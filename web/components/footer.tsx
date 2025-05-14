@@ -8,7 +8,7 @@ function Footer() {
 	return (
 		<footer className="fixed bottom-0 left-0 w-full z-50 px-8 pb-6 pt-2 bg-transparent flex items-end justify-between">
 			{/* Left group: ButtonSegment and Star us button */}
-			<div className="flex items-center gap-2">
+			<div className="flex items-center gap-4">
 				<ButtonSegment className="bg-black text-white inline-flex items-center rounded-full px-4">
 					{socials.map(({ href, label }) => (
 						<Link
