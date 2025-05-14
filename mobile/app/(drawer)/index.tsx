@@ -1,6 +1,7 @@
-import { View, Text, Pressable } from "react-native";
+import { View, Text } from "react-native";
 import { router } from "expo-router";
 import { TabBarIcon } from "@/components/router/TabBarIcon";
+import { Button } from "@/components/ui/Button";
 
 export default function DrawerIndex() {
 	return (
@@ -10,22 +11,28 @@ export default function DrawerIndex() {
 				This is content in your drawer navigation
 			</Text>
 
-			<View className="mt-4">
-				<Pressable
-					className="flex-row items-center py-3 border-b border-gray-200"
+			<View className="mt-4 space-y-2">
+				<Button
+					variant="ghost"
+					className="flex-row justify-start p-3"
 					onPress={() => router.push("/(drawer)/settings")}
 				>
-					<TabBarIcon name="lucide:settings" color="#000" size={24} />
-					<Text className="ml-3 text-base">Settings</Text>
-				</Pressable>
+					<View className="flex-row items-center">
+						<TabBarIcon name="lucide:settings" color="#000" size={24} />
+						<Text className="ml-3 text-base">Settings</Text>
+					</View>
+				</Button>
 
-				<Pressable
-					className="flex-row items-center py-3 border-b border-gray-200"
+				<Button
+					variant="ghost"
+					className="flex-row justify-start p-3"
 					onPress={() => router.push("/(tabs)")}
 				>
-					<TabBarIcon name="lucide:home" color="#000" size={24} />
-					<Text className="ml-3 text-base">Back to Home</Text>
-				</Pressable>
+					<View className="flex-row items-center">
+						<TabBarIcon name="lucide:home" color="#000" size={24} />
+						<Text className="ml-3 text-base">Back to Home</Text>
+					</View>
+				</Button>
 			</View>
 		</View>
 	);
