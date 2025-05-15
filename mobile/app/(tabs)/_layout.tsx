@@ -2,7 +2,7 @@ import type React from "react";
 import { Link, Tabs } from "expo-router";
 import { Pressable, View, Text } from "react-native";
 
-import Colors from "@constants/Colors";
+import { COLORS } from "@constants/Colors";
 import { useColorScheme } from "@hooks/useColorScheme";
 import { useClientOnlyValue } from "@hooks/useClientOnlyValue";
 import { TabBarIcon } from "@/components/router/TabBarIcon";
@@ -17,7 +17,7 @@ export default function TabLayout() {
 				tabBarStyle: {
 					borderTopWidth: 0,
 				},
-				tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
+				tabBarActiveTintColor: COLORS[colorScheme ?? "light"].primary,
 				headerShown: useClientOnlyValue(false, true),
 			}}
 		>
@@ -40,7 +40,7 @@ export default function TabLayout() {
 									<View style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}>
 										<TabBarIcon
 											name="lucide:info"
-											color={Colors[colorScheme ?? "light"].text}
+											color={COLORS[colorScheme ?? "light"].foreground}
 											size={25}
 										/>
 									</View>
@@ -83,7 +83,7 @@ export default function TabLayout() {
 									<View style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}>
 										<TabBarIcon
 											name="lucide:info"
-											color={Colors[colorScheme ?? "light"].text}
+											color={COLORS[colorScheme ?? "light"].foreground}
 											size={25}
 										/>
 									</View>

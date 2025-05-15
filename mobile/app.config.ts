@@ -34,6 +34,7 @@ const config: ExpoConfig = {
 	plugins: ["expo-router"],
 	experiments: {
 		typedRoutes: true,
+		buildCacheProvider: "eas",
 	},
 	extra: {
 		eas: {

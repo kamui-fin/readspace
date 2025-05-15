@@ -12,7 +12,6 @@ import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@hooks/useColorScheme";
-import { TabBarIcon } from "@/components/router/TabBarIcon";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -64,7 +63,6 @@ function RootLayoutNav() {
 				}}
 			>
 				<Drawer.Screen name="(tabs)" options={{ headerShown: false }} />
-				<Stack.Screen name="modal" options={{ presentation: "modal" }} />
 			</Drawer>
 		</ThemeProvider>
 	);
