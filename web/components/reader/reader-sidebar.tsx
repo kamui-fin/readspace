@@ -23,8 +23,6 @@ import { NavItem } from "epubjs"
 import { usePathname } from "next/navigation"
 import { ScrollArea } from "../ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
-import { ActiveRecallOnboarding } from "./active-recall-onboarding"
-import { ChatTab } from "./chat-with-doc"
 
 interface ReaderSidebarProps extends React.ComponentProps<typeof SidebarRight> {
     // Remove goToPage from props
@@ -266,7 +264,6 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
         >
             <SidebarContent className="h-full">
                 <SidebarGroup>
-                    <ActiveRecallOnboarding />
                     <Tabs
                         value={activeTab}
                         onValueChange={(value) =>
@@ -280,9 +277,6 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                                 className="text-[0.8rem]"
                             >
                                 Contents
-                            </TabsTrigger>
-                            <TabsTrigger value="chat" className="text-[0.8rem]">
-                                AI Chat
                             </TabsTrigger>
                             <TabsTrigger
                                 value="highlights"
@@ -312,9 +306,6 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                         </TabsContent>
                         <TabsContent value="highlights" className="m-0">
                             <HighlightsTab />
-                        </TabsContent>
-                        <TabsContent value="chat" className="m-0">
-                            <ChatTab />
                         </TabsContent>
                     </Tabs>
                 </SidebarGroup>
@@ -412,18 +403,18 @@ export function HighlightCard({ highlight }: HighlightProps) {
                     <p className="text-sm text-card-foreground">
                         {highlightType === "epub"
                             ? (highlight as EpubHighlight).text.slice(0, 150) +
-                              "..."
+                            "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
-                                  0,
-                                  150
-                              ) + "..."}
+                                0,
+                                150
+                            ) + "..."}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Page{" "}
                         {highlightType === "epub"
                             ? (highlight as EpubHighlight).page
                             : (highlight as PdfHighlight).position.boundingRect
-                                  ?.pageNumber}
+                                ?.pageNumber}
                     </p>
                 </div>
             </div>

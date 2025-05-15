@@ -14,6 +14,7 @@ ModelType = TypeVar("ModelType", bound=Base)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
+
 class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
     """Base repository with common CRUD operations using SQLAlchemy."""
 
@@ -40,11 +41,11 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """Get multiple records with optional filtering."""
         try:
             query: Select = select(self.model)
-            
+
             if filters:
                 for key, value in filters.items():
                     query = query.where(getattr(self.model, key) == value)
-            
+
             query = query.offset(skip).limit(limit)
             result = await db.execute(query)
             return result.scalars().all()
@@ -69,7 +70,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db: AsyncSession,
         *,
         id: UUID,
-        obj_in: Union[UpdateSchemaType, Dict[str, Any]]
+        obj_in: Union[UpdateSchemaType, Dict[str, Any]],
     ) -> ModelType:
         """Update a record."""
         try:
@@ -82,7 +83,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             )
             await db.execute(query)
             await db.commit()
-            
+
             # Fetch the updated object
             return await self.get(db, id)
         except Exception as e:
@@ -98,4 +99,4 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result.rowcount > 0
         except Exception as e:
             await db.rollback()
-            raise StorageError(f"Failed to delete {self.model.__name__}: {str(e)}") 
+            raise StorageError(f"Failed to delete {self.model.__name__}: {str(e)}")

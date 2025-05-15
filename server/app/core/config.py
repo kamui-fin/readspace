@@ -6,22 +6,25 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     """Application settings."""
+
     # API settings
     API_V1_STR: str = "/api/v1"
     PROJECT_NAME: str = "ReadSpace API"
     VERSION: str = "1.0.0"
-    
+
     # Supabase settings
     SUPABASE_URL: str = "http://localhost:54321"
     SUPABASE_KEY: str
-    SUPABASE_DB_CONNECTION: str = "postgresql://postgres:postgres@localhost:5432/postgres"
-    
+    SUPABASE_DB_CONNECTION: str = (
+        "postgresql://postgres:postgres@localhost:54322/postgres"
+    )
+
     # Security
     JWT_SECRET: str = "super-secret-jwt-token-with-at-least-32-characters-long"
-    
+
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:8042"
-    
+
     # Logging
     LOG_LEVEL: str = "INFO"
     ENVIRONMENT: str = "development"

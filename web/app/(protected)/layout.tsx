@@ -1,10 +1,7 @@
-import BetaDiscountBanner from "@/components/beta-discount-banner"
 import ClientLayout from "@/components/layout/client-layout"
-import MobileWarning from "@/components/mobile-warning"
 import { AppSidebar } from "@/components/navigation/app-sidebar"
 import { ReaderSidebar } from "@/components/reader/reader-sidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
-import UpgradeDialog from "@/components/upgrade-dialog"
 
 export default function ProtectedLayout({
     children,
@@ -13,14 +10,11 @@ export default function ProtectedLayout({
 }) {
     return (
         <ClientLayout>
-            <MobileWarning />
             <AppSidebar />
             <SidebarInset>
-                <BetaDiscountBanner />
                 {children}
             </SidebarInset>
             <ReaderSidebar />
-            <UpgradeDialog />
         </ClientLayout>
     )
 }

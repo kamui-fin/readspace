@@ -13,16 +13,12 @@ import { PdfHighlighterUtils } from "@/components/reader/pdf-highlight/contexts/
 import ExpandableTip from "@/components/reader/pdf-highlight/expandable-tip"
 import HighlightContainer from "@/components/reader/pdf-highlight/highlight-container"
 import { PdfHighlighter } from "@/components/reader/pdf-highlight/pdf-highlights"
-import {
-    addAnnotation,
-    addHighlight,
-    deleteHighlightsByText,
-    savePdfProgress,
-} from "../../app/(protected)/library/[id]/actions"
 import { PdfHighlight } from "../../types/library"
 
 import { Loading } from "@/components/reader/reader-content"
+import { ApiClient } from "@/lib/api/client"
 import { saveLocalPdfProgress } from "@/lib/reader/bookstore"
+import { useMutation } from "@tanstack/react-query"
 import { pdfjs } from "react-pdf"
 
 // Global storage key for zoom preference (same as in pdf-zoom.tsx)
@@ -102,6 +98,30 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     //     setOpen(false)
     // }, [])
 
+    const updateProgressMutation = useMutation({
+        mutationFn: ({ bookId, page }: { bookId: string; page: number }) =>
+            ApiClient.put(`/books/${bookId}/progress`, { pdf_page: page }),
+        onError: (err: Error) => {
+            console.error("Failed to save remote progress:", err)
+        }
+    })
+
+    const addHighlightMutation = useMutation({
+        mutationFn: (data: any) => ApiClient.post("/highlights", data),
+        onError: (err: Error) => console.error("Failed to add highlight:", err)
+    })
+
+    const deleteHighlightMutation = useMutation({
+        mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
+        onError: (err: Error) => console.error("Failed to delete highlight:", err)
+    })
+
+    const addAnnotationMutation = useMutation({
+        mutationFn: ({ note, text }: { note: string; text: string }) =>
+            ApiClient.put(`/highlights/${text}/note`, { note }),
+        onError: (err: Error) => console.error("Failed to add annotation:", err)
+    })
+
     useEffect(() => {
         const initialize = async () => {
             try {
@@ -134,7 +154,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         if (bookMeta.file_url === null) {
             saveLocalPdfProgress(pageLeftOff, bookMeta.id)
         } else {
-            savePdfProgress(pageLeftOff, bookMeta.id)
+            updateProgressMutation.mutate({ bookId: bookMeta.id, page: pageLeftOff })
         }
     }
 
@@ -186,7 +206,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                     )
                 } else {
                     // Cloud book - use server action
-                    savePdfProgress(pageLeftOff, bookMeta.id)
+                    updateProgressMutation.mutate({ bookId: bookMeta.id, page: pageLeftOff })
                 }
             }
         }
@@ -248,7 +268,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             insertHighlight({ highlight, removeFn: () => { } })
 
             if (highlight.content.text) {
-                await addHighlight({
+                await addHighlightMutation.mutateAsync({
                     book_id: bookMeta.id,
                     text: highlight.content.text,
                     color: highlight.color || "yellow",
@@ -271,7 +291,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             )
 
             setHighlights(updatedHighlights)
-            await deleteHighlightsByText(highlightText)
+            await deleteHighlightMutation.mutateAsync(highlightText)
         },
         [highlights, setHighlights]
     )
@@ -296,7 +316,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             })
 
             setHighlights(updatedHighlights)
-            await addAnnotation(note, textToAddTo)
+            await addAnnotationMutation.mutateAsync({ note, text: textToAddTo })
         },
         [highlights, setHighlights]
     )
@@ -372,12 +392,6 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                     )}
                 </PdfLoader>
             </div>
-
-            <AiResponsePanel />
-            <ActiveRecallModal />
-            <FlashcardDialog />
-
-            {viewerReady && <ReaderOnboarding />}
         </div>
     )
 }

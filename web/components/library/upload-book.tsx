@@ -25,13 +25,11 @@ import {
     FileListSize,
 } from "@/components/ui/file-list"
 import { Label } from "@/components/ui/label"
-import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
-import { getFrontendLimit } from "@/utils/limits"
 import { User } from "@supabase/supabase-js"
 import { BookOpen, LoaderCircle, X } from "lucide-react"
 import { type PDFDocumentProxy } from "pdfjs-dist"
-import { useCallback, useId, useState } from "react"
+import { useCallback, useId } from "react"
 import { useDropzone } from "react-dropzone"
 import { Card } from "../ui/card"
 
@@ -48,7 +46,6 @@ if (typeof Promise.withResolvers === "undefined") {
         }
 }
 
-import { getUserRoleFromId } from "@/app/(protected)/library/[id]/actions"
 import { NavItem } from "epubjs/types/navigation"
 
 function cleanShallow(obj: { [s: string]: unknown } | ArrayLike<unknown>) {
@@ -213,10 +210,8 @@ const formatFileSize = (bytes: number) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
 }
 
-const DragDropBook = ({
+export const DragDropBook = ({
     isUploading,
-    enableRag,
-    setEnableRag,
     onFileSelect,
     selectedFile,
     onRemoveFile,
@@ -225,8 +220,6 @@ const DragDropBook = ({
     setIsLocalStorage,
 }: {
     isUploading: boolean
-    enableRag: boolean
-    setEnableRag: (value: boolean) => void
     onFileSelect: (file: File | null) => void
     selectedFile: File | null
     onRemoveFile: () => void
@@ -234,44 +227,15 @@ const DragDropBook = ({
     isLocalStorage: boolean
     setIsLocalStorage: (value: boolean) => void
 }) => {
-    const ragId = useId()
     const localStorageId = useId()
-    const [isLocalForceEnabled, setIsLocalForceEnabled] = useState(false)
 
     const onDrop = useCallback(
         async (acceptedFiles: File[]) => {
             const file = acceptedFiles[0]
             if (!file || !user) return
-
-            // --- Max File Size Check ---
-            // Only check size limit for cloud storage, not for local storage
-            if (!isLocalStorage) {
-                // Assume user role is in user_metadata, adjust if needed
-                const userRole = await getUserRoleFromId(user.id)
-                if (!userRole) {
-                    toast.error("Failed to get user role")
-                    return
-                }
-                const maxSizeLimit = getFrontendLimit(
-                    userRole,
-                    "maxFileSizeBytes"
-                )
-                if (file.size > maxSizeLimit) {
-                    // Automatically switch to local storage
-                    setIsLocalStorage(true)
-                    setEnableRag(false) // Disable RAG as it's not available in local storage
-                    setIsLocalForceEnabled(true) // Mark as force enabled due to size
-                    toast.info(
-                        `Using local storage as file exceeds cloud limit of ${formatFileSize(maxSizeLimit)}.`
-                    )
-                    // Continue with file selection in local mode
-                }
-            }
-            // --- End Max File Size Check ---
-
             onFileSelect(file)
         },
-        [user, onFileSelect, isLocalStorage, setIsLocalStorage, setEnableRag]
+        [user, onFileSelect]
     )
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -306,7 +270,7 @@ const DragDropBook = ({
                                         </FileListDescriptionSeparator>
                                         <FileListDescriptionText>
                                             {selectedFile.type ===
-                                            "application/pdf"
+                                                "application/pdf"
                                                 ? "PDF"
                                                 : "EPUB"}
                                         </FileListDescriptionText>
@@ -361,51 +325,21 @@ const DragDropBook = ({
                 <Checkbox
                     id={localStorageId}
                     checked={isLocalStorage}
-                    onCheckedChange={
-                        isLocalForceEnabled ? undefined : setIsLocalStorage
-                    }
-                    disabled={isLocalForceEnabled}
+                    onCheckedChange={setIsLocalStorage}
                     aria-describedby={`${localStorageId}-description`}
                 />
                 <div className="grid grow gap-2">
-                    <Label
-                        htmlFor={localStorageId}
-                        className={isLocalForceEnabled ? "opacity-70" : ""}
-                    >
-                        Store locally only{" "}
-                        {isLocalForceEnabled && "(Required due to file size)"}
+                    <Label htmlFor={localStorageId}>
+                        Store locally only
                     </Label>
                     <p
                         id={`${localStorageId}-description`}
                         className="text-muted-foreground text-xs"
                     >
-                        Store only on this device. No upload, no file size
-                        limits, but AI processing will be disabled.
+                        Store only on this device
                     </p>
                 </div>
             </div>
-            {!isLocalStorage && selectedFile && (
-                <div className="flex items-start gap-2">
-                    <Checkbox
-                        id={ragId}
-                        checked={enableRag}
-                        onCheckedChange={setEnableRag}
-                        aria-describedby={`${ragId}-description`}
-                    />
-                    <div className="grid grow gap-2">
-                        <Label htmlFor={ragId}>Enable AI Processing</Label>
-                        <p
-                            id={`${ragId}-description`}
-                            className="text-muted-foreground text-xs"
-                        >
-                            Process the document for enhanced AI interactions.
-                            This enables better citations and deeper document
-                            understanding, but may take longer to process in the
-                            background.
-                        </p>
-                    </div>
-                </div>
-            )}
         </div>
     )
 }

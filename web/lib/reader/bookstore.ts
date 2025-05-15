@@ -144,7 +144,7 @@ export async function initializeBookProgressStorage(
  * Saves EPUB reading progress to localforage
  */
 export async function saveLocalEpubProgress(
-    progress: TablesUpdate<"books">["epub_progress"],
+    progress: TablesUpdate<"user_book_library">["epub_progress"],
     bookId: string
 ): Promise<boolean> {
     try {

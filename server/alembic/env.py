@@ -1,15 +1,25 @@
 import asyncio
 from logging.config import fileConfig
 
+from alembic import context
+from app.core.config import get_settings
+from app.db.base_class import Base
+
+# Import all models here to ensure they are registered with Base.metadata
+from app.models.book_models import (  # noqa: F401
+    BookFormat,
+    BookMetadata,
+    Highlight,
+    HighlightColor,
+    HighlightLocation,
+    UserBookLibrary,
+)
+from app.models.user_models import Profile  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
-from alembic import context
-
-from app.core.config import get_settings
-from app.db.base_class import Base
-from app.models.book_models import BookMetadata, UserBookLibrary, Highlight, HighlightLocation
+# Import all models here to ensure they are registered with Base.metadata
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -31,7 +41,7 @@ target_metadata = Base.metadata
 
 def get_url():
     settings = get_settings()
-    return settings.SUPABASE_DB_CONNECTION
+    return settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -59,7 +69,6 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
-
     with context.begin_transaction():
         context.run_migrations()
 
@@ -87,4 +96,9 @@ async def run_async_migrations() -> None:
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
 
-    asyncio.run(run_async_migrations()) 
+    asyncio.run(run_async_migrations())
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()

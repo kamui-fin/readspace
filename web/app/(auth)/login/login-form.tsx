@@ -10,12 +10,12 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toast } from "@/components/ui/sonner"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { useFormik } from "formik"
 import { useRouter } from "next/navigation"
 import * as React from "react"
+import toast from "react-hot-toast"
 import z from "zod"
 import { toFormikValidationSchema } from "zod-formik-adapter"
 
@@ -132,11 +132,11 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.email}
                                         required
-                                        // className={cn(
-                                        //     formik.touched.email && formik.errors.email
-                                        //         ? "border-red-500 focus-visible:ring-red-500"
-                                        //         : ""
-                                        // )}
+                                    // className={cn(
+                                    //     formik.touched.email && formik.errors.email
+                                    //         ? "border-red-500 focus-visible:ring-red-500"
+                                    //         : ""
+                                    // )}
                                     />
                                     {/* {formik.touched.email && formik.errors.email && (
                                         <p className="text-sm text-red-500">
@@ -164,12 +164,12 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.password}
                                         required
-                                        // className={cn(
-                                        //     formik.touched.password &&
-                                        //         formik.errors.password
-                                        //         ? "border-red-500 focus-visible:ring-red-500"
-                                        //         : ""
-                                        // )}
+                                    // className={cn(
+                                    //     formik.touched.password &&
+                                    //         formik.errors.password
+                                    //         ? "border-red-500 focus-visible:ring-red-500"
+                                    //         : ""
+                                    // )}
                                     />
                                     {/* {formik.touched.password &&
                                         formik.errors.password && (

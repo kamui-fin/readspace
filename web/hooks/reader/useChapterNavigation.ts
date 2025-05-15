@@ -1,6 +1,7 @@
+import { ApiClient } from "@/lib/api/client"
 import { useReaderStore } from "@/stores/reader"
+import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
-import { saveEpubProgress } from "../../app/(protected)/library/[id]/actions"
 import { saveLocalEpubProgress } from "../../lib/reader/bookstore"
 
 export default function useChapterNavigation() {
@@ -26,6 +27,14 @@ export default function useChapterNavigation() {
         }))
     )
 
+    const updateProgressMutation = useMutation({
+        mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
+            ApiClient.put(`/books/${bookId}/progress`, { epub_progress: progress }),
+        onError: (err: Error) => {
+            console.error("Failed to save remote progress:", err)
+        }
+    })
+
     const changeChapter = async (index: number) => {
         if (epubBook && bookMeta) {
             const spine = (epubBook as ePub.Book).spine.get(index)
@@ -49,10 +58,8 @@ export default function useChapterNavigation() {
                             console.error("Failed to save local progress:", err)
                     )
                 } else {
-                    // Cloud book - use server action
-                    saveEpubProgress(progressData, bookMeta.id).catch((err) =>
-                        console.error("Failed to save remote progress:", err)
-                    )
+                    // Cloud book - use React Query mutation
+                    updateProgressMutation.mutate({ bookId: bookMeta.id, progress: progressData })
                 }
 
                 setProgressPercentage(0)

@@ -8,14 +8,14 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 import { useFormik } from "formik"
 import { MailIcon } from "lucide-react"
 import * as React from "react"
+import toast from "react-hot-toast"
 import { z } from "zod"
 import { toFormikValidationSchema } from "zod-formik-adapter"
 import { signUp } from "../actions"

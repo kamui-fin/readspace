@@ -20,7 +20,6 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS, Transform } from "@dnd-kit/utilities"
-import { composeEventHandlers } from "@radix-ui/primitive"
 import { composeRefs } from "@radix-ui/react-compose-refs"
 import * as PortalPrimitive from "@radix-ui/react-portal"
 import { Primitive } from "@radix-ui/react-primitive"
@@ -30,9 +29,9 @@ import { cn } from "@/lib/utils"
 
 const SortableImplContext = React.createContext<
     Pick<SortableProps, "getNewIndex"> &
-        Required<Pick<SortableProps, "getTransformStyle">> & {
-            activeId: UniqueIdentifier | null
-        }
+    Required<Pick<SortableProps, "getTransformStyle">> & {
+        activeId: UniqueIdentifier | null
+    }
 >({
     activeId: null,
     getTransformStyle: CSS.Transform.toString,
@@ -87,15 +86,18 @@ export const Sortable = ({
             }}
         >
             <DndContext
-                onDragStart={composeEventHandlers(onDragStart, ({ active }) =>
-                    setActiveId(active.id)
-                )}
-                onDragEnd={composeEventHandlers(onDragEnd, () =>
-                    setActiveId(null)
-                )}
-                onDragCancel={composeEventHandlers(onDragCancel, () =>
-                    setActiveId(null)
-                )}
+                onDragStart={(event) => {
+                    onDragStart?.(event);
+                    setActiveId(event.active.id);
+                }}
+                onDragEnd={(event) => {
+                    onDragEnd?.(event);
+                    setActiveId(null);
+                }}
+                onDragCancel={(event) => {
+                    onDragCancel?.(event);
+                    setActiveId(null);
+                }}
                 collisionDetection={collisionDetection}
                 sensors={sensors}
                 {...props}
@@ -106,7 +108,7 @@ export const Sortable = ({
 
 export interface SortableListProps
     extends Omit<SortableContextProps, "children">,
-        React.ComponentPropsWithoutRef<typeof Primitive.ul> {
+    React.ComponentPropsWithoutRef<typeof Primitive.ul> {
     orientation?: "vertical" | "horizontal"
 }
 

@@ -1,10 +1,12 @@
 import EPUBReader from "@/components/reader/reader"
+import { ApiClient } from "@/lib/api/client"
 import { createClient } from "@/lib/supabase/server"
+import { Highlight } from "@/types/api"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { PDFViewer } from "../../../../components/reader/pdf-reader"
-import { EpubHighlight, PdfHighlight } from "../../../../types/library"
-import { getBook, getHighlights } from "./actions"
+import { BookMeta, EpubHighlight, PdfHighlight } from "../../../../types/library"
+
 interface PageProps {
     params: Promise<{
         id: string
@@ -16,7 +18,8 @@ export async function generateMetadata({
 }: {
     params: Promise<{ id: string }>
 }): Promise<Metadata> {
-    const book = await getBook((await params).id) // your data fetch
+    const bookId = (await params).id
+    const book = await ApiClient.get<BookMeta>(`/books/${bookId}`)
     return {
         title: `${book?.title}`,
         description:
@@ -36,11 +39,8 @@ export default async function Page({ params }: PageProps) {
     }
 
     const bookId = (await params).id
-    const bookMeta = await getBook(bookId)
-    const highlights = await getHighlights(
-        bookId,
-        bookMeta?.type as "epub" | "pdf"
-    )
+    const bookMeta = await ApiClient.get<BookMeta>(`/books/${bookId}`)
+    const highlights = await ApiClient.get<Highlight[]>(`/highlights/book/${bookId}`)
 
     if (!bookMeta) {
         return (

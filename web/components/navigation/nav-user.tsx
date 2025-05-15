@@ -2,11 +2,7 @@
 
 import {
     ChevronsUpDown,
-    CreditCard,
-    Gauge,
     LogOut,
-    Sparkles,
-    Settings,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -28,10 +24,6 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCurrentUser } from "@/hooks/use-current-user"
-import { createCustomerPortalSession } from "@/lib/api/stripe"
-import { useUpgradeDialog } from "@/stores/upgrade-dialog"
-import Link from "next/link"
-import { SettingsDialog } from "@/components/settings-dialog"
 
 interface NavUserProps {
     avatar: string
@@ -42,27 +34,11 @@ interface NavUserProps {
 
 export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
     const { isMobile, toggleSidebar } = useSidebarLeft()
-    const { open: openUpgradeDialog } = useUpgradeDialog()
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-    const [isLoadingPortal, setIsLoadingPortal] = useState(false)
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false)
 
     const { user } = useCurrentUser()
 
-    const { isPro } = user || {}
-
     const loadingUser = !name || !email
-
-    const handleManageBilling = async () => {
-        setIsLoadingPortal(true)
-        try {
-            const returnUrl = window.location.href
-            const portalUrl = await createCustomerPortalSession(returnUrl)
-            window.location.href = portalUrl
-        } catch (err: any) {
-            console.error("Failed to create portal session:", err)
-        }
-    }
 
     return (
         <>
@@ -150,78 +126,15 @@ export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
-                                {!isPro && (
-                                    <DropdownMenuItem
-                                        onClick={() => {
-                                            if (isMobile) {
-                                                toggleSidebar()
-                                            }
-                                            setIsUserMenuOpen(false)
-                                            openUpgradeDialog({
-                                                title: "Upgrade to Pro",
-                                                description:
-                                                    "Get access to all features and benefits of Readspace Pro",
-                                            })
-                                        }}
-                                    >
-                                        <Sparkles className="mr-2 h-4 w-4" />
-                                        Upgrade to Pro
-                                    </DropdownMenuItem>
-                                )}
-                                {!isPro && (
-                                    <Link
-                                        href="/usage"
-                                        className="flex w-full items-center justify-between gap-2"
-                                        onClick={() => {
-                                            if (isMobile) {
-                                                toggleSidebar()
-                                            }
-                                            setIsUserMenuOpen(false)
-                                        }}
-                                    >
-                                        <DropdownMenuItem className="w-full">
-                                            <Gauge className="mr-2 h-4 w-4" />
-                                            Usage limits
-                                        </DropdownMenuItem>
-                                    </Link>
-                                )}
-                                {isPro && (
-                                    <DropdownMenuItem
-                                        onSelect={handleManageBilling}
-                                        disabled={isLoadingPortal}
-                                    >
-                                        <CreditCard className="mr-2 h-4 w-4" />
-                                        {isLoadingPortal
-                                            ? "Redirecting..."
-                                            : "Billing"}
-                                    </DropdownMenuItem>
-                                )}
-                                <DropdownMenuItem
-                                    onClick={() => {
-                                        if (isMobile) {
-                                            toggleSidebar()
-                                        }
-                                        setIsUserMenuOpen(false)
-                                        setIsSettingsOpen(true)
-                                    }}
-                                >
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Settings
+                                <DropdownMenuItem onClick={handleSignOut}>
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Log out
                                 </DropdownMenuItem>
                             </DropdownMenuGroup>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={handleSignOut}>
-                                <LogOut className="mr-2 h-4 w-4" />
-                                Log out
-                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </SidebarMenuItem>
             </SidebarMenu>
-            <SettingsDialog
-                open={isSettingsOpen}
-                onOpenChange={setIsSettingsOpen}
-            />
         </>
     )
 }

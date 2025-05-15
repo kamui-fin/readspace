@@ -1,5 +1,3 @@
-import { toast } from "@/components/ui/sonner"
-import { GradeResponse, Question } from "@/lib/api/chat"
 import {
     cacheBook,
     getEpubFromCache,
@@ -10,17 +8,14 @@ import {
 import { getFileFromSupabase } from "@/lib/supabase/storage"
 import { BookMeta, HighlightState } from "@/types/library"
 import ePub, { NavItem } from "epubjs"
+import toast from "react-hot-toast"
 import { Scaled } from "react-pdf-highlighter-extended"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 
 type BookType = "epub" | "pdf"
 type Book = ePub.Book | string | null
-interface AIActionResult {
-    content?: string
-    loading?: boolean
-    [key: string]: unknown
-}
+
 // type Toc = NavItem | { title: string; page: number }
 
 interface ReaderState {
@@ -47,71 +42,14 @@ interface ReaderState {
     currentPage: number
     totalPages: number
 
-    activeAIAction: AIAction
-    setActiveAIAction: (action: AIAction) => void
-
-    // AI dialog state
-    isAIDialogOpen: boolean
-
-    // Command history removed - now using chat store
-
-    // Abort controller for AI requests
-    abortController: AbortController | null
-
-    // flashcard state
-    flashcards: Array<{ id: string; front: string; back: string }>
-    flashcardDialogOpen: boolean
-
     isLoading: boolean // General loading state for book fetch etc.
-    isRecallModalOpen: boolean // State for the recall modal visibility
-    isGeneratingRecall: boolean // State for recall question generation loading
-    recallMode: "quiz" | "flashcards" // Mode for active recall session
-
-    recallTest: {
-        isActive: boolean
-        bookId: string | null
-        questions: Question[]
-        currentStep: number
-        flashcards: { id: string; front: string; back: string }[]
-        sessionId: string | null
-        recallEndPage: number | null
-        questionStates: {
-            [questionId: string]: {
-                chatHistory: [string, string][]
-                lastFeedback: GradeResponse | null
-                mcSelectedIndex?: number | null
-                mcIsSubmitted?: boolean
-            }
-        }
-        isSubmitted: boolean
-        selectedIndex: number | null
-        showFinalReview: boolean
-        highlights: string[]
-    } | null
-
-    isAreaSelectionActive: boolean
 
     pageTextMap: Record<number, string>
 
     // Add activeTab state
-    activeTab: "contents" | "highlights" | "chat"
-}
+    activeTab: "contents" | "highlights"
 
-export interface AIAction {
-    type: string
-    text: string
-    result: any
-    imageUrl?: string | null
-    threadId?: string | null
-}
-
-// Default empty AI action
-const defaultAIAction: AIAction = {
-    type: "",
-    text: "",
-    result: null,
-    imageUrl: null,
-    threadId: null,
+    isAreaSelectionActive: boolean
 }
 
 type ReaderActions = {
@@ -125,8 +63,6 @@ type ReaderActions = {
     setEpubDocRef: (ref: HTMLDivElement) => void
     setHighlights: (highlights: HighlightState[]) => void
     setTotalPages: (pages: number) => void
-    setActiveAIAction: (action: AIAction) => void
-    setAIDialogOpen: (isOpen: boolean) => void
     insertHighlight: (highlight: HighlightState) => void
     setCharsReadInChapter: (chars: number) => void
     setCurrentPage: (page: number) => void
@@ -139,73 +75,17 @@ type ReaderActions = {
     goToPage: (page: number) => void // Function to navigate to a specific page
 
     // Add setActiveTab action
-    setActiveTab: (tab: "contents" | "highlights" | "chat") => void
-
-    // Flashcard actions
-    setFlashcards: (
-        flashcards: Array<{ id: string; front: string; back: string }>
-    ) => void
-    addFlashcard: (flashcard: {
-        id: string
-        front: string
-        back: string
-    }) => void
-    updateFlashcard: (flashcard: {
-        id: string
-        front: string
-        back: string
-    }) => void
-    removeFlashcard: (id: string) => void
-    setFlashcardDialogOpen: (open: boolean) => void
+    setActiveTab: (tab: "contents" | "highlights") => void
 
     fetch: (bookMeta: BookMeta) => Promise<void> // fetch book from cache or supabase
 
     setIsLoading: (loading: boolean) => void
-    setRecallModalOpen: (open: boolean) => void // Action to control modal visibility
-    setRecallMode: (mode: "quiz" | "flashcards") => void // Action to set recall mode
-    setIsGeneratingRecall: (generating: boolean) => void // Action to control recall generation loading state
-
-    startRecallTest: (
-        questions: Question[],
-        sessionId: string,
-        bookId: string,
-        recallEndPage: number
-    ) => void
-    updateRecallTest: (
-        update: Partial<NonNullable<ReaderState["recallTest"]>>
-    ) => void
-    finishRecallTest: () => void
-    setRecallTestHighlights: (highlights: string[]) => void
-    updateQuestionChatHistory: (
-        questionId: string,
-        history: [string, string][]
-    ) => void
-    updateQuestionFeedback: (
-        questionId: string,
-        feedback: GradeResponse
-    ) => void
-    updateMultipleChoiceState: (
-        questionId: string,
-        selectedIndex: number | null,
-        isSubmitted: boolean
-    ) => void
-
-    // Add new methods for abort controller
-    setAbortController: (controller: AbortController) => void
-    abortAndResetController: () => void
-
-    // Command history actions (deprecated - use chat store instead)
-    addToCommandHistory: (userMessage: string, aiResponse: string) => void
-    clearCommandHistory: () => void
-    getCommandHistory: () => [string, string][]
-
-    enableAreaSelection: () => void
-    disableAreaSelection: () => void
 
     setPageTextMap: (pageMap: Record<number, string>) => void
     getPageText: (pageNumber: number) => string
 
-    setLastRecallPageInBookMeta: (page: number) => void
+    enableAreaSelection: () => void
+    disableAreaSelection: () => void
 }
 
 export const useReaderStore = create<ReaderState & ReaderActions>()(
@@ -217,7 +97,6 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         epubDocRef: null,
         highlights: [],
         charsReadInChapter: 0,
-        activeAIAction: defaultAIAction,
         toc: [],
         currentLocation: undefined,
         currentPdfLocation: undefined,
@@ -226,17 +105,9 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         totalPages: 0,
         pdfRef: null,
         isLoading: false,
-        isRecallModalOpen: false, // Initial state for modal
-        isGeneratingRecall: false, // Initial state for recall generation
-        recallTest: null,
-        flashcards: [],
-        flashcardDialogOpen: false,
-        abortController: null,
-        isAreaSelectionActive: false,
         pageTextMap: {},
         activeTab: "contents", // Initialize activeTab
-        recallMode: "quiz",
-        isAIDialogOpen: false,
+        isAreaSelectionActive: false,
 
         setToc: (newToc) => set({ toc: newToc }),
         setLocation: (newLocation) => set({ currentLocation: newLocation }),
@@ -249,41 +120,6 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         setEpubDocRef: (ref: HTMLDivElement) => set({ epubDocRef: ref }),
         setHighlights: (highlights) => set({ highlights }),
         setPdfRef: (pdfRef) => set({ pdfRef }),
-
-        // Flashcard actions
-        setFlashcards: (flashcards) => set({ flashcards }),
-        addFlashcard: (flashcard) =>
-            set((state) => {
-                state.flashcards.push(flashcard)
-            }),
-        updateFlashcard: (flashcard) =>
-            set((state) => {
-                const index = state.flashcards.findIndex(
-                    (f) => f.id === flashcard.id
-                )
-                if (index !== -1) {
-                    state.flashcards[index] = flashcard
-                }
-            }),
-        removeFlashcard: (id) =>
-            set((state) => {
-                state.flashcards = state.flashcards.filter((f) => f.id !== id)
-            }),
-        setFlashcardDialogOpen: (open) => set({ flashcardDialogOpen: open }),
-
-        // Implement the setActiveAIAction method
-        setActiveAIAction: (action) => set({ activeAIAction: action }),
-
-        // Implement the new abort controller methods
-        setAbortController: (controller) =>
-            set({ abortController: controller }),
-        abortAndResetController: () => {
-            const controller = get().abortController
-            if (controller) {
-                controller.abort()
-                set({ abortController: null })
-            }
-        },
 
         insertHighlight: (highlight) => {
             const { highlights } = get()
@@ -308,7 +144,7 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                 return (
                     charCounts
                         .slice(0, currentChapterIdx)
-                        .reduce((a, b) => a + b, 0) + charsReadInChapter
+                        .reduce((a: number, b: number) => a + b, 0) + charsReadInChapter
                 )
             }
             return 0
@@ -320,7 +156,7 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
 
             // Check if epub_chapter_char_counts exists and is an array
             const charCounts = bookMeta.epub_chapter_char_counts || []
-            return charCounts.reduce((a, b) => a + b, 0)
+            return charCounts.reduce((a: number, b: number) => a + b, 0)
         },
 
         getPageProgress: () => {
@@ -358,178 +194,6 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         },
 
         setIsLoading: (loading: boolean) => set({ isLoading: loading }),
-        setRecallModalOpen: (open: boolean) => set({ isRecallModalOpen: open }),
-        setRecallMode: (mode: "quiz" | "flashcards") =>
-            set({ recallMode: mode }),
-        setIsGeneratingRecall: (generating: boolean) =>
-            set({ isGeneratingRecall: generating }),
-
-        startRecallTest: (questions, sessionId, bookId, recallEndPage) => {
-            console.log(
-                `Starting recall test for book ${bookId}, end page: ${recallEndPage}`
-            )
-            // Initialize questionStates with empty state for each question
-            const questionStates = questions.reduce(
-                (acc, question) => {
-                    acc[question.id] = {
-                        chatHistory: [],
-                        lastFeedback: null,
-                    }
-                    return acc
-                },
-                {} as {
-                    [key: string]: {
-                        chatHistory: [string, string][]
-                        lastFeedback: GradeResponse | null
-                    }
-                }
-            )
-
-            set({
-                recallTest: {
-                    isActive: false,
-                    bookId,
-                    questions,
-                    currentStep: 0,
-                    flashcards: [],
-                    sessionId,
-                    recallEndPage,
-                    questionStates,
-                    isSubmitted: false,
-                    selectedIndex: null,
-                    showFinalReview: false,
-                    highlights: [],
-                },
-            })
-        },
-
-        updateRecallTest: (update) =>
-            set((state) => {
-                if (state.recallTest) {
-                    console.log(
-                        "Updating recall test with:",
-                        JSON.stringify(update, null, 2)
-                    )
-                    console.log(
-                        "Current state before update:",
-                        JSON.stringify(
-                            {
-                                currentStep: state.recallTest.currentStep,
-                                questionCount:
-                                    state.recallTest.questions.length,
-                                currentQuestionId:
-                                    state.recallTest.questions[
-                                        state.recallTest.currentStep
-                                    ]?.id,
-                            },
-                            null,
-                            2
-                        )
-                    )
-
-                    Object.assign(state.recallTest, update)
-
-                    // Log the state after update
-                    const updatedStep = state.recallTest.currentStep
-                    console.log(
-                        "State after update:",
-                        JSON.stringify(
-                            {
-                                currentStep: updatedStep,
-                                nextQuestionId:
-                                    state.recallTest.questions[updatedStep]?.id,
-                                questionStates: Object.keys(
-                                    state.recallTest.questionStates
-                                ),
-                            },
-                            null,
-                            2
-                        )
-                    )
-                }
-            }),
-
-        finishRecallTest: () => set({ recallTest: null }),
-
-        setRecallTestHighlights: (highlights) => {
-            const { recallTest } = get()
-            if (recallTest) {
-                set({
-                    recallTest: {
-                        ...recallTest,
-                        highlights,
-                    },
-                })
-            }
-        },
-
-        updateQuestionChatHistory: (
-            questionId: string,
-            history: [string, string][]
-        ) => {
-            console.log(
-                `Updating chat history for question ${questionId}:`,
-                JSON.stringify(history, null, 2)
-            )
-
-            // Don't update state immediately to avoid render-time updates
-            setTimeout(() => {
-                console.log(`Inside setTimeout for question ${questionId}`)
-                set((state) => {
-                    if (state.recallTest?.questionStates[questionId]) {
-                        console.log(
-                            `Setting chat history for question ${questionId}`
-                        )
-                        state.recallTest.questionStates[
-                            questionId
-                        ].chatHistory = history
-                        console.log(
-                            `Chat history updated for question ${questionId}`
-                        )
-                    } else {
-                        console.warn(
-                            `Question state not found for ${questionId}`
-                        )
-                    }
-                })
-            }, 0)
-        },
-
-        updateQuestionFeedback: (
-            questionId: string,
-            feedback: GradeResponse
-        ) => {
-            console.log(
-                `Updating feedback for question ${questionId}:`,
-                JSON.stringify(feedback, null, 2)
-            )
-            set((state) => {
-                if (state.recallTest?.questionStates[questionId]) {
-                    state.recallTest.questionStates[questionId].lastFeedback =
-                        feedback
-                    console.log(`Feedback updated for question ${questionId}`)
-                } else {
-                    console.warn(
-                        `Question state not found for feedback update on ${questionId}`
-                    )
-                }
-            })
-        },
-
-        updateMultipleChoiceState: (
-            questionId: string,
-            selectedIndex: number | null,
-            isSubmitted: boolean
-        ) =>
-            set((state) => {
-                if (state.recallTest?.questionStates[questionId]) {
-                    state.recallTest.questionStates[
-                        questionId
-                    ].mcSelectedIndex = selectedIndex
-                    state.recallTest.questionStates[questionId].mcIsSubmitted =
-                        isSubmitted
-                }
-            }),
 
         fetch: async (bookMeta) => {
             const bookId = bookMeta.id
@@ -548,17 +212,9 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                         await getFileFromSupabase(bookMeta.file_url)
 
                     if (!success || !data) {
-                        console.error(
-                            "Failed to fetch book from storage:",
-                            bookId,
-                            error,
-                            message
-                        )
+                        console.error("Failed to fetch book from storage:", bookId, error, message)
                         set({ isLoading: false })
-                        toast.error(
-                            "Failed to load book",
-                            "Could not retrieve the book from cloud storage."
-                        )
+                        toast.error("Failed to load book - Could not retrieve the book from cloud storage.")
                         return
                     }
 
@@ -578,11 +234,8 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                     set({ isLoading: false })
                     toast.error(
                         isLocalBook
-                            ? "Local book not found"
-                            : "Book not available",
-                        isLocalBook
-                            ? "This book is stored locally but could not be found in your browser storage."
-                            : "The book could not be loaded. Please try again later."
+                            ? "Local book not found - This book is stored locally but could not be found in your browser storage."
+                            : "Book not available - The book could not be loaded. Please try again later."
                     )
                     return
                 }
@@ -644,58 +297,15 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
             } catch (error) {
                 console.error("Error loading book:", error)
                 set({ isLoading: false })
-                // toast.error(
-                //     "Error loading book",
-                //     "An unexpected error occurred while loading the book."
-                // )
+                toast.error("Error loading book - An unexpected error occurred while loading the book.")
             }
         },
-
-        // Command history actions - replaced with no-op stubs for compatibility
-        // These will be fully removed in a future update
-        addToCommandHistory: (userMessage: string, aiResponse: string) => {
-            console.warn(
-                "addToCommandHistory is deprecated, use chat store instead"
-            )
-        },
-        clearCommandHistory: () => {
-            console.warn(
-                "clearCommandHistory is deprecated, use chat store instead"
-            )
-        },
-        getCommandHistory: () => {
-            console.warn(
-                "getCommandHistory is deprecated, use chat store instead"
-            )
-            return []
-        },
-
-        enableAreaSelection: () => set({ isAreaSelectionActive: true }),
-        disableAreaSelection: () => set({ isAreaSelectionActive: false }),
 
         setPageTextMap: (pageMap) => set({ pageTextMap: pageMap }),
         getPageText: (pageNumber) => get().pageTextMap[pageNumber] || "",
 
-        setLastRecallPageInBookMeta: (page: number) => {
-            set((state) => {
-                if (state.bookMeta) {
-                    state.bookMeta.last_recall_page = page
-                    console.log(
-                        `Local bookMeta updated: last_recall_page set to ${page}`
-                    )
-                } else {
-                    // This case should ideally not happen if called correctly
-                    console.warn(
-                        "Attempted to set last_recall_page in store, but bookMeta is null."
-                    )
-                }
-            })
-        },
-
-        // Add setActiveTab implementation
         setActiveTab: (tab) => set({ activeTab: tab }),
-
-        // Add setAIDialogOpen implementation
-        setAIDialogOpen: (isOpen: boolean) => set({ isAIDialogOpen: isOpen }),
+        enableAreaSelection: () => set({ isAreaSelectionActive: true }),
+        disableAreaSelection: () => set({ isAreaSelectionActive: false }),
     }))
 )

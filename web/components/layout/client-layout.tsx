@@ -6,36 +6,63 @@ import {
     SidebarLeftProvider,
     SidebarRightProvider,
 } from "@/components/ui/sidebar"
-import { Toaster } from "@/components/ui/sonner"
-import { FlashcardSessionProvider } from "@/providers/flashcard-session"
-import { HistoryProvider } from "@/providers/history"
-import { trpc } from "@/utils/trpc"
-import { TourProvider } from "@/components/tour"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { Toaster } from "react-hot-toast"
 
 interface ClientLayoutProps {
     children: React.ReactNode
 }
 
+// Create a client
+const queryClient = new QueryClient({
+    defaultOptions: {
+        queries: {
+            staleTime: 5 * 60 * 1000, // 5 minutes
+            retry: 1,
+        },
+    },
+})
+
 // Client component for providers
 function ClientLayout({ children }: ClientLayoutProps) {
     return (
-        <PostHogProvider>
-            <ThemeProvider>
-                <TourProvider>
+        <QueryClientProvider client={queryClient}>
+            <PostHogProvider>
+                <ThemeProvider>
                     <SidebarLeftProvider>
                         <SidebarRightProvider>
-                            <HistoryProvider>
-                                <FlashcardSessionProvider>
-                                    {children}
-                                </FlashcardSessionProvider>
-                            </HistoryProvider>
+                            {children}
                         </SidebarRightProvider>
                     </SidebarLeftProvider>
-                </TourProvider>
-            </ThemeProvider>
-            <Toaster />
-        </PostHogProvider>
+                </ThemeProvider>
+                <Toaster
+                    position="top-center"
+                    toastOptions={{
+                        duration: 4000,
+                        style: {
+                            background: 'var(--background)',
+                            color: 'var(--foreground)',
+                            border: '1px solid var(--border)',
+                        },
+                        success: {
+                            duration: 2000,
+                            iconTheme: {
+                                primary: 'var(--success)',
+                                secondary: 'var(--background)',
+                            },
+                        },
+                        error: {
+                            duration: 4000,
+                            iconTheme: {
+                                primary: 'var(--destructive)',
+                                secondary: 'var(--background)',
+                            },
+                        },
+                    }}
+                />
+            </PostHogProvider>
+        </QueryClientProvider>
     )
 }
 
-export default trpc.withTRPC(ClientLayout) as typeof ClientLayout
+export default ClientLayout

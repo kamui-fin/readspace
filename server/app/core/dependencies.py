@@ -1,5 +1,5 @@
 import uuid
-from typing import Annotated, AsyncGenerator
+from typing import Annotated
 
 from fastapi import Depends, Request
 from supabase import Client
@@ -19,16 +19,20 @@ SupabaseClient = Annotated[Client, Depends(get_supabase_client)]
 StorageClient = Annotated[SupabaseStorageClient, Depends(get_supabase_client)]
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
+
 async def get_book_repository(db: DatabaseSession) -> BookRepository:
     """Get book repository instance."""
     return BookRepository()
+
 
 async def get_highlight_repository(db: DatabaseSession) -> HighlightRepository:
     """Get highlight repository instance."""
     return HighlightRepository()
 
+
 BookRepo = Annotated[BookRepository, Depends(get_book_repository)]
 HighlightRepo = Annotated[HighlightRepository, Depends(get_highlight_repository)]
+
 
 async def get_request_id(request: Request) -> str:
     """Get request ID from state or generate new one."""

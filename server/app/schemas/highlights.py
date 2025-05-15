@@ -4,8 +4,10 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+
 class HighlightBase(BaseModel):
     """Base schema for highlight data."""
+
     book_id: UUID
     text: str
     color: Optional[str] = None
@@ -17,12 +19,16 @@ class HighlightBase(BaseModel):
     epub_est_page: Optional[int] = None
     pdf_rect_position: Optional[Dict[str, Any]] = None
 
+
 class HighlightCreate(HighlightBase):
     """Schema for creating a new highlight."""
+
     pass
+
 
 class HighlightUpdate(BaseModel):
     """Schema for updating a highlight."""
+
     text: Optional[str] = None
     color: Optional[str] = None
     note: Optional[str] = None
@@ -33,11 +39,13 @@ class HighlightUpdate(BaseModel):
     epub_est_page: Optional[int] = None
     pdf_rect_position: Optional[Dict[str, Any]] = None
 
+
 class HighlightResponse(HighlightBase):
     """Schema for highlight response."""
+
     id: UUID
     created_at: datetime
     updated_at: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

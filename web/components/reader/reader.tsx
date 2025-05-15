@@ -5,7 +5,6 @@ import ReadingProgressBar from "@/components/reader/progress-bar"
 import ReaderContent from "@/components/reader/reader-content"
 import { ReaderNavActions } from "@/components/reader/reader-nav-actions"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { READER_TOUR_STEP_IDS } from "@/lib/tour-constants"
 import { useReaderStore } from "@/stores/reader"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -14,11 +13,6 @@ import useChapterNavigation from "../../hooks/reader/use-chapter-navigation"
 import useAutoBookmark from "../../hooks/reader/useAutoBookmark"
 import { insertCharCountAttributes } from "../../lib/reader/reader-utils"
 import { BookMeta, EpubHighlight } from "../../types/library"
-import { ActiveRecallModal } from "../recall/active-recall-modal"
-import AIResponsePanel from "./ai-response-panel"
-import { FlashcardDialog } from "./flashcard-dialog"
-import HighlightPopover from "./highlight-popover"
-import { ReaderOnboarding } from "./reader-onboarding"
 // Custom hook for scroll direction detection
 const useScrollDirection = (
     containerRef: React.RefObject<HTMLElement | null>
@@ -78,7 +72,9 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
 
     useEffect(() => {
         fetch(bookMeta).then(() => {
-            restorePoint(bookMeta.epub_progress)
+            if (bookMeta.epub_progress) {
+                restorePoint(bookMeta.epub_progress)
+            }
         })
     }, [bookMeta])
 
@@ -143,50 +139,34 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
 
     return (
         <>
-            <ReadingProgressBar id={READER_TOUR_STEP_IDS.READER_PROGRESS} />
+            <ReadingProgressBar />
             <Header
                 classAttributes={`sticky top-0 z-2 bg-background border-b shadow-sm transition-all duration-200 ${headerVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"}`}
                 breadcrumbItems={
                     isMobile
                         ? [
-                              {
-                                  href: `/library/${bookId}`,
-                                  label: bookMeta.title.slice(0, 15) + "...",
-                              },
-                          ]
+                            {
+                                href: `/library/${bookId}`,
+                                label: bookMeta.title.slice(0, 15) + "...",
+                            },
+                        ]
                         : [
-                              { href: "/library", label: "Home" },
-                              {
-                                  href: `/library/${bookId}`,
-                                  label:
-                                      bookMeta.title.length > 30
-                                          ? `${bookMeta.title.substring(0, 30)}...`
-                                          : bookMeta.title,
-                              },
-                          ]
+                            { href: "/library", label: "Home" },
+                            {
+                                href: `/library/${bookId}`,
+                                label:
+                                    bookMeta.title.length > 30
+                                        ? `${bookMeta.title.substring(0, 30)}...`
+                                        : bookMeta.title,
+                            },
+                        ]
                 }
             >
-                <div id={READER_TOUR_STEP_IDS.READER_NAVIGATION}>
-                    <ReaderNavActions />
-                </div>
-                <div
-                    id={READER_TOUR_STEP_IDS.READER_SETTINGS}
-                    className="hidden md:block"
-                >
-                    {/* Settings will be accessed through ReaderNavActions */}
-                </div>
+                <ReaderNavActions />
             </Header>
-            <div ref={readerRef} id={READER_TOUR_STEP_IDS.READER_CONTENT}>
+            <div ref={readerRef}>
                 <ReaderContent />
             </div>
-            <div id={READER_TOUR_STEP_IDS.READER_HIGHLIGHT}>
-                <HighlightPopover savedHighlights={savedHighlights} />
-            </div>
-            <div id={READER_TOUR_STEP_IDS.READER_AI}>
-                <AIResponsePanel />
-            </div>
-            <ActiveRecallModal />
-            <FlashcardDialog />
             {/* Chapter Navigation Buttons */}
             <div className="flex justify-center items-center max-w-7xl mx-auto py-8 px-4">
                 <div className="bg-gray-50 rounded-lg border border-gray-100 flex items-center p-1">
@@ -211,7 +191,6 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                     </button>
                 </div>
             </div>
-            <ReaderOnboarding />
         </>
     )
 }

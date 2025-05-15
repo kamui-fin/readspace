@@ -44,7 +44,6 @@ import {
 import { MouseSelection } from "./mouse-selection"
 import { TipContainer } from "./tip-container"
 
-import { updateBookLanguage } from "@/app/(protected)/library/[id]/actions"
 import Header from "@/components/navigation/header"
 import ReadingProgressBar from "@/components/reader/progress-bar"
 import { Button } from "@/components/ui/button"
@@ -117,13 +116,13 @@ const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
 let EventBus: typeof TEventBus,
     PDFLinkService: typeof TPDFLinkService,
     PDFViewer: typeof TPDFViewer
-;(async () => {
-    // Due to breaking changes in PDF.js 4.0.189. See issue #17228
-    const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
-    EventBus = pdfjs.EventBus
-    PDFLinkService = pdfjs.PDFLinkService
-    PDFViewer = pdfjs.PDFViewer
-})()
+    ; (async () => {
+        // Due to breaking changes in PDF.js 4.0.189. See issue #17228
+        const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
+        EventBus = pdfjs.EventBus
+        PDFLinkService = pdfjs.PDFLinkService
+        PDFViewer = pdfjs.PDFViewer
+    })()
 
 const SCROLL_MARGIN = 10
 const DEFAULT_SCALE_VALUE = 0.1
@@ -411,7 +410,6 @@ export const PdfHighlighter = ({
     )
     const setTotalPages = useReaderStore((state) => state.setTotalPages)
     const goToPage = useReaderStore((state) => state.goToPage)
-    const activeAIAction = useReaderStore((state) => state.activeAIAction)
     const isAreaSelectionActive = useReaderStore(
         (state) => state.isAreaSelectionActive
     )
@@ -420,14 +418,6 @@ export const PdfHighlighter = ({
     // Language state
     const bookLanguage = bookMeta?.language || "English (en)"
     const [language, setLanguage] = useState(bookLanguage)
-
-    // Handle language change
-    const handleLanguageChange = async (value: string) => {
-        setLanguage(value)
-        if (bookId) {
-            await updateBookLanguage(bookId, value)
-        }
-    }
 
     // State
     const [tip, setTip] = useState<Tip | null>(null)
@@ -447,7 +437,7 @@ export const PdfHighlighter = ({
     const scrolledToHighlightIdRef = useRef<string | null>(null)
     const isAreaSelectionInProgressRef = useRef(false)
     const isEditInProgressRef = useRef(false)
-    const updateTipPositionRef = useRef(() => {})
+    const updateTipPositionRef = useRef(() => { })
 
     const eventBusRef = useRef<InstanceType<typeof EventBus>>(new EventBus())
     const linkServiceRef = useRef<InstanceType<typeof PDFLinkService>>(
@@ -511,7 +501,7 @@ export const PdfHighlighter = ({
 
             // Apply initial zoom if provided
             if (pdfScaleValue && viewerRef.current) {
-                ;`Setting initial zoom to ${pdfScaleValue} during initialization`
+                ; `Setting initial zoom to ${pdfScaleValue} during initialization`
                 viewerRef.current.currentScaleValue = pdfScaleValue.toString()
             }
         }, 100)
@@ -960,15 +950,15 @@ export const PdfHighlighter = ({
                             isMobile
                                 ? []
                                 : [
-                                      { href: "/library", label: "Home" },
-                                      {
-                                          href: `/library/${bookId}`,
-                                          label:
-                                              bookTitle.length > 30
-                                                  ? `${bookTitle.substring(0, 30)}...`
-                                                  : bookTitle,
-                                      },
-                                  ]
+                                    { href: "/library", label: "Home" },
+                                    {
+                                        href: `/library/${bookId}`,
+                                        label:
+                                            bookTitle.length > 30
+                                                ? `${bookTitle.substring(0, 30)}...`
+                                                : bookTitle,
+                                    },
+                                ]
                         }
                     >
                         <div className="flex items-center gap-2">
@@ -976,10 +966,6 @@ export const PdfHighlighter = ({
                                 onZoomChange={(zoom) => handleScaleValue(zoom)}
                             />
                             <PageNumberInput onPageChange={goToPage} />
-                            <LanguagePopover
-                                language={language}
-                                onLanguageChange={handleLanguageChange}
-                            />
                             <SidebarRightTrigger />
                         </div>
                     </Header>
@@ -1013,8 +999,8 @@ export const PdfHighlighter = ({
                             <MouseSelection
                                 viewer={viewerRef.current!}
                                 onChange={(isVisible) =>
-                                    (isAreaSelectionInProgressRef.current =
-                                        isVisible)
+                                (isAreaSelectionInProgressRef.current =
+                                    isVisible)
                                 }
                                 enableAreaSelection={enableAreaSelection}
                                 style={mouseSelectionStyle}

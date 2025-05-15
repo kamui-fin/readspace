@@ -1,8 +1,8 @@
 import { AreaHighlight, TextHighlight } from "react-pdf-highlighter-extended"
 
 import HighlightedPopover from "@/components/reader/highlighted-popover"
+import { PdfHighlight } from "@/types/library"
 import { Tip } from "react-pdf-highlighter-extended"
-import { PdfHighlight } from "../../../../../types/library"
 import { useHighlightContainerContext } from "./contexts/HighlightContext"
 import { usePdfHighlighterContext } from "./contexts/PdfHighlighterContext"
 import { MonitoredHighlightContainer } from "./monitored-highlight-container"

@@ -1,8 +1,9 @@
+import { ApiClient } from "@/lib/api/client"
 import { useReaderStore } from "@/stores/reader"
+import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { useShallow } from "zustand/react/shallow"
-import { saveEpubProgress } from "../../app/(protected)/library/[id]/actions"
 import { saveLocalEpubProgress } from "../../lib/reader/bookstore"
 import {
     generateElementSelector,
@@ -36,6 +37,14 @@ export default function useAutoBookmark() {
             getCurrentChapterIdx: state.getCurrentChapterIdx,
         }))
     )
+
+    const updateProgressMutation = useMutation({
+        mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
+            ApiClient.put(`/books/${bookId}/progress`, { epub_progress: progress }),
+        onError: (err: Error) => {
+            console.error("Failed to save remote progress:", err)
+        }
+    })
 
     const debouncedOnScroll = useDebouncedCallback(() => {
         const elm = getTopVisibleElement()
@@ -81,10 +90,8 @@ export default function useAutoBookmark() {
                     console.error("Failed to save local progress:", err)
                 )
             } else {
-                // Cloud book - use server action
-                saveEpubProgress(progressData, bookMeta.id).catch((err) =>
-                    console.error("Failed to save remote progress:", err)
-                )
+                // Cloud book - use React Query mutation
+                updateProgressMutation.mutate({ bookId: bookMeta.id, progress: progressData })
             }
         }
     }, 250)
@@ -139,10 +146,8 @@ export default function useAutoBookmark() {
                     console.error("Failed to save local progress:", err)
                 )
             } else {
-                // Cloud book - use server action
-                saveEpubProgress(progressData, bookMeta.id).catch((err) =>
-                    console.error("Failed to save remote progress:", err)
-                )
+                // Cloud book - use React Query mutation
+                updateProgressMutation.mutate({ bookId: bookMeta.id, progress: progressData })
             }
 
             setProgressPercentage(0)

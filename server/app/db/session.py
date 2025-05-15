@@ -14,7 +14,7 @@ engine = create_async_engine(
     future=True,
     pool_pre_ping=True,
     pool_size=5,
-    max_overflow=10
+    max_overflow=10,
 )
 
 # Create async session factory
@@ -37,4 +37,4 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.rollback()
             raise
         finally:
-            await session.close() 
+            await session.close()

@@ -1,15 +1,11 @@
-import { toast } from "@/components/ui/sonner"
 import { Json } from "@/database.types"
+import { ApiClient } from "@/lib/api/client"
 import { deserializeRange, serializeRange } from "@/lib/reader/range-serialize"
 import { getTocItemForSection } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
-import { getFrontendLimit } from "@/utils/limits"
+import { useMutation } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
-import {
-    addHighlight,
-    deleteHighlightsByText,
-} from "../../app/(protected)/library/[id]/actions"
 import { highlightRange } from "../../lib/reader/highlight-range"
 import { EpubHighlight, Highlight, RangeRefElement } from "../../types/library"
 import { useCurrentUser } from "../use-current-user"
@@ -33,14 +29,10 @@ export default function useHighlight(savedHighlights: Highlight[]) {
         epubDocRef,
         epubBook,
         getPageProgress,
-        setRecallTestHighlights,
-        currentLocation,
-        recallTest,
     } = useReaderStore(
         useShallow((state) => ({
             bookMeta: state.bookMeta,
             chapterHTML: state.chapterHTML,
-            currentLocation: state.currentLocation,
             highlights: state.highlights,
             setHighlights: state.setHighlights,
             insertHighlight: state.insertHighlight,
@@ -48,10 +40,18 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             epubBook: state.book,
             getPageProgress: state.getPageProgress,
             epubDocRef: state.epubDocRef,
-            recallTest: state.recallTest,
-            setRecallTestHighlights: state.setRecallTestHighlights,
         }))
     )
+
+    const addHighlightMutation = useMutation({
+        mutationFn: (data: any) => ApiClient.post("/highlights", data),
+        onError: (err: Error) => console.error("Failed to add highlight:", err)
+    })
+
+    const deleteHighlightMutation = useMutation({
+        mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
+        onError: (err: Error) => console.error("Failed to delete highlight:", err)
+    })
 
     const onSelectStart = () => {
         selectionRef.current = null
@@ -86,17 +86,6 @@ export default function useHighlight(savedHighlights: Highlight[]) {
 
         const selectionText = selection.toString()
         if (!selectionText.trim()) return // Ignore empty/whitespace selection
-
-        // --- Max Highlight Length Check ---
-        const highlightLimit = getFrontendLimit(userRole, "maxHighlightLength")
-        if (selectionText.length > highlightLimit) {
-            toast.error(`Highlight cannot exceed ${highlightLimit} characters.`)
-            window.getSelection()?.removeAllRanges()
-            selectionRef.current = null
-            setIsPopupOpen(false) // Close popup if open
-            return // Prevent highlight creation
-        }
-        // --- End Max Highlight Length Check ---
 
         const range = selection.getRangeAt(0)
         if (!epubDocRef?.contains(range.commonAncestorContainer)) return
@@ -139,7 +128,7 @@ export default function useHighlight(savedHighlights: Highlight[]) {
         selectionRef.current = null
         setIsPopupOpen(false)
 
-        addHighlight({
+        addHighlightMutation.mutate({
             book_id: bookMeta.id,
             color,
             text: selectionText,
@@ -149,14 +138,6 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             epub_chapter_href: section.href,
             epub_chapter_title: chapterTitle?.label.trim(),
         })
-
-        // Add highlight to active recall session if one exists
-        if (recallTest && !recallTest.isActive && newHighlight.text) {
-            setRecallTestHighlights([
-                ...recallTest.highlights,
-                newHighlight.text,
-            ])
-        }
     }
 
     const handleRemoveHighlight = () => {
@@ -173,7 +154,7 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             )
         )
 
-        deleteHighlightsByText(highlightedText)
+        deleteHighlightMutation.mutate(highlightedText)
         setIsPopupOpen(false)
         rangeRef.current = null
     }

@@ -8,17 +8,11 @@ import {
 } from "@/components/ui/tooltip"
 import { useReaderStore } from "@/stores/reader"
 import { useEffect, useRef, useState } from "react"
-import {
-    addAnnotation,
-    getUserRoleFromId,
-} from "../../app/(protected)/library/[id]/actions"
 import useHighlight from "../../hooks/reader/use-highlight"
 import { EpubHighlight, Highlight } from "../../types/library"
 
-import { useAIAction } from "@/hooks/use-ai-action"
-import { UserRole } from "@/lib/db/schema"
-import { createClient } from "@/lib/supabase/client"
-import { User } from "@supabase/supabase-js"
+import { ApiClient } from "@/lib/api/client"
+import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
 import GeneralPopover from "./general-popover"
 import HighlightColorOptions from "./highlight-options"
@@ -46,41 +40,6 @@ export const CustomTooltip = ({
     )
 }
 
-export const useUserRole = () => {
-    const [user, setUser] = useState<User | null>(null)
-    const [userRole, setUserRole] = useState<UserRole | undefined>()
-    const [userAvatarUrl, setUserAvatarUrl] = useState<string | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<Error | null>(null)
-
-    useEffect(() => {
-        const fetchUserRole = async () => {
-            try {
-                const supabase = createClient()
-                const {
-                    data: { user },
-                } = await supabase.auth.getUser()
-
-                const role = await getUserRoleFromId(user?.id)
-                setUser(user)
-                setUserRole(role)
-            } catch (err) {
-                setError(
-                    err instanceof Error
-                        ? err
-                        : new Error("Failed to fetch user role")
-                )
-            } finally {
-                setIsLoading(false)
-            }
-        }
-
-        fetchUserRole()
-    }, [])
-
-    return { userRole, user, isLoading, error }
-}
-
 export default function HighlightPopover({
     savedHighlights,
 }: {
@@ -93,23 +52,13 @@ export default function HighlightPopover({
         getPageProgress,
         highlights,
         currentPage,
-        setActiveAIAction,
-        abortAndResetController,
     } = useReaderStore(
         useShallow((state) => ({
             getPageProgress: state.getPageProgress,
             highlights: state.highlights,
             currentPage: state.currentPage,
-            setActiveAIAction: state.setActiveAIAction,
-            abortAndResetController: state.abortAndResetController,
         }))
     )
-
-    // Get the user role
-    const { userRole } = useUserRole()
-
-    // Use the AI action hook
-    const { handleAIAction } = useAIAction()
 
     const {
         isPopupOpen,
@@ -120,6 +69,12 @@ export default function HighlightPopover({
         rangeRef,
     } = useHighlight(savedHighlights)
 
+    const addAnnotationMutation = useMutation({
+        mutationFn: ({ note, text }: { note: string; text: string }) =>
+            ApiClient.put(`/highlights/${text}/note`, { note }),
+        onError: (err: Error) => console.error("Failed to add annotation:", err)
+    })
+
     // Add click-outside and blur handlers
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -127,9 +82,6 @@ export default function HighlightPopover({
                 containerRef.current &&
                 !containerRef.current.contains(event.target as Node)
             ) {
-                // Cancel any ongoing requests when popover closes
-                useReaderStore.getState().abortAndResetController()
-
                 setIsPopupOpen(false)
                 setShowNoteForm(false)
             }
@@ -140,9 +92,6 @@ export default function HighlightPopover({
                 containerRef.current &&
                 !containerRef.current.contains(event.target as Node)
             ) {
-                // Cancel any ongoing requests when popover loses focus
-                useReaderStore.getState().abortAndResetController()
-
                 setIsPopupOpen(false)
                 setShowNoteForm(false)
             }
@@ -169,7 +118,7 @@ export default function HighlightPopover({
 
     const handleSubmitNote = (note: string) => {
         if (!highlightedText) return
-        addAnnotation(note, highlightedText)
+        addAnnotationMutation.mutate({ note, text: highlightedText })
 
         const found = highlights.find(
             (h) => (h.highlight as EpubHighlight).text === highlightedText
@@ -178,22 +127,6 @@ export default function HighlightPopover({
         setIsPopupOpen(false)
     }
 
-    const handleAIActionWrapper = async (actionType: string) => {
-        const selection = window.getSelection()
-        const selectedText = selection?.toString().trim() || ""
-
-        setIsPopupOpen(false)
-        abortAndResetController?.()
-
-        // Use the hook's handleAIAction method
-        await handleAIAction(
-            actionType,
-            selectedText,
-            userRole || "basic",
-            currentPage,
-            undefined // no imageUrl for highlight-popover
-        )
-    }
 
     if (!rangeRef.current || !isPopupOpen) {
         return null
@@ -250,7 +183,7 @@ export default function HighlightPopover({
                 />
             ) : (
                 <div className="flex flex-col gap-3 popover-animation bg-background/0">
-                    <GeneralPopover handleAIAction={handleAIActionWrapper} />
+                    <GeneralPopover />
                     <div id="highlight-options" className="hidden mt-1">
                         <HighlightColorOptions
                             handleHighlight={handleHighlight}

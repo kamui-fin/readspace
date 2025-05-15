@@ -2,10 +2,12 @@ from datetime import datetime
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
+
 
 class BookBase(BaseModel):
     """Base schema for book data."""
+
     title: str
     author: Optional[str] = None
     description: Optional[str] = None
@@ -19,12 +21,16 @@ class BookBase(BaseModel):
     pdf_page: Optional[int] = None
     last_recall_page: Optional[int] = None
 
+
 class BookCreate(BookBase):
     """Schema for creating a new book."""
+
     user_id: UUID
+
 
 class BookUpdate(BaseModel):
     """Schema for updating a book."""
+
     title: Optional[str] = None
     author: Optional[str] = None
     description: Optional[str] = None
@@ -38,18 +44,22 @@ class BookUpdate(BaseModel):
     pdf_page: Optional[int] = None
     last_recall_page: Optional[int] = None
 
+
 class BookProgress(BaseModel):
     """Schema for updating book progress."""
+
     current_page: Optional[int] = None
     epub_progress: Optional[dict] = None
     pdf_page: Optional[int] = None
 
+
 class BookResponse(BookBase):
     """Schema for book response."""
+
     id: UUID
     user_id: UUID
     date_added: datetime
     last_modified: datetime
 
     class Config:
-        from_attributes = True 
+        from_attributes = True

@@ -67,10 +67,24 @@ export interface PdfHighlight extends GhostHighlight {
 
 export type Highlight = EpubHighlight | PdfHighlight
 
-// Map Supabase book table to BookMeta type
-export type BookMeta = Tables<"books"> & {
-    // Type information for epub_progress
-    epub_progress: EpubLocation
-    // Add proper typing for EPUB-specific fields
-    epub_chapter_char_counts?: number[]
+// Map Supabase book_metadata table to BookMeta type
+export type BookMeta = Tables<"book_metadata"> & {
+    type: "epub" | "pdf"
+    epub_progress?: EpubLocation | null
+    pdf_page?: number | null
+    pdf_toc?: any | null
+    epub_chapter_char_counts?: number[] | null
+    language?: string | null
+    num_pages?: number | null
+    date_added?: string | null
 }
+
+export type BookCreate = Omit<BookMeta, "id" | "created_at" | "updated_at">
+
+export type BookFormat = "epub" | "pdf"
+
+export type HighlightLocation = Tables<"highlight_locations">
+
+export type UserBookLibrary = Tables<"user_book_library">
+
+export type Profile = Tables<"profiles">

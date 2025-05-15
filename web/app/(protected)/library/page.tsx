@@ -1,8 +1,7 @@
-import Header from "@/components/navigation/header"
-
 import { LibraryCatalog } from "@/components/library/library-catalog"
 import UploadBookDialog from "@/components/library/upload-book"
-import { getBooks } from "@/lib/db/supabase"
+import Header from "@/components/navigation/header"
+import { ApiClient } from "@/lib/api/client"
 import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import { BookMeta } from "../../../types/library"
@@ -19,11 +18,11 @@ export default async function Library() {
     } = await supabase.auth.getUser()
 
     if (!user) {
-        ;("no user for library, redirecting to login")
         redirect("/login")
     }
 
-    const books = await getBooks(user.id)
+    // Fetch books from FastAPI
+    const books = await ApiClient.get<BookMeta[]>("/books")
 
     return (
         <div className="flex flex-col min-h-screen">
@@ -36,7 +35,7 @@ export default async function Library() {
                         <h1 className="text-3xl font-bold">My Library</h1>
                         <UploadBookDialog />
                     </div>
-                    <LibraryCatalog books={books as BookMeta[]} />
+                    <LibraryCatalog books={books} />
                 </div>
             </main>
         </div>
