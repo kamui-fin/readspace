@@ -13,22 +13,51 @@ export default function SettingsScreen() {
 		<View className="flex-1 p-4">
 			<Text className="text-2xl font-bold mb-6">Settings</Text>
 
-			<View className="flex-row justify-between items-center py-3 border-b border-gray-200">
-				<Text className="text-base">Notifications</Text>
-				<Switch
-					value={notificationsEnabled}
-					onValueChange={setNotificationsEnabled}
-				/>
-			</View>
+			<View className="space-y-4">
+				<Button
+					variant={notificationsEnabled ? "default" : "outline"}
+					className="flex-row justify-between py-3"
+					onPress={() => setNotificationsEnabled(!notificationsEnabled)}
+				>
+					<Text className={notificationsEnabled ? "text-white" : "text-black"}>
+						Notifications
+					</Text>
+					<TabBarIcon
+						name={notificationsEnabled ? "lucide:bell" : "lucide:bell-off"}
+						color={notificationsEnabled ? "#fff" : "#000"}
+						size={18}
+					/>
+				</Button>
 
-			<View className="flex-row justify-between items-center py-3 border-b border-gray-200">
-				<Text className="text-base">Dark Mode</Text>
-				<Switch value={darkModeEnabled} onValueChange={setDarkModeEnabled} />
-			</View>
+				<Button
+					variant={darkModeEnabled ? "default" : "outline"}
+					className="flex-row justify-between py-3"
+					onPress={() => setDarkModeEnabled(!darkModeEnabled)}
+				>
+					<Text className={darkModeEnabled ? "text-white" : "text-black"}>
+						Dark Mode
+					</Text>
+					<TabBarIcon
+						name={darkModeEnabled ? "lucide:moon" : "lucide:sun"}
+						color={darkModeEnabled ? "#fff" : "#000"}
+						size={18}
+					/>
+				</Button>
 
-			<View className="flex-row justify-between items-center py-3 border-b border-gray-200">
-				<Text className="text-base">Background Sync</Text>
-				<Switch value={syncEnabled} onValueChange={setSyncEnabled} />
+				<Button
+					variant={syncEnabled ? "default" : "outline"}
+					className="flex-row justify-between py-3"
+					onPress={() => setSyncEnabled(!syncEnabled)}
+				>
+					<Text className={syncEnabled ? "text-white" : "text-black"}>
+						Background Sync
+					</Text>
+					<TabBarIcon
+						name={syncEnabled ? "lucide:refresh-cw" : "lucide:refresh-ccw"}
+						color={syncEnabled ? "#fff" : "#000"}
+						size={18}
+					/>
+				</Button>
 			</View>
 
 			<View className="mt-auto items-center py-5">
