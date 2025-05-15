@@ -136,29 +136,3 @@ class SupabaseStorageClient:
         except Exception as e:
             logger.error("Storage deletion failed", error=str(e), path=object_name)
             raise StorageError(f"Failed to delete file: {str(e)}")
-
-
-def get_book_metadata(book_id: str) -> Optional[dict]:
-    """
-    Get metadata for a book from the database.
-
-    Args:
-        book_id: The ID of the book to look up
-
-    Returns:
-        Optional[dict]: The book metadata if found, None otherwise
-    """
-    try:
-        supabase = get_supabase_client()
-        book_data_response = (
-            supabase.table("books")
-            .select("*")
-            .eq("id", book_id)
-            .maybe_single()
-            .execute()
-        )
-        return book_data_response.data if book_data_response.data else None
-
-    except Exception as e:
-        logger.error("Failed to get book metadata", error=str(e), book_id=book_id)
-        raise StorageError(f"Failed to get book metadata: {str(e)}")

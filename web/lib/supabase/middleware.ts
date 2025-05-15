@@ -1,10 +1,8 @@
 import { env } from "@/env"
-import logger from "@/lib/logger"
 import { createServerClient } from "@supabase/ssr"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function updateSession(request: NextRequest) {
-    logger.info("[Middleware] Updating session for request:", request.url)
     let supabaseResponse = NextResponse.next({
         request,
     })
@@ -45,7 +43,6 @@ export async function updateSession(request: NextRequest) {
 
     if (
         !user &&
-        !request.nextUrl.pathname.startsWith("/api/metrics") &&
         !request.nextUrl.pathname.startsWith("/login") &&
         !request.nextUrl.pathname.startsWith("/signup") &&
         !request.nextUrl.pathname.startsWith("/auth")

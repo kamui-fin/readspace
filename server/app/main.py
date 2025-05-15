@@ -7,7 +7,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.core.config import get_settings
 from app.core.redis_client import close_redis_client, create_redis_client
 from app.middleware import setup_middleware
-from app.routers import router
+from app.routers import auth, books, highlights
 from app.utils.logging_config import setup_logging, setup_tracing
 
 settings = get_settings()
@@ -29,12 +29,13 @@ def create_app() -> FastAPI:
         description="API for ReadSpace application",
         version=settings.VERSION,
         lifespan=lifespan,
+        openapi_url=f"{settings.API_V1_STR}/openapi.json"
     )
 
     # Add CORS middleware
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.allowed_origins_list,
+        allow_origins=settings.CORS_ORIGINS,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -43,7 +44,9 @@ def create_app() -> FastAPI:
     )
 
     # Include routers
-    app.include_router(router, prefix=settings.API_V1_STR)
+    app.include_router(auth.router, prefix=settings.API_V1_STR)
+    app.include_router(books.router, prefix=settings.API_V1_STR)
+    app.include_router(highlights.router, prefix=settings.API_V1_STR)
 
     # Setup auth middleware with public paths
     public_paths = [

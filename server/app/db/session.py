@@ -7,11 +7,14 @@ from app.core.config import get_settings
 
 settings = get_settings()
 
-# Create async engine
+# Create async engine with Supabase PostgreSQL URL
 engine = create_async_engine(
-    settings.SUPABASE_DB_CONNECTION,
+    settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://"),
     echo=settings.ENVIRONMENT == "development",
     future=True,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10
 )
 
 # Create async session factory

@@ -1,14 +1,29 @@
 import { env } from "@/env" // Import validated env
 import { getSession } from "@/lib/auth/supabase"
 import { HTTPError } from "@/lib/errors"
-import { useUpgradeDialog } from "@/stores/upgrade-dialog"
 
 interface ApiClientOptions {
     method?: string
     body?: any
     headers?: HeadersInit
     signal?: AbortSignal
-    upgradeDialogMessage?: { title: string; description: string }
+}
+
+const API_URL = env.NEXT_PUBLIC_API_BASE_URL
+
+export class ApiError extends Error {
+    constructor(public status: number, message: string) {
+        super(message)
+        this.name = "ApiError"
+    }
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+    if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "An error occurred" }))
+        throw new ApiError(response.status, error.message || "An error occurred")
+    }
+    return response.json()
 }
 
 export class ApiClient {
@@ -37,83 +52,6 @@ export class ApiClient {
 
         return headers
     }
-
-    private static handleError(
-        error: any,
-        upgradeDialogMessage?: { title: string; description: string }
-    ) {
-        // Check for storage/usage limit errors
-        if (error instanceof HTTPError && error.status === 429) {
-            const openUpgradeDialog = useUpgradeDialog.getState().open
-
-            // Try to extract resource type from error response
-            let customMessage = upgradeDialogMessage
-
-            if (error.response) {
-                try {
-                    const errorData = JSON.parse(error.response)
-                    if (errorData.detail && errorData.detail.resource) {
-                        const resource = errorData.detail.resource
-
-                        // Customize message based on the resource type
-                        switch (resource) {
-                            case "image":
-                                customMessage = {
-                                    title: "Image action limit reached for today",
-                                    description:
-                                        "Upgrade to Pro for unlimited image analysis and AI interactions.",
-                                }
-                                break
-                            case "actions":
-                                customMessage = {
-                                    title: "Daily AI action limit reached for today",
-                                    description:
-                                        "Upgrade to Pro for unlimited AI actions and personalized learning.",
-                                }
-                                break
-                            case "storage":
-                                customMessage = {
-                                    title: "Storage limit reached",
-                                    description:
-                                        "Upgrade to Pro to upload more documents and access unlimited storage.",
-                                }
-                                break
-                            case "recall":
-                                customMessage = {
-                                    title: "Recall session limit reached for today",
-                                    description:
-                                        "Upgrade to Pro for unlimited recall sessions and enhanced learning.",
-                                }
-                                break
-                            case "rag":
-                                customMessage = {
-                                    title: "Deep processing limit exceeded",
-                                    description:
-                                        "Upgrade to Pro for unlimited processing and comprehensive knowledge retrieval.",
-                                }
-                                break
-                        }
-                    }
-                } catch (e) {
-                    // If parsing fails, use the default message
-                    console.error("Failed to parse error response:", e)
-                }
-            }
-
-            // Use setTimeout to ensure the upgrade dialog opens after any state cleanup
-            setTimeout(() => {
-                openUpgradeDialog(
-                    customMessage || {
-                        title: "Usage limit reached",
-                        description:
-                            "Upgrade to Pro for unlimited usage and enhanced features.",
-                    }
-                )
-            }, 0)
-        }
-        throw error
-    }
-
     static async fetch(endpoint: string, options: ApiClientOptions = {}) {
         try {
             const headers = await this.getAuthHeaders()
@@ -142,7 +80,7 @@ export class ApiClient {
             }
             return await response.text()
         } catch (error) {
-            return this.handleError(error, options.upgradeDialogMessage)
+            throw error
         }
     }
 
@@ -150,8 +88,7 @@ export class ApiClient {
     static async uploadFile(
         endpoint: string,
         formData: FormData,
-        signal?: AbortSignal,
-        upgradeDialogMessage?: { title: string; description: string }
+        signal?: AbortSignal
     ) {
         try {
             const headers = await this.getAuthHeadersForUpload()
@@ -172,48 +109,60 @@ export class ApiClient {
 
             return await response.json()
         } catch (error) {
-            return this.handleError(error, upgradeDialogMessage)
+            throw error
         }
     }
+}
 
-    // Streaming fetch utility for text/event-stream or chunked text
-    static async *fetchStream(
-        endpoint: string,
-        options: ApiClientOptions = {}
-    ): AsyncIterable<string> {
-        try {
-            const headers = await this.getAuthHeaders()
-            const response = await fetch(`${this.baseUrl}${endpoint}`, {
-                method: options.method || "GET",
-                headers: {
-                    ...headers,
-                    ...options.headers,
-                },
-                body: options.body ? JSON.stringify(options.body) : undefined,
-                credentials: "include",
-                mode: "cors",
-                signal: options.signal,
+export const api = {
+    async get<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+        const url = new URL(`${API_URL}${endpoint}`)
+        if (params) {
+            Object.entries(params).forEach(([key, value]) => {
+                url.searchParams.append(key, value)
             })
-
-            if (!response.ok) {
-                const responseText = await response.text()
-                throw new HTTPError(response.status, responseText)
-            }
-
-            // Stream the response body as text
-            const reader = response.body?.getReader()
-            if (!reader) return
-            const decoder = new TextDecoder()
-            let done = false
-            while (!done) {
-                const { value, done: doneReading } = await reader.read()
-                if (value) {
-                    yield decoder.decode(value, { stream: !doneReading })
-                }
-                done = doneReading
-            }
-        } catch (error) {
-            return this.handleError(error, options.upgradeDialogMessage)
         }
-    }
+        const response = await fetch(url.toString(), {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        return handleResponse<T>(response)
+    },
+
+    async post<T>(endpoint: string, data: unknown): Promise<T> {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        })
+        return handleResponse<T>(response)
+    },
+
+    async put<T>(endpoint: string, data: unknown): Promise<T> {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(data),
+        })
+        return handleResponse<T>(response)
+    },
+
+    async delete(endpoint: string): Promise<void> {
+        const response = await fetch(`${API_URL}${endpoint}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        })
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ message: "An error occurred" }))
+            throw new ApiError(response.status, error.message || "An error occurred")
+        }
+    },
 }

@@ -1,8 +1,6 @@
 "use server"
 
 import { TablesInsert, TablesUpdate } from "@/database.types"
-import { db } from "@/lib/db/drizzle"
-import { users } from "@/lib/db/schema"
 import { createClient } from "@/lib/supabase/server"
 import { eq } from "drizzle-orm"
 import { ScaledPosition } from "react-pdf-highlighter-extended"
