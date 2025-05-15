@@ -25,8 +25,9 @@ export function useThemeColor(
 
 	if (colorFromProps) {
 		return colorFromProps;
+	} else {
+		return COLORS[theme][colorName];
 	}
-	return COLORS[theme][colorName];
 }
 
 export function Text(props: TextProps) {

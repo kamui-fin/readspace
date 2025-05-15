@@ -1,12 +1,12 @@
-import type { ExpoConfig } from "expo/config";
+import { ExpoConfig } from "expo/config";
 
 const config: ExpoConfig = {
-	name: "readspace",
-	slug: "readspace",
+	name: "mobile",
+	slug: "mobile",
 	version: "1.0.0",
 	orientation: "portrait",
 	icon: "./assets/images/icon.png",
-	scheme: "readspace",
+	scheme: "mobile",
 	userInterfaceStyle: "automatic",
 	newArchEnabled: true,
 	splash: {
@@ -15,11 +15,9 @@ const config: ExpoConfig = {
 		backgroundColor: "#ffffff",
 	},
 	ios: {
-		supportsTablet: false,
-		bundleIdentifier: "com.readspace.app",
+		supportsTablet: true,
 	},
 	android: {
-		package: "com.readspace.app",
 		adaptiveIcon: {
 			foregroundImage: "./assets/images/adaptive-icon.png",
 			backgroundColor: "#ffffff",
@@ -35,11 +33,6 @@ const config: ExpoConfig = {
 	experiments: {
 		typedRoutes: true,
 		buildCacheProvider: "eas",
-	},
-	extra: {
-		eas: {
-			projectId: "c4419737-8659-4cef-9ca3-509396eaad44",
-		},
 	},
 };
 

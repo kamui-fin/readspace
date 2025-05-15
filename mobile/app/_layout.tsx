@@ -6,12 +6,13 @@ import {
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
 import { Drawer } from "expo-router/drawer";
-import { Stack } from "expo-router";
+import { Stack, Tabs } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@hooks/useColorScheme";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -55,15 +56,47 @@ function RootLayoutNav() {
 
 	return (
 		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-			<Drawer
-				screenOptions={{
-					drawerType: "slide",
-					drawerPosition: "left",
-					headerShown: false,
-				}}
-			>
-				<Drawer.Screen name="(tabs)" options={{ headerShown: false }} />
-			</Drawer>
+			<GestureHandlerRootView style={{ flex: 1 }}>
+				<Drawer
+					screenOptions={{
+						drawerType: "slide",
+						drawerPosition: "left",
+						headerShown: false,
+					}}
+				>
+					<Drawer.Screen
+						name="(tabs)"
+						options={{
+							drawerItemStyle: {
+								display: "none",
+							},
+						}}
+					/>
+					<Drawer.Screen
+						name="modal"
+						options={{
+							drawerItemStyle: {
+								display: "none",
+							},
+						}}
+					/>
+					<Drawer.Screen
+						name="+not-found"
+						options={{
+							drawerItemStyle: {
+								display: "none",
+							},
+						}}
+					/>
+					{/* <Drawer.Screen
+						name="settings"
+						options={{
+							drawerLabel: "Settings",
+							title: "Settings",
+						}}
+					/> */}
+				</Drawer>
+			</GestureHandlerRootView>
 		</ThemeProvider>
 	);
 }

@@ -5,7 +5,7 @@ import {
 	PressableProps,
 	ActivityIndicator,
 } from "react-native";
-import { cn } from "@/lib/utils";
+import { cn } from "@lib/utils";
 
 type Variant =
 	| "default"

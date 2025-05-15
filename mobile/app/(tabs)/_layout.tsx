@@ -41,7 +41,7 @@ export default function TabLayout() {
 										<TabBarIcon
 											name="lucide:info"
 											color={COLORS[colorScheme ?? "light"].foreground}
-											size={25}
+											size={28}
 										/>
 									</View>
 								)}
@@ -52,49 +52,6 @@ export default function TabLayout() {
 			/>
 			<Tabs.Screen
 				name="two"
-				options={{
-					tabBarLabel: () => null,
-					tabBarIcon: ({ color }) => (
-						<TabBarIcon
-							name="lucide:badge-check"
-							color={color}
-							size={28}
-							className="mb-1"
-						/>
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="three"
-				options={{
-					tabBarLabel: () => null,
-					tabBarIcon: ({ color }) => (
-						<TabBarIcon
-							name="lucide:badge-check"
-							color={color}
-							size={28}
-							className="mb-1"
-						/>
-					),
-					headerRight: () => (
-						<Link href="/modal" asChild>
-							<Pressable>
-								{({ pressed }) => (
-									<View style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}>
-										<TabBarIcon
-											name="lucide:info"
-											color={COLORS[colorScheme ?? "light"].foreground}
-											size={25}
-										/>
-									</View>
-								)}
-							</Pressable>
-						</Link>
-					),
-				}}
-			/>
-			<Tabs.Screen
-				name="four"
 				options={{
 					tabBarLabel: () => null,
 					tabBarIcon: ({ color }) => (
