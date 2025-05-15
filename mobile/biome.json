@@ -7,7 +7,28 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"ignore": []
+		"ignore": [
+			"node_modules/",
+			".expo/",
+			"dist/",
+			"web-build/",
+			"expo-env.d.ts",
+			".DS_Store",
+			"*.tsbuildinfo",
+			"*.orig.*",
+			"*.jks",
+			"*.p8",
+			"*.p12",
+			"*.key",
+			"*.mobileprovision",
+			".metro-health-check*",
+			"npm-debug.*",
+			"yarn-debug.*",
+			"yarn-error.*",
+			"*.pem",
+			".env*.local",
+			"components/__tests__/"
+		]
 	},
 	"formatter": {
 		"enabled": true,

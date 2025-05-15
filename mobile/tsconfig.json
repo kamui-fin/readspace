@@ -6,7 +6,8 @@
 			"@/*": ["./*"],
 			"@components/*": ["./components/*"],
 			"@constants/*": ["./constants/*"],
-			"@hooks/*": ["./hooks/*"]
+			"@hooks/*": ["./hooks/*"],
+			"@lib/*": ["./lib/*"]
 		}
 	},
 	"include": [

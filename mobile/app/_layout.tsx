@@ -5,12 +5,14 @@ import {
 	ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
+import { Drawer } from "expo-router/drawer";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
 
 import { useColorScheme } from "@hooks/useColorScheme";
+import { TabBarIcon } from "@/components/router/TabBarIcon";
 
 export {
 	// Catch any errors thrown by the Layout component.
@@ -54,10 +56,16 @@ function RootLayoutNav() {
 
 	return (
 		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-			<Stack>
-				<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+			<Drawer
+				screenOptions={{
+					drawerType: "slide",
+					drawerPosition: "left",
+					headerShown: false,
+				}}
+			>
+				<Drawer.Screen name="(tabs)" options={{ headerShown: false }} />
 				<Stack.Screen name="modal" options={{ presentation: "modal" }} />
-			</Stack>
+			</Drawer>
 		</ThemeProvider>
 	);
 }
