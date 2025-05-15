@@ -1,0 +1,59 @@
+[project]
+name = "readspace-server"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Kamui",email = "fin-kamui@pm.me"}
+]
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+name = "readspace-server"
+description = ""
+version = "0.1.0"
+authors = [
+    "Kamui <fin-kamui@pm.me>"
+]
+readme = "README.md"
+packages = [
+    {include = "app",from = "."}
+]
+
+[tool.poe.tasks]
+start = "uvicorn app.main:app --reload --host 0.0.0.0 --port 8008"
+test = "pytest tests/"
+lint = "ruff check app --fix"
+format = "ruff format app"
+
+[tool.poetry.dependencies]
+fastapi = {extras = ["all"], version = "^0.115.12"}
+uvicorn = "^0.34.0"
+orjson = "^3.9.13"
+pydantic = "^2.9.2"
+pydantic-settings = "^2.8.1"
+python-dotenv = "^1.0.1"
+python-jose = "^3.3.0"
+requests = "^2.31.0"
+httpx = "^0.28.1"
+ebooklib = "^0.18"
+supabase = "^2.15.0"
+asyncpg = "^0.29.0"
+psycopg = {extras = ["pool"], version = "^3.1.18"}
+posthog = "^3.24.1"
+structlog = "^25.2.0"
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.15.0"
+pytest = "^8.3.5"
+pytest-cov = "^6.0.0"
+pre-commit = "^4.1.0"
+bandit = "^1.8.3"
+types-requests = "^2.32.0.20250306"
+safety = "^3.3.1"
+poethepoet = "^0.33.1"
+ruff = "^0.11.5"

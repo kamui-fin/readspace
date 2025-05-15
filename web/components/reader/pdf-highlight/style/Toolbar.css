@@ -1,0 +1,81 @@
+.Toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 16px;
+    background-color: #2b2e33;
+    color: #f5f5f5;
+    border-bottom: 2px solid #9096a2;
+    flex-wrap: wrap;
+    min-width: 0;
+    gap: 8px;
+    overflow-x: auto;
+}
+
+.ZoomControls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.ZoomControls button {
+    background: none;
+    /* Remove background */
+    color: #f5f5f5;
+    border: none;
+    /* Remove border */
+    cursor: pointer;
+    font-size: 24px;
+    padding: 2px;
+    margin-right: 8px;
+    transition:
+        color 0.3s,
+        transform 0.2s;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.ZoomControls button:hover {
+    color: #b958ff;
+    transform: scale(1.05);
+}
+
+.HighlightButton {
+    background: none;
+    /* Remove background */
+    color: #f5f5f5;
+    border: none;
+    /* Remove border */
+    cursor: pointer;
+    font-size: 16px;
+    padding: 2px;
+    margin-right: 8px;
+    transition:
+        color 0.3s,
+        transform 0.2s;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+.HighlightButton:hover {
+    color: #b958ff;
+    transform: scale(1.05);
+}
+
+.HighlightButton.active {
+    color: #b958ff;
+}
+
+@media (max-width: 900px) {
+    .Toolbar {
+        padding: 4px 4px;
+        gap: 4px;
+    }
+
+    .ZoomControls button,
+    .HighlightButton {
+        font-size: 14px;
+        margin-right: 4px;
+    }
+}

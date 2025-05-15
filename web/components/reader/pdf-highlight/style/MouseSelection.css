@@ -1,0 +1,36 @@
+.MouseSelection {
+    position: absolute;
+    border: 1px dashed #333;
+    background: rgba(153, 193, 218, 255);
+    mix-blend-mode: multiply;
+}
+
+.MouseSelection-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* Internet Explorer support method */
+@media all and (-ms-high-contrast: none), (-ms-high-contrast: active) {
+    .MouseSelection {
+        opacity: 0.5;
+    }
+}
+
+/* Microsoft Edge Browser 12+ (All) - @supports method */
+@supports (-ms-ime-align: auto) {
+    .MouseSelection {
+        opacity: 0.5;
+    }
+}
+
+/* Crosshair cursor for area selection */
+.area-selection-active,
+.area-selection-active .pdfViewer,
+.area-selection-active .textLayer {
+    cursor: crosshair !important;
+}
