@@ -48,6 +48,7 @@ posthog = "^3.24.1"
 structlog = "^25.2.0"
 sqlalchemy = {extras = ["asyncio"], version = "^2.0.28"}
 alembic = "^1.13.1"
+psycopg2 = "^2.9.10"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

@@ -33,7 +33,6 @@ interface ReaderState {
 
     toc: NavItem[]
     currentLocation: string | undefined
-
     currentPdfLocation: Scaled | undefined
 
     progressPercentage: number
@@ -43,13 +42,6 @@ interface ReaderState {
     totalPages: number
 
     isLoading: boolean // General loading state for book fetch etc.
-
-    pageTextMap: Record<number, string>
-
-    // Add activeTab state
-    activeTab: "contents" | "highlights"
-
-    isAreaSelectionActive: boolean
 }
 
 type ReaderActions = {
@@ -74,18 +66,9 @@ type ReaderActions = {
     setPdfRef: (viewerRef: any) => void // PDF viewer reference setter
     goToPage: (page: number) => void // Function to navigate to a specific page
 
-    // Add setActiveTab action
-    setActiveTab: (tab: "contents" | "highlights") => void
-
     fetch: (bookMeta: BookMeta) => Promise<void> // fetch book from cache or supabase
 
     setIsLoading: (loading: boolean) => void
-
-    setPageTextMap: (pageMap: Record<number, string>) => void
-    getPageText: (pageNumber: number) => string
-
-    enableAreaSelection: () => void
-    disableAreaSelection: () => void
 }
 
 export const useReaderStore = create<ReaderState & ReaderActions>()(
@@ -105,9 +88,6 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         totalPages: 0,
         pdfRef: null,
         isLoading: false,
-        pageTextMap: {},
-        activeTab: "contents", // Initialize activeTab
-        isAreaSelectionActive: false,
 
         setToc: (newToc) => set({ toc: newToc }),
         setLocation: (newLocation) => set({ currentLocation: newLocation }),
@@ -144,7 +124,8 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                 return (
                     charCounts
                         .slice(0, currentChapterIdx)
-                        .reduce((a: number, b: number) => a + b, 0) + charsReadInChapter
+                        .reduce((a: number, b: number) => a + b, 0) +
+                    charsReadInChapter
                 )
             }
             return 0
@@ -212,9 +193,16 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                         await getFileFromSupabase(bookMeta.file_url)
 
                     if (!success || !data) {
-                        console.error("Failed to fetch book from storage:", bookId, error, message)
+                        console.error(
+                            "Failed to fetch book from storage:",
+                            bookId,
+                            error,
+                            message
+                        )
                         set({ isLoading: false })
-                        toast.error("Failed to load book - Could not retrieve the book from cloud storage.")
+                        toast.error(
+                            "Failed to load book - Could not retrieve the book from cloud storage."
+                        )
                         return
                     }
 
@@ -297,15 +285,10 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
             } catch (error) {
                 console.error("Error loading book:", error)
                 set({ isLoading: false })
-                toast.error("Error loading book - An unexpected error occurred while loading the book.")
+                toast.error(
+                    "Error loading book - An unexpected error occurred while loading the book."
+                )
             }
         },
-
-        setPageTextMap: (pageMap) => set({ pageTextMap: pageMap }),
-        getPageText: (pageNumber) => get().pageTextMap[pageNumber] || "",
-
-        setActiveTab: (tab) => set({ activeTab: tab }),
-        enableAreaSelection: () => set({ isAreaSelectionActive: true }),
-        disableAreaSelection: () => set({ isAreaSelectionActive: false }),
     }))
 )

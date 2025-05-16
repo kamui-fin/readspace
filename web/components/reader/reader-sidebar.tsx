@@ -403,18 +403,18 @@ export function HighlightCard({ highlight }: HighlightProps) {
                     <p className="text-sm text-card-foreground">
                         {highlightType === "epub"
                             ? (highlight as EpubHighlight).text.slice(0, 150) +
-                            "..."
+                              "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
-                                0,
-                                150
-                            ) + "..."}
+                                  0,
+                                  150
+                              ) + "..."}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Page{" "}
                         {highlightType === "epub"
                             ? (highlight as EpubHighlight).page
                             : (highlight as PdfHighlight).position.boundingRect
-                                ?.pageNumber}
+                                  ?.pageNumber}
                     </p>
                 </div>
             </div>

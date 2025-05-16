@@ -60,7 +60,7 @@ export const useUpdateBookGoals = () => {
         try {
             await updateBookMutation.mutateAsync({
                 bookId,
-                book: { goals: sanitizeText(goals.trim()) || null }
+                book: { goals: sanitizeText(goals.trim()) || null },
             })
         } catch (error) {
             console.error("Error updating book goals:", error)
@@ -79,7 +79,7 @@ export const useUploadBook = () => {
             isLocalStorage,
             metadata,
             charCounts,
-            enableRag = true
+            enableRag = true,
         }: {
             file: File
             user: User
@@ -110,11 +110,11 @@ export const useUploadBook = () => {
                 // Create progress object for EPUB
                 const progress = !isPdf
                     ? {
-                        globalProgress: {
-                            current: 0,
-                            total: charCounts.reduce((a, b) => a + b, 0),
-                        },
-                    }
+                          globalProgress: {
+                              current: 0,
+                              total: charCounts.reduce((a, b) => a + b, 0),
+                          },
+                      }
                     : undefined
 
                 let bookData: BookCreate = {
@@ -129,17 +129,17 @@ export const useUploadBook = () => {
                     goals: null, // Goals will be added in a separate step
                     ...(isPdf
                         ? {
-                            pdf_page: 0,
-                            pdf_toc: sanitizeJsonRecursively(
-                                metadata.toc
-                            ) as unknown as Json,
-                        }
+                              pdf_page: 0,
+                              pdf_toc: sanitizeJsonRecursively(
+                                  metadata.toc
+                              ) as unknown as Json,
+                          }
                         : {
-                            epub_progress: sanitizeJsonRecursively(
-                                progress
-                            ) as unknown as Record<string, unknown>,
-                            epub_chapter_char_counts: charCounts,
-                        }),
+                              epub_progress: sanitizeJsonRecursively(
+                                  progress
+                              ) as unknown as Record<string, unknown>,
+                              epub_chapter_char_counts: charCounts,
+                          }),
                 }
 
                 if (isLocalStorage) {
@@ -187,6 +187,6 @@ export const useUploadBook = () => {
                 console.error("Error uploading book:", error)
                 throw error
             }
-        }
+        },
     })
 }

@@ -35,13 +35,13 @@ export function LibraryCatalog({ books }: { books: BookMeta[] }) {
         const progress =
             book.type === "pdf"
                 ? Math.round(
-                    ((book.pdf_page || 0) / (book.num_pages || 1)) * 100
-                )
+                      ((book.pdf_page || 0) / (book.num_pages || 1)) * 100
+                  )
                 : Math.round(
-                    ((book.epub_progress?.globalProgress?.current || 0) /
-                        (book.epub_progress?.globalProgress?.total || 1)) *
-                    100
-                )
+                      ((book.epub_progress?.globalProgress?.current || 0) /
+                          (book.epub_progress?.globalProgress?.total || 1)) *
+                          100
+                  )
 
         if (filter === "all") return matchesSearch
         if (filter === "completed") return matchesSearch && progress === 100

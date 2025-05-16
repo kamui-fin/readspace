@@ -1,4 +1,4 @@
-import { SignupForm } from "@/app/(auth)/signup/auth/signup-form"
+import { SignupForm } from "@/app/(auth)/signup/signup-form"
 import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 import { redirect } from "next/navigation"

@@ -29,10 +29,12 @@ export default function useChapterNavigation() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}/progress`, { epub_progress: progress }),
+            ApiClient.put(`/books/${bookId}/progress`, {
+                epub_progress: progress,
+            }),
         onError: (err: Error) => {
             console.error("Failed to save remote progress:", err)
-        }
+        },
     })
 
     const changeChapter = async (index: number) => {
@@ -59,7 +61,10 @@ export default function useChapterNavigation() {
                     )
                 } else {
                     // Cloud book - use React Query mutation
-                    updateProgressMutation.mutate({ bookId: bookMeta.id, progress: progressData })
+                    updateProgressMutation.mutate({
+                        bookId: bookMeta.id,
+                        progress: progressData,
+                    })
                 }
 
                 setProgressPercentage(0)

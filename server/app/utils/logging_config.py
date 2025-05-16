@@ -17,7 +17,7 @@ def setup_logging() -> None:
         return
 
     # Define shared processors for structlog (unchanged)
-    if settings.environment == "production":
+    if settings.ENVIRONMENT == "production":
         shared_processors: list[Any] = [
             structlog.contextvars.merge_contextvars,
             structlog.stdlib.add_logger_name,
@@ -67,14 +67,14 @@ def setup_logging() -> None:
 
     # Add Loki handler only if not in development environment
     handlers_active = ["Console"]
-    root_logger.setLevel(settings.log_level)
+    root_logger.setLevel(settings.LOG_LEVEL)
 
     log = structlog.get_logger()
     log.info(
         "Structlog logging configured",
         handlers=handlers_active,
-        level=settings.log_level,
-        environment=settings.environment,
+        level=settings.LOG_LEVEL,
+        environment=settings.ENVIRONMENT,
     )
 
     return log

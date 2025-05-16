@@ -54,13 +54,13 @@ export function BookCardList({ book }: BookCardListProps) {
         book.type === "pdf"
             ? (book.pdf_page || 0) / (book.num_pages || 1)
             : (book.epub_progress?.globalProgress?.current || 0) /
-            (book.epub_progress?.globalProgress?.total || 1)
+              (book.epub_progress?.globalProgress?.total || 1)
 
     const remainingNumChars =
         book.type === "pdf"
             ? 0 // PDF doesn't use character count
             : (book.epub_progress?.globalProgress?.total || 0) -
-            (book.epub_progress?.globalProgress?.current || 0)
+              (book.epub_progress?.globalProgress?.current || 0)
 
     const estReadingTimeLeft =
         book.type === "pdf"

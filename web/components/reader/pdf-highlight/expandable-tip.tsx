@@ -23,10 +23,7 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
     const selectionRef = useRef<PdfSelection | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)
 
-    const {
-        bookMeta,
-        disableAreaSelection,
-    } = useReaderStore(
+    const { bookMeta, disableAreaSelection } = useReaderStore(
         useShallow((state) => ({
             bookMeta: state.bookMeta,
             disableAreaSelection: state.disableAreaSelection,

@@ -14,7 +14,7 @@ import {
     SidebarMenu,
     SidebarMenuItem,
     SidebarSeparator,
-    useSidebarLeft
+    useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { createClient } from "@/lib/supabase/client"
@@ -24,7 +24,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
-import readspace from "../../public/readspace.svg"
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
 
@@ -141,13 +140,13 @@ export function AppSidebar({
                             <SidebarLeftMenuButton size="lg" asChild>
                                 <Link href={"/library"}>
                                     <Image
-                                        src={readspace}
+                                        src="/readspace.svg"
                                         width={30}
                                         height={30}
                                         alt={""}
                                         className="rounded"
                                     />
-                                    <h1 className="text-lg font-logo font-bold">
+                                    <h1 className="text-xl font-logo font-medium">
                                         Readspace
                                     </h1>
                                 </Link>

@@ -4,7 +4,7 @@ from typing import Optional
 import structlog
 from app.repositories.supabase import get_supabase_client
 from app.schemas.auth import TokenData
-from app.schemas.settings import Settings
+from app.core.config import get_settings
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
 
@@ -14,10 +14,10 @@ logger = structlog.get_logger()
 def verify_token(token: str) -> TokenData:
     """Verify and decode a JWT token."""
     try:
-        settings = Settings()
+        settings = get_settings()
         payload = jwt.decode(
             token,
-            key=settings.jwt_secret.get_secret_value(),
+            key=settings.SUPABASE_JWT_SECRET,
             algorithms=["HS256"],
             options={"verify_aud": False},  # Skip audience verification
         )

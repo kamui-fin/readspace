@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils"
 
 const SortableImplContext = React.createContext<
     Pick<SortableProps, "getNewIndex"> &
-    Required<Pick<SortableProps, "getTransformStyle">> & {
-        activeId: UniqueIdentifier | null
-    }
+        Required<Pick<SortableProps, "getTransformStyle">> & {
+            activeId: UniqueIdentifier | null
+        }
 >({
     activeId: null,
     getTransformStyle: CSS.Transform.toString,
@@ -87,16 +87,16 @@ export const Sortable = ({
         >
             <DndContext
                 onDragStart={(event) => {
-                    onDragStart?.(event);
-                    setActiveId(event.active.id);
+                    onDragStart?.(event)
+                    setActiveId(event.active.id)
                 }}
                 onDragEnd={(event) => {
-                    onDragEnd?.(event);
-                    setActiveId(null);
+                    onDragEnd?.(event)
+                    setActiveId(null)
                 }}
                 onDragCancel={(event) => {
-                    onDragCancel?.(event);
-                    setActiveId(null);
+                    onDragCancel?.(event)
+                    setActiveId(null)
                 }}
                 collisionDetection={collisionDetection}
                 sensors={sensors}
@@ -108,7 +108,7 @@ export const Sortable = ({
 
 export interface SortableListProps
     extends Omit<SortableContextProps, "children">,
-    React.ComponentPropsWithoutRef<typeof Primitive.ul> {
+        React.ComponentPropsWithoutRef<typeof Primitive.ul> {
     orientation?: "vertical" | "horizontal"
 }
 

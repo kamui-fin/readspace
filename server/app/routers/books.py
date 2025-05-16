@@ -1,35 +1,33 @@
-from typing import List
+from typing import List, Annotated
 from uuid import UUID
 
-from app.core.dependencies import BookRepo, DatabaseSession
+from app.core.database import get_db
 from app.repositories.books import BookRepository
 from app.schemas.books import BookCreate, BookProgress, BookResponse, BookUpdate
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/books", tags=["books"])
+book_repo = BookRepository()
 
 
 @router.get("/", response_model=List[BookResponse])
 async def get_books(
-    user_id: UUID,
+    db: Annotated[AsyncSession, Depends(get_db)],
     skip: int = 0,
-    limit: int = 100,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> List[BookResponse]:
+    limit: int = 100
+):
     """Get all books for a user."""
-    books = await book_repo.get_user_books(user_id, skip=skip, limit=limit)
-    return books
+    return await book_repo.get_multi(db, skip=skip, limit=limit)
 
 
 @router.get("/{book_id}", response_model=BookResponse)
 async def get_book(
     book_id: UUID,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> BookResponse:
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     """Get a specific book by ID."""
-    book = await book_repo.get(book_id)
+    book = await book_repo.get(db, book_id)
     if not book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
@@ -40,22 +38,20 @@ async def get_book(
 @router.post("/", response_model=BookResponse)
 async def create_book(
     book: BookCreate,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> BookResponse:
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     """Create a new book."""
-    return await book_repo.create(book)
+    return await book_repo.create(db, book)
 
 
 @router.put("/{book_id}", response_model=BookResponse)
 async def update_book(
     book_id: UUID,
     book: BookUpdate,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> BookResponse:
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     """Update a book."""
-    updated_book = await book_repo.update(book_id, book)
+    updated_book = await book_repo.update(db, book_id, book)
     if not updated_book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
@@ -66,11 +62,10 @@ async def update_book(
 @router.delete("/{book_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(
     book_id: UUID,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> None:
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     """Delete a book."""
-    success = await book_repo.delete(book_id)
+    success = await book_repo.delete(db, book_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"
@@ -81,11 +76,10 @@ async def delete_book(
 async def update_book_progress(
     book_id: UUID,
     progress: BookProgress,
-    db: DatabaseSession = Depends(),
-    book_repo: BookRepository = Depends(BookRepo),
-) -> BookResponse:
+    db: Annotated[AsyncSession, Depends(get_db)]
+):
     """Update a book's progress."""
-    updated_book = await book_repo.update_progress(book_id, progress)
+    updated_book = await book_repo.update_progress(db, book_id, progress.dict(exclude_unset=True))
     if not updated_book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Book not found"

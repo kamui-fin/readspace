@@ -1,6 +1,4 @@
-import {
-    Highlighter
-} from "lucide-react"
+import { Highlighter } from "lucide-react"
 
 import { usePdfHighlighterContext } from "@/components/reader/pdf-highlight/contexts/PdfHighlighterContext"
 import { Separator } from "@/components/ui/separator"

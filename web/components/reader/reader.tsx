@@ -145,21 +145,21 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 breadcrumbItems={
                     isMobile
                         ? [
-                            {
-                                href: `/library/${bookId}`,
-                                label: bookMeta.title.slice(0, 15) + "...",
-                            },
-                        ]
+                              {
+                                  href: `/library/${bookId}`,
+                                  label: bookMeta.title.slice(0, 15) + "...",
+                              },
+                          ]
                         : [
-                            { href: "/library", label: "Home" },
-                            {
-                                href: `/library/${bookId}`,
-                                label:
-                                    bookMeta.title.length > 30
-                                        ? `${bookMeta.title.substring(0, 30)}...`
-                                        : bookMeta.title,
-                            },
-                        ]
+                              { href: "/library", label: "Home" },
+                              {
+                                  href: `/library/${bookId}`,
+                                  label:
+                                      bookMeta.title.length > 30
+                                          ? `${bookMeta.title.substring(0, 30)}...`
+                                          : bookMeta.title,
+                              },
+                          ]
                 }
             >
                 <ReaderNavActions />

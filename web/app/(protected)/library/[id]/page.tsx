@@ -5,7 +5,11 @@ import { Highlight } from "@/types/api"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { PDFViewer } from "../../../../components/reader/pdf-reader"
-import { BookMeta, EpubHighlight, PdfHighlight } from "../../../../types/library"
+import {
+    BookMeta,
+    EpubHighlight,
+    PdfHighlight,
+} from "../../../../types/library"
 
 interface PageProps {
     params: Promise<{
@@ -40,7 +44,9 @@ export default async function Page({ params }: PageProps) {
 
     const bookId = (await params).id
     const bookMeta = await ApiClient.get<BookMeta>(`/books/${bookId}`)
-    const highlights = await ApiClient.get<Highlight[]>(`/highlights/book/${bookId}`)
+    const highlights = await ApiClient.get<Highlight[]>(
+        `/highlights/book/${bookId}`
+    )
 
     if (!bookMeta) {
         return (

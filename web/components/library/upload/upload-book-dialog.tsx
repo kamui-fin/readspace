@@ -21,7 +21,13 @@ import {
 } from "@/components/ui/stepper"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { HTTPError } from "@/lib/errors"
-import { ArrowRightIcon, BookOpen, Check, LoaderCircle, Plus } from "lucide-react"
+import {
+    ArrowRightIcon,
+    BookOpen,
+    Check,
+    LoaderCircle,
+    Plus,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
@@ -68,7 +74,7 @@ export default function UploadBookDialog() {
                 user,
                 isLocalStorage,
                 metadata,
-                charCounts
+                charCounts,
             })
 
             setUploadedBookId(bookId)
@@ -187,7 +193,9 @@ export default function UploadBookDialog() {
                                             content.step
                                         )}
                                     </StepperIndicator>
-                                    <StepperTitle>{content.stepTitle}</StepperTitle>
+                                    <StepperTitle>
+                                        {content.stepTitle}
+                                    </StepperTitle>
                                 </StepperTrigger>
                                 {index < stepContent.length - 1 && (
                                     <StepperSeparator />
@@ -196,9 +204,7 @@ export default function UploadBookDialog() {
                         ))}
                     </Stepper>
                 </div>
-                <div className="py-4">
-                    {stepContent[step - 1].children}
-                </div>
+                <div className="py-4">{stepContent[step - 1].children}</div>
                 <DialogFooter>
                     {step === 1 && (
                         <Button

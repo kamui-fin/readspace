@@ -18,10 +18,14 @@ class Feedback(Base):
     __tablename__ = "feedback"
 
     id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
-    user_id = Column(PGUUID, ForeignKey("auth.users", ondelete="SET NULL"), nullable=True)
-    
+    user_id = Column(
+        PGUUID, ForeignKey("auth.users", ondelete="SET NULL"), nullable=True
+    )
+
     feedback_type = Column(SQLEnum(FeedbackType), nullable=False)
     description = Column(Text, nullable=False)
     allow_follow_up = Column(Boolean, nullable=False, default=False)
-    
-    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow) 
+
+    created_at = Column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow
+    )

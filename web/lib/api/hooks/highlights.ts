@@ -7,7 +7,8 @@ const HIGHLIGHTS_QUERY_KEY = "highlights"
 export function useBookHighlights(bookId: string) {
     return useQuery({
         queryKey: [HIGHLIGHTS_QUERY_KEY, bookId],
-        queryFn: () => ApiClient.get<Highlight[]>(`/api/v1/highlights/book/${bookId}`),
+        queryFn: () =>
+            ApiClient.get<Highlight[]>(`/api/v1/highlights/book/${bookId}`),
     })
 }
 
@@ -24,12 +25,18 @@ export function useCreateHighlight() {
     })
 }
 
-type UpdateHighlightVariables = { highlightId: string; highlight: HighlightUpdate }
+type UpdateHighlightVariables = {
+    highlightId: string
+    highlight: HighlightUpdate
+}
 export function useUpdateHighlight() {
     const queryClient = useQueryClient()
     return useMutation<Highlight, Error, UpdateHighlightVariables>({
         mutationFn: ({ highlightId, highlight }) =>
-            ApiClient.put<Highlight>(`/api/v1/highlights/${highlightId}`, highlight),
+            ApiClient.put<Highlight>(
+                `/api/v1/highlights/${highlightId}`,
+                highlight
+            ),
         onSuccess: (_, { highlightId }) => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -51,7 +58,9 @@ export function useDeleteHighlightsByText() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (text: string) =>
-            ApiClient.delete(`/api/v1/highlights/text/${encodeURIComponent(text)}`),
+            ApiClient.delete(
+                `/api/v1/highlights/text/${encodeURIComponent(text)}`
+            ),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -63,9 +72,11 @@ export function useUpdateHighlightNote() {
     const queryClient = useQueryClient()
     return useMutation<Highlight, Error, UpdateHighlightNoteVariables>({
         mutationFn: ({ highlightId, note }) =>
-            ApiClient.put<Highlight>(`/api/v1/highlights/${highlightId}/note`, { note }),
+            ApiClient.put<Highlight>(`/api/v1/highlights/${highlightId}/note`, {
+                note,
+            }),
         onSuccess: (_, { highlightId }) => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
     })
-} 
+}

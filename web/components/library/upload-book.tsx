@@ -270,7 +270,7 @@ export const DragDropBook = ({
                                         </FileListDescriptionSeparator>
                                         <FileListDescriptionText>
                                             {selectedFile.type ===
-                                                "application/pdf"
+                                            "application/pdf"
                                                 ? "PDF"
                                                 : "EPUB"}
                                         </FileListDescriptionText>
@@ -329,9 +329,7 @@ export const DragDropBook = ({
                     aria-describedby={`${localStorageId}-description`}
                 />
                 <div className="grid grow gap-2">
-                    <Label htmlFor={localStorageId}>
-                        Store locally only
-                    </Label>
+                    <Label htmlFor={localStorageId}>Store locally only</Label>
                     <p
                         id={`${localStorageId}-description`}
                         className="text-muted-foreground text-xs"

@@ -103,23 +103,25 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             ApiClient.put(`/books/${bookId}/progress`, { pdf_page: page }),
         onError: (err: Error) => {
             console.error("Failed to save remote progress:", err)
-        }
+        },
     })
 
     const addHighlightMutation = useMutation({
         mutationFn: (data: any) => ApiClient.post("/highlights", data),
-        onError: (err: Error) => console.error("Failed to add highlight:", err)
+        onError: (err: Error) => console.error("Failed to add highlight:", err),
     })
 
     const deleteHighlightMutation = useMutation({
         mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
-        onError: (err: Error) => console.error("Failed to delete highlight:", err)
+        onError: (err: Error) =>
+            console.error("Failed to delete highlight:", err),
     })
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
             ApiClient.put(`/highlights/${text}/note`, { note }),
-        onError: (err: Error) => console.error("Failed to add annotation:", err)
+        onError: (err: Error) =>
+            console.error("Failed to add annotation:", err),
     })
 
     useEffect(() => {
@@ -131,7 +133,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                     savedHighlights.map(
                         (h): HighlightState => ({
                             highlight: h,
-                            removeFn: () => { },
+                            removeFn: () => {},
                         })
                     )
                 )
@@ -154,7 +156,10 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         if (bookMeta.file_url === null) {
             saveLocalPdfProgress(pageLeftOff, bookMeta.id)
         } else {
-            updateProgressMutation.mutate({ bookId: bookMeta.id, page: pageLeftOff })
+            updateProgressMutation.mutate({
+                bookId: bookMeta.id,
+                page: pageLeftOff,
+            })
         }
     }
 
@@ -206,7 +211,10 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                     )
                 } else {
                     // Cloud book - use server action
-                    updateProgressMutation.mutate({ bookId: bookMeta.id, page: pageLeftOff })
+                    updateProgressMutation.mutate({
+                        bookId: bookMeta.id,
+                        page: pageLeftOff,
+                    })
                 }
             }
         }
@@ -265,7 +273,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const onAddNewHighlight = useCallback(
         async (highlight: PdfHighlight) => {
             // Add highlight directly to the Zustand store
-            insertHighlight({ highlight, removeFn: () => { } })
+            insertHighlight({ highlight, removeFn: () => {} })
 
             if (highlight.content.text) {
                 await addHighlightMutation.mutateAsync({

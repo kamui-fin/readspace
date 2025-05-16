@@ -98,4 +98,4 @@ export interface HighlightUpdate {
     epub_chapter_title?: string
     epub_est_page?: number
     pdf_rect_position?: Record<string, unknown>
-} 
+}

@@ -1,4 +1,4 @@
-import { LoginForm } from "@/app/(auth)/signup/auth/login-form"
+import { LoginForm } from "@/app/(auth)/login/login-form"
 import { createClient } from "@/lib/supabase/server"
 import Image from "next/image"
 import { redirect } from "next/navigation"

@@ -1,65 +1,32 @@
-from datetime import datetime
-from typing import Optional
-from uuid import UUID
-
 from pydantic import BaseModel
+from typing import Optional, Dict, Any, List
 
-
-class BookBase(BaseModel):
-    """Base schema for book data."""
-
+class BookCreate(BaseModel):
     title: str
     author: Optional[str] = None
-    description: Optional[str] = None
-    cover_url: Optional[str] = None
-    file_url: str
-    file_type: str
-    language: Optional[str] = None
-    total_pages: Optional[int] = None
-    current_page: Optional[int] = None
-    epub_progress: Optional[dict] = None
-    pdf_page: Optional[int] = None
-    last_recall_page: Optional[int] = None
-
-
-class BookCreate(BookBase):
-    """Schema for creating a new book."""
-
-    user_id: UUID
-
-
-class BookUpdate(BaseModel):
-    """Schema for updating a book."""
-
-    title: Optional[str] = None
-    author: Optional[str] = None
-    description: Optional[str] = None
-    cover_url: Optional[str] = None
+    format: str
     file_url: Optional[str] = None
-    file_type: Optional[str] = None
-    language: Optional[str] = None
-    total_pages: Optional[int] = None
-    current_page: Optional[int] = None
-    epub_progress: Optional[dict] = None
-    pdf_page: Optional[int] = None
-    last_recall_page: Optional[int] = None
-
+    rag_enabled: bool = False
 
 class BookProgress(BaseModel):
-    """Schema for updating book progress."""
+    epub_progress: Optional[Dict[str, Any]] = None
+    pdf_current_page: Optional[int] = None
 
-    current_page: Optional[int] = None
-    epub_progress: Optional[dict] = None
-    pdf_page: Optional[int] = None
+class BookResponse(BaseModel):
+    id: str
+    title: str
+    author: Optional[str] = None
+    format: str
+    file_url: Optional[str] = None
+    rag_enabled: bool = False
+    epub_progress: Optional[Dict[str, Any]] = None
+    pdf_current_page: Optional[int] = None
 
-
-class BookResponse(BookBase):
-    """Schema for book response."""
-
-    id: UUID
-    user_id: UUID
-    date_added: datetime
-    last_modified: datetime
-
-    class Config:
-        from_attributes = True
+class BookUpdate(BaseModel):
+    title: Optional[str] = None
+    author: Optional[str] = None
+    format: Optional[str] = None
+    file_url: Optional[str] = None
+    rag_enabled: Optional[bool] = None
+    epub_progress: Optional[Dict[str, Any]] = None
+    pdf_current_page: Optional[int] = None 

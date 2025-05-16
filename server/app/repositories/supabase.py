@@ -4,10 +4,10 @@ from typing import Optional
 import structlog
 from supabase import Client, create_client
 
-from app.schemas.settings import Settings
+from app.core.config import get_settings
 
 logger = structlog.get_logger()
-settings = Settings()
+settings = get_settings()
 
 
 class StorageError(Exception):

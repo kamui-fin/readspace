@@ -51,9 +51,13 @@ export function BookActions({ book }: BookActionsProps) {
             if (session?.access_token) {
                 headers["Authorization"] = `Bearer ${session.access_token}`
             }
-            toast.success("Successfully deleted book - The book has been removed from your library.")
+            toast.success(
+                "Successfully deleted book - The book has been removed from your library."
+            )
         } catch (error) {
-            toast.error("Failed to delete book - An error occurred while deleting the book.")
+            toast.error(
+                "Failed to delete book - An error occurred while deleting the book."
+            )
         }
 
         setIsOpen(false)
@@ -63,7 +67,9 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.id) {
-            toast.error("Failed to reset progress - Could not determine book ID.")
+            toast.error(
+                "Failed to reset progress - Could not determine book ID."
+            )
             return
         }
 
@@ -73,20 +79,27 @@ export function BookActions({ book }: BookActionsProps) {
                 book.type === "pdf"
                     ? { pdf_page: 0 }
                     : {
-                        epub_progress: {
-                            globalProgress: {
-                                current: 0,
-                                total:
-                                    book.epub_progress?.globalProgress?.total ||
-                                    0,
-                            },
-                        },
-                    }
+                          epub_progress: {
+                              globalProgress: {
+                                  current: 0,
+                                  total:
+                                      book.epub_progress?.globalProgress
+                                          ?.total || 0,
+                              },
+                          },
+                      }
 
-            await updateBookMutation.mutateAsync({ bookId: book.id, book: updates })
-            toast.success("Successfully reset progress - The progress for this book has been reset.")
+            await updateBookMutation.mutateAsync({
+                bookId: book.id,
+                book: updates,
+            })
+            toast.success(
+                "Successfully reset progress - The progress for this book has been reset."
+            )
         } catch (error) {
-            toast.error("Failed to reset progress - An error occurred while resetting progress.")
+            toast.error(
+                "Failed to reset progress - An error occurred while resetting progress."
+            )
         }
 
         setIsOpen(false)
@@ -96,7 +109,9 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.id) {
-            toast.error("Failed to mark as complete - Could not determine book ID.")
+            toast.error(
+                "Failed to mark as complete - Could not determine book ID."
+            )
             return
         }
 
@@ -106,22 +121,29 @@ export function BookActions({ book }: BookActionsProps) {
                 book.type === "pdf"
                     ? { pdf_page: book.num_pages || 0 }
                     : {
-                        epub_progress: {
-                            globalProgress: {
-                                current:
-                                    book.epub_progress?.globalProgress?.total ||
-                                    0,
-                                total:
-                                    book.epub_progress?.globalProgress?.total ||
-                                    0,
-                            },
-                        },
-                    }
+                          epub_progress: {
+                              globalProgress: {
+                                  current:
+                                      book.epub_progress?.globalProgress
+                                          ?.total || 0,
+                                  total:
+                                      book.epub_progress?.globalProgress
+                                          ?.total || 0,
+                              },
+                          },
+                      }
 
-            await updateBookMutation.mutateAsync({ bookId: book.id, book: updates })
-            toast.success("Successfully marked as complete - The book has been marked as complete.")
+            await updateBookMutation.mutateAsync({
+                bookId: book.id,
+                book: updates,
+            })
+            toast.success(
+                "Successfully marked as complete - The book has been marked as complete."
+            )
         } catch (error) {
-            toast.error("Failed to mark as complete - An error occurred while marking the book as complete.")
+            toast.error(
+                "Failed to mark as complete - An error occurred while marking the book as complete."
+            )
         }
 
         setIsOpen(false)

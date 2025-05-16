@@ -132,11 +132,11 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.email}
                                         required
-                                    // className={cn(
-                                    //     formik.touched.email && formik.errors.email
-                                    //         ? "border-red-500 focus-visible:ring-red-500"
-                                    //         : ""
-                                    // )}
+                                        // className={cn(
+                                        //     formik.touched.email && formik.errors.email
+                                        //         ? "border-red-500 focus-visible:ring-red-500"
+                                        //         : ""
+                                        // )}
                                     />
                                     {/* {formik.touched.email && formik.errors.email && (
                                         <p className="text-sm text-red-500">
@@ -164,12 +164,12 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.password}
                                         required
-                                    // className={cn(
-                                    //     formik.touched.password &&
-                                    //         formik.errors.password
-                                    //         ? "border-red-500 focus-visible:ring-red-500"
-                                    //         : ""
-                                    // )}
+                                        // className={cn(
+                                        //     formik.touched.password &&
+                                        //         formik.errors.password
+                                        //         ? "border-red-500 focus-visible:ring-red-500"
+                                        //         : ""
+                                        // )}
                                     />
                                     {/* {formik.touched.password &&
                                         formik.errors.password && (

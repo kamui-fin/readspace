@@ -48,11 +48,7 @@ export default function HighlightPopover({
     const containerRef = useRef<HTMLDivElement>(null)
     const [showNoteForm, setShowNoteForm] = useState(false)
 
-    const {
-        getPageProgress,
-        highlights,
-        currentPage,
-    } = useReaderStore(
+    const { getPageProgress, highlights, currentPage } = useReaderStore(
         useShallow((state) => ({
             getPageProgress: state.getPageProgress,
             highlights: state.highlights,
@@ -72,7 +68,8 @@ export default function HighlightPopover({
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
             ApiClient.put(`/highlights/${text}/note`, { note }),
-        onError: (err: Error) => console.error("Failed to add annotation:", err)
+        onError: (err: Error) =>
+            console.error("Failed to add annotation:", err),
     })
 
     // Add click-outside and blur handlers
@@ -126,7 +123,6 @@ export default function HighlightPopover({
         if (found) found.highlight.note = note
         setIsPopupOpen(false)
     }
-
 
     if (!rangeRef.current || !isPopupOpen) {
         return null

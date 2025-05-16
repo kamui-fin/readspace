@@ -1,9 +1,31 @@
-import { env } from "@/env"; // Import validated env
+import { env } from "@/env" // Import validated env
+import { getSession } from "@/lib/auth/supabase"
 
 const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
 
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {
+        "Content-Type": "application/json",
+    }
+
+    try {
+        const session = await getSession()
+        if (session?.access_token) {
+            headers["Authorization"] = `Bearer ${session.access_token}`
+        }
+    } catch (error) {
+        console.error("Error getting auth token:", error)
+    }
+
+    return headers
+}
+
 export class ApiError extends Error {
-    constructor(public status: number, message: string) {
+    constructor(
+        public status: number,
+        message: string
+    ) {
         super(message)
         this.name = "ApiError"
     }
@@ -11,8 +33,13 @@ export class ApiError extends Error {
 
 async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-        const error = await response.json().catch(() => ({ message: "An error occurred" }))
-        throw new ApiError(response.status, error.message || "An error occurred")
+        const error = await response
+            .json()
+            .catch(() => ({ message: "An error occurred" }))
+        throw new ApiError(
+            response.status,
+            error.message || "An error occurred"
+        )
     }
     return response.json()
 }
@@ -22,10 +49,11 @@ export class ApiClient {
         endpoint: string,
         options: RequestInit = {}
     ): Promise<T> {
+        const headers = await getAuthHeaders()
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
             headers: {
-                "Content-Type": "application/json",
+                ...headers,
                 ...options.headers,
             },
         })
@@ -42,7 +70,11 @@ export class ApiClient {
         return this.fetch<T>(endpoint, { ...options, method: "GET" })
     }
 
-    static async post<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
+    static async post<T>(
+        endpoint: string,
+        data?: any,
+        options?: RequestInit
+    ): Promise<T> {
         return this.fetch<T>(endpoint, {
             ...options,
             method: "POST",
@@ -50,7 +82,11 @@ export class ApiClient {
         })
     }
 
-    static async put<T>(endpoint: string, data?: any, options?: RequestInit): Promise<T> {
+    static async put<T>(
+        endpoint: string,
+        data?: any,
+        options?: RequestInit
+    ): Promise<T> {
         return this.fetch<T>(endpoint, {
             ...options,
             method: "PUT",
@@ -58,11 +94,18 @@ export class ApiClient {
         })
     }
 
-    static async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
+    static async delete<T>(
+        endpoint: string,
+        options?: RequestInit
+    ): Promise<T> {
         return this.fetch<T>(endpoint, { ...options, method: "DELETE" })
     }
 
-    static async uploadFile(endpoint: string, formData: FormData, signal?: AbortSignal): Promise<any> {
+    static async uploadFile(
+        endpoint: string,
+        formData: FormData,
+        signal?: AbortSignal
+    ): Promise<any> {
         const response = await fetch(`${API_BASE_URL}${endpoint}`, {
             method: "POST",
             body: formData,

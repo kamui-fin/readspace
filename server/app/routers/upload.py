@@ -18,12 +18,12 @@ from app.repositories.supabase import (
     get_storage_client,
 )
 from app.schemas.auth import TokenData
-from app.schemas.settings import Settings
+from app.core.config import get_settings
 from app.services.auth import get_current_user
 
 router = APIRouter()
 logger = structlog.get_logger()
-settings = Settings()
+settings = get_settings()
 
 
 class UploadResponse(BaseModel):

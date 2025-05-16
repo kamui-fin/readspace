@@ -30,9 +30,7 @@ function ClientLayout({ children }: ClientLayoutProps) {
             <PostHogProvider>
                 <ThemeProvider>
                     <SidebarLeftProvider>
-                        <SidebarRightProvider>
-                            {children}
-                        </SidebarRightProvider>
+                        <SidebarRightProvider>{children}</SidebarRightProvider>
                     </SidebarLeftProvider>
                 </ThemeProvider>
                 <Toaster
@@ -40,22 +38,22 @@ function ClientLayout({ children }: ClientLayoutProps) {
                     toastOptions={{
                         duration: 4000,
                         style: {
-                            background: 'var(--background)',
-                            color: 'var(--foreground)',
-                            border: '1px solid var(--border)',
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                            border: "1px solid var(--border)",
                         },
                         success: {
                             duration: 2000,
                             iconTheme: {
-                                primary: 'var(--success)',
-                                secondary: 'var(--background)',
+                                primary: "var(--success)",
+                                secondary: "var(--background)",
                             },
                         },
                         error: {
                             duration: 4000,
                             iconTheme: {
-                                primary: 'var(--destructive)',
-                                secondary: 'var(--background)',
+                                primary: "var(--destructive)",
+                                secondary: "var(--background)",
                             },
                         },
                     }}

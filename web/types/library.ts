@@ -1,7 +1,6 @@
 import { Tables } from "@/database.types"
 import { GhostHighlight, ScaledPosition } from "react-pdf-highlighter-extended"
 
-// Define zoom value type for PDF viewer
 export type ZoomValue =
     | number
     | "auto"

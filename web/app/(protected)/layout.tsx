@@ -11,9 +11,7 @@ export default function ProtectedLayout({
     return (
         <ClientLayout>
             <AppSidebar />
-            <SidebarInset>
-                {children}
-            </SidebarInset>
+            <SidebarInset>{children}</SidebarInset>
             <ReaderSidebar />
         </ClientLayout>
     )

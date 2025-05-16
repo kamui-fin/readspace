@@ -45,12 +45,13 @@ export default function useHighlight(savedHighlights: Highlight[]) {
 
     const addHighlightMutation = useMutation({
         mutationFn: (data: any) => ApiClient.post("/highlights", data),
-        onError: (err: Error) => console.error("Failed to add highlight:", err)
+        onError: (err: Error) => console.error("Failed to add highlight:", err),
     })
 
     const deleteHighlightMutation = useMutation({
         mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
-        onError: (err: Error) => console.error("Failed to delete highlight:", err)
+        onError: (err: Error) =>
+            console.error("Failed to delete highlight:", err),
     })
 
     const onSelectStart = () => {

@@ -68,8 +68,8 @@ export function FeedbackModal({ isOpen, onClose, userId }: FeedbackModalProps) {
                 <DialogHeader>
                     <DialogTitle>Submit Feedback</DialogTitle>
                     <DialogDescription>
-                        Help us improve by sharing your thoughts, reporting bugs, or
-                        suggesting features.
+                        Help us improve by sharing your thoughts, reporting
+                        bugs, or suggesting features.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
