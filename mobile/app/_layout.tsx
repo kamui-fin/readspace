@@ -1,4 +1,4 @@
-import { Stack } from "expo-router";
+import { Stack, Tabs } from "expo-router";
 import {
 	ThemeProvider,
 	DarkTheme,
@@ -18,7 +18,7 @@ export {
 
 export const unstable_settings = {
 	// Ensure that reloading on `/modal` keeps a back button present.
-	initialRouteName: "(tabs)",
+	initialRouteName: "(drawer)",
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -54,13 +54,12 @@ function RootLayoutNav() {
 		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
 			<GestureHandlerRootView style={{ flex: 1 }}>
 				<Stack>
-					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 					<Stack.Screen
 						name="(drawer)"
 						options={{ headerShown: false, gestureEnabled: true }}
 					/>
 					<Stack.Screen
-						name="modal"
+						name="(modal)/settings"
 						options={{ presentation: "modal", headerShown: false }}
 					/>
 					<Stack.Screen name="+not-found" options={{ headerShown: false }} />
