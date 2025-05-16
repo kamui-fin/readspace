@@ -1,6 +1,8 @@
 import type React from "react";
-import { Link, Tabs } from "expo-router";
-import { Pressable, View, Text } from "react-native";
+import { Link, router, Tabs } from "expo-router";
+import { Pressable, View } from "react-native";
+import { Monicon } from "@monicon/native";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
 
 import { COLORS } from "@constants/Colors";
 import { useColorScheme } from "@hooks/useColorScheme";
@@ -9,6 +11,7 @@ import { TabBarIcon } from "@/components/router/TabBarIcon";
 
 export default function TabLayout() {
 	const colorScheme = useColorScheme();
+	const navigation = useNavigation();
 
 	return (
 		<Tabs
@@ -19,6 +22,18 @@ export default function TabLayout() {
 				},
 				tabBarActiveTintColor: COLORS[colorScheme ?? "light"].primary,
 				headerShown: useClientOnlyValue(false, true),
+				headerLeft: () => (
+					<Pressable
+						onPress={() => navigation.dispatch(DrawerActions.toggleDrawer())}
+						style={{ marginLeft: 12 }}
+					>
+						<Monicon
+							name="lucide:menu"
+							size={24}
+							color={COLORS[colorScheme ?? "light"].foreground}
+						/>
+					</Pressable>
+				),
 			}}
 		>
 			<Tabs.Screen

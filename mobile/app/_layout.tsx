@@ -1,16 +1,13 @@
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Stack } from "expo-router";
 import {
+	ThemeProvider,
 	DarkTheme,
 	DefaultTheme,
-	ThemeProvider,
 } from "@react-navigation/native";
 import { useFonts } from "expo-font";
-import { Drawer } from "expo-router/drawer";
-import { Stack, Tabs } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import "react-native-reanimated";
-
 import { useColorScheme } from "@hooks/useColorScheme";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
@@ -30,7 +27,6 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
 	const [loaded, error] = useFonts({
 		SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-		...FontAwesome.font,
 	});
 
 	// Expo Router uses Error Boundaries to catch errors in the navigation tree.
@@ -57,45 +53,18 @@ function RootLayoutNav() {
 	return (
 		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
 			<GestureHandlerRootView style={{ flex: 1 }}>
-				<Drawer
-					screenOptions={{
-						drawerType: "slide",
-						drawerPosition: "left",
-						headerShown: false,
-					}}
-				>
-					<Drawer.Screen
-						name="(tabs)"
-						options={{
-							drawerItemStyle: {
-								display: "none",
-							},
-						}}
+				<Stack>
+					<Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+					<Stack.Screen
+						name="(drawer)"
+						options={{ headerShown: false, gestureEnabled: true }}
 					/>
-					<Drawer.Screen
+					<Stack.Screen
 						name="modal"
-						options={{
-							drawerItemStyle: {
-								display: "none",
-							},
-						}}
+						options={{ presentation: "modal", headerShown: false }}
 					/>
-					<Drawer.Screen
-						name="+not-found"
-						options={{
-							drawerItemStyle: {
-								display: "none",
-							},
-						}}
-					/>
-					{/* <Drawer.Screen
-						name="settings"
-						options={{
-							drawerLabel: "Settings",
-							title: "Settings",
-						}}
-					/> */}
-				</Drawer>
+					<Stack.Screen name="+not-found" options={{ headerShown: false }} />
+				</Stack>
 			</GestureHandlerRootView>
 		</ThemeProvider>
 	);
