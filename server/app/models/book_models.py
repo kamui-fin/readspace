@@ -51,12 +51,6 @@ class BookMetadata(Base):
     created_at = Column(
         DateTime(timezone=True), nullable=False, default=datetime.utcnow
     )
-    updated_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-    )
 
     # Relationships
     user_libraries = relationship(
@@ -103,39 +97,14 @@ class Highlight(Base):
     color = Column(Enum(HighlightColor), nullable=False)
     original_text = Column(Text, nullable=False)
     note = Column(Text)
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        nullable=False,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow,
-    )
-
-    # Relationships
-    user_book_library = relationship("UserBookLibrary", back_populates="highlights")
-    locations = relationship(
-        "HighlightLocation", back_populates="highlight", cascade="all, delete-orphan"
-    )
-
-
-class HighlightLocation(Base):
-    __tablename__ = "highlight_locations"
-
-    id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
-    highlight_id = Column(
-        PGUUID, ForeignKey("highlights.id", ondelete="CASCADE"), nullable=False
-    )
+    
+    # Location fields 
     chapter_idx = Column(Integer)
     chapter_href = Column(Text)
     chapter_title = Column(Text)
     page = Column(Integer)
     html_range = Column(JSON)
     pdf_rect_position = Column(JSON)
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow
-    )
 
     # Relationships
-    highlight = relationship("Highlight", back_populates="locations")
+    user_book_library = relationship("UserBookLibrary", back_populates="highlights")

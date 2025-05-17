@@ -11,7 +11,6 @@ from app.models.book_models import (  # noqa: F401
     BookMetadata,
     Highlight,
     HighlightColor,
-    HighlightLocation,
     UserBookLibrary,
 )
 from app.models.user_models import Profile  # noqa: F401

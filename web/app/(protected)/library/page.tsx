@@ -11,50 +11,55 @@ export const metadata = {
     description: "Your personal library of books",
 }
 
+interface LibraryErrorProps {
+    message: string
+}
+
+function LibraryError({ message }: LibraryErrorProps) {
+    return (
+        <div className="text-center text-red-500">
+            {message}
+        </div>
+    )
+}
+
+interface LibraryLayoutProps {
+    children: React.ReactNode
+}
+
+function LibraryLayout({ children }: LibraryLayoutProps) {
+    return (
+        <div className="flex flex-col min-h-screen">
+            <Header breadcrumbItems={[{ href: "/library", label: "Your Library" }]} />
+            <main className="flex-1 container mx-auto px-4 py-8">
+                <div className="flex justify-between items-center mb-8">
+                    <h1 className="text-3xl font-bold">Your Library</h1>
+                    <UploadBookDialog />
+                </div>
+                {children}
+            </main>
+        </div>
+    )
+}
+
 export default async function Library() {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-        redirect("/login")
-    }
-
     try {
-        const books = (await ApiClient.books.getUserBooks()) as UserBookLibrary[]
-        console.log(books)
+        const books = await ApiClient.books.getUserBooks() as UserBookLibrary[]
+        
         return (
-            <div className="flex flex-col min-h-screen">
-                <Header breadcrumbItems={[{ href: "/library", label: "Your Library" }]} />
-                <main className="flex-1 container mx-auto px-4 py-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <h1 className="text-3xl font-bold">Your Library</h1>
-                        <UploadBookDialog />
-                    </div>
-                    <LibraryCatalog books={books} />
-                </main>
-            </div>
+            <LibraryLayout>
+                <LibraryCatalog books={books} />
+            </LibraryLayout>
         )
     } catch (error) {
-        console.error("Failed to fetch books:", error)
-
-        // If authentication error, redirect to login
         if (error instanceof Error && error.message === "Authentication required") {
             redirect("/login")
         }
 
         return (
-            <div className="flex flex-col min-h-screen">
-                <Header breadcrumbItems={[{ href: "/library", label: "Your Library" }]} />
-                <main className="flex-1 container mx-auto px-4 py-8">
-                    <div className="flex justify-between items-center mb-8">
-                        <h1 className="text-3xl font-bold">Your Library</h1>
-                        <UploadBookDialog />
-                    </div>
-                    <div className="text-center text-red-500">
-                        Failed to load books. Please try again later.
-                    </div>
-                </main>
-            </div>
+            <LibraryLayout>
+                <LibraryError message="Failed to load books. Please try again later." />
+            </LibraryLayout>
         )
     }
 }

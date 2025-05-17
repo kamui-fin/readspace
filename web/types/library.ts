@@ -1,5 +1,6 @@
-import { Tables } from "@/database.types"
+import { Database } from "@/database.types"
 import { GhostHighlight, ScaledPosition } from "react-pdf-highlighter-extended"
+import { BookMetadata, Highlight } from "./api"
 
 export type ZoomValue =
     | number
@@ -25,12 +26,8 @@ export interface SerializedRange {
     endOffset: number
 }
 
-export interface EpubHighlight {
+export interface EpubHighlight extends Highlight {
     range: SerializedRange
-    color: "yellow" | "blue" | "green"
-    text: string
-    note: string | null
-    book_id: string
     chapter: {
         idx: number
         href: string
@@ -51,10 +48,8 @@ export interface PdfHighlight extends GhostHighlight {
     library_id?: string
 }
 
-export type Highlight = EpubHighlight | PdfHighlight
-
-export interface HighlightState {
-    highlight: Highlight
+export type HighlightState = {
+    highlight: EpubHighlight | PdfHighlight
     removeFn: () => void
 }
 
@@ -69,23 +64,11 @@ export interface EpubLocation {
     globalProgress: CharacterProgress
 }
 
-export type BookMetadata = Tables<"book_metadata"> & {
-}
-
-export type UserLibraryBook = Tables<"user_book_library"> & {
-    book_metadata: BookMetadata;
-}
-
 export type BookViewProps = BookMetadata & {
-    library_id?: string | null;
-    pdf_current_page?: number | null;
-    epub_progress?: EpubLocation | null;
+    library_id?: string | null
+    pdf_current_page?: number | null
+    epub_progress?: EpubLocation | null
 }
 
-export type BookCreate = Omit<Tables<"book_metadata">, "id" | "created_at" | "updated_at">
-
-export type BookFormat = "EPUB" | "PDF"
-
-export type HighlightLocation = Tables<"highlight_locations">
-
-export type Profile = Tables<"profiles">
+export type BookCreate = Omit<BookMetadata, "id" | "created_at" | "updated_at">
+export type BookFormat = Database["public"]["Enums"]["bookformat"]

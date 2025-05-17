@@ -89,7 +89,6 @@ export default function UploadBookDialog() {
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
                 <Button
-                    variant="outline"
                     size="sm"
                     className="gap-2"
                     disabled={isUploading}

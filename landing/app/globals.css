@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+/* @theme {
+    --font-sans: var(--font-geist-sans);
+    --font-serif: var(--font-garamond-serif);
+    --font-mono: var(--font-geist-mono);
+} */
+
+/* sidebar-foreground, sidebar-background, sidebar-primary, sidebar-primary-foreground, sidebar-accent, sidebar-accent-foreground, sidebar-border, sidebar-ring */
+
+@layer base {
+    :root {
+        --background: 120 100% 99.41%;
+        --foreground: 200 4.76% 24.71%;
+        --muted: 132 33.33% 97.06%;
+        --muted-foreground: 97, 6%, 57%;
+        --popover: 132 33.33% 97.06%;
+        --popover-foreground: 234 10% 27%;
+        --card: 132 33.33% 97.06%;
+        --card-foreground: 240, 3%, 7%;
+        --border: 210 15% 93%;
+        --input: 130 9.86% 86.35%;
+        --primary: 131.74 29.11% 30.98%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 97.6 32.47% 45.29%;
+        --secondary-foreground: 132 33.33% 97.06%;
+        --accent: 96.92 26.53% 90.39%;
+        --accent-foreground: 210 25% 23%;
+        --destructive: 8 93% 44%;
+        --destructive-foreground: 0 0% 100%;
+        --ring: 131.74 29.11% 30.98%;
+        --chart-1: 131.74 29.11% 30.98%;
+        --chart-2: 97.6 32.47% 45.29%;
+        --chart-3: 96.92 26.53% 90.39%;
+        --chart-4: 97.6 32.47% 48.29%;
+        --chart-5: 131.74 32.11% 30.98%;
+        --radius: 0.5rem;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+h1,
+h2,
+h3 {
+    @apply text-[#111112];
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+
+    body {
+        @apply bg-background text-foreground;
+    }
+}
