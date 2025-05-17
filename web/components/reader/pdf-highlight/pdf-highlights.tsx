@@ -46,23 +46,9 @@ import { TipContainer } from "./tip-container"
 
 import Header from "@/components/navigation/header"
 import ReadingProgressBar from "@/components/reader/progress-bar"
-import { Button } from "@/components/ui/button"
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/components/ui/popover"
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select"
 import { SidebarRightTrigger, useSidebarRight } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useReaderStore } from "@/stores/reader"
-import { Globe } from "lucide-react"
 import type {
     EventBus as TEventBus,
     PDFLinkService as TPDFLinkService,
@@ -71,58 +57,17 @@ import type {
 import PageNumberInput from "./page-selector"
 import { PdfZoom } from "./pdf-zoom"
 
-// Language options from reader-nav-actions.tsx
-const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
-    { value: "Arabic (ar)", label: "Arabic (ar)" },
-    { value: "Bengali (bn)", label: "Bengali (bn)" },
-    { value: "Bulgarian (bg)", label: "Bulgarian (bg)" },
-    { value: "Chinese (zh)", label: "Chinese (zh)" },
-    { value: "Croatian (hr)", label: "Croatian (hr)" },
-    { value: "Czech (cs)", label: "Czech (cs)" },
-    { value: "Danish (da)", label: "Danish (da)" },
-    { value: "Dutch (nl)", label: "Dutch (nl)" },
-    { value: "English (en)", label: "English (en)" },
-    { value: "Estonian (et)", label: "Estonian (et)" },
-    { value: "Finnish (fi)", label: "Finnish (fi)" },
-    { value: "French (fr)", label: "French (fr)" },
-    { value: "German (de)", label: "German (de)" },
-    { value: "Greek (el)", label: "Greek (el)" },
-    { value: "Hebrew (iw)", label: "Hebrew (iw)" },
-    { value: "Hindi (hi)", label: "Hindi (hi)" },
-    { value: "Hungarian (hu)", label: "Hungarian (hu)" },
-    { value: "Indonesian (id)", label: "Indonesian (id)" },
-    { value: "Italian (it)", label: "Italian (it)" },
-    { value: "Japanese (ja)", label: "Japanese (ja)" },
-    { value: "Korean (ko)", label: "Korean (ko)" },
-    { value: "Latvian (lv)", label: "Latvian (lv)" },
-    { value: "Lithuanian (lt)", label: "Lithuanian (lt)" },
-    { value: "Norwegian (no)", label: "Norwegian (no)" },
-    { value: "Polish (pl)", label: "Polish (pl)" },
-    { value: "Portuguese (pt)", label: "Portuguese (pt)" },
-    { value: "Romanian (ro)", label: "Romanian (ro)" },
-    { value: "Russian (ru)", label: "Russian (ru)" },
-    { value: "Serbian (sr)", label: "Serbian (sr)" },
-    { value: "Slovak (sk)", label: "Slovak (sk)" },
-    { value: "Slovenian (sl)", label: "Slovenian (sl)" },
-    { value: "Spanish (es)", label: "Spanish (es)" },
-    { value: "Swahili (sw)", label: "Swahili (sw)" },
-    { value: "Swedish (sv)", label: "Swedish (sv)" },
-    { value: "Thai (th)", label: "Thai (th)" },
-    { value: "Turkish (tr)", label: "Turkish (tr)" },
-    { value: "Ukrainian (uk)", label: "Ukrainian (uk)" },
-    { value: "Vietnamese (vi)", label: "Vietnamese (vi)" },
-]
 
 let EventBus: typeof TEventBus,
     PDFLinkService: typeof TPDFLinkService,
     PDFViewer: typeof TPDFViewer
-;(async () => {
-    // Due to breaking changes in PDF.js 4.0.189. See issue #17228
-    const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
-    EventBus = pdfjs.EventBus
-    PDFLinkService = pdfjs.PDFLinkService
-    PDFViewer = pdfjs.PDFViewer
-})()
+    ; (async () => {
+        // Due to breaking changes in PDF.js 4.0.189. See issue #17228
+        const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
+        EventBus = pdfjs.EventBus
+        PDFLinkService = pdfjs.PDFLinkService
+        PDFViewer = pdfjs.PDFViewer
+    })()
 
 const SCROLL_MARGIN = 10
 const DEFAULT_SCALE_VALUE = 0.1
@@ -332,48 +277,6 @@ export interface PdfHighlighterProps {
     bookTitle: string
 }
 
-// Language Popover component
-const LanguagePopover: React.FC<{
-    language: string
-    onLanguageChange: (value: string) => void
-}> = ({ language, onLanguageChange }) => (
-    <Popover>
-        <PopoverTrigger asChild>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 data-[state=open]:bg-accent"
-            >
-                <Globe className="h-4 w-4" />
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent
-            className="w-60 overflow-hidden rounded-lg p-4"
-            align="end"
-        >
-            <div className="space-y-4">
-                <h3 className="font-medium">AI Language</h3>
-                <Select value={language} onValueChange={onLanguageChange}>
-                    <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                        {LANGUAGE_OPTIONS.map(({ value, label }) => (
-                            <SelectItem
-                                key={value}
-                                value={value}
-                                className="cursor-pointer"
-                            >
-                                {label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        </PopoverContent>
-    </Popover>
-)
-
 /**
  * This is a large-scale PDF viewer component designed to facilitate
  * highlighting. It should be used as a child to a {@link PdfLoader} to ensure
@@ -410,14 +313,6 @@ export const PdfHighlighter = ({
     )
     const setTotalPages = useReaderStore((state) => state.setTotalPages)
     const goToPage = useReaderStore((state) => state.goToPage)
-    const isAreaSelectionActive = useReaderStore(
-        (state) => state.isAreaSelectionActive
-    )
-    const bookMeta = useReaderStore((state) => state.bookMeta)
-
-    // Language state
-    const bookLanguage = bookMeta?.language || "English (en)"
-    const [language, setLanguage] = useState(bookLanguage)
 
     // State
     const [tip, setTip] = useState<Tip | null>(null)
@@ -437,7 +332,7 @@ export const PdfHighlighter = ({
     const scrolledToHighlightIdRef = useRef<string | null>(null)
     const isAreaSelectionInProgressRef = useRef(false)
     const isEditInProgressRef = useRef(false)
-    const updateTipPositionRef = useRef(() => {})
+    const updateTipPositionRef = useRef(() => { })
 
     const eventBusRef = useRef<InstanceType<typeof EventBus>>(new EventBus())
     const linkServiceRef = useRef<InstanceType<typeof PDFLinkService>>(
@@ -476,8 +371,20 @@ export const PdfHighlighter = ({
     }, [])
 
     useEffect(() => {
-        startPageRef.current = startPage
-    }, [startPage])
+        startPageRef.current = startPage;
+        console.log("PdfHighlighter: startPage prop updated to", startPage);
+
+        // If viewer is already ready, attempt to set the page when prop changes
+        if (isViewerReady && viewerRef.current && startPage && !initialPageSetRef.current) {
+            console.log("PdfHighlighter: Attempting to set page on prop change", startPage);
+            try {
+                viewerRef.current.currentPageNumber = Number(startPage);
+                initialPageSetRef.current = true;
+            } catch (err) {
+                console.error("Error setting page on prop change:", err);
+            }
+        }
+    }, [startPage, isViewerReady])
 
     // Initialise PDF Viewer
     useLayoutEffect(() => {
@@ -501,7 +408,7 @@ export const PdfHighlighter = ({
 
             // Apply initial zoom if provided
             if (pdfScaleValue && viewerRef.current) {
-                ;`Setting initial zoom to ${pdfScaleValue} during initialization`
+                ; `Setting initial zoom to ${pdfScaleValue} during initialization`
                 viewerRef.current.currentScaleValue = pdfScaleValue.toString()
             }
         }, 100)
@@ -527,22 +434,41 @@ export const PdfHighlighter = ({
                 return
             if (initialPageSetRef.current) return
 
-            setTimeout(() => {
-                if (viewerRef.current) {
-                    initialPageSetRef.current = true
-                    viewerRef.current.currentPageNumber = Number(startPage)
-                    initialPageSetRef.current = true
+            console.log("PdfHighlighter: Setting initial page to", startPage, "viewer ready:", Boolean(viewerRef.current));
 
-                    // Apply initial zoom when the viewer is ready
-                    if (
-                        pdfScaleValue &&
-                        pdfScaleValue?.toString() !== "[object Object]"
-                    ) {
-                        viewerRef.current.currentScaleValue =
-                            pdfScaleValue.toString()
+            initialPageSetRef.current = true;
+
+            // Make multiple attempts to set the page, as sometimes the first ones can fail
+            const setPageAttempt = (attempt = 1) => {
+                if (attempt > 5) return; // max 5 attempts
+
+                try {
+                    if (viewerRef.current) {
+                        console.log(`PdfHighlighter: Setting page attempt ${attempt}`, startPage);
+                        viewerRef.current.currentPageNumber = Number(startPage);
+
+                        // Apply initial zoom when the viewer is ready
+                        if (
+                            pdfScaleValue &&
+                            pdfScaleValue?.toString() !== "[object Object]"
+                        ) {
+                            viewerRef.current.currentScaleValue =
+                                pdfScaleValue.toString();
+                        }
                     }
+                } catch (err) {
+                    console.error("Error setting initial page:", err);
+                    // Try again with a slight delay
+                    setTimeout(() => setPageAttempt(attempt + 1), 100);
                 }
-            }, 100)
+            };
+
+            // Make first attempt immediately
+            setPageAttempt();
+            // And schedule additional attempts with increasing delays
+            setTimeout(() => setPageAttempt(2), 100);
+            setTimeout(() => setPageAttempt(3), 300);
+            setTimeout(() => setPageAttempt(4), 600);
         }
 
         // Listen for the 'pagesloaded' event which indicates the PDF is fully loaded
@@ -950,15 +876,15 @@ export const PdfHighlighter = ({
                             isMobile
                                 ? []
                                 : [
-                                      { href: "/library", label: "Home" },
-                                      {
-                                          href: `/library/${bookId}`,
-                                          label:
-                                              bookTitle.length > 30
-                                                  ? `${bookTitle.substring(0, 30)}...`
-                                                  : bookTitle,
-                                      },
-                                  ]
+                                    { href: "/library", label: "Home" },
+                                    {
+                                        href: `/library/${bookId}`,
+                                        label:
+                                            bookTitle.length > 30
+                                                ? `${bookTitle.substring(0, 30)}...`
+                                                : bookTitle,
+                                    },
+                                ]
                         }
                     >
                         <div className="flex items-center gap-2">
@@ -975,7 +901,7 @@ export const PdfHighlighter = ({
                 <PdfHighlighterContext.Provider value={pdfHighlighterUtils}>
                     <div
                         ref={containerNodeRef}
-                        className={`PdfContainer ${open ? "w-full" : "w-full"} transition-all duration-200 z-1 ${isAreaSelectionActive ? "area-selection-active" : ""}`}
+                        className={`PdfContainer ${open ? "w-full" : "w-full"} transition-all duration-200 z-1`}
                         onPointerDown={handleMouseDown}
                         onPointerUp={handleMouseUp}
                         style={style}
@@ -999,8 +925,8 @@ export const PdfHighlighter = ({
                             <MouseSelection
                                 viewer={viewerRef.current!}
                                 onChange={(isVisible) =>
-                                    (isAreaSelectionInProgressRef.current =
-                                        isVisible)
+                                (isAreaSelectionInProgressRef.current =
+                                    isVisible)
                                 }
                                 enableAreaSelection={enableAreaSelection}
                                 style={mouseSelectionStyle}

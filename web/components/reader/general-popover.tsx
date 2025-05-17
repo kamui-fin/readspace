@@ -12,7 +12,7 @@ const GeneralPopover = () => {
 
     let getCurrentSelection = undefined
 
-    if (bookType === "pdf") {
+    if (bookType === "PDF") {
         getCurrentSelection = usePdfHighlighterContext().getCurrentSelection
     }
 

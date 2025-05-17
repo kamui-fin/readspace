@@ -1,14 +1,15 @@
 import EPUBReader from "@/components/reader/reader"
 import { ApiClient } from "@/lib/api/client"
 import { createClient } from "@/lib/supabase/server"
-import { Highlight } from "@/types/api"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { PDFViewer } from "../../../../components/reader/pdf-reader"
 import {
-    BookMeta,
+    BookViewProps,
     EpubHighlight,
+    EpubLocation,
     PdfHighlight,
+    UserLibraryBook,
 } from "../../../../types/library"
 
 interface PageProps {
@@ -22,13 +23,14 @@ export async function generateMetadata({
 }: {
     params: Promise<{ id: string }>
 }): Promise<Metadata> {
-    const bookId = (await params).id
-    const book = await ApiClient.get<BookMeta>(`/books/${bookId}`)
+    const libraryBookId = (await params).id
+    const libraryBook = await ApiClient.get<UserLibraryBook>(`/books/${libraryBookId}`)
+    const bookMetaData = libraryBook?.book_metadata
     return {
-        title: `${book?.title}`,
+        title: `${bookMetaData?.title}`,
         description:
-            book?.description ||
-            `Reading ${book?.title} by ${book?.author || "Unknown Author"}`,
+            bookMetaData?.description ||
+            `Reading ${bookMetaData?.title} by ${bookMetaData?.author || "Unknown Author"}`,
     }
 }
 
@@ -42,13 +44,19 @@ export default async function Page({ params }: PageProps) {
         redirect("/login")
     }
 
-    const bookId = (await params).id
-    const bookMeta = await ApiClient.get<BookMeta>(`/books/${bookId}`)
-    const highlights = await ApiClient.get<Highlight[]>(
-        `/highlights/book/${bookId}`
-    )
+    const libraryBookId = (await params).id
 
-    if (!bookMeta) {
+    let libraryBook: UserLibraryBook | null = null;
+    try {
+        libraryBook = await ApiClient.get<UserLibraryBook>(`/books/${libraryBookId}`);
+        console.log("Full Library Book Fetched:", libraryBook);
+    } catch (error) {
+        console.error("Failed to fetch library book:", error);
+    }
+
+    const highlights: (EpubHighlight | PdfHighlight)[] = []
+
+    if (!libraryBook || !libraryBook.book_metadata) {
         return (
             <div className="flex items-center justify-center h-screen">
                 <div className="text-center">
@@ -62,21 +70,29 @@ export default async function Page({ params }: PageProps) {
         )
     }
 
-    // Determine book type either by file extension or type field
-    const isPdf = bookMeta.type === "pdf" || bookMeta.file_url?.endsWith(".pdf")
+    const bookViewProps: BookViewProps = {
+        ...libraryBook.book_metadata,
+        library_id: libraryBook.id,
+        pdf_current_page: libraryBook.pdf_current_page,
+        epub_progress: libraryBook.epub_progress ? libraryBook.epub_progress as unknown as EpubLocation : null,
+    };
+
+    console.log("BookViewProps being passed to viewer:", bookViewProps);
+
+    const isPdf = bookViewProps.format === "PDF";
 
     if (isPdf) {
         return (
             <PDFViewer
-                bookMeta={bookMeta}
-                savedHighlights={highlights as unknown as PdfHighlight[]}
+                bookMeta={bookViewProps}
+                savedHighlights={highlights as PdfHighlight[]}
             />
         )
     } else {
         return (
             <EPUBReader
-                bookMeta={bookMeta}
-                savedHighlights={highlights as unknown as EpubHighlight[]}
+                bookMeta={bookViewProps}
+                savedHighlights={highlights as EpubHighlight[]}
             />
         )
     }

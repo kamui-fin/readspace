@@ -22,14 +22,14 @@ export default function useChapterNavigation() {
             getTotalCharsInBook: state.getTotalCharsInBook,
             setLocation: state.setLocation,
             epubBook: state.book,
-            bookMeta: state.bookMeta,
+            bookMeta: state.bookLibraryItem,
             setProgressPercentage: state.setProgressPercentage,
         }))
     )
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}/progress`, {
+            ApiClient.put(`/books/${bookId}`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {

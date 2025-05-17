@@ -8,13 +8,12 @@ import {
     ArrowUpDown,
     ChartNoAxesColumnIncreasing,
     ChevronDown,
-    Globe,
     LetterText,
     Minus,
     Plus,
     Space,
     TextQuote,
-    X,
+    X
 } from "lucide-react"
 import * as React from "react"
 
@@ -38,7 +37,6 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SidebarRightTrigger } from "@/components/ui/sidebar"
-import useChapterNavigation from "@/hooks/reader/use-chapter-navigation"
 import { useReaderStore } from "@/stores/reader"
 import useReaderSettingsStore, {
     ReaderFontFamily,
@@ -159,12 +157,6 @@ export function ReaderNavActions() {
             isStandardFont ? "serif" : settings.fontFamily
         )
 
-    const { nextChapter, prevChapter } = useChapterNavigation()
-
-    const bookMeta = useReaderStore((state) => state.bookMeta)
-    const bookLanguage = bookMeta?.language || "English (en)"
-    const [language, setLanguage] = React.useState(bookLanguage)
-
     const getTotalCharsInBook = useReaderStore(
         (state) => state.getTotalCharsInBook
     )
@@ -270,47 +262,6 @@ const ProgressPopover: React.FC<{
     </Popover>
 )
 
-const LanguagePopover: React.FC<{
-    language: string
-    onLanguageChange: (value: string) => void
-}> = ({ language, onLanguageChange }) => (
-    <Popover>
-        <PopoverTrigger asChild>
-            <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 data-[state=open]:bg-accent"
-            >
-                <Globe className="h-4 w-4" />
-            </Button>
-        </PopoverTrigger>
-        <PopoverContent
-            className="w-60 overflow-hidden rounded-lg p-4"
-            align="end"
-        >
-            <div className="space-y-4">
-                <h3 className="font-medium">AI Language {language}</h3>
-                <Select value={language} onValueChange={onLanguageChange}>
-                    <SelectTrigger className="h-9">
-                        <SelectValue placeholder="Select language" />
-                    </SelectTrigger>
-                    <SelectContent className="max-h-[300px]">
-                        {LANGUAGE_OPTIONS.map(({ value, label }) => (
-                            <SelectItem
-                                key={value}
-                                value={value}
-                                className="cursor-pointer"
-                            >
-                                {label}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
-        </PopoverContent>
-    </Popover>
-)
-
 const DisplaySettingsPopover: React.FC<{
     isOpen: boolean
     onOpenChange: (open: boolean) => void
@@ -330,131 +281,131 @@ const DisplaySettingsPopover: React.FC<{
     onFontFamilyChange,
     onCustomFontClose,
 }) => {
-    const settings = useReaderSettingsStore()
-    const [isAdvancedOpen, setIsAdvancedOpen] = React.useState(false)
+        const settings = useReaderSettingsStore()
+        const [isAdvancedOpen, setIsAdvancedOpen] = React.useState(false)
 
-    return (
-        <Popover open={isOpen} onOpenChange={onOpenChange}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-7 w-7 data-[state=open]:bg-accent hover:bg-accent/50"
+        return (
+            <Popover open={isOpen} onOpenChange={onOpenChange}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 data-[state=open]:bg-accent hover:bg-accent/50"
+                    >
+                        <LetterText className="h-4 w-4" />
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                    className="w-[380px] overflow-hidden rounded-lg p-6 shadow-lg"
+                    align="end"
                 >
-                    <LetterText className="h-4 w-4" />
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent
-                className="w-[380px] overflow-hidden rounded-lg p-6 shadow-lg"
-                align="end"
-            >
-                <div className="space-y-6">
-                    {/* Text Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-semibold">
-                                Reader Settings
-                            </h2>
-                        </div>
-
+                    <div className="space-y-6">
+                        {/* Text Section */}
                         <div className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-xl font-semibold">
+                                    Reader Settings
+                                </h2>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <TextQuote className="h-4 w-4" />
+                                            <span className="text-sm font-medium">
+                                                Text size
+                                            </span>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() =>
+                                                    settings.updateFontSize(
+                                                        Math.max(
+                                                            12,
+                                                            settings.fontSize - 1
+                                                        )
+                                                    )
+                                                }
+                                            >
+                                                <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <span className="min-w-[2.5rem] text-center py-1.5">
+                                                {settings.fontSize}
+                                            </span>
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                                onClick={() =>
+                                                    settings.updateFontSize(
+                                                        Math.min(
+                                                            36,
+                                                            settings.fontSize + 1
+                                                        )
+                                                    )
+                                                }
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1.5">
                                     <div className="flex items-center gap-2">
-                                        <TextQuote className="h-4 w-4" />
-                                        <span className="text-sm font-medium">
-                                            Text size
-                                        </span>
+                                        <LetterText className="h-4 w-4" />
+                                        <Label className="text-sm font-medium">
+                                            Font
+                                        </Label>
                                     </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() =>
-                                                settings.updateFontSize(
-                                                    Math.max(
-                                                        12,
-                                                        settings.fontSize - 1
-                                                    )
-                                                )
-                                            }
+                                    {showCustomFont ? (
+                                        <CustomFontInput
+                                            value={customFontFamily}
+                                            onChange={onCustomFontChange}
+                                            onSubmit={onCustomFontSubmit}
+                                            onClose={onCustomFontClose}
+                                        />
+                                    ) : (
+                                        <Select
+                                            value={settings.fontFamily}
+                                            onValueChange={onFontFamilyChange}
                                         >
-                                            <Minus className="h-4 w-4" />
-                                        </Button>
-                                        <span className="min-w-[2.5rem] text-center py-1.5">
-                                            {settings.fontSize}
-                                        </span>
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() =>
-                                                settings.updateFontSize(
-                                                    Math.min(
-                                                        36,
-                                                        settings.fontSize + 1
+                                            <SelectTrigger className="h-9">
+                                                <SelectValue placeholder="Select font" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {FONT_OPTIONS.map(
+                                                    ({ value, label }) => (
+                                                        <SelectItem
+                                                            key={value}
+                                                            value={value}
+                                                            className="cursor-pointer"
+                                                        >
+                                                            {label}
+                                                        </SelectItem>
                                                     )
-                                                )
-                                            }
-                                        >
-                                            <Plus className="h-4 w-4" />
-                                        </Button>
-                                    </div>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                    )}
                                 </div>
                             </div>
-
-                            <div className="space-y-1.5">
-                                <div className="flex items-center gap-2">
-                                    <LetterText className="h-4 w-4" />
-                                    <Label className="text-sm font-medium">
-                                        Font
-                                    </Label>
-                                </div>
-                                {showCustomFont ? (
-                                    <CustomFontInput
-                                        value={customFontFamily}
-                                        onChange={onCustomFontChange}
-                                        onSubmit={onCustomFontSubmit}
-                                        onClose={onCustomFontClose}
-                                    />
-                                ) : (
-                                    <Select
-                                        value={settings.fontFamily}
-                                        onValueChange={onFontFamilyChange}
-                                    >
-                                        <SelectTrigger className="h-9">
-                                            <SelectValue placeholder="Select font" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {FONT_OPTIONS.map(
-                                                ({ value, label }) => (
-                                                    <SelectItem
-                                                        key={value}
-                                                        value={value}
-                                                        className="cursor-pointer"
-                                                    >
-                                                        {label}
-                                                    </SelectItem>
-                                                )
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Layout Section */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-xl font-semibold">Layout</h2>
                         </div>
 
+                        <Separator />
+
+                        {/* Layout Section */}
                         <div className="space-y-4">
-                            {/* <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-xl font-semibold">Layout</h2>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* <div className="space-y-2">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <PanelLeftClose className="h-4 w-4" />
@@ -476,128 +427,128 @@ const DisplaySettingsPopover: React.FC<{
                                     />
                                 </div> */}
 
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <ArrowUpDown className="h-4 w-4" />
-                                        <Label className="text-sm font-medium">
-                                            Line spacing
-                                        </Label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <ArrowUpDown className="h-4 w-4" />
+                                            <Label className="text-sm font-medium">
+                                                Line spacing
+                                            </Label>
+                                        </div>
+                                        <span className="text-sm text-muted-foreground">
+                                            {settings.lineHeight}x
+                                        </span>
                                     </div>
-                                    <span className="text-sm text-muted-foreground">
-                                        {settings.lineHeight}x
-                                    </span>
+                                    <ReaderSlider
+                                        ticks={SLIDER_CONFIG.lineHeight.ticks}
+                                        defaultNum={settings.lineHeight}
+                                        maxNum={SLIDER_CONFIG.lineHeight.max}
+                                        interval={SLIDER_CONFIG.lineHeight.interval}
+                                        onSlideChange={settings.updateLineHeight}
+                                    />
                                 </div>
-                                <ReaderSlider
-                                    ticks={SLIDER_CONFIG.lineHeight.ticks}
-                                    defaultNum={settings.lineHeight}
-                                    maxNum={SLIDER_CONFIG.lineHeight.max}
-                                    interval={SLIDER_CONFIG.lineHeight.interval}
-                                    onSlideChange={settings.updateLineHeight}
-                                />
                             </div>
                         </div>
-                    </div>
 
-                    {/* <Separator /> */}
+                        {/* <Separator /> */}
 
-                    {/* Advanced Section */}
-                    <div className="hidden space-y-4">
-                        <button
-                            onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
-                            className="flex w-full items-center gap-2 text-xl font-semibold"
-                        >
-                            <span>Advanced</span>
-                            <ChevronDown
-                                className={cn(
-                                    "ml-auto h-5 w-5 transition-transform",
-                                    {
-                                        "transform rotate-180": isAdvancedOpen,
-                                    }
-                                )}
-                            />
-                        </button>
+                        {/* Advanced Section */}
+                        <div className="hidden space-y-4">
+                            <button
+                                onClick={() => setIsAdvancedOpen(!isAdvancedOpen)}
+                                className="flex w-full items-center gap-2 text-xl font-semibold"
+                            >
+                                <span>Advanced</span>
+                                <ChevronDown
+                                    className={cn(
+                                        "ml-auto h-5 w-5 transition-transform",
+                                        {
+                                            "transform rotate-180": isAdvancedOpen,
+                                        }
+                                    )}
+                                />
+                            </button>
 
-                        {isAdvancedOpen && (
-                            <div className="space-y-4 pt-2">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <TextQuote className="h-4 w-4" />
-                                            <Label className="text-sm font-medium">
-                                                Character spacing
-                                            </Label>
+                            {isAdvancedOpen && (
+                                <div className="space-y-4 pt-2">
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <TextQuote className="h-4 w-4" />
+                                                <Label className="text-sm font-medium">
+                                                    Character spacing
+                                                </Label>
+                                            </div>
+                                            <span className="text-sm text-muted-foreground">
+                                                1.0x
+                                            </span>
                                         </div>
-                                        <span className="text-sm text-muted-foreground">
-                                            1.0x
-                                        </span>
+                                        <ReaderSlider
+                                            ticks={[]}
+                                            defaultNum={1}
+                                            maxNum={2}
+                                            interval={0.1}
+                                            onSlideChange={() => { }}
+                                        />
                                     </div>
-                                    <ReaderSlider
-                                        ticks={[]}
-                                        defaultNum={1}
-                                        maxNum={2}
-                                        interval={0.1}
-                                        onSlideChange={() => {}}
-                                    />
-                                </div>
 
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <Space className="h-4 w-4" />
-                                            <Label className="text-sm font-medium">
-                                                Word spacing
-                                            </Label>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Space className="h-4 w-4" />
+                                                <Label className="text-sm font-medium">
+                                                    Word spacing
+                                                </Label>
+                                            </div>
+                                            <span className="text-sm text-muted-foreground">
+                                                1.0x
+                                            </span>
                                         </div>
-                                        <span className="text-sm text-muted-foreground">
-                                            1.0x
-                                        </span>
+                                        <ReaderSlider
+                                            ticks={[]}
+                                            defaultNum={1}
+                                            maxNum={2}
+                                            interval={0.1}
+                                            onSlideChange={() => { }}
+                                        />
                                     </div>
-                                    <ReaderSlider
-                                        ticks={[]}
-                                        defaultNum={1}
-                                        maxNum={2}
-                                        interval={0.1}
-                                        onSlideChange={() => {}}
-                                    />
-                                </div>
 
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center gap-2">
-                                        <AlignLeft className="h-4 w-4" />
-                                        <Label className="text-sm font-medium">
-                                            Text alignment
-                                        </Label>
-                                    </div>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-9"
-                                        >
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2">
                                             <AlignLeft className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-9"
-                                        >
-                                            <AlignCenter className="h-4 w-4" />
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            className="h-9"
-                                        >
-                                            <AlignRight className="h-4 w-4" />
-                                        </Button>
+                                            <Label className="text-sm font-medium">
+                                                Text alignment
+                                            </Label>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9"
+                                            >
+                                                <AlignLeft className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9"
+                                            >
+                                                <AlignCenter className="h-4 w-4" />
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-9"
+                                            >
+                                                <AlignRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
-            </PopoverContent>
-        </Popover>
-    )
-}
+                </PopoverContent>
+            </Popover>
+        )
+    }

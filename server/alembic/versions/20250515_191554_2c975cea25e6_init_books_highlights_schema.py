@@ -25,7 +25,8 @@ def upgrade() -> None:
         sa.Column('email', sa.Text(), nullable=False),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint('id')
+        sa.PrimaryKeyConstraint('id'),
+        sa.ForeignKeyConstraint(['id'], ['auth.users.id'], ondelete='CASCADE')
     )
 
     # Create trigger function
@@ -55,7 +56,7 @@ def upgrade() -> None:
         sa.Column('description', sa.Text(), nullable=True),
         sa.Column('cover_url', sa.Text(), nullable=True),
         sa.Column('file_url', sa.Text(), nullable=True),
-        sa.Column('format', postgresql.ENUM('epub', 'pdf', name='bookformat'), nullable=False),
+        sa.Column('format', postgresql.ENUM('EPUB', 'PDF', name='bookformat'), nullable=False),
         sa.Column('num_pages', sa.Integer(), nullable=True),
         sa.Column('file_size_bytes', sa.BigInteger(), nullable=True),
         sa.Column('epub_chapter_char_counts', postgresql.ARRAY(sa.Integer()), nullable=True),

@@ -2,9 +2,9 @@ import uuid
 from typing import Optional
 
 import structlog
-from supabase import Client, create_client
-
 from app.core.config import get_settings
+
+from supabase import Client, create_client
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -27,8 +27,8 @@ def generate_id() -> str:
 def get_supabase_client() -> Client:
     """Get a Supabase client instance."""
     try:
-        url = settings.supabase_url
-        key = settings.supabase_key.get_secret_value()
+        url = settings.SUPABASE_URL
+        key = settings.SUPABASE_SERVICE_ROLE_KEY.get_secret_value()
         client = create_client(url, key)
         return client
     except Exception as e:

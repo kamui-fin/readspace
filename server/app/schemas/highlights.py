@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -8,7 +8,6 @@ from pydantic import BaseModel
 class HighlightBase(BaseModel):
     """Base schema for highlight data."""
 
-    book_id: UUID
     text: str
     color: Optional[str] = None
     note: Optional[str] = None
@@ -22,8 +21,7 @@ class HighlightBase(BaseModel):
 
 class HighlightCreate(HighlightBase):
     """Schema for creating a new highlight."""
-
-    pass
+    user_book_lib_id: UUID
 
 
 class HighlightUpdate(BaseModel):
@@ -44,6 +42,7 @@ class HighlightResponse(HighlightBase):
     """Schema for highlight response."""
 
     id: UUID
+    user_book_lib_id: UUID
     created_at: datetime
     updated_at: datetime
 

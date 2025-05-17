@@ -1,14 +1,14 @@
 from typing import Annotated, List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
-
-from app.core.dependencies import DatabaseSession, HighlightRepo
-from app.repositories.highlights import HighlightRepository
-from app.schemas.highlights import HighlightCreate, HighlightUpdate, HighlightResponse
-from app.core.dependencies import get_current_user
 from app.core.database import get_db
-from app.models.highlight_models import Highlight
+from app.core.dependencies import HighlightRepo, get_current_user
+from app.models.book_models import Highlight, HighlightLocation, UserBookLibrary
+from app.repositories.highlights import HighlightRepository
+from app.schemas.auth import TokenData
+from app.schemas.highlights import HighlightCreate, HighlightResponse, HighlightUpdate
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/highlights", tags=["highlights"])
@@ -22,28 +22,62 @@ async def get_book_highlights(
     highlight_repo: HighlightRepository = Depends(HighlightRepo),
 ) -> List[HighlightResponse]:
     """Get all highlights for a book."""
-    highlights = await highlight_repo.get_book_highlights(book_id)
+    highlights = await highlight_repo.get_book_highlights(db, book_id)
     return highlights
 
 
 @router.post("/", response_model=HighlightResponse)
 async def create_highlight(
-    highlight: HighlightCreate,
+    highlight_data: HighlightCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    user: Annotated[Optional[dict], Depends(get_current_user)] = None
+    user: Annotated[Optional[TokenData], Depends(get_current_user)] = None
 ):
     """
-    Create a new highlight entry.
+    Create a new highlight entry and its location.
     """
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
+
+    # Get the user_book_library entry using the correct ID
+    stmt = select(UserBookLibrary).where(
+        UserBookLibrary.user_id == user.sub,
+        UserBookLibrary.id == highlight_data.user_book_lib_id
+    )
+    result = await db.execute(stmt)
+    user_book_lib = result.scalar_one_or_none()
+    
+    if not user_book_lib:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Book not found in user's library. Ensure 'user_book_lib_id' in the request refers to a valid UserBookLibrary entry."
+        )
+
+    # Create the Highlight object
     db_highlight = Highlight(
-        user_id=user["id"] if user else None,
-        book_id=highlight.book_id,
-        text=highlight.text,
-        page_number=highlight.page_number,
+        user_book_lib_id=user_book_lib.id,
+        color=highlight_data.color,
+        original_text=highlight_data.text,
+        note=highlight_data.note
     )
     db.add(db_highlight)
+    await db.flush()  # Flush to get the db_highlight.id before creating location
+
+    # Create the HighlightLocation object
+    db_highlight_location = HighlightLocation(
+        highlight_id=db_highlight.id,
+        chapter_idx=highlight_data.epub_chapter_idx,
+        chapter_href=highlight_data.epub_chapter_href,
+        chapter_title=highlight_data.epub_chapter_title,
+        page=highlight_data.epub_est_page, # Assuming epub_est_page is for general page number
+        html_range=highlight_data.epub_range,
+        pdf_rect_position=highlight_data.pdf_rect_position
+    )
+    db.add(db_highlight_location)
+    
     await db.commit()
     await db.refresh(db_highlight)
+    # We might need to refresh db_highlight_location as well if we return it or its fields
+    # For now, HighlightResponse doesn't seem to directly include location details other than what's in HighlightBase
     return db_highlight
 
 

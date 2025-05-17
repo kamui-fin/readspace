@@ -2,9 +2,8 @@ import functools
 from typing import Optional
 
 import structlog
-from app.repositories.supabase import get_supabase_client
-from app.schemas.auth import TokenData
 from app.core.config import get_settings
+from app.schemas.auth import TokenData
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
 
@@ -17,7 +16,7 @@ def verify_token(token: str) -> TokenData:
         settings = get_settings()
         payload = jwt.decode(
             token,
-            key=settings.SUPABASE_JWT_SECRET,
+            key=settings.SUPABASE_JWT_SECRET.get_secret_value(),
             algorithms=["HS256"],
             options={"verify_aud": False},  # Skip audience verification
         )
@@ -46,15 +45,8 @@ def get_current_user(request: Request) -> TokenData:
 
     token = auth_header.split(" ")[1]
     token_data = verify_token(token)
-    token_data.role = get_user_role(token_data.sub)
     return token_data
 
-
-def get_user_role(user_id: str) -> str:
-    """Get the role of the user from the database."""
-    supabase = get_supabase_client()
-    user = supabase.table("profiles").select("role").eq("id", user_id).execute().data[0]
-    return user["role"]
 
 
 # Optional dependency that doesn't require auth but provides user if available

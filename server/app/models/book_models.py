@@ -2,6 +2,7 @@ from datetime import datetime
 from enum import Enum as PyEnum
 
 from app.db.base_class import Base
+from app.models.user_models import Profile  # noqa: F401
 from sqlalchemy import (
     ARRAY,
     JSON,
@@ -19,8 +20,8 @@ from sqlalchemy.orm import relationship
 
 
 class BookFormat(PyEnum):
-    EPUB = "epub"
-    PDF = "pdf"
+    EPUB = "EPUB"
+    PDF = "PDF"
 
 
 class HighlightColor(PyEnum):

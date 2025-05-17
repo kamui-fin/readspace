@@ -31,7 +31,7 @@ export function FeedbackModal({ isOpen, onClose, userId }: FeedbackModalProps) {
 
     const { mutate: submitFeedback, isPending } = useMutation({
         mutationFn: async () => {
-            const response = await fetch("/api/v1/feedback", {
+            const response = await fetch("/feedback", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

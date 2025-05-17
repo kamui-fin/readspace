@@ -6,27 +6,15 @@ import {
     DialogClose,
     DialogContent,
     DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import {
-    Stepper,
-    StepperIndicator,
-    StepperItem,
-    StepperSeparator,
-    StepperTitle,
-    StepperTrigger,
-} from "@/components/ui/stepper"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { HTTPError } from "@/lib/errors"
 import {
-    ArrowRightIcon,
-    BookOpen,
-    Check,
     LoaderCircle,
-    Plus,
+    Plus
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -44,11 +32,10 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 
 export default function UploadBookDialog() {
     const [isOpen, setIsOpen] = useState(false)
-    const [step, setStep] = useState(1)
-    const [isLocalStorage, setIsLocalStorage] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadedBookId, setUploadedBookId] = useState<string>("")
+    const [isLocalStorage, setIsLocalStorage] = useState(false)
 
     const { user } = useCurrentUser()
     const router = useRouter()
@@ -78,9 +65,8 @@ export default function UploadBookDialog() {
             })
 
             setUploadedBookId(bookId)
-
-            // Move to goals step instead of final step
-            setStep(2)
+            setIsOpen(false)
+            router.push(`/library/${bookId}`)
         } catch (err) {
             console.error("Error during file upload process:", err)
 
@@ -94,56 +80,10 @@ export default function UploadBookDialog() {
                     ? err.message
                     : "An unexpected error occurred. Please try again."
             )
-            // Reset to upload step on failure
         } finally {
             setIsUploading(false)
         }
     }
-
-    const stepContent = [
-        {
-            step: 1,
-            stepTitle: "Upload",
-            title: "Upload your document",
-            description:
-                "Select the document you want to upload and we'll take care of the rest.",
-            children: (
-                <DragDropBook
-                    isUploading={isUploading}
-                    onFileSelect={setSelectedFile}
-                    selectedFile={selectedFile}
-                    onRemoveFile={() => setSelectedFile(null)}
-                    user={user}
-                    isLocalStorage={isLocalStorage}
-                    setIsLocalStorage={setIsLocalStorage}
-                />
-            ),
-        },
-        {
-            step: 3,
-            stepTitle: "Complete",
-            title: "You're all set!",
-            description:
-                "Your book has been uploaded and is ready to read. You can now start reading and taking notes.",
-            children: (
-                <div className="flex flex-col items-center justify-center gap-4 py-8">
-                    <BookOpen className="h-12 w-12 text-primary" />
-                    <p className="text-center text-sm text-muted-foreground">
-                        Your book has been uploaded successfully. You can now
-                        dive right in to your book!
-                    </p>
-                    <Button
-                        onClick={() => {
-                            setIsOpen(false)
-                            router.push(`/library/${uploadedBookId}`)
-                        }}
-                    >
-                        Start Reading
-                    </Button>
-                </div>
-            ),
-        },
-    ]
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -175,76 +115,34 @@ export default function UploadBookDialog() {
                     </DialogDescription>
                 </DialogHeader>
                 <div className="py-4">
-                    <Stepper value={step}>
-                        {stepContent.map((content, index) => (
-                            <StepperItem
-                                key={content.step}
-                                step={content.step}
-                                className="flex-1"
-                            >
-                                <StepperTrigger
-                                    disabled={step < content.step}
-                                    className="flex w-full flex-col items-center gap-2"
-                                >
-                                    <StepperIndicator>
-                                        {step > content.step ? (
-                                            <Check className="h-4 w-4" />
-                                        ) : (
-                                            content.step
-                                        )}
-                                    </StepperIndicator>
-                                    <StepperTitle>
-                                        {content.stepTitle}
-                                    </StepperTitle>
-                                </StepperTrigger>
-                                {index < stepContent.length - 1 && (
-                                    <StepperSeparator />
-                                )}
-                            </StepperItem>
-                        ))}
-                    </Stepper>
+                    <DragDropBook
+                        isUploading={isUploading}
+                        onFileSelect={setSelectedFile}
+                        selectedFile={selectedFile}
+                        onRemoveFile={() => setSelectedFile(null)}
+                        user={user}
+                        isLocalStorage={isLocalStorage}
+                        setIsLocalStorage={setIsLocalStorage}
+                    />
                 </div>
-                <div className="py-4">{stepContent[step - 1].children}</div>
-                <DialogFooter>
-                    {step === 1 && (
-                        <Button
-                            onClick={handleFileUpload}
-                            disabled={!selectedFile || isUploading}
-                        >
-                            {isUploading ? (
-                                <>
-                                    <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                                    Uploading...
-                                </>
-                            ) : (
-                                <>
-                                    Continue
-                                    <ArrowRightIcon className="ml-2 h-4 w-4" />
-                                </>
-                            )}
-                        </Button>
-                    )}
-                    {step === 2 && (
-                        <Button
-                            onClick={() => setStep(3)}
-                            disabled={!uploadedBookId}
-                        >
-                            Continue
-                            <ArrowRightIcon className="ml-2 h-4 w-4" />
-                        </Button>
-                    )}
-                    {step === 3 && (
-                        <DialogClose asChild>
-                            <Button
-                                onClick={() => {
-                                    router.push(`/library/${uploadedBookId}`)
-                                }}
-                            >
-                                Start Reading
-                            </Button>
-                        </DialogClose>
-                    )}
-                </DialogFooter>
+                <div className="flex justify-end gap-2">
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button
+                        onClick={handleFileUpload}
+                        disabled={!selectedFile || isUploading}
+                    >
+                        {isUploading ? (
+                            <>
+                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            "Upload"
+                        )}
+                    </Button>
+                </div>
             </DialogContent>
         </Dialog>
     )

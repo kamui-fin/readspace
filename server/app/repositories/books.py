@@ -2,20 +2,22 @@ from typing import List, Optional
 from uuid import UUID
 
 from app.core.exceptions import StorageError
-from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.book_models import BookMetadata, UserBookLibrary
+from app.schemas.books import (
+    UserBookLibraryCreate,
+    UserBookLibraryResponse,
+    UserBookLibraryUpdate,
+)
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.book_models import BookMetadata, UserBookLibrary
-from app.repositories.base import BaseRepository
-from app.schemas.book import BookCreate, BookUpdate
 
-
-class BookRepository(BaseRepository[BookMetadata, BookCreate, BookUpdate]):
+class BookRepository:
     """Repository for book operations."""
 
     def __init__(self):
-        super().__init__(BookMetadata)
+        self.model = BookMetadata
 
     async def get_by_title(
         self, db: AsyncSession, title: str
@@ -30,20 +32,96 @@ class BookRepository(BaseRepository[BookMetadata, BookCreate, BookUpdate]):
 
     async def get_user_books(
         self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
-    ) -> List[BookMetadata]:
-        """Get all books for a specific user."""
-        try:
-            query = (
-                select(self.model)
-                .join(UserBookLibrary)
-                .where(UserBookLibrary.user_id == user_id)
-                .offset(skip)
-                .limit(limit)
+    ) -> List[UserBookLibraryResponse]:
+        """Get all books in a user's library."""
+        query = (
+            select(UserBookLibrary)
+            .options(selectinload(UserBookLibrary.book_metadata))
+            .where(UserBookLibrary.user_id == user_id)
+            .offset(skip)
+            .limit(limit)
+        )
+        result = await db.execute(query)
+        return result.scalars().all()
+
+    async def get_user_book(
+        self, db: AsyncSession, library_id: UUID, user_id: UUID
+    ) -> Optional[UserBookLibraryResponse]:
+        """Get a specific book from a user's library."""
+        stmt = (
+            select(UserBookLibrary)
+            .join(BookMetadata, UserBookLibrary.book_metadata_id == BookMetadata.id)
+            .where(
+                UserBookLibrary.id == library_id,
+                UserBookLibrary.user_id == user_id
             )
-            result = await db.execute(query)
-            return result.scalars().all()
-        except Exception as e:
-            raise StorageError(f"Failed to get user books: {str(e)}")
+        )
+        result = await db.execute(stmt)
+        db_obj = result.scalar_one_or_none()
+        if not db_obj:
+            return None
+
+        # Ensure the relationship is loaded
+        await db.refresh(db_obj, ["book_metadata"])
+        return db_obj
+
+    async def add_to_library(
+        self, db: AsyncSession, obj_in: UserBookLibraryCreate
+    ) -> UserBookLibraryResponse:
+        """Add a book to user's library."""
+        db_obj = UserBookLibrary(**obj_in.model_dump())
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        # Eagerly load the relationship
+        await db.refresh(db_obj, ["book_metadata"])
+        return db_obj
+
+    async def update_user_book(
+        self,
+        db: AsyncSession,
+        library_id: UUID,
+        user_id: UUID,
+        obj_in: UserBookLibraryUpdate
+    ) -> Optional[UserBookLibraryResponse]:
+        """Update a book in user's library."""
+        query = (
+            select(UserBookLibrary)
+            .options(selectinload(UserBookLibrary.book_metadata))
+            .where(
+                UserBookLibrary.id == library_id,
+                UserBookLibrary.user_id == user_id
+            )
+        )
+        result = await db.execute(query)
+        db_obj = result.scalar_one_or_none()
+        if not db_obj:
+            return None
+
+        update_data = obj_in.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(db_obj, field, value)
+
+        await db.commit()
+        await db.refresh(db_obj)
+        return db_obj
+
+    async def remove_from_library(
+        self, db: AsyncSession, library_id: UUID, user_id: UUID
+    ) -> bool:
+        """Remove a book from user's library."""
+        query = select(UserBookLibrary).where(
+            UserBookLibrary.id == library_id,
+            UserBookLibrary.user_id == user_id
+        )
+        result = await db.execute(query)
+        db_obj = result.scalar_one_or_none()
+        if not db_obj:
+            return False
+
+        await db.delete(db_obj)
+        await db.commit()
+        return True
 
     async def update_progress(
         self, db: AsyncSession, book_id: UUID, progress_data: dict
@@ -58,7 +136,7 @@ class BookRepository(BaseRepository[BookMetadata, BookCreate, BookUpdate]):
                 raise StorageError(f"Book not found: {book_id}")
 
             # Update progress based on book format
-            if book.format == "epub":
+            if book.format == "EPUB":
                 book.epub_progress = progress_data
             else:
                 book.pdf_current_page = progress_data.get("page", 0)

@@ -23,10 +23,9 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
     const selectionRef = useRef<PdfSelection | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)
 
-    const { bookMeta, disableAreaSelection } = useReaderStore(
+    const { bookMeta } = useReaderStore(
         useShallow((state) => ({
-            bookMeta: state.bookMeta,
-            disableAreaSelection: state.disableAreaSelection,
+            bookMeta: state.bookLibraryItem,
         }))
     )
 
@@ -59,14 +58,22 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
             return
         }
 
-        addHighlight({
+        // Create PDF highlight with all required fields
+        const highlightData: PdfHighlight = {
             book_id: bookMeta?.id ? bookMeta.id.toString() : "",
             content: selectionRef.current!.content,
             type: "text",
             position: selectionRef.current!.position,
             color: color,
             id: getNextId(),
-        })
+        };
+
+        // Add library_id if available, which will be used to get user_book_lib_id
+        if (bookMeta?.library_id) {
+            highlightData.library_id = bookMeta.library_id;
+        }
+
+        addHighlight(highlightData);
 
         removeGhostHighlight()
         setTip(null)

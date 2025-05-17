@@ -31,7 +31,7 @@ export default function useHighlight(savedHighlights: Highlight[]) {
         getPageProgress,
     } = useReaderStore(
         useShallow((state) => ({
-            bookMeta: state.bookMeta,
+            bookMeta: state.bookLibraryItem,
             chapterHTML: state.chapterHTML,
             highlights: state.highlights,
             setHighlights: state.setHighlights,
@@ -44,8 +44,44 @@ export default function useHighlight(savedHighlights: Highlight[]) {
     )
 
     const addHighlightMutation = useMutation({
-        mutationFn: (data: any) => ApiClient.post("/highlights", data),
-        onError: (err: Error) => console.error("Failed to add highlight:", err),
+        mutationFn: async (data: any) => {
+            console.log("Creating highlight with data:", data, "Current bookMeta:", bookMeta);
+
+            if (bookMeta?.library_id) {
+                data.user_book_lib_id = bookMeta.library_id;
+                console.log("Using library_id from bookMeta:", bookMeta.library_id);
+            } else {
+                // This case should ideally not happen for non-local books if bookMeta is correctly populated.
+                // For local books, user_book_lib_id might not be applicable, or a different approach is needed.
+                // The server currently expects user_book_lib_id for all highlights.
+                console.warn(
+                    "Attempting to create highlight without a readily available library_id in bookMeta.",
+                    "This might lead to issues if the book is not a local file or if user_book_lib_id is strictly required by the backend."
+                );
+                // If it's a truly local book without a library entry, the backend might need adjustment
+                // or this flow needs to be re-evaluated for local-only highlights.
+            }
+
+            // Defensive check: Ensure user_book_lib_id is set before POSTing
+            // The backend currently makes this a required field for the query to find UserBookLibrary.
+            if (!data.user_book_lib_id) {
+                // If user_book_lib_id is still not found, we should not proceed with the API call
+                // as it will likely fail or associate the highlight incorrectly.
+                const errorMsg = "user_book_lib_id is missing. Cannot create highlight.";
+                console.error(errorMsg, data);
+                // Optionally, throw an error to stop the mutation and provide feedback
+                throw new Error(errorMsg);
+            }
+
+            return ApiClient.post("/highlights", data);
+        },
+        onError: (err: Error) => {
+            console.error("Failed to add highlight mutation:", err);
+            // Potentially add user-facing error message here
+        },
+        onSuccess: (response) => {
+            console.log("Highlight created successfully:", response);
+        }
     })
 
     const deleteHighlightMutation = useMutation({
@@ -109,8 +145,8 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             epubBook as ePub.Book
         )
 
-        const newHighlight: EpubHighlight = {
-            book_id: bookMeta.id,
+        const newHighlightForClientState: EpubHighlight = {
+            book_id: bookMeta.id, // For client-side state model
             color,
             range: serialized,
             text: selectionText,
@@ -122,23 +158,28 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             },
             page: getPageProgress().current,
         }
-        const highlight = { highlight: newHighlight, removeFn }
-        insertHighlight(highlight)
+        const highlightForStore = { highlight: newHighlightForClientState, removeFn }
+        insertHighlight(highlightForStore)
 
         selection.removeAllRanges()
         selectionRef.current = null
         setIsPopupOpen(false)
 
-        addHighlightMutation.mutate({
-            book_id: bookMeta.id,
-            color,
+        // Construct payload for the server, matching HighlightCreate schema (via HighlightBase)
+        const payloadForServer = {
+            // user_book_lib_id will be added in addHighlightMutation's mutationFn
             text: selectionText,
+            color,
             note: null,
             epub_range: serialized as unknown as Json,
             epub_chapter_idx: chapterIdx,
             epub_chapter_href: section.href,
             epub_chapter_title: chapterTitle?.label.trim(),
-        })
+            epub_est_page: getPageProgress().current, // Added this field
+            pdf_rect_position: null // Explicitly null for EPUB highlights, as per HighlightBase
+        };
+
+        addHighlightMutation.mutate(payloadForServer);
     }
 
     const handleRemoveHighlight = () => {

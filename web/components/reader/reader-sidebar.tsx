@@ -83,7 +83,7 @@ const TocTree = React.memo(function TocTree({
 }) {
     // Only filter PDF items at the top level
     const filteredItems = useMemo(() => {
-        if (topLevel && bookType === "pdf") {
+        if (topLevel && bookType === "PDF") {
             return items.filter((item) => Number.parseInt(item.href) >= 0)
         }
         return items
@@ -120,7 +120,7 @@ const TocTree = React.memo(function TocTree({
                         // For EPUB: simple href matching
                         // For PDF: check if this exact item ID matches the active chapter ID
                         const isActive =
-                            bookType === "epub" && currentLocation
+                            bookType === "EPUB" && currentLocation
                                 ? currentLocation === item.href
                                 : activeChapterId === item.id
 
@@ -185,7 +185,7 @@ const TocTree = React.memo(function TocTree({
                 // For EPUB: simple href matching
                 // For PDF: check if this exact item ID matches the active chapter ID
                 const isActive =
-                    bookType === "epub" && currentLocation
+                    bookType === "EPUB" && currentLocation
                         ? currentLocation === item.href
                         : activeChapterId === item.id
 
@@ -224,18 +224,21 @@ const TocTree = React.memo(function TocTree({
 })
 
 export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
+    const [activeTab, setActiveTab] = React.useState<"contents" | "highlights">(
+        "contents"
+    )
     const toc = useReaderStore((state) => state.toc)
-    const activeTab = useReaderStore((state) => state.activeTab)
-    const setActiveTab = useReaderStore((state) => state.setActiveTab)
     const setLocation = useReaderStore((state) => state.setLocation)
     const goToPage = useReaderStore((state) => state.goToPage)
     const currentLocation = useReaderStore((state) => state.currentLocation)
     const bookType = useReaderStore((state) => state.bookType)
     const currentPage = useReaderStore((state) => state.currentPage)
 
+    console.log(toc, bookType)
+
     // For PDFs, find the active chapter once at the top level
     const activeChapter = useMemo(() => {
-        if (bookType === "pdf") {
+        if (bookType === "PDF") {
             return findActiveChapterForPdf(toc, currentPage)
         }
         return null
@@ -244,7 +247,7 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
     const activeChapterId = activeChapter?.id || null
 
     const handleAction = (href: string) => {
-        if (bookType === "epub") setLocation(href)
+        if (bookType === "EPUB") setLocation(href)
         else if (goToPage) {
             goToPage(Number.parseInt(href))
         }
@@ -269,7 +272,7 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                         onValueChange={(value) =>
                             setActiveTab(value as "contents" | "highlights")
                         }
-                        className="mt-4 w-full"
+                        className="w-full"
                     >
                         <TabsList className="grid w-full grid-cols-3 mb-2">
                             <TabsTrigger
@@ -350,7 +353,7 @@ export function HighlightCard({ highlight }: HighlightProps) {
     }
     const setLocation = useReaderStore((state) => state.setLocation)
 
-    const bookMeta = useReaderStore((state) => state.bookMeta)
+    const bookMeta = useReaderStore((state) => state.bookLibraryItem)
     const epubDocRef = useReaderStore((state) => state.epubDocRef)
     const pdfRef = useReaderStore((state) => state.pdfRef)
 
@@ -359,7 +362,7 @@ export function HighlightCard({ highlight }: HighlightProps) {
     const navigateHighlight = () => {
         if (!epubDocRef && !pdfRef) return
         // setLocation to chapter idx
-        if (highlightType === "epub" && epubDocRef) {
+        if (highlightType === "EPUB" && epubDocRef) {
             setLocation((highlight as EpubHighlight).chapter.href)
             // else document.querySelector()
             // deserialize range
@@ -371,7 +374,7 @@ export function HighlightCard({ highlight }: HighlightProps) {
             if (range) {
                 scrollToRange(range)
             }
-        } else if (highlightType === "pdf" && pdfRef) {
+        } else if (highlightType === "PDF" && pdfRef) {
             pdfRef.current.currentPageNumber = (
                 highlight as PdfHighlight
             ).position.boundingRect.pageNumber
@@ -395,26 +398,26 @@ export function HighlightCard({ highlight }: HighlightProps) {
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-primary">
-                            {highlightType === "epub"
+                            {highlightType === "EPUB"
                                 ? (highlight as EpubHighlight).chapter.title
                                 : (highlight as PdfHighlight).note}
                         </span>
                     </div>
                     <p className="text-sm text-card-foreground">
-                        {highlightType === "epub"
+                        {highlightType === "EPUB"
                             ? (highlight as EpubHighlight).text.slice(0, 150) +
-                              "..."
+                            "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
-                                  0,
-                                  150
-                              ) + "..."}
+                                0,
+                                150
+                            ) + "..."}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Page{" "}
-                        {highlightType === "epub"
+                        {highlightType === "EPUB"
                             ? (highlight as EpubHighlight).page
                             : (highlight as PdfHighlight).position.boundingRect
-                                  ?.pageNumber}
+                                ?.pageNumber}
                     </p>
                 </div>
             </div>

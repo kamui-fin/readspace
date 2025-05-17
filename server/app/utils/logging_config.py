@@ -5,7 +5,7 @@ from typing import Any
 import structlog
 
 # Import the Settings model
-from app.schemas.settings import Settings
+from app.core.config import Settings
 
 # Instantiate settings to load configuration
 settings = Settings()

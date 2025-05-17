@@ -1,5 +1,5 @@
-import { EpubHighlight, PdfHighlight } from "@/types/library"
 import { useReaderStore } from "@/stores/reader"
+import { EpubHighlight, PdfHighlight } from "@/types/library"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { MessageSquareDiff, PlusIcon, TrashIcon } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
@@ -36,10 +36,10 @@ const HighlightedPopover = ({
     const formRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLButtonElement>(null)
 
-    const highlightType = useReaderStore((state) => state.bookMeta?.type)
+    const highlightType = useReaderStore((state) => state.bookLibraryItem?.type)
 
     const onRemoveHighlight = () => {
-        if (highlightType == "epub") {
+        if (highlightType == "EPUB") {
             handleRemoveHighlight()
         } else {
             handleRemoveHighlight(
@@ -50,7 +50,7 @@ const HighlightedPopover = ({
     }
 
     const onAddNote = (note: string) => {
-        if (highlightType == "epub") {
+        if (highlightType == "EPUB") {
             handleSubmitNote(note)
         } else {
             handleSubmitNote(
@@ -113,11 +113,10 @@ const HighlightedPopover = ({
                     {showNoteForm && (
                         <div
                             ref={formRef}
-                            className={`absolute z-50 ${
-                                showAbove
-                                    ? "bottom-[calc(100%+30px)]"
-                                    : "top-[calc(100%+30px)]"
-                            } left-2 -translate-x-[20px] dark:bg-gray-800 p-4 rounded-md shadow-lg border bg-popover`}
+                            className={`absolute z-50 ${showAbove
+                                ? "bottom-[calc(100%+30px)]"
+                                : "top-[calc(100%+30px)]"
+                                } left-2 -translate-x-[20px] dark:bg-gray-800 p-4 rounded-md shadow-lg border bg-popover`}
                             style={{
                                 minWidth: "285px",
                             }}

@@ -13,6 +13,8 @@ import useChapterNavigation from "../../hooks/reader/use-chapter-navigation"
 import useAutoBookmark from "../../hooks/reader/useAutoBookmark"
 import { insertCharCountAttributes } from "../../lib/reader/reader-utils"
 import { BookMeta, EpubHighlight } from "../../types/library"
+import HighlightPopover from "./highlight-popover"
+
 // Custom hook for scroll direction detection
 const useScrollDirection = (
     containerRef: React.RefObject<HTMLElement | null>
@@ -53,7 +55,6 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
         currentLocation,
         setChapterHTML,
         getCurrentChapterIdx,
-        setPageTextMap,
     ] = useReaderStore(
         useShallow((state) => [
             state.book as ePub.Book,
@@ -61,7 +62,6 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
             state.currentLocation,
             state.setChapterHTML,
             state.getCurrentChapterIdx,
-            state.setPageTextMap,
             state.epubDocRef,
         ])
     )
@@ -97,7 +97,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                     .reduce((sum, count) => sum + count, 0) || 0
 
             // Process the chapter content with our updated function
-            const { html, pageMap } = insertCharCountAttributes(
+            const { html } = insertCharCountAttributes(
                 chapterContent,
                 chapterCharCount,
                 prevChapterCharCount
@@ -105,10 +105,6 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
 
             // Set the HTML content
             setChapterHTML(html)
-
-            // Store the page map in the reader state
-            setPageTextMap(pageMap)
-            console.log(pageMap)
         }
 
         loadChapter()
@@ -145,21 +141,21 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 breadcrumbItems={
                     isMobile
                         ? [
-                              {
-                                  href: `/library/${bookId}`,
-                                  label: bookMeta.title.slice(0, 15) + "...",
-                              },
-                          ]
+                            {
+                                href: `/library/${bookId}`,
+                                label: bookMeta.title.slice(0, 15) + "...",
+                            },
+                        ]
                         : [
-                              { href: "/library", label: "Home" },
-                              {
-                                  href: `/library/${bookId}`,
-                                  label:
-                                      bookMeta.title.length > 30
-                                          ? `${bookMeta.title.substring(0, 30)}...`
-                                          : bookMeta.title,
-                              },
-                          ]
+                            { href: "/library", label: "Home" },
+                            {
+                                href: `/library/${bookId}`,
+                                label:
+                                    bookMeta.title.length > 30
+                                        ? `${bookMeta.title.substring(0, 30)}...`
+                                        : bookMeta.title,
+                            },
+                        ]
                 }
             >
                 <ReaderNavActions />
@@ -167,6 +163,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
             <div ref={readerRef}>
                 <ReaderContent />
             </div>
+            <HighlightPopover savedHighlights={savedHighlights} />
             {/* Chapter Navigation Buttons */}
             <div className="flex justify-center items-center max-w-7xl mx-auto py-8 px-4">
                 <div className="bg-gray-50 rounded-lg border border-gray-100 flex items-center p-1">

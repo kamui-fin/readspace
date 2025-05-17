@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { useSignedImageUrl } from "@/hooks/use-signed-image-url"
 import { formatDate } from "@/lib/utils"
-import { BookMeta } from "@/types/library"
+import { UserBookLibrary } from "@/types/api"
 import humanizeDuration from "humanize-duration"
 import localforage from "localforage"
 import { BookOpenCheck, Cloud, HardDrive } from "lucide-react"
@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 
 interface BookCardProps {
-    book: BookMeta
+    book: UserBookLibrary
 }
 
 /**
@@ -63,20 +63,20 @@ export function BookCard({ book }: BookCardProps) {
     const [isLocallyAvailable, setIsLocallyAvailable] = useState(false)
 
     let coverUrl
-    if (book.cover_url) {
-        const { url } = useSignedImageUrl(book.cover_url, 3600)
+    if (book.book_metadata.cover_url) {
+        const { url } = useSignedImageUrl(book.book_metadata.cover_url, 3600)
         coverUrl = url
     }
 
     if (!coverUrl) {
         coverUrl =
-            book.type === "pdf" ? "/default_pdf_cover.png" : "/placeholder.svg"
+            book.book_metadata.format === "PDF" ? "/default_pdf_cover.png" : "/placeholder.svg"
     }
 
     // Check if the book is available in local storage
     useEffect(() => {
         const checkLocalAvailability = async () => {
-            const isLocal = book.file_url === null
+            const isLocal = book.book_metadata.file_url === null
             if (isLocal) {
                 const keys = await localforage.keys()
                 setIsLocallyAvailable(keys.includes(book.id))
@@ -84,28 +84,28 @@ export function BookCard({ book }: BookCardProps) {
         }
 
         checkLocalAvailability()
-    }, [book.id, book.file_url])
+    }, [book.id, book.book_metadata.file_url])
 
     // Calculate progress based on book type
     const progress =
-        book.type === "pdf"
-            ? (book.pdf_page || 0) / (book.num_pages || 1)
+        book.book_metadata.format === "PDF"
+            ? (book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)
             : (book.epub_progress?.globalProgress?.current || 0) /
-              (book.epub_progress?.globalProgress?.total || 1)
+            (book.epub_progress?.globalProgress?.total || 1)
 
     const remainingNumChars =
-        book.type === "pdf"
+        book.book_metadata.format === "PDF"
             ? 0 // PDF doesn't use character count
             : (book.epub_progress?.globalProgress?.total || 0) -
-              (book.epub_progress?.globalProgress?.current || 0)
+            (book.epub_progress?.globalProgress?.current || 0)
 
     const estReadingTimeLeft =
-        book.type === "pdf"
-            ? `${Math.ceil((book.num_pages || 0) - (book.pdf_page || 0))} pages`
+        book.book_metadata.format === "PDF"
+            ? `${Math.ceil((book.book_metadata.num_pages || 0) - (book.pdf_current_page || 0))} pages`
             : estimateReadingTime(remainingNumChars, 250)
 
     // Determine card style based on local availability
-    const isLocal = book.file_url === null
+    const isLocal = book.book_metadata.file_url === null
     const cardStyle =
         isLocal && !isLocallyAvailable
             ? "opacity-50 hover:opacity-70"
@@ -118,7 +118,7 @@ export function BookCard({ book }: BookCardProps) {
             <div className="relative aspect-square pt-[60%] bg-muted overflow-hidden">
                 <Image
                     src={coverUrl}
-                    alt={`Cover for ${book.title}`}
+                    alt={`Cover for ${book.book_metadata.title}`}
                     fill
                     className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
@@ -134,10 +134,10 @@ export function BookCard({ book }: BookCardProps) {
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
                         <h3 className="font-semibold leading-tight line-clamp-1">
-                            {book.title}
+                            {book.book_metadata.title}
                         </h3>
                         <p className="text-sm text-muted-foreground">
-                            {book.author}
+                            {book.book_metadata.author}
                         </p>
                     </div>
                     {(!isLocal || isLocallyAvailable) && (
@@ -145,9 +145,9 @@ export function BookCard({ book }: BookCardProps) {
                     )}
                 </div>
 
-                {book.description && (
+                {book.book_metadata.description && (
                     <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
-                        {book.description}
+                        {book.book_metadata.description}
                     </p>
                 )}
 
@@ -156,7 +156,7 @@ export function BookCard({ book }: BookCardProps) {
                         variant="outline"
                         className="text-xs flex items-center gap-1"
                     >
-                        {book.file_url === null ? (
+                        {book.book_metadata.file_url === null ? (
                             <>
                                 <HardDrive className="h-3 w-3" />
                                 {isLocallyAvailable
@@ -175,9 +175,7 @@ export function BookCard({ book }: BookCardProps) {
                 <div className="mt-4 flex justify-between items-center text-xs text-muted-foreground">
                     <span>
                         Added{" "}
-                        {formatDate(
-                            book.date_added || new Date().toISOString()
-                        )}
+                        {formatDate(book.date_added)}
                     </span>
                     <span>
                         {estReadingTimeLeft ? (

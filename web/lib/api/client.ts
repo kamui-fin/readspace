@@ -1,25 +1,6 @@
-import { env } from "@/env" // Import validated env
+import { env } from "@/env"
 import { getSession } from "@/lib/auth/supabase"
-
-const API_BASE_URL = env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"
-
-// Helper function to get auth headers
-async function getAuthHeaders(): Promise<HeadersInit> {
-    const headers: HeadersInit = {
-        "Content-Type": "application/json",
-    }
-
-    try {
-        const session = await getSession()
-        if (session?.access_token) {
-            headers["Authorization"] = `Bearer ${session.access_token}`
-        }
-    } catch (error) {
-        console.error("Error getting auth token:", error)
-    }
-
-    return headers
-}
+import { createClient } from "@/lib/supabase/server"
 
 export class ApiError extends Error {
     constructor(
@@ -29,6 +10,31 @@ export class ApiError extends Error {
         super(message)
         this.name = "ApiError"
     }
+}
+
+// Helper function to get auth headers
+async function getAuthHeaders(): Promise<HeadersInit> {
+    const headers: HeadersInit = {
+        "Content-Type": "application/json",
+    }
+
+    try {
+        // Try server-side auth first
+        const supabase = await createClient()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+            headers["Authorization"] = `Bearer ${session.access_token}`
+            return headers
+        }
+    } catch {
+        // If server-side auth fails, try client-side auth
+        const session = await getSession()
+        if (session?.access_token) {
+            headers["Authorization"] = `Bearer ${session.access_token}`
+        }
+    }
+
+    return headers
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
@@ -45,25 +51,30 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export class ApiClient {
-    private static async fetch<T>(
+    private static baseUrl = env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8008"
+
+    static async fetch<T>(
         endpoint: string,
         options: RequestInit = {}
     ): Promise<T> {
-        const headers = await getAuthHeaders()
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                ...headers,
-                ...options.headers,
-            },
-        })
+        try {
+            const headers = await getAuthHeaders()
+            const response = await fetch(`${this.baseUrl}${endpoint}`, {
+                ...options,
+                headers: {
+                    ...headers,
+                    ...options.headers,
+                },
+                cache: "no-store", // Disable caching for authenticated requests
+            })
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}))
-            throw new Error(error.detail || "An error occurred")
+            return handleResponse<T>(response)
+        } catch (error) {
+            if (error instanceof ApiError && error.status === 401) {
+                throw new Error("Authentication required")
+            }
+            throw error
         }
-
-        return response.json()
     }
 
     static async get<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -106,17 +117,37 @@ export class ApiClient {
         formData: FormData,
         signal?: AbortSignal
     ): Promise<any> {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const headers = await getAuthHeaders()
+        // Remove Content-Type header for form data to let the browser set it with the boundary
+        const { "Content-Type": _, ...uploadHeaders } = headers as Record<string, string>
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
             method: "POST",
             body: formData,
             signal,
+            headers: uploadHeaders,
         })
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}))
-            throw new Error(error.detail || "Upload failed")
-        }
+        return handleResponse(response)
+    }
 
-        return response.json()
+    // Book endpoints
+    static books = {
+        getUserBooks: () => this.get("/books"),
+        getBook: (id: string) => this.get(`/books/${id}`),
+        createBook: (data: any) => this.post("/books", data),
+        updateBook: (id: string, data: any) => this.put(`/books/${id}`, data),
+        deleteBook: (id: string) => this.delete(`/books/${id}`),
+    }
+
+    // Highlight endpoints
+    static highlights = {
+        getBookHighlights: (bookId: string) =>
+            this.get(`/books/${bookId}/highlights`),
+        createHighlight: (bookId: string, data: any) =>
+            this.post(`/books/${bookId}/highlights`, data),
+        updateHighlight: (bookId: string, highlightId: string, data: any) =>
+            this.put(`/books/${bookId}/highlights/${highlightId}`, data),
+        deleteHighlight: (bookId: string, highlightId: string) =>
+            this.delete(`/books/${bookId}/highlights/${highlightId}`),
     }
 }

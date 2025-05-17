@@ -3,25 +3,24 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
+from app.core.config import get_settings
+from app.repositories.supabase import (
+    SupabaseStorageClient,
+    get_storage_client,
+)
+from app.schemas.auth import TokenData
+from app.services.auth import get_current_user
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
+    Form,
     HTTPException,
     UploadFile,
     status,
 )
 from pydantic import BaseModel, Field
 
-from app.repositories.supabase import (
-    SupabaseStorageClient,
-    get_storage_client,
-)
-from app.schemas.auth import TokenData
-from app.core.config import get_settings
-from app.services.auth import get_current_user
-
-router = APIRouter()
+router = APIRouter(prefix="/upload")
 logger = structlog.get_logger()
 settings = get_settings()
 
@@ -30,7 +29,7 @@ class UploadResponse(BaseModel):
     """Response model for file upload endpoint."""
 
     file_path: str = Field(..., description="Path where the file was stored")
-    book_id: str = Field(..., description="ID of the book associated with the upload")
+    book_id: UUID = Field(..., description="ID of the book associated with the upload")
 
 
 class FileUploadError(Exception):
@@ -125,10 +124,9 @@ async def process_file_upload(
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=UploadResponse)
 async def upload_file(
-    background_tasks: BackgroundTasks,
     file: UploadFile,
-    user: Annotated[TokenData, Depends(get_current_user)],
-    book_id: str,
+    book_id: Annotated[UUID, Form()],
+    user: Annotated[TokenData, Depends(get_current_user)] = None,
     storage_client: SupabaseStorageClient = Depends(get_storage_client),
 ):
     """
@@ -136,8 +134,8 @@ async def upload_file(
 
     Args:
         file: The file to upload
-        user: Current authenticated user
         book_id: ID of the book to associate with the upload
+        user: Current authenticated user
         storage_client: Storage client for file operations
 
     Returns:

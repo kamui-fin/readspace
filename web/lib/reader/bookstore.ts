@@ -13,8 +13,6 @@ export const getEpubMetadata = async (fileBuffer: ArrayBuffer) => {
     await epub.ready
 
     const metadata = await epub.loaded.metadata
-    // hack for now
-    metadata.language = "English (en)"
 
     const cover = await epub.loaded.cover
     const spine = await epub.loaded.spine
@@ -111,7 +109,7 @@ export async function initializeBookProgressStorage(
     bookType: string
 ): Promise<void> {
     try {
-        if (bookType === "epub") {
+        if (bookType === "EPUB") {
             // Check if we already have progress stored
             const existingProgress = await getLocalEpubProgress(bookId)
             if (!existingProgress) {
@@ -128,7 +126,7 @@ export async function initializeBookProgressStorage(
                     bookId
                 )
             }
-        } else if (bookType === "pdf") {
+        } else if (bookType === "PDF") {
             const existingProgress = await getLocalPdfProgress(bookId)
             if (existingProgress === null) {
                 // Initialize with page 1

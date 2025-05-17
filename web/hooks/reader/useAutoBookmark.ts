@@ -25,7 +25,7 @@ export default function useAutoBookmark() {
         getCurrentChapterIdx,
     } = useReaderStore(
         useShallow((state) => ({
-            bookMeta: state.bookMeta,
+            bookMeta: state.bookLibraryItem,
             chapterHTML: state.chapterHTML,
             currentLocation: state.currentLocation,
             getTotalCharsInBook: state.getTotalCharsInBook,
@@ -40,7 +40,7 @@ export default function useAutoBookmark() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}/progress`, {
+            ApiClient.put(`/books/${bookId}`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {

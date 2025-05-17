@@ -1,13 +1,15 @@
+import logging
 from typing import List, Optional
 from uuid import UUID
 
 from app.core.exceptions import StorageError
-from app.models.book_models import Highlight
+from app.models.book_models import Highlight, UserBookLibrary
 from app.repositories.base import BaseRepository
 from app.schemas.highlights import HighlightCreate, HighlightUpdate
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+logger = logging.getLogger(__name__)
 
 class HighlightRepository(BaseRepository[Highlight, HighlightCreate, HighlightUpdate]):
     """Repository for highlight operations."""
@@ -20,14 +22,20 @@ class HighlightRepository(BaseRepository[Highlight, HighlightCreate, HighlightUp
     ) -> List[Highlight]:
         """Get all highlights for a book."""
         try:
+            logger.info(f"Building query for book_id: {book_id}")
             query = (
                 select(self.model)
-                .where(self.model.book_id == book_id)
+                .join(UserBookLibrary)
+                .where(UserBookLibrary.book_metadata_id == book_id)
                 .order_by(self.model.created_at.desc())
             )
+            logger.info(f"Executing query: {query}")
             result = await db.execute(query)
-            return result.scalars().all()
+            highlights = result.scalars().all()
+            logger.info(f"Query returned {len(highlights)} highlights")
+            return highlights
         except Exception as e:
+            logger.error(f"Failed to get book highlights: {str(e)}", exc_info=True)
             raise StorageError(f"Failed to get book highlights: {str(e)}")
 
     async def get_by_text(self, db: AsyncSession, text: str) -> Optional[Highlight]:

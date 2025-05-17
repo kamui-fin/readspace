@@ -8,10 +8,13 @@ import {
 } from "@/components/library/book-card-skeleton"
 import { CatalogHeader } from "@/components/library/catalog-header"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { BookMeta } from "@/types/library"
+import { ApiClient } from "@/lib/api/client"
+import { BOOKS_QUERY_KEY } from "@/lib/api/hooks/books"
+import { UserBookLibrary } from "@/types/api"
+import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
 
-export function LibraryCatalog({ books }: { books: BookMeta[] }) {
+export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary[] }) {
     const isMobile = useIsMobile()
     const [viewMode, setViewMode] = useState<"grid" | "list">(
         !isMobile ? "list" : "grid"
@@ -19,29 +22,38 @@ export function LibraryCatalog({ books }: { books: BookMeta[] }) {
     const [searchQuery, setSearchQuery] = useState("")
     const [filter, setFilter] = useState("all")
     const [sortBy, setSortBy] = useState("dateAdded")
-    const [loading] = useState(false)
+
+    // Use React Query to keep books in sync with client-side mutations
+    const { data: books = initialBooks, isLoading: loading } = useQuery<UserBookLibrary[]>({
+        queryKey: [BOOKS_QUERY_KEY],
+        queryFn: async () => {
+            const response = await ApiClient.books.getUserBooks();
+            return response as UserBookLibrary[];
+        },
+        initialData: initialBooks,
+    })
 
     useEffect(() => {
         setViewMode(!isMobile ? "list" : "grid")
     }, [isMobile])
 
     // Filter books based on search query and filter
-    const filteredBooks = books.filter((book) => {
-        const matchesSearch = book.title
+    const filteredBooks = books.filter((book: UserBookLibrary) => {
+        const matchesSearch = book.book_metadata.title
             .toLowerCase()
             .includes(searchQuery.toLowerCase())
 
         // Calculate progress based on book type
         const progress =
-            book.type === "pdf"
+            book.book_metadata.format === "PDF"
                 ? Math.round(
-                      ((book.pdf_page || 0) / (book.num_pages || 1)) * 100
-                  )
+                    ((book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)) * 100
+                )
                 : Math.round(
-                      ((book.epub_progress?.globalProgress?.current || 0) /
-                          (book.epub_progress?.globalProgress?.total || 1)) *
-                          100
-                  )
+                    ((book.epub_progress?.globalProgress?.current || 0) /
+                        (book.epub_progress?.globalProgress?.total || 1)) *
+                    100
+                )
 
         if (filter === "all") return matchesSearch
         if (filter === "completed") return matchesSearch && progress === 100
@@ -61,13 +73,13 @@ export function LibraryCatalog({ books }: { books: BookMeta[] }) {
             (b.epub_progress?.globalProgress?.current || 0) /
             (b.epub_progress?.globalProgress?.total || 1)
 
-        if (sortBy === "title") return a.title.localeCompare(b.title)
-        if (sortBy === "author") return a.title.localeCompare(b.title) // Use title as fallback since creator is gone
+        if (sortBy === "title") return a.book_metadata.title.localeCompare(b.book_metadata.title)
+        if (sortBy === "author") return (a.book_metadata.author || "").localeCompare(b.book_metadata.author || "")
         if (sortBy === "progress") return bProgress - aProgress
         // Default: sort by date_added (newest first)
         return (
-            new Date(b.date_added || "").getTime() -
-            new Date(a.date_added || "").getTime()
+            new Date(b.date_added).getTime() -
+            new Date(a.date_added).getTime()
         )
     })
 

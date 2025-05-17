@@ -26,8 +26,6 @@ export interface BookMetadata {
 
 export interface DragDropBookProps {
     isUploading: boolean
-    enableRag: boolean
-    setEnableRag: (value: boolean) => void
     onFileSelect: (file: File | null) => void
     selectedFile: File | null
     onRemoveFile: () => void

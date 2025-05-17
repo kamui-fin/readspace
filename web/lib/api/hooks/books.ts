@@ -1,43 +1,46 @@
-import { Book, BookCreate, BookProgress, BookUpdate } from "@/types/api"
+import { UserBookLibrary, UserBookLibraryCreate, UserBookLibraryUpdate } from "@/types/api"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ApiClient } from "../client"
 
-const BOOKS_QUERY_KEY = "books"
+export const BOOKS_QUERY_KEY = "books"
 
 export function useBooks(userId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, userId],
-        queryFn: () => ApiClient.get<Book[]>(`/api/v1/books?user_id=${userId}`),
+        queryFn: () => ApiClient.get<UserBookLibrary[]>(`/books?user_id=${userId}`),
     })
 }
 
 export function useBook(bookId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, bookId],
-        queryFn: () => ApiClient.get<Book>(`/api/v1/books/${bookId}`),
+        queryFn: () => ApiClient.get<UserBookLibrary>(`/books/${bookId}`),
     })
 }
 
 export function useCreateBook() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (book: BookCreate) =>
-            ApiClient.post<Book>("/api/v1/books", book),
+        mutationFn: (book: UserBookLibraryCreate) =>
+            ApiClient.post<UserBookLibrary>("/books", book),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },
     })
 }
 
-type UpdateBookVariables = { bookId: string; book: BookUpdate }
+type UpdateBookVariables = { bookId: string; book: UserBookLibraryUpdate }
 export function useUpdateBook() {
     const queryClient = useQueryClient()
-    return useMutation<Book, Error, UpdateBookVariables>({
+    return useMutation<UserBookLibrary, Error, UpdateBookVariables>({
         mutationFn: ({ bookId, book }) =>
-            ApiClient.put<Book>(`/api/v1/books/${bookId}`, book),
+            ApiClient.put<UserBookLibrary>(`/books/${bookId}`, book),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
                 queryKey: [BOOKS_QUERY_KEY, bookId],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [BOOKS_QUERY_KEY],
             })
         },
     })
@@ -47,38 +50,25 @@ export function useDeleteBook() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (bookId: string) =>
-            ApiClient.delete(`/api/v1/books/${bookId}`),
+            ApiClient.delete(`/books/${bookId}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },
     })
 }
 
-type UpdateBookProgressVariables = { bookId: string; progress: BookProgress }
+type UpdateBookProgressVariables = { bookId: string; progress: UserBookLibraryUpdate }
 export function useUpdateBookProgress() {
     const queryClient = useQueryClient()
-    return useMutation<Book, Error, UpdateBookProgressVariables>({
+    return useMutation<UserBookLibrary, Error, UpdateBookProgressVariables>({
         mutationFn: ({ bookId, progress }) =>
-            ApiClient.put<Book>(`/api/v1/books/${bookId}/progress`, progress),
+            ApiClient.put<UserBookLibrary>(`/books/${bookId}`, progress),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
                 queryKey: [BOOKS_QUERY_KEY, bookId],
             })
-        },
-    })
-}
-
-type UpdateBookLanguageVariables = { bookId: string; language: string }
-export function useUpdateBookLanguage() {
-    const queryClient = useQueryClient()
-    return useMutation<Book, Error, UpdateBookLanguageVariables>({
-        mutationFn: ({ bookId, language }) =>
-            ApiClient.put<Book>(`/api/v1/books/${bookId}/language`, {
-                language,
-            }),
-        onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
-                queryKey: [BOOKS_QUERY_KEY, bookId],
+                queryKey: [BOOKS_QUERY_KEY],
             })
         },
     })

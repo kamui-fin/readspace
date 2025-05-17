@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { useSignedImageUrl } from "@/hooks/use-signed-image-url"
 import { formatDate } from "@/lib/utils"
-import { BookMeta } from "@/types/library"
+import { UserBookLibrary } from "@/types/api"
 import localforage from "localforage"
 import { BookOpenCheck, Cloud, HardDrive } from "lucide-react"
 import Image from "next/image"
@@ -13,7 +13,7 @@ import { useEffect, useState } from "react"
 import { estimateReadingTime } from "./book-card"
 
 interface BookCardListProps {
-    book: BookMeta
+    book: UserBookLibrary
 }
 
 /**
@@ -28,18 +28,18 @@ function roundToOneDecimal(num: number): number {
 export function BookCardList({ book }: BookCardListProps) {
     const [isLocallyAvailable, setIsLocallyAvailable] = useState(true)
     let coverUrl
-    if (book.cover_url) {
-        const { url } = useSignedImageUrl(book.cover_url, 3600)
+    if (book.book_metadata.cover_url) {
+        const { url } = useSignedImageUrl(book.book_metadata.cover_url, 3600)
         coverUrl = url
     } else {
         coverUrl =
-            book.type === "pdf" ? "/default_pdf_cover.png" : "/placeholder.svg"
+            book.book_metadata.format === "PDF" ? "/default_pdf_cover.png" : "/placeholder.svg"
     }
 
     // Check if the book is available in local storage
     useEffect(() => {
         const checkLocalAvailability = async () => {
-            const isLocal = book.file_url === null
+            const isLocal = book.book_metadata.file_url === null
             if (isLocal) {
                 const keys = await localforage.keys()
                 setIsLocallyAvailable(keys.includes(book.id))
@@ -47,28 +47,28 @@ export function BookCardList({ book }: BookCardListProps) {
         }
 
         checkLocalAvailability()
-    }, [book.id, book.file_url])
+    }, [book.id, book.book_metadata.file_url])
 
     // Calculate progress based on book type
     const progress =
-        book.type === "pdf"
-            ? (book.pdf_page || 0) / (book.num_pages || 1)
+        book.book_metadata.format === "PDF"
+            ? (book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)
             : (book.epub_progress?.globalProgress?.current || 0) /
-              (book.epub_progress?.globalProgress?.total || 1)
+            (book.epub_progress?.globalProgress?.total || 1)
 
     const remainingNumChars =
-        book.type === "pdf"
+        book.book_metadata.format === "PDF"
             ? 0 // PDF doesn't use character count
             : (book.epub_progress?.globalProgress?.total || 0) -
-              (book.epub_progress?.globalProgress?.current || 0)
+            (book.epub_progress?.globalProgress?.current || 0)
 
     const estReadingTimeLeft =
-        book.type === "pdf"
-            ? `${Math.ceil((book.num_pages || 0) - (book.pdf_page || 0))} pages`
+        book.book_metadata.format === "PDF"
+            ? `${Math.ceil((book.book_metadata.num_pages || 0) - (book.pdf_current_page || 0))} pages`
             : estimateReadingTime(remainingNumChars, 250)
 
     // Determine card style based on local availability
-    const isLocal = book.file_url === null
+    const isLocal = book.book_metadata.file_url === null
     const cardStyle =
         isLocal && !isLocallyAvailable
             ? "opacity-50 hover:opacity-70"
@@ -80,7 +80,7 @@ export function BookCardList({ book }: BookCardListProps) {
                 <div className="relative w-[60px] h-[90px] sm:w-[80px] sm:h-[120px] rounded shrink-0 bg-muted overflow-hidden">
                     <Image
                         src={coverUrl || "/placeholder.svg"}
-                        alt={`Cover of ${book.title}`}
+                        alt={`Cover of ${book.book_metadata.title}`}
                         fill
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                     />
@@ -90,11 +90,11 @@ export function BookCardList({ book }: BookCardListProps) {
                     <div className="flex justify-between items-start">
                         <div className="min-w-0 pr-2">
                             <h3 className="font-semibold text-base sm:text-lg truncate">
-                                {book.title}
+                                {book.book_metadata.title}
                             </h3>
                             <div className="flex flex-wrap items-center text-xs sm:text-sm text-muted-foreground mt-1 space-x-2">
                                 <span className="truncate max-w-[150px] sm:max-w-none">
-                                    {book.author}
+                                    {book.book_metadata.author}
                                 </span>
                                 <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block"></span>
                                 {estReadingTimeLeft ? (
@@ -113,7 +113,7 @@ export function BookCardList({ book }: BookCardListProps) {
                                     variant="outline"
                                     className="text-[10px] sm:text-xs flex items-center gap-1 px-1 sm:px-2 py-0 sm:py-0.5"
                                 >
-                                    {book.file_url === null ? (
+                                    {book.book_metadata.file_url === null ? (
                                         <>
                                             <HardDrive className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
                                             <span className="hidden xs:inline">
@@ -144,20 +144,16 @@ export function BookCardList({ book }: BookCardListProps) {
                     </div>
 
                     <p className="text-xs sm:text-sm text-muted-foreground my-1 sm:my-2 line-clamp-1 sm:line-clamp-2 hidden xs:block">
-                        {book.description || "No description yet."}
+                        {book.book_metadata.description || "No description yet."}
                     </p>
 
                     <div className="mt-auto flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
                         <span className="hidden sm:inline">
                             Added{" "}
-                            {formatDate(
-                                book.date_added || new Date().toISOString()
-                            )}
+                            {formatDate(book.date_added)}
                         </span>
                         <span className="sm:hidden">
-                            {new Date(
-                                book.date_added || new Date().toISOString()
-                            ).toLocaleDateString()}
+                            {new Date(book.date_added).toLocaleDateString()}
                         </span>
                         <span>
                             {roundToOneDecimal((1 - progress) * 100)}% left

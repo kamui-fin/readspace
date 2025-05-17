@@ -1,9 +1,9 @@
+from app.core.config import get_settings
+from app.routers import books, feedback, highlights, upload
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import get_settings
-from app.routers import books, feedback, highlights
 
-app = FastAPI(title="ReadSpace API")
+app = FastAPI(title="Readspace API")
 
 settings = get_settings()
 
@@ -17,6 +17,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(books.router, prefix=settings.API_V1_STR)
-app.include_router(feedback.router, prefix=settings.API_V1_STR)
-app.include_router(highlights.router, prefix=settings.API_V1_STR)
+app.include_router(books.router)
+app.include_router(feedback.router)
+app.include_router(highlights.router)
+app.include_router(upload.router)
