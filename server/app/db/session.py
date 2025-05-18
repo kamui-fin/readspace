@@ -1,9 +1,8 @@
 from typing import AsyncGenerator
 
+from app.core.config import get_settings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -36,5 +35,3 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
-        finally:
-            await session.close()

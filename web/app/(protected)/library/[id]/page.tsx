@@ -1,16 +1,16 @@
+import { PDFViewer } from "@/components/reader/pdf-reader"
 import EPUBReader from "@/components/reader/reader"
 import { ApiClient } from "@/lib/api/client"
 import { createClient } from "@/lib/supabase/server"
-import { Metadata } from "next"
-import { redirect } from "next/navigation"
-import { PDFViewer } from "@/components/reader/pdf-reader"
+import { UserBookLibrary } from "@/types/api"
 import {
     BookViewProps,
     EpubHighlight,
     EpubLocation,
     PdfHighlight,
 } from "@/types/library"
-import { UserBookLibrary } from "@/types/api"
+import { Metadata } from "next"
+import { redirect } from "next/navigation"
 
 interface PageProps {
     params: {
@@ -47,7 +47,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
         return {
             title: `${bookMetaData.title} | ReadSpace`,
-            description: bookMetaData.description || 
+            description: bookMetaData.description ||
                 `Reading ${bookMetaData.title} by ${bookMetaData.author || "Unknown Author"}`,
         }
     } catch (error) {
@@ -81,8 +81,8 @@ export default async function BookReaderPage({ params }: PageProps) {
         ...libraryBook.book_metadata,
         library_id: libraryBook.id,
         pdf_current_page: libraryBook.pdf_current_page,
-        epub_progress: libraryBook.epub_progress ? 
-            libraryBook.epub_progress as unknown as EpubLocation : 
+        epub_progress: libraryBook.epub_progress ?
+            libraryBook.epub_progress as unknown as EpubLocation :
             null,
     }
 

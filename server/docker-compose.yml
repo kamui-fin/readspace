@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: readspace_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - readspace_network
+
+  api: # Assuming your FastAPI app runs in a service named 'api' or similar
+    # Your existing API service definition...
+    # Ensure it's on the same network and might depend on Redis if using it directly
+    build:
+      context: . # Assuming Dockerfile is in server/
+      dockerfile: Dockerfile # Or your specific Dockerfile name
+    container_name: readspace_api
+    env_file:
+      - .env # Make sure .env includes CELERY_BROKER_URL and CELERY_RESULT_BACKEND
+    ports:
+      - "8000:8000" # Or your API port
+    volumes:
+      - .:/app # Map current directory to /app in container
+    depends_on:
+      - redis # If API needs to connect to Redis directly for other purposes
+      # - db # If you have a database service like Postgres
+    networks:
+      - readspace_network
+    # command: ["/start-reload.sh"] # Or your existing command
+
+  celery_worker:
+    build:
+      context: . # Assuming Dockerfile is in server/
+      dockerfile: Dockerfile # Uses the same Docker image as the API
+    container_name: readspace_celery_worker
+    command: celery -A app.core.celery_app.celery worker -l info -Q rss_feed_refresh
+    volumes:
+      - .:/app # Mount the application code
+    depends_on:
+      - redis
+      - api # Worker might need DB through API's ORM setup or shared db module
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      # Add other necessary environment variables for your app, like DB connection
+      - SUPABASE_DB_CONNECTION=${SUPABASE_DB_CONNECTION} 
+    networks:
+      - readspace_network
+
+  celery_beat:
+    build:
+      context: . # Same image
+      dockerfile: Dockerfile
+    container_name: readspace_celery_beat
+    # command: celery -A app.core.celery_app.celery beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler # Using Django scheduler
+    # For a simpler setup without django_celery_beat, we use the default scheduler and define the schedule in celery_app.py.
+    command: celery -A app.core.celery_app.celery beat -l info # Simpler command, schedule in code
+    volumes:
+      - .:/app
+    depends_on:
+      - redis
+      - api # Beat might need DB access if tasks directly interact or for dynamic schedules
+    environment:
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/1}
+      # Add other necessary environment variables
+      - SUPABASE_DB_CONNECTION=${SUPABASE_DB_CONNECTION}
+    networks:
+      - readspace_network
+
+volumes:
+  redis_data:
+
+networks:
+  readspace_network:
+    driver: bridge 

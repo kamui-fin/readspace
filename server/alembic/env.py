@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from app.core.config import get_settings
 from app.db.base_class import Base
+from app.models import rss_models  # noqa: F401 # Added for RSS models
 
 # Import all models here to ensure they are registered with Base.metadata
 from app.models.book_models import (  # noqa: F401

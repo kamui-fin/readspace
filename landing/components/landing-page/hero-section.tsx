@@ -2,15 +2,13 @@
 
 import { HeroHeader } from "@/components/landing-page/hero5-header"
 import { cn } from "@/lib/utils"
-import { BookText, CalendarArrowUp } from "lucide-react"
+import { Github } from "lucide-react"
+import { motion } from "motion/react"
 import Link from "next/link"
+import { AnimatedGradientText } from "../magicui/animated-gradient-text"
 import { AnimatedShinyText } from "../magicui/animated-shiny-text"
 import { DotPattern } from "../magicui/dot-pattern"
-import MacWindow from "./mac-window"
 import { Button } from "../ui/button"
-import { motion } from "motion/react"
-import VideoPlayer from "./video-player"
-import { AnimatedGradientText } from "../magicui/animated-gradient-text"
 import { WaitlistForm } from "./waitlist-form"
 
 const MotionButton = motion(Button)
@@ -29,7 +27,6 @@ export function AnimatedReadButton() {
             }}
             whileTap={{ scale: 0.95 }}
         >
-            <BookText className="w-5 h-5" />
             <span>Start reading</span>
         </MotionButton>
     )
@@ -51,20 +48,23 @@ export default function HeroSection({ className }: { className?: string }) {
                     <div className="mx-auto max-w-7xl px-2 md:px-6 z-100">
                         <div className="text-center sm:mx-auto lg:mr-auto lg:mt-0 z-100">
                             <Link
-                                href="#cta"
-                                className="hover:bg-background dark:hover:border-t-border bg-muted group mx-auto flex w-fit items-center gap-3 rounded-full border p-1 px-4 shadow-md shadow-zinc-950/5 dark:border-t-white/5 dark:shadow-zinc-950"
+                                href="https://github.com/kamui-fin/readspace"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="group mx-auto flex w-fit items-center gap-2 rounded-full border border-gray-200 bg-muted px-4 py-1.5 shadow-sm transition hover:bg-background dark:border-white/10 dark:hover:border-white/20"
                             >
-                                <CalendarArrowUp className="size-3" />
+                                <Github className="h-4 w-4 text-gray-700 dark:text-gray-200" />
                                 <AnimatedShinyText>
-                                    <span className="text-foreground text-sm">
-                                        We just launched the open beta!
+                                    <span className="text-sm font-medium text-foreground">
+                                        Star us on GitHub
                                     </span>
                                 </AnimatedShinyText>
                             </Link>
 
-                            <h1 className="text-balance text-black font-semibold text-5xl md:text-7xl mt-4 xl:text-[5.25rem] tracking-[-0.02em] max-w-[80rem] mx-auto">
-                                AI that makes reading{" "}
-                                <AnimatedGradientText speed={1} colorFrom="#6A994E" colorTo="#386641" className="font-semibold tracking-tight">stick.</AnimatedGradientText>
+                            <h1 className="text-pretty text-black font-semibold text-5xl md:text-7xl mt-4 xl:text-[5.25rem] tracking-[-0.02em] max-w-[80rem] mx-auto">
+                                A{" "}
+                                <AnimatedGradientText speed={1} colorFrom="#6A994E" colorTo="#386641" className="font-semibold tracking-tight">quieter</AnimatedGradientText>
+                                {" "}way to read the internet
                             </h1>
                             <p className="px-2 mx-auto mt-4 md:mt-4 mb-4 max-w-3xl text-pretty text-sm sm:text-lg text-[#7a7a7a]">
                                 <span className="backdrop-blur-lg bg-opacity-10">

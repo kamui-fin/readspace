@@ -1,0 +1,281 @@
+---
+description: 
+globs: web/**
+alwaysApply: false
+---
+---
+description: This rule explains Tailwind CSS 4 changes, new features, and best practices for modern UI development.
+globs: *
+alwaysApply: false
+---
+
+# Tailwind CSS 4 rules
+
+## Core Changes
+
+- Use CSS-first configuration with `@theme` directive instead of JavaScript config `tailwind.config.js`:
+
+```css
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Satoshi", "sans-serif";
+  --breakpoint-3xl: 1920px;
+  --color-avocado-500: oklch(0.84 0.18 117.33);
+  --ease-fluid: cubic-bezier(0.3, 0, 0, 1);
+}
+```
+
+- Import legacy config files with the `@config` directive:
+
+```css
+@import "tailwindcss";
+@config "../../tailwind.config.js";
+```
+
+- Use `@import "tailwindcss"` instead of separate `@tailwind` directives:
+
+```css
+/* Old way */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* New way */
+@import "tailwindcss";
+```
+
+- Use updated package names:
+  - PostCSS plugin: `@tailwindcss/postcss` (not `tailwindcss`)
+  - CLI: `@tailwindcss/cli`
+  - Vite plugin: `@tailwindcss/vite`
+
+## Theme Configuration
+
+- Use CSS variables for all design tokens:
+
+```css
+/* In CSS */
+.custom-element {
+  background-color: var(--color-blue-500);
+  font-family: var(--font-sans);
+}
+```
+
+- Available CSS variable namespaces:
+  - `--color-*`: Colors (e.g., `--color-blue-500`)
+  - `--font-*`: Font families (e.g., `--font-sans`)
+  - `--text-*`: Font sizes (e.g., `--text-xl`)
+  - `--font-weight-*`: Font weights (e.g., `--font-weight-bold`)
+  - `--spacing-*`: Spacing values (e.g., `--spacing-4`)
+  - `--radius-*`: Border radius (e.g., `--radius-md`)
+  - `--shadow-*`: Box shadows (e.g., `--shadow-lg`)
+
+- Override entire namespaces or the whole theme:
+
+```css
+@theme {
+  /* Override all font variables */
+  --font-*: initial;
+  
+  /* Override the entire theme */
+  --*: initial;
+}
+```
+
+## Container Queries
+
+- Use container queries with `@container` and container-based breakpoints:
+
+```html
+<!-- Create a container context -->
+<div class="@container">
+  <!-- Elements that respond to container size, not viewport -->
+  <div class="@sm:text-lg @md:text-xl @lg:text-2xl">
+    Responsive to container
+  </div>
+</div>
+```
+
+- Use max-width container queries and ranges:
+
+```html
+<div class="@container">
+  <!-- Hidden when container is between md and xl breakpoints -->
+  <div class="@max-md:block @min-md:@max-xl:hidden @min-xl:block">
+    Conditionally visible
+  </div>
+</div>
+```
+
+## 3D Transforms
+
+- Use 3D transforms with new utilities:
+
+```html
+<!-- Enable 3D transforms -->
+<div class="transform-3d rotate-x-12 rotate-y-6 translate-z-4 perspective-distant">
+  3D transformed element
+</div>
+
+<!-- Control backface visibility -->
+<div class="transform-3d rotate-y-180 backface-hidden">
+  Card back (hidden when flipped)
+</div>
+```
+
+## Enhanced Gradients
+
+- Use new gradient syntax and features:
+
+```html
+<!-- Linear gradient with specific angle -->
+<div class="bg-linear-45 from-blue-500 to-purple-500">
+  45-degree gradient
+</div>
+
+<!-- Gradient with specific color space interpolation -->
+<div class="bg-linear-to-r/oklch from-blue-500 to-red-500">
+  Linear gradient with OKLCH interpolation
+</div>
+
+<!-- Conic and radial gradients -->
+<div class="bg-conic from-red-500 via-yellow-500 to-green-500">
+  Conic gradient
+</div>
+
+<div class="bg-radial-[at_25%_25%] from-amber-500 to-transparent">
+  Radial gradient with custom position
+</div>
+```
+
+## New Variants
+
+- Use composable variants by chaining them:
+
+```html
+<div class="group">
+  <!-- Only visible when parent has data-active attribute and is hovered -->
+  <span class="opacity-0 group-has-data-active:group-hover:opacity-100">
+    Conditionally visible
+  </span>
+</div>
+```
+
+- Use new variants:
+
+```html
+<!-- Styles applied during CSS transitions -->
+<div class="opacity-0 starting:opacity-100 transition">
+  Fade in on initial render
+</div>
+
+<!-- Target elements that are not in a specific state -->
+<div class="not-first:mt-4">
+  Margin top on all but first item
+</div>
+
+<!-- Target specific nth-child positions -->
+<ul>
+  <li class="nth-3:bg-gray-100">Every third item has gray background</li>
+</ul>
+
+<!-- Target all descendants -->
+<div class="**:text-gray-800">
+  All text inside is gray-800
+</div>
+```
+
+## Custom Extensions
+
+- Create custom utilities with `@utility` directive:
+
+```css
+@utility tab-4 {
+  tab-size: 4;
+}
+
+/* Usage */
+<pre class="tab-4">
+  Indented with tabs
+</pre>
+```
+
+- Create custom variants with `@variant` directive:
+
+```css
+@variant pointer-coarse (@media (pointer: coarse));
+@variant theme-midnight (&:where([data-theme="midnight"] *));
+
+/* Usage */
+<button class="pointer-coarse:p-4">
+  Larger padding on touch devices
+</button>
+```
+
+- Use plugins with `@plugin` directive:
+
+```css
+@plugin "@tailwindcss/typography";
+```
+
+## Breaking Changes
+
+- Use new syntax for CSS variables in arbitrary values:
+
+```html
+<!-- Old way -->
+<div class="bg-[--brand-color]">
+  Using CSS variable
+</div>
+<!-- New way -->
+<div class="bg-(--brand-color)">
+  Using CSS variable
+</div>
+```
+
+- Use renamed utilities:
+
+```html
+<!-- Old way -->
+<div class="shadow-sm rounded-sm blur-sm"></div>
+
+<!-- New way -->
+<div class="shadow-xs rounded-xs blur-xs"></div>
+```
+
+## Advanced Configuration
+
+- Add a prefix to all Tailwind classes:
+
+```css
+@import "tailwindcss" prefix(tw);
+
+/* Results in classes like: */
+<div class="tw:flex tw:bg-blue-500 tw:hover:bg-blue-600">
+  Prefixed classes
+</div>
+```
+
+- Configure dark mode:
+
+```css
+@import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
+
+/* Usage */
+<div class="dark">
+  <p class="text-gray-900 dark:text-white">
+    Dark mode text
+  </p>
+</div>
+```
+- Customize container:
+
+```css
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+```
+

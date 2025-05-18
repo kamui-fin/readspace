@@ -1,16 +1,33 @@
 import structlog
+from app.services.auth import TokenData, get_current_user
 from fastapi import APIRouter, Depends
 
-from app.services.auth import TokenData, get_current_user
-
 from . import (
+    books,
+    feedback,
+    highlights,
+    rss_articles,
+    rss_feeds,
+    rss_folders,
+    rss_opml,
+    rss_tags,
     upload,
 )
 
 router = APIRouter()
 
 # Include all route modules
-router.include_router(upload.router, prefix="/upload", tags=["upload"])
+router.include_router(books.router, tags=["Books"])
+router.include_router(feedback.router, tags=["Feedback"])
+router.include_router(highlights.router, tags=["Highlights"])
+router.include_router(upload.router, prefix="/upload", tags=["Upload"])
+
+# RSS Routers
+router.include_router(rss_folders.router, prefix="/rss", tags=["RSS Folders"])
+router.include_router(rss_tags.router, prefix="/rss", tags=["RSS Tags"])
+router.include_router(rss_feeds.router, prefix="/rss", tags=["RSS Feeds"])
+router.include_router(rss_articles.router, prefix="/rss", tags=["RSS Articles"])
+router.include_router(rss_opml.router, prefix="/rss", tags=["RSS OPML"])
 
 
 @router.get("/health")
