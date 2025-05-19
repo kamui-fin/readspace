@@ -1,13 +1,4 @@
 const nextConfig = {
-    redirects: async () => {
-        return [
-            {
-                source: "/",
-                destination: "/library",
-                permanent: true,
-            },
-        ]
-    },
     experimental: {
         serverActions: {
             bodySizeLimit: "100mb",

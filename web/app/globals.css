@@ -50,7 +50,7 @@
     :root {
         --background: 120 100% 99.41%;
         --foreground: 200 4.76% 24.71%;
-        --muted: 132 33.33% 97.06%;
+        --muted: 132 33.3% 97.1%;
         --muted-foreground: 97, 6%, 57%;
         --popover: 132 33.33% 97.06%;
         --popover-foreground: 234 10% 27%;
@@ -74,7 +74,7 @@
         --chart-5: 131.74 32.11% 30.98%;
         --radius: 0.5rem;
 
-        --sidebar: var(--background);
+        --sidebar: 108 28.3% 97.1%;
         --sidebar-foreground: var(--foreground);
         --sidebar-primary: var(--primary);
         --sidebar-primary-foreground: var(--primary-foreground);

@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_LEFT_WIDTH = "15rem"
+const SIDEBAR_LEFT_WIDTH = "17rem"
 const SIDEBAR_RIGHT_WIDTH = "23rem"
 const SIDEBAR_WIDTH_MOBILE = "18rem"
 const SIDEBAR_WIDTH_ICON = "3rem"
@@ -344,7 +344,7 @@ const Sidebar = React.forwardRef<
                             : "right-0 group-data-[collapsible=offcanvas]:w-0",
                         // Adjust the padding for floating and inset variants.
                         variant === "floating" || variant === "inset"
-                            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+                            ? "p-2 pr-1 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
                             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
                         className
                     )}
@@ -668,9 +668,9 @@ const sidebarMenuButtonVariants = cva(
                     "bg-background shadow-[0_0_0_1px_hsl(var(--sidebar-border))] hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:shadow-[0_0_0_1px_hsl(var(--sidebar-accent))]",
             },
             size: {
-                default: "h-8 text-sm",
-                sm: "h-7 text-xs",
-                lg: "h-12 text-sm group-data-[collapsible=icon]:p-0!",
+                default: "h-8 text-sm py-2 px-0",
+                sm: "h-7 text-xs py-1.5 px-0",
+                lg: "h-12 text-sm py-3 px-0 group-data-[collapsible=icon]:p-0!",
             },
         },
         defaultVariants: {
@@ -876,7 +876,7 @@ const SidebarMenuSub = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <ul
         className={cn(
-            "border-sidebar-border mx-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l px-2.5 py-0.5",
+            "border-sidebar-border ml-3.5 flex min-w-0 translate-x-px flex-col gap-1 border-l pl-2 py-0.5",
             "group-data-[collapsible=icon]:hidden",
             className
         )}
@@ -893,12 +893,16 @@ const SidebarMenuSubItem = React.forwardRef<
 >(({ ...props }, ref) => <li ref={ref} {...props} />)
 SidebarMenuSubItem.displayName = "SidebarMenuSubItem"
 
+// Define props for SidebarMenuSubButton
+type SidebarMenuSubButtonProps = React.ComponentProps<"a"> & {
+    asChild?: boolean
+    size?: "sm" | "md"
+    isActive?: boolean
+}
+
 const SidebarMenuSubButton = React.forwardRef<
     HTMLAnchorElement,
-    React.ComponentProps<"a"> & {
-        asChild?: boolean
-        size?: "sm" | "md"
-        isActive?: boolean
+    SidebarMenuSubButtonProps & { // Use the new props type
         toggleSidebar: () => void
         isMobile: boolean
     }
@@ -920,7 +924,7 @@ const SidebarMenuSubButton = React.forwardRef<
         return (
             <Comp
                 className={cn(
-                    "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground [&>svg]:text-sidebar-accent-foreground flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-2 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
+                    "text-sidebar-foreground ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground [&>svg]:text-sidebar-accent-foreground flex h-7 min-w-0 -translate-x-px items-center gap-2 overflow-hidden rounded-md px-0 outline-hidden focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 [&>span:last-child]:truncate [&>svg]:size-4 [&>svg]:shrink-0",
                     "data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground",
                     size === "sm" && "text-xs",
                     size === "md" && "text-sm",
@@ -938,6 +942,19 @@ const SidebarMenuSubButton = React.forwardRef<
     }
 )
 SidebarMenuSubButton.displayName = "SidebarMenuSubButton"
+
+// Create and export SidebarLeftMenuSubButton
+export function SidebarLeftMenuSubButton(props: SidebarMenuSubButtonProps) {
+    const { isMobile, toggleSidebar } = useSidebarLeft()
+
+    return (
+        <SidebarMenuSubButton
+            {...props}
+            isMobile={isMobile}
+            toggleSidebar={toggleSidebar}
+        />
+    )
+}
 
 export {
     Sidebar,

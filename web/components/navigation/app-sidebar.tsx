@@ -1,6 +1,5 @@
 "use client"
 
-import { BookOpen, MessageCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
@@ -10,33 +9,72 @@ import {
     SidebarFooter,
     SidebarHeader,
     SidebarLeft,
-    SidebarLeftMenuButton,
     SidebarMenu,
     SidebarMenuItem,
-    SidebarSeparator,
-    useSidebarLeft,
+    useSidebarLeft
 } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import Image from "next/image"
-import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { NavMain } from "./nav-main"
+import { NavSecondary } from "./nav-secondary"
 import { NavUser } from "./nav-user"
 
-const navLinks = {
-    navMain: [
+const data = {
+    navSecondary: [
         {
-            name: "Library",
-            url: "/library",
-            icon: BookOpen,
+            title: "Support",
+            url: "#",
+            icon: function LifeBuoy(props: React.SVGProps<SVGSVGElement>) {
+                return (
+                    <svg
+                        {...props}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="4" />
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="m4.93 4.93 4.24 4.24" />
+                        <path d="m14.83 14.83 4.24 4.24" />
+                        <path d="m14.83 9.17 4.24-4.24" />
+                        <path d="m9.17 14.83-4.24 4.24" />
+                    </svg>
+                )
+            },
         },
         {
-            name: "Feedback",
-            icon: MessageCircle,
+            title: "Feedback",
+            url: "#",
+            icon: function Send(props: React.SVGProps<SVGSVGElement>) {
+                return (
+                    <svg
+                        {...props}
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    >
+                        <path d="m22 2-7 20-4-9-9-4Z" />
+                        <path d="M22 2 11 13" />
+                    </svg>
+                )
+            },
         },
     ],
 }
@@ -80,84 +118,34 @@ export function AppSidebar({
         user?.user_metadata?.full_name || user?.user_metadata?.display_name
     const email = user?.email || null
     const userId = user?.id || null
-
-    const navMainItems = navLinks.navMain.map((item) => {
-        if (item.name === "Feedback") {
-            const { url, ...rest } = item
-            return {
-                ...rest,
-                onClick: handleFeedbackClick,
-                isActive: false,
-                icon: (props: any) => <item.icon size={16} {...props} />,
-                renderText: () => (
-                    <span className="sidebar-menu-text group-data-[collapsible=icon]:hidden">
-                        {item.name}
-                    </span>
-                ),
-            }
-        }
-        if (item.name === "Library" && item.url) {
-            const { url, ...rest } = item
-            return {
-                ...rest,
-                onClick: () => {
-                    if (isMobile) {
-                        toggleSidebar()
-                    }
-                    router.push(url)
-                },
-                isActive: pathname.startsWith(url),
-                icon: (props: any) => <item.icon size={16} {...props} />,
-                renderText: () => (
-                    <span className="sidebar-menu-text group-data-[collapsible=icon]:hidden">
-                        {item.name}
-                    </span>
-                ),
-            }
-        }
-        return {
-            ...item,
-            isActive: item.url ? pathname.startsWith(item.url) : false,
-            icon: (props: any) => <item.icon size={16} {...props} />,
-            renderText: () => (
-                <span className="sidebar-menu-text group-data-[collapsible=icon]:hidden">
-                    {item.name}
-                </span>
-            ),
-        }
-    })
-
     return (
         <>
             <SidebarLeft
+                variant="inset"
                 {...props}
                 className={cn(props.className, { hidden: !user })}
                 collapsible="icon"
             >
                 <SidebarHeader>
                     <SidebarMenu>
-                        <SidebarMenuItem>
-                            <SidebarLeftMenuButton size="lg" asChild>
-                                <Link href={"/library"}>
-                                    <Image
-                                        src="/readspace.svg"
-                                        width={30}
-                                        height={30}
-                                        alt={""}
-                                        className="rounded"
-                                    />
-                                    <h1 className="text-xl font-logo font-medium">
-                                        Readspace
-                                    </h1>
-                                </Link>
-                            </SidebarLeftMenuButton>
+                        <SidebarMenuItem className="flex gap-2 items-center p-2 pl-0 pt-0">
+                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                                <Image
+                                    src="/readspace.svg"
+                                    width={30}
+                                    height={30}
+                                    alt=""
+                                    className="rounded"
+                                />
+                            </div>
+                            <h1 className="truncate font-logo text-xl font-medium tracking-normal">Readspace</h1>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarHeader>
-                <SidebarContent className="flex flex-col">
-                    <NavMain group="Platform" items={navMainItems as any} />
+                <SidebarContent>
+                    <NavMain />
+                    <NavSecondary items={data.navSecondary} className="mt-auto" />
                 </SidebarContent>
-                <SidebarSeparator />
                 <SidebarFooter>
                     <NavUser
                         avatar={avatar}

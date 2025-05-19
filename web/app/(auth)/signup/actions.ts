@@ -25,7 +25,7 @@ export async function signUp(formData: z.infer<typeof signUpSchema>) {
                     display_name: validatedData.username,
                 },
                 // Add new_user=true parameter to trigger onboarding after signup
-                emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/library?new_user=true`,
+                emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/`,
             },
         })
 
