@@ -101,7 +101,7 @@ export default function ImportOPMLPage() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
             <div className="flex flex-col w-full p-6 items-center justify-center">
                 <div className="max-w-xl w-full">
                     <h1 className="text-3xl font-semibold mb-2">OPML Import</h1>

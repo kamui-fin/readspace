@@ -6,7 +6,7 @@ import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -46,13 +46,12 @@ import { useSidebarModals } from "@/stores/sidebar"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     BookmarkIcon,
-    Check,
+    CheckCircle2,
     ChevronRight,
     Clock,
     Diamond,
     Inbox,
     MoreHorizontal,
-    Move,
     Pencil,
     Plus,
     Rss,
@@ -128,6 +127,7 @@ function FeedContextMenu({
 }) {
     const { setIsFolderModalOpen, setIsFeedModalOpen } = useSidebarModals();
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [newName, setNewName] = useState("");
     const markFeedAsRead = useMarkFeedAsRead();
     const markFolderAsRead = useMarkFolderAsRead();
@@ -234,67 +234,74 @@ function FeedContextMenu({
     const handleDelete = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        setIsDeleteModalOpen(true);
+    };
 
+    // Handle delete confirmation
+    const handleDeleteConfirm = () => {
         if (isFolder) {
             // Delete folder
-            if (confirm(`Are you sure you want to delete the folder "${itemTitle}"? All feeds in this folder will also be deleted.`)) {
-                deleteFolder.mutate(itemId, {
-                    onSuccess: () => {
-                        toast.success("Folder deleted");
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] });
-                        router.push('/articles');
-                    },
-                    onError: (error) => {
-                        toast.error("Failed to delete folder");
-                        console.error("Delete folder error:", error);
-                    }
-                });
-            }
+            deleteFolder.mutate(itemId, {
+                onSuccess: () => {
+                    setIsDeleteModalOpen(false);
+                    toast.success("Folder deleted");
+                    queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
+                    queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+                    queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] });
+                    router.push('/articles');
+                },
+                onError: (error: any) => {
+                    setIsDeleteModalOpen(false);
+                    toast.error(error.response?.data?.detail || "Failed to delete folder");
+                    console.error("Delete folder error:", error);
+                }
+            });
         } else {
-            // Unfollow feed
-            if (confirm(`Are you sure you want to unfollow "${itemTitle}"?`)) {
-                deleteFeed.mutate(itemId, {
-                    onSuccess: () => {
-                        toast.success("Feed unfollowed");
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] });
-                        router.push('/articles');
-                    },
-                    onError: (error) => {
-                        toast.error("Failed to unfollow feed");
-                        console.error("Delete feed error:", error);
-                    }
-                });
-            }
+            // Delete feed
+            deleteFeed.mutate(itemId, {
+                onSuccess: () => {
+                    setIsDeleteModalOpen(false);
+                    toast.success("Feed unfollowed");
+                    queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+                    queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] });
+                    router.push('/articles');
+                },
+                onError: (error) => {
+                    setIsDeleteModalOpen(false);
+                    toast.error("Failed to unfollow feed");
+                    console.error("Delete feed error:", error);
+                }
+            });
         }
     };
 
     return (
         <>
-            <DropdownMenuContent className="w-52" side="right" align="start">
+            <DropdownMenuContent align="start" className="w-[200px]">
+                {!isFolder && (
+                    <DropdownMenuItem onClick={handleToggleFavorite}>
+                        {isFavorite ? (
+                            <>
+                                <Star className="mr-2 h-4 w-4 fill-current" />
+                                <span>Remove favorite</span>
+                            </>
+                        ) : (
+                            <>
+                                <Star className="mr-2 h-4 w-4" />
+                                <span>Add to favorites</span>
+                            </>
+                        )}
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={handleMarkAllAsRead}>
-                    <Check className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
                     <span>Mark all as read</span>
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleRename}>
-                    <Pencil className="mr-2 h-4 w-4 text-muted-foreground" />
+                    <Pencil className="mr-2 h-4 w-4" />
                     <span>Rename</span>
                 </DropdownMenuItem>
-                {!isFolder && (
-                    <>
-                        <DropdownMenuItem onClick={handleToggleFavorite}>
-                            <Star className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>{isFavorite ? 'Remove from Favorites' : 'Add to Favorites'}</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                            <Move className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>Move to...</span>
-                        </DropdownMenuItem>
-                    </>
-                )}
-                <DropdownMenuSeparator />
                 <DropdownMenuItem
                     className="text-red-600 focus:text-red-600 hover:text-red-600 focus:bg-red-50 dark:focus:text-red-400 dark:hover:text-red-400"
                     onClick={handleDelete}
@@ -341,8 +348,44 @@ function FeedContextMenu({
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Delete/Unfollow Modal */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{isFolder ? 'Delete Folder' : 'Unfollow Feed'}</DialogTitle>
+                        <DialogDescription>
+                            {isFolder
+                                ? `Are you sure you want to delete the folder "${itemTitle}"?`
+                                : `Are you sure you want to unfollow "${itemTitle}"?`
+                            }
+                            {isFolder && ' All feeds in this folder will also be deleted.'}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4 flex gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setIsDeleteModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={handleDeleteConfirm}
+                            disabled={isFolder ? deleteFolder.status === "pending" : deleteFeed.status === "pending"}
+                        >
+                            {isFolder
+                                ? (deleteFolder.status === "pending" ? "Deleting..." : "Delete")
+                                : (deleteFeed.status === "pending" ? "Unfollowing..." : "Unfollow")
+                            }
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
-    )
+    );
 }
 
 // Feed Dropdown Menu component
@@ -395,22 +438,26 @@ function FeedDropdownMenu({
                     <span className="sr-only">Add</span>
                 </Button>
             )}
+
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <div className="flex items-center">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className={cn(
-                                "h-6 w-6 p-0 transition-opacity",
-                                "opacity-0 group-hover/item:opacity-100 data-[state=open]:opacity-100"
-                            )}
-                        >
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">More</span>
-                        </Button>
-                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className={cn(
+                            "h-6 w-6 p-0 transition-all duration-200",
+                            "opacity-0 group-hover/item:opacity-100 focus:opacity-100",
+                            "hover:bg-muted hover:text-primary",
+                            "active:scale-95",
+                            "rounded-full cursor-pointer data-[state=open]:opacity-100 data-[state=open]:bg-muted"
+                        )}
+                        title="More options"
+                    >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">More</span>
+                    </Button>
                 </DropdownMenuTrigger>
+
                 <FeedContextMenu
                     isFolder={isFolder}
                     itemActive={itemActive}
@@ -420,7 +467,7 @@ function FeedDropdownMenu({
                 />
             </DropdownMenu>
         </>
-    )
+    );
 }
 
 // Sub Feed Item component
@@ -479,37 +526,36 @@ function CollapsibleFeedItem({ feed }: { feed: FeedItem }) {
             onOpenChange={setIsOpen}
         >
             <SidebarMenuItem>
-                <Link href={`/folders/${feed.id}/articles`} passHref legacyBehavior>
-                    <CollapsibleTrigger asChild>
-                        <SidebarLeftMenuButton
-                            className={`group/trigger justify-start group/item ${isActivePath ? 'bg-muted' : ''}`}
-                            aria-label={`Open folder ${feed.title} articles`}
-                        >
-                            <div className="flex flex-grow items-center overflow-hidden pl-2">
-                                <motion.div
-                                    animate={{ rotate: isOpen ? 90 : 0 }}
-                                    transition={{ duration: 0.2, ease: "easeInOut" }}
-                                    className="mr-1"
-                                >
-                                    <ChevronRight className="h-4 w-4 shrink-0" />
-                                </motion.div>
-                                {feed.icon && React.createElement(feed.icon, { className: "ml-1 mr-1 h-4 w-4 shrink-0" })}
-                                <span className="ml-1 truncate">{feed.title}</span>
-                            </div>
-                            <div className="ml-auto flex shrink-0 items-center pr-2">
-                                <FeedDropdownMenu
-                                    isFolder={true}
-                                    itemActive={isActivePath}
-                                    folderId={feed.id}
-                                    itemId={feed.id}
-                                    itemTitle={feed.title}
-                                    isFavorite={feed.isFavorite}
-                                />
-                                {feed.count && <span className="ml-1.5 text-xs text-muted-foreground">{feed.count}</span>}
-                            </div>
-                        </SidebarLeftMenuButton>
-                    </CollapsibleTrigger>
-                </Link>
+                <CollapsibleTrigger asChild>
+                    <SidebarLeftMenuButton
+                        className={`group/trigger justify-start group/item ${isActivePath ? 'bg-muted' : ''}`}
+                        aria-label={`Open folder ${feed.title} articles`}
+                        onClick={() => router.push(`/folders/${feed.id}/articles`)}
+                    >
+                        <div className="flex flex-grow items-center overflow-hidden pl-2">
+                            <motion.div
+                                animate={{ rotate: isOpen ? 90 : 0 }}
+                                transition={{ duration: 0.2, ease: "easeInOut" }}
+                                className="mr-1"
+                            >
+                                <ChevronRight className="h-4 w-4 shrink-0" />
+                            </motion.div>
+                            {feed.icon && React.createElement(feed.icon, { className: "ml-1 mr-1 h-4 w-4 shrink-0" })}
+                            <span className="ml-1 truncate">{feed.title}</span>
+                        </div>
+                        <div className="ml-auto flex shrink-0 items-center pr-2">
+                            <FeedDropdownMenu
+                                isFolder={true}
+                                itemActive={isActivePath}
+                                folderId={feed.id}
+                                itemId={feed.id}
+                                itemTitle={feed.title}
+                                isFavorite={feed.isFavorite}
+                            />
+                            {feed.count && <span className="ml-1.5 text-xs text-muted-foreground">{feed.count}</span>}
+                        </div>
+                    </SidebarLeftMenuButton>
+                </CollapsibleTrigger>
                 <CollapsibleContent forceMount className="overflow-hidden">
                     <AnimatePresence>
                         {isOpen && Array.isArray(feed.items) && feed.items.length > 0 && (

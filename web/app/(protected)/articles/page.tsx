@@ -7,7 +7,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
 import { useArticle, useArticles, useBulkUpdateArticles, useReadLaterArticles, useRecentlyReadArticles, useUpdateArticle } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
-import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -189,7 +189,7 @@ export default function ArticlesPage({
 
     if (isArticlesLoading) {
         return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
                 <div className="w-full flex flex-col gap-4 p-8">
                     <ArticleItemSkeleton />
                     <ArticleItemSkeleton />
@@ -201,7 +201,7 @@ export default function ArticlesPage({
 
     if (!isArticlesLoading && articlesData.items.length === 0) {
         return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
                 <div className="w-full flex flex-col items-center justify-center gap-4">
                     <p className="text-muted-foreground">
                         {isRecentlyReadMode ? "No recently read articles" :
@@ -224,7 +224,7 @@ export default function ArticlesPage({
     }
 
     return (
-        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
             <ResizablePanelGroup direction="horizontal">
                 <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
                     <div className="flex h-full flex-col border-r">
@@ -232,7 +232,7 @@ export default function ArticlesPage({
                             <div className="flex items-center space-x-2">
                                 <h2 className="font-semibold">{sidebarTitle}</h2>
                                 {!isRecentlyReadMode && !isReadLaterMode && unreadCount > 0 && (
-                                    <Badge variant="secondary" className="ml-2">{unreadCount}</Badge>
+                                    <Badge variant="outline" className="min-w-3 px-1">{unreadCount}</Badge>
                                 )}
                             </div>
                             <div className="flex items-center gap-1">
@@ -448,10 +448,10 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
         : "Date unknown";
 
     return (
-        <article className="mx-auto max-w-3xl">
+        <article className="mx-auto max-w-4xl">
             <div className="flex justify-between items-center mb-3">
                 <h1 className="text-2xl font-semibold">{article.title}</h1>
-                <div>
+                {/* <div>
                     <Button
                         variant={optimisticReadLater ? "default" : "outline"}
                         size="icon"
@@ -459,7 +459,7 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
                     >
                         <BookmarkIcon className="h-4 w-4" />
                     </Button>
-                </div>
+                </div> */}
             </div>
             <div className="flex items-center gap-2 mb-6 text-[10px]">
                 <Avatar className="h-6 w-6">
@@ -491,7 +491,7 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
             </div>
             <div className="space-y-6">
                 {article.image_url && (
-                    <div className="aspect-video w-full overflow-hidden rounded-lg bg-primary/5 mb-6">
+                    <div className="aspect-video w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
@@ -499,7 +499,7 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
                         />
                     </div>
                 )}
-                {article.description && (
+                {/* {article.description && (
                     <div
                         className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
                         dangerouslySetInnerHTML={{ __html: `<blockquote>${article.description}</blockquote>` }}
@@ -507,7 +507,7 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
                             fontFamily: 'var(--font-garamond-serif)'
                         }}
                     />
-                )}
+                )} */}
                 {article.content && (
                     <div
                         ref={contentRef}

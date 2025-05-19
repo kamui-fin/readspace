@@ -6,7 +6,6 @@ from uuid import UUID
 
 import feedparser  # For parsing RSS/Atom feeds
 import httpx  # For fetching feed data
-import opml  # For parsing OPML
 import structlog  # For logging
 from app.core.redis_cache import RedisCache  # Added
 from app.crud import crud_article, crud_feed, crud_folder, crud_tag
@@ -764,32 +763,54 @@ class RssService:
         failed_count = 0
         errors = []
         created_folders = {} # Cache for created folder IDs: name -> UUID
+        default_folder_id = None # Initialize default folder id as None, only create when needed
 
         try:
-            opml_data = opml.parse(opml_content)
+            # Try using a different approach with xml.etree.ElementTree to parse the OPML
+            import xml.etree.ElementTree as ET
+            root = ET.fromstring(opml_content)
+            
+            # Convert the ElementTree to a format similar to what opml.parse would return
+            class Outline:
+                def __init__(self, elem):
+                    self.outlines = []
+                    for attr_name, attr_value in elem.attrib.items():
+                        setattr(self, attr_name, attr_value)
+                    for child in elem.findall('outline'):
+                        self.outlines.append(Outline(child))
+            
+            opml_data = []
+            for outline_elem in root.findall('./body/outline'):
+                opml_data.append(Outline(outline_elem))
+                
         except Exception as e:
             logger.error("Failed to parse OPML content", user_id=self.user_id, error=str(e))
             raise ValueError(f"Invalid OPML content: {str(e)}") from e
 
-        # Ensure the default folder exists or create it
-        default_folder_db = await crud_folder.get_folder_by_name(self.db, name=default_folder_name, user_id=self.user_id)
-        if not default_folder_db:
-            try:
-                default_folder_db = await crud_folder.create_folder(
-                    self.db, folder_in=FolderCreate(name=default_folder_name), user_id=self.user_id
-                )
-                created_folders[default_folder_name] = default_folder_db.id
-            except IntegrityError: # Should not happen if get_by_name was None, but as a safeguard
-                default_folder_db = await crud_folder.get_folder_by_name(self.db, name=default_folder_name, user_id=self.user_id)
-                if not default_folder_db: # Still not found, critical error
-                     errors.append({"message": f"Could not create or find default folder: {default_folder_name}"})
-                     # Cannot proceed without a default folder if outlines are at root
-                     return {"imported_count": 0, "failed_count": len(opml_data), "errors": errors}
-        
-        default_folder_id_to_use = default_folder_db.id
+        # Function to get or create the default folder only when needed
+        async def get_or_create_default_folder():
+            nonlocal default_folder_id
+            if default_folder_id is not None:
+                return default_folder_id
+                
+            default_folder_db = await crud_folder.get_folder_by_name(self.db, name=default_folder_name, user_id=self.user_id)
+            if not default_folder_db:
+                try:
+                    default_folder_db = await crud_folder.create_folder(
+                        self.db, folder_in=FolderCreate(name=default_folder_name), user_id=self.user_id
+                    )
+                    created_folders[default_folder_name] = default_folder_db.id
+                except IntegrityError:
+                    default_folder_db = await crud_folder.get_folder_by_name(self.db, name=default_folder_name, user_id=self.user_id)
+                    if not default_folder_db:
+                        errors.append({"message": f"Could not create or find default folder: {default_folder_name}"})
+                        raise ValueError(f"Could not create or find default folder: {default_folder_name}")
+            
+            default_folder_id = default_folder_db.id
+            return default_folder_id
 
-        async def process_outline(outline, current_folder_id: UUID):
-            nonlocal imported_count, failed_count # Allow modification of outer scope variables
+        async def process_outline(outline, current_folder_id: Optional[UUID] = None):
+            nonlocal imported_count, failed_count
             
             is_feed_outline = hasattr(outline, 'xmlUrl') and outline.xmlUrl is not None
             is_category_folder = not is_feed_outline and hasattr(outline, 'text') and outline.text is not None
@@ -812,7 +833,7 @@ class RssService:
                                 folder_id_for_category = folder_db.id
                             except IntegrityError:
                                 folder_db = await crud_folder.get_folder_by_name(self.db, name=folder_name, user_id=self.user_id)
-                                if not folder_db: # Should not happen
+                                if not folder_db:
                                     errors.append({"message": f"Could not create or find folder: {folder_name} for outline {outline.text}"})
                                     # Feeds under this outline will go to current_folder_id or default
                                     folder_id_for_category = current_folder_id 
@@ -826,7 +847,7 @@ class RssService:
 
             if is_feed_outline:
                 feed_url = outline.xmlUrl
-                feed_title = outline.title or outline.text # OPML might use text or title for feed name
+                feed_title = getattr(outline, 'title', None) or getattr(outline, 'text', None) # OPML might use text or title for feed name
                 
                 # Extract tags if present as 'category' attribute (comma-separated)
                 feed_tags_names = []
@@ -841,12 +862,17 @@ class RssService:
                         # Optionally, could update folder/tags if specified differently in OPML
                         imported_count +=1 # Count as imported if already exists and we are skipping
                     else:
-                        await self.add_new_feed(url=feed_url, folder_id=folder_to_use_for_children, tag_names=feed_tags_names)
+                        # If feed has no folder, use or create the default folder
+                        folder_id_to_use = folder_to_use_for_children
+                        if folder_id_to_use is None:
+                            folder_id_to_use = await get_or_create_default_folder()
+                            
+                        await self.add_new_feed(url=feed_url, folder_id=folder_id_to_use, tag_names=feed_tags_names)
                         imported_count += 1
-                        logger.info("Successfully imported feed from OPML", url=feed_url, title=feed_title, folder_id=folder_to_use_for_children)
+                        logger.info("Successfully imported feed from OPML", url=feed_url, title=feed_title, folder_id=folder_id_to_use)
                 except Exception as e:
                     failed_count += 1
-                    error_detail = {"url": feed_url, "title": feed_title, "error": str(e)}
+                    error_detail = {"url": feed_url, "title": feed_title or "Unknown", "error": str(e)}
                     errors.append(error_detail)
                     logger.error("Failed to import feed from OPML", **error_detail, user_id=self.user_id)
             
@@ -857,7 +883,7 @@ class RssService:
 
         # Process root outlines
         for outline_item in opml_data:
-            await process_outline(outline_item, default_folder_id_to_use)
+            await process_outline(outline_item)
 
         logger.info("OPML import finished", user_id=self.user_id, imported=imported_count, failed=failed_count)
         return {"imported_count": imported_count, "failed_count": failed_count, "errors": errors}

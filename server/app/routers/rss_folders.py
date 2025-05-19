@@ -96,15 +96,24 @@ async def delete_folder(
     """Delete a folder."""
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     try:
+        # First check if folder exists
+        folder = await rss_service.get_folder(folder_id=folder_id)
+        if not folder:
+            logger.warning("Folder not found for deletion", folder_id=folder_id, user_id=current_user.sub)
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+            
+        # Then try to delete it
         success = await rss_service.delete_folder(folder_id=folder_id)
         if not success:
-            logger.warning("Folder not found for deletion or access denied", folder_id=folder_id, user_id=current_user.sub)
+            # This shouldn't happen since we already checked existence, but just in case
+            logger.warning("Deletion returned false despite folder existing", folder_id=folder_id, user_id=current_user.sub)
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+            
         logger.info("Folder deleted successfully", folder_id=folder_id, user_id=current_user.sub)
         return
     except ValueError as e:
         logger.warning("Failed to delete folder due to value error", error=str(e), user_id=current_user.sub, folder_id=folder_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        logger.error("Unexpected error deleting folder", error=str(e), user_id=current_user.sub, folder_id=folder_id)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while deleting the folder.") 
+        logger.error("Unexpected error deleting folder", error=str(e), user_id=current_user.sub, folder_id=folder_id, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred while deleting the folder: {str(e)}") 

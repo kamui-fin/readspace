@@ -1,3 +1,5 @@
+- Ensure background refresh is working
+- Fix quirks and bugs
 - Organize feeds page with table
 - Discover page for rss hub and existing feeds
 - Responsive design for mobile
