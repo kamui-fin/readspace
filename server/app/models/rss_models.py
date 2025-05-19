@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime, timezone
 
 from app.db.base_class import Base
@@ -20,21 +21,21 @@ from sqlalchemy.orm import relationship
 feed_tag_association = Table(
     "feed_tag_association",
     Base.metadata,
-    Column("feed_id", PGUUID(as_uuid=True), ForeignKey("feeds.id"), primary_key=True),
-    Column("tag_id", PGUUID(as_uuid=True), ForeignKey("tags.id"), primary_key=True),
+    Column("feed_id", PGUUID(as_uuid=True), ForeignKey("feeds.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", PGUUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 
 
 class Folder(Base):
     __tablename__ = "folders"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    feeds = relationship("Feed", back_populates="folder")
+    feeds = relationship("Feed", back_populates="folder", cascade="all, delete-orphan")
     # user = relationship("Profile", back_populates="folders") # Assuming Profile model has a 'folders' relationship
 
     __table_args__ = (UniqueConstraint('user_id', 'name', name='uq_folder_user_name'),)
@@ -43,14 +44,14 @@ class Folder(Base):
 class Tag(Base):
     __tablename__ = "tags"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(100), nullable=False, index=True) # Consider uniqueness constraint per user
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     feeds = relationship(
-        "Feed", secondary=feed_tag_association, back_populates="tags"
+        "Feed", secondary=feed_tag_association, back_populates="tags", cascade="all, delete"
     )
     # user = relationship("Profile", back_populates="tags") # Assuming Profile model has a 'tags' relationship
 
@@ -60,9 +61,9 @@ class Tag(Base):
 class Feed(Base):
     __tablename__ = "feeds"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False, index=True)
-    folder_id = Column(PGUUID(as_uuid=True), ForeignKey("folders.id"), nullable=False, index=True)
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+    folder_id = Column(PGUUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=False, index=True)
 
     url = Column(String(2048), nullable=False, index=True) # Unique per user_id
     title = Column(String(500))
@@ -90,7 +91,7 @@ class Feed(Base):
     folder = relationship("Folder", back_populates="feeds")
     articles = relationship("Article", back_populates="feed", cascade="all, delete-orphan")
     tags = relationship(
-        "Tag", secondary=feed_tag_association, back_populates="feeds"
+        "Tag", secondary=feed_tag_association, back_populates="feeds", cascade="all, delete"
     )
     # user = relationship("Profile", back_populates="feeds") # Assuming Profile model has a 'feeds' relationship
 
@@ -100,9 +101,9 @@ class Feed(Base):
 class Article(Base):
     __tablename__ = "articles"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, index=True)
-    feed_id = Column(PGUUID(as_uuid=True), ForeignKey("feeds.id"), nullable=False, index=True)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False, index=True) # Denormalized for easier querying
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    feed_id = Column(PGUUID(as_uuid=True), ForeignKey("feeds.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True) # Denormalized for easier querying
 
     guid = Column(String(1024), nullable=False, index=True) # Unique identifier from feed
     title = Column(Text)
@@ -127,4 +128,4 @@ class Article(Base):
     feed = relationship("Feed", back_populates="articles")
     # user = relationship("Profile", back_populates="articles") # Assuming Profile model has an 'articles' relationship
 
-    __table_args__ = (UniqueConstraint('feed_id', 'guid', name='uq_article_feed_guid'),) 
+    __table_args__ = (UniqueConstraint('feed_id', 'guid', name='uq_article_feed_guid'),)

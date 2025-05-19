@@ -136,7 +136,13 @@ async def create_articles_batch(db: AsyncSession, *, articles_in: List[ArticleCr
         if (article_data.feed_id in existing_guids_by_feed and 
             article_data.guid in existing_guids_by_feed[article_data.feed_id]):
             continue
-        new_articles_to_create.append(Article(**article_data.model_dump()))
+        # Ensure link and image_url are str
+        article_dict = article_data.model_dump()
+        if article_dict.get("link") is not None:
+            article_dict["link"] = str(article_dict["link"])
+        if article_dict.get("image_url") is not None:
+            article_dict["image_url"] = str(article_dict["image_url"])
+        new_articles_to_create.append(Article(**article_dict))
 
     if not new_articles_to_create:
         return []
@@ -204,6 +210,40 @@ async def bulk_update_articles_status(
         update(Article)
         .where(Article.id.in_(article_ids), Article.user_id == user_id)
         .values(**values_to_update)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return result.rowcount
+
+
+async def mark_articles_as_read_for_feed(db: AsyncSession, *, user_id: UUID, feed_id: UUID) -> int:
+    """Marks all unread articles for a specific feed as read for the user."""
+    now = datetime.now(timezone.utc)
+    stmt = (
+        update(Article)
+        .where(
+            Article.user_id == user_id,
+            Article.feed_id == feed_id,
+            Article.is_read == False,
+        )
+        .values(is_read=True, read_at=now, updated_at=now)
+    )
+    result = await db.execute(stmt)
+    await db.commit()
+    return result.rowcount
+
+
+async def mark_articles_as_read_for_folder(db: AsyncSession, *, user_id: UUID, folder_id: UUID) -> int:
+    """Marks all unread articles in a specific folder as read for the user."""
+    now = datetime.now(timezone.utc)
+    stmt = (
+        update(Article)
+        .where(
+            Article.user_id == user_id,
+            Article.feed_id.in_(select(Feed.id).where(Feed.folder_id == folder_id)), # Select feeds in the folder
+            Article.is_read == False,
+        )
+        .values(is_read=True, read_at=now, updated_at=now)
     )
     result = await db.execute(stmt)
     await db.commit()

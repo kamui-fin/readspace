@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation"
 import * as React from "react"
 
-import { FeedbackModal } from "@/components/feedback/feedback-modal"
 import {
     SidebarContent,
     SidebarFooter,
@@ -27,9 +26,9 @@ import { NavUser } from "./nav-user"
 const data = {
     navSecondary: [
         {
-            title: "Support",
-            url: "#",
-            icon: function LifeBuoy(props: React.SVGProps<SVGSVGElement>) {
+            title: "Import OPML",
+            url: "/import-opml",
+            icon: function Upload(props: React.SVGProps<SVGSVGElement>) {
                 return (
                     <svg
                         {...props}
@@ -43,19 +42,16 @@ const data = {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                     >
-                        <circle cx="12" cy="12" r="4" />
-                        <circle cx="12" cy="12" r="10" />
-                        <path d="m4.93 4.93 4.24 4.24" />
-                        <path d="m14.83 14.83 4.24 4.24" />
-                        <path d="m14.83 9.17 4.24-4.24" />
-                        <path d="m9.17 14.83-4.24 4.24" />
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
                     </svg>
                 )
             },
         },
         {
             title: "Feedback",
-            url: "#",
+            url: "https://github.com/kamui-fin/readspace",
             icon: function Send(props: React.SVGProps<SVGSVGElement>) {
                 return (
                     <svg
@@ -106,13 +102,6 @@ export function AppSidebar({
         window.location.href = "/login"
     }
 
-    const handleFeedbackClick = () => {
-        setIsFeedbackModalOpen(true)
-        if (isMobile) {
-            toggleSidebar()
-        }
-    }
-
     const avatar = user?.user_metadata.avatar_url || "/notion-avatar.png"
     const name =
         user?.user_metadata?.full_name || user?.user_metadata?.display_name
@@ -155,12 +144,6 @@ export function AppSidebar({
                     />
                 </SidebarFooter>
             </SidebarLeft>
-
-            <FeedbackModal
-                isOpen={isFeedbackModalOpen}
-                onClose={() => setIsFeedbackModalOpen(false)}
-                userId={userId}
-            />
         </>
     )
 }

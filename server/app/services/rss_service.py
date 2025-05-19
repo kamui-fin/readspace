@@ -135,18 +135,30 @@ class RssService:
         language = feed_info.get("language")
         image_url = feed_info.get("image", {}).get("href") or feed_info.get("logo")
         
+        # If no image is found and we have a link, use favicon from the link domain
+        if not image_url and link:
+            try:
+                # Extract domain from link and create favicon URL
+                from urllib.parse import urlparse
+                parsed_url = urlparse(link)
+                domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
+                image_url = f"{domain}/favicon.ico"
+                logger.info("Using favicon as fallback for feed image", feed_url=feed_url, favicon_url=image_url)
+            except Exception as e:
+                logger.warning("Failed to create favicon URL", feed_url=feed_url, link=link, error=str(e))
+        
         # RSS TTL, skipHours, skipDays (these are less common but good to support)
         ttl = feed_info.get("ttl") # In minutes
         skip_hours_data = feed_info.get("skipHours", {}).get("hour", [])
         skip_days_data = feed_info.get("skipDays", {}).get("day", [])
 
         return FeedBase(
-            url=feed_url, # The original URL used to fetch
+            url=str(feed_url), # The original URL used to fetch
             title=title,
             description=description,
-            link=link,
+            link=str(link) if link is not None else None,
             language=language,
-            image_url=image_url
+            image_url=str(image_url) if image_url is not None else None
             # ttl, skip_hours, skip_days will be set on the DB model directly
         )
     
@@ -197,10 +209,10 @@ class RssService:
             user_id=user_id,
             guid=str(guid)[:1024], # Ensure GUID fits in model
             title=title,
-            link=str(link),
+            link=str(link) if link is not None else None,
             description=description,
             content=content,
-            image_url=image_url,
+            image_url=str(image_url) if image_url is not None else None,
             published_at=published_dt,
             estimated_read_time_minutes=estimated_read_time,
             is_read=False, # New articles are unread
@@ -367,8 +379,9 @@ class RssService:
             await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
             logger.info(f"Created {len(articles_to_create)} initial articles for feed", feed_id=db_feed.id, url=url)
         
-        # Return the fully populated FeedResponse
-        return FeedResponse.model_validate(db_feed)
+        # Always re-fetch to ensure relationships are loaded for Pydantic
+        db_feed_with_rels = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
+        return FeedResponse.model_validate(db_feed_with_rels)
 
     async def refresh_feed(self, feed_id: UUID, force_refetch: bool = False) -> Optional[FeedResponse]:
         """Refreshes an existing feed, fetches new articles, and updates the database."""
@@ -898,5 +911,23 @@ class RssService:
         opml_string = ET.tostring(opml_element, encoding="unicode", method="xml")
         logger.info("OPML export finished", user_id=self.user_id)
         return opml_string
+
+    async def mark_feed_articles_as_read(self, feed_id: UUID) -> int:
+        """Marks all articles in a given feed as read for the current user."""
+        logger.info("Marking all articles as read for feed", feed_id=feed_id, user_id=self.user_id)
+        affected_count = await crud_article.mark_articles_as_read_for_feed(
+            self.db, user_id=self.user_id, feed_id=feed_id
+        )
+        logger.info(f"{affected_count} articles marked as read for feed", feed_id=feed_id, user_id=self.user_id)
+        return affected_count
+
+    async def mark_folder_articles_as_read(self, folder_id: UUID) -> int:
+        """Marks all articles in a given folder as read for the current user."""
+        logger.info("Marking all articles as read for folder", folder_id=folder_id, user_id=self.user_id)
+        affected_count = await crud_article.mark_articles_as_read_for_folder(
+            self.db, user_id=self.user_id, folder_id=folder_id
+        )
+        logger.info(f"{affected_count} articles marked as read for folder", folder_id=folder_id, user_id=self.user_id)
+        return affected_count
 
     # ... (rest of RssService, if any) ... 

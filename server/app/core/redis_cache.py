@@ -13,7 +13,7 @@ class RedisCache:
 
     @classmethod
     async def _get_client(cls) -> redis.Redis:
-        if cls._client is None or not cls._client.is_connected():
+        if cls._client is None:
             try:
                 cls._client = redis.from_url(
                     settings.REDIS_URL, 
@@ -24,9 +24,23 @@ class RedisCache:
                 logger.info("Successfully connected to Redis server.")
             except redis.RedisError as e:
                 logger.error("Failed to connect to Redis server", error=str(e), exc_info=True)
-                # In a real app, might want to handle this more gracefully (e.g. retry, circuit breaker)
-                # For now, re-raise or return None to indicate failure if needed by callers
                 raise ConnectionError(f"Failed to connect to Redis: {str(e)}") from e
+        else:
+            try:
+                await cls._client.ping()
+            except redis.RedisError:
+                # If ping fails, reconnect
+                try:
+                    cls._client = redis.from_url(
+                        settings.REDIS_URL, 
+                        encoding="utf-8", 
+                        decode_responses=True
+                    )
+                    await cls._client.ping()
+                    logger.info("Reconnected to Redis server.")
+                except redis.RedisError as e:
+                    logger.error("Failed to reconnect to Redis server", error=str(e), exc_info=True)
+                    raise ConnectionError(f"Failed to connect to Redis: {str(e)}") from e
         return cls._client
 
     async def get(self, key: str) -> Optional[Any]:

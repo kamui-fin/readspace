@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type * as React from "react"
 
 import {
@@ -25,10 +26,10 @@ export function NavSecondary({
                     {items.map((item) => (
                         <SidebarMenuItem key={item.title}>
                             <SidebarLeftMenuButton asChild size="sm">
-                                <a href={item.url}>
+                                <Link href={item.url}>
                                     <item.icon />
                                     <span>{item.title}</span>
-                                </a>
+                                </Link>
                             </SidebarLeftMenuButton>
                         </SidebarMenuItem>
                     ))}

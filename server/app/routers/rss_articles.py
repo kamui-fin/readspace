@@ -93,7 +93,7 @@ async def get_unread_article_counts(
 ):
     """Get unread article counts (total, and by folder if folder_id is not specified)."""
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
-    return await rss_service.get_unread_counts(folder_id=folder_id)
+    return await rss_service.get_unread_counts(folder_id_filter=folder_id)
 
 @router.get("/articles/{article_id}", response_model=ArticleResponse)
 async def get_article(
@@ -151,4 +151,46 @@ async def bulk_update_article_statuses(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error("Unexpected error during bulk article update", error=str(e), user_id=current_user.sub)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.") 
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
+
+@router.post("/articles/feed/{feed_id}/mark-all-as-read", response_model=Dict[str, int])
+async def mark_all_feed_articles_as_read(
+    feed_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Marks all articles in a specific feed as read for the current user."""
+    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    try:
+        affected_count = await rss_service.mark_feed_articles_as_read(feed_id=feed_id)
+        logger.info(
+            "Marked all articles as read for feed", 
+            feed_id=feed_id, 
+            num_affected=affected_count, 
+            user_id=current_user.sub
+        )
+        return {"affected_articles": affected_count}
+    except Exception as e:
+        logger.error("Error marking feed articles as read", error=str(e), feed_id=feed_id, user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while marking articles as read.")
+
+@router.post("/articles/folder/{folder_id}/mark-all-as-read", response_model=Dict[str, int])
+async def mark_all_folder_articles_as_read(
+    folder_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Marks all articles in a specific folder as read for the current user."""
+    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    try:
+        affected_count = await rss_service.mark_folder_articles_as_read(folder_id=folder_id)
+        logger.info(
+            "Marked all articles as read for folder", 
+            folder_id=folder_id, 
+            num_affected=affected_count, 
+            user_id=current_user.sub
+        )
+        return {"affected_articles": affected_count}
+    except Exception as e:
+        logger.error("Error marking folder articles as read", error=str(e), folder_id=folder_id, user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while marking articles as read.") 

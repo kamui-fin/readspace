@@ -4,303 +4,343 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
-import { CalendarIcon, CheckCircle2, Clock, RefreshCw } from "lucide-react"
-import { useMemo, useState } from "react"
+import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
+import { useArticle, useArticles, useBulkUpdateArticles, useReadLaterArticles, useRecentlyReadArticles, useUpdateArticle } from "@/lib/api/hooks/feeds"
+import { format, formatDistanceToNow, parseISO } from "date-fns"
+import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
+import { useEffect, useMemo, useRef, useState } from "react"
 
-// Types
-interface Article {
-    id: string;
-    title: string;
-    description: string;
-    source: string;
-    time: string;
-    date: string;
-    dateGroup: string;
-    hasImage?: boolean;
-    content: ArticleContent;
-}
+export default function ArticlesPage({
+    initialSidebarTitle,
+    feedId,
+    folderId,
+    publishedSince,
+    publishedUntil,
+    mode = 'allArticles'
+}: {
+    initialSidebarTitle?: string;
+    feedId?: string;
+    folderId?: string;
+    publishedSince?: string;
+    publishedUntil?: string;
+    mode?: 'allArticles' | 'recentlyRead' | 'readLater';
+}) {
+    const [page, setPage] = useState(1);
+    const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+    const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+    const router = useRouter();
 
-interface ArticleContent {
-    title: string;
-    author: string;
-    time: string;
-    date: string;
-    views: number;
-    paragraphs: string[];
-    prerequisites?: string[];
-}
+    const isRecentlyReadMode = mode === 'recentlyRead';
+    const isReadLaterMode = mode === 'readLater';
+    const sidebarTitle =
+        isRecentlyReadMode ? "Recently Read" :
+            isReadLaterMode ? "Read Later" :
+                (initialSidebarTitle || "All Articles");
 
-// Mock data
-const MOCK_ARTICLES: Article[] = [
-    {
-        id: "1",
-        title: "Last Week in AI #309 - OpenAI keeps non-profit & launches Codex, AlphaEvolve, and more!",
-        description: "Top News: OpenAI says non-profit will remain in control after backlash",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "1 day ago",
-        date: "Yesterday",
-        dateGroup: "yesterday",
-        hasImage: true,
-        content: {
-            title: "Last Week in AI #309 - OpenAI keeps non-profit & launches Codex, AlphaEvolve, and more!",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "1 day ago",
-            date: "Yesterday",
-            views: 8,
-            paragraphs: [
-                "OpenAI announced today that the non-profit entity will maintain governance control, responding to concerns about its corporate structure. This comes after weeks of public debate following leadership changes.",
-                "The company also revealed Codex, a new AI-powered coding assistant, and AlphaEvolve, a system for algorithmic optimization. These tools are set to be released to developers in the coming months.",
-                "These developments signal OpenAI's continued commitment to balancing commercial interests with its original mission of ensuring artificial general intelligence benefits humanity broadly."
-            ]
-        }
-    },
-    {
-        id: "2",
-        title: "Canvas App Components: A Crash Course for Power Apps Developers",
-        description: "If you have experience in traditional software development, low-code tools may feel a bit sparse at first.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "2 days ago",
-        date: "Friday, May 16",
-        dateGroup: "friday",
-        hasImage: true,
-        content: {
-            title: "Canvas App Components: A Crash Course for Power Apps Developers",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "2 days ago",
-            date: "Friday, May 16",
-            views: 12,
-            paragraphs: [
-                "If you have experience in traditional software development, low-code tools may feel a bit sparse at first. However, Power Apps' Canvas Components provide a powerful way to create reusable UI elements.",
-                "Canvas Components allow you to encapsulate functionality and UI in a reusable package, similar to components in React or Angular. This approach significantly reduces duplication and makes your apps more maintainable.",
-                "In this guide, we'll explore how to create, configure, and use Canvas Components effectively in your Power Apps projects."
-            ]
-        }
-    },
-    {
-        id: "3",
-        title: "How to Write Math Equations in Google Docs",
-        description: "Math equations are a critical part of academic papers, research reports, and technical documentation.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "2 days ago",
-        date: "Friday, May 16",
-        dateGroup: "friday",
-        hasImage: true,
-        content: {
-            title: "How to Write Math Equations in Google Docs",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "2 days ago",
-            date: "Friday, May 16",
-            views: 15,
-            paragraphs: [
-                "Math equations are a critical part of academic papers, research reports, and technical documentation. Google Docs offers several ways to insert and edit mathematical expressions.",
-                "The most powerful method is using LaTeX notation within the built-in equation editor. This gives you access to the full range of mathematical symbols and formatting options.",
-                "In this tutorial, you'll learn how to access the equation editor, use LaTeX commands, and create complex formulas that render beautifully in your documents."
-            ]
-        }
-    },
-    {
-        id: "4",
-        title: "How to make Developer Friends When You Don't Live in Silicon Valley, with Iraqi Engineer Code:Life [Podcast #172]",
-        description: "On this week's episode of the podcast, freeCodeCamp founder Quincy Larson interviews software engineer and live coding streamer...",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "3 days ago",
-        date: "Friday, May 16",
-        dateGroup: "friday",
-        content: {
-            title: "How to make Developer Friends When You Don't Live in Silicon Valley, with Iraqi Engineer Code:Life [Podcast #172]",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "3 days ago",
-            date: "Friday, May 16",
-            views: 7,
-            paragraphs: [
-                "On this week's episode of the podcast, freeCodeCamp founder Quincy Larson interviews software engineer and live coding streamer Code:Life about building a developer network outside of traditional tech hubs.",
-                "Code:Life shares his experience growing up in Iraq and how he connected with the global developer community through live streaming, open-source contributions, and virtual meetups.",
-                "They discuss practical strategies for finding mentorship, collaborators, and job opportunities regardless of your geographic location."
-            ]
-        }
-    },
-    {
-        id: "5",
-        title: "Learn A1 Level Spanish",
-        description: "Learning a new language can open doors to new cultures, connections, and opportunities, and Spanish is one of the most widely spoken languages in the world.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "3 days ago",
-        date: "Thursday, May 15",
-        dateGroup: "thursday",
-        content: {
-            title: "Learn A1 Level Spanish",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "3 days ago",
-            date: "Thursday, May 15",
-            views: 8,
-            paragraphs: [
-                "Learning a new language can open doors to new cultures, connections, and opportunities, and Spanish is one of the most widely spoken languages in the world. Whether you're dreaming of traveling to Spanish-speaking countries, connecting with Spanish-speaking communities, or simply expanding your linguistic skills, taking the first step can be the hardest part. But with the right guidance and a structured, engaging approach, mastering the basics becomes an enjoyable and rewarding experience.",
-                "We just published a course on the freeCodeCamp.org YouTube channel that will teach you all about beginner-level Spanish using the highly regarded textbook Aula Internacional 1. This comprehensive, step-by-step course is designed specifically for complete beginners and aligns with the A1 level of the Common European Framework of Reference for Languages (CEFR).",
-                "Taught entirely in Spanish to immerse you from the start, this course provides a solid foundation in essential vocabulary, grammar, and conversational skills, making it ideal for anyone starting their language-learning journey. Virginia teaches this A1 level course. She is a certified Spanish teacher with 16 years experience teaching Spanish."
-            ]
-        }
-    },
-    {
-        id: "6",
-        title: "How DNS Works: A Guide to Understanding the Internet's Address Book",
-        description: "The Domain Name System (DNS) translates domain names (like example.com) into IP addresses.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "4 days ago",
-        date: "Wednesday, May 14",
-        dateGroup: "wednesday",
-        hasImage: true,
-        content: {
-            title: "How DNS Works: A Guide to Understanding the Internet's Address Book",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "4 days ago",
-            date: "Wednesday, May 14",
-            views: 10,
-            paragraphs: [
-                "The Domain Name System (DNS) translates domain names (like example.com) into IP addresses that computers can understand. This critical internet infrastructure works behind the scenes every time you browse the web.",
-                "Understanding DNS is essential for anyone working with networks, web development, or cybersecurity. In this comprehensive guide, we'll walk through the entire DNS resolution process.",
-                "You'll learn about DNS servers, records, caching, and common configuration issues. By the end, you'll have a solid grasp of how this fundamental system keeps the internet running smoothly."
-            ]
-        }
-    },
-    {
-        id: "7",
-        title: "Load Balancing with Azure Application Gateway and Azure Load Balancer – When to Use Each One",
-        description: "You've probably heard someone mention load balancing when talking about cloud apps.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "5 days ago",
-        date: "Wednesday, May 14",
-        dateGroup: "wednesday",
-        hasImage: true,
-        content: {
-            title: "Load Balancing with Azure Application Gateway and Azure Load Balancer – When to Use Each One",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "5 days ago",
-            date: "Wednesday, May 14",
-            views: 6,
-            paragraphs: [
-                "You've probably heard someone mention load balancing when talking about cloud apps. It's a critical component for building scalable and reliable web services.",
-                "Azure offers two main load balancing solutions: Azure Load Balancer and Application Gateway. While they serve similar purposes, they're designed for different scenarios and operate at different layers of the network stack.",
-                "This guide will help you understand the key differences between these services and how to choose the right one for your specific needs."
-            ]
-        }
-    },
-    {
-        id: "8",
-        title: "How to Build Slim and Fast Docker Images with Multi-Stage Builds",
-        description: "Apps don't stay simple forever. As they grow, so does their complexity.",
-        source: "FreeCodeCamp Programming Tutorials",
-        time: "4 days ago",
-        date: "Wednesday, May 14",
-        dateGroup: "wednesday",
-        hasImage: true,
-        content: {
-            title: "How to Build Slim and Fast Docker Images with Multi-Stage Builds",
-            author: "FreeCodeCamp Programming Tutorials: Python, JavaScript, Git & More",
-            time: "4 days ago",
-            date: "Wednesday, May 14",
-            views: 18,
-            paragraphs: [
-                "Apps don't stay simple forever. More features mean more dependencies, slower builds, and heavier Docker images. That's where things start to hurt.",
-                "Docker helps, but without the right setup, your builds can quickly get bloated.",
-                "Multi-stage builds make things smoother by keeping your images fast, clean, and production-ready. In this guide, you'll learn how to use them to supercharge your Docker workflow.",
-                "Let's get into it."
-            ],
-            prerequisites: [
-                "Docker installed and running",
-                "Basic understanding of Docker",
-                "Some Python knowledge (or any language, really)",
-                "Familiarity with the terminal"
-            ]
-        }
+    const allArticlesParams = {
+        feedIds: feedId ? [feedId] : undefined,
+        folderId: folderId,
+        publishedSince,
+        publishedUntil,
+        page,
+        size: 25,
+        sortBy: "published_at",
+        sortOrder: "desc",
+        isRead: showUnreadOnly ? false : undefined
+    };
+    const recentlyReadParams = { page, size: 25 };
+    const readLaterParams = { page, size: 25 };
+
+    let queryKeyParams;
+    let articlesHook;
+
+    if (isRecentlyReadMode) {
+        queryKeyParams = recentlyReadParams;
+        articlesHook = useRecentlyReadArticles;
+    } else if (isReadLaterMode) {
+        queryKeyParams = readLaterParams;
+        articlesHook = useReadLaterArticles;
+    } else {
+        queryKeyParams = allArticlesParams;
+        articlesHook = useArticles;
     }
-];
 
-export default function ArticlesPage({ sidebarTitle = "All Personal Feeds" }: { sidebarTitle?: string }) {
-    const [selectedArticleId, setSelectedArticleId] = useState<string>("8");
+    const {
+        data,
+        isLoading: isArticlesLoading,
+        isFetching,
+        refetch: refetchArticles
+    } = articlesHook(queryKeyParams, {
+        keepPreviousData: true,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false
+    });
 
-    // Group articles by date
+    const articlesData: PaginatedResponse<Article> = data || { items: [], total: 0, page: 1, pages: 1, size: 25 };
+    const bulkUpdateArticles = useBulkUpdateArticles();
+
+    const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(selectedArticleId || "");
+    const updateArticle = useUpdateArticle();
+
+    useEffect(() => {
+        if (articlesData.items.length > 0 && !selectedArticleId) {
+            setSelectedArticleId(articlesData.items[0].id);
+        }
+    }, [articlesData, selectedArticleId]);
+
+    useEffect(() => {
+        if (!isRecentlyReadMode && !isReadLaterMode) {
+            setPage(1);
+            setSelectedArticleId(null);
+        }
+    }, [feedId, folderId, publishedSince, publishedUntil, isRecentlyReadMode, isReadLaterMode]);
+
+    useEffect(() => {
+        if (isRecentlyReadMode || isReadLaterMode) {
+            setPage(1);
+        }
+    }, [isRecentlyReadMode, isReadLaterMode]);
+
     const groupedArticles = useMemo(() => {
+        if (isRecentlyReadMode || articlesData.items.length === 0) {
+            return {};
+        }
         const groups: Record<string, { label: string, articles: Article[] }> = {};
-
-        MOCK_ARTICLES.forEach(article => {
-            if (!groups[article.dateGroup]) {
-                groups[article.dateGroup] = {
-                    label: article.date,
+        articlesData.items.forEach((article: Article) => {
+            if (!article.published_at) return;
+            const date = parseISO(article.published_at);
+            const today = new Date();
+            const yesterday = new Date();
+            yesterday.setDate(today.getDate() - 1);
+            let dateGroup: string;
+            let dateLabel: string;
+            if (date.toDateString() === today.toDateString()) {
+                dateGroup = "today";
+                dateLabel = "Today";
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                dateGroup = "yesterday";
+                dateLabel = "Yesterday";
+            } else {
+                dateGroup = format(date, 'yyyy-MM-dd');
+                dateLabel = format(date, 'EEEE, MMMM d');
+            }
+            if (!groups[dateGroup]) {
+                groups[dateGroup] = {
+                    label: dateLabel,
                     articles: []
                 };
             }
-            groups[article.dateGroup].articles.push(article);
+            groups[dateGroup].articles.push(article);
         });
-
         return groups;
-    }, []);
+    }, [articlesData, isRecentlyReadMode]);
 
-    const selectedArticle = useMemo(() => {
-        return MOCK_ARTICLES.find(article => article.id === selectedArticleId);
-    }, [selectedArticleId]);
+    const handleArticleClick = (articleId: string) => {
+        setSelectedArticleId(articleId);
+        const article = articlesData.items.find((a: Article) => a.id === articleId);
+        if (!isRecentlyReadMode && article && !article.is_read) {
+            // Update the article in the UI optimistically
+            const updatedArticles = articlesData.items.map((item: Article) =>
+                item.id === articleId ? { ...item, is_read: true } : item
+            );
+
+            // Here we would ideally update the query cache optimistically
+
+            // Then perform the actual update
+            updateArticle.mutate({
+                articleId,
+                data: { is_read: true }
+            });
+        }
+    };
+
+    const handleRefresh = () => {
+        refetchArticles();
+    };
+
+    const handleMarkAllAsRead = () => {
+        // Get all unread article IDs from the current view
+        const unreadArticleIds = articlesData.items
+            .filter(article => !article.is_read)
+            .map(article => article.id);
+
+        if (unreadArticleIds.length === 0) return;
+
+        bulkUpdateArticles.mutate({
+            articleIds: unreadArticleIds,
+            action: "mark_as_read"
+        }, {
+            onSuccess: () => {
+                refetchArticles();
+            }
+        });
+    };
+
+    const toggleShowUnreadOnly = () => {
+        setShowUnreadOnly(prev => !prev);
+    };
+
+    // Calculate unread count for the badge
+    const unreadCount = useMemo(() => {
+        return articlesData.items.filter(article => !article.is_read).length;
+    }, [articlesData.items]);
+
+    if (isArticlesLoading) {
+        return (
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+                <div className="w-full flex flex-col gap-4 p-8">
+                    <ArticleItemSkeleton />
+                    <ArticleItemSkeleton />
+                    <ArticleItemSkeleton />
+                </div>
+            </div>
+        );
+    }
+
+    if (!isArticlesLoading && articlesData.items.length === 0) {
+        return (
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
+                <div className="w-full flex flex-col items-center justify-center gap-4">
+                    <p className="text-muted-foreground">
+                        {isRecentlyReadMode ? "No recently read articles" :
+                            isReadLaterMode ? "No articles in your Read Later list" :
+                                "No articles found"}
+                    </p>
+                    {isRecentlyReadMode || isReadLaterMode ? (
+                        <Button variant="outline" onClick={() => router.push('/articles')}>
+                            Browse Articles
+                        </Button>
+                    ) : (
+                        <Button variant="outline" onClick={handleRefresh}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Refresh
+                        </Button>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl rounded-bl-none shadow-sm">
             <ResizablePanelGroup direction="horizontal">
-                {/* Sidebar */}
                 <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
                     <div className="flex h-full flex-col border-r">
                         <div className="flex h-14 items-center justify-between border-b px-4">
-                            <h2 className="font-semibold">{sidebarTitle}</h2>
+                            <div className="flex items-center space-x-2">
+                                <h2 className="font-semibold">{sidebarTitle}</h2>
+                                {!isRecentlyReadMode && !isReadLaterMode && unreadCount > 0 && (
+                                    <Badge variant="secondary" className="ml-2">{unreadCount}</Badge>
+                                )}
+                            </div>
                             <div className="flex items-center gap-1">
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                {!isRecentlyReadMode && !isReadLaterMode && (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={toggleShowUnreadOnly}
+                                            title={showUnreadOnly ? "Show all articles" : "Show unread only"}
+                                        >
+                                            {showUnreadOnly ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={handleMarkAllAsRead}
+                                            title="Mark all as read"
+                                            disabled={unreadCount === 0}
+                                        >
+                                            <CheckCircle2 className="h-4 w-4" />
+                                        </Button>
+                                    </>
+                                )}
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={handleRefresh}
+                                    title="Refresh"
+                                >
                                     <RefreshCw className="h-4 w-4" />
                                 </Button>
                             </div>
                         </div>
-
-                        {/* Article list */}
                         <div className="flex-1 overflow-y-auto">
                             <div className="flex flex-col">
-                                {/* Render articles grouped by date */}
-                                {Object.entries(groupedArticles).map(([groupId, group]) => (
-                                    <div key={groupId}>
-                                        {/* Date header */}
-                                        <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
-                                            <div className="flex items-center gap-2">
-                                                {group.label === "Yesterday" ? (
-                                                    <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                                                ) : (
-                                                    <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                                )}
-                                                <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
+                                {isRecentlyReadMode || isReadLaterMode ? (
+                                    articlesData.items.map((article: Article, index: number) => (
+                                        <ArticleItem
+                                            key={article.id}
+                                            article={article}
+                                            isActive={article.id === selectedArticleId}
+                                            isLastInGroup={index === articlesData.items.length - 1}
+                                            onClick={() => handleArticleClick(article.id)}
+                                            isRecentlyReadMode={isRecentlyReadMode}
+                                            isReadLaterMode={isReadLaterMode}
+                                        />
+                                    ))
+                                ) : (
+                                    Object.entries(groupedArticles).map(([groupId, group]) => (
+                                        <div key={groupId}>
+                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    {group.label === "Today" || group.label === "Yesterday" ? (
+                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                    <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
+                                                </div>
                                             </div>
+                                            {group.articles.map((article: Article, index: number) => (
+                                                <ArticleItem
+                                                    key={article.id}
+                                                    article={article}
+                                                    isActive={article.id === selectedArticleId}
+                                                    isLastInGroup={index === group.articles.length - 1}
+                                                    onClick={() => handleArticleClick(article.id)}
+                                                />
+                                            ))}
                                         </div>
-
-                                        {/* Articles in this group */}
-                                        {group.articles.map((article, index) => (
-                                            <ArticleItem
-                                                key={article.id}
-                                                title={article.title}
-                                                description={article.description}
-                                                source={article.source}
-                                                time={article.time}
-                                                hasImage={article.hasImage}
-                                                isActive={article.id === selectedArticleId}
-                                                isLastInGroup={index === group.articles.length - 1}
-                                                onClick={() => setSelectedArticleId(article.id)}
-                                            />
-                                        ))}
+                                    ))
+                                )}
+                                {articlesData.page < articlesData.pages && (
+                                    <div className="px-3 py-4 text-center">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setPage(prevPage => prevPage + 1)}
+                                            disabled={isFetching}
+                                        >
+                                            {isFetching ? "Loading..." : "Load More"}
+                                        </Button>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     </div>
                 </ResizablePanel>
-
                 <ResizableHandle />
-
-                {/* Main Content */}
-                <ResizablePanel defaultSize={75}>
-                    <div className="flex h-full flex-col overflow-hidden">
-                        {selectedArticle && (
-                            <div className="flex-1 overflow-y-auto p-6 md:p-10">
-                                <ArticleContentView article={selectedArticle} />
+                <ResizablePanel defaultSize={75} className="overflow-hidden">
+                    <div className="flex flex-col h-full">
+                        {isArticleLoading && (
+                            <div className="flex-1 p-8">
+                                <ArticleContentSkeleton />
+                            </div>
+                        )}
+                        {!isArticleLoading && selectedArticle && (
+                            <div className="p-6 md:p-10 h-full overflow-y-auto">
+                                <ArticleContentView article={selectedArticle} isRecentlyReadMode={isRecentlyReadMode} isReadLaterMode={isReadLaterMode} />
+                            </div>
+                        )}
+                        {!isArticleLoading && !selectedArticle && (
+                            <div className="flex flex-1 items-center justify-center">
+                                <p className="text-muted-foreground">Select an article to read</p>
                             </div>
                         )}
                     </div>
@@ -310,99 +350,253 @@ export default function ArticlesPage({ sidebarTitle = "All Personal Feeds" }: { 
     )
 }
 
-// Article Content Component
-function ArticleContentView({ article }: { article: Article }) {
+function ArticleItemSkeleton() {
+    return (
+        <div className="flex gap-3 py-2.5 px-3 border-b animate-pulse">
+            <div className="flex-1 space-y-1.5 min-w-0">
+                <div className="flex items-center gap-2">
+                    <div className="h-2 w-20 bg-muted rounded" />
+                    <div className="h-2 w-16 bg-muted rounded" />
+                </div>
+                <div className="h-4 w-5/6 bg-muted rounded" />
+                <div className="h-3 w-1/2 bg-muted/70 rounded" />
+                <div className="h-3 w-full bg-muted/70 rounded" />
+            </div>
+            <div className="h-16 w-16 bg-muted/30 rounded-md" />
+        </div>
+    );
+}
+
+function ArticleContentSkeleton() {
+    return (
+        <div className="mx-auto max-w-3xl space-y-6 animate-pulse">
+            <div className="h-8 bg-muted rounded w-3/4 mb-2"></div>
+            <div className="flex items-center gap-2 mb-6">
+                <div className="h-6 w-6 rounded-full bg-muted" />
+                <div className="h-3 bg-muted rounded w-24" />
+                <div className="h-3 bg-muted rounded w-16" />
+                <div className="h-3 bg-muted rounded w-32" />
+            </div>
+            <div className="aspect-video w-full rounded-lg bg-muted/30 mb-6"></div>
+            <div className="space-y-3">
+                <div className="h-4 bg-muted rounded w-full"></div>
+                <div className="h-4 bg-muted rounded w-full"></div>
+                <div className="h-4 bg-muted rounded w-5/6"></div>
+            </div>
+            <div className="space-y-3">
+                <div className="h-4 bg-muted/70 rounded w-full"></div>
+                <div className="h-4 bg-muted/70 rounded w-full"></div>
+                <div className="h-4 bg-muted/70 rounded w-4/6"></div>
+            </div>
+        </div>
+    );
+}
+
+function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
+    article: Article,
+    isRecentlyReadMode?: boolean,
+    isReadLaterMode?: boolean
+}) {
+    const updateArticle = useUpdateArticle();
+    const { resolvedTheme } = useTheme();
+    const [optimisticReadLater, setOptimisticReadLater] = useState(article.is_read_later);
+    const contentRef = useRef<HTMLDivElement>(null);
+    const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read);
+
+    const handleToggleReadLater = () => {
+        const newReadLaterState = !optimisticReadLater;
+        setOptimisticReadLater(newReadLaterState);
+        updateArticle.mutate({
+            articleId: article.id,
+            data: { is_read_later: newReadLaterState }
+        });
+    };
+
+    useEffect(() => {
+        // Update optimistic state when article changes
+        setOptimisticReadLater(article.is_read_later);
+    }, [article.is_read_later]);
+
+    useEffect(() => {
+        if ((isRecentlyReadMode || isReadLaterMode) || !contentRef.current || hasMarkedRead) return;
+        const el = contentRef.current;
+        const handleScroll = () => {
+            if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
+                if (!hasMarkedRead) {
+                    // Set optimistic UI update first
+                    setHasMarkedRead(true);
+
+                    // Then perform the actual update
+                    updateArticle.mutate({
+                        articleId: article.id,
+                        data: { is_read: true }
+                    });
+                }
+            }
+        };
+        el.addEventListener('scroll', handleScroll);
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, [article.id, hasMarkedRead, updateArticle, isRecentlyReadMode, isReadLaterMode]);
+
+    const publishedAtString = article.published_at;
+    const readAtString = article.read_at;
+
+    const publishedAtDisplay = publishedAtString
+        ? (isRecentlyReadMode && readAtString
+            ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
+            : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
+        : "Date unknown";
+
     return (
         <article className="mx-auto max-w-3xl">
-            <h1 className="text-2xl font-semibold mb-3">{article.content.title}</h1>
-
-            <div className="flex items-center gap-2 mb-6">
-                <Avatar className="h-6 w-6">
-                    <AvatarImage src="/placeholders/avatar.png" />
-                    <AvatarFallback>FC</AvatarFallback>
-                </Avatar>
-                <span className="text-[10px] truncate max-w-[280px]">{article.content.author}</span>
-                <span className="text-[10px] text-muted-foreground">• {article.content.time}</span>
-                <Badge variant="outline" className="ml-2 text-[10px] px-1.5 py-0 h-4">{article.content.views}</Badge>
-            </div>
-
-            <div className="space-y-6">
-                {article.content.paragraphs.map((paragraph, index) => (
-                    <p key={index} className="text-base text-balance leading-relaxed">
-                        {paragraph}
-                    </p>
-                ))}
-
-                {article.content.prerequisites && (
-                    <>
-                        <h2 className="text-2xl font-semibold mt-8 mb-4">Prerequisites</h2>
-                        <p className="text-base text-balance leading-relaxed">
-                            To follow this guide, you should have:
-                        </p>
-                        <ul className="list-disc pl-6 space-y-4 mt-4">
-                            {article.content.prerequisites.map((prerequisite, index) => (
-                                <li key={index} className="text-base">{prerequisite}</li>
-                            ))}
-                        </ul>
-                    </>
-                )}
-
-                <div className="aspect-video w-full overflow-hidden rounded-lg bg-primary/5 mt-8">
-                    {/* Placeholder for code sample or image */}
-                    <div className="flex h-full items-center justify-center text-muted-foreground">
-                        Content Preview Placeholder
-                    </div>
+            <div className="flex justify-between items-center mb-3">
+                <h1 className="text-2xl font-semibold">{article.title}</h1>
+                <div>
+                    <Button
+                        variant={optimisticReadLater ? "default" : "outline"}
+                        size="icon"
+                        onClick={handleToggleReadLater}
+                    >
+                        <BookmarkIcon className="h-4 w-4" />
+                    </Button>
                 </div>
+            </div>
+            <div className="flex items-center gap-2 mb-6 text-[10px]">
+                <Avatar className="h-6 w-6">
+                    <AvatarImage src={article.feed?.image_url || article.image_url || "/placeholders/avatar.png"} />
+                    <AvatarFallback>{article.feed?.title?.substring(0, 2) || "N/A"}</AvatarFallback>
+                </Avatar>
+                <span className="truncate max-w-[200px]">
+                    {article.author || article.feed?.title || "Unknown Source"}
+                </span>
+                <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                    {publishedAtDisplay}
+                </span>
+                {article.estimated_read_time_minutes != null && (
+                    <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                        {article.estimated_read_time_minutes} min read
+                    </span>
+                )}
+                {article.link && (
+                    <a
+                        href={article.link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-2 text-primary hover:underline focus:underline cursor-pointer"
+                        tabIndex={0}
+                    >
+                        Open original article
+                    </a>
+                )}
+            </div>
+            <div className="space-y-6">
+                {article.image_url && (
+                    <div className="aspect-video w-full overflow-hidden rounded-lg bg-primary/5 mb-6">
+                        <img
+                            src={article.image_url}
+                            alt={article.title || "Article image"}
+                            className="w-full h-full object-cover"
+                        />
+                    </div>
+                )}
+                {article.description && (
+                    <div
+                        className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
+                        dangerouslySetInnerHTML={{ __html: `<blockquote>${article.description}</blockquote>` }}
+                        style={{
+                            fontFamily: 'var(--font-garamond-serif)'
+                        }}
+                    />
+                )}
+                {article.content && (
+                    <div
+                        ref={contentRef}
+                        className="article-content prose prose-lg dark:prose-invert max-w-none 
+                          prose-headings:font-semibold prose-h1:text-xl prose-h2:text-lg
+                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline
+                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md"
+                        dangerouslySetInnerHTML={{ __html: article.content }}
+                        style={{
+                            fontFamily: 'var(--font-garamond-serif)',
+                            overflowWrap: 'break-word',
+                            wordWrap: 'break-word'
+                        }}
+                    />
+                )}
             </div>
         </article>
     );
 }
 
+const stripHTML = (html: string) => {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    return doc.body.textContent || '';
+};
+
 function ArticleItem({
-    title,
-    description,
-    source,
-    time,
-    hasImage = false,
+    article,
     isActive = false,
     isLastInGroup = false,
-    onClick
+    onClick,
+    isRecentlyReadMode = false,
+    isReadLaterMode = false
 }: {
-    title: string;
-    description: string;
-    source: string;
-    time: string;
-    hasImage?: boolean;
+    article: Article;
     isActive?: boolean;
     isLastInGroup?: boolean;
     onClick: () => void;
+    isRecentlyReadMode?: boolean;
+    isReadLaterMode?: boolean;
 }) {
+    const publishedAtString = article.published_at;
+    const readAtString = article.read_at;
+
+    const timeDisplay = publishedAtString
+        ? (isRecentlyReadMode && readAtString
+            ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
+            : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
+        : "Date unknown";
+
     return (
         <div
             className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? 'border-b' : ''} 
             ${!isActive ? 'hover:bg-muted/80 hover:border-l-accent' : ''}
             active:bg-secondary/5
             transition-all duration-200 ease-out cursor-pointer 
-            ${isActive ? "bg-secondary/5 border-l-2 border-l-secondary" : "border-l-2 border-l-transparent"}`}
+            ${isActive ? "bg-secondary/5 border-l-2 border-l-secondary" : "border-l-2 border-l-transparent"}
+            ${article.is_read ? "opacity-70" : ""}`}
             onClick={onClick}
         >
             <div className="flex gap-3">
                 <div className="flex-1 space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{source}</span>
+                        <div className="flex items-center gap-1">
+                            {article.feed?.image_url && (
+                                <img
+                                    src={article.feed.image_url}
+                                    alt=""
+                                    className="h-3 w-3 shrink-0 rounded"
+                                />
+                            )}
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                                {article.feed?.title || "Unknown Source"}
+                            </span>
+                        </div>
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
                             <Clock className="h-3 w-3" />
-                            {time}
+                            {timeDisplay}
                         </span>
                     </div>
-                    <h3 className="text-sm font-medium leading-tight">{title}</h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">{description}</p>
+                    <h3 className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}>{article.title}</h3>
+                    {article.author && (
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">{article.author}</div>
+                    )}
+                    {article.description && <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">{stripHTML(article.description)}</p>}
                 </div>
-                {hasImage && (
+                {article.image_url && (
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors">
-                        <div className="h-full w-full flex items-center justify-center">
-                            <div className="h-10 w-10 rounded-sm bg-secondary/10"></div>
-                        </div>
+                        <img src={article.image_url} alt={article.title || "Article image"} className="h-full w-full object-cover" />
                     </div>
                 )}
             </div>

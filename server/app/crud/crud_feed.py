@@ -109,7 +109,12 @@ async def create_feed(
         "is_favorite": False,
     }
     if initial_feed_data:
-        feed_data_dict.update(initial_feed_data.model_dump(exclude_unset=True))
+        # Ensure all URL fields are str, not Url objects
+        initial_data = initial_feed_data.model_dump(exclude_unset=True)
+        for key in ["url", "link", "image_url"]:
+            if key in initial_data and initial_data[key] is not None:
+                initial_data[key] = str(initial_data[key])
+        feed_data_dict.update(initial_data)
     
     db_feed = Feed(**feed_data_dict)
 

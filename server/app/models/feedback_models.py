@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from enum import Enum
 
@@ -17,7 +18,7 @@ class FeedbackType(str, Enum):
 class Feedback(Base):
     __tablename__ = "feedback"
 
-    id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
+    id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(
         PGUUID, ForeignKey("auth.users", ondelete="SET NULL"), nullable=True
     )

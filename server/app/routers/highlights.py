@@ -3,7 +3,7 @@ from uuid import UUID
 
 from app.core.database import get_db
 from app.core.dependencies import HighlightRepo, get_current_user
-from app.models.book_models import Highlight, HighlightLocation, UserBookLibrary
+from app.models.book_models import Highlight, UserBookLibrary
 from app.repositories.highlights import HighlightRepository
 from app.schemas.auth import TokenData
 from app.schemas.highlights import HighlightCreate, HighlightResponse, HighlightUpdate
@@ -57,14 +57,7 @@ async def create_highlight(
         user_book_lib_id=user_book_lib.id,
         color=highlight_data.color,
         original_text=highlight_data.text,
-        note=highlight_data.note
-    )
-    db.add(db_highlight)
-    await db.flush()  # Flush to get the db_highlight.id before creating location
-
-    # Create the HighlightLocation object
-    db_highlight_location = HighlightLocation(
-        highlight_id=db_highlight.id,
+        note=highlight_data.note,
         chapter_idx=highlight_data.epub_chapter_idx,
         chapter_href=highlight_data.epub_chapter_href,
         chapter_title=highlight_data.epub_chapter_title,
@@ -72,7 +65,8 @@ async def create_highlight(
         html_range=highlight_data.epub_range,
         pdf_rect_position=highlight_data.pdf_rect_position
     )
-    db.add(db_highlight_location)
+    db.add(db_highlight)
+    await db.flush()  # Flush to get the db_highlight.id before creating location
     
     await db.commit()
     await db.refresh(db_highlight)

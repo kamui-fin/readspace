@@ -150,4 +150,117 @@ export class ApiClient {
         deleteHighlight: (bookId: string, highlightId: string) =>
             this.delete(`/books/${bookId}/highlights/${highlightId}`),
     }
+
+    // RSS endpoints
+    static rss = {
+        // Folders
+        getFolders: () => this.get("/rss/folders"),
+        getFolder: (id: string) => this.get(`/rss/folders/${id}`),
+        createFolder: (data: { name: string }) => this.post("/rss/folders", data),
+        updateFolder: (id: string, data: { name: string }) => this.put(`/rss/folders/${id}`, data),
+        deleteFolder: (id: string) => this.delete(`/rss/folders/${id}`),
+
+        // Feeds
+        getFeeds: (params?: {
+            folder_id?: string;
+            tag_names?: string[];
+            is_favorite?: boolean;
+            search_query?: string;
+        }) => {
+            const queryParams = new URLSearchParams();
+            if (params?.folder_id) queryParams.append("folder_id", params.folder_id);
+            if (params?.tag_names) params.tag_names.forEach(tag => queryParams.append("tag_names", tag));
+            if (params?.is_favorite !== undefined) queryParams.append("is_favorite", params.is_favorite.toString());
+            if (params?.search_query) queryParams.append("search_query", params.search_query);
+
+            const queryString = queryParams.toString();
+            return this.get(`/rss/feeds${queryString ? `?${queryString}` : ''}`);
+        },
+        getFeed: (id: string) => this.get(`/rss/feeds/${id}`),
+        createFeed: (data: { url: string; folder_id?: string; tag_ids?: string[] }) =>
+            this.post("/rss/feeds", data),
+        updateFeed: (id: string, data: {
+            folder_id?: string;
+            tag_ids?: string[];
+            is_favorite?: boolean;
+            title?: string;
+        }) => this.put(`/rss/feeds/${id}`, data),
+        refreshFeed: (id: string, forceRefetch: boolean = false) => {
+            const queryParams = new URLSearchParams();
+            if (forceRefetch) queryParams.append("force_refetch", "true");
+            return this.post(`/rss/feeds/${id}/refresh${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
+        },
+        deleteFeed: (id: string) => this.delete(`/rss/feeds/${id}`),
+
+        // Articles
+        getArticles: (params: {
+            feed_ids?: string[];
+            folder_id?: string;
+            is_read?: boolean;
+            is_read_later?: boolean;
+            is_favorite?: boolean;
+            feed_is_favorite?: boolean;
+            published_since?: string;
+            published_until?: string;
+            search_query?: string;
+            sort_by?: string;
+            sort_order?: string;
+            page?: number;
+            size?: number;
+        }) => {
+            const queryParams = new URLSearchParams();
+            if (params.feed_ids) params.feed_ids.forEach(id => queryParams.append("feed_ids", id));
+            if (params.folder_id) queryParams.append("folder_id", params.folder_id);
+            if (params.is_read !== undefined) queryParams.append("is_read", params.is_read.toString());
+            if (params.is_read_later !== undefined) queryParams.append("is_read_later", params.is_read_later.toString());
+            if (params.is_favorite !== undefined) queryParams.append("is_favorite", params.is_favorite.toString());
+            if (params.feed_is_favorite !== undefined) queryParams.append("feed_is_favorite", params.feed_is_favorite.toString());
+            if (params.published_since) queryParams.append("published_since", params.published_since);
+            if (params.published_until) queryParams.append("published_until", params.published_until);
+            if (params.search_query) queryParams.append("search_query", params.search_query);
+            if (params.sort_by) queryParams.append("sort_by", params.sort_by);
+            if (params.sort_order) queryParams.append("sort_order", params.sort_order);
+            if (params.page) queryParams.append("page", params.page.toString());
+            if (params.size) queryParams.append("size", params.size.toString());
+
+            const queryString = queryParams.toString();
+            return this.get(`/rss/articles${queryString ? `?${queryString}` : ''}`);
+        },
+        getRecentlyReadArticles: (page?: number, size?: number) => {
+            const queryParams = new URLSearchParams();
+            if (page) queryParams.append("page", page.toString());
+            if (size) queryParams.append("size", size.toString());
+
+            const queryString = queryParams.toString();
+            return this.get(`/rss/articles/recently_read${queryString ? `?${queryString}` : ''}`);
+        },
+        getReadLaterArticles: (page?: number, size?: number) => {
+            const queryParams = new URLSearchParams();
+            if (page) queryParams.append("page", page.toString());
+            if (size) queryParams.append("size", size.toString());
+
+            const queryString = queryParams.toString();
+            return this.get(`/rss/articles/read_later${queryString ? `?${queryString}` : ''}`);
+        },
+        getUnreadCounts: (folderId?: string) => {
+            const queryParams = new URLSearchParams();
+            if (folderId) queryParams.append("folder_id", folderId);
+
+            const queryString = queryParams.toString();
+            return this.get(`/rss/articles/unread_counts${queryString ? `?${queryString}` : ''}`);
+        },
+        getArticle: (id: string) => this.get(`/rss/articles/${id}`),
+        updateArticle: (id: string, data: {
+            is_read?: boolean;
+            read_at?: string;
+            is_read_later?: boolean;
+            is_favorite?: boolean;
+        }) => this.put(`/rss/articles/${id}`, data),
+        bulkUpdateArticles: (articleIds: string[], action: string) =>
+            this.post(`/rss/articles/bulk_update`, { article_ids: articleIds, action }),
+        markFeedAsRead: (feedId: string) =>
+            this.post<{ affected_articles: number }>(`/rss/articles/feed/${feedId}/mark-all-as-read`),
+        markFolderAsRead: (folderId: string) =>
+            this.post<{ affected_articles: number }>(`/rss/articles/folder/${folderId}/mark-all-as-read`),
+    }
 }

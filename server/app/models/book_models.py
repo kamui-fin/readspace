@@ -1,3 +1,4 @@
+import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
@@ -33,7 +34,7 @@ class HighlightColor(PyEnum):
 class BookMetadata(Base):
     __tablename__ = "book_metadata"
 
-    id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
+    id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
     title = Column(Text, nullable=False)
     author = Column(Text)
     description = Column(Text)
@@ -61,7 +62,7 @@ class BookMetadata(Base):
 class UserBookLibrary(Base):
     __tablename__ = "user_book_library"
 
-    id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
+    id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
     user_id = Column(
         PGUUID, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
     )
@@ -90,7 +91,7 @@ class UserBookLibrary(Base):
 class Highlight(Base):
     __tablename__ = "highlights"
 
-    id = Column(PGUUID, primary_key=True, server_default="gen_random_uuid()")
+    id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
     user_book_lib_id = Column(
         PGUUID, ForeignKey("user_book_library.id", ondelete="CASCADE"), nullable=False
     )

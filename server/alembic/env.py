@@ -14,7 +14,7 @@ from app.models.book_models import (  # noqa: F401
     HighlightColor,
     UserBookLibrary,
 )
-from app.models.user_models import Profile  # noqa: F401
+from app.models.user_models import AuthBase, Profile  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
@@ -32,7 +32,7 @@ if config.config_file_name is not None:
 
 # add your model's MetaData object here
 # for 'autogenerate' support
-target_metadata = Base.metadata
+target_metadata = [Base.metadata, AuthBase.metadata]
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
@@ -42,6 +42,14 @@ target_metadata = Base.metadata
 def get_url():
     settings = get_settings()
     return settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
+
+def include_object(obj, name, type_, reflected, compare_to):
+    print(obj, name, type_, reflected, compare_to)
+    # optionally skip creating the auth.users table itself
+    if type_ == "table" and obj.schema == "auth" and name == "users":
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -59,7 +67,10 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        compare_type=True,
+        compare_server_default=True,
         literal_binds=True,
+        include_object=include_object,
         dialect_opts={"paramstyle": "named"},
     )
 
@@ -68,7 +79,7 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(connection=connection, target_metadata=target_metadata, include_object=include_object, compare_server_default=True)
     with context.begin_transaction():
         context.run_migrations()
 
