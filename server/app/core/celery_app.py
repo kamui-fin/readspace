@@ -44,7 +44,7 @@ celery.conf.beat_schedule = {
     'schedule-hourly-feed-refreshes': {
         'task': 'app.workers.tasks.schedule_all_feed_refreshes_task',
         # 'schedule': crontab(minute=0),  # Every hour at minute 0
-        'schedule': crontab(minute='*/15'), # Every 15 minutes for more frequent updates during dev/testing
+        'schedule': crontab(minute='*/30'), # Every 30 minutes for more frequent updates during dev/testing
         # 'args': (16, 16), # Example arguments for the task, if any
     },
     # You can add more periodic tasks here

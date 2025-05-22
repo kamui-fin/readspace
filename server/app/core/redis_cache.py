@@ -9,41 +9,32 @@ logger = structlog.get_logger(__name__)
 settings = get_settings()
 
 class RedisCache:
-    _client: Optional[redis.Redis] = None
+    # Remove class-level client, or manage it per-loop if we had a more complex setup.
+    # For this fix, we will create a client on each call to _get_client within a task context.
+    # _client: Optional[redis.Redis] = None 
 
     @classmethod
     async def _get_client(cls) -> redis.Redis:
-        if cls._client is None:
-            try:
-                cls._client = redis.from_url(
-                    settings.REDIS_URL, 
-                    encoding="utf-8", 
-                    decode_responses=True # Automatically decode responses from bytes to str
-                )
-                await cls._client.ping() # Verify connection
-                logger.info("Successfully connected to Redis server.")
-            except redis.RedisError as e:
-                logger.error("Failed to connect to Redis server", error=str(e), exc_info=True)
-                raise ConnectionError(f"Failed to connect to Redis: {str(e)}") from e
-        else:
-            try:
-                await cls._client.ping()
-            except redis.RedisError:
-                # If ping fails, reconnect
-                try:
-                    cls._client = redis.from_url(
-                        settings.REDIS_URL, 
-                        encoding="utf-8", 
-                        decode_responses=True
-                    )
-                    await cls._client.ping()
-                    logger.info("Reconnected to Redis server.")
-                except redis.RedisError as e:
-                    logger.error("Failed to reconnect to Redis server", error=str(e), exc_info=True)
-                    raise ConnectionError(f"Failed to connect to Redis: {str(e)}") from e
-        return cls._client
+        # Always create a new client for the current event loop
+        # This is a simplification. A more robust solution might involve
+        # a dictionary to store clients per event loop if RedisCache were a long-lived singleton
+        # managing connections for multiple concurrent loops, but for Celery tasks with asyncio.run(),
+        # creating a client per task run is more straightforward.
+        try:
+            client = redis.from_url(
+                settings.REDIS_URL, 
+                encoding="utf-8", 
+                decode_responses=True # Automatically decode responses from bytes to str
+            )
+            await client.ping() # Verify connection
+            # logger.info("Successfully (re)established Redis connection for current task.") # Less noisy log
+            return client
+        except redis.RedisError as e:
+            logger.error("Failed to establish Redis connection for current task", error=str(e), exc_info=True)
+            raise ConnectionError(f"Failed to connect to Redis: {str(e)}") from e
 
     async def get(self, key: str) -> Optional[Any]:
+        client = None
         try:
             client = await self._get_client()
             cached_value = await client.get(key)
@@ -53,17 +44,21 @@ class RedisCache:
                     return json.loads(cached_value)
                 except json.JSONDecodeError:
                     logger.warning("Failed to decode JSON from cache, returning raw", key=key, value=cached_value)
-                    return cached_value # Or None, or re-raise, depending on expected stored value type
+                    return cached_value
             logger.debug("Cache miss", key=key)
             return None
-        except ConnectionError:
+        except ConnectionError: # Already logged in _get_client or if ping fails
             logger.error("Redis connection error during GET, returning None", key=key)
-            return None # Act as if cache miss if Redis is down
+            return None
         except Exception as e:
             logger.error("Error getting value from Redis", key=key, error=str(e), exc_info=True)
-            return None # Act as if cache miss on other errors
+            return None
+        finally:
+            if client:
+                await client.close() # Close the client after the operation
 
     async def set(self, key: str, value: Any, ttl_seconds: Optional[int] = None) -> bool:
+        client = None
         try:
             client = await self._get_client()
             serialized_value = json.dumps(value)
@@ -79,8 +74,12 @@ class RedisCache:
         except Exception as e:
             logger.error("Error setting value in Redis", key=key, error=str(e), exc_info=True)
             return False
+        finally:
+            if client:
+                await client.close() # Close the client after the operation
 
     async def delete(self, key: str) -> bool:
+        client = None
         try:
             client = await self._get_client()
             await client.delete(key)
@@ -92,16 +91,23 @@ class RedisCache:
         except Exception as e:
             logger.error("Error deleting key from Redis", key=key, error=str(e), exc_info=True)
             return False
-
+        finally:
+            if client:
+                await client.close() # Close the client after the operation
+    
     @classmethod
     async def close(cls):
-        if cls._client:
-            try:
-                await cls._client.close()
-                logger.info("Redis client connection closed.")
-            except Exception as e:
-                logger.error("Error closing Redis client connection", error=str(e), exc_info=True)
-            cls._client = None
+        # This method is now less relevant if clients are created/closed per operation.
+        # However, if there were a global client, it would be closed here.
+        # For now, we can leave it as a no-op or remove if no global client is ever used.
+        logger.info("RedisCache.close() called. Clients are now managed per-operation.")
+        # if cls._client:
+        #     try:
+        #         await cls._client.close()
+        #         logger.info("Redis client connection closed.")
+        #     except Exception as e:
+        #         logger.error("Error closing Redis client connection", error=str(e), exc_info=True)
+        #     cls._client = None
 
 # Global instance for convenience, can be injected or accessed via class methods
 # redis_cache_instance = RedisCache()

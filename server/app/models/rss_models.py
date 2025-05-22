@@ -79,6 +79,7 @@ class Feed(Base):
     last_fetched_at = Column(DateTime(timezone=True))
     last_modified_header = Column(String(255)) # HTTP Last-Modified header value
     etag_header = Column(String(255)) # HTTP ETag header value
+    last_article_published_at = Column(DateTime(timezone=True), nullable=True) # Timestamp of the newest article from this feed
     
     is_favorite = Column(Boolean, default=False, nullable=False)
     

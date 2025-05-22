@@ -7,10 +7,7 @@ export const env = createEnv({
      * isn't built with invalid env vars.
      */
     server: {
-        DATABASE_URL: z.string().url(), // supabase db url
-        NODE_ENV: z.enum(["development", "test", "production"]),
-        PORT: z.coerce.number().optional(),
-        VERCEL_URL: z.string().optional(), // Vercel provides this automatically
+        NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     },
 
     /**
@@ -19,10 +16,10 @@ export const env = createEnv({
      * `NEXT_PUBLIC_`.
      */
     client: {
-        NEXT_PUBLIC_NODE_ENV: z.enum(["development", "test", "production"]),
+        NEXT_PUBLIC_NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
         NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
         NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string(),
-        NEXT_PUBLIC_API_BASE_URL: z.string().url(),
+        NEXT_PUBLIC_API_BASE_URL: z.string().url().default("http://localhost:8008"),
     },
 
     /**

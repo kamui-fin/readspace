@@ -8,6 +8,7 @@ from app.schemas.rss_schemas import FolderCreate, FolderResponse, FolderUpdate
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
 from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
@@ -110,7 +111,10 @@ async def delete_folder(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
             
         logger.info("Folder deleted successfully", folder_id=folder_id, user_id=current_user.sub)
-        return
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={"ok": True}
+        )
     except ValueError as e:
         logger.warning("Failed to delete folder due to value error", error=str(e), user_id=current_user.sub, folder_id=folder_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))

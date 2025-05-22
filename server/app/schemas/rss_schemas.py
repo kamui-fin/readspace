@@ -66,6 +66,7 @@ class FeedBase(BaseModel):
     language: Optional[str] = Field(None, max_length=50)
     image_url: Optional[HttpUrl] = None
     is_favorite: bool = False
+    last_article_published_at: Optional[datetime] = None
 
 class FeedCreate(BaseModel):
     url: HttpUrl
@@ -90,6 +91,7 @@ class FeedInDBBase(FeedBase):
     last_fetched_at: Optional[datetime] = None
     last_modified_header: Optional[str] = Field(None, max_length=255)
     etag_header: Optional[str] = Field(None, max_length=255)
+    last_article_published_at: Optional[datetime] = None
     
     fetch_error_count: int = 0
     last_error_message: Optional[str] = None

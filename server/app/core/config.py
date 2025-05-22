@@ -12,7 +12,6 @@ class Settings(BaseSettings):
 
     # Supabase Configuration
     SUPABASE_URL: str
-    SUPABASE_KEY: SecretStr
     SUPABASE_JWT_SECRET: SecretStr
     SUPABASE_SERVICE_ROLE_KEY: SecretStr
 
@@ -28,16 +27,8 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
 
-    # Other Configuration
-    DEBUG: bool = False
-
     class Config:
         env_file = ".env"
-
-    # Add your settings here, for example:
-    # DATABASE_URL: str
-    # API_KEY: str
-    pass 
 
 @cache
 def get_settings() -> Settings:

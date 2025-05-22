@@ -350,11 +350,26 @@ class RssService:
             await self.db.rollback()
             raise
 
-        # 6. Update the feed with metadata from the first fetch (ETag, Last-Modified, TTL etc.)
+        # 6. Extract and store initial articles & determine latest article date
+        articles_to_create: List[ArticleCreate] = []
+        latest_article_date: Optional[datetime] = None
+        for entry in parsed_feed.entries:
+            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id)
+            if article_schema:
+                articles_to_create.append(article_schema)
+                if article_schema.published_at:
+                    if latest_article_date is None or article_schema.published_at > latest_article_date:
+                        latest_article_date = article_schema.published_at
+        
+        if articles_to_create:
+            await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
+            logger.info(f"Created {len(articles_to_create)} initial articles for feed", feed_id=db_feed.id, url=url)
+
+        # Update the feed with metadata from the first fetch (ETag, Last-Modified, TTL, latest_article_date etc.)
         await crud_feed.update_feed_fetch_metadata(
             self.db, 
             feed_db=db_feed, 
-            title=initial_feed_data.title, # Already part of initial_feed_data in create
+            title=initial_feed_data.title, 
             description=initial_feed_data.description,
             link=str(initial_feed_data.link) if initial_feed_data.link else None,
             language=initial_feed_data.language,
@@ -364,54 +379,62 @@ class RssService:
             skip_days=parsed_feed.feed.get("skipDays", {}).get("day", []),
             last_modified=feed_http_headers.get("Last-Modified"),
             etag=feed_http_headers.get("ETag"),
-            last_fetched_at=datetime.now(timezone.utc)
+            last_fetched_at=datetime.now(timezone.utc),
+            last_article_published_at=latest_article_date
         )
-
-        # 7. Extract and store initial articles
-        articles_to_create: List[ArticleCreate] = []
-        for entry in parsed_feed.entries:
-            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id)
-            if article_schema:
-                articles_to_create.append(article_schema)
-        
-        if articles_to_create:
-            await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
-            logger.info(f"Created {len(articles_to_create)} initial articles for feed", feed_id=db_feed.id, url=url)
         
         # Always re-fetch to ensure relationships are loaded for Pydantic
         db_feed_with_rels = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
         return FeedResponse.model_validate(db_feed_with_rels)
 
     async def refresh_feed(self, feed_id: UUID, force_refetch: bool = False) -> Optional[FeedResponse]:
-        """Refreshes an existing feed, fetches new articles, and updates the database."""
-        db_feed = await crud_feed.get_feed(self.db, feed_id=feed_id, user_id=self.user_id)
-        if not db_feed:
-            logger.warning("Feed not found for refresh", feed_id=feed_id, user_id=self.user_id)
-            return None
-
-        logger.info("Refreshing feed", feed_id=feed_id, url=db_feed.url, user_id=self.user_id)
-
-        etag = None if force_refetch else db_feed.etag_header
-        last_modified = None if force_refetch else db_feed.last_modified_header
-
+        """
+        Refreshes a single feed:
+        1. Fetches feed from DB.
+        2. Fetches content from network (using cache and conditional GETs).
+        3. Parses content.
+        4. Updates feed metadata in DB.
+        5. Creates new articles in DB.
+        Returns the updated FeedResponse or None if feed not found or error.
+        """
         try:
+            db_feed = await crud_feed.get_feed_by_id_for_system(db=self.db, feed_id=feed_id)
+            if not db_feed:
+                logger.warning("Feed not found for refresh by system", feed_id=feed_id)
+                return None
+
+            # Access id and url immediately to avoid MissingGreenlet in logger later
+            feed_id_val = db_feed.id
+            feed_url_val = db_feed.url
+            user_id_val = db_feed.user_id # Also likely needed and good to access early
+
+            logger.info(
+                "Refreshing feed", 
+                feed_id=feed_id_val, 
+                url=feed_url_val, 
+                user_id=user_id_val # Use the accessed user_id_val
+            )
+
+            etag = db_feed.etag_header if not force_refetch else None
+            last_modified = db_feed.last_modified_header if not force_refetch else None
+
             fetch_result = await self._fetch_feed_content(str(db_feed.url), etag=etag, last_modified=last_modified)
             
             if fetch_result["status"] == 304: # Not Modified
                 # Update last_fetched_at even if not modified
                 await crud_feed.update_feed_fetch_metadata(self.db, feed_db=db_feed, last_fetched_at=datetime.now(timezone.utc))
-                logger.info("Feed not modified, refresh skipped", feed_id=feed_id, url=db_feed.url)
+                logger.info("Feed not modified, refresh skipped", feed_id=feed_id_val, url=feed_url_val)
                 return FeedResponse.model_validate(db_feed)
 
             if fetch_result["status"] != 200 or not fetch_result["content"]:
                 await crud_feed.update_feed_fetch_error(self.db, feed_db=db_feed, error_message="Failed to fetch content during refresh")
-                logger.error("Failed to fetch content for feed refresh", feed_id=feed_id, url=db_feed.url, status=fetch_result.get("status"))
+                logger.error("Failed to fetch content for feed refresh", feed_id=feed_id_val, url=feed_url_val, status=fetch_result.get("status"))
                 return FeedResponse.model_validate(db_feed) # Return current state with error logged
 
             parsed_feed = self._parse_feed_data(fetch_result["content"], str(db_feed.url))
         except (ConnectionError, ValueError) as e:
             await crud_feed.update_feed_fetch_error(self.db, feed_db=db_feed, error_message=str(e))
-            logger.error("Error refreshing feed", feed_id=feed_id, url=db_feed.url, error=str(e))
+            logger.error("Error refreshing feed", feed_id=feed_id_val, url=feed_url_val, error=str(e))
             return FeedResponse.model_validate(db_feed) # Return current state with error logged
 
         # Update feed metadata (title, description, link might change)
@@ -432,29 +455,35 @@ class RssService:
             skip_days=parsed_feed.feed.get("skipDays", {}).get("day", []),
             last_modified=feed_http_headers.get("Last-Modified"),
             etag=feed_http_headers.get("ETag"),
-            last_fetched_at=datetime.now(timezone.utc)
+            last_fetched_at=datetime.now(timezone.utc),
+            last_article_published_at=db_feed.last_article_published_at
         )
         
         # Extract and store new articles
         articles_to_create: List[ArticleCreate] = []
+        latest_article_date: Optional[datetime] = db_feed.last_article_published_at # Initialize with current value
+
         for entry in parsed_feed.entries:
             article_schema = self._extract_article_data(entry, db_feed.id, self.user_id)
             if article_schema:
                 articles_to_create.append(article_schema)
+                if article_schema.published_at:
+                    if latest_article_date is None or article_schema.published_at > latest_article_date:
+                        latest_article_date = article_schema.published_at
         
         newly_created_articles_count = 0
         if articles_to_create:
             await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
             newly_created_articles_count = len(articles_to_create)
-            logger.info(f"Created {newly_created_articles_count} new articles for feed", feed_id=db_feed.id, url=db_feed.url)
+            logger.info(f"Created {newly_created_articles_count} new articles for feed", feed_id=feed_id_val, url=feed_url_val)
         else:
-            logger.info("No new articles found for feed", feed_id=db_feed.id, url=db_feed.url)
+            logger.info("No new articles found for feed", feed_id=feed_id_val, url=feed_url_val)
         
         # Optionally, add newly_created_articles_count to the response or log it.
         # The FeedResponse itself doesn't have a field for this, but it's useful info.
         
         # Eager load relationships for the response again
-        refreshed_db_feed_with_relations = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
+        refreshed_db_feed_with_relations = await crud_feed.get_feed(self.db, feed_id=feed_id_val, user_id=user_id_val)
         return FeedResponse.model_validate(refreshed_db_feed_with_relations)
 
     # --- Folder Methods ---
@@ -488,19 +517,20 @@ class RssService:
             raise ValueError(str(e))
 
     async def delete_folder(self, folder_id: UUID) -> bool:
-        folder_db = await crud_folder.get_folder(self.db, folder_id=folder_id, user_id=self.user_id)
-        if not folder_db:
-            return False # Or raise NotFound
+        """Deletes a folder. Returns True if successful, False otherwise."""
+        folder = await crud_folder.get_folder(db=self.db, folder_id=folder_id, user_id=self.user_id)
+        if not folder:
+            return False
         
-        # Check if folder has any feeds associated with it
-        feeds_in_folder = await crud_feed.get_feeds_by_user(self.db, user_id=self.user_id, folder_id=folder_id, limit=1)
-        if feeds_in_folder:
-            logger.warning("Attempt to delete folder with associated feeds", folder_id=folder_id, user_id=self.user_id)
-            # Raise an error or return a specific status indicating it can't be deleted
-            raise ValueError("Folder cannot be deleted: it contains feeds. Please move or delete the feeds first.")
+        # Removed check for folder.feeds to allow cascade delete
+        # if folder.feeds:
+        #     logger.warning("Attempt to delete folder with associated feeds", folder_id=folder_id, user_id=self.user_id)
+        #     raise ValueError("Folder cannot be deleted: it contains feeds. Please move or delete the feeds first.")
 
-        deleted_folder = await crud_folder.delete_folder(self.db, folder_id=folder_id, user_id=self.user_id)
-        return deleted_folder is not None
+        # The database schema (models.Folder.feeds relationship with cascade="all, delete-orphan")
+        # should handle cascading the deletion to feeds and their articles.
+        await crud_folder.delete_folder(db=self.db, folder_id=folder_id, user_id=self.user_id)
+        return True
 
     # --- Tag Methods ---
     async def create_tag(self, tag_in: TagCreate) -> TagResponse:

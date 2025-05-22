@@ -2,6 +2,12 @@ from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 
+import structlog  # Import structlog
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased, selectinload
+
 from app.crud import (
     crud_folder,  # To validate folder
     crud_tag,  # To get/validate tags
@@ -12,17 +18,15 @@ from app.schemas.rss_schemas import (  # FeedBase for initial data
     FeedCreate,
     FeedUpdate,
 )
-from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, selectinload
 
 # Constants for refresh logic (in minutes)
-MIN_REFRESH_INTERVAL_MINUTES = 15
-DEFAULT_REFRESH_INTERVAL_MINUTES = 60
+MIN_REFRESH_INTERVAL_MINUTES = 1 # Temporarily reduced for testing
+DEFAULT_REFRESH_INTERVAL_MINUTES = 35 # Temporarily reduced for testing (was 60)
 MAX_REFRESH_INTERVAL_MINUTES = 24 * 60  # 1 day
-ERROR_BACKOFF_BASE_MINUTES = 30 # Base delay for first error
+ERROR_BACKOFF_BASE_MINUTES = 35 # Base delay for first error
 MAX_ERROR_BACKOFF_MINUTES = 12 * 60 # Max delay due to errors
+
+logger = structlog.get_logger(__name__) # Initialize logger
 
 async def get_feed(db: AsyncSession, *, feed_id: UUID, user_id: UUID) -> Optional[Feed]:
     """Get a specific feed by its ID and user ID, with folder and tags eager loaded."""
@@ -204,7 +208,8 @@ async def update_feed_fetch_metadata(
     skip_days: Optional[List[str]] = None,
     last_modified: Optional[str] = None,
     etag: Optional[str] = None,
-    last_fetched_at: Optional[datetime] = None
+    last_fetched_at: Optional[datetime] = None,
+    last_article_published_at: Optional[datetime] = None
 ) -> Feed:
     """Update feed details after a successful fetch or from parsed data."""
     if title is not None and feed_db.title != title:
@@ -224,6 +229,8 @@ async def update_feed_fetch_metadata(
     if last_modified is not None: feed_db.last_modified_header = last_modified
     if etag is not None: feed_db.etag_header = etag
     if last_fetched_at is not None: feed_db.last_fetched_at = last_fetched_at
+    if last_article_published_at is not None and feed_db.last_article_published_at != last_article_published_at:
+        feed_db.last_article_published_at = last_article_published_at
     
     feed_db.fetch_error_count = 0
     feed_db.last_error_message = None
@@ -265,66 +272,84 @@ async def get_all_feeds_for_user_by_url(db: AsyncSession, *, user_id: UUID) -> L
 
 async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> List[Feed]:
     """Get feeds that might need refreshing based on TTL, errors, and last fetched time."""
+    logger.info("get_feeds_needing_refresh called", limit=limit)
     now = datetime.now(timezone.utc)
 
     # For feeds never fetched, they are top priority
     never_fetched_stmt = (
         select(Feed)
-        .filter(Feed.last_fetched_at == None)
+        .filter(Feed.last_fetched_at is None)
         .order_by(Feed.created_at.asc())
         .limit(limit)
     )
     never_fetched_result = await db.execute(never_fetched_stmt)
-    feeds_needing_refresh = list(never_fetched_result.scalars().all()) # Convert to list
+    feeds_needing_refresh = list(never_fetched_result.scalars().all())
+    logger.info("Found never_fetched feeds", count=len(feeds_needing_refresh), limit_applied=limit)
     remaining_limit = limit - len(feeds_needing_refresh)
 
     if remaining_limit > 0:
         min_interval_ago = now - timedelta(minutes=MIN_REFRESH_INTERVAL_MINUTES)
+        logger.info("Checking for previously fetched feeds", remaining_limit=remaining_limit, min_interval_ago=min_interval_ago.isoformat())
         
-        # Fetch candidate feeds that have been fetched before and are older than min_interval_ago
-        # Order to prioritize errored feeds and then older fetches
         candidate_feeds_stmt = (
             select(Feed)
-            .filter(Feed.last_fetched_at != None)
+            .filter(Feed.last_fetched_at is not None)
             .filter(Feed.last_fetched_at < min_interval_ago)
             .order_by(Feed.fetch_error_count.desc().nulls_last(), Feed.last_fetched_at.asc())
-            .limit(remaining_limit * 5)  # Fetch a larger candidate set (e.g., * 5)
+            .limit(remaining_limit * 5)  # Fetch a larger candidate set
         )
         candidate_result = await db.execute(candidate_feeds_stmt)
         candidates = candidate_result.scalars().all()
+        logger.info("Fetched candidates for refresh", count=len(candidates), candidate_limit=(remaining_limit * 5))
         
         actually_due_feeds: List[Feed] = []
         for feed in candidates:
             if len(actually_due_feeds) >= remaining_limit:
+                logger.info("Reached remaining_limit for actually_due_feeds", count=len(actually_due_feeds))
                 break
 
             current_utc_hour = now.hour
             current_utc_weekday = now.weekday()
 
             if feed.skip_hours and current_utc_hour in feed.skip_hours:
+                logger.debug("Skipping feed due to skip_hours", feed_id=feed.id, feed_url=feed.url, current_hour=current_utc_hour, skip_hours=feed.skip_hours)
                 continue
             
             if feed.skip_days:
                 days_of_week = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
                 current_day_name = days_of_week[current_utc_weekday]
                 if current_day_name in feed.skip_days:
+                    logger.debug("Skipping feed due to skip_days", feed_id=feed.id, feed_url=feed.url, current_day=current_day_name, skip_days=feed.skip_days)
                     continue
 
             item_delay_minutes = DEFAULT_REFRESH_INTERVAL_MINUTES
             if feed.fetch_error_count and feed.fetch_error_count > 0:
                 current_backoff = ERROR_BACKOFF_BASE_MINUTES * (2**(feed.fetch_error_count - 1))
                 item_delay_minutes = min(current_backoff, MAX_ERROR_BACKOFF_MINUTES)
+                logger.debug("Calculated error backoff delay", feed_id=feed.id, feed_url=feed.url, error_count=feed.fetch_error_count, delay_minutes=item_delay_minutes)
             elif feed.ttl is not None:
                 item_delay_minutes = max(MIN_REFRESH_INTERVAL_MINUTES, min(feed.ttl, MAX_REFRESH_INTERVAL_MINUTES))
+                logger.debug("Calculated TTL-based delay", feed_id=feed.id, feed_url=feed.url, ttl=feed.ttl, delay_minutes=item_delay_minutes)
+            else:
+                logger.debug("Using default delay", feed_id=feed.id, feed_url=feed.url, delay_minutes=item_delay_minutes)
             
             if feed.last_fetched_at is None: # Should have been caught by never_fetched_stmt, but as a safeguard
+                 logger.debug("Adding never-fetched feed (safeguard in candidate loop)", feed_id=feed.id, feed_url=feed.url)
                  actually_due_feeds.append(feed)
                  continue
 
             next_fetch_time = feed.last_fetched_at + timedelta(minutes=item_delay_minutes)
             if now >= next_fetch_time:
+                logger.debug("Feed is due for refresh", feed_id=feed.id, feed_url=feed.url, last_fetched_at=feed.last_fetched_at.isoformat(), next_fetch_time=next_fetch_time.isoformat(), now=now.isoformat())
                 actually_due_feeds.append(feed)
+            else:
+                logger.debug("Feed not yet due", feed_id=feed.id, feed_url=feed.url, last_fetched_at=feed.last_fetched_at.isoformat(), next_fetch_time=next_fetch_time.isoformat(), now=now.isoformat())
         
+        logger.info("Found actually_due feeds from candidates", count=len(actually_due_feeds))
         feeds_needing_refresh.extend(actually_due_feeds)
+    else:
+        logger.info("No remaining limit after checking never_fetched feeds or limit was 0 initially.")
 
+    final_feeds_count = len(feeds_needing_refresh[:limit])
+    logger.info("get_feeds_needing_refresh returning", total_count_before_limit=len(feeds_needing_refresh), final_count_after_limit=final_feeds_count)
     return feeds_needing_refresh[:limit] 

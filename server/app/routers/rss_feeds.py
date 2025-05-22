@@ -9,6 +9,7 @@ from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
@@ -152,4 +153,7 @@ async def delete_feed(
         logger.warning("Feed not found for deletion or access denied", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
     logger.info("Feed deleted successfully", feed_id=feed_id, user_id=current_user.sub)
-    return 
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"ok": True}
+    )

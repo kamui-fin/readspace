@@ -6,3 +6,73 @@ services:
     container_name: readspace_redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "localhost", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: readspace_web
+    ports:
+      - "8042:8042"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: readspace_api
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8008"
+    ports:
+      - "8008:8008"
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./server:/app
+    env_file:
+      - ./server/.env
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: readspace_worker
+    command: celery -A app.core.celery_app worker -l info
+    volumes:
+      - ./server:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - PYTHONUNBUFFERED=1
+
+  beat:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: readspace_beat
+    command: celery -A app.core.celery_app beat -l info
+    volumes:
+      - ./server:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - PYTHONUNBUFFERED=1

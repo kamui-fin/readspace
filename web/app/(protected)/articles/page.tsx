@@ -5,12 +5,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
-import { useArticle, useArticles, useBulkUpdateArticles, useReadLaterArticles, useRecentlyReadArticles, useUpdateArticle } from "@/lib/api/hooks/feeds"
+import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useUpdateArticle } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
-import { CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "react-hot-toast"
 
 export default function ArticlesPage({
     initialSidebarTitle,
@@ -31,6 +32,7 @@ export default function ArticlesPage({
     const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
     const router = useRouter();
+    const { data: allUserFeeds } = useFeeds();
 
     const isRecentlyReadMode = mode === 'recentlyRead';
     const isReadLaterMode = mode === 'readLater';
@@ -39,9 +41,7 @@ export default function ArticlesPage({
             isReadLaterMode ? "Read Later" :
                 (initialSidebarTitle || "All Articles");
 
-    const allArticlesParams = {
-        feedIds: feedId ? [feedId] : undefined,
-        folderId: folderId,
+    const baseArticlesParams = {
         publishedSince,
         publishedUntil,
         page,
@@ -50,20 +50,36 @@ export default function ArticlesPage({
         sortOrder: "desc",
         isRead: showUnreadOnly ? false : undefined
     };
-    const recentlyReadParams = { page, size: 25 };
-    const readLaterParams = { page, size: 25 };
 
-    let queryKeyParams;
+    let queryKeyParams: any;
     let articlesHook;
 
     if (isRecentlyReadMode) {
-        queryKeyParams = recentlyReadParams;
+        queryKeyParams = { page, size: 25 };
         articlesHook = useRecentlyReadArticles;
     } else if (isReadLaterMode) {
-        queryKeyParams = readLaterParams;
+        queryKeyParams = { page, size: 25 };
         articlesHook = useReadLaterArticles;
     } else {
-        queryKeyParams = allArticlesParams;
+        if (folderId) {
+            queryKeyParams = {
+                ...baseArticlesParams,
+                folderId: folderId,
+                feedIds: undefined,
+            };
+        } else if (feedId) {
+            queryKeyParams = {
+                ...baseArticlesParams,
+                feedIds: [feedId],
+                folderId: undefined,
+            };
+        } else {
+            queryKeyParams = {
+                ...baseArticlesParams,
+                feedIds: undefined,
+                folderId: undefined,
+            };
+        }
         articlesHook = useArticles;
     }
 
@@ -80,6 +96,7 @@ export default function ArticlesPage({
 
     const articlesData: PaginatedResponse<Article> = data || { items: [], total: 0, page: 1, pages: 1, size: 25 };
     const bulkUpdateArticles = useBulkUpdateArticles();
+    const refreshFeed = useRefreshFeed();
 
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(selectedArticleId || "");
     const updateArticle = useUpdateArticle();
@@ -156,8 +173,57 @@ export default function ArticlesPage({
         }
     };
 
-    const handleRefresh = () => {
-        refetchArticles();
+    const handleRefresh = async () => {
+        if (feedId) {
+            // Specific feed view: refresh this feed, allow hook to show toast
+            refreshFeed.mutate({ feedId, forceRefetch: true, silent: false });
+        } else if (folderId && allUserFeeds) {
+            // Folder view: refresh all feeds in this folder, manage toasts centrally
+            const feedsInFolder = allUserFeeds.filter(f => f.folder_id === folderId);
+            if (feedsInFolder.length > 0) {
+                const toastId = 'folder-refresh';
+                toast.loading(`Refreshing ${feedsInFolder.length} feed(s) in folder...`, { id: toastId });
+                // TODO: Implement backend route and celery task for folder refresh to avoid Promise.all here.
+                // Then, implement task polling on the frontend.
+                try {
+                    await Promise.all(
+                        feedsInFolder.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
+                    );
+                    toast.success(`Finished refreshing feeds in folder.`, { id: toastId });
+                } catch (error) {
+                    toast.error("Some feeds in the folder might not have refreshed correctly.", { id: toastId });
+                    console.error("Error refreshing feeds in folder:", error);
+                }
+                refetchArticles();
+            } else {
+                toast("No feeds in this folder to refresh.");
+                refetchArticles();
+            }
+        } else if (mode === 'allArticles' && allUserFeeds) {
+            // "All Articles" view: Refresh all feeds the user is subscribed to.
+            // TODO: This should ideally be a single backend Celery task for all feeds,
+            // similar to the folder refresh. Implement task polling on the frontend.
+            if (allUserFeeds.length > 10) {
+                if (!window.confirm(`You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`)) {
+                    return;
+                }
+            }
+            const toastId = 'all-feeds-refresh';
+            toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { id: toastId });
+            try {
+                await Promise.all(
+                    allUserFeeds.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
+                );
+                toast.success(`Finished refreshing all feeds.`, { id: toastId });
+            } catch (error) {
+                toast.error("Some feeds might not have refreshed correctly.", { id: toastId });
+                console.error("Error refreshing all feeds:", error);
+            }
+            refetchArticles();
+        } else {
+            // Read Later / Recently Read / Other views or if allUserFeeds is not available: Just refetch from DB
+            refetchArticles();
+        }
     };
 
     const handleMarkAllAsRead = () => {
@@ -168,6 +234,18 @@ export default function ArticlesPage({
 
         if (unreadArticleIds.length === 0) return;
 
+        // Update optimistically
+        const optimisticallyUpdatedArticles = articlesData.items.map(article =>
+            !article.is_read ? { ...article, is_read: true } : article
+        );
+
+        // Update the cache optimistically
+        const optimisticData = {
+            ...articlesData,
+            items: optimisticallyUpdatedArticles
+        };
+
+        // Update query cache with optimistic data
         bulkUpdateArticles.mutate({
             articleIds: unreadArticleIds,
             action: "mark_as_read"
@@ -180,6 +258,8 @@ export default function ArticlesPage({
 
     const toggleShowUnreadOnly = () => {
         setShowUnreadOnly(prev => !prev);
+        // Reset to page 1 when toggling filter
+        setPage(1);
     };
 
     // Calculate unread count for the badge
@@ -204,11 +284,28 @@ export default function ArticlesPage({
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
                 <div className="w-full flex flex-col items-center justify-center gap-4">
                     <p className="text-muted-foreground">
-                        {isRecentlyReadMode ? "No recently read articles" :
-                            isReadLaterMode ? "No articles in your Read Later list" :
-                                "No articles found"}
+                        {showUnreadOnly
+                            ? "No unread articles found matching your filters."
+                            : isRecentlyReadMode
+                                ? "No recently read articles"
+                                : isReadLaterMode
+                                    ? "No articles in your Read Later list"
+                                    : "No articles found"}
                     </p>
-                    {isRecentlyReadMode || isReadLaterMode ? (
+                    {/* Always show toggle if in a mode that supports it, or refresh otherwise */}
+                    {(!isRecentlyReadMode && !isReadLaterMode && (mode === 'allArticles' || feedId || folderId)) ? (
+                        <div className="flex flex-col items-center gap-2">
+                            {showUnreadOnly && articlesData.total === 0 && (
+                                <Button variant="outline" onClick={toggleShowUnreadOnly}>
+                                    Show All Articles
+                                </Button>
+                            )}
+                            <Button variant="outline" onClick={handleRefresh}>
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Refresh
+                            </Button>
+                        </div>
+                    ) : isRecentlyReadMode || isReadLaterMode ? (
                         <Button variant="outline" onClick={() => router.push('/articles')}>
                             Browse Articles
                         </Button>
@@ -236,7 +333,8 @@ export default function ArticlesPage({
                                 )}
                             </div>
                             <div className="flex items-center gap-1">
-                                {!isRecentlyReadMode && !isReadLaterMode && (
+                                {(!isRecentlyReadMode && !isReadLaterMode) ? (
+                                    // Full controls for default article views (All, Folder, Feed)
                                     <>
                                         <Button
                                             variant="ghost"
@@ -257,17 +355,28 @@ export default function ArticlesPage({
                                         >
                                             <CheckCircle2 className="h-4 w-4" />
                                         </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8"
+                                            onClick={handleRefresh}
+                                            title="Refresh"
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                        </Button>
                                     </>
+                                ) : (
+                                    // Minimal controls (Refresh only) for special views like Recently Read, Read Later
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={handleRefresh}
+                                        title="Refresh"
+                                    >
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
                                 )}
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8"
-                                    onClick={handleRefresh}
-                                    title="Refresh"
-                                >
-                                    <RefreshCw className="h-4 w-4" />
-                                </Button>
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -451,43 +560,47 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
         <article className="mx-auto max-w-4xl">
             <div className="flex justify-between items-center mb-3">
                 <h1 className="text-2xl font-semibold">{article.title}</h1>
-                {/* <div>
+            </div>
+            <div className="flex items-center justify-between mb-6 text-[10px]">
+                <div className="flex items-center gap-2">
+                    <Avatar className="h-6 w-6">
+                        <AvatarImage src={article.feed?.image_url || article.image_url || "/placeholders/avatar.png"} />
+                        <AvatarFallback>{article.feed?.title?.substring(0, 2) || "N/A"}</AvatarFallback>
+                    </Avatar>
+                    <span className="truncate max-w-[200px]">
+                        {article.author || article.feed?.title || "Unknown Source"}
+                    </span>
+                    <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                        {publishedAtDisplay}
+                    </span>
+                    {article.estimated_read_time_minutes != null && (
+                        <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                            {article.estimated_read_time_minutes} min read
+                        </span>
+                    )}
+                </div>
+                <div className="flex items-center gap-3">
+                    {article.link && (
+                        <a
+                            href={article.link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline focus:underline cursor-pointer"
+                            tabIndex={0}
+                        >
+                            Open original article
+                        </a>
+                    )}
                     <Button
-                        variant={optimisticReadLater ? "default" : "outline"}
-                        size="icon"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full hover:bg-muted"
                         onClick={handleToggleReadLater}
                     >
-                        <BookmarkIcon className="h-4 w-4" />
+                        <BookmarkIcon className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`} />
+                        <span className="sr-only">{optimisticReadLater ? "Remove from read later" : "Save for later"}</span>
                     </Button>
-                </div> */}
-            </div>
-            <div className="flex items-center gap-2 mb-6 text-[10px]">
-                <Avatar className="h-6 w-6">
-                    <AvatarImage src={article.feed?.image_url || article.image_url || "/placeholders/avatar.png"} />
-                    <AvatarFallback>{article.feed?.title?.substring(0, 2) || "N/A"}</AvatarFallback>
-                </Avatar>
-                <span className="truncate max-w-[200px]">
-                    {article.author || article.feed?.title || "Unknown Source"}
-                </span>
-                <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
-                    {publishedAtDisplay}
-                </span>
-                {article.estimated_read_time_minutes != null && (
-                    <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
-                        {article.estimated_read_time_minutes} min read
-                    </span>
-                )}
-                {article.link && (
-                    <a
-                        href={article.link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-2 text-primary hover:underline focus:underline cursor-pointer"
-                        tabIndex={0}
-                    >
-                        Open original article
-                    </a>
-                )}
+                </div>
             </div>
             <div className="space-y-6">
                 {article.image_url && (

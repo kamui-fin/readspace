@@ -3,9 +3,9 @@
     "version": "0.1.0",
     "private": true,
     "scripts": {
-        "dev": "next dev --turbopack -p 8080",
+        "dev": "next dev --turbopack -p 8042",
         "build": "next build",
-        "start": "next start -p 8080",
+        "start": "next start -p 8042",
         "lint": "next lint",
         "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
         "prepare": "husky",

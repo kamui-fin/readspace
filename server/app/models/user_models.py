@@ -1,13 +1,12 @@
 from datetime import datetime
 
-from app.db.base_class import Base
 from sqlalchemy import Column, DateTime, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import declarative_base
 
-AuthBase = declarative_base()
+from app.db.base_class import Base
 
-class AuthUser(AuthBase):
+
+class AuthUser(Base):
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
 

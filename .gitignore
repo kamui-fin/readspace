@@ -1,2 +1,4 @@
 .cursor/
 .vscode/
+.env*
+supabase/volumes/db/data

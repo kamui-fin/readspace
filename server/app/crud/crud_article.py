@@ -2,11 +2,12 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 from uuid import UUID
 
-from app.models.rss_models import Article, Feed
-from app.schemas.rss_schemas import ArticleCreate, ArticleUpdate
 from sqlalchemy import asc, desc, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+
+from app.models.rss_models import Article, Feed
+from app.schemas.rss_schemas import ArticleCreate, ArticleUpdate
 
 
 async def get_article(db: AsyncSession, *, article_id: UUID, user_id: UUID) -> Optional[Article]:
@@ -296,7 +297,7 @@ async def get_unread_counts_by_folder(db: AsyncSession, *, user_id: UUID) -> Dic
         select(Feed.folder_id, func.count(Article.id).label("unread_count"))
         .join(Article.feed) # Join Article to Feed
         .filter(Article.user_id == user_id, Article.is_read == False)
-        .filter(Feed.folder_id != None) # Ensure folder_id is not null
+        .filter(Feed.folder_id is not None) # Ensure folder_id is not null
         .group_by(Feed.folder_id)
     )
     result = await db.execute(stmt)

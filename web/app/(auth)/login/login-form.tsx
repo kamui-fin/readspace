@@ -96,7 +96,7 @@ export function LoginForm({
                 <CardContent>
                     <form onSubmit={formik.handleSubmit}>
                         <div className="grid gap-6">
-                            <div className="flex flex-col gap-4">
+                            {/* <div className="flex flex-col gap-4">
                                 <Button
                                     variant="outline"
                                     className="w-full"
@@ -120,7 +120,7 @@ export function LoginForm({
                                 <span className="relative z-10 bg-background px-2 text-muted-foreground">
                                     Or continue with
                                 </span>
-                            </div>
+                            </div> */}
                             <div className="grid gap-6">
                                 <div className="grid gap-2">
                                     <Label htmlFor="email">Email</Label>
