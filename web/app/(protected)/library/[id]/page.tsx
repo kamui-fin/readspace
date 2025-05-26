@@ -13,9 +13,9 @@ import { Metadata } from "next"
 import { redirect } from "next/navigation"
 
 interface PageProps {
-    params: {
+    params: Promise<{
         id: string
-    }
+    }>
 }
 
 interface BookNotFoundProps {
@@ -34,8 +34,9 @@ function BookNotFound({ message = "The book you're looking for doesn't exist or 
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const resolvedParams = await params
     try {
-        const libraryBook = await ApiClient.get<UserBookLibrary>(`/books/${params.id}`)
+        const libraryBook = await ApiClient.get<UserBookLibrary>(`/books/${resolvedParams.id}`)
         const bookMetaData = libraryBook?.book_metadata
 
         if (!bookMetaData) {
@@ -59,6 +60,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function BookReaderPage({ params }: PageProps) {
+    const resolvedParams = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -68,7 +70,7 @@ export default async function BookReaderPage({ params }: PageProps) {
 
     let libraryBook: UserBookLibrary | null = null
     try {
-        libraryBook = await ApiClient.get<UserBookLibrary>(`/books/${params.id}`)
+        libraryBook = await ApiClient.get<UserBookLibrary>(`/books/${resolvedParams.id}`)
     } catch (error) {
         return <BookNotFound message="Failed to load the book. Please try again later." />
     }

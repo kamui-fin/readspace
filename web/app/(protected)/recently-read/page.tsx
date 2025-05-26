@@ -1,8 +1,8 @@
 'use client'
 
-import ArticlesPage from "../articles/page"; // Import the refactored ArticlesPage
+import { ArticlesView } from "@/components/articles"
 
 export default function RecentlyReadPage() {
-    // Render the ArticlesPage component in 'recentlyRead' mode
-    return <ArticlesPage mode="recentlyRead" />;
+    // Render the ArticlesView component in 'recentlyRead' mode
+    return <ArticlesView mode="recentlyRead" />;
 } 

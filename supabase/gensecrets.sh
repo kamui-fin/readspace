@@ -2,6 +2,8 @@
 
 set -e
 
+cp .env.example .env
+
 # Generate secure secrets
 JWT_SECRET=$(openssl rand -hex 32)
 SERVICE_ROLE_KEY=$(openssl rand -hex 32)
@@ -10,7 +12,7 @@ POSTGRES_PASSWORD=$(openssl rand -hex 16)
 DASHBOARD_USERNAME="admin"
 DASHBOARD_PASSWORD=$(openssl rand -hex 12)
 SECRET_KEY_BASE=$(openssl rand -base64 48 | tr -d '=+/[:space:]' | cut -c1-64)
-VAULT_ENC_KEY=$(openssl rand -hex 32)
+VAULT_ENC_KEY=$(openssl rand -hex 16)
 LOGFLARE_API_KEY=$(openssl rand -hex 32)
 
 # Replace the values in the .env file

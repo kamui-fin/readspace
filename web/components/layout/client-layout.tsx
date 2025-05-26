@@ -1,6 +1,5 @@
 "use client"
 
-import { PostHogProvider } from "@/app/providers"
 import { ThemeProvider } from "@/components/theme-provider"
 import {
     SidebarLeftProvider,
@@ -27,16 +26,14 @@ const queryClient = new QueryClient({
 function ClientLayout({ children }: ClientLayoutProps) {
     return (
         <QueryClientProvider client={queryClient}>
-            <PostHogProvider>
-                <ThemeProvider>
-                    <SidebarLeftProvider>
-                        <SidebarRightProvider>{children}</SidebarRightProvider>
-                    </SidebarLeftProvider>
-                </ThemeProvider>
-                <Toaster
-                    position="top-center"
-                />
-            </PostHogProvider>
+            <ThemeProvider>
+                <SidebarLeftProvider>
+                    <SidebarRightProvider>{children}</SidebarRightProvider>
+                </SidebarLeftProvider>
+            </ThemeProvider>
+            <Toaster
+                position="top-center"
+            />
         </QueryClientProvider>
     )
 }

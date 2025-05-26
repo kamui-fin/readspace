@@ -1,5 +1,5 @@
 # 1. Base image with Node.js
-FROM node:20-alpine AS base
+FROM node:22-alpine AS base
 WORKDIR /app
 
 # 2. Install dependencies with pnpm
@@ -17,6 +17,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
+
+ENV SUPABASE_URL=http://0.0.0.0:8000
+
 RUN pnpm build
 
 # 4. Production image

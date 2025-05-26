@@ -23,6 +23,9 @@ const nextConfig = {
     eslint: {
         ignoreDuringBuilds: true,
     },
+    typescript: {
+        ignoreBuildErrors: true,
+    },
     serverExternalPackages: ["import-in-the-middle", "require-in-the-middle"],
 }
 

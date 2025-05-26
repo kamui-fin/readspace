@@ -1,6 +1,6 @@
 'use client'
 
-import ArticlesPage from '@/app/(protected)/articles/page'
+import { ArticlesView } from "@/components/articles"
 import { useFolders } from '@/lib/api/hooks/feeds'
 import { useParams } from 'next/navigation'
 
@@ -20,8 +20,7 @@ export default function FolderArticlesPage() {
     }
 
     return (
-        <ArticlesPage
-            initialSidebarTitle={folder.name || 'Folder Articles'}
+        <ArticlesView
             folderId={folderId}
         />
     )

@@ -457,3 +457,7 @@ services:
 
 volumes:
   db-config:
+
+networks:
+  default:
+    name: readspace_shared_net

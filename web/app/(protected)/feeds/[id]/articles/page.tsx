@@ -1,6 +1,6 @@
 'use client'
 
-import ArticlesPage from '@/app/(protected)/articles/page'
+import { ArticlesView } from "@/components/articles"
 import { useFeed } from '@/lib/api/hooks/feeds'
 import { useParams } from 'next/navigation'
 
@@ -18,8 +18,7 @@ export default function FeedArticlesPage() {
     }
 
     return (
-        <ArticlesPage
-            sidebarTitle={feed.title || 'Feed Articles'}
+        <ArticlesView
             feedId={feedId}
         />
     )

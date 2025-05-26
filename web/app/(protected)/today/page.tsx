@@ -1,17 +1,17 @@
 'use client'
 
-import { endOfToday, startOfToday } from 'date-fns'
-import ArticlesPage from '../articles/page'
+import { ArticlesView } from "@/components/articles"
 
 export default function TodayPage() {
-    const today = startOfToday().toISOString()
-    const endOfTodayDate = endOfToday().toISOString()
+    const today = new Date();
+    const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
 
     return (
-        <ArticlesPage
-            sidebarTitle="Today"
-            publishedSince={today}
-            publishedUntil={endOfTodayDate}
+        <ArticlesView
+            initialSidebarTitle="Today"
+            publishedSince={startOfDay.toISOString()}
+            publishedUntil={endOfDay.toISOString()}
         />
-    )
+    );
 } 

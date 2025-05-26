@@ -1,8 +1,8 @@
 'use client'
 
-import ArticlesPage from "../articles/page"; // Import the refactored ArticlesPage
+import { ArticlesView } from "@/components/articles"
 
 export default function ReadLaterPage() {
-    // Render the ArticlesPage component in 'readLater' mode
-    return <ArticlesPage mode="readLater" />;
+    // Render the ArticlesView component in 'readLater' mode
+    return <ArticlesView mode="readLater" />;
 } 

@@ -1,4 +1,6 @@
 .cursor/
 .vscode/
-.env*
+.env
+.env.local
+.env.prod
 supabase/volumes/db/data
