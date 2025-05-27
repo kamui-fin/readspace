@@ -40,7 +40,7 @@ export default function useAutoBookmark() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}`, {
+            ApiClient.put(`/books/${bookId}/progress`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {
@@ -94,7 +94,7 @@ export default function useAutoBookmark() {
             } else {
                 // Cloud book - use React Query mutation
                 updateProgressMutation.mutate({
-                    bookId: bookMeta.id,
+                    bookId: bookMeta.library_id || bookMeta.id,
                     progress: progressData,
                 })
             }
@@ -153,7 +153,7 @@ export default function useAutoBookmark() {
             } else {
                 // Cloud book - use React Query mutation
                 updateProgressMutation.mutate({
-                    bookId: bookMeta.id,
+                    bookId: bookMeta.library_id || bookMeta.id,
                     progress: progressData,
                 })
             }

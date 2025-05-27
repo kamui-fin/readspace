@@ -20,7 +20,7 @@ from fastapi import (
 )
 from pydantic import BaseModel, Field
 
-router = APIRouter(prefix="/upload")
+router = APIRouter()
 logger = structlog.get_logger()
 settings = get_settings()
 

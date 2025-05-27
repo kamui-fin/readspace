@@ -36,7 +36,7 @@ const HighlightedPopover = ({
     const formRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLButtonElement>(null)
 
-    const highlightType = useReaderStore((state) => state.bookLibraryItem?.type)
+    const highlightType = useReaderStore((state) => state.bookLibraryItem?.format)
 
     const onRemoveHighlight = () => {
         if (highlightType == "EPUB") {

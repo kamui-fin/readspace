@@ -30,10 +30,10 @@ interface LibraryLayoutProps {
 function LibraryLayout({ children }: LibraryLayoutProps) {
     return (
         <div className="flex flex-col min-h-screen">
-            <Header breadcrumbItems={[{ href: "/library", label: "Your Library" }]} />
-            <main className="flex-1 container mx-auto px-4 py-8">
+            <Header breadcrumbItems={[{ href: "/library", label: "Book Library" }]} />
+            <main className="flex-1 container mx-auto px-8 py-8">
                 <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold">Your Library</h1>
+                    <h1 className="text-3xl font-bold">Your Bookshelf</h1>
                     <UploadBookDialog />
                 </div>
                 {children}
@@ -52,10 +52,6 @@ export default async function Library() {
             </LibraryLayout>
         )
     } catch (error) {
-        if (error instanceof Error && error.message === "Authentication required") {
-            redirect("/login")
-        }
-
         return (
             <LibraryLayout>
                 <LibraryError message="Failed to load books. Please try again later." />

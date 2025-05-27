@@ -7,10 +7,10 @@ import { useMutation } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { highlightRange } from "../../lib/reader/highlight-range"
-import { EpubHighlight, Highlight, RangeRefElement } from "../../types/library"
+import { EpubHighlight, RangeRefElement } from "../../types/library"
 import { useCurrentUser } from "../use-current-user"
 
-export default function useHighlight(savedHighlights: Highlight[]) {
+export default function useHighlight(savedHighlights: EpubHighlight[]) {
     const { user } = useCurrentUser()
     const { role: userRole } = user || {}
 
@@ -85,7 +85,7 @@ export default function useHighlight(savedHighlights: Highlight[]) {
     })
 
     const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
+        mutationFn: (text: string) => ApiClient.delete(`/highlights/text/${encodeURIComponent(text)}`),
         onError: (err: Error) =>
             console.error("Failed to delete highlight:", err),
     })
@@ -145,11 +145,12 @@ export default function useHighlight(savedHighlights: Highlight[]) {
             epubBook as ePub.Book
         )
 
-        const newHighlightForClientState: EpubHighlight = {
-            book_id: bookMeta.id, // For client-side state model
-            color,
+        const newHighlightForClientState = {
+            id: crypto.randomUUID(), // Generate a temporary ID for client state
+            library_id: bookMeta.id, // For client-side state model
+            color: color.toUpperCase() as "YELLOW" | "GREEN" | "BLUE",
             range: serialized,
-            text: selectionText,
+            original_text: selectionText,
             note: null,
             chapter: {
                 idx: chapterIdx,
@@ -157,7 +158,14 @@ export default function useHighlight(savedHighlights: Highlight[]) {
                 title: chapterTitle?.label.trim(),
             },
             page: getPageProgress().current,
-        }
+            // Add required database fields with placeholder values
+            user_book_lib_id: bookMeta.library_id || "",
+            chapter_href: section.href,
+            chapter_idx: chapterIdx,
+            chapter_title: chapterTitle?.label.trim(),
+            html_range: serialized as unknown as Json,
+            pdf_rect_position: null,
+        } as unknown as EpubHighlight
         const highlightForStore = { highlight: newHighlightForClientState, removeFn }
         insertHighlight(highlightForStore)
 
@@ -168,14 +176,14 @@ export default function useHighlight(savedHighlights: Highlight[]) {
         // Construct payload for the server, matching HighlightCreate schema (via HighlightBase)
         const payloadForServer = {
             // user_book_lib_id will be added in addHighlightMutation's mutationFn
-            text: selectionText,
-            color,
+            original_text: selectionText,
+            color: color.toUpperCase(),
             note: null,
-            epub_range: serialized as unknown as Json,
-            epub_chapter_idx: chapterIdx,
-            epub_chapter_href: section.href,
-            epub_chapter_title: chapterTitle?.label.trim(),
-            epub_est_page: getPageProgress().current, // Added this field
+            html_range: serialized as unknown as Json,
+            chapter_idx: chapterIdx,
+            chapter_href: section.href,
+            chapter_title: chapterTitle?.label.trim(),
+            page: getPageProgress().current, // Added this field
             pdf_rect_position: null // Explicitly null for EPUB highlights, as per HighlightBase
         };
 
@@ -186,13 +194,13 @@ export default function useHighlight(savedHighlights: Highlight[]) {
         if (!highlightedText) return
 
         const toRemove = highlights.filter(
-            (h) => (h.highlight as EpubHighlight).text === highlightedText
+            (h) => (h.highlight as EpubHighlight).original_text === highlightedText
         )
         toRemove.forEach((h) => h.removeFn())
 
         setHighlights(
             highlights.filter(
-                (hl) => (hl.highlight as EpubHighlight).text !== highlightedText
+                (hl) => (hl.highlight as EpubHighlight).original_text !== highlightedText
             )
         )
 
@@ -231,7 +239,7 @@ export default function useHighlight(savedHighlights: Highlight[]) {
                     { class: `highlight-${highlight.color}` },
                     (elm) => {
                         rangeRef.current = elm
-                        setHighlightedText((highlight as EpubHighlight).text)
+                        setHighlightedText((highlight as EpubHighlight).original_text)
                         setIsPopupOpen(true)
                     }
                 )

@@ -9,7 +9,7 @@ import {
 import { useReaderStore } from "@/stores/reader"
 import { useEffect, useRef, useState } from "react"
 import useHighlight from "../../hooks/reader/use-highlight"
-import { EpubHighlight, Highlight } from "../../types/library"
+import { EpubHighlight } from "../../types/library"
 
 import { ApiClient } from "@/lib/api/client"
 import { useMutation } from "@tanstack/react-query"
@@ -43,7 +43,7 @@ export const CustomTooltip = ({
 export default function HighlightPopover({
     savedHighlights,
 }: {
-    savedHighlights: Highlight[]
+    savedHighlights: EpubHighlight[]
 }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [showNoteForm, setShowNoteForm] = useState(false)
@@ -67,7 +67,7 @@ export default function HighlightPopover({
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(`/highlights/${text}/note`, { note }),
+            ApiClient.put(`/highlights/text/${encodeURIComponent(text)}/note`, { note }),
         onError: (err: Error) =>
             console.error("Failed to add annotation:", err),
     })
@@ -110,7 +110,7 @@ export default function HighlightPopover({
         rangeRef.current.className.startsWith("highlight")
 
     const selectedHighlight = highlights.find(
-        (h) => (h.highlight as EpubHighlight).text === highlightedText
+        (h) => (h.highlight as EpubHighlight).original_text === highlightedText
     )
 
     const handleSubmitNote = (note: string) => {
@@ -118,7 +118,7 @@ export default function HighlightPopover({
         addAnnotationMutation.mutate({ note, text: highlightedText })
 
         const found = highlights.find(
-            (h) => (h.highlight as EpubHighlight).text === highlightedText
+            (h) => (h.highlight as EpubHighlight).original_text === highlightedText
         )
         if (found) found.highlight.note = note
         setIsPopupOpen(false)

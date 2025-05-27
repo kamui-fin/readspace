@@ -285,7 +285,6 @@ export default function ManageFeedsPage() {
                                                 <SelectValue placeholder="Select folder" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="none">No Folder</SelectItem>
                                                 {folders.map(folder => (
                                                     <SelectItem key={folder.id} value={folder.id}>{folder.name}</SelectItem>
                                                 ))}

@@ -47,6 +47,7 @@ interface EpubReaderProps {
 }
 
 const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
+    console.log(savedHighlights)
     const bookId = bookMeta.id
 
     const [

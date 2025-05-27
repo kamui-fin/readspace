@@ -7,14 +7,6 @@ export async function updateSession(request: NextRequest) {
         request,
     })
 
-    console.log("SUPABASE_URL", env.SUPABASE_URL)
-    console.log("Host header:", request.headers.get("host"));
-    console.log("Raw Cookie header:", request.headers.get("cookie"));
-    console.log(
-        "Parsed cookies:",
-        request.cookies.getAll().map((c) => `${c.name}=${c.value}`)
-    );
-
     const supabase = createServerClient(
         env.SUPABASE_URL,
         env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
@@ -50,8 +42,6 @@ export async function updateSession(request: NextRequest) {
         error
     } = await supabase.auth.getUser()
 
-    console.log("user", user)
-    console.log("error", error)
 
     if (
         !user &&

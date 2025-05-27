@@ -105,3 +105,4 @@ services:
 networks:
   default:
     name: readspace_shared_net
+    external: true

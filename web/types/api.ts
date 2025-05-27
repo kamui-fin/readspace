@@ -13,13 +13,12 @@ export type UserBookLibrary = Database["public"]["Tables"]["user_book_library"][
     book_metadata: BookMetadata
 }
 export type Highlight = Database["public"]["Tables"]["highlights"]["Row"]
-export type HighlightLocation = Database["public"]["Tables"]["highlight_locations"]["Row"]
 
 // Create types
 export type BookMetadataCreate = Omit<BookMetadata, "id" | "created_at" | "updated_at">
 export type UserBookLibraryCreate = Omit<UserBookLibrary, "id" | "date_added" | "book_metadata">
 export type HighlightCreate = Omit<Highlight, "id" | "created_at" | "updated_at"> & {
-    locations: Omit<HighlightLocation, "id" | "created_at" | "highlight_id">[]
+    locations: Omit<Highlight, "id" | "created_at" | "highlight_id">[]
 }
 
 // Update types

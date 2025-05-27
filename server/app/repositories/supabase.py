@@ -29,6 +29,7 @@ def get_supabase_client() -> Client:
     try:
         url = settings.SUPABASE_URL
         key = settings.SUPABASE_SERVICE_ROLE_KEY.get_secret_value()
+        print(key)
         client = create_client(url, key)
         return client
     except Exception as e:

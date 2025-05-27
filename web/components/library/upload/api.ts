@@ -21,7 +21,7 @@ export const uploadToCloudStorage = async (
     formData.append("file", file)
     formData.append("book_id", bookId)
 
-    return ApiClient.uploadFile("/upload", formData)
+    return ApiClient.uploadFile("/upload/", formData)
 }
 
 export const useUploadBook = () => {

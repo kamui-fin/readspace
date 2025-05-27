@@ -26,8 +26,7 @@ class HighlightRepository(BaseRepository[Highlight, HighlightCreate, HighlightUp
             query = (
                 select(self.model)
                 .join(UserBookLibrary)
-                .where(UserBookLibrary.book_metadata_id == book_id)
-                .order_by(self.model.created_at.desc())
+                .where(UserBookLibrary.id == book_id)
             )
             logger.info(f"Executing query: {query}")
             result = await db.execute(query)
@@ -50,7 +49,7 @@ class HighlightRepository(BaseRepository[Highlight, HighlightCreate, HighlightUp
     async def delete_by_text(self, db: AsyncSession, text: str) -> bool:
         """Delete highlights by text content."""
         try:
-            query = select(self.model).where(self.model.text == text)
+            query = select(self.model).where(self.model.original_text == text)
             result = await db.execute(query)
             highlights = result.scalars().all()
 
@@ -82,3 +81,23 @@ class HighlightRepository(BaseRepository[Highlight, HighlightCreate, HighlightUp
         except Exception as e:
             await db.rollback()
             raise StorageError(f"Failed to update highlight note: {str(e)}")
+
+    async def update_note_by_text(
+        self, db: AsyncSession, text: str, note: str
+    ) -> Highlight:
+        """Update a highlight's note by text content."""
+        try:
+            query = select(self.model).where(self.model.original_text == text)
+            result = await db.execute(query)
+            highlight = result.scalar_one_or_none()
+
+            if not highlight:
+                raise StorageError(f"Highlight not found with text: {text}")
+
+            highlight.note = note
+            await db.commit()
+            await db.refresh(highlight)
+            return highlight
+        except Exception as e:
+            await db.rollback()
+            raise StorageError(f"Failed to update highlight note by text: {str(e)}")

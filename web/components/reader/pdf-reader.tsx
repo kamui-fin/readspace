@@ -117,14 +117,14 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     })
 
     const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) => ApiClient.delete(`/highlights/${text}`),
+        mutationFn: (text: string) => ApiClient.delete(`/highlights/text/${encodeURIComponent(text)}`),
         onError: (err: Error) =>
             console.error("Failed to delete highlight:", err),
     })
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(`/highlights/${text}/note`, { note }),
+            ApiClient.put(`/highlights/text/${encodeURIComponent(text)}/note`, { note }),
         onError: (err: Error) =>
             console.error("Failed to add annotation:", err),
     })

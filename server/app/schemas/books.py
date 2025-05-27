@@ -44,14 +44,13 @@ class BookMetadataResponse(BookMetadataBase):
     """Model for book metadata response."""
 
     id: UUID
-    # Allow created_at and updated_at to be either string or datetime
+    # Allow created_at to be either string or datetime
     created_at: Union[str, datetime]
-    updated_at: Union[str, datetime]
 
     class Config:
         from_attributes = True
 
-    @field_validator('created_at', 'updated_at', mode='before')
+    @field_validator('created_at', mode='before')
     @classmethod
     def validate_datetime(cls, value):
         """Convert datetime to string if it's a datetime object."""

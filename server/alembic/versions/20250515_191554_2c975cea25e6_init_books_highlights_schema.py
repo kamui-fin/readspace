@@ -85,7 +85,7 @@ def upgrade() -> None:
     op.create_table('highlights',
         sa.Column('id', postgresql.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
         sa.Column('user_book_lib_id', postgresql.UUID(), nullable=False),
-        sa.Column('color', postgresql.ENUM('yellow', 'green', 'blue', name='highlightcolor'), nullable=False),
+        sa.Column('color', postgresql.ENUM('YELLOW', 'GREEN', 'BLUE', name='highlightcolor'), nullable=False),
         sa.Column('original_text', sa.Text(), nullable=False),
         sa.Column('note', sa.Text(), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),

@@ -8,14 +8,14 @@ from pydantic import BaseModel
 class HighlightBase(BaseModel):
     """Base schema for highlight data."""
 
-    text: str
+    original_text: str
     color: Optional[str] = None
     note: Optional[str] = None
-    epub_range: Optional[Dict[str, Any]] = None
-    epub_chapter_href: Optional[str] = None
-    epub_chapter_idx: Optional[int] = None
-    epub_chapter_title: Optional[str] = None
-    epub_est_page: Optional[int] = None
+    html_range: Optional[Dict[str, Any]] = None
+    chapter_href: Optional[str] = None
+    chapter_idx: Optional[int] = None
+    chapter_title: Optional[str] = None
+    page: Optional[int] = None
     pdf_rect_position: Optional[Dict[str, Any]] = None
 
 
@@ -27,14 +27,14 @@ class HighlightCreate(HighlightBase):
 class HighlightUpdate(BaseModel):
     """Schema for updating a highlight."""
 
-    text: Optional[str] = None
+    original_text: Optional[str] = None
     color: Optional[str] = None
     note: Optional[str] = None
-    epub_range: Optional[Dict[str, Any]] = None
-    epub_chapter_href: Optional[str] = None
-    epub_chapter_idx: Optional[int] = None
-    epub_chapter_title: Optional[str] = None
-    epub_est_page: Optional[int] = None
+    html_range: Optional[Dict[str, Any]] = None
+    chapter_href: Optional[str] = None
+    chapter_idx: Optional[int] = None
+    chapter_title: Optional[str] = None
+    page: Optional[int] = None
     pdf_rect_position: Optional[Dict[str, Any]] = None
 
 
@@ -43,8 +43,6 @@ class HighlightResponse(HighlightBase):
 
     id: UUID
     user_book_lib_id: UUID
-    created_at: datetime
-    updated_at: datetime
 
     class Config:
         from_attributes = True

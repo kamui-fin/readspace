@@ -16,7 +16,7 @@ from supabase import Client
 Settings = Annotated[type(get_settings()), Depends(get_settings)]
 CurrentUser = Annotated[TokenData, Depends(get_current_user)]
 SupabaseClient = Annotated[Client, Depends(get_supabase_client)]
-StorageClient = Annotated[SupabaseStorageClient, Depends(get_supabase_client)]
+StorageClient = SupabaseStorageClient
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]
 
 

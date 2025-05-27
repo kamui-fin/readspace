@@ -4,3 +4,4 @@
 .env.local
 .env.prod
 supabase/volumes/db/data
+supabase/volumes/storage/stub

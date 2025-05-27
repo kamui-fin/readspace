@@ -29,7 +29,7 @@ export default function useChapterNavigation() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}`, {
+            ApiClient.put(`/books/${bookId}/progress`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {
@@ -62,7 +62,7 @@ export default function useChapterNavigation() {
                 } else {
                     // Cloud book - use React Query mutation
                     updateProgressMutation.mutate({
-                        bookId: bookMeta.id,
+                        bookId: bookMeta.library_id || bookMeta.id,
                         progress: progressData,
                     })
                 }

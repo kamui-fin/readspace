@@ -28,7 +28,7 @@ export default function useChapterNavigation() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}`, {
+            ApiClient.put(`/books/${bookId}/progress`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {
@@ -42,7 +42,7 @@ export default function useChapterNavigation() {
             if (spine) {
                 setLocation(spine.href)
                 updateProgressMutation.mutate({
-                    bookId: bookMeta.id,
+                    bookId: bookMeta.library_id || bookMeta.id,
                     progress: {
                         loc: spine.href,
                         scrollElement: undefined,

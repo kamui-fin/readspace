@@ -11,6 +11,9 @@ import {
 } from "@/types/library"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { Tables } from "@/database.types"
+
+type Highlight = Tables<"highlights">
 
 interface PageProps {
     params: Promise<{
@@ -89,7 +92,41 @@ export default async function BookReaderPage({ params }: PageProps) {
     }
 
     const isPdf = bookViewProps.format === "PDF"
-    const highlights: (EpubHighlight | PdfHighlight)[] = []
+    const fetchedHighlights = await ApiClient.get<Highlight[]>(`/highlights/book/${resolvedParams.id}`)
+
+    let highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map((h): EpubHighlight | PdfHighlight => {
+        if (isPdf) {
+            return {
+                id: h.id,
+                note: h.note || undefined,
+                color: h.color || undefined,
+                book_id: bookViewProps.id,
+                type: "text",
+                position: h.pdf_rect_position as unknown as PdfHighlight['position'],
+                content: { text: h.original_text },
+                user_book_lib_id: h.user_book_lib_id,
+                library_id: h.user_book_lib_id,
+            } as PdfHighlight;
+        } else {
+            return {
+                id: h.id,
+                user_book_lib_id: h.user_book_lib_id,
+                original_text: h.original_text,
+                color: h.color || undefined,
+                note: h.note || undefined,
+                range: h.html_range as unknown as EpubHighlight['range'],
+                chapter: {
+                    idx: h.chapter_idx || 0,
+                    href: h.chapter_href || "",
+                    title: h.chapter_title || undefined,
+                },
+                page: h.page || 0,
+            } as EpubHighlight;
+        }
+    });
+
+
+    console.log(highlights)
 
     return isPdf ? (
         <PDFViewer
