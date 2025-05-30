@@ -46,6 +46,7 @@ import { useSidebarModals } from "@/stores/sidebar"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     BookmarkIcon,
+    BookOpen,
     CheckCircle2,
     ChevronRight,
     Clock,
@@ -1001,6 +1002,30 @@ export function FeedsNavigation() {
     )
 }
 
+function LibraryNavigation() {
+    const pathname = usePathname();
+
+    return (
+        <SidebarGroup>
+            <SidebarGroupLabel>Other reading</SidebarGroupLabel>
+        <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarLeftMenuButton
+                    asChild
+                    tooltip="Library"
+                    isActive={pathname === "/library"}
+                >
+                    <Link href="/library" className="pl-2">
+                        <BookOpen className="h-4 w-4" />
+                        <span>Books</span>
+                    </Link>
+                </SidebarLeftMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
+        </SidebarGroup>
+    )
+}
+
 // Main Navigation component
 export function NavMain() {
     const { isMobile, toggleSidebar } = useSidebarLeft()
@@ -1017,6 +1042,7 @@ export function NavMain() {
         <>
             <MainNavigationItems items={mainNavItems} isMobile={isMobile} toggleSidebar={toggleSidebar} />
             <FeedsNavigation />
+            <LibraryNavigation />
         </>
     )
 }

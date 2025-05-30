@@ -18,7 +18,7 @@ import {
 import { deserializeRange, scrollToRange } from "@/lib/reader/range-serialize"
 import { cn } from "@/lib/utils"
 import { useReaderStore } from "@/stores/reader"
-import { EpubHighlight, Highlight, PdfHighlight } from "@/types/library"
+import { EpubHighlight, PdfHighlight } from "@/types/library"
 import { NavItem } from "epubjs"
 import { usePathname } from "next/navigation"
 import { ScrollArea } from "../ui/scroll-area"
@@ -274,7 +274,7 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                         }
                         className="w-full"
                     >
-                        <TabsList className="grid w-full grid-cols-3 mb-2">
+                        <TabsList className="grid w-full grid-cols-2 mb-2">
                             <TabsTrigger
                                 value="contents"
                                 className="text-[0.8rem]"
@@ -290,7 +290,7 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                         </TabsList>
                         <TabsContent value="contents" className="m-0">
                             <SidebarGroup>
-                                <SidebarGroupLabel>
+                                <SidebarGroupLabel className="pl-0 ml-0">
                                     Table of Contents
                                 </SidebarGroupLabel>
                                 <SidebarGroupContent>
@@ -318,8 +318,8 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
 }
 
 export function HighlightsTab() {
-    const highlightsState = useReaderStore((state) => state.highlights)
-    const highlights = highlightsState.map(({ highlight }) => highlight)
+    const allHighlights = useReaderStore((state) => state.allHighlights)
+    const highlights = allHighlights.map(({ highlight }) => highlight)
     if (!highlights.length) {
         return (
             <div className="flex flex-col items-left justify-center p-4 text-left">
@@ -342,7 +342,7 @@ export function HighlightsTab() {
 }
 
 interface HighlightProps {
-    highlight: Highlight
+    highlight: EpubHighlight | PdfHighlight
 }
 
 export function HighlightCard({ highlight }: HighlightProps) {
@@ -352,27 +352,34 @@ export function HighlightCard({ highlight }: HighlightProps) {
         yellow: "bg-amber-500",
     }
     const setLocation = useReaderStore((state) => state.setLocation)
+    const setPendingHighlightScroll = useReaderStore((state) => state.setPendingHighlightScroll)
+    const getCurrentChapterIdx = useReaderStore((state) => state.getCurrentChapterIdx)
 
     const bookMeta = useReaderStore((state) => state.bookLibraryItem)
     const epubDocRef = useReaderStore((state) => state.epubDocRef)
     const pdfRef = useReaderStore((state) => state.pdfRef)
 
-    const highlightType = bookMeta?.type
+    const highlightType = bookMeta?.format
 
     const navigateHighlight = () => {
         if (!epubDocRef && !pdfRef) return
-        // setLocation to chapter idx
+        
         if (highlightType === "EPUB" && epubDocRef) {
-            setLocation((highlight as EpubHighlight).chapter.href)
-            // else document.querySelector()
-            // deserialize range
-            const range = deserializeRange(
-                (highlight as EpubHighlight).range,
-                epubDocRef
-            )
-            // scroll to element
-            if (range) {
-                scrollToRange(range)
+            const epubHighlight = highlight as EpubHighlight
+            const currentChapterIdx = getCurrentChapterIdx()
+            
+            // Check if we're already on the correct chapter
+            if (currentChapterIdx === epubHighlight.chapter.idx) {
+                // We're already on the correct chapter, scroll immediately
+                const range = deserializeRange(epubHighlight.range, epubDocRef)
+                if (range) {
+                    scrollToRange(range)
+                }
+            } else {
+                // We need to navigate to a different chapter first
+                // Store the range to scroll to after the chapter loads
+                setPendingHighlightScroll(epubHighlight.range)
+                setLocation(epubHighlight.chapter.href)
             }
         } else if (highlightType === "PDF" && pdfRef) {
             pdfRef.current.currentPageNumber = (
@@ -405,7 +412,7 @@ export function HighlightCard({ highlight }: HighlightProps) {
                     </div>
                     <p className="text-sm text-card-foreground">
                         {highlightType === "EPUB"
-                            ? (highlight as EpubHighlight).text.slice(0, 150) +
+                            ? (highlight as EpubHighlight).original_text.slice(0, 150) +
                             "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
                                 0,

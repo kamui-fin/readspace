@@ -5,7 +5,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useDeleteBook, useUpdateBook } from "@/lib/api/hooks/books"
+import { useDeleteBookMetadata, useUpdateBook } from "@/lib/api/hooks/books"
 import { UserBookLibrary, UserBookLibraryUpdate } from "@/types/api"
 import localforage from "localforage"
 import { BookOpenCheck, MoreVertical, RotateCcw, Trash } from "lucide-react"
@@ -16,22 +16,34 @@ interface BookActionsProps {
     book: UserBookLibrary
 }
 
+// Type guard to check if epub_progress has the expected structure
+function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+    return (
+        progress &&
+        typeof progress === 'object' &&
+        progress.globalProgress &&
+        typeof progress.globalProgress === 'object' &&
+        typeof progress.globalProgress.current === 'number' &&
+        typeof progress.globalProgress.total === 'number'
+    )
+}
+
 export function BookActions({ book }: BookActionsProps) {
     const [isOpen, setIsOpen] = useState(false)
-    const deleteBookMutation = useDeleteBook()
+    const deleteBookMetadataMutation = useDeleteBookMetadata()
     const updateBookMutation = useUpdateBook()
 
     const removeBook = async (e: MouseEvent<HTMLDivElement>) => {
         e.preventDefault()
 
-        if (!book.id) {
-            toast.error("Failed to delete book - Could not determine book ID.")
+        if (!book.book_metadata?.id) {
+            toast.error("Failed to delete book - Could not determine book metadata ID.")
             return
         }
 
         try {
-            // Delete from database via backend API
-            await deleteBookMutation.mutateAsync(book.id)
+            // Delete the book metadata (this will cascade delete the library entries)
+            await deleteBookMetadataMutation.mutateAsync(book.book_metadata.id)
 
             toast.success(
                 "Successfully deleted book - The book has been removed from your library."
@@ -76,19 +88,26 @@ export function BookActions({ book }: BookActionsProps) {
 
         try {
             // Reset progress based on book type via backend API
-            const updates: UserBookLibraryUpdate =
-                book.book_metadata.format === "PDF"
-                    ? { pdf_current_page: 0 }
-                    : {
-                        epub_progress: {
-                            globalProgress: {
-                                current: 0,
-                                total:
-                                    book.epub_progress?.globalProgress
-                                        ?.total || 0,
-                            },
+            let updates: UserBookLibraryUpdate
+
+            if (book.book_metadata.format === "PDF") {
+                updates = { pdf_current_page: 0 }
+            } else {
+                // For EPUB, get the total from existing progress if available
+                let total = 0
+                if (isEpubProgressObject(book.epub_progress)) {
+                    total = book.epub_progress.globalProgress.total
+                }
+
+                updates = {
+                    epub_progress: {
+                        globalProgress: {
+                            current: 0,
+                            total: total,
                         },
-                    }
+                    },
+                }
+            }
 
             await updateBookMutation.mutateAsync({
                 bookId: book.id,
@@ -120,21 +139,26 @@ export function BookActions({ book }: BookActionsProps) {
 
         try {
             // Mark as complete based on book type via backend API
-            const updates: UserBookLibraryUpdate =
-                book.book_metadata.format === "PDF"
-                    ? { pdf_current_page: book.book_metadata.num_pages || 0 }
-                    : {
-                        epub_progress: {
-                            globalProgress: {
-                                current:
-                                    book.epub_progress?.globalProgress
-                                        ?.total || 0,
-                                total:
-                                    book.epub_progress?.globalProgress
-                                        ?.total || 0,
-                            },
+            let updates: UserBookLibraryUpdate
+
+            if (book.book_metadata.format === "PDF") {
+                updates = { pdf_current_page: book.book_metadata.num_pages || 0 }
+            } else {
+                // For EPUB, get the total from existing progress if available
+                let total = 0
+                if (isEpubProgressObject(book.epub_progress)) {
+                    total = book.epub_progress.globalProgress.total
+                }
+
+                updates = {
+                    epub_progress: {
+                        globalProgress: {
+                            current: total,
+                            total: total,
                         },
-                    }
+                    },
+                }
+            }
 
             await updateBookMutation.mutateAsync({
                 bookId: book.id,

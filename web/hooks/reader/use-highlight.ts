@@ -1,6 +1,6 @@
 import { Json } from "@/database.types"
 import { ApiClient } from "@/lib/api/client"
-import { deserializeRange, serializeRange } from "@/lib/reader/range-serialize"
+import { deserializeRange, serializeRange, scrollToRange } from "@/lib/reader/range-serialize"
 import { getTocItemForSection } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
 import { useMutation } from "@tanstack/react-query"
@@ -24,22 +24,30 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         chapterHTML,
         highlights,
         setHighlights,
+        setAllHighlights,
         insertHighlight,
+        insertAllHighlight,
         getCurrentChapterIdx,
         epubDocRef,
         epubBook,
         getPageProgress,
+        pendingHighlightScroll,
+        setPendingHighlightScroll,
     } = useReaderStore(
         useShallow((state) => ({
             bookMeta: state.bookLibraryItem,
             chapterHTML: state.chapterHTML,
             highlights: state.highlights,
             setHighlights: state.setHighlights,
+            setAllHighlights: state.setAllHighlights,
             insertHighlight: state.insertHighlight,
+            insertAllHighlight: state.insertAllHighlight,
             getCurrentChapterIdx: state.getCurrentChapterIdx,
             epubBook: state.book,
             getPageProgress: state.getPageProgress,
             epubDocRef: state.epubDocRef,
+            pendingHighlightScroll: state.pendingHighlightScroll,
+            setPendingHighlightScroll: state.setPendingHighlightScroll,
         }))
     )
 
@@ -168,6 +176,9 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         } as unknown as EpubHighlight
         const highlightForStore = { highlight: newHighlightForClientState, removeFn }
         insertHighlight(highlightForStore)
+        
+        // Also add to allHighlights for the sidebar
+        insertAllHighlight(highlightForStore)
 
         selection.removeAllRanges()
         selectionRef.current = null
@@ -203,6 +214,14 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                 (hl) => (hl.highlight as EpubHighlight).original_text !== highlightedText
             )
         )
+        
+        // Also remove from allHighlights
+        const { allHighlights } = useReaderStore.getState()
+        setAllHighlights(
+            allHighlights.filter(
+                (hl) => (hl.highlight as EpubHighlight).original_text !== highlightedText
+            )
+        )
 
         deleteHighlightMutation.mutate(highlightedText)
         setIsPopupOpen(false)
@@ -222,6 +241,15 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         if (epubDocRef == null) return
         // re-apply saved highlights
         console.log("re-applying saved highlights")
+        
+        // Set all highlights for the sidebar (no filtering)
+        const allHighlightsForStore = savedHighlights.map((highlight) => ({
+            highlight,
+            removeFn: () => {} // Placeholder function since highlights in sidebar don't need removal
+        }))
+        setAllHighlights(allHighlightsForStore)
+        
+        // Set current chapter highlights (filtered) for rendering in the text
         const loaded = savedHighlights
             .filter(
                 (h) =>
@@ -248,6 +276,21 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             .filter((h) => h !== null)
         setHighlights(loaded)
     }, [epubDocRef, savedHighlights, chapterHTML])
+
+    // Handle pending highlight scroll after chapter loads
+    useEffect(() => {
+        if (epubDocRef && pendingHighlightScroll && chapterHTML) {
+            // Small delay to ensure the DOM is fully rendered
+            setTimeout(() => {
+                const range = deserializeRange(pendingHighlightScroll, epubDocRef)
+                if (range) {
+                    scrollToRange(range)
+                    // Clear the pending scroll
+                    setPendingHighlightScroll(null)
+                }
+            }, 100)
+        }
+    }, [epubDocRef, pendingHighlightScroll, chapterHTML, setPendingHighlightScroll])
 
     return {
         isPopupOpen,

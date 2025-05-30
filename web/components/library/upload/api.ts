@@ -100,7 +100,7 @@ export const useUploadBook = () => {
                 const libraryResult = await ApiClient.post<UserBookLibrary>("/books", libraryData)
 
                 // Always cache the book in localforage
-                await cacheBook(fileBuffer, libraryResult.id)
+                await cacheBook(fileBuffer, createdMetadata.id)
 
                 if (isLocalStorage) {
                     toast.success("Book saved locally successfully")

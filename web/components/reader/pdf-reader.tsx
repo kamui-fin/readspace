@@ -66,7 +66,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const highlighterUtilsRef = useRef<PdfHighlighterUtils>(null)
 
     // Get all store functions we need
-    const { pdfBook, fetchBook, highlights, insertHighlight, setHighlights, goToPage } =
+    const { pdfBook, fetchBook, highlights, insertHighlight, setHighlights, setAllHighlights, insertAllHighlight, goToPage } =
         useReaderStore(
             useShallow((state) => ({
                 pdfBook: state.book,
@@ -74,6 +74,8 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 highlights: state.highlights,
                 insertHighlight: state.insertHighlight,
                 setHighlights: state.setHighlights,
+                setAllHighlights: state.setAllHighlights,
+                insertAllHighlight: state.insertAllHighlight,
                 goToPage: state.goToPage
             }))
         )
@@ -145,14 +147,14 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 await fetchBook(bookMeta)
 
                 // Initialize the store with saved highlights
-                setHighlights(
-                    savedHighlights.map(
-                        (h): HighlightState => ({
-                            highlight: h,
-                            removeFn: () => { }, // Placeholder, actual remove logic might be elsewhere
-                        })
-                    )
+                const highlightStates = savedHighlights.map(
+                    (h): HighlightState => ({
+                        highlight: h,
+                        removeFn: () => { }, // Placeholder, actual remove logic might be elsewhere
+                    })
                 )
+                setHighlights(highlightStates)
+                setAllHighlights(highlightStates)
 
                 // Set initial page using pdf_current_page from BookViewProps
                 if (bookMeta.pdf_current_page !== null && bookMeta.pdf_current_page !== undefined) {
@@ -193,7 +195,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         }
         // Ensure dependencies are correct. bookMeta might be complex; consider destructuring if it causes re-runs.
         // For now, keeping bookMeta as is, but be mindful of its stability.
-    }, [bookMeta, fetchBook, setHighlights, savedHighlights]) // Removed goToPage if not directly called here
+    }, [bookMeta, fetchBook, setHighlights, setAllHighlights, insertAllHighlight, savedHighlights]) // Removed goToPage if not directly called here
 
     const saveProgress = (pageLeftOff: number) => {
         // Ensure bookMeta is available
@@ -389,19 +391,21 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const onAddNewHighlight = useCallback(
         async (highlight: PdfHighlight) => {
             // Add highlight directly to the Zustand store
-            insertHighlight({ highlight, removeFn: () => { } })
+            const highlightState = { highlight, removeFn: () => { } }
+            insertHighlight(highlightState)
+            insertAllHighlight(highlightState) // Also add to allHighlights for sidebar
 
             if (highlight.content.text) {
                 // Use index signature for dynamic properties
                 const highlightData: {
                     book_id: string;
-                    text: string;
+                    original_text: string;
                     color: string;
                     pdf_rect_position: any;
                     [key: string]: any;
                 } = {
                     book_id: bookMeta.id,
-                    text: highlight.content.text,
+                    original_text: highlight.content.text,
                     color: highlight.color || "yellow",
                     pdf_rect_position: highlight.position,
                 };
@@ -421,7 +425,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 await addHighlightMutation.mutateAsync(highlightData);
             }
         },
-        [insertHighlight, bookMeta.id, bookMeta.library_id]
+        [insertHighlight, insertAllHighlight, bookMeta.id, bookMeta.library_id]
     )
 
     const deleteHighlight = useCallback(
@@ -434,11 +438,20 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                     "position" in h.highlight &&
                     (h.highlight as PdfHighlight).content.text !== highlightText
             )
+            
+            // Also filter from allHighlights
+            const { allHighlights } = useReaderStore.getState()
+            const updatedAllHighlights = allHighlights.filter(
+                (h) =>
+                    "position" in h.highlight &&
+                    (h.highlight as PdfHighlight).content.text !== highlightText
+            )
 
             setHighlights(updatedHighlights)
+            setAllHighlights(updatedAllHighlights)
             await deleteHighlightMutation.mutateAsync(highlightText)
         },
-        [highlights, setHighlights]
+        [highlights, setHighlights, setAllHighlights]
     )
 
     const addNote = useCallback(
@@ -459,11 +472,30 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 }
                 return h
             })
+            
+            // Also update in allHighlights
+            const { allHighlights } = useReaderStore.getState()
+            const updatedAllHighlights = allHighlights.map((h) => {
+                if (
+                    "position" in h.highlight &&
+                    (h.highlight as PdfHighlight).content.text === textToAddTo
+                ) {
+                    return {
+                        ...h,
+                        highlight: {
+                            ...(h.highlight as PdfHighlight),
+                            note,
+                        },
+                    }
+                }
+                return h
+            })
 
             setHighlights(updatedHighlights)
+            setAllHighlights(updatedAllHighlights)
             await addAnnotationMutation.mutateAsync({ note, text: textToAddTo })
         },
-        [highlights, setHighlights]
+        [highlights, setHighlights, setAllHighlights]
     )
 
     // Scroll to highlight based on hash in the URL

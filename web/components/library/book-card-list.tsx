@@ -11,6 +11,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { estimateReadingTime } from "./book-card"
+import humanizeDuration from "humanize-duration"
 
 interface BookCardListProps {
     book: UserBookLibrary
@@ -23,6 +24,18 @@ interface BookCardListProps {
  */
 function roundToOneDecimal(num: number): number {
     return Math.round((num + Number.EPSILON) * 10) / 10
+}
+
+// Type guard to check if epub_progress has the expected structure
+function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+    return (
+        progress &&
+        typeof progress === 'object' &&
+        progress.globalProgress &&
+        typeof progress.globalProgress === 'object' &&
+        typeof progress.globalProgress.current === 'number' &&
+        typeof progress.globalProgress.total === 'number'
+    )
 }
 
 export function BookCardList({ book }: BookCardListProps) {
@@ -53,14 +66,15 @@ export function BookCardList({ book }: BookCardListProps) {
     const progress =
         book.book_metadata.format === "PDF"
             ? (book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)
-            : (book.epub_progress?.globalProgress?.current || 0) /
-            (book.epub_progress?.globalProgress?.total || 1)
+            : isEpubProgressObject(book.epub_progress)
+            ? book.epub_progress.globalProgress.current / book.epub_progress.globalProgress.total
+            : 0
 
     const remainingNumChars =
         book.book_metadata.format === "PDF"
             ? 0 // PDF doesn't use character count
-            : (book.epub_progress?.globalProgress?.total || 0) -
-            (book.epub_progress?.globalProgress?.current || 0)
+            : (isEpubProgressObject(book.epub_progress) ? book.epub_progress.globalProgress.total : 0) -
+            (isEpubProgressObject(book.epub_progress) ? book.epub_progress.globalProgress.current : 0)
 
     const estReadingTimeLeft =
         book.book_metadata.format === "PDF"

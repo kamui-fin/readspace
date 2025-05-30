@@ -13,6 +13,23 @@ import { BOOKS_QUERY_KEY } from "@/lib/api/hooks/books"
 import { UserBookLibrary } from "@/types/api"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
+import { Grid, List, Search, SortAsc } from "lucide-react"
+
+interface LibraryCatalogProps {
+    books: UserBookLibrary[]
+}
+
+// Type guard to check if epub_progress has the expected structure
+function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+    return (
+        progress &&
+        typeof progress === 'object' &&
+        progress.globalProgress &&
+        typeof progress.globalProgress === 'object' &&
+        typeof progress.globalProgress.current === 'number' &&
+        typeof progress.globalProgress.total === 'number'
+    )
+}
 
 export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary[] }) {
     const isMobile = useIsMobile()
@@ -50,9 +67,9 @@ export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary
                     ((book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)) * 100
                 )
                 : Math.round(
-                    ((book.epub_progress?.globalProgress?.current || 0) /
-                        (book.epub_progress?.globalProgress?.total || 1)) *
-                    100
+                    (isEpubProgressObject(book.epub_progress)
+                        ? (book.epub_progress.globalProgress.current / book.epub_progress.globalProgress.total) * 100
+                        : 0)
                 )
 
         if (filter === "all") return matchesSearch
@@ -66,12 +83,12 @@ export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary
 
     // Sort books
     const sortedBooks = [...filteredBooks].sort((a, b) => {
-        const aProgress =
-            (a.epub_progress?.globalProgress?.current || 0) /
-            (a.epub_progress?.globalProgress?.total || 1)
-        const bProgress =
-            (b.epub_progress?.globalProgress?.current || 0) /
-            (b.epub_progress?.globalProgress?.total || 1)
+        const aProgress = isEpubProgressObject(a.epub_progress)
+            ? a.epub_progress.globalProgress.current / a.epub_progress.globalProgress.total
+            : 0
+        const bProgress = isEpubProgressObject(b.epub_progress)
+            ? b.epub_progress.globalProgress.current / b.epub_progress.globalProgress.total
+            : 0
 
         if (sortBy === "title") return a.book_metadata.title.localeCompare(b.book_metadata.title)
         if (sortBy === "author") return (a.book_metadata.author || "").localeCompare(b.book_metadata.author || "")

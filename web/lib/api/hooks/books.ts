@@ -57,6 +57,17 @@ export function useDeleteBook() {
     })
 }
 
+export function useDeleteBookMetadata() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (metadataId: string) =>
+            ApiClient.delete(`/books/metadata/${metadataId}`),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
+        },
+    })
+}
+
 type UpdateBookProgressVariables = { bookId: string; progress: UserBookLibraryUpdate }
 export function useUpdateBookProgress() {
     const queryClient = useQueryClient()

@@ -25,8 +25,12 @@ interface ReaderState {
     chapterHTML: string | null
     epubDocRef: HTMLDivElement | null
 
-    highlights: HighlightState[]
+    highlights: HighlightState[] // Current chapter highlights (for rendering in text)
+    allHighlights: HighlightState[] // All highlights for the book (for sidebar)
     charsReadInChapter: number // init to 0
+    
+    // Pending highlight to scroll to after chapter loads
+    pendingHighlightScroll: any | null
 
     // PDF viewer reference
     pdfRef: any
@@ -54,8 +58,11 @@ type ReaderActions = {
     setChapterHTML: (html: string | null) => void
     setEpubDocRef: (ref: HTMLDivElement) => void
     setHighlights: (highlights: HighlightState[]) => void
+    setAllHighlights: (highlights: HighlightState[]) => void
+    setPendingHighlightScroll: (range: any | null) => void
     setTotalPages: (pages: number) => void
     insertHighlight: (highlight: HighlightState) => void
+    insertAllHighlight: (highlight: HighlightState) => void
     setCharsReadInChapter: (chars: number) => void
     setCurrentPage: (page: number) => void
     getCumulativeCharsRead: () => number
@@ -79,6 +86,7 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         chapterHTML: null,
         epubDocRef: null,
         highlights: [],
+        allHighlights: [],
         charsReadInChapter: 0,
         toc: [],
         currentLocation: undefined,
@@ -88,6 +96,7 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         totalPages: 0,
         pdfRef: null,
         isLoading: false,
+        pendingHighlightScroll: null,
 
         setToc: (newToc) => set({ toc: newToc }),
         setLocation: (newLocation) => set({ currentLocation: newLocation }),
@@ -99,11 +108,18 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         setChapterHTML: (chapterHTML) => set({ chapterHTML }),
         setEpubDocRef: (ref: HTMLDivElement) => set({ epubDocRef: ref }),
         setHighlights: (highlights) => set({ highlights }),
+        setAllHighlights: (highlights) => set({ allHighlights: highlights }),
+        setPendingHighlightScroll: (range: any | null) => set({ pendingHighlightScroll: range }),
         setPdfRef: (pdfRef) => set({ pdfRef }),
 
         insertHighlight: (highlight) => {
             const { highlights } = get()
             set({ highlights: [...highlights, highlight] })
+        },
+
+        insertAllHighlight: (highlight) => {
+            const { allHighlights } = get()
+            set({ allHighlights: [...allHighlights, highlight] })
         },
 
         setCharsReadInChapter: (chars) => {
