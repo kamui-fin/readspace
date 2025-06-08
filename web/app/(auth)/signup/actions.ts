@@ -16,7 +16,7 @@ const signUpSchema = z
 export async function signUp(formData: z.infer<typeof signUpSchema>) {
     try {
         const validatedData = signUpSchema.parse(formData)
-        const supabase = await createClient()
+        const supabase = createClient()
         const { error } = await supabase.auth.signUp({
             email: validatedData.email,
             password: validatedData.password,
@@ -28,6 +28,7 @@ export async function signUp(formData: z.infer<typeof signUpSchema>) {
                 emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/`,
             },
         })
+        console.log(error)
 
         if (error) {
             return { error: error.message }

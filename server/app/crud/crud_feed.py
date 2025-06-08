@@ -235,9 +235,13 @@ async def update_feed_fetch_metadata(
     feed_db.fetch_error_count = 0
     feed_db.last_error_message = None
 
+    logger.info(f"[BEGIN] UPDATE FEED {feed_db.id} TO DATABASE")
     db.add(feed_db)
+    logger.info(f"[ADDED] UPDATE FEED {feed_db.id} TO DATABASE")
     await db.commit()
+    logger.info(f"[COMMIT] UPDATE FEED {feed_db.id} TO DATABASE")
     await db.refresh(feed_db)
+    logger.info(f"[REFRESH] UPDATE FEED {feed_db.id} TO DATABASE")
     return feed_db
 
 async def update_feed_fetch_error(

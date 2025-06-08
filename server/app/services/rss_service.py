@@ -1,8 +1,9 @@
 import re  # Import re at the top level
 import xml.etree.ElementTree as ET  # For building OPML for export
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 from uuid import UUID
+from urllib.parse import urljoin, urlparse
 
 import feedparser  # For parsing RSS/Atom feeds
 import httpx  # For fetching feed data
@@ -38,6 +39,13 @@ logger = structlog.get_logger(__name__)
 # from feedparser import FeedParserDict # Example, actual type might be different
 
 DEFAULT_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
+OPML_IMPORT_TIMEOUT_SECONDS = 8  # Shorter timeout for OPML imports
+
+# Set a default timeout for RSS feed fetching
+DEFAULT_RSS_TIMEOUT = 8  # Reduced from 15 to 8 seconds for OPML imports
+
+# Constants for feed validation
+MIN_ARTICLE_COUNT = 1  # Minimum number of articles required for a feed to be considered valid
 
 class RssService:
     def __init__(self, db: AsyncSession, user_id: UUID):
@@ -45,10 +53,13 @@ class RssService:
         self.user_id = user_id
         self.redis_cache = RedisCache() # Initialized
 
-    async def _fetch_feed_content(self, url: str, etag: Optional[str] = None, last_modified: Optional[str] = None) -> Dict[str, Any]:
+    async def _fetch_feed_content(self, url: str, etag: Optional[str] = None, last_modified: Optional[str] = None, timeout_seconds: Optional[int] = None) -> Dict[str, Any]:
         """Fetches feed content using httpx with ETag and Last-Modified headers, using cache."""
         cache_key = f"feed_content:{url}"
         cached_data = await self.redis_cache.get(cache_key)
+
+        # Use custom timeout if provided, otherwise use default
+        timeout = timeout_seconds if timeout_seconds is not None else 15.0
 
         request_headers = {}
         if etag:
@@ -66,7 +77,7 @@ class RssService:
                  request_headers["If-Modified-Since"] = cached_data["headers"]["Last-Modified"]
 
         try:
-            async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
                 response = await client.get(url, headers=request_headers)
             
             response_headers_dict = {k.lower(): v for k, v in response.headers.items()} # Store lowercased keys
@@ -108,22 +119,50 @@ class RssService:
             raise ConnectionError(f"Error connecting to feed: {url}. Details: {str(e)}") from e
 
     def _parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
-        """Parses feed content (string) using feedparser."""
+        """Parses RSS/Atom feed content and validates its structure."""
         try:
-            # feedparser.parse can take a string directly
             parsed_feed = feedparser.parse(feed_content_text)
-            if parsed_feed.bozo:
-                bozo_exception = parsed_feed.bozo_exception
-                logger.warning(
-                    "Feed parsed with issues (bozo)", 
-                    url=url, 
-                    bozo_type=type(bozo_exception).__name__,
-                    bozo_message=str(bozo_exception)
-                )
-            return parsed_feed
         except Exception as e:
             logger.error("Failed to parse feed content", url=url, error=str(e))
-            raise ValueError(f"Could not parse feed content from {url}. Error: {str(e)}") from e
+            raise ValueError(f"Unable to parse feed content: {e}")
+
+        # Check for basic parsing issues
+        if parsed_feed.bozo:
+            # Log the bozo issue but don't necessarily fail - many feeds have minor issues
+            bozo_type = type(parsed_feed.bozo_exception).__name__ if parsed_feed.bozo_exception else "Unknown"
+            bozo_message = str(parsed_feed.bozo_exception) if parsed_feed.bozo_exception else "Unknown error"
+            logger.warning("Feed parsed with issues (bozo)", url=url, bozo_type=bozo_type, bozo_message=bozo_message)
+            
+            # Only fail for severe parsing errors
+            if parsed_feed.bozo_exception and any(error_type in bozo_type for error_type in [
+                'SAXParseException', 'ExpatError', 'XMLSyntaxError'
+            ]):
+                # Still allow it if we have some basic feed structure
+                if not parsed_feed.feed or not hasattr(parsed_feed, 'entries'):
+                    logger.error("Feed has severe parsing errors and no valid structure", url=url, bozo_type=bozo_type)
+                    raise ValueError(f"Feed has severe parsing errors: {bozo_message}")
+
+        # Validate basic feed structure
+        if not hasattr(parsed_feed, 'feed') or not parsed_feed.feed:
+            logger.error("Feed missing basic structure", url=url)
+            raise ValueError("Feed content does not contain valid feed structure")
+
+        if not hasattr(parsed_feed, 'entries'):
+            logger.error("Feed missing entries structure", url=url)
+            raise ValueError("Feed content does not contain valid entries structure")
+
+        # Check if feed has a title (most feeds should have this)
+        feed_title = parsed_feed.feed.get('title', '').strip()
+        if not feed_title:
+            logger.warning("Feed has no title", url=url)
+
+        # Validate that the feed has at least some content that looks like RSS/Atom
+        if not any(key in parsed_feed.feed for key in ['title', 'description', 'summary', 'link']):
+            logger.error("Feed lacks basic RSS/Atom elements", url=url)
+            raise ValueError("Content does not appear to be a valid RSS or Atom feed")
+
+        logger.debug("Feed parsed successfully", url=url, entry_count=len(parsed_feed.entries), has_title=bool(feed_title))
+        return parsed_feed
 
     def _extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> FeedBase:
         """Extracts relevant FeedBase data from parsed feed."""
@@ -161,20 +200,42 @@ class RssService:
             # ttl, skip_hours, skip_days will be set on the DB model directly
         )
     
-    def _extract_article_data(self, entry: Any, feed_id: UUID, user_id: UUID) -> Optional[ArticleCreate]:
+    def _extract_article_data(self, entry: Any, feed_id: UUID, user_id: UUID, feed_url: str = None) -> Optional[ArticleCreate]:
         """Extracts ArticleCreate data from a single feed entry."""
         guid = entry.get("id") or entry.get("guid") or entry.get("link") # GUID is critical
         if not guid:
             logger.warning("Skipping entry with no GUID or link", entry_title=entry.get("title"))
             return None
 
+        # Validate GUID length and content
+        guid_str = str(guid)[:1024]  # Ensure GUID fits in model
+        if not guid_str.strip():
+            logger.warning("Skipping entry with empty GUID", entry_title=entry.get("title"))
+            return None
+
         title = entry.get("title")
+        if title:
+            title = str(title).strip()
+            if not title:
+                title = None
+
         link = entry.get("link")
-        if not link: # A link is also essential
+        if not link:  # A link is also essential
             logger.warning("Skipping entry with no link", guid=guid, entry_title=title)
             return None
 
+        # Validate and clean the link
+        link_str = str(link).strip()
+        if not link_str or link_str in ['#', 'javascript:void(0)']:
+            logger.warning("Skipping entry with invalid link", guid=guid, entry_title=title, link=link_str)
+            return None
+
         description = entry.get("summary") or entry.get("description")
+        if description:
+            description = str(description).strip()
+            if not description:
+                description = None
+
         content = None
         if "content" in entry:
             # feedparser returns a list of content dicts, usually we want the first HTML or text
@@ -186,6 +247,11 @@ class RssService:
                     content = content_item.value
         if not content and description and len(description) > 200: # Fallback if description is rich
              content = description # Or if description is substantially longer than a typical summary
+
+        if content:
+            content = str(content).strip()
+            if not content:
+                content = None
 
         published_dt: Optional[datetime] = None
         if "published_parsed" in entry and entry.published_parsed:
@@ -199,53 +265,118 @@ class RssService:
             except Exception:
                 logger.warning("Failed to parse updated_parsed", guid=guid, updated_parsed=entry.updated_parsed)
 
-        # Placeholder for image extraction and read time calculation
-        image_url = self._find_best_article_image(entry, content)
-        estimated_read_time = self._calculate_estimated_read_time(content or description)
+        # Skip articles that have no meaningful content
+        if not title and not content and not description:
+            logger.warning("Skipping entry with no title, content, or description", guid=guid)
+            return None
 
-        return ArticleCreate(
-            feed_id=feed_id,
-            user_id=user_id,
-            guid=str(guid)[:1024], # Ensure GUID fits in model
-            title=title,
-            link=str(link) if link is not None else None,
-            description=description,
-            content=content,
-            image_url=str(image_url) if image_url is not None else None,
-            published_at=published_dt,
-            estimated_read_time_minutes=estimated_read_time,
-            is_read=False, # New articles are unread
-            is_read_later=False,
-            is_favorite=False
-        )
+        try:
+            # Placeholder for image extraction and read time calculation
+            image_url = self._find_best_article_image(entry, content, feed_url)
+            estimated_read_time = self._calculate_estimated_read_time(content or description)
 
-    def _find_best_article_image(self, entry: Any, content_html: Optional[str]) -> Optional[str]:
-        """Tries to find the best image for an article."""
+            return ArticleCreate(
+                feed_id=feed_id,
+                user_id=user_id,
+                guid=guid_str,
+                title=title,
+                link=link_str,
+                description=description,
+                content=content,
+                image_url=str(image_url) if image_url is not None else None,
+                published_at=published_dt,
+                estimated_read_time_minutes=estimated_read_time,
+                is_read=False, # New articles are unread
+                is_read_later=False,
+                is_favorite=False
+            )
+        except Exception as e:
+            logger.warning("Failed to create ArticleCreate object", guid=guid, error=str(e), entry_title=title)
+            return None
+
+    def _find_best_article_image(self, entry: Any, content_html: Optional[str], feed_url: str = None) -> Optional[str]:
+        """Tries to find the best image for an article and converts relative URLs to absolute."""
+        
+        def validate_and_normalize_url(url: str) -> Optional[str]:
+            """Validate URL and convert relative URLs to absolute using feed_url."""
+            if not url or not url.strip():
+                return None
+                
+            url = url.strip()
+            
+            # Skip data URLs and obvious placeholders
+            if url.startswith('data:') or url in ['#', 'javascript:void(0)']:
+                return None
+            
+            # If it's already an absolute URL, validate and return
+            if url.startswith(('http://', 'https://')):
+                try:
+                    parsed = urlparse(url)
+                    if parsed.netloc:  # Must have a domain
+                        return url
+                except Exception:
+                    pass
+                return None
+            
+            # Convert relative URL to absolute if we have a feed_url
+            if feed_url:
+                try:
+                    absolute_url = urljoin(feed_url, url)
+                    parsed = urlparse(absolute_url)
+                    if parsed.netloc and parsed.scheme in ['http', 'https']:
+                        return absolute_url
+                except Exception:
+                    pass
+            
+            return None
+        
+        # Check media_content first
         if "media_content" in entry and entry.media_content:
             for media in entry.media_content:
                 if media.get("medium") == "image" and media.get("url"):
-                    return media.get("url")
+                    validated_url = validate_and_normalize_url(media.get("url"))
+                    if validated_url:
+                        return validated_url
+        
+        # Check enclosures
         if "enclosures" in entry and entry.enclosures:
             for enclosure in entry.enclosures:
                 if enclosure.get("type", "").startswith("image/") and enclosure.get("href"):
-                    return enclosure.get("href")
+                    validated_url = validate_and_normalize_url(enclosure.get("href"))
+                    if validated_url:
+                        return validated_url
         
+        # Parse content HTML for images
         if content_html:
             try:
                 soup = BeautifulSoup(content_html, 'html.parser')
                 img_tag = soup.find('img')
                 if img_tag and img_tag.get('src'):
-                    # Basic check for placeholder/tiny images, can be expanded
+                    # Basic check for placeholder/tiny images
                     src = img_tag.get('src')
-                    if not (src.startswith('data:') or (img_tag.get('width') == '1' and img_tag.get('height') == '1')):
-                         return src
+                    width = img_tag.get('width')
+                    height = img_tag.get('height')
+                    
+                    # Skip tiny images (likely tracking pixels)
+                    if width == '1' and height == '1':
+                        return None
+                    
+                    validated_url = validate_and_normalize_url(src)
+                    if validated_url:
+                        return validated_url
+                        
             except Exception as e:
                 logger.warning("BeautifulSoup failed to parse content for image extraction", error=str(e), guid=entry.get("id"))
-                # Fallback to regex if BeautifulSoup fails, or remove regex entirely
-                # For now, keeping the regex as a last resort if BS fails.
-                img_match = re.search(r'<img [^>]*src=(["\'])(.*?)\1', content_html, re.IGNORECASE | re.DOTALL)
-                if img_match:
-                    return img_match.group(2)
+                # Fallback to regex if BeautifulSoup fails
+                try:
+                    img_match = re.search(r'<img [^>]*src=(["\'])(.*?)\1', content_html, re.IGNORECASE | re.DOTALL)
+                    if img_match:
+                        validated_url = validate_and_normalize_url(img_match.group(2))
+                        if validated_url:
+                            return validated_url
+                except Exception:
+                    pass
+        
         return None
 
     def _calculate_estimated_read_time(self, text_content: Optional[str], wpm: int = 230) -> Optional[int]: # Changed WPM to 230
@@ -353,13 +484,35 @@ class RssService:
         # 6. Extract and store initial articles & determine latest article date
         articles_to_create: List[ArticleCreate] = []
         latest_article_date: Optional[datetime] = None
+        total_entries = len(parsed_feed.entries)
+        
         for entry in parsed_feed.entries:
-            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id)
+            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id, url)
             if article_schema:
                 articles_to_create.append(article_schema)
                 if article_schema.published_at:
                     if latest_article_date is None or article_schema.published_at > latest_article_date:
                         latest_article_date = article_schema.published_at
+        
+        # Check if feed has any valid articles - if not, consider it broken
+        valid_articles_count = len(articles_to_create)
+        logger.info("Feed validation", url=url, total_entries=total_entries, valid_articles=valid_articles_count)
+        
+        if valid_articles_count == 0:
+            # Delete the feed we just created since it has no articles
+            await crud_feed.delete_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
+            if total_entries == 0:
+                logger.warning("Feed has no entries at all", url=url, user_id=self.user_id)
+                raise ValueError("Feed appears to be broken: no entries found in feed")
+            else:
+                logger.warning("Feed has entries but no valid articles", url=url, user_id=self.user_id, total_entries=total_entries)
+                raise ValueError("Feed appears to be broken: no valid articles found despite having entries")
+        
+        # Additional check for feeds that might be too sparse
+        if total_entries > 0 and valid_articles_count < (total_entries * 0.1):
+            logger.warning("Feed has very low valid article ratio", url=url, user_id=self.user_id, 
+                         total_entries=total_entries, valid_articles=valid_articles_count)
+            # Don't fail here, but log it for monitoring
         
         if articles_to_create:
             await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
@@ -382,10 +535,11 @@ class RssService:
             last_fetched_at=datetime.now(timezone.utc),
             last_article_published_at=latest_article_date
         )
-        
-        # Always re-fetch to ensure relationships are loaded for Pydantic
-        db_feed_with_rels = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
-        return FeedResponse.model_validate(db_feed_with_rels)
+        logger.info("Feed added", feed_id=db_feed.id, url=url)
+        # # Always re-fetch to ensure relationships are loaded for Pydantic
+        # db_feed_with_rels = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
+        # return FeedResponse.model_validate(db_feed_with_rels)
+        return db_feed
 
     async def refresh_feed(self, feed_id: UUID, force_refetch: bool = False) -> Optional[FeedResponse]:
         """
@@ -464,7 +618,7 @@ class RssService:
         latest_article_date: Optional[datetime] = db_feed.last_article_published_at # Initialize with current value
 
         for entry in parsed_feed.entries:
-            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id)
+            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id, str(db_feed.url))
             if article_schema:
                 articles_to_create.append(article_schema)
                 if article_schema.published_at:
@@ -786,17 +940,15 @@ class RssService:
         return response_data
 
     # --- OPML Methods ---
-    async def import_opml(self, opml_content: str, default_folder_name: str = "Imported Feeds") -> Dict[str, Any]:
-        """Imports feeds from an OPML string content."""
-        logger.info("Starting OPML import process", user_id=self.user_id)
-        imported_count = 0
-        failed_count = 0
-        errors = []
-        created_folders = {} # Cache for created folder IDs: name -> UUID
-        default_folder_id = None # Initialize default folder id as None, only create when needed
-
+    async def extract_feeds_from_opml(self, opml_content: str, default_folder_name: str = "Imported Feeds") -> List[Dict[str, Any]]:
+        """
+        Extracts feed data from OPML content without importing them.
+        Returns a list of feed data dictionaries ready for import.
+        """
+        logger.info("Extracting feeds from OPML content", user_id=self.user_id)
+        
+        # Parse OPML content
         try:
-            # Try using a different approach with xml.etree.ElementTree to parse the OPML
             import xml.etree.ElementTree as ET
             root = ET.fromstring(opml_content)
             
@@ -817,6 +969,11 @@ class RssService:
             logger.error("Failed to parse OPML content", user_id=self.user_id, error=str(e))
             raise ValueError(f"Invalid OPML content: {str(e)}") from e
 
+        # Collect all feeds to extract
+        feeds_data = []
+        created_folders = {}  # Cache for created folder IDs: name -> UUID
+        default_folder_id = None
+
         # Function to get or create the default folder only when needed
         async def get_or_create_default_folder():
             nonlocal default_folder_id
@@ -833,20 +990,19 @@ class RssService:
                 except IntegrityError:
                     default_folder_db = await crud_folder.get_folder_by_name(self.db, name=default_folder_name, user_id=self.user_id)
                     if not default_folder_db:
-                        errors.append({"message": f"Could not create or find default folder: {default_folder_name}"})
                         raise ValueError(f"Could not create or find default folder: {default_folder_name}")
             
             default_folder_id = default_folder_db.id
             return default_folder_id
 
-        async def process_outline(outline, current_folder_id: Optional[UUID] = None):
-            nonlocal imported_count, failed_count
-            
+        async def collect_feeds_from_outline(outline, current_folder_id: Optional[UUID] = None):
+            """Recursively collect all feeds from OPML outline structure."""
             is_feed_outline = hasattr(outline, 'xmlUrl') and outline.xmlUrl is not None
             is_category_folder = not is_feed_outline and hasattr(outline, 'text') and outline.text is not None
 
             folder_to_use_for_children = current_folder_id
 
+            # Handle folder creation for categories
             if is_category_folder:
                 folder_name = outline.text.strip()
                 if folder_name:
@@ -863,60 +1019,58 @@ class RssService:
                                 folder_id_for_category = folder_db.id
                             except IntegrityError:
                                 folder_db = await crud_folder.get_folder_by_name(self.db, name=folder_name, user_id=self.user_id)
-                                if not folder_db:
-                                    errors.append({"message": f"Could not create or find folder: {folder_name} for outline {outline.text}"})
-                                    # Feeds under this outline will go to current_folder_id or default
-                                    folder_id_for_category = current_folder_id 
-                                else:
+                                if folder_db:
                                     created_folders[folder_name] = folder_db.id
                                     folder_id_for_category = folder_db.id
+                                else:
+                                    # Folder creation failed, use current or default folder
+                                    folder_id_for_category = current_folder_id 
                         else:
                             created_folders[folder_name] = folder_db.id
                             folder_id_for_category = folder_db.id
                     folder_to_use_for_children = folder_id_for_category
 
+            # Handle feed collection
             if is_feed_outline:
                 feed_url = outline.xmlUrl
-                feed_title = getattr(outline, 'title', None) or getattr(outline, 'text', None) # OPML might use text or title for feed name
+                feed_title = getattr(outline, 'title', None) or getattr(outline, 'text', None)
                 
-                # Extract tags if present as 'category' attribute (comma-separated)
+                # Extract tags if present
                 feed_tags_names = []
                 if hasattr(outline, 'category') and outline.category:
                     feed_tags_names = [t.strip() for t in outline.category.split(',') if t.strip()]
                 
-                try:
-                    # Check if feed already exists for this user by URL
-                    existing_feed = await crud_feed.get_feed_by_url(self.db, url=feed_url, user_id=self.user_id)
-                    if existing_feed:
-                        logger.info("Skipping already existing feed from OPML", url=feed_url, user_id=self.user_id)
-                        # Optionally, could update folder/tags if specified differently in OPML
-                        imported_count +=1 # Count as imported if already exists and we are skipping
-                    else:
-                        # If feed has no folder, use or create the default folder
-                        folder_id_to_use = folder_to_use_for_children
-                        if folder_id_to_use is None:
-                            folder_id_to_use = await get_or_create_default_folder()
-                            
-                        await self.add_new_feed(url=feed_url, folder_id=folder_id_to_use, tag_names=feed_tags_names)
-                        imported_count += 1
-                        logger.info("Successfully imported feed from OPML", url=feed_url, title=feed_title, folder_id=folder_id_to_use)
-                except Exception as e:
-                    failed_count += 1
-                    error_detail = {"url": feed_url, "title": feed_title or "Unknown", "error": str(e)}
-                    errors.append(error_detail)
-                    logger.error("Failed to import feed from OPML", **error_detail, user_id=self.user_id)
+                # Determine folder to use
+                folder_id_to_use = folder_to_use_for_children
+                if folder_id_to_use is None:
+                    folder_id_to_use = await get_or_create_default_folder()
+                
+                feeds_data.append({
+                    "url": feed_url,
+                    "title": feed_title,
+                    "folder_id": folder_id_to_use,
+                    "tag_names": feed_tags_names
+                })
             
             # Recursively process children outlines
             if hasattr(outline, 'outlines') and outline.outlines:
                 for child_outline in outline.outlines:
-                    await process_outline(child_outline, folder_to_use_for_children)
+                    await collect_feeds_from_outline(child_outline, folder_to_use_for_children)
 
-        # Process root outlines
+        # Collect all feeds first
         for outline_item in opml_data:
-            await process_outline(outline_item)
+            await collect_feeds_from_outline(outline_item)
 
-        logger.info("OPML import finished", user_id=self.user_id, imported=imported_count, failed=failed_count)
-        return {"imported_count": imported_count, "failed_count": failed_count, "errors": errors}
+        logger.info("Extracted feeds from OPML", total_feeds=len(feeds_data), user_id=self.user_id)
+        return feeds_data
+
+    async def import_opml(self, opml_content: str, default_folder_name: str = "Imported Feeds") -> Dict[str, Any]:
+        """
+        DEPRECATED: This method is no longer used. OPML imports are now handled via Celery tasks.
+        Use extract_feeds_from_opml instead for extracting feed data.
+        """
+        logger.warning("import_opml called but is deprecated - use Celery tasks instead", user_id=self.user_id)
+        raise NotImplementedError("OPML imports are now handled via Celery tasks. Use extract_feeds_from_opml instead.")
 
     async def export_opml(self) -> str:
         """Exports all user feeds to an OPML string."""

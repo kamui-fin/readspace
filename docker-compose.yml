@@ -59,7 +59,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: readspace_worker
-    command: celery -A app.core.celery_app worker -l info
+    command: celery -A app.core.celery_app  worker -l info
     volumes:
       - ./server:/app
     depends_on:

@@ -27,6 +27,47 @@ export type Feed = {
     last_article_published_at: string | null
 }
 
+// OPML Import types
+export type OPMLImportResponse = {
+    processing_mode: 'background'
+    task_id: string
+    message: string
+    estimated_feeds: number
+    check_status_url: string
+    // Results when completed (in task status)
+    imported_count?: number
+    failed_count?: number
+    total_feeds?: number
+    errors?: Array<{
+        url: string
+        title: string
+        error: string
+        status: string
+    }>
+    broken_feeds?: Array<{
+        url: string
+        title: string
+        error: string
+        status: string
+    }>
+    summary?: {
+        successful: number
+        already_existed: number
+        broken_feeds: number
+        temporary_errors: number
+        fetch_failures: number
+        invalid_feeds: number
+    }
+}
+
+export type ImportTaskStatus = {
+    task_id: string
+    status: 'pending' | 'in_progress' | 'completed' | 'failed'
+    message: string
+    result?: OPMLImportResponse
+    error?: string
+}
+
 // Corresponds to FeedBasicInfo in rss_schemas.py
 export type FeedBasicInfo = {
     id: string; // Changed from UUID to string for frontend consistency, assuming conversion happens
@@ -76,6 +117,30 @@ export const RSS_QUERY_KEYS = {
     ARTICLES: "rss-articles",
     ARTICLE: "rss-article",
     UNREAD_COUNTS: "rss-unread-counts",
+    OPML_IMPORT_STATUS: "opml-import-status",
+}
+
+// OPML Import hooks
+export function useImportOPML() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (formData: FormData) => 
+            ApiClient.uploadFile('/rss/opml/import', formData) as Promise<OPMLImportResponse>,
+        onSuccess: (data) => {
+            // All imports are background now - queries will be invalidated when task completes
+            // No immediate invalidation needed
+        },
+    })
+}
+
+export function useImportTaskStatus(taskId: string | null, enabled: boolean = true) {
+    return useQuery({
+        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_STATUS, taskId],
+        queryFn: () => ApiClient.get<ImportTaskStatus>(`/rss/opml/import/status/${taskId}`),
+        enabled: !!taskId && enabled,
+        refetchInterval: 3000, // Poll every 3 seconds - we'll handle stopping in the component
+        retry: false, // Don't retry failed status checks
+    })
 }
 
 // Folder hooks

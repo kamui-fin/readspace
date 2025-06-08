@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import ThemeSwitcher from "./theme-switcher"
 
 interface NavUserProps {
     avatar: string
