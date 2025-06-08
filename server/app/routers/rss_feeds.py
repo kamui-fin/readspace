@@ -2,12 +2,13 @@ from typing import List, Optional
 from uuid import UUID
 
 import structlog
-from app.crud import crud_tag
+from app.crud import crud_tag, crud_folder
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
+from app.workers.tasks import refresh_folder_feeds_task, refresh_all_user_feeds_task  # Import the background tasks
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -139,6 +140,236 @@ async def refresh_feed(
     except Exception as e:
         logger.error("Unexpected error refreshing feed", error=str(e), user_id=current_user.sub, feed_id=feed_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred during feed refresh.")
+
+@router.post("/feeds/refresh_folder/{folder_id}", response_model=dict)
+async def refresh_folder_feeds(
+    folder_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Trigger background refresh of all feeds in a specific folder."""
+    # Verify folder exists and belongs to user
+    folder = await crud_folder.get_folder(db, folder_id=folder_id, user_id=UUID(current_user.sub))
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+    
+    try:
+        # Queue the background task
+        task = refresh_folder_feeds_task.delay(
+            user_id=current_user.sub,
+            folder_id=str(folder_id)
+        )
+        
+        logger.info("Folder refresh task queued", folder_id=folder_id, task_id=task.id, user_id=current_user.sub)
+        
+        return {
+            "processing_mode": "background",
+            "task_id": task.id,
+            "message": f"Folder refresh queued for processing. Individual feeds will be refreshed in parallel.",
+            "check_status_url": f"/api/rss/feeds/refresh_status/{task.id}"
+        }
+        
+    except Exception as e:
+        logger.error("Error queuing folder refresh task", folder_id=folder_id, error=str(e), user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue folder refresh task.")
+
+@router.post("/feeds/refresh_all", response_model=dict)
+async def refresh_all_feeds(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Trigger background refresh of all feeds for the current user."""
+    try:
+        # Queue the background task
+        task = refresh_all_user_feeds_task.delay(user_id=current_user.sub)
+        
+        logger.info("All feeds refresh task queued", task_id=task.id, user_id=current_user.sub)
+        
+        return {
+            "processing_mode": "background",
+            "task_id": task.id,
+            "message": f"All feeds refresh queued for processing. Individual feeds will be refreshed in parallel.",
+            "check_status_url": f"/api/rss/feeds/refresh_status/{task.id}"
+        }
+        
+    except Exception as e:
+        logger.error("Error queuing all feeds refresh task", error=str(e), user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue all feeds refresh task.")
+
+@router.get("/feeds/refresh_status/{task_id}", response_model=dict)
+async def get_refresh_status(
+    task_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get the status of a background feed refresh task."""
+    try:
+        from app.core.celery_app import celery
+        
+        # Get orchestration task result
+        orchestration_result = celery.AsyncResult(task_id)
+        
+        if orchestration_result.state == 'PENDING':
+            return {
+                "task_id": task_id,
+                "status": "pending",
+                "message": "Feed refresh is queued and waiting to start."
+            }
+        elif orchestration_result.state == 'PROGRESS':
+            return {
+                "task_id": task_id,
+                "status": "in_progress",
+                "message": "Feed refresh is being processed and individual feeds are being queued.",
+                "progress": orchestration_result.info
+            }
+        elif orchestration_result.state == 'SUCCESS':
+            # Orchestration completed, now check individual feed refresh tasks
+            orchestration_data = orchestration_result.result
+            feed_task_ids = orchestration_data.get("task_ids", [])
+            
+            if not feed_task_ids:
+                return {
+                    "task_id": task_id,
+                    "status": "completed",
+                    "result": {
+                        "refreshed_count": 0,
+                        "failed_count": 0,
+                        "total_feeds": 0,
+                        "message": "No feeds found to refresh."
+                    }
+                }
+            
+            # Check status of individual feed refresh tasks
+            completed_tasks = 0
+            successful_refreshes = 0
+            failed_refreshes = 0
+            failed_feeds = []  # Track which feeds failed and why
+            
+            logger.info("Checking status of individual feed refresh tasks", 
+                       total_tasks=len(feed_task_ids), task_id=task_id)
+            
+            for i, feed_task_id in enumerate(feed_task_ids):
+                feed_task_result = celery.AsyncResult(feed_task_id)
+                logger.debug("Checking feed refresh task", 
+                           task_index=i, feed_task_id=feed_task_id, 
+                           state=feed_task_result.state)
+                
+                if feed_task_result.state == 'SUCCESS':
+                    completed_tasks += 1
+                    successful_refreshes += 1
+                    logger.debug("Feed refresh task SUCCESS", feed_task_id=feed_task_id)
+                elif feed_task_result.state == 'FAILURE':
+                    completed_tasks += 1
+                    failed_refreshes += 1
+                    
+                    # Try to get detailed error information
+                    error_info = {"task_id": feed_task_id, "error": "Unknown error"}
+                    try:
+                        if hasattr(feed_task_result, 'info') and feed_task_result.info:
+                            error_str = str(feed_task_result.info)
+                            # Categorize common errors for better user understanding
+                            if "timeout" in error_str.lower() or "timed out" in error_str.lower():
+                                error_info["error"] = "Feed timed out (server not responding)"
+                                error_info["category"] = "timeout"
+                            elif "404" in error_str or "not found" in error_str.lower():
+                                error_info["error"] = "Feed not found (404)"
+                                error_info["category"] = "not_found"
+                            elif "403" in error_str or "forbidden" in error_str.lower():
+                                error_info["error"] = "Access denied (403)"
+                                error_info["category"] = "access_denied"
+                            elif "500" in error_str or "502" in error_str or "503" in error_str:
+                                error_info["error"] = "Server error"
+                                error_info["category"] = "server_error"
+                            elif "parse" in error_str.lower() or "xml" in error_str.lower():
+                                error_info["error"] = "Invalid feed format"
+                                error_info["category"] = "parse_error"
+                            elif "connection" in error_str.lower():
+                                error_info["error"] = "Connection failed"
+                                error_info["category"] = "connection_error"
+                            elif "invalid types" in error_str.lower() or "dataerror" in error_str.lower():
+                                error_info["error"] = "Feed contains invalid data types"
+                                error_info["category"] = "data_error"
+                            else:
+                                error_info["error"] = error_str[:200]  # Truncate long errors
+                                error_info["category"] = "other"
+                    except Exception as e:
+                        logger.debug("Could not extract detailed error info", feed_task_id=feed_task_id, error=str(e))
+                    
+                    failed_feeds.append(error_info)
+                    logger.debug("Feed refresh task FAILURE", feed_task_id=feed_task_id, error=error_info["error"])
+                else:
+                    logger.debug("Feed refresh task still processing", 
+                               feed_task_id=feed_task_id, 
+                               state=feed_task_result.state)
+            
+            total_feeds = len(feed_task_ids)
+            is_complete = completed_tasks == total_feeds
+            
+            logger.info("Refresh task status summary", 
+                       completed=completed_tasks, total=total_feeds,
+                       successful=successful_refreshes, failed=failed_refreshes, 
+                       is_complete=is_complete)
+            
+            if is_complete:
+                result = {
+                    "task_id": task_id,
+                    "status": "completed",
+                    "result": {
+                        "refreshed_count": successful_refreshes,
+                        "failed_count": failed_refreshes,
+                        "total_feeds": total_feeds,
+                        "summary": {
+                            "successful": successful_refreshes,
+                            "failed": failed_refreshes
+                        }
+                    }
+                }
+                
+                # Include failed feeds details if any failed
+                if failed_feeds:
+                    result["result"]["failed_feeds"] = failed_feeds
+                    # Summarize error categories
+                    error_categories = {}
+                    for failed_feed in failed_feeds:
+                        category = failed_feed.get("category", "other")
+                        error_categories[category] = error_categories.get(category, 0) + 1
+                    result["result"]["error_summary"] = error_categories
+                
+                return result
+            else:
+                progress_result = {
+                    "task_id": task_id,
+                    "status": "in_progress",
+                    "message": f"Refreshing feeds: {completed_tasks}/{total_feeds} completed",
+                    "progress": {
+                        "completed": completed_tasks,
+                        "total": total_feeds,
+                        "successful": successful_refreshes,
+                        "failed": failed_refreshes
+                    }
+                }
+                
+                # Include failed feeds details if any failed so far
+                if failed_feeds:
+                    progress_result["progress"]["failed_feeds"] = failed_feeds
+                
+                return progress_result
+        elif orchestration_result.state == 'FAILURE':
+            return {
+                "task_id": task_id,
+                "status": "failed",
+                "error": str(orchestration_result.info),
+                "message": "Feed refresh failed. Please try again."
+            }
+        else:
+            return {
+                "task_id": task_id,
+                "status": orchestration_result.state.lower(),
+                "message": f"Task is in state: {orchestration_result.state}"
+            }
+            
+    except Exception as e:
+        logger.error("Error checking refresh task status", task_id=task_id, error=str(e), user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not check refresh status.")
 
 @router.delete("/feeds/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_feed(

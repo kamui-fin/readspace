@@ -29,17 +29,47 @@ settings = get_settings()
 # Comment about Celery worker setup and asyncio remains relevant, 
 # but using asyncio.run() is a workaround if direct async task handling is problematic.
 
+async def create_task_db_session():
+    """Create a database session for Celery tasks."""
+    engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
+    TaskAsyncSessionLocal = sessionmaker(
+        bind=engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False
+    )
+    return engine, TaskAsyncSessionLocal
+
+async def queue_feed_refresh_tasks(feeds: List, task_name: str) -> dict:
+    """Queue individual refresh tasks for a list of feeds."""
+    if not feeds:
+        return {
+            "total_feeds": 0,
+            "queued_tasks": 0,
+            "task_ids": [],
+            "status": "no_feeds_found"
+        }
+    
+    total_feeds = len(feeds)
+    logger.info(f"Queuing {total_feeds} feed refresh tasks for {task_name}")
+    
+    task_ids = []
+    for feed in feeds:
+        task = refresh_single_feed_task.delay(str(feed.id))
+        task_ids.append(task.id)
+    
+    logger.info(f"Successfully queued {len(task_ids)} feed refresh tasks for {task_name}")
+    
+    return {
+        "total_feeds": total_feeds,
+        "queued_tasks": len(task_ids),
+        "task_ids": task_ids,
+        "status": "tasks_queued"
+    }
+
 @celery.task(name="app.workers.tasks.import_single_feed_task", bind=True, max_retries=2, default_retry_delay=60)
 def import_single_feed_task(self, user_id: str, feed_url: str, folder_id: str, tag_names: Optional[List[str]] = None, feed_title: Optional[str] = None):
     """Celery task to import a single feed."""
     async def _async_import_single_feed():
-        engine = None
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
-            TaskAsyncSessionLocal = sessionmaker(
-                bind=engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False
-            )
-            
             async with TaskAsyncSessionLocal() as db:
                 user_uuid = UUID(user_id)
                 folder_uuid = UUID(folder_id)
@@ -137,12 +167,8 @@ def import_single_feed_task(self, user_id: str, feed_url: str, folder_id: str, t
 def import_opml_task(self, user_id: str, opml_content: str, default_folder_name: str = "Imported Feeds"):
     """Celery task to orchestrate OPML import by queuing individual feed import tasks."""
     async def _async_import_opml():
-        engine = None
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
-            TaskAsyncSessionLocal = sessionmaker(
-                bind=engine, class_=AsyncSession, autocommit=False, autoflush=False, expire_on_commit=False
-            )
             logger.info("Starting OPML import orchestration task", user_id=user_id)
             
             async with TaskAsyncSessionLocal() as db:
@@ -183,10 +209,9 @@ def import_opml_task(self, user_id: str, opml_content: str, default_folder_name:
         except Exception as exc:
             logger.error("Error in OPML import orchestration task", user_id=user_id, error=str(exc), exc_info=True)
             raise
-        # finally:
-        #     if engine:
-        #         await engine.dispose()
-        #         logger.info("Task-specific engine disposed for import_opml_task", user_id=user_id)
+        finally:
+            if engine:
+                await engine.dispose()
     
     try:
         return asyncio.run(_async_import_opml())
@@ -198,20 +223,12 @@ def import_opml_task(self, user_id: str, opml_content: str, default_folder_name:
             logger.error("Max retries reached for OPML import task", user_id=user_id, error=str(exc), exc_info=True)
             raise
 
-
-
 @celery.task(name="app.workers.tasks.refresh_single_feed_task", bind=True, max_retries=3, default_retry_delay=60)
 def refresh_single_feed_task(self, feed_id: str):
     """Celery task to refresh a single RSS feed."""
     async def _async_refresh_single_feed():
-        engine = None  # Ensure engine is defined for finally block
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            # Create a new engine and session factory for this task run
-            # Using NullPool to avoid connection reuse issues across different event loops
-            engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
-            TaskAsyncSessionLocal = sessionmaker(
-                bind=engine, class_=AsyncSession, autocommit=False, autoflush=False
-            )
             logger.info("Starting refresh_single_feed_task", feed_id=feed_id)
             
             async with TaskAsyncSessionLocal() as db:
@@ -240,24 +257,99 @@ def refresh_single_feed_task(self, feed_id: str):
     try:
         return asyncio.run(_async_refresh_single_feed())
     except Exception as exc:
-        if self.request.retries < (self.max_retries or 3):
-            logger.info(f"Retrying refresh_single_feed_task, attempt {self.request.retries + 1}", feed_id=feed_id)
-            raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+        # Categorize errors for better user feedback
+        error_str = str(exc).lower()
+        if "dataerror" in error_str or "invalid input for query argument" in error_str:
+            # SQL type conversion error - usually from malformed feed data
+            logger.error(f"SQL type conversion error for refresh_single_feed_task", feed_id=feed_id, error=str(exc))
+            if self.request.retries < (self.max_retries or 3):
+                logger.info(f"Retrying refresh_single_feed_task after SQL error, attempt {self.request.retries + 1}", feed_id=feed_id)
+                raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+            else:
+                logger.error("Max retries reached for refresh_single_feed_task with SQL error", feed_id=feed_id, error=str(exc))
+                raise ConnectionError(f"Feed data contains invalid types that cannot be processed") from exc
+        elif "timeout" in error_str or "timed out" in error_str:
+            # Timeout error
+            raise ConnectionError(f"Feed timed out during refresh") from exc
+        elif "connection" in error_str:
+            # Connection error
+            raise ConnectionError(f"Connection failed during feed refresh") from exc
         else:
-            logger.error("Max retries reached for refresh_single_feed_task", feed_id=feed_id, error=str(exc), exc_info=True)
+            # Other errors - retry as normal
+            if self.request.retries < (self.max_retries or 3):
+                logger.info(f"Retrying refresh_single_feed_task, attempt {self.request.retries + 1}", feed_id=feed_id)
+                raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1))
+            else:
+                logger.error("Max retries reached for refresh_single_feed_task", feed_id=feed_id, error=str(exc), exc_info=True)
+                raise
+
+@celery.task(name="app.workers.tasks.refresh_folder_feeds_task", bind=True, max_retries=1, default_retry_delay=60)
+def refresh_folder_feeds_task(self, user_id: str, folder_id: str):
+    """Celery task to refresh all feeds in a specific folder."""
+    async def _async_refresh_folder_feeds():
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
+        try:
+            logger.info("Starting refresh_folder_feeds_task", user_id=user_id, folder_id=folder_id)
+            
+            async with TaskAsyncSessionLocal() as db:
+                user_uuid = UUID(user_id)
+                folder_uuid = UUID(folder_id)
+                feeds = await crud_feed.get_feeds_by_user(db, user_id=user_uuid, folder_id=folder_uuid)
+                return await queue_feed_refresh_tasks(feeds, f"folder {folder_id}")
+                
+        except Exception as exc:
+            logger.error("Error in refresh_folder_feeds_task", user_id=user_id, folder_id=folder_id, error=str(exc), exc_info=True)
+            raise
+        finally:
+            if engine:
+                await engine.dispose()
+    
+    try:
+        return asyncio.run(_async_refresh_folder_feeds())
+    except Exception as exc:
+        if self.request.retries < (self.max_retries or 1):
+            logger.info(f"Retrying refresh_folder_feeds_task, attempt {self.request.retries + 1}", user_id=user_id, folder_id=folder_id)
+            raise self.retry(exc=exc, countdown=60)
+        else:
+            logger.error("Max retries reached for refresh_folder_feeds_task", user_id=user_id, folder_id=folder_id, error=str(exc), exc_info=True)
+            raise
+
+@celery.task(name="app.workers.tasks.refresh_all_user_feeds_task", bind=True, max_retries=1, default_retry_delay=60)
+def refresh_all_user_feeds_task(self, user_id: str):
+    """Celery task to refresh all feeds for a specific user."""
+    async def _async_refresh_all_user_feeds():
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
+        try:
+            logger.info("Starting refresh_all_user_feeds_task", user_id=user_id)
+            
+            async with TaskAsyncSessionLocal() as db:
+                user_uuid = UUID(user_id)
+                feeds = await crud_feed.get_feeds_by_user(db, user_id=user_uuid)
+                return await queue_feed_refresh_tasks(feeds, "all user feeds")
+                
+        except Exception as exc:
+            logger.error("Error in refresh_all_user_feeds_task", user_id=user_id, error=str(exc), exc_info=True)
+            raise
+        finally:
+            if engine:
+                await engine.dispose()
+    
+    try:
+        return asyncio.run(_async_refresh_all_user_feeds())
+    except Exception as exc:
+        if self.request.retries < (self.max_retries or 1):
+            logger.info(f"Retrying refresh_all_user_feeds_task, attempt {self.request.retries + 1}", user_id=user_id)
+            raise self.retry(exc=exc, countdown=60)
+        else:
+            logger.error("Max retries reached for refresh_all_user_feeds_task", user_id=user_id, error=str(exc), exc_info=True)
             raise
 
 @celery.task(name="app.workers.tasks.schedule_all_feed_refreshes_task")
 def schedule_all_feed_refreshes_task():
     """Celery Beat task to find feeds needing refresh and dispatch individual refresh tasks."""
     async def _async_schedule_all_feeds():
-        engine = None # Ensure engine is defined for finally block
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            # Create a new engine and session factory for this task run
-            engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
-            TaskAsyncSessionLocal = sessionmaker(
-                bind=engine, class_=AsyncSession, autocommit=False, autoflush=False
-            )
             logger.info("Starting schedule_all_feed_refreshes_task")
             
             async with TaskAsyncSessionLocal() as db:

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
-import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useUpdateArticle } from "@/lib/api/hooks/feeds"
+import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus, useUpdateArticle } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
 import { useTheme } from "next-themes"
@@ -42,6 +42,8 @@ export function ArticlesView({
     const [page, setPage] = useState(1);
     const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
     const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+    const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null);
+    const [refreshType, setRefreshType] = useState<'folder' | 'all' | null>(null);
     const router = useRouter();
     const { data: allUserFeeds } = useFeeds();
 
@@ -108,6 +110,10 @@ export function ArticlesView({
     const articlesData: PaginatedResponse<Article> = data || { items: [], total: 0, page: 1, pages: 1, size: 25 };
     const bulkUpdateArticles = useBulkUpdateArticles();
     const refreshFeed = useRefreshFeed();
+    const refreshFolderFeeds = useRefreshFolderFeeds();
+    const refreshAllFeeds = useRefreshAllFeeds();
+
+    const { data: refreshStatus } = useRefreshStatus(refreshTaskId, !!refreshTaskId);
 
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(selectedArticleId || "");
     const updateArticle = useUpdateArticle();
@@ -130,6 +136,78 @@ export function ArticlesView({
             setPage(1);
         }
     }, [isRecentlyReadMode, isReadLaterMode]);
+
+    // Handle refresh status updates
+    useEffect(() => {
+        if (refreshStatus && typeof refreshStatus === 'object') {
+            const status = (refreshStatus as any).status;
+            if (status === 'completed') {
+                const result = (refreshStatus as any).result;
+                if (result) {
+                    let message = `Refresh completed! ${result.refreshed_count} feeds refreshed successfully`;
+                    
+                    if (result.failed_count > 0) {
+                        message += `, ${result.failed_count} failed`;
+                        
+                        // Add error summary if available
+                        if (result.error_summary) {
+                            const errorTypes = Object.entries(result.error_summary)
+                                .map(([type, count]: [string, any]) => {
+                                    const typeLabels: Record<string, string> = {
+                                        timeout: 'timeouts',
+                                        not_found: '404s',
+                                        access_denied: 'access denied',
+                                        server_error: 'server errors',
+                                        parse_error: 'invalid feeds',
+                                        connection_error: 'connection issues',
+                                        data_error: 'data type errors',
+                                        other: 'other errors'
+                                    };
+                                    return `${count} ${typeLabels[type] || type}`;
+                                })
+                                .join(', ');
+                            message += ` (${errorTypes})`;
+                        }
+                    }
+                    
+                    message += '.';
+                    
+                    toast.success(message, { 
+                        id: 'bulk-refresh',
+                        duration: result.failed_count > 0 ? 8000 : 4000 // Show longer if there were failures
+                    });
+                } else {
+                    toast.success('Refresh completed!', { id: 'bulk-refresh' });
+                }
+                setRefreshTaskId(null);
+                setRefreshType(null);
+                refetchArticles();
+            } else if (status === 'failed') {
+                toast.error('Refresh failed. Please try again.', { id: 'bulk-refresh' });
+                setRefreshTaskId(null);
+                setRefreshType(null);
+            } else if (status === 'in_progress') {
+                const progress = (refreshStatus as any).progress;
+                if (progress) {
+                    const refreshLabel = refreshType === 'folder' ? 'folder feeds' : 'feeds';
+                    let progressMessage = `Refreshing ${refreshLabel}: ${progress.completed}/${progress.total} completed`;
+                    
+                    if (progress.successful > 0 || progress.failed > 0) {
+                        progressMessage += ` (${progress.successful} successful`;
+                        if (progress.failed > 0) {
+                            progressMessage += `, ${progress.failed} failed`;
+                        }
+                        progressMessage += ')';
+                    }
+                    
+                    toast.loading(progressMessage, { 
+                        id: 'bulk-refresh',
+                        duration: 0
+                    });
+                }
+            }
+        }
+    }, [refreshStatus, refreshType, refetchArticles]);
 
     const groupedArticles = useMemo(() => {
         if (isRecentlyReadMode || articlesData.items.length === 0) {
@@ -186,16 +264,27 @@ export function ArticlesView({
 
     const handleRefresh = async () => {
         if (viewFeedId) {
-            // Specific feed view: refresh this feed, allow hook to show toast
+            // Specific feed view: refresh this feed directly
             refreshFeed.mutate({ feedId: viewFeedId, forceRefetch: true, silent: false });
         } else if (viewFolderId && allUserFeeds) {
-            // Folder view: refresh all feeds in this folder, manage toasts centrally
+            // Folder view: check if we should use bulk refresh
             const feedsInFolder = allUserFeeds.filter(f => f.folder_id === viewFolderId);
-            if (feedsInFolder.length > 0) {
-                const toastId = 'folder-refresh';
+            if (feedsInFolder.length > 1) {
+                // Use bulk refresh for folders with many feeds
+                refreshFolderFeeds.mutate(viewFolderId, {
+                    onSuccess: (data: any) => {
+                        setRefreshTaskId(data.task_id);
+                        setRefreshType('folder');
+                        toast.loading(`Refreshing ${feedsInFolder.length} feed(s) in folder...`, { 
+                            id: 'bulk-refresh',
+                            duration: 0 // Keep loading until we manually dismiss it
+                        });
+                    }
+                });
+            } else if (feedsInFolder.length > 0) {
+                // Use individual refresh for smaller folders
+                const toastId = 'individual-refresh';
                 toast.loading(`Refreshing ${feedsInFolder.length} feed(s) in folder...`, { id: toastId });
-                // TODO: Implement backend route and celery task for folder refresh to avoid Promise.all here.
-                // Then, implement task polling on the frontend.
                 try {
                     await Promise.all(
                         feedsInFolder.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
@@ -211,28 +300,39 @@ export function ArticlesView({
                 refetchArticles();
             }
         } else if (viewMode === 'allArticles' && allUserFeeds) {
-            // "All Articles" view: Refresh all feeds the user is subscribed to.
-            // TODO: This should ideally be a single backend Celery task for all feeds,
-            // similar to the folder refresh. Implement task polling on the frontend.
+            // "All Articles" view: check if we should use bulk refresh
             if (allUserFeeds.length > 10) {
-                if (!window.confirm(`You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`)) {
+                // Use bulk refresh for many feeds
+                if (allUserFeeds.length > 50 && !window.confirm(`You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`)) {
                     return;
                 }
+                refreshAllFeeds.mutate(undefined, {
+                    onSuccess: (data: any) => {
+                        setRefreshTaskId(data.task_id);
+                        setRefreshType('all');
+                        toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { 
+                            id: 'bulk-refresh',
+                            duration: 0 // Keep loading until we manually dismiss it
+                        });
+                    }
+                });
+            } else {
+                // Use individual refresh for smaller numbers
+                const toastId = 'individual-refresh';
+                toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { id: toastId });
+                try {
+                    await Promise.all(
+                        allUserFeeds.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
+                    );
+                    toast.success(`Finished refreshing all feeds.`, { id: toastId });
+                } catch (error) {
+                    toast.error("Some feeds might not have refreshed correctly.", { id: toastId });
+                    console.error("Error refreshing all feeds:", error);
+                }
+                refetchArticles();
             }
-            const toastId = 'all-feeds-refresh';
-            toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { id: toastId });
-            try {
-                await Promise.all(
-                    allUserFeeds.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
-                );
-                toast.success(`Finished refreshing all feeds.`, { id: toastId });
-            } catch (error) {
-                toast.error("Some feeds might not have refreshed correctly.", { id: toastId });
-                console.error("Error refreshing all feeds:", error);
-            }
-            refetchArticles();
         } else {
-            // Read Later / Recently Read / Other views or if allUserFeeds is not available: Just refetch from DB
+            // Read Later / Recently Read / Other views: Just refetch from DB
             refetchArticles();
         }
     };
@@ -372,8 +472,9 @@ export function ArticlesView({
                                             className="h-8 w-8"
                                             onClick={handleRefresh}
                                             title="Refresh"
+                                            disabled={!!refreshTaskId}
                                         >
-                                            <RefreshCw className="h-4 w-4" />
+                                            <RefreshCw className={`h-4 w-4 ${refreshTaskId ? 'animate-spin' : ''}`} />
                                         </Button>
                                     </>
                                 ) : (
@@ -384,8 +485,9 @@ export function ArticlesView({
                                         className="h-8 w-8"
                                         onClick={handleRefresh}
                                         title="Refresh"
+                                        disabled={!!refreshTaskId}
                                     >
-                                        <RefreshCw className="h-4 w-4" />
+                                        <RefreshCw className={`h-4 w-4 ${refreshTaskId ? 'animate-spin' : ''}`} />
                                     </Button>
                                 )}
                             </div>
@@ -522,6 +624,7 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
     const [optimisticReadLater, setOptimisticReadLater] = useState(article.is_read_later);
     const contentRef = useRef<HTMLDivElement>(null);
     const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read);
+    const [imageError, setImageError] = useState(false);
 
     const handleToggleReadLater = () => {
         const newReadLaterState = !optimisticReadLater;
@@ -614,12 +717,13 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
                 </div>
             </div>
             <div className="space-y-6">
-                {article.image_url && (
+                {article.image_url && !imageError && (
                     <div className="aspect-video w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
                             className="w-full h-full object-cover"
+                            onError={() => setImageError(true)}
                         />
                     </div>
                 )}
@@ -673,6 +777,9 @@ function ArticleItem({
     isRecentlyReadMode?: boolean;
     isReadLaterMode?: boolean;
 }) {
+    const [feedImageError, setFeedImageError] = useState(false);
+    const [articleImageError, setArticleImageError] = useState(false);
+    
     const publishedAtString = article.published_at;
     const readAtString = article.read_at;
 
@@ -696,13 +803,16 @@ function ArticleItem({
                 <div className="flex-1 space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
-                            {article.feed?.image_url && (
+                            {article.feed?.image_url && !feedImageError ? (
                                 <img
                                     src={article.feed.image_url}
                                     alt=""
                                     className="h-3 w-3 shrink-0 rounded"
+                                    onError={() => setFeedImageError(true)}
                                 />
-                            )}
+                            ) : article.feed?.image_url ? (
+                                <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
+                            ) : null}
                             <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
                                 {article.feed?.title || "Unknown Source"}
                             </span>
@@ -718,9 +828,14 @@ function ArticleItem({
                     )}
                     {article.description && <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">{stripHTML(article.description)}</p>}
                 </div>
-                {article.image_url && (
+                {article.image_url && !articleImageError && (
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors">
-                        <img src={article.image_url} alt={article.title || "Article image"} className="h-full w-full object-cover" />
+                        <img 
+                            src={article.image_url} 
+                            alt={article.title || "Article image"} 
+                            className="h-full w-full object-cover" 
+                            onError={() => setArticleImageError(true)}
+                        />
                     </div>
                 )}
             </div>

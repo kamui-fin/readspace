@@ -223,9 +223,35 @@ async def update_feed_fetch_metadata(
     if image_url is not None and feed_db.image_url != str(image_url): # Ensure comparison with string form
         feed_db.image_url = str(image_url)
     
-    if ttl is not None: feed_db.ttl = ttl
-    if skip_hours is not None: feed_db.skip_hours = skip_hours
-    if skip_days is not None: feed_db.skip_days = skip_days
+    # Defensive type conversion for TTL, skip_hours, and skip_days
+    if ttl is not None:
+        try:
+            feed_db.ttl = int(ttl) if ttl is not None else None
+        except (ValueError, TypeError):
+            logger.warning("Invalid TTL value, setting to None", ttl=ttl, feed_id=feed_db.id)
+            feed_db.ttl = None
+    
+    if skip_hours is not None:
+        try:
+            # Ensure all skip_hours are integers
+            validated_hours = []
+            for hour in skip_hours:
+                hour_int = int(hour)
+                if 0 <= hour_int <= 23:
+                    validated_hours.append(hour_int)
+            feed_db.skip_hours = validated_hours
+        except (ValueError, TypeError):
+            logger.warning("Invalid skip_hours value, setting to empty list", skip_hours=skip_hours, feed_id=feed_db.id)
+            feed_db.skip_hours = []
+    
+    if skip_days is not None:
+        try:
+            # Ensure all skip_days are strings
+            feed_db.skip_days = [str(day) for day in skip_days]
+        except (ValueError, TypeError):
+            logger.warning("Invalid skip_days value, setting to empty list", skip_days=skip_days, feed_id=feed_db.id)
+            feed_db.skip_days = []
+    
     if last_modified is not None: feed_db.last_modified_header = last_modified
     if etag is not None: feed_db.etag_header = etag
     if last_fetched_at is not None: feed_db.last_fetched_at = last_fetched_at

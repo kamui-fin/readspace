@@ -190,6 +190,9 @@ export class ApiClient {
             if (forceRefetch) queryParams.append("force_refetch", "true");
             return this.post(`/rss/feeds/${id}/refresh${queryParams.toString() ? `?${queryParams.toString()}` : ''}`);
         },
+        refreshFolderFeeds: (folderId: string) => this.post(`/rss/feeds/refresh_folder/${folderId}`),
+        refreshAllFeeds: () => this.post("/rss/feeds/refresh_all"),
+        getRefreshStatus: (taskId: string) => this.get(`/rss/feeds/refresh_status/${taskId}`),
         deleteFeed: (id: string) => this.delete(`/rss/feeds/${id}`),
 
         // Articles

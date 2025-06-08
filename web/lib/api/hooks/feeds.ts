@@ -118,6 +118,7 @@ export const RSS_QUERY_KEYS = {
     ARTICLE: "rss-article",
     UNREAD_COUNTS: "rss-unread-counts",
     OPML_IMPORT_STATUS: "opml-import-status",
+    REFRESH_STATUS: "refresh-status",
 }
 
 // OPML Import hooks
@@ -320,6 +321,42 @@ export function useRefreshFeed() {
                 toast.error(error.response?.data?.detail || `Failed to refresh feed '${feedId.substring(0, 8)}...'.`);
             }
         }
+    })
+}
+
+export function useRefreshFolderFeeds() {
+    return useMutation({
+        mutationFn: (folderId: string) => ApiClient.post(`/rss/feeds/refresh_folder/${folderId}`),
+        onSuccess: (data) => {
+            toast.success("Folder refresh started! Check status for progress.");
+            return data;
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.detail || "Failed to start folder refresh.");
+        }
+    })
+}
+
+export function useRefreshAllFeeds() {
+    return useMutation({
+        mutationFn: () => ApiClient.post("/rss/feeds/refresh_all"),
+        onSuccess: (data) => {
+            toast.success("All feeds refresh started! Check status for progress.");
+            return data;
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.detail || "Failed to start all feeds refresh.");
+        }
+    })
+}
+
+export function useRefreshStatus(taskId: string | null, enabled: boolean = true) {
+    return useQuery({
+        queryKey: [RSS_QUERY_KEYS.REFRESH_STATUS, taskId],
+        queryFn: () => ApiClient.get(`/rss/feeds/refresh_status/${taskId}`),
+        enabled: enabled && !!taskId,
+        refetchInterval: 2000, // Poll every 2 seconds
+        refetchIntervalInBackground: false,
     })
 }
 

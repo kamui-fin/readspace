@@ -550,6 +550,8 @@ function FeedDropdownMenu({
 
 // Sub Feed Item component
 function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
+    const [imageError, setImageError] = useState(false);
+
     return (
         <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -561,8 +563,13 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
                 <SidebarLeftMenuSubButton asChild isActive={item.isActive} className="py-0 group/item">
                     <Link href={item.url} className="flex w-full items-center">
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
-                            {item.image ? (
-                                <img src={item.image} alt="" className="mr-2 h-4 w-4 shrink-0 rounded" />
+                            {item.image && !imageError ? (
+                                <img 
+                                    src={item.image} 
+                                    alt="" 
+                                    className="mr-2 h-4 w-4 shrink-0 rounded" 
+                                    onError={() => setImageError(true)}
+                                />
                             ) : (
                                 <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
                             )}

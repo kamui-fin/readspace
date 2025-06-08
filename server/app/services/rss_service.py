@@ -59,7 +59,7 @@ class RssService:
         cached_data = await self.redis_cache.get(cache_key)
 
         # Use custom timeout if provided, otherwise use default
-        timeout = timeout_seconds if timeout_seconds is not None else 15.0
+        timeout = timeout_seconds if timeout_seconds is not None else 30.0
 
         request_headers = {}
         if etag:
@@ -104,9 +104,30 @@ class RssService:
             # If error is e.g. 404 or 410, might want to clear/invalidate cache for this URL.
             if e.response.status_code in [404, 410]:
                 await self.redis_cache.delete(cache_key)
-            raise ConnectionError(f"HTTP error {e.response.status_code} while fetching feed: {url}") from e
+            
+            # Provide more user-friendly error messages
+            if e.response.status_code == 404:
+                raise ConnectionError(f"Feed not found (404): {url}")
+            elif e.response.status_code == 403:
+                raise ConnectionError(f"Access denied to feed (403): {url}")
+            elif e.response.status_code in [500, 502, 503]:
+                raise ConnectionError(f"Feed server error ({e.response.status_code}): {url}")
+            else:
+                raise ConnectionError(f"HTTP error {e.response.status_code} while fetching feed: {url}") from e
         except httpx.RequestError as e:
             logger.error("Request error fetching feed", url=url, error=str(e))
+            
+            # Provide more specific error messages based on error type
+            error_str = str(e).lower()
+            if "timeout" in error_str or "timed out" in error_str:
+                specific_error = f"Feed timed out after {timeout} seconds: {url}"
+            elif "connection" in error_str:
+                specific_error = f"Connection failed to feed: {url}"
+            elif "dns" in error_str or "name resolution" in error_str:
+                specific_error = f"Could not resolve feed domain: {url}"
+            else:
+                specific_error = f"Network error fetching feed: {url} - {str(e)}"
+            
             # If we have cached data, we could serve it stale here if preferred
             if cached_data and cached_data.get("content_text"):
                 logger.warning("Network error, serving stale content from cache", url=url, error=str(e))
@@ -116,7 +137,7 @@ class RssService:
                     "headers": cached_data.get("headers", {}),
                     "stale": True
                 }
-            raise ConnectionError(f"Error connecting to feed: {url}. Details: {str(e)}") from e
+            raise ConnectionError(specific_error) from e
 
     def _parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
         """Parses RSS/Atom feed content and validates its structure."""
@@ -519,27 +540,60 @@ class RssService:
             logger.info(f"Created {len(articles_to_create)} initial articles for feed", feed_id=db_feed.id, url=url)
 
         # Update the feed with metadata from the first fetch (ETag, Last-Modified, TTL, latest_article_date etc.)
-        await crud_feed.update_feed_fetch_metadata(
+        feed_http_headers = fetch_result.get("headers", {})
+        updated_feed_info = self._extract_feed_metadata(parsed_feed, str(db_feed.url))
+
+        # Extract and properly convert TTL and scheduling data
+        ttl_value = None
+        if parsed_feed.feed.get("ttl"):
+            try:
+                ttl_value = int(parsed_feed.feed.get("ttl"))
+            except (ValueError, TypeError):
+                logger.warning("Invalid TTL value in feed", feed_id=db_feed.id, ttl_raw=parsed_feed.feed.get("ttl"))
+                ttl_value = None
+
+        skip_hours_value = []
+        skip_hours_raw = parsed_feed.feed.get("skipHours", {}).get("hour", [])
+        if skip_hours_raw:
+            for hour in skip_hours_raw:
+                try:
+                    hour_int = int(hour)
+                    if 0 <= hour_int <= 23:  # Valid hour range
+                        skip_hours_value.append(hour_int)
+                except (ValueError, TypeError):
+                    logger.warning("Invalid skip hour value", feed_id=db_feed.id, hour_raw=hour)
+
+        skip_days_value = []
+        skip_days_raw = parsed_feed.feed.get("skipDays", {}).get("day", [])
+        if skip_days_raw:
+            valid_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            for day in skip_days_raw:
+                day_str = str(day).strip()
+                if day_str in valid_days:
+                    skip_days_value.append(day_str)
+                else:
+                    logger.warning("Invalid skip day value", feed_id=db_feed.id, day_raw=day)
+
+        db_feed = await crud_feed.update_feed_fetch_metadata(
             self.db, 
             feed_db=db_feed, 
-            title=initial_feed_data.title, 
-            description=initial_feed_data.description,
-            link=str(initial_feed_data.link) if initial_feed_data.link else None,
-            language=initial_feed_data.language,
-            image_url=str(initial_feed_data.image_url) if initial_feed_data.image_url else None,
-            ttl=parsed_feed.feed.get("ttl"),
-            skip_hours=parsed_feed.feed.get("skipHours", {}).get("hour", []),
-            skip_days=parsed_feed.feed.get("skipDays", {}).get("day", []),
+            title=updated_feed_info.title,
+            description=updated_feed_info.description,
+            link=str(updated_feed_info.link) if updated_feed_info.link else None,
+            language=updated_feed_info.language,
+            image_url=str(updated_feed_info.image_url) if updated_feed_info.image_url else None,
+            ttl=ttl_value,
+            skip_hours=skip_hours_value,
+            skip_days=skip_days_value,
             last_modified=feed_http_headers.get("Last-Modified"),
             etag=feed_http_headers.get("ETag"),
             last_fetched_at=datetime.now(timezone.utc),
             last_article_published_at=latest_article_date
         )
-        logger.info("Feed added", feed_id=db_feed.id, url=url)
-        # # Always re-fetch to ensure relationships are loaded for Pydantic
-        # db_feed_with_rels = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
-        # return FeedResponse.model_validate(db_feed_with_rels)
-        return db_feed
+        
+        # Eager load relationships for the response again
+        refreshed_db_feed_with_relations = await crud_feed.get_feed(self.db, feed_id=db_feed.id, user_id=self.user_id)
+        return FeedResponse.model_validate(refreshed_db_feed_with_relations)
 
     async def refresh_feed(self, feed_id: UUID, force_refetch: bool = False) -> Optional[FeedResponse]:
         """
@@ -590,11 +644,48 @@ class RssService:
             await crud_feed.update_feed_fetch_error(self.db, feed_db=db_feed, error_message=str(e))
             logger.error("Error refreshing feed", feed_id=feed_id_val, url=feed_url_val, error=str(e))
             return FeedResponse.model_validate(db_feed) # Return current state with error logged
+        except Exception as e:
+            # Catch any other unexpected errors and provide a generic message
+            error_message = f"Unexpected error during refresh: {str(e)}"
+            await crud_feed.update_feed_fetch_error(self.db, feed_db=db_feed, error_message=error_message)
+            logger.error("Unexpected error refreshing feed", feed_id=feed_id_val, url=feed_url_val, error=str(e), exc_info=True)
+            return FeedResponse.model_validate(db_feed) # Return current state with error logged
 
         # Update feed metadata (title, description, link might change)
         # User-settable fields like is_favorite, folder_id, tags are NOT changed here.
         feed_http_headers = fetch_result.get("headers", {})
         updated_feed_info = self._extract_feed_metadata(parsed_feed, str(db_feed.url))
+
+        # Extract and properly convert TTL and scheduling data
+        ttl_value = None
+        if parsed_feed.feed.get("ttl"):
+            try:
+                ttl_value = int(parsed_feed.feed.get("ttl"))
+            except (ValueError, TypeError):
+                logger.warning("Invalid TTL value in feed", feed_id=feed_id_val, ttl_raw=parsed_feed.feed.get("ttl"))
+                ttl_value = None
+
+        skip_hours_value = []
+        skip_hours_raw = parsed_feed.feed.get("skipHours", {}).get("hour", [])
+        if skip_hours_raw:
+            for hour in skip_hours_raw:
+                try:
+                    hour_int = int(hour)
+                    if 0 <= hour_int <= 23:  # Valid hour range
+                        skip_hours_value.append(hour_int)
+                except (ValueError, TypeError):
+                    logger.warning("Invalid skip hour value", feed_id=feed_id_val, hour_raw=hour)
+
+        skip_days_value = []
+        skip_days_raw = parsed_feed.feed.get("skipDays", {}).get("day", [])
+        if skip_days_raw:
+            valid_days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+            for day in skip_days_raw:
+                day_str = str(day).strip()
+                if day_str in valid_days:
+                    skip_days_value.append(day_str)
+                else:
+                    logger.warning("Invalid skip day value", feed_id=feed_id_val, day_raw=day)
 
         db_feed = await crud_feed.update_feed_fetch_metadata(
             self.db, 
@@ -604,9 +695,9 @@ class RssService:
             link=str(updated_feed_info.link) if updated_feed_info.link else None,
             language=updated_feed_info.language,
             image_url=str(updated_feed_info.image_url) if updated_feed_info.image_url else None,
-            ttl=parsed_feed.feed.get("ttl"),
-            skip_hours=parsed_feed.feed.get("skipHours", {}).get("hour", []),
-            skip_days=parsed_feed.feed.get("skipDays", {}).get("day", []),
+            ttl=ttl_value,
+            skip_hours=skip_hours_value,
+            skip_days=skip_days_value,
             last_modified=feed_http_headers.get("Last-Modified"),
             etag=feed_http_headers.get("ETag"),
             last_fetched_at=datetime.now(timezone.utc),
