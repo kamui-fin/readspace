@@ -4,6 +4,7 @@ import { formatDate, extractDomain } from '@/lib/utils'
 import { PageMetadata, DiscoveredFeed } from '@/types'
 import { BookOpen, Clock, Calendar, Globe, Rss, Settings, BellPlus, Copy } from 'lucide-react'
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 
 interface ArticlePreviewProps {
@@ -39,10 +40,10 @@ export function ArticlePreview({
   const copyFeedUrl = async (feedUrl: string) => {
     try {
       await navigator.clipboard.writeText(feedUrl)
-      console.log('Feed URL copied to clipboard')
-      // TODO: Show success toast/notification to user
+      toast.success('Feed URL copied to clipboard!')
     } catch (error) {
       console.error('Failed to copy feed URL:', error)
+      toast.error('Failed to copy feed URL to clipboard')
     }
   }
 
@@ -215,8 +216,8 @@ export function ArticlePreview({
             isOpen={isModalOpen}
             onClose={handleModalClose}
             onSuccess={() => {
-              // Optional: Show success message or update UI
               console.log('Feed subscription successful!')
+              // Toast is already shown in FeedSubscriptionModal
             }}
           />
         )}

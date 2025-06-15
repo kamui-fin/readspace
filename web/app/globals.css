@@ -188,3 +188,7 @@
 .toast-loading {
     @apply border-accent/20;
 }
+
+pre {
+    @apply text-foreground;
+}

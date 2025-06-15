@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { DiscoveredFeed } from '@/types'
 import { Rss, BellPlus, Loader2, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { useExtensionStore } from '@/store'
 
 interface FeedSubscriptionModalProps {
@@ -28,22 +29,26 @@ export function FeedSubscriptionModal({
     e.preventDefault()
     
     if (!selectedFolderId) {
-      // TODO: Show error message that folder is required
+      toast.error('Please select a folder to continue')
       return
     }
 
     setIsSubscribing(true)
+    const toastId = toast.loading('Subscribing to feed...')
+    
     try {
       await subscribeToFeed(feed.url, {
         folder_id: selectedFolderId,
         tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       })
-      console.log('Successfully subscribed to RSS feed:', feed.url)
+      
+      toast.success('Successfully subscribed to RSS feed!', { id: toastId })
       onSuccess?.()
       onClose()
     } catch (error) {
       console.error('Failed to subscribe to RSS feed:', error)
-      // TODO: Show error toast/notification to user
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      toast.error(`Failed to subscribe to feed: ${errorMessage}`, { id: toastId })
     } finally {
       setIsSubscribing(false)
     }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
+import toast, { Toaster } from 'react-hot-toast'
 import './index.css'
 import { ArticlePreview } from './components/ArticlePreview'
 import { AdvancedSaveOptions } from './components/AdvancedSaveOptions'
@@ -8,7 +9,7 @@ import { Settings } from './components/Settings'
 import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
 import { Settings as SettingsIcon, ExternalLink } from 'lucide-react'
-import { SaveOptions } from './types'
+import { SaveOptions, PageMetadata } from './types'
 
 function Popup() {
   const {
@@ -18,6 +19,7 @@ function Popup() {
     isSaving,
     setCurrentPageMetadata,
     saveArticle,
+    checkExistingSession,
   } = useExtensionStore()
   
   const [currentView, setCurrentView] = useState<'main' | 'settings' | 'login' | 'advanced-save'>('main')
@@ -25,6 +27,9 @@ function Popup() {
   const [readingTime, setReadingTime] = useState<number | undefined>()
 
   useEffect(() => {
+    // Check for existing session on load
+    checkExistingSession()
+    
     // Get current tab information
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
@@ -36,24 +41,57 @@ function Popup() {
   }, [])
 
   const extractPageMetadata = async (tab: chrome.tabs.Tab) => {
-    if (!tab.id || !tab.url) return
+    if (!tab.id) return
+
+    const sendMessage = <T,>(action: string): Promise<T> => {
+      return new Promise((resolve, reject) => {
+        chrome.tabs.sendMessage(tab.id!, { action }, response => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message))
+          } else {
+            resolve(response)
+          }
+        })
+      })
+    }
 
     try {
-      // Send message to content script to extract page metadata
-      const metadata = await chrome.tabs.sendMessage(tab.id, { action: 'extractMetadata' })
+      let metadata: PageMetadata | undefined
+      try {
+        metadata = await sendMessage<PageMetadata>('extractMetadata')
+      } catch (e: any) {
+        if (e.message?.includes('Receiving end does not exist')) {
+          console.log('Content script not available. This can happen when:')
+          console.log('1. The page was loaded before the extension was enabled')
+          console.log('2. The page is a special Chrome page (chrome://, chrome-extension://, etc.)')
+          console.log('3. The content script failed to load')
+          
+          // Instead of trying to inject manually, we'll fall back to basic tab info
+          // The content script should automatically load on page refresh or navigation
+          throw new Error('Content script not available. Try refreshing the page.')
+        } else {
+          throw e
+        }
+      }
       setCurrentPageMetadata(metadata)
-      
+
       // Also try to get full content for reading time calculation
       try {
-        const contentData = await chrome.tabs.sendMessage(tab.id, { action: 'extractContent' })
+        const contentData: { estimated_read_time?: number } = await sendMessage('extractContent')
         if (contentData && contentData.estimated_read_time) {
           setReadingTime(contentData.estimated_read_time)
         }
       } catch (error) {
         console.error('Failed to extract content for reading time:', error)
+        // Don't show toast for reading time extraction failure as it's non-critical
       }
     } catch (error) {
       console.error('Failed to extract page metadata:', error)
+      // Show user-friendly error message
+      toast.error(
+        'Failed to extract page information. Try refreshing the page.',
+      )
+
       // Fallback to basic tab information
       setCurrentPageMetadata({
         title: tab.title,
@@ -68,10 +106,10 @@ function Popup() {
     
     try {
       await saveArticle(currentTab.url, options)
-      // Show success message but don't close popup for debugging
-      console.log('Article saved successfully!')
+      toast.success('Article saved successfully!')
     } catch (error) {
       console.error('Failed to save article:', error)
+      toast.error(`Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -86,65 +124,50 @@ function Popup() {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="w-96 min-h-[500px] p-4">
-        <div className="text-center mb-6">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-6 h-6">
-              <img 
-                src="/src/assets/readspace.svg" 
-                alt="Readspace" 
-                className="w-full h-full"
-              />
-            </div>
-            <h1 className="text-xl font-bold">Readspace</h1>
-          </div>
-          <p className="text-muted-foreground text-sm">Save articles for later reading</p>
-        </div>
-        
-        {currentView === 'login' ? (
-          <LoginForm onBack={() => setCurrentView('main')} />
-        ) : currentView === 'settings' ? (
+      <div className="w-96 min-h-[500px] p-6">
+        {currentView === 'settings' ? (
           <Settings onBack={() => setCurrentView('main')} />
         ) : (
-          <div className="space-y-4">
-            {!settings.supabase_url || !settings.supabase_anon_key ? (
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Configure Supabase connection to get started
-                </p>
-                <Button onClick={() => setCurrentView('settings')} className="w-full">
-                  <SettingsIcon className="w-4 h-4 mr-2" />
-                  Configure Supabase
-                </Button>
+          <div className="space-y-6">
+            {/* Logo and Title */}
+            <div className="text-center mb-2">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12">
+                  <img 
+                    src="/src/assets/readspace.svg" 
+                    alt="Readspace" 
+                    className="w-full h-full rounded"
+                  />
+                </div>
               </div>
-            ) : (
-              <div className="text-center space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Sign in to start saving articles
-                </p>
-                <Button onClick={() => setCurrentView('login')} className="w-full">
-                  Sign In to Readspace
-                </Button>
-              </div>
-            )}
-            
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">Or</span>
-              </div>
+              <h1 className="text-lg font-semibold">Sign in to Readspace</h1>
             </div>
             
-            <Button
-              variant="outline"
-              onClick={() => setCurrentView('settings')}
-              className="w-full"
-            >
-              <SettingsIcon className="w-4 h-4 mr-2" />
-              Settings
-            </Button>
+            {/* Embedded Login Form */}
+            <LoginForm />
+            
+            {/* New to Readspace link */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                New to Readspace?{' '}
+                <button 
+                  onClick={() => window.open('https://readspace.ai/signup', '_blank')}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Create account
+                </button>
+              </p>
+            </div>
+            
+            {/* Self-hosted link at bottom */}
+            <div className="pt-4 border-t">
+              <button 
+                onClick={() => setCurrentView('settings')}
+                className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center"
+              >
+                Have a self-hosted server?
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -217,5 +240,19 @@ function Popup() {
 const container = document.getElementById('root')
 if (container) {
   const root = createRoot(container)
-  root.render(<Popup />)
+  root.render(
+    <>
+      <Popup />
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            fontSize: '14px',
+            maxWidth: '350px',
+          },
+        }}
+      />
+    </>
+  )
 } 

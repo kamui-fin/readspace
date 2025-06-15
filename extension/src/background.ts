@@ -220,10 +220,10 @@ async function handleOpenReadspace() {
   try {
     const result = await chrome.storage.local.get(['readspace-extension'])
     const settings = result['readspace-extension']?.state?.settings
-    const url = settings?.readspace_url || 'https://readspace.app'
+    const url = settings?.readspace_url || 'https://readspace.ai'
     
     chrome.tabs.create({ url })
   } catch (error) {
-    chrome.tabs.create({ url: 'https://readspace.app' })
+    chrome.tabs.create({ url: 'https://readspace.ai' })
   }
 } 

@@ -1,24 +1,17 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
-import { useExtensionStore } from '@/store'
 
 let supabaseClient: SupabaseClient | null = null
-let currentUrl: string | null = null
-let currentKey: string | null = null
 
-export function getSupabaseClient(): SupabaseClient {
-  const settings = useExtensionStore.getState().settings
+export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string): SupabaseClient | null {
+  // If client exists and no new credentials provided, return existing
+  if (supabaseClient && !supabaseUrl && !supabaseAnonKey) {
+    return supabaseClient
+  }
   
-  if (!supabaseClient || 
-      currentUrl !== settings.supabase_url ||
-      currentKey !== settings.supabase_anon_key) {
-    
-    if (!settings.supabase_url || !settings.supabase_anon_key) {
-      throw new Error('Supabase URL and anonymous key must be configured')
-    }
-    
-    supabaseClient = createClient(settings.supabase_url, settings.supabase_anon_key)
-    currentUrl = settings.supabase_url
-    currentKey = settings.supabase_anon_key
+  // If new credentials provided, create new client
+  if (supabaseUrl && supabaseAnonKey) {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey)
+    return supabaseClient
   }
   
   return supabaseClient
@@ -26,6 +19,4 @@ export function getSupabaseClient(): SupabaseClient {
 
 export function resetSupabaseClient() {
   supabaseClient = null
-  currentUrl = null
-  currentKey = null
 } 

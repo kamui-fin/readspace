@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { PageMetadata, SaveOptions, Priority } from '@/types'
 import { useExtensionStore } from '@/store'
 import { ArrowLeft, Save, X } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface AdvancedSaveOptionsProps {
   metadata: PageMetadata
@@ -22,10 +23,9 @@ export function AdvancedSaveOptions({
   onCancel,
   isLoading = false
 }: AdvancedSaveOptionsProps) {
-  const { folders, tags } = useExtensionStore()
+  const { tags } = useExtensionStore()
   
   const [titleOverride, setTitleOverride] = useState('')
-  const [selectedFolderId, setSelectedFolderId] = useState<string>('')
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
@@ -38,15 +38,21 @@ export function AdvancedSaveOptions({
     )
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const options: Partial<SaveOptions> = {
       title: titleOverride || undefined,
-      folder_id: selectedFolderId || undefined,
       tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       note: note || undefined,
       priority,
     }
-    onSave(options)
+    
+    try {
+      await onSave(options)
+      toast.success('Article saved with custom options!')
+    } catch (error) {
+      console.error('Failed to save article with custom options:', error)
+      toast.error('Failed to save article with custom options')
+    }
   }
 
   return (
@@ -63,24 +69,10 @@ export function AdvancedSaveOptions({
         </Button>
         <div>
           <h3 className="font-medium">Advanced Save Options</h3>
-          <p className="text-xs text-muted-foreground uppercase tracking-wide">
-            CUSTOMIZE YOUR SAVE
-          </p>
         </div>
       </div>
 
-      {/* Article Preview (simplified) */}
-      <div className="bg-muted/30 rounded-lg p-3 space-y-2">
-        <h4 className="font-medium text-sm line-clamp-2">
-          {metadata.title || 'Untitled Article'}
-        </h4>
-        {metadata.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {metadata.description}
-          </p>
-        )}
-      </div>
-
+      
       {/* Options */}
       <div className="space-y-4">
         {/* Title Override */}
@@ -96,25 +88,6 @@ export function AdvancedSaveOptions({
             className="text-sm"
           />
         </div>
-
-        {/* Folder Selection */}
-        {folders.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Folder</Label>
-            <Select 
-              value={selectedFolderId} 
-              onChange={(e) => setSelectedFolderId(e.target.value)}
-              className="text-sm"
-            >
-              <option value="">No folder</option>
-              {folders.map((folder) => (
-                <option key={folder.id} value={folder.id}>
-                  {folder.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
 
         {/* Priority */}
         <div className="space-y-2">

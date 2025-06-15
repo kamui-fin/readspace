@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import toast from 'react-hot-toast'
 import {
   ExtensionSettings,
   User,
@@ -11,7 +12,7 @@ import {
   DiscoveredFeed,
 } from '@/types'
 import { ReadspaceAPI } from '@/lib/api'
-import { SupabaseAuthService } from '@/lib/supabase-auth'
+import { getSupabaseClient } from '@/lib/supabase'
 
 interface ExtensionState {
   // Settings
@@ -25,6 +26,7 @@ interface ExtensionState {
   login: (accessToken: string) => Promise<void>
   logout: () => void
   updateToken: (accessToken: string) => void
+  checkExistingSession: () => Promise<void>
 
   // Data
   folders: Folder[]
@@ -77,7 +79,7 @@ export const useExtensionStore = create<ExtensionState>()(
       currentPageMetadata: null,
 
       // Settings
-      updateSettings: (newSettings) => {
+      updateSettings: async (newSettings) => {
         const settings = { ...get().settings, ...newSettings }
         set({ settings })
         
@@ -87,9 +89,51 @@ export const useExtensionStore = create<ExtensionState>()(
           const newApi = new ReadspaceAPI(settings.readspace_url, settings.access_token)
           set({ api: newApi })
         }
+
+        // Reset Supabase client if settings changed to force recreation with new settings
+        if (newSettings.supabase_url || newSettings.supabase_anon_key) {
+          const { resetSupabaseClient } = await import('@/lib/supabase')
+          resetSupabaseClient()
+          console.log('Supabase client reset for new settings')
+        }
       },
 
       // Authentication
+      checkExistingSession: async () => {
+        const { settings } = get()
+        
+        // Don't check session if Supabase is not configured
+        if (!settings.supabase_url || !settings.supabase_anon_key) {
+          return
+        }
+
+        try {
+          console.log('Checking existing session...')
+          const supabase = getSupabaseClient(settings.supabase_url, settings.supabase_anon_key)
+          
+          if (!supabase) {
+            console.log('Failed to create Supabase client')
+            return
+          }
+          
+          const { data: { session }, error } = await supabase.auth.getSession()
+          
+          if (error) {
+            console.error('Session check failed:', error)
+            return
+          }
+
+          if (session?.access_token) {
+            console.log('Found existing session, logging in...')
+            await get().login(session.access_token)
+          } else {
+            console.log('No existing session found')
+          }
+        } catch (error) {
+          console.error('Failed to check existing session:', error)
+        }
+      },
+
       login: async (accessToken: string) => {
         set({ isConnecting: true })
         try {
@@ -107,22 +151,26 @@ export const useExtensionStore = create<ExtensionState>()(
             isConnecting: false,
           })
 
-          // Initialize auth service for token refresh
-          const authService = SupabaseAuthService.getInstance()
-          await authService.initialize()
-
           // Load initial data
           await get().loadUserData()
         } catch (error) {
           set({ isConnecting: false })
-          throw error
+          const errorMessage = error instanceof Error ? error.message : 'Authentication failed'
+          console.error('Login failed:', error)
+          throw new Error(errorMessage)
         }
       },
 
       logout: () => {
-        // Destroy auth service
-        const authService = SupabaseAuthService.getInstance()
-        authService.destroy()
+        const { settings } = get()
+        
+        // Sign out from Supabase
+        const supabase = getSupabaseClient(settings.supabase_url, settings.supabase_anon_key)
+        if (supabase) {
+          supabase.auth.signOut().catch(error => {
+            console.error('Failed to sign out from Supabase:', error)
+          })
+        }
         
         set({
           user: null,
@@ -168,6 +216,7 @@ export const useExtensionStore = create<ExtensionState>()(
           set({ folders, tags })
         } catch (error) {
           console.error('Failed to load user data:', error)
+          toast.error('Failed to load user data. Please try again.')
         } finally {
           set({ isLoading: false })
         }
@@ -227,28 +276,46 @@ export const useExtensionStore = create<ExtensionState>()(
 
       subscribeToFeed: async (feedUrl: string, options = {}) => {
         const { api, settings } = get()
-        if (!api) throw new Error('Not authenticated')
+        if (!api) {
+          toast.error('Please sign in to subscribe to feeds')
+          throw new Error('Not authenticated')
+        }
 
-        await api.createFeed({
-          url: feedUrl,
-          folder_id: options.folder_id || settings.default_folder_id,
-          tag_ids: options.tag_ids || settings.default_tags,
-        })
+        try {
+          await api.createFeed({
+            url: feedUrl,
+            folder_id: options.folder_id || settings.default_folder_id,
+            tag_ids: options.tag_ids || settings.default_tags,
+          })
+        } catch (error) {
+          console.error('Failed to subscribe to feed:', error)
+          const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe to feed'
+          throw new Error(errorMessage)
+        }
       },
 
       subscribeToFeeds: async (feeds: DiscoveredFeed[], options = {}) => {
         const { api, settings } = get()
-        if (!api) throw new Error('Not authenticated')
-
-        const subscribeRequest = {
-          feeds: feeds.map(feed => ({
-            url: feed.url,
-            folder_id: options.folder_id || settings.default_folder_id,
-            tag_ids: options.tag_ids || settings.default_tags,
-          }))
+        if (!api) {
+          toast.error('Please sign in to subscribe to feeds')
+          throw new Error('Not authenticated')
         }
 
-        await api.subscribeToFeeds(subscribeRequest)
+        try {
+          const subscribeRequest = {
+            feeds: feeds.map(feed => ({
+              url: feed.url,
+              folder_id: options.folder_id || settings.default_folder_id,
+              tag_ids: options.tag_ids || settings.default_tags,
+            }))
+          }
+
+          await api.subscribeToFeeds(subscribeRequest)
+        } catch (error) {
+          console.error('Failed to subscribe to feeds:', error)
+          const errorMessage = error instanceof Error ? error.message : 'Failed to subscribe to feeds'
+          throw new Error(errorMessage)
+        }
       },
     }),
     {

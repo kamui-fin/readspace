@@ -4,14 +4,12 @@ import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { useExtensionStore } from '@/store'
 import { getSupabaseClient } from '@/lib/supabase'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
-interface LoginFormProps {
-  onBack: () => void
-}
 
-export function LoginForm({ onBack }: LoginFormProps) {
-  const { login, isConnecting } = useExtensionStore()
+export function LoginForm() {
+  const { login, isConnecting, settings } = useExtensionStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -21,20 +19,35 @@ export function LoginForm({ onBack }: LoginFormProps) {
     setError('')
 
     if (!email.trim() || !password.trim()) {
-      setError('Please enter both email and password')
+      const errorMsg = 'Please enter both email and password'
+      setError(errorMsg)
+      toast.error(errorMsg)
       return
     }
 
+    if (!settings.supabase_url || !settings.supabase_anon_key) {
+      const errorMsg = 'Supabase configuration is missing. Please check settings.'
+      setError(errorMsg)
+      toast.error(errorMsg)
+      return
+    }
+
+    const toastId = toast.loading('Signing in...')
+    
     try {
-      const supabase = getSupabaseClient()
+      const supabase = getSupabaseClient(settings.supabase_url, settings.supabase_anon_key)
       
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
+      if (!supabase) {
+        throw new Error('Failed to initialize Supabase client')
+      }
+
+      const { data, error: signinError } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password: password.trim(),
       })
 
-      if (authError) {
-        throw new Error(authError.message)
+      if (signinError) {
+        throw new Error(signinError.message)
       }
 
       if (!data.session?.access_token) {
@@ -43,87 +56,67 @@ export function LoginForm({ onBack }: LoginFormProps) {
 
       // Login to the extension store with the access token
       await login(data.session.access_token)
+      toast.success('Successfully signed in!', { id: toastId })
       
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to sign in')
+      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in'
+      setError(errorMessage)
+      toast.error(errorMessage, { id: toastId })
     }
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email address</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="email@example.com"
+            value={email}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            disabled={isConnecting}
+            required
+            className="h-12"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            disabled={isConnecting}
+            required
+            className="h-12"
+          />
+        </div>
+
+        {error && (
+          <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">
+            {error}
+          </div>
+        )}
+
         <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="h-8 w-8 p-0"
+          type="submit"
+          disabled={isConnecting || !email.trim() || !password.trim()}
+          className="w-full h-12"
         >
-          <ArrowLeft className="w-4 h-4" />
-        </Button>
-        <h2 className="text-lg font-semibold">Sign In</h2>
-      </div>
-
-      <div className="space-y-4">
-        <div className="text-sm text-muted-foreground">
-          <p>Sign in to your Readspace account</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="email@example.com"
-              value={email}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              disabled={isConnecting}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              value={password}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              disabled={isConnecting}
-              required
-            />
-          </div>
-
-          {error && (
-            <div className="text-sm text-destructive bg-destructive/10 p-2 rounded">
-              {error}
-            </div>
+          {isConnecting ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Signing in...
+            </>
+          ) : (
+            'Sign In'
           )}
-
-          <Button
-            type="submit"
-            disabled={isConnecting || !email.trim() || !password.trim()}
-            className="w-full"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Signing in...
-              </>
-            ) : (
-              'Sign In'
-            )}
-          </Button>
-        </form>
-
-        <div className="text-xs text-muted-foreground">
-          <p>
-            Your credentials are handled securely by Supabase and only used to
-            authenticate with your Readspace instance.
-          </p>
-        </div>
-      </div>
+        </Button>
+      </form>
     </div>
   )
 } 

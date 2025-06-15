@@ -78,36 +78,6 @@ npm run lint
 npm run format
 ```
 
-### Project Structure
-
-```
-extension/
-├── src/
-│   ├── components/          # React components
-│   │   ├── ui/             # Reusable UI components
-│   │   ├── ArticlePreview.tsx
-│   │   ├── LoginForm.tsx
-│   │   ├── RecentArticles.tsx
-│   │   └── Settings.tsx
-│   ├── lib/                # Utility libraries
-│   │   ├── api.ts          # Readspace API client
-│   │   └── utils.ts        # Helper functions
-│   ├── store/              # State management
-│   │   └── index.ts        # Zustand store
-│   ├── types/              # TypeScript definitions
-│   │   └── index.ts
-│   ├── background.ts       # Service worker
-│   ├── content.ts          # Content script
-│   ├── popup.tsx           # Main popup component
-│   └── defuddle.js         # Content extraction
-├── public/
-│   └── icons/              # Extension icons
-├── index.html              # Popup HTML
-├── package.json            # Manifest and dependencies
-├── vite.config.ts          # Build configuration
-└── tailwind.config.js      # Styling configuration
-```
-
 ## Usage
 
 ### First-Time Setup
@@ -178,100 +148,12 @@ The extension uses intelligent content extraction powered by the [Defuddle libra
 
 Defuddle is specifically designed to extract main content from web pages by removing clutter like comments, sidebars, headers, and footers, providing clean and consistent HTML output that's perfect for reading applications.
 
-## Privacy & Security
-
-- **No tracking** - the extension only communicates with your Readspace instance
-- **Local storage** - settings and tokens stored in Chrome's secure storage
-- **HTTPS only** - all API communication is encrypted
-- **Minimal permissions** - only requests necessary browser permissions
-
-## Troubleshooting
-
-### Common Issues
-
-**Extension not loading**
-- Check that you've enabled Developer mode in Chrome
-- Verify the extension files are in the correct directory
-- Check the console for error messages
-
-**Authentication failures**
-- Verify your access token is correct and hasn't expired
-- Check your Readspace instance URL is correct
-- Ensure your Readspace instance is accessible
-
-**Content not extracting**
-- Some sites may block content scripts
-- Try refreshing the page and using the extension again
-- Check if the site has unusual content structure
-
-**Saving failures**
-- Check your internet connection
-- Verify Readspace API is accessible
-- Check browser console for detailed error messages
-
 ### Getting Help
 
 1. **Check the browser console** (F12 → Console) for error messages
 2. **Verify network requests** in the Network tab
 3. **Submit an issue** with detailed steps to reproduce
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
-
 ## License
 
 This extension is part of the Readspace project. See the main project LICENSE file for details.
-
-## Roadmap
-
-### Upcoming Features
-- [ ] OAuth authentication flow
-- [ ] Advanced save options (folders, tags, notes)
-- [ ] Bulk feed subscription from OPML
-- [ ] Article highlighting and annotations
-- [ ] Offline reading support
-- [ ] Firefox and Safari support
-
-### API Requirements
-
-The extension expects these new API endpoints to be implemented:
-
-```typescript
-// Save article with content extraction
-POST /api/v1/articles/save
-{
-  url: string
-  title?: string
-  content?: string
-  metadata?: {
-    description?: string
-    author?: string
-    published_at?: string
-    image_url?: string
-    favicon?: string
-  }
-  priority?: 'high' | 'medium' | 'low'
-  tag_ids?: string[]
-  folder_id?: string
-  note?: string
-}
-
-// RSS feed discovery
-POST /api/v1/feeds/discover
-{ url: string }
-
-// Bulk feed subscription
-POST /api/v1/feeds/bulk-subscribe
-{
-  feeds: Array<{
-    url: string
-    folder_id?: string
-    tag_ids?: string[]
-  }>
-}
-``` 

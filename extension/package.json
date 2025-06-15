@@ -30,6 +30,7 @@
     "lucide-react": "^0.475.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.5.2",
     "tailwind-merge": "^3.0.1",
     "zustand": "^5.0.3"
   },
@@ -57,7 +58,13 @@
     "manifest_version": 3,
     "name": "Readspace",
     "version": "1.0.0",
-    "description": "Save articles to Readspace for later reading",
+    "description": "The read-it-later extension for Readspace, your calm reading space for the web.",
+    "icons": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    },
     "permissions": [
       "activeTab",
       "storage",
@@ -104,7 +111,9 @@
     },
     "web_accessible_resources": [
       {
-        "resources": ["src/assets/readspace.svg"],
+        "resources": [
+          "src/assets/readspace.svg"
+        ],
         "matches": [
           "*://*/*"
         ]
