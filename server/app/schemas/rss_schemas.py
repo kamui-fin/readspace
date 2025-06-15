@@ -162,6 +162,7 @@ class ClippedArticleBase(BaseModel):
     priority: str = Field("medium", pattern="^(low|medium|high)$")
     note: Optional[str] = None
     is_read: bool = False
+    is_read_later: bool = True
     is_favorite: bool = False
 
 class ClippedArticleCreate(ClippedArticleBase):
@@ -172,7 +173,9 @@ class ClippedArticleUpdate(BaseModel):
     priority: Optional[str] = Field(None, pattern="^(low|medium|high)$")
     note: Optional[str] = None
     is_read: Optional[bool] = None
+    is_read_later: Optional[bool] = None
     is_favorite: Optional[bool] = None
+    read_at: Optional[datetime] = None
 
 class ClippedArticleResponse(ClippedArticleBase):
     model_config = ConfigDict(from_attributes=True)

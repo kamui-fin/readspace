@@ -7,7 +7,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
 import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus, useUpdateArticle } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
-import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, Paperclip, RefreshCw } from "lucide-react"
+import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, Paperclip, RefreshCw, Globe, Check } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -123,6 +123,16 @@ export function ArticlesView({
             setSelectedArticleId(articlesData.items[0].id);
         }
     }, [articlesData, selectedArticleId]);
+
+    // Clear selected article if it's no longer in the articles list (e.g., removed from read later)
+    useEffect(() => {
+        if (selectedArticleId && articlesData.items.length > 0) {
+            const selectedArticleExists = articlesData.items.some(article => article.id === selectedArticleId);
+            if (!selectedArticleExists) {
+                setSelectedArticleId(null);
+            }
+        }
+    }, [selectedArticleId, articlesData.items]);
 
     useEffect(() => {
         if (!isRecentlyReadMode && !isReadLaterMode) {
@@ -557,7 +567,7 @@ export function ArticlesView({
                         )}
                         {!isArticleLoading && selectedArticle && (
                             <div className="p-6 md:p-10 h-full overflow-y-auto">
-                                <ArticleContentView article={selectedArticle} isRecentlyReadMode={isRecentlyReadMode} isReadLaterMode={isReadLaterMode} />
+                                <ArticleContentView article={selectedArticle} isRecentlyReadMode={isRecentlyReadMode} isReadLaterMode={isReadLaterMode} onArticleRemoved={() => setSelectedArticleId(null)} />
                             </div>
                         )}
                         {!isArticleLoading && !selectedArticle && (
@@ -614,10 +624,11 @@ function ArticleContentSkeleton() {
     );
 }
 
-function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
+function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode, onArticleRemoved }: {
     article: Article,
     isRecentlyReadMode?: boolean,
-    isReadLaterMode?: boolean
+    isReadLaterMode?: boolean,
+    onArticleRemoved?: () => void
 }) {
     const updateArticle = useUpdateArticle();
     const { resolvedTheme } = useTheme();
@@ -632,6 +643,21 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
         updateArticle.mutate({
             articleId: article.id,
             data: { is_read_later: newReadLaterState }
+        });
+    };
+
+    const handleMarkAsRead = () => {
+        // Mark as read and remove from read later
+        updateArticle.mutate({
+            articleId: article.id,
+            data: { is_read: true, is_read_later: false }
+        }, {
+            onSuccess: () => {
+                // If we're in read later mode, clear the selected article since it will be removed from the list
+                if (isReadLaterMode) {
+                    onArticleRemoved?.();
+                }
+            }
         });
     };
 
@@ -661,6 +687,65 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
         return () => el.removeEventListener('scroll', handleScroll);
     }, [article.id, hasMarkedRead, updateArticle, isRecentlyReadMode, isReadLaterMode]);
 
+    // Handle scroll completion for read later mode
+    useEffect(() => {
+        if (!isReadLaterMode || !contentRef.current || hasMarkedRead) return;
+        const el = contentRef.current;
+        const handleScroll = () => {
+            if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
+                if (!hasMarkedRead) {
+                    // Set optimistic UI update first
+                    setHasMarkedRead(true);
+
+                    // Show toast asking about removal from read later
+                    toast((t) => (
+                        <div className="flex flex-col gap-2">
+                            <span>Article finished! What would you like to do?</span>
+                            <div className="flex gap-2">
+                                <Button
+                                    size="sm"
+                                    onClick={() => {
+                                        updateArticle.mutate({
+                                            articleId: article.id,
+                                            data: { is_read: true, is_read_later: false }
+                                        });
+                                        toast.dismiss(t.id);
+                                        onArticleRemoved?.();
+                                    }}
+                                >
+                                    Mark as Read
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                        updateArticle.mutate({
+                                            articleId: article.id,
+                                            data: { is_read_later: false }
+                                        });
+                                        toast.dismiss(t.id);
+                                        onArticleRemoved?.();
+                                    }}
+                                >
+                                    Remove from Read Later
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => toast.dismiss(t.id)}
+                                >
+                                    Keep
+                                </Button>
+                            </div>
+                        </div>
+                    ), { duration: 0 });
+                }
+            }
+        };
+        el.addEventListener('scroll', handleScroll);
+        return () => el.removeEventListener('scroll', handleScroll);
+    }, [article.id, hasMarkedRead, updateArticle, isReadLaterMode]);
+
     const publishedAtString = article.published_at;
     const readAtString = article.read_at;
 
@@ -669,6 +754,11 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
         : "Date unknown";
+
+    // Extract priority for clipped articles
+    const priority = article.article_type === 'clipped' && article.priority
+        ? article.priority
+        : null;
 
     return (
         <article className="mx-auto max-w-4xl">
@@ -705,15 +795,27 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode }: {
                             Open original article
                         </a>
                     )}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 rounded-full hover:bg-muted"
-                        onClick={handleToggleReadLater}
-                    >
-                        <BookmarkIcon className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`} />
-                        <span className="sr-only">{optimisticReadLater ? "Remove from read later" : "Save for later"}</span>
-                    </Button>
+                    {isReadLaterMode ? (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-muted"
+                            onClick={handleMarkAsRead}
+                        >
+                            <Check className="h-4 w-4" />
+                            <span className="sr-only">Mark as read</span>
+                        </Button>
+                    ) : (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-muted"
+                            onClick={handleToggleReadLater}
+                        >
+                            <BookmarkIcon className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`} />
+                            <span className="sr-only">{optimisticReadLater ? "Remove from read later" : "Save for later"}</span>
+                        </Button>
+                    )}
                 </div>
             </div>
             <div className="space-y-6">
@@ -789,6 +891,21 @@ function ArticleItem({
             : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
         : "Date unknown";
 
+    // Get priority color for clipped articles
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case 'high': return 'text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-950 dark:border-red-800';
+            case 'medium': return 'text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800';
+            case 'low': return 'text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950 dark:border-green-800';
+            default: return 'text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-950 dark:border-gray-800';
+        }
+    };
+
+    // Extract priority for clipped articles
+    const priority = article.article_type === 'clipped' && article.priority
+        ? article.priority
+        : null;
+
     return (
         <div
             className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? 'border-b' : ''} 
@@ -803,6 +920,12 @@ function ArticleItem({
                 <div className="flex-1 space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
+                            {article.article_type === 'clipped' && priority && (
+                                <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority)}`}>
+                                    <Globe className="h-2.5 w-2.5" />
+                                    <span className="capitalize">{priority}</span>
+                                </div>
+                            )}
                             {article.feed?.image_url && !feedImageError ? (
                                 <img
                                     src={article.feed.image_url}
@@ -820,11 +943,6 @@ function ArticleItem({
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
                             <Clock className="h-3 w-3" />
                             {timeDisplay}
-                            {/* {article.article_type === 'clipped' && (
-                                <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap" title="Clipped article">
-                                    <Paperclip className="h-3 w-3" />
-                                </span>
-                            )} */}
                         </span>
                     </div>
                     <h3 className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}>{article.title}</h3>

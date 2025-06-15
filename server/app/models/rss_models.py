@@ -168,6 +168,7 @@ class ClippedArticle(Base):
     # User interaction state
     is_read = Column(Boolean, default=False, nullable=False, index=True)
     read_at = Column(DateTime(timezone=True))  # Timestamp for "Recently Read"
+    is_read_later = Column(Boolean, default=True, nullable=False, index=True)  # Clipped articles are read later by default
     is_favorite = Column(Boolean, default=False, nullable=False, index=True)
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)

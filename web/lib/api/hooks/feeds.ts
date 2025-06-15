@@ -100,6 +100,8 @@ export type Article = {
     custom_metadata: any | null; // Added (JSONB maps to any)
     feed?: FeedBasicInfo | { id: string | null; title: string | null; url: string | null; image_url: string | null }; // More flexible feed object for both RSS and clipped articles
     article_type: 'feed' | 'clipped';
+    priority?: string | null; // Added for clipped articles
+    note?: string | null; // Added for clipped articles
 }
 
 // Ensure PaginatedResponse is also exported if it wasn't already

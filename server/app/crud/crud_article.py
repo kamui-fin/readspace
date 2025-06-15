@@ -303,12 +303,13 @@ async def get_read_later_articles(
     feed_articles_result = await db.execute(feed_articles_query)
     feed_articles = feed_articles_result.scalars().all()
     
-    # 2. Get ALL clipped articles (they're all inherently "read later")
+    # 2. Get clipped articles marked as read later
     clipped_articles_query = (
         select(ClippedArticle)
         .options(selectinload(ClippedArticle.content))
-        .filter(ClippedArticle.user_id == user_id)
+        .filter(and_(ClippedArticle.user_id == user_id, ClippedArticle.is_read_later == True))
     )
+    
     clipped_articles_result = await db.execute(clipped_articles_query)
     clipped_articles = clipped_articles_result.scalars().all()
 
@@ -606,7 +607,7 @@ class CRUDArticleUnified:
             estimated_read_time_minutes=clipped_article.content.estimated_read_time_minutes,
             # User interaction state
             is_read=clipped_article.is_read,
-            is_read_later=True,  # All clipped articles are inherently "read later"
+            is_read_later=clipped_article.is_read_later,
             is_favorite=clipped_article.is_favorite,
             read_at=clipped_article.read_at,
             # Clipped specific
@@ -700,10 +701,11 @@ class CRUDArticleUnified:
             if is_read is not None:
                 clipped_articles_query = clipped_articles_query.filter(ClippedArticle.is_read == is_read)
             
+            if is_read_later is not None:
+                clipped_articles_query = clipped_articles_query.filter(ClippedArticle.is_read_later == is_read_later)
+            
             if is_favorite is not None:
                 clipped_articles_query = clipped_articles_query.filter(ClippedArticle.is_favorite == is_favorite)
-            
-            # Note: Clipped articles are inherently "read later" so we don't filter by is_read_later
             
             if published_since or published_until or search_query:
                 clipped_articles_query = clipped_articles_query.join(ClippedArticle.content)
