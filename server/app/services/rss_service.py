@@ -9,7 +9,17 @@ import feedparser  # For parsing RSS/Atom feeds
 import httpx  # For fetching feed data
 import structlog  # For logging
 from app.core.redis_cache import RedisCache  # Added
-from app.crud import crud_article, crud_feed, crud_folder, crud_tag
+from app.crud import crud_feed, crud_folder, crud_tag
+from app.crud.crud_article import (
+    crud_article, 
+    bulk_update_articles_status,
+    get_recently_read_articles,
+    get_read_later_articles,
+    count_unread_articles,
+    get_unread_counts_by_folder,
+    mark_articles_as_read_for_feed,
+    mark_articles_as_read_for_folder
+)
 from app.models.rss_models import Tag
 from app.schemas.rss_schemas import (
     ArticleCreate,
@@ -536,8 +546,16 @@ class RssService:
             # Don't fail here, but log it for monitoring
         
         if articles_to_create:
-            await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
-            logger.info(f"Created {len(articles_to_create)} initial articles for feed", feed_id=db_feed.id, url=url)
+            # Use the unified CRUD system to create articles properly
+            created_articles = []
+            for article_data in articles_to_create:
+                try:
+                    created_article = await crud_article.create_from_legacy_schema(self.db, obj_in=article_data)
+                    created_articles.append(created_article)
+                except Exception as e:
+                    logger.warning(f"Failed to create article with GUID {article_data.guid}", error=str(e))
+                    continue
+            logger.info(f"Created {len(created_articles)} initial articles for feed", feed_id=db_feed.id, url=url)
 
         # Update the feed with metadata from the first fetch (ETag, Last-Modified, TTL, latest_article_date etc.)
         feed_http_headers = fetch_result.get("headers", {})
@@ -718,8 +736,16 @@ class RssService:
         
         newly_created_articles_count = 0
         if articles_to_create:
-            await crud_article.create_articles_batch(self.db, articles_in=articles_to_create)
-            newly_created_articles_count = len(articles_to_create)
+            # Use the unified CRUD system to create articles properly
+            created_articles = []
+            for article_data in articles_to_create:
+                try:
+                    created_article = await crud_article.create_from_legacy_schema(self.db, obj_in=article_data)
+                    created_articles.append(created_article)
+                except Exception as e:
+                    logger.warning(f"Failed to create article with GUID {article_data.guid}", error=str(e))
+                    continue
+            newly_created_articles_count = len(created_articles)
             logger.info(f"Created {newly_created_articles_count} new articles for feed", feed_id=feed_id_val, url=feed_url_val)
         else:
             logger.info("No new articles found for feed", feed_id=feed_id_val, url=feed_url_val)
@@ -878,10 +904,8 @@ class RssService:
 
     # --- Article Methods (Continued) ---
     async def get_article(self, article_id: UUID) -> Optional[ArticleResponse]:
-        article = await crud_article.get_article(self.db, article_id=article_id, user_id=self.user_id)
-        if not article:
-            return None
-        return ArticleResponse.model_validate(article)
+        article = await crud_article.get_unified_article(self.db, article_id=article_id, user_id=self.user_id)
+        return article
 
     async def list_articles(
         self,
@@ -900,7 +924,7 @@ class RssService:
         size: int = 20,
     ) -> PaginatedResponse[ArticleResponse]: # Using the PaginatedResponse schema
         skip = (page - 1) * size
-        articles, total_count = await crud_article.get_articles_by_user(
+        articles, total_count = await crud_article.get_unified_articles_by_user(
             self.db,
             user_id=self.user_id,
             feed_ids=feed_ids,
@@ -918,7 +942,7 @@ class RssService:
             limit=size,
         )
         return PaginatedResponse(
-            items=[ArticleResponse.model_validate(art) for art in articles],
+            items=articles,  # Already converted to ArticleResponse
             total=total_count,
             page=page,
             size=size,
@@ -926,12 +950,10 @@ class RssService:
         )
 
     async def update_article_status(self, article_id: UUID, article_in: ArticleUpdate) -> Optional[ArticleResponse]:
-        article_db = await crud_article.get_article(self.db, article_id=article_id, user_id=self.user_id)
-        if not article_db:
-            return None
-        
-        updated_article = await crud_article.update_article(self.db, article_db=article_db, article_in=article_in)
-        return ArticleResponse.model_validate(updated_article)
+        updated_article = await crud_article.update_article_status(
+            self.db, article_id=article_id, user_id=self.user_id, article_in=article_in
+        )
+        return updated_article
 
     async def bulk_update_articles_status(
         self, article_ids: List[UUID], action: str # e.g. "mark_as_read", "toggle_favorite"
@@ -957,14 +979,14 @@ class RssService:
         if not updates:
             return 0
             
-        affected_rows = await crud_article.bulk_update_articles_status(
+        affected_rows = await bulk_update_articles_status(
             self.db, article_ids=article_ids, user_id=self.user_id, updates=updates
         )
         return affected_rows
 
     async def get_recently_read_articles(self, page: int = 1, size: int = 20) -> PaginatedResponse[ArticleResponse]:
         skip = (page - 1) * size
-        articles, total_count = await crud_article.get_recently_read_articles(
+        articles, total_count = await get_recently_read_articles(
             self.db, user_id=self.user_id, skip=skip, limit=size
         )
         return PaginatedResponse(
@@ -976,27 +998,30 @@ class RssService:
         )
 
     async def get_read_later_articles(self, page: int = 1, size: int = 100) -> PaginatedResponse[ArticleResponse]:
-        skip = (page - 1) * size
-        articles, total_count = await crud_article.get_read_later_articles(
-            self.db, user_id=self.user_id, skip=skip, limit=size
+        """Get all articles for a user marked as read later."""
+        items, total_count = await get_read_later_articles(
+            db=self.db, user_id=self.user_id, skip=(page - 1) * size, limit=size
         )
+        
         return PaginatedResponse(
-            items=[ArticleResponse.model_validate(art) for art in articles],
+            items=items,
             total=total_count,
             page=page,
             size=size,
-            pages=(total_count + size - 1) // size if total_count > 0 else 0
+            pages=(total_count + size - 1) // size if size > 0 else 0,
         )
 
     async def get_unread_counts(self, folder_id_filter: Optional[UUID] = None) -> Dict[str, Any]:
-        """Provides unread counts: total, and per folder."""
+        """
+        Get unread counts: total, and by folder.
+        """
         # Overall total unread for the user
-        total_unread_overall = await crud_article.count_unread_articles(self.db, user_id=self.user_id)
+        total_unread_overall = await count_unread_articles(self.db, user_id=self.user_id)
         response_data = {"total_unread": total_unread_overall}
 
         if folder_id_filter:
             # If a specific folder is requested, get its count directly
-            folder_specific_unread = await crud_article.count_unread_articles(
+            folder_specific_unread = await count_unread_articles(
                 self.db, user_id=self.user_id, folder_id=folder_id_filter
             )
             folder_db = await crud_folder.get_folder(self.db, folder_id=folder_id_filter, user_id=self.user_id)
@@ -1010,7 +1035,7 @@ class RssService:
             user_folders = await crud_folder.get_folders_by_user(self.db, user_id=self.user_id, limit=500) # Adjust limit as necessary
             
             # Get unread counts grouped by folder_id in one query
-            unread_counts_map = await crud_article.get_unread_counts_by_folder(self.db, user_id=self.user_id)
+            unread_counts_map = await get_unread_counts_by_folder(self.db, user_id=self.user_id)
             
             folder_counts_list = []
             for folder in user_folders:
@@ -1216,7 +1241,7 @@ class RssService:
     async def mark_feed_articles_as_read(self, feed_id: UUID) -> int:
         """Marks all articles in a given feed as read for the current user."""
         logger.info("Marking all articles as read for feed", feed_id=feed_id, user_id=self.user_id)
-        affected_count = await crud_article.mark_articles_as_read_for_feed(
+        affected_count = await mark_articles_as_read_for_feed(
             self.db, user_id=self.user_id, feed_id=feed_id
         )
         logger.info(f"{affected_count} articles marked as read for feed", feed_id=feed_id, user_id=self.user_id)
@@ -1225,7 +1250,7 @@ class RssService:
     async def mark_folder_articles_as_read(self, folder_id: UUID) -> int:
         """Marks all articles in a given folder as read for the current user."""
         logger.info("Marking all articles as read for folder", folder_id=folder_id, user_id=self.user_id)
-        affected_count = await crud_article.mark_articles_as_read_for_folder(
+        affected_count = await mark_articles_as_read_for_folder(
             self.db, user_id=self.user_id, folder_id=folder_id
         )
         logger.info(f"{affected_count} articles marked as read for folder", folder_id=folder_id, user_id=self.user_id)

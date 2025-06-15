@@ -14,7 +14,7 @@ export function useBooks(userId: string) {
 export function useBook(bookId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, bookId],
-        queryFn: () => ApiClient.get<UserBookLibrary>(`/books/${bookId}`),
+        queryFn: () => ApiClient.get<UserBookLibrary>(`/api/books/${bookId}`),
     })
 }
 
@@ -34,7 +34,7 @@ export function useUpdateBook() {
     const queryClient = useQueryClient()
     return useMutation<UserBookLibrary, Error, UpdateBookVariables>({
         mutationFn: ({ bookId, book }) =>
-            ApiClient.put<UserBookLibrary>(`/books/${bookId}`, book),
+            ApiClient.put<UserBookLibrary>(`/api/books/${bookId}`, book),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
                 queryKey: [BOOKS_QUERY_KEY, bookId],
@@ -50,7 +50,7 @@ export function useDeleteBook() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (bookId: string) =>
-            ApiClient.delete(`/books/${bookId}`),
+            ApiClient.delete(`/api/books/${bookId}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },
@@ -61,7 +61,7 @@ export function useDeleteBookMetadata() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (metadataId: string) =>
-            ApiClient.delete(`/books/metadata/${metadataId}`),
+            ApiClient.delete(`/api/books/metadata/${metadataId}`),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },
@@ -73,7 +73,7 @@ export function useUpdateBookProgress() {
     const queryClient = useQueryClient()
     return useMutation<UserBookLibrary, Error, UpdateBookProgressVariables>({
         mutationFn: ({ bookId, progress }) =>
-            ApiClient.put<UserBookLibrary>(`/books/${bookId}/progress`, progress),
+            ApiClient.put<UserBookLibrary>(`/api/books/${bookId}/progress`, progress),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
                 queryKey: [BOOKS_QUERY_KEY, bookId],

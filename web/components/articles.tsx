@@ -7,7 +7,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/componen
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
 import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus, useUpdateArticle } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
-import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, Paperclip, RefreshCw } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -820,6 +820,11 @@ function ArticleItem({
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
                             <Clock className="h-3 w-3" />
                             {timeDisplay}
+                            {/* {article.article_type === 'clipped' && (
+                                <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap" title="Clipped article">
+                                    <Paperclip className="h-3 w-3" />
+                                </span>
+                            )} */}
                         </span>
                     </div>
                     <h3 className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}>{article.title}</h3>

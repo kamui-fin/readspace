@@ -11,10 +11,10 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/tags", tags=["RSS Tags"])
 
 
-@router.post("/tags/", response_model=TagResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=TagResponse, status_code=status.HTTP_201_CREATED)
 async def create_tag(
     *, 
     db: AsyncSession = Depends(get_db),
@@ -33,10 +33,10 @@ async def create_tag(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error("Unexpected error creating tag", error=str(e), user_id=current_user.sub, tag_name=tag_in.name)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while creating the tag.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
 
-@router.get("/tags/", response_model=List[TagResponse])
+@router.get("/", response_model=List[TagResponse])
 async def list_tags(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
@@ -49,7 +49,7 @@ async def list_tags(
     return tags
 
 
-@router.get("/tags/{tag_id}", response_model=TagResponse)
+@router.get("/{tag_id}", response_model=TagResponse)
 async def get_tag(
     tag_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -64,7 +64,7 @@ async def get_tag(
     return tag
 
 
-@router.put("/tags/{tag_id}", response_model=TagResponse)
+@router.put("/{tag_id}", response_model=TagResponse)
 async def update_tag(
     tag_id: UUID,
     tag_in: TagUpdate = Body(...),
@@ -86,10 +86,10 @@ async def update_tag(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error("Unexpected error updating tag", error=str(e), user_id=current_user.sub, tag_id=tag_id)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while updating the tag.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
 
-@router.delete("/tags/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tag(
     tag_id: UUID,
     db: AsyncSession = Depends(get_db),

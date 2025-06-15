@@ -40,7 +40,7 @@ export default function useAutoBookmark() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.put(`/books/${bookId}/progress`, {
+            ApiClient.put(`/api/books/${bookId}/progress`, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {

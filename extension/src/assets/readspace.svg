@@ -1,0 +1,24 @@
+<svg width="508" height="508" viewBox="0 0 508 508" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_26_2)">
+<rect width="508" height="508" fill="#EAEAEA"/>
+<rect width="508" height="508" fill="#232222"/>
+<circle cx="331.5" cy="254.5" r="34.5" transform="rotate(90 331.5 254.5)" fill="#6A994E"/>
+<circle cx="203.5" cy="332.5" r="34.5" transform="rotate(90 203.5 332.5)" fill="#E5EDE0"/>
+<rect x="222.165" y="315.979" width="102.891" height="18" rx="9" transform="rotate(-35.1819 222.165 315.979)" fill="url(#paint0_linear_26_2)"/>
+<ellipse cx="35.5" cy="34.5" rx="35.5" ry="34.5" transform="matrix(0 -1 -1 0 238 212)" fill="#E5EDE0"/>
+<rect width="106.65" height="18.2648" rx="9.1324" transform="matrix(0.811374 0.584527 0.56782 -0.823153 220.096 191.66)" fill="url(#paint1_linear_26_2)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_26_2" x1="325.056" y1="324.979" x2="222.165" y2="324.979" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A994E"/>
+<stop offset="1" stop-color="#E5EDE0"/>
+</linearGradient>
+<linearGradient id="paint1_linear_26_2" x1="106.65" y1="9.1324" x2="0" y2="9.1324" gradientUnits="userSpaceOnUse">
+<stop stop-color="#6A994E"/>
+<stop offset="1" stop-color="#E5EDE0"/>
+</linearGradient>
+<clipPath id="clip0_26_2">
+<rect width="508" height="508" fill="white"/>
+</clipPath>
+</defs>
+</svg>

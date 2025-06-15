@@ -45,4 +45,4 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
 
 # Include the main API router
-app.include_router(api_router) # Add all routes from app.routers with /api prefix
+app.include_router(api_router, prefix="/api") # Add all routes from app.routers with /api prefix

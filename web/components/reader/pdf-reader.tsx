@@ -103,7 +103,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, page }: { bookId: string; page: number }) => {
             console.log("API CALL: Saving progress to server", { bookId, page });
-            return ApiClient.put(`/books/${bookId}/progress`, { pdf_current_page: page });
+            return ApiClient.put(`/api/books/${bookId}/progress`, { pdf_current_page: page });
         },
         onSuccess: (response) => {
             console.log("API SUCCESS: Progress saved successfully", response);
@@ -268,7 +268,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                         epub_progress?: any;
                         date_added: string;
                         book_metadata: any;
-                    }>(`/books/${bookMeta.library_id}`);
+                    }>(`/api/books/${bookMeta.library_id}`);
 
                     console.log("INITIAL PAGE CHECK RESPONSE:", response);
 

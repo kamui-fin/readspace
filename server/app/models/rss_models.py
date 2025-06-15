@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime, timezone
+from typing import List
 
 from app.db.base_class import Base
 from sqlalchemy import (
@@ -90,43 +91,92 @@ class Feed(Base):
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
     folder = relationship("Folder", back_populates="feeds")
-    articles = relationship("Article", back_populates="feed", cascade="all, delete-orphan")
-    tags = relationship(
-        "Tag", secondary=feed_tag_association, back_populates="feeds", cascade="all, delete"
-    )
+    tags = relationship("Tag", secondary=feed_tag_association, back_populates="feeds")
+    feed_articles = relationship("FeedArticle", back_populates="feed", cascade="all, delete-orphan")
     # user = relationship("Profile", back_populates="feeds") # Assuming Profile model has a 'feeds' relationship
 
     __table_args__ = (UniqueConstraint('user_id', 'url', name='uq_feed_user_url'),)
 
 
-class Article(Base):
-    __tablename__ = "articles"
+class ArticleContent(Base):
+    """Shared content table for both RSS articles and clipped articles"""
+    __tablename__ = "article_contents"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    
+    # Core article data
+    title = Column(Text)
+    link = Column(String(2048), nullable=False)
+    description = Column(Text)  # Summary
+    content = Column(Text)  # Full content
+    image_url = Column(String(2048))  # Best representative cover image
+    author = Column(String(500))
+    
+    published_at = Column(DateTime(timezone=True), index=True)
+    estimated_read_time_minutes = Column(Integer)  # In minutes
+    
+    # Metadata
+    custom_metadata = Column(JSONB)  # For any other data from the feed item or extraction
+    
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    feed_articles = relationship("FeedArticle", back_populates="content")
+    clipped_articles = relationship("ClippedArticle", back_populates="content")
+
+
+class FeedArticle(Base):
+    """RSS feed articles - links feeds to article content"""
+    __tablename__ = "feed_articles"
 
     id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     feed_id = Column(PGUUID(as_uuid=True), ForeignKey("feeds.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True) # Denormalized for easier querying
+    content_id = Column(PGUUID(as_uuid=True), ForeignKey("article_contents.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)  # Denormalized for easier querying
 
-    guid = Column(String(1024), nullable=False, index=True) # Unique identifier from feed
-    title = Column(Text)
-    link = Column(String(2048), nullable=False)
-    description = Column(Text) # Summary
-    content = Column(Text) # Full content, if available
-    image_url = Column(String(2048)) # Best representative cover image
-
-    published_at = Column(DateTime(timezone=True), index=True)
-    estimated_read_time_minutes = Column(Integer) # In minutes
-
+    guid = Column(String(1024), nullable=False, index=True)  # Unique identifier from feed
+    
+    # User interaction state
     is_read = Column(Boolean, default=False, nullable=False, index=True)
-    read_at = Column(DateTime(timezone=True)) # Timestamp for "Recently Read"
+    read_at = Column(DateTime(timezone=True))  # Timestamp for "Recently Read"
     is_read_later = Column(Boolean, default=False, nullable=False, index=True)
-    is_favorite = Column(Boolean, default=False, nullable=False, index=True) # Article-level favorite
-
-    custom_metadata = Column(JSONB) # For any other data from the feed item
+    is_favorite = Column(Boolean, default=False, nullable=False, index=True)  # Article-level favorite
 
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
-    feed = relationship("Feed", back_populates="articles")
-    # user = relationship("Profile", back_populates="articles") # Assuming Profile model has an 'articles' relationship
+    # Relationships
+    feed = relationship("Feed", back_populates="feed_articles")
+    content = relationship("ArticleContent", back_populates="feed_articles")
 
-    __table_args__ = (UniqueConstraint('feed_id', 'guid', name='uq_article_feed_guid'),)
+    __table_args__ = (UniqueConstraint('feed_id', 'guid', name='uq_feed_article_feed_guid'),)
+
+
+class ClippedArticle(Base):
+    """Manually saved web articles - not from RSS feeds"""
+    __tablename__ = "clipped_articles"
+
+    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    content_id = Column(PGUUID(as_uuid=True), ForeignKey("article_contents.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(PGUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # Clipped article specific fields
+    priority = Column(String(20), default='medium', nullable=False)  # low, medium, high
+    note = Column(Text)  # User's personal note about the article
+    
+    # User interaction state
+    is_read = Column(Boolean, default=False, nullable=False, index=True)
+    read_at = Column(DateTime(timezone=True))  # Timestamp for "Recently Read"
+    is_favorite = Column(Boolean, default=False, nullable=False, index=True)
+
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+
+    # Relationships
+    content = relationship("ArticleContent", back_populates="clipped_articles")
+
+    __table_args__ = (UniqueConstraint('user_id', 'content_id', name='uq_clipped_article_user_content'),)
+
+
+# Keep backward compatibility alias
+Article = FeedArticle

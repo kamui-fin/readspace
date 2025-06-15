@@ -14,10 +14,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
 
 
-@router.post("/feeds/", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
 async def add_new_feed(
     *, 
     db: AsyncSession = Depends(get_db),
@@ -52,10 +52,10 @@ async def add_new_feed(
         logger.error("Connection error adding feed", error=str(e), user_id=current_user.sub, url=feed_in.url)
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"Could not connect to feed URL: {e}")
     except Exception as e:
-        logger.error("Unexpected error adding feed", error=str(e), user_id=current_user.sub, url=feed_in.url)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while adding the feed.")
+        logger.error("Unexpected error adding new feed", error=str(e), exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
-@router.get("/feeds/", response_model=List[FeedResponse])
+@router.get("/", response_model=List[FeedResponse])
 async def list_feeds(
     db: AsyncSession = Depends(get_db),
     folder_id: Optional[UUID] = Query(None, description="Filter feeds by folder ID"),
@@ -78,7 +78,7 @@ async def list_feeds(
     )
     return feeds
 
-@router.get("/feeds/{feed_id}", response_model=FeedResponse)
+@router.get("/{feed_id}", response_model=FeedResponse)
 async def get_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -92,7 +92,7 @@ async def get_feed(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
     return feed
 
-@router.put("/feeds/{feed_id}", response_model=FeedResponse)
+@router.put("/{feed_id}", response_model=FeedResponse)
 async def update_feed_settings(
     feed_id: UUID,
     feed_in: FeedUpdate = Body(...),
@@ -109,13 +109,13 @@ async def update_feed_settings(
         logger.info("Feed settings updated successfully", feed_id=updated_feed.id, user_id=current_user.sub)
         return updated_feed
     except ValueError as e:
-        logger.warning("Failed to update feed due to value error", error=str(e), user_id=current_user.sub, feed_id=feed_id)
+        logger.warning(f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error("Unexpected error updating feed settings", error=str(e), user_id=current_user.sub, feed_id=feed_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
-@router.post("/feeds/{feed_id}/refresh", response_model=FeedResponse)
+@router.post("/{feed_id}/refresh", response_model=FeedResponse)
 async def refresh_feed(
     feed_id: UUID,
     force_refetch: bool = Query(False, description="Force refetch even if not modified based on ETag/Last-Modified"),
@@ -141,7 +141,7 @@ async def refresh_feed(
         logger.error("Unexpected error refreshing feed", error=str(e), user_id=current_user.sub, feed_id=feed_id)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred during feed refresh.")
 
-@router.post("/feeds/refresh_folder/{folder_id}", response_model=dict)
+@router.post("/refresh_folder/{folder_id}", response_model=dict)
 async def refresh_folder_feeds(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -173,7 +173,7 @@ async def refresh_folder_feeds(
         logger.error("Error queuing folder refresh task", folder_id=folder_id, error=str(e), user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue folder refresh task.")
 
-@router.post("/feeds/refresh_all", response_model=dict)
+@router.post("/refresh_all", response_model=dict)
 async def refresh_all_feeds(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user)
@@ -196,7 +196,7 @@ async def refresh_all_feeds(
         logger.error("Error queuing all feeds refresh task", error=str(e), user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to queue all feeds refresh task.")
 
-@router.get("/feeds/refresh_status/{task_id}", response_model=dict)
+@router.get("/refresh_status/{task_id}", response_model=dict)
 async def get_refresh_status(
     task_id: str,
     current_user: TokenData = Depends(get_current_user)
@@ -371,7 +371,7 @@ async def get_refresh_status(
         logger.error("Error checking refresh task status", task_id=task_id, error=str(e), user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not check refresh status.")
 
-@router.delete("/feeds/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),

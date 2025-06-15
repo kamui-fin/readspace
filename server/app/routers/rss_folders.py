@@ -12,10 +12,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/folders", tags=["RSS Folders"])
 
 
-@router.post("/folders/", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=FolderResponse, status_code=status.HTTP_201_CREATED)
 async def create_folder(
     *, 
     db: AsyncSession = Depends(get_db),
@@ -36,7 +36,7 @@ async def create_folder(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while creating the folder.")
 
 
-@router.get("/folders/", response_model=List[FolderResponse])
+@router.get("/", response_model=List[FolderResponse])
 async def list_folders(
     db: AsyncSession = Depends(get_db),
     skip: int = 0,
@@ -49,7 +49,7 @@ async def list_folders(
     return folders
 
 
-@router.get("/folders/{folder_id}", response_model=FolderResponse)
+@router.get("/{folder_id}", response_model=FolderResponse)
 async def get_folder(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -64,7 +64,7 @@ async def get_folder(
     return folder
 
 
-@router.put("/folders/{folder_id}", response_model=FolderResponse)
+@router.put("/{folder_id}", response_model=FolderResponse)
 async def update_folder(
     folder_id: UUID,
     folder_in: FolderUpdate = Body(...),
@@ -88,7 +88,7 @@ async def update_folder(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while updating the folder.")
 
 
-@router.delete("/folders/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_folder(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),

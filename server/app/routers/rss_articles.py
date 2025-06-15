@@ -10,17 +10,64 @@ from app.schemas.rss_schemas import (
     ArticleResponse,
     ArticleUpdate,
     PaginatedResponse,
+    ClippedArticleResponse,
 )
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
+from app.services.web_article_service import WebArticleService
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import BaseModel, HttpUrl
 
 logger = structlog.get_logger(__name__)
-router = APIRouter()
+router = APIRouter(prefix="/articles", tags=["RSS Articles"])
 
 
-@router.get("/articles/", response_model=PaginatedResponse[ArticleResponse])
+class SaveArticleRequest(BaseModel):
+    url: HttpUrl
+    title: Optional[str] = None
+    content: Optional[str] = None  # Extracted HTML content from extension
+    metadata: Optional[Dict[str, Any]] = None
+    priority: Optional[str] = None
+    tag_ids: Optional[List[UUID]] = None
+    note: Optional[str] = None
+
+
+@router.post("/save", response_model=ClippedArticleResponse)
+async def save_web_article(
+    request: SaveArticleRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Save a web article from URL for read-later functionality."""
+    web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
+    
+    try:
+        article = await web_service.save_article_from_url(
+            url=str(request.url),
+            title=request.title,
+            content=request.content,  # Pass extracted content from extension
+            metadata=request.metadata or {},
+            tag_ids=request.tag_ids or [],
+            note=request.note,
+            priority=request.priority
+        )
+        
+        logger.info("Web article saved successfully", article_id=article.id, user_id=current_user.sub, url=str(request.url))
+        return article
+        
+    except ValueError as e:
+        logger.warning("Failed to save web article due to validation error", error=str(e), user_id=current_user.sub, url=str(request.url))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except ConnectionError as e:
+        logger.warning("Failed to save web article due to connection error", error=str(e), user_id=current_user.sub, url=str(request.url))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unable to fetch article: {str(e)}")
+    except Exception as e:
+        logger.error("Unexpected error saving web article", error=str(e), user_id=current_user.sub, url=str(request.url))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while saving the article.")
+
+
+@router.get("/", response_model=PaginatedResponse[ArticleResponse])
 async def list_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -63,7 +110,7 @@ async def list_articles(
     )
     return paginated_articles
 
-@router.get("/articles/recently_read", response_model=PaginatedResponse[ArticleResponse])
+@router.get("/recently_read", response_model=PaginatedResponse[ArticleResponse])
 async def get_recently_read_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -74,7 +121,7 @@ async def get_recently_read_articles(
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     return await rss_service.get_recently_read_articles(page=page, size=size)
 
-@router.get("/articles/read_later", response_model=PaginatedResponse[ArticleResponse])
+@router.get("/read_later", response_model=PaginatedResponse[ArticleResponse])
 async def get_read_later_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -85,7 +132,7 @@ async def get_read_later_articles(
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     return await rss_service.get_read_later_articles(page=page, size=size)
 
-@router.get("/articles/unread_counts", response_model=Dict[str, Any])
+@router.get("/unread_counts", response_model=Dict[str, Any])
 async def get_unread_article_counts(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -95,7 +142,7 @@ async def get_unread_article_counts(
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     return await rss_service.get_unread_counts(folder_id_filter=folder_id)
 
-@router.get("/articles/{article_id}", response_model=ArticleResponse)
+@router.get("/{article_id}", response_model=ArticleResponse)
 async def get_article(
     article_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -109,7 +156,7 @@ async def get_article(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
     return article
 
-@router.put("/articles/{article_id}", response_model=ArticleResponse)
+@router.put("/{article_id}", response_model=ArticleResponse)
 async def update_article_status(
     article_id: UUID,
     article_in: ArticleUpdate = Body(...),
@@ -125,7 +172,7 @@ async def update_article_status(
     logger.info("Article status updated successfully", article_id=updated_article.id, user_id=current_user.sub)
     return updated_article
 
-@router.post("/articles/bulk_update", response_model=Dict[str, int])
+@router.post("/bulk_update", response_model=Dict[str, int])
 async def bulk_update_article_statuses(
     update_request: ArticleBulkUpdateRequest = Body(...),
     db: AsyncSession = Depends(get_db),
@@ -153,7 +200,7 @@ async def bulk_update_article_statuses(
         logger.error("Unexpected error during bulk article update", error=str(e), user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
-@router.post("/articles/feed/{feed_id}/mark-all-as-read", response_model=Dict[str, int])
+@router.post("/feed/{feed_id}/mark-all-as-read", response_model=Dict[str, int])
 async def mark_all_feed_articles_as_read(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
@@ -174,7 +221,7 @@ async def mark_all_feed_articles_as_read(
         logger.error("Error marking feed articles as read", error=str(e), feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while marking articles as read.")
 
-@router.post("/articles/folder/{folder_id}/mark-all-as-read", response_model=Dict[str, int])
+@router.post("/folder/{folder_id}/mark-all-as-read", response_model=Dict[str, int])
 async def mark_all_folder_articles_as_read(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),

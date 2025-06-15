@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 
 # Generic Paginated Response
@@ -23,17 +23,13 @@ class FolderCreate(FolderBase):
 class FolderUpdate(FolderBase):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
 
-class FolderInDBBase(FolderBase):
+class FolderResponse(FolderBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: UUID
     user_id: UUID
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True # Replaces orm_mode = True
-
-class FolderResponse(FolderInDBBase):
-    pass
 
 # ========= Tag Schemas =========
 class TagBase(BaseModel):
@@ -42,20 +38,16 @@ class TagBase(BaseModel):
 class TagCreate(TagBase):
     pass
 
-class TagUpdate(TagBase):
+class TagUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
 
-class TagInDBBase(TagBase):
+class TagResponse(TagBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: UUID
     user_id: UUID
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class TagResponse(TagInDBBase):
-    pass
 
 # ========= Feed Schemas =========
 class FeedBase(BaseModel):
@@ -66,45 +58,41 @@ class FeedBase(BaseModel):
     language: Optional[str] = Field(None, max_length=50)
     image_url: Optional[HttpUrl] = None
     is_favorite: bool = False
-    last_article_published_at: Optional[datetime] = None
+    ttl: Optional[int] = Field(None, gt=0)
+    skip_hours: Optional[List[int]] = Field(None, min_length=0, max_length=24)
+    skip_days: Optional[List[str]] = Field(None, min_length=0, max_length=7)
 
-class FeedCreate(BaseModel):
-    url: HttpUrl
+class FeedCreate(FeedBase):
     folder_id: UUID
-    tag_ids: Optional[List[UUID]] = []
+    tag_ids: Optional[List[UUID]] = None
 
 class FeedUpdate(BaseModel):
+    url: Optional[HttpUrl] = None
+    title: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
+    link: Optional[HttpUrl] = None
+    language: Optional[str] = Field(None, max_length=50)
+    image_url: Optional[HttpUrl] = None
     folder_id: Optional[UUID] = None
-    tag_ids: Optional[List[UUID]] = None # To set/replace tags
     is_favorite: Optional[bool] = None
-    title: Optional[str] = Field(None, max_length=500) # Allow user to override title
+    ttl: Optional[int] = Field(None, gt=0)
+    skip_hours: Optional[List[int]] = Field(None, min_length=0, max_length=24)
+    skip_days: Optional[List[str]] = Field(None, min_length=0, max_length=7)
 
-class FeedInDBBase(FeedBase):
+class FeedResponse(FeedBase):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: UUID
     user_id: UUID
     folder_id: UUID
-    
-    ttl: Optional[int] = None
-    skip_hours: Optional[List[int]] = None
-    skip_days: Optional[List[str]] = None
-    
     last_fetched_at: Optional[datetime] = None
-    last_modified_header: Optional[str] = Field(None, max_length=255)
-    etag_header: Optional[str] = Field(None, max_length=255)
+    last_modified_header: Optional[str] = None
+    etag_header: Optional[str] = None
     last_article_published_at: Optional[datetime] = None
-    
-    fetch_error_count: int = 0
+    fetch_error_count: int
     last_error_message: Optional[str] = None
-
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
-class FeedResponse(FeedInDBBase):
-    folder: FolderResponse
-    tags: List[TagResponse] = []
 
 # Minimal feed info for nesting in Article
 class FeedBasicInfo(BaseModel):
@@ -117,53 +105,155 @@ class FeedBasicInfo(BaseModel):
         from_attributes = True
 
 # ========= Article Schemas =========
-class ArticleBase(BaseModel):
-    guid: str = Field(..., max_length=1024)
+class ArticleContentBase(BaseModel):
     title: Optional[str] = None
     link: HttpUrl
-    description: Optional[str] = None # Summary
-    content: Optional[str] = None     # Full content
+    description: Optional[str] = None
+    content: Optional[str] = None
     image_url: Optional[HttpUrl] = None
+    author: Optional[str] = Field(None, max_length=500)
     published_at: Optional[datetime] = None
-    estimated_read_time_minutes: Optional[int] = None
-    
-    is_read: bool = False
-    is_read_later: bool = False
-    is_favorite: bool = False # Article-level favorite
-
-# This schema is mostly for internal use when creating articles from feed parsing
-class ArticleCreate(ArticleBase):
-    feed_id: UUID
-    user_id: UUID # Denormalized from Feed for easier querying/ownership
-
-class ArticleUpdate(BaseModel): # User can only update these fields
-    is_read: Optional[bool] = None
-    read_at: Optional[datetime] = None # Set when is_read becomes true
-    is_read_later: Optional[bool] = None
-    is_favorite: Optional[bool] = None
-
-class ArticleInDBBase(ArticleBase):
-    id: UUID
-    feed_id: UUID
-    user_id: UUID # Denormalized
-    
-    read_at: Optional[datetime] = None
+    estimated_read_time_minutes: Optional[int] = Field(None, ge=0)
     custom_metadata: Optional[Dict[str, Any]] = None
+
+class ArticleContentCreate(ArticleContentBase):
+    pass
+
+class ArticleContentResponse(ArticleContentBase):
+    model_config = ConfigDict(from_attributes=True)
     
+    id: UUID
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+# FeedArticle schemas (RSS articles)
+class FeedArticleBase(BaseModel):
+    guid: str = Field(..., max_length=1024)
+    is_read: bool = False
+    is_read_later: bool = False
+    is_favorite: bool = False
 
-class ArticleResponse(ArticleInDBBase):
-    feed: Optional[FeedBasicInfo] = None # Include basic feed info
+class FeedArticleCreate(FeedArticleBase):
+    feed_id: UUID
+    user_id: UUID
+    content_id: UUID
 
-# Schema for bulk updating articles
+class FeedArticleUpdate(BaseModel):
+    is_read: Optional[bool] = None
+    is_read_later: Optional[bool] = None
+    is_favorite: Optional[bool] = None
+
+class FeedArticleResponse(FeedArticleBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: UUID
+    feed_id: UUID
+    content_id: UUID
+    user_id: UUID
+    read_at: Optional[datetime] = None
+    created_at: datetime
+    updated_at: datetime
+    
+    # Include the content
+    content: ArticleContentResponse
+
+# ClippedArticle schemas (manually saved web articles)
+class ClippedArticleBase(BaseModel):
+    priority: str = Field("medium", pattern="^(low|medium|high)$")
+    note: Optional[str] = None
+    is_read: bool = False
+    is_favorite: bool = False
+
+class ClippedArticleCreate(ClippedArticleBase):
+    user_id: UUID
+    content_id: UUID
+
+class ClippedArticleUpdate(BaseModel):
+    priority: Optional[str] = Field(None, pattern="^(low|medium|high)$")
+    note: Optional[str] = None
+    is_read: Optional[bool] = None
+    is_favorite: Optional[bool] = None
+
+class ClippedArticleResponse(ClippedArticleBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: UUID
+    content_id: UUID
+    user_id: UUID
+    read_at: Optional[datetime] = None
+    created_at: datetime
+    
+    # Include the content
+    content: ArticleContentResponse
+
+# Unified Article schemas (for backward compatibility and API responses)
+class ArticleBase(BaseModel):
+    """Unified article schema that can represent both feed and clipped articles"""
+    # Core content (from ArticleContent)
+    title: Optional[str] = None
+    link: HttpUrl
+    description: Optional[str] = None
+    content: Optional[str] = None
+    image_url: Optional[HttpUrl] = None
+    author: Optional[str] = Field(None, max_length=500)
+    published_at: Optional[datetime] = None
+    estimated_read_time_minutes: Optional[int] = Field(None, ge=0)
+    
+    # User interaction state
+    is_read: bool = False
+    is_read_later: bool = False
+    is_favorite: bool = False
+    read_at: Optional[datetime] = None
+    
+    # Clipped article specific (only present for clipped articles)
+    priority: Optional[str] = None
+    note: Optional[str] = None
+    
+    # Feed specific (only present for feed articles)
+    feed_id: Optional[UUID] = None
+    guid: Optional[str] = None
+    folder_id: Optional[UUID] = None  # From feed's folder for feed articles
+
+class ArticleCreate(BaseModel):
+    """For backward compatibility with RSS system"""
+    feed_id: UUID
+    user_id: UUID
+    guid: str
+    title: Optional[str] = None
+    link: HttpUrl
+    description: Optional[str] = None
+    content: Optional[str] = None
+    author: Optional[str] = None
+    image_url: Optional[HttpUrl] = None
+    published_at: Optional[datetime] = None
+    estimated_read_time_minutes: Optional[int] = None
+    custom_metadata: Optional[Dict[str, Any]] = None
+    is_read: bool = False
+    is_read_later: bool = False
+    is_favorite: bool = False
+
+class ArticleUpdate(BaseModel):
+    is_read: Optional[bool] = None
+    is_read_later: Optional[bool] = None
+    is_favorite: Optional[bool] = None
+
+class ArticleResponse(ArticleBase):
+    model_config = ConfigDict(from_attributes=True)
+    
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    
+    # Additional metadata for API consumers
+    article_type: str  # "feed" or "clipped"
+    feed: Optional[Dict[str, Any]] = None  # Nested feed info for both RSS and clipped articles
+
+# Legacy schemas (kept for backward compatibility)
+Article = FeedArticleResponse
+
 class ArticleBulkUpdateRequest(BaseModel):
-    article_ids: List[UUID]
-    action: str # e.g., "mark_as_read", "mark_as_unread", "toggle_read_later", "toggle_favorite"
-    # No status field needed if action is descriptive enough like "mark_as_read" vs "mark_as_unread"
+    article_ids: List[UUID] = Field(..., min_length=1)
+    action: str = Field(..., pattern=r"^(mark_read|mark_unread|toggle_favorite|mark_read_later|remove_read_later)$")
 
 # ========= OPML Schemas =========
 class OpmlImportRequest(BaseModel):

@@ -23,11 +23,11 @@ router.include_router(highlights.router, tags=["Highlights"])
 router.include_router(upload.router, prefix="/upload", tags=["Upload"])
 
 # RSS Routers
-router.include_router(rss_folders.router, prefix="/rss", tags=["RSS Folders"])
-router.include_router(rss_tags.router, prefix="/rss", tags=["RSS Tags"])
-router.include_router(rss_feeds.router, prefix="/rss", tags=["RSS Feeds"])
-router.include_router(rss_articles.router, prefix="/rss", tags=["RSS Articles"])
-router.include_router(rss_opml.router, prefix="/rss", tags=["RSS OPML"])
+router.include_router(rss_folders.router, prefix="/rss")
+router.include_router(rss_tags.router, prefix="/rss")
+router.include_router(rss_feeds.router, prefix="/rss")
+router.include_router(rss_articles.router, prefix="/rss")
+router.include_router(rss_opml.router, prefix="/rss")
 
 
 @router.get("/health")

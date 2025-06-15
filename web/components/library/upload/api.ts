@@ -72,7 +72,7 @@ export const useUploadBook = () => {
                         }),
                 }
 
-                const createdMetadata = await ApiClient.post<{ id: string }>("/books/metadata", bookMetadata)
+                const createdMetadata = await ApiClient.post<{ id: string }>("/api/books/metadata", bookMetadata)
 
                 // Create progress object for EPUB
                 const progress = !isPdf
@@ -112,7 +112,7 @@ export const useUploadBook = () => {
                     )
 
                     // Update the book metadata with the file URL
-                    await ApiClient.put(`/books/metadata/${createdMetadata.id}`, {
+                    await ApiClient.put(`/api/books/metadata/${createdMetadata.id}`, {
                         file_url: uploadResponse.file_path,
                     })
 
