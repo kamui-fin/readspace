@@ -13,11 +13,11 @@ type Props = {
 	tabsHorizontalPadding: number;
 };
 
-export const TabIndicator: FC<Props> = ({
+export function TabIndicator({
 	indexDecimal,
 	numberOfTabs,
 	tabsHorizontalPadding,
-}) => {
+}: Props) {
 	const { width } = useWindowDimensions();
 
 	const tabBarItemWidth = (width - tabsHorizontalPadding * 2) / numberOfTabs;
@@ -36,7 +36,7 @@ export const TabIndicator: FC<Props> = ({
 	});
 
 	return <Animated.View style={[styles.indicator, rIndicatorStyle]} />;
-};
+}
 
 const styles = StyleSheet.create({
 	indicator: {

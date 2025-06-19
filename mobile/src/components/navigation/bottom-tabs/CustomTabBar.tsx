@@ -20,10 +20,7 @@ import { useColorScheme } from "@hooks/useColorScheme";
 import { useNavigationElements } from "@hooks/useNavigationElements";
 import { useIsDarkMode } from "@showtime-xyz/universal.hooks";
 
-export const ThemeBottomTabbar = ({
-	state,
-	descriptors,
-}: BottomTabBarProps) => {
+export function ThemeBottomTabbar({ state, descriptors }: BottomTabBarProps) {
 	const colorScheme = useColorScheme();
 	const currentColors = COLORS[colorScheme ?? "light"];
 	const { width } = useWindowDimensions();
@@ -95,7 +92,7 @@ export const ThemeBottomTabbar = ({
 			/>
 		</View>
 	);
-};
+}
 
 export const BottomTabbar = (props: BottomTabBarProps) => {
 	const { isTabBarHidden } = useNavigationElements();

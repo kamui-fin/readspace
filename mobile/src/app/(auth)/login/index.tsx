@@ -1,13 +1,13 @@
 import React from "react";
-import { router } from "expo-router";
-import { AppState, Pressable } from "react-native";
+import Monicon from "@monicon/native";
+import { AppState } from "react-native";
 import { Text } from "@components/Themed";
+import { Button } from "@/src/components/ui/Button";
 import { View } from "@showtime-xyz/universal.view";
 import { TextInput } from "@showtime-xyz/universal.text-input";
 import { supabase } from "@lib/supabase/client";
 import { useSafeAreaInsets } from "@showtime-xyz/universal.safe-area";
 import { COLORS, TYPOGRAPHY } from "@/src/lib/constants";
-import Monicon from "@monicon/native";
 
 AppState.addEventListener("change", (state) => {
 	if (state === "active") {
@@ -80,12 +80,9 @@ export default function LoginScreen() {
 					}}
 				/>
 			</View>
-			<Pressable
+			<Button
+				size="large"
 				// onPress={() => router.push("/(protected)/(tabs)/feeds")}
-				className="flex-row items-center justify-center rounded-xl py-6 w-full"
-				style={{
-					backgroundColor: colors.grey2,
-				}}
 			>
 				<View style={{ position: "relative", alignItems: "center" }}>
 					<Text
@@ -97,7 +94,7 @@ export default function LoginScreen() {
 						Continue
 					</Text>
 				</View>
-			</Pressable>
+			</Button>
 		</View>
 	);
 }

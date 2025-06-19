@@ -14,12 +14,7 @@ type Props = {
 	onPress: () => void;
 };
 
-export const TabItem: FC<Props> = ({
-	index,
-	tabName,
-	indexDecimal,
-	onPress,
-}) => {
+export function TabItem({ index, tabName, indexDecimal, onPress }: Props) {
 	const rTextStyle = useAnimatedStyle(() => {
 		const color = interpolateColor(
 			indexDecimal.value,
@@ -40,7 +35,7 @@ export const TabItem: FC<Props> = ({
 			</Reanimated.Text>
 		</TouchableOpacity>
 	);
-};
+}
 
 const styles = StyleSheet.create({
 	container: {
@@ -49,7 +44,7 @@ const styles = StyleSheet.create({
 		justifyContent: "center",
 	},
 	text: {
-		...TYPOGRAPHY.STYLES.button,
+		...TYPOGRAPHY.STYLES.headerSmall,
 		textTransform: "none",
 	},
 });

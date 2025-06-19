@@ -6,6 +6,7 @@ import { GoogleOriginal } from "@showtime-xyz/universal.icon";
 import { COLORS, TYPOGRAPHY } from "@lib/constants";
 import { useColorScheme } from "@hooks/useColorScheme";
 import { Logo, RSS, Newspaper } from "@/src/components/icons";
+import { Button } from "@/src/components/ui/Button";
 
 export default function WelcomeScreen() {
 	const insets = useSafeAreaInsets();
@@ -26,10 +27,7 @@ export default function WelcomeScreen() {
 				className="absolute top-4 right-4 z-10"
 				style={{ marginTop: insets.top }}
 			>
-				<Pressable
-					onPress={() => router.push("/login")}
-					className="px-4 py-2 rounded-full"
-				>
+				<Button variant="text" onPress={() => router.push("/login")}>
 					<Text
 						style={{
 							...TYPOGRAPHY.STYLES.headerSmall,
@@ -38,7 +36,7 @@ export default function WelcomeScreen() {
 					>
 						Login
 					</Text>
-				</Pressable>
+				</Button>
 			</View>
 
 			{/* Main Content */}
@@ -134,7 +132,8 @@ export default function WelcomeScreen() {
 					alignItems: "center",
 				}}
 			>
-				<Pressable
+				<Button
+					size="large"
 					onPress={() => router.push("/login")}
 					className="flex-row items-center justify-center rounded-xl py-6 w-full"
 					style={{
@@ -167,8 +166,12 @@ export default function WelcomeScreen() {
 							Continue with Google
 						</Text>
 					</View>
-				</Pressable>
-				<Pressable className="mt-4" onPress={() => router.push("/signup")}>
+				</Button>
+				<Button
+					variant="text"
+					className="mx-4 bg-transparent border-0"
+					onPress={() => router.push("/signup")}
+				>
 					<Text
 						style={{
 							...TYPOGRAPHY.STYLES.bodyLarge,
@@ -177,7 +180,7 @@ export default function WelcomeScreen() {
 					>
 						Or use email instead
 					</Text>
-				</Pressable>
+				</Button>
 			</View>
 		</View>
 	);

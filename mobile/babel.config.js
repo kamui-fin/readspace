@@ -12,6 +12,8 @@ export default function (api) {
 					root: ["./src"],
 					extensions: [".js", ".jsx", ".ts", ".tsx"],
 					alias: {
+						"^@showtime-xyz/universal.alert$":
+							"./node_modules/@showtime-xyz/universal.alert",
 						"^@showtime-xyz/universal.button$":
 							"./node_modules/@showtime-xyz/universal.button",
 						"^@showtime-xyz/universal.tab-view$":
