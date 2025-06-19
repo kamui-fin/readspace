@@ -67,7 +67,7 @@ export default function HighlightPopover({
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(`/highlights/text/${encodeURIComponent(text)}/note`, { note }),
+            ApiClient.put(`/api/highlights/text/${encodeURIComponent(text)}/note`, { note }),
         onError: (err: Error) =>
             console.error("Failed to add annotation:", err),
     })
@@ -179,12 +179,10 @@ export default function HighlightPopover({
                 />
             ) : (
                 <div className="flex flex-col gap-3 popover-animation bg-background/0">
-                    <GeneralPopover />
-                    <div id="highlight-options" className="hidden mt-1">
-                        <HighlightColorOptions
-                            handleHighlight={handleHighlight}
-                        />
-                    </div>
+                    {/* <GeneralPopover /> */}
+                    <HighlightColorOptions
+                        handleHighlight={handleHighlight}
+                    />
                 </div>
             )}
         </div>

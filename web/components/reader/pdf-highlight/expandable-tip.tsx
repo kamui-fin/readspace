@@ -87,10 +87,8 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
     return (
         <div className="flex flex-col">
             {/* <HighlightColorOptions handleHighlight={handleHighlight}/> */}
-            <GeneralPopover />
-            <div id="highlight-options" className="hidden mt-1">
-                <HighlightColorOptions handleHighlight={handleHighlight} />
-            </div>
+            {/* <GeneralPopover /> */}
+            <HighlightColorOptions handleHighlight={handleHighlight} />
         </div>
     )
 }

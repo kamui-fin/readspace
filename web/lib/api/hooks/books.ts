@@ -7,7 +7,7 @@ export const BOOKS_QUERY_KEY = "books"
 export function useBooks(userId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, userId],
-        queryFn: () => ApiClient.get<UserBookLibrary[]>(`/books?user_id=${userId}`),
+        queryFn: () => ApiClient.get<UserBookLibrary[]>(`/api/books/?user_id=${userId}`),
     })
 }
 
@@ -22,7 +22,7 @@ export function useCreateBook() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (book: UserBookLibraryCreate) =>
-            ApiClient.post<UserBookLibrary>("/books", book),
+            ApiClient.post<UserBookLibrary>("/api/books/", book),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },

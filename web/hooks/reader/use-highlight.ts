@@ -59,15 +59,12 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                 data.user_book_lib_id = bookMeta.library_id;
                 console.log("Using library_id from bookMeta:", bookMeta.library_id);
             } else {
-                // This case should ideally not happen for non-local books if bookMeta is correctly populated.
-                // For local books, user_book_lib_id might not be applicable, or a different approach is needed.
-                // The server currently expects user_book_lib_id for all highlights.
+                // This case should not happen if bookMeta is correctly populated.
+                // The server requires user_book_lib_id for all highlights.
                 console.warn(
                     "Attempting to create highlight without a readily available library_id in bookMeta.",
-                    "This might lead to issues if the book is not a local file or if user_book_lib_id is strictly required by the backend."
+                    "This might lead to issues if user_book_lib_id is strictly required by the backend."
                 );
-                // If it's a truly local book without a library entry, the backend might need adjustment
-                // or this flow needs to be re-evaluated for local-only highlights.
             }
 
             // Defensive check: Ensure user_book_lib_id is set before POSTing
@@ -81,7 +78,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                 throw new Error(errorMsg);
             }
 
-            return ApiClient.post("/highlights", data);
+            return ApiClient.post("/api/highlights/", data);
         },
         onError: (err: Error) => {
             console.error("Failed to add highlight mutation:", err);
@@ -93,7 +90,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
     })
 
     const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) => ApiClient.delete(`/highlights/text/${encodeURIComponent(text)}`),
+        mutationFn: (text: string) => ApiClient.delete(`/api/highlights/text/${encodeURIComponent(text)}`),
         onError: (err: Error) =>
             console.error("Failed to delete highlight:", err),
     })

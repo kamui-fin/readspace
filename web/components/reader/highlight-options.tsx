@@ -7,7 +7,7 @@ const HighlightColorOptions = ({
     handleHighlight: (color: "yellow" | "blue" | "green") => void
 }) => {
     return (
-        <div className="flex items-center gap-2 p-2 bg-background dark:bg-gray-900 rounded-md border shadow-sm w-fit">
+        <div className="mb-2 flex items-center gap-2 p-2 bg-background dark:bg-gray-900 rounded-md border shadow-sm w-fit">
             <CustomTooltip content="Yellow highlight">
                 <Button
                     className="rounded-full bg-yellow-300 h-8 w-8"

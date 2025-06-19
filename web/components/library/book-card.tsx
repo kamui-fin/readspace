@@ -6,11 +6,9 @@ import { useSignedImageUrl } from "@/hooks/use-signed-image-url"
 import { formatDate } from "@/lib/utils"
 import { UserBookLibrary } from "@/types/api"
 import humanizeDuration from "humanize-duration"
-import localforage from "localforage"
-import { BookOpenCheck, Cloud, HardDrive } from "lucide-react"
+import { BookOpenCheck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
 
 interface BookCardProps {
     book: UserBookLibrary
@@ -72,8 +70,6 @@ function isEpubProgressObject(progress: any): progress is { globalProgress: { cu
 }
 
 export function BookCard({ book }: BookCardProps) {
-    const [isLocallyAvailable, setIsLocallyAvailable] = useState(false)
-
     let coverUrl
     if (book.book_metadata.cover_url) {
         const { url } = useSignedImageUrl(book.book_metadata.cover_url, 3600)
@@ -84,19 +80,6 @@ export function BookCard({ book }: BookCardProps) {
         coverUrl =
             book.book_metadata.format === "PDF" ? "/default_pdf_cover.png" : "/placeholder.svg"
     }
-
-    // Check if the book is available in local storage
-    useEffect(() => {
-        const checkLocalAvailability = async () => {
-            const isLocal = book.book_metadata.file_url === null
-            if (isLocal) {
-                const keys = await localforage.keys()
-                setIsLocallyAvailable(keys.includes(book.id))
-            }
-        }
-
-        checkLocalAvailability()
-    }, [book.id, book.book_metadata.file_url])
 
     // Calculate progress based on book type
     const progress =
@@ -117,31 +100,18 @@ export function BookCard({ book }: BookCardProps) {
             ? `${Math.ceil((book.book_metadata.num_pages || 0) - (book.pdf_current_page || 0))} pages`
             : estimateReadingTime(remainingNumChars, 250)
 
-    // Determine card style based on local availability
-    const isLocal = book.book_metadata.file_url === null
-    const cardStyle =
-        isLocal && !isLocallyAvailable
-            ? "opacity-50 hover:opacity-70"
-            : "hover:shadow-md"
-
     const bookCardContent = (
-        <Card
-            className={`h-full flex flex-col overflow-hidden transition-all duration-300 ${cardStyle}`}
-        >
-            <div className="relative aspect-square pt-[60%] bg-muted overflow-hidden">
-                <Image
-                    src={coverUrl}
-                    alt={`Cover for ${book.book_metadata.title}`}
-                    fill
-                    className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
+        <Card className="transition-all duration-300 hover:shadow-md">
+            <div className="relative">
+                <div className="aspect-[3/4] w-full relative rounded-t-lg overflow-hidden bg-muted">
+                    <Image
+                        src={coverUrl}
+                        alt={`Cover of ${book.book_metadata.title}`}
+                        fill
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    />
+                </div>
             </div>
-
-            <Progress
-                value={Math.round(progress * 100)}
-                className="h-1 w-full rounded-none bg-gray-200 dark:bg-sidebar"
-                indicatorClassName="bg-linear-to-r from-secondary to-primary transition-all duration-300 ease-in-out"
-            />
 
             <CardContent className="flex-1 p-4">
                 <div className="flex justify-between items-start">
@@ -153,9 +123,7 @@ export function BookCard({ book }: BookCardProps) {
                             {book.book_metadata.author}
                         </p>
                     </div>
-                    {(!isLocal || isLocallyAvailable) && (
-                        <BookActions book={book} />
-                    )}
+                    <BookActions book={book} />
                 </div>
 
                 {book.book_metadata.description && (
@@ -169,47 +137,38 @@ export function BookCard({ book }: BookCardProps) {
                         variant="outline"
                         className="text-xs flex items-center gap-1"
                     >
-                        {book.book_metadata.file_url === null ? (
-                            <>
-                                <HardDrive className="h-3 w-3" />
-                                {isLocallyAvailable
-                                    ? "Local"
-                                    : "Not on this device"}
-                            </>
-                        ) : (
-                            <>
-                                <Cloud className="h-3 w-3" />
-                                Cloud
-                            </>
-                        )}
+                        <BookOpenCheck className="h-3 w-3" />
+                        {book.book_metadata.format}
                     </Badge>
                 </div>
 
-                <div className="mt-4 flex justify-between items-center text-xs text-muted-foreground">
-                    <span>
-                        Added{" "}
-                        {formatDate(book.date_added)}
-                    </span>
-                    <span>
-                        {estReadingTimeLeft ? (
-                            <span>
-                                {roundToOneDecimal((1 - progress) * 100)}% left
-                            </span>
-                        ) : (
-                            <div className="flex gap-2 items-center">
-                                <BookOpenCheck className="w-4 h-4" />
-                                <span>Complete</span>
-                            </div>
-                        )}
-                    </span>
+                <div className="mt-4 space-y-2">
+                    <div className="flex justify-between items-center text-sm text-muted-foreground">
+                        <span>Progress</span>
+                        <span>{Math.round(progress * 100)}%</span>
+                    </div>
+                    <Progress value={Math.round(progress * 100)} className="h-2" />
+                </div>
+
+                <div className="mt-2 text-xs text-muted-foreground text-center">
+                    {progress < 1 ? (
+                        <>
+                            {estReadingTimeLeft}{" "}
+                            {book.book_metadata.format === "PDF" ? "remaining" : "left"}
+                        </>
+                    ) : (
+                        "Completed"
+                    )}
+                </div>
+
+                <div className="mt-3 text-xs text-muted-foreground">
+                    Added {formatDate(book.date_added)}
                 </div>
             </CardContent>
         </Card>
     )
 
-    return isLocal && !isLocallyAvailable ? (
-        <div className="block group">{bookCardContent}</div>
-    ) : (
+    return (
         <Link href={`/library/${book.id}`} className="block group">
             {bookCardContent}
         </Link>

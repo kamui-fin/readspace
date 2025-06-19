@@ -39,7 +39,7 @@ class BookMetadata(Base):
     author = Column(Text)
     description = Column(Text)
     cover_url = Column(Text)
-    file_url = Column(Text)
+    file_url = Column(Text, nullable=False)
     format = Column(Enum(BookFormat), nullable=False)
     num_pages = Column(Integer)
     file_size_bytes = Column(BigInteger)

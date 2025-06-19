@@ -9,7 +9,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url
 ).toString()
 
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
 import {
     FileList,
     FileListAction,
@@ -24,14 +25,12 @@ import {
     FileListName,
     FileListSize,
 } from "@/components/ui/file-list"
-import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import { BookOpen, LoaderCircle, X } from "lucide-react"
 import { type PDFDocumentProxy } from "pdfjs-dist"
-import { useCallback, useId } from "react"
+import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
-import { Card } from "../ui/card"
 
 if (typeof Promise.withResolvers === "undefined") {
     if (window)
@@ -216,19 +215,13 @@ export const DragDropBook = ({
     selectedFile,
     onRemoveFile,
     user,
-    isLocalStorage,
-    setIsLocalStorage,
 }: {
     isUploading: boolean
     onFileSelect: (file: File | null) => void
     selectedFile: File | null
     onRemoveFile: () => void
     user: User | null
-    isLocalStorage: boolean
-    setIsLocalStorage: (value: boolean) => void
 }) => {
-    const localStorageId = useId()
-
     const onDrop = useCallback(
         async (acceptedFiles: File[]) => {
             const file = acceptedFiles[0]
@@ -321,23 +314,6 @@ export const DragDropBook = ({
                     </div>
                 </Card>
             )}
-            <div className="flex items-start gap-2">
-                <Checkbox
-                    id={localStorageId}
-                    checked={isLocalStorage}
-                    onCheckedChange={setIsLocalStorage}
-                    aria-describedby={`${localStorageId}-description`}
-                />
-                <div className="grid grow gap-2">
-                    <Label htmlFor={localStorageId}>Store locally only</Label>
-                    <p
-                        id={`${localStorageId}-description`}
-                        className="text-muted-foreground text-xs"
-                    >
-                        Store only on this device
-                    </p>
-                </div>
-            </div>
         </div>
     )
 }

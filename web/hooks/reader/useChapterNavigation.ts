@@ -2,7 +2,6 @@ import { ApiClient } from "@/lib/api/client"
 import { useReaderStore } from "@/stores/reader"
 import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
-import { saveLocalEpubProgress } from "../../lib/reader/bookstore"
 
 export default function useChapterNavigation() {
     const {
@@ -52,20 +51,11 @@ export default function useChapterNavigation() {
                     },
                 }
 
-                // Check if the book is local or cloud-based
-                if (bookMeta.file_url === null) {
-                    // Local book - use localforage
-                    saveLocalEpubProgress(progressData, bookMeta.id).catch(
-                        (err) =>
-                            console.error("Failed to save local progress:", err)
-                    )
-                } else {
-                    // Cloud book - use React Query mutation
-                    updateProgressMutation.mutate({
-                        bookId: bookMeta.library_id || bookMeta.id,
-                        progress: progressData,
-                    })
-                }
+                // Save progress to API
+                updateProgressMutation.mutate({
+                    bookId: bookMeta.library_id || bookMeta.id,
+                    progress: progressData,
+                })
 
                 setProgressPercentage(0)
                 setCharsReadInChapter(0)

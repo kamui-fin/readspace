@@ -868,10 +868,10 @@ export const PdfHighlighter = ({
 
     return (
         <div>
-            <div className="flex">
+            <div className="flex rounded-t-xl ">
                 <div ref={headerRef} className="flex-1 w-full">
                     <Header
-                        classAttributes={`sticky top-0 z-2 bg-background border-b shadow-sm transition-all duration-200 ${isScrollingUp || showHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"} ${open ? "w-full" : "w-full"}`}
+                        classAttributes={`rounded-t-xl sticky top-0 z-2 bg-background border-b shadow-sm transition-all duration-200 ${isScrollingUp || showHeader ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"} ${open ? "w-full" : "w-full"}`}
                         breadcrumbItems={
                             isMobile
                                 ? []
@@ -906,7 +906,7 @@ export const PdfHighlighter = ({
                         onPointerUp={handleMouseUp}
                         style={style}
                     >
-                        <div className="pdfViewer" />
+                        <div className="pdfViewer rounded-t-xl" />
                         <style>
                             {`
                                     .textLayer ::selection {

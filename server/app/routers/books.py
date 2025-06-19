@@ -71,7 +71,7 @@ async def update_book_metadata(
     await db.refresh(db_obj)
     return db_obj
 
-@router.delete("/metadata/{metadata_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/metadata/{metadata_id}")
 async def delete_book_metadata(
     metadata_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -113,7 +113,8 @@ async def delete_book_metadata(
     logger.info("Successfully deleted book metadata (and cascaded library entries)", metadata_id=metadata_id, user_id=current_user.sub)
 
     return {
-        "ok": True
+        "ok": True,
+        "message": "Book metadata deleted successfully"
     }
 
 @router.get("/", response_model=List[UserBookLibraryResponse])

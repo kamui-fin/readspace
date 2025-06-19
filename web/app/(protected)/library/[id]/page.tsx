@@ -92,7 +92,7 @@ export default async function BookReaderPage({ params }: PageProps) {
     }
 
     const isPdf = bookViewProps.format === "PDF"
-    const fetchedHighlights = await ApiClient.get<Highlight[]>(`/highlights/book/${resolvedParams.id}`)
+    const fetchedHighlights = await ApiClient.get<Highlight[]>(`/api/highlights/book/${resolvedParams.id}`)
 
     let highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map((h): EpubHighlight | PdfHighlight => {
         if (isPdf) {

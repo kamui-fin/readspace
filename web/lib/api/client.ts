@@ -132,9 +132,9 @@ export class ApiClient {
 
     // Book endpoints
     static books = {
-        getUserBooks: () => this.get("/books"),
+        getUserBooks: () => this.get("/api/books/"),
         getBook: (id: string) => this.get(`/api/books/${id}`),
-        createBook: (data: any) => this.post("/books", data),
+        createBook: (data: any) => this.post("/api/books/", data),
         updateBook: (id: string, data: any) => this.put(`/api/books/${id}`, data),
         deleteBook: (id: string) => this.delete(`/api/books/${id}`),
     }

@@ -133,7 +133,7 @@ export type Database = {
           epub_chapter_char_counts: number[] | null
           epub_page_char_counts: number[] | null
           file_size_bytes: number | null
-          file_url: string | null
+          file_url: string
           format: Database["public"]["Enums"]["bookformat"]
           id: string
           num_pages: number | null
@@ -148,7 +148,7 @@ export type Database = {
           epub_chapter_char_counts?: number[] | null
           epub_page_char_counts?: number[] | null
           file_size_bytes?: number | null
-          file_url?: string | null
+          file_url: string
           format: Database["public"]["Enums"]["bookformat"]
           id: string
           num_pages?: number | null
@@ -163,7 +163,7 @@ export type Database = {
           epub_chapter_char_counts?: number[] | null
           epub_page_char_counts?: number[] | null
           file_size_bytes?: number | null
-          file_url?: string | null
+          file_url?: string
           format?: Database["public"]["Enums"]["bookformat"]
           id?: string
           num_pages?: number | null

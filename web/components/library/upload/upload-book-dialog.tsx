@@ -35,7 +35,6 @@ export default function UploadBookDialog() {
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadedBookId, setUploadedBookId] = useState<string>("")
-    const [isLocalStorage, setIsLocalStorage] = useState(false)
 
     const { user } = useCurrentUser()
     const router = useRouter()
@@ -59,7 +58,6 @@ export default function UploadBookDialog() {
             const { bookId } = await uploadBook.mutateAsync({
                 file: selectedFile,
                 user,
-                isLocalStorage,
                 metadata,
                 charCounts,
             })
@@ -120,8 +118,6 @@ export default function UploadBookDialog() {
                         selectedFile={selectedFile}
                         onRemoveFile={() => setSelectedFile(null)}
                         user={user}
-                        isLocalStorage={isLocalStorage}
-                        setIsLocalStorage={setIsLocalStorage}
                     />
                 </div>
                 <div className="flex justify-end gap-2">

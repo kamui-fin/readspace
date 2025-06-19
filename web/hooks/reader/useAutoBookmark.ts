@@ -4,7 +4,6 @@ import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect } from "react"
 import { useDebouncedCallback } from "use-debounce"
 import { useShallow } from "zustand/react/shallow"
-import { saveLocalEpubProgress } from "../../lib/reader/bookstore"
 import {
     generateElementSelector,
     getTopVisibleElement,
@@ -51,30 +50,23 @@ export default function useAutoBookmark() {
     const debouncedOnScroll = useDebouncedCallback(() => {
         const elm = getTopVisibleElement()
         if (!elm) return
-        if (progressPercentage === 100) {
-            const currentChapterIdx = getCurrentChapterIdx()
-            const charCounts = bookMeta?.epub_chapter_char_counts
 
-            if (
-                charCounts &&
-                currentChapterIdx >= 0 &&
-                currentChapterIdx < charCounts.length
-            ) {
-                const charsInCurrentChapter = charCounts[currentChapterIdx]
-                setCharsReadInChapter(charsInCurrentChapter)
-            } else {
-                console.warn(
-                    "Could not determine character count for completed chapter",
-                    { currentChapterIdx, charCountsAvailable: !!charCounts }
-                )
-                const charAttr = elm.getAttribute("data-char-count") ?? "0"
-                setCharsReadInChapter(parseInt(charAttr))
-            }
-        } else {
-            const charAttr = elm.getAttribute("data-char-count") ?? "0"
-            setCharsReadInChapter(parseInt(charAttr))
-        }
         const sel = generateElementSelector(elm)
+        if (!sel) return
+
+        // Get character count from element
+        const charAttr = elm.getAttribute("data-char-count") ?? "0"
+        setCharsReadInChapter(parseInt(charAttr))
+
+        // Calculate progress percentage on scroll
+        const rect = elm.getBoundingClientRect()
+        const windowHeight = window.innerHeight
+        const scrollPercent = Math.min(
+            100,
+            Math.max(0, (windowHeight - rect.top) / windowHeight) * 100
+        )
+        setProgressPercentage(scrollPercent)
+
         if (sel && bookMeta) {
             const progressData = {
                 loc: currentLocation,
@@ -85,19 +77,11 @@ export default function useAutoBookmark() {
                 },
             }
 
-            // Check if the book is local or cloud-based
-            if (bookMeta.file_url === null) {
-                // Local book - use localforage
-                saveLocalEpubProgress(progressData, bookMeta.id).catch((err) =>
-                    console.error("Failed to save local progress:", err)
-                )
-            } else {
-                // Cloud book - use React Query mutation
-                updateProgressMutation.mutate({
-                    bookId: bookMeta.library_id || bookMeta.id,
-                    progress: progressData,
-                })
-            }
+            // Save progress to API
+            updateProgressMutation.mutate({
+                bookId: bookMeta.library_id || bookMeta.id,
+                progress: progressData,
+            })
         }
     }, 250)
 
@@ -144,19 +128,11 @@ export default function useAutoBookmark() {
                 },
             }
 
-            // Check if the book is local or cloud-based
-            if (bookMeta.file_url === null) {
-                // Local book - use localforage
-                saveLocalEpubProgress(progressData, bookMeta.id).catch((err) =>
-                    console.error("Failed to save local progress:", err)
-                )
-            } else {
-                // Cloud book - use React Query mutation
-                updateProgressMutation.mutate({
-                    bookId: bookMeta.library_id || bookMeta.id,
-                    progress: progressData,
-                })
-            }
+            // Save progress to API
+            updateProgressMutation.mutate({
+                bookId: bookMeta.library_id || bookMeta.id,
+                progress: progressData,
+            })
 
             setProgressPercentage(0)
             setCharsReadInChapter(0)

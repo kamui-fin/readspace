@@ -13,11 +13,19 @@ class BookMetadataBase(BaseModel):
     description: str = ""
     cover_url: Optional[str] = None
     format: str  # "PDF" or "EPUB"
-    file_url: Optional[str] = None
+    file_url: str
     file_size_bytes: Optional[int] = None
     num_pages: Optional[int] = None
     pdf_toc: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None  # Allow both dict and list
     epub_chapter_char_counts: Optional[List[int]] = None
+    epub_page_char_counts: Optional[List[int]] = None
+
+    @field_validator("format")
+    @classmethod
+    def validate_format(cls, v: str) -> str:
+        if v not in ["PDF", "EPUB"]:
+            raise ValueError("Format must be either 'PDF' or 'EPUB'")
+        return v
 
 
 class BookMetadataCreate(BookMetadataBase):

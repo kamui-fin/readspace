@@ -16,7 +16,6 @@ import { PdfHighlighter } from "@/components/reader/pdf-highlight/pdf-highlights
 
 import { Loading } from "@/components/reader/reader-content"
 import { ApiClient } from "@/lib/api/client"
-import { saveLocalPdfProgress } from "@/lib/reader/bookstore"
 import { useMutation } from "@tanstack/react-query"
 import { pdfjs } from "react-pdf"
 
@@ -114,19 +113,19 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     })
 
     const addHighlightMutation = useMutation({
-        mutationFn: (data: any) => ApiClient.post("/highlights", data),
+        mutationFn: (data: any) => ApiClient.post("/api/highlights/", data),
         onError: (err: Error) => console.error("Failed to add highlight:", err),
     })
 
     const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) => ApiClient.delete(`/highlights/text/${encodeURIComponent(text)}`),
+        mutationFn: (text: string) => ApiClient.delete(`/api/highlights/text/${encodeURIComponent(text)}`),
         onError: (err: Error) =>
             console.error("Failed to delete highlight:", err),
     })
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(`/highlights/text/${encodeURIComponent(text)}/note`, { note }),
+            ApiClient.put(`/api/highlights/text/${encodeURIComponent(text)}/note`, { note }),
         onError: (err: Error) =>
             console.error("Failed to add annotation:", err),
     })
@@ -212,39 +211,33 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         currentPageRef.current = pageLeftOff;
         useReaderStore.getState().setCurrentPage(pageLeftOff);
 
-        if (bookMeta.file_url === null) {
-            // Local book - save to localforage
-            console.log("Saving progress locally for book ID:", bookMeta.id);
-            saveLocalPdfProgress(pageLeftOff, bookMeta.id);
+        // Save progress to API
+        let libraryIdToUse: string | null | undefined = bookMeta.library_id;
+
+        if (!libraryIdToUse) {
+            const pathParts = window.location.pathname.split('/');
+            // Assuming URL structure like /reader/pdf/{library_id}
+            // Adjust index if your URL structure is different
+            if (pathParts.length >= 3 && pathParts[pathParts.length - 2] === 'pdf') {
+                libraryIdToUse = pathParts[pathParts.length - 1];
+                console.log("Extracted library_id from URL:", libraryIdToUse);
+            }
+        }
+
+        // CRITICAL: Only proceed if we have a valid libraryIdToUse
+        // DO NOT fall back to bookMeta.id for cloud saves.
+        if (libraryIdToUse) {
+            console.log("Saving progress to API for library ID:", libraryIdToUse);
+            updateProgressMutation.mutate({
+                bookId: libraryIdToUse, // This is UserBookLibrary.id
+                page: pageLeftOff,
+            });
         } else {
-            // Cloud book - save to API
-            let libraryIdToUse: string | null | undefined = bookMeta.library_id;
-
-            if (!libraryIdToUse) {
-                const pathParts = window.location.pathname.split('/');
-                // Assuming URL structure like /reader/pdf/{library_id}
-                // Adjust index if your URL structure is different
-                if (pathParts.length >= 3 && pathParts[pathParts.length - 2] === 'pdf') {
-                    libraryIdToUse = pathParts[pathParts.length - 1];
-                    console.log("Extracted library_id from URL:", libraryIdToUse);
-                }
-            }
-
-            // CRITICAL: Only proceed if we have a valid libraryIdToUse
-            // DO NOT fall back to bookMeta.id for cloud saves.
-            if (libraryIdToUse) {
-                console.log("Saving progress to API for library ID:", libraryIdToUse);
-                updateProgressMutation.mutate({
-                    bookId: libraryIdToUse, // This is UserBookLibrary.id
-                    page: pageLeftOff,
-                });
-            } else {
-                console.warn(
-                    "Could not determine library_id for cloud book. Progress not saved to API.",
-                    "bookMeta.library_id:", bookMeta.library_id,
-                    "pathname:", window.location.pathname
-                );
-            }
+            console.warn(
+                "Could not determine library_id for cloud book. Progress not saved to API.",
+                "bookMeta.library_id:", bookMeta.library_id,
+                "pathname:", window.location.pathname
+            );
         }
 
         // Also update the bookMeta prop directly if it's being used for current page reference by UI
@@ -335,26 +328,14 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             // Save when component unmounts (SPA navigation)
             if (!isSavingRef.current) {
                 const pageLeftOff = useReaderStore.getState().currentPage
-                // Save progress based on book type
-                if (bookMeta.file_url === null) {
-                    // Local book - use localforage
-                    saveLocalPdfProgress(pageLeftOff, bookMeta.id).catch(
-                        (err) =>
-                            console.error(
-                                "Failed to save local PDF progress:",
-                                err
-                            )
-                    )
-                } else {
-                    // Cloud book - use server action
-                    const pathParts = window.location.pathname.split('/');
-                    const libraryIdFromUrl = pathParts.length > 2 ? pathParts[pathParts.length - 1] : null;
-                    const libraryId = libraryIdFromUrl || bookMeta.library_id || bookMeta.id;
-                    updateProgressMutation.mutate({
-                        bookId: libraryId,
-                        page: pageLeftOff,
-                    })
-                }
+                // Save progress to API
+                const pathParts = window.location.pathname.split('/');
+                const libraryIdFromUrl = pathParts.length > 2 ? pathParts[pathParts.length - 1] : null;
+                const libraryId = libraryIdFromUrl || bookMeta.library_id || bookMeta.id;
+                updateProgressMutation.mutate({
+                    bookId: libraryId,
+                    page: pageLeftOff,
+                })
             }
         }
     }, [bookMeta.id, viewerReady, isLoading])

@@ -5,11 +5,9 @@ import { Progress } from "@/components/ui/progress"
 import { useSignedImageUrl } from "@/hooks/use-signed-image-url"
 import { formatDate } from "@/lib/utils"
 import { UserBookLibrary } from "@/types/api"
-import localforage from "localforage"
-import { BookOpenCheck, Cloud, HardDrive } from "lucide-react"
+import { BookOpenCheck } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
-import { useEffect, useState } from "react"
 import { estimateReadingTime } from "./book-card"
 import humanizeDuration from "humanize-duration"
 
@@ -39,7 +37,6 @@ function isEpubProgressObject(progress: any): progress is { globalProgress: { cu
 }
 
 export function BookCardList({ book }: BookCardListProps) {
-    const [isLocallyAvailable, setIsLocallyAvailable] = useState(true)
     let coverUrl
     if (book.book_metadata.cover_url) {
         const { url } = useSignedImageUrl(book.book_metadata.cover_url, 3600)
@@ -48,19 +45,6 @@ export function BookCardList({ book }: BookCardListProps) {
         coverUrl =
             book.book_metadata.format === "PDF" ? "/default_pdf_cover.png" : "/placeholder.svg"
     }
-
-    // Check if the book is available in local storage
-    useEffect(() => {
-        const checkLocalAvailability = async () => {
-            const isLocal = book.book_metadata.file_url === null
-            if (isLocal) {
-                const keys = await localforage.keys()
-                setIsLocallyAvailable(keys.includes(book.id))
-            }
-        }
-
-        checkLocalAvailability()
-    }, [book.id, book.book_metadata.file_url])
 
     // Calculate progress based on book type
     const progress =
@@ -81,15 +65,8 @@ export function BookCardList({ book }: BookCardListProps) {
             ? `${Math.ceil((book.book_metadata.num_pages || 0) - (book.pdf_current_page || 0))} pages`
             : estimateReadingTime(remainingNumChars, 250)
 
-    // Determine card style based on local availability
-    const isLocal = book.book_metadata.file_url === null
-    const cardStyle =
-        isLocal && !isLocallyAvailable
-            ? "opacity-50 hover:opacity-70"
-            : "hover:shadow-md"
-
     const CardContent = (
-        <Card className={`transition-all duration-300 ${cardStyle}`}>
+        <Card className="transition-all duration-300 hover:shadow-md">
             <div className="p-2 sm:p-4 flex gap-2 sm:gap-4">
                 <div className="relative w-[60px] h-[90px] sm:w-[80px] sm:h-[120px] rounded shrink-0 bg-muted overflow-hidden">
                     <Image
@@ -101,59 +78,27 @@ export function BookCardList({ book }: BookCardListProps) {
                 </div>
 
                 <div className="flex-1 flex flex-col min-w-0">
-                    <div className="flex justify-between items-start">
-                        <div className="min-w-0 pr-2">
-                            <h3 className="font-semibold text-base sm:text-lg truncate">
+                    <div className="flex justify-between items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-sm sm:text-base line-clamp-1">
                                 {book.book_metadata.title}
                             </h3>
-                            <div className="flex flex-wrap items-center text-xs sm:text-sm text-muted-foreground mt-1 space-x-2">
-                                <span className="truncate max-w-[150px] sm:max-w-none">
-                                    {book.book_metadata.author}
-                                </span>
-                                <span className="w-1 h-1 rounded-full bg-muted-foreground hidden sm:block"></span>
-                                {estReadingTimeLeft ? (
-                                    <span className="hidden sm:inline">
-                                        {estReadingTimeLeft} left
-                                    </span>
-                                ) : (
-                                    <div className="flex gap-1 sm:gap-2 items-center">
-                                        <BookOpenCheck className="w-3 h-3 sm:w-4 sm:h-4" />
-                                        <span>Complete</span>
-                                    </div>
-                                )}
-                            </div>
+                            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-1">
+                                {book.book_metadata.author}
+                            </p>
+
                             <div className="flex mt-1 sm:mt-2">
                                 <Badge
                                     variant="outline"
                                     className="text-[10px] sm:text-xs flex items-center gap-1 px-1 sm:px-2 py-0 sm:py-0.5"
                                 >
-                                    {book.book_metadata.file_url === null ? (
-                                        <>
-                                            <HardDrive className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                            <span className="hidden xs:inline">
-                                                {isLocallyAvailable
-                                                    ? "Local"
-                                                    : "Not on this device"}
-                                            </span>
-                                            <span className="xs:hidden">
-                                                {isLocallyAvailable
-                                                    ? "Local"
-                                                    : "N/A"}
-                                            </span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Cloud className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
-                                            <span>Cloud</span>
-                                        </>
-                                    )}
+                                    <BookOpenCheck className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                                    <span>{book.book_metadata.format}</span>
                                 </Badge>
                             </div>
                         </div>
                         <div className="shrink-0">
-                            {(!isLocal || isLocallyAvailable) && (
-                                <BookActions book={book} />
-                            )}
+                            <BookActions book={book} />
                         </div>
                     </div>
 
@@ -183,9 +128,7 @@ export function BookCardList({ book }: BookCardListProps) {
         </Card>
     )
 
-    return isLocal && !isLocallyAvailable ? (
-        <div className="block group">{CardContent}</div>
-    ) : (
+    return (
         <Link href={`/library/${book.id}`} className="block group">
             {CardContent}
         </Link>

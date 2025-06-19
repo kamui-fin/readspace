@@ -30,8 +30,6 @@ export interface DragDropBookProps {
     selectedFile: File | null
     onRemoveFile: () => void
     user: User | null
-    isLocalStorage: boolean
-    setIsLocalStorage: (value: boolean) => void
 }
 
 export interface ProcessedFileMetadata {

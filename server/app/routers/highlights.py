@@ -96,26 +96,30 @@ async def update_highlight(
     return updated_highlight
 
 
-@router.delete("/{highlight_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{highlight_id}")
 async def delete_highlight(
     highlight_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
-) -> None:
+):
     """Delete a highlight."""
     success = await highlight_repo.delete(highlight_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
         )
+    return {
+        "ok": True,
+        "message": "Highlight deleted successfully"
+    }
 
 
-@router.delete("/text/{text}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/text/{text}")
 async def delete_highlights_by_text(
     text: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
-) -> None:
+):
     """Delete highlights by text content."""
     success = await highlight_repo.delete_by_text(db, text)
     if not success:
@@ -123,6 +127,10 @@ async def delete_highlights_by_text(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No highlights found with the given text",
         )
+    return {
+        "ok": True,
+        "message": "Highlights deleted successfully"
+    }
 
 
 @router.put("/{highlight_id}/note", response_model=HighlightResponse)

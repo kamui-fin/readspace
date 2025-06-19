@@ -1,9 +1,6 @@
 import {
     cacheBook,
     getEpubFromCache,
-    getLocalEpubProgress,
-    getLocalPdfProgress,
-    initializeBookProgressStorage,
 } from "@/lib/reader/bookstore"
 import { getFileFromSupabase } from "@/lib/supabase/storage"
 import { BookViewProps, HighlightState } from "@/types/library"
@@ -192,7 +189,6 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
             console.log("Fetching book with initial meta (BookViewProps):", initialBookMeta)
             const bookId = initialBookMeta.id
             const bookType = initialBookMeta.format === "EPUB" ? "EPUB" : "PDF"
-            const isLocalBook = initialBookMeta.file_url === null
 
             let currentBookLibraryItem = { ...initialBookMeta }
 
@@ -201,7 +197,7 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
             try {
                 let buffer = await getEpubFromCache(bookId)
 
-                if (!buffer && !isLocalBook && currentBookLibraryItem.file_url) {
+                if (!buffer && currentBookLibraryItem.file_url) {
                     const { data, success, error, message } =
                         await getFileFromSupabase(currentBookLibraryItem.file_url)
 
@@ -224,48 +220,12 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                 }
 
                 if (!buffer) {
-                    console.error(
-                        isLocalBook
-                            ? "Local book not found in cache:"
-                            : "Book not available in storage:",
-                        bookId
-                    )
+                    console.error("Book not available in storage:", bookId)
                     set({ isLoading: false })
                     toast.error(
-                        isLocalBook
-                            ? "Local book not found - This book is stored locally but could not be found in your browser storage."
-                            : "Book not available - The book could not be loaded. Please try again later."
+                        "Book not available - The book could not be loaded. Please try again later."
                     )
                     return
-                }
-
-                if (isLocalBook) {
-                    await initializeBookProgressStorage(bookId, bookType)
-
-                    if (bookType === "EPUB") {
-                        const localProgress = await getLocalEpubProgress(bookId)
-                        if (localProgress) {
-                            if (typeof localProgress === 'string') {
-                                currentBookLibraryItem.epub_progress = {
-                                    loc: localProgress,
-                                    globalProgress: { current: 0, total: 0 }
-                                };
-                            } else if (typeof localProgress === 'object' && localProgress !== null && 'loc' in localProgress) {
-                                currentBookLibraryItem.epub_progress = {
-                                    loc: (localProgress as any).loc,
-                                    globalProgress: (localProgress as any).globalProgress || { current: 0, total: 0 }
-                                };
-                            } else {
-                                currentBookLibraryItem.epub_progress = null;
-                                console.warn("Unsupported local EPUB progress format:", localProgress);
-                            }
-                        }
-                    } else {
-                        const localPage = await getLocalPdfProgress(bookId)
-                        if (localPage !== null) {
-                            currentBookLibraryItem.pdf_current_page = localPage
-                        }
-                    }
                 }
 
                 if (bookType === "EPUB") {
