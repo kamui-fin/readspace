@@ -90,14 +90,17 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
     cd ..
     ```
 
-3.  **Launch Readspace Application**
+> [!NOTE]
+> Use [this](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys) to generate the **ANON_KEY** and **SERVICE_ROLE_KEY** from a **JWT_SECRET**
+
+4.  **Launch Readspace Application**
 
     From the root of the `readspace` directory, use Docker Compose to bring up the main Readspace application services. This will connect to your local Supabase backend.
 
     ```bash
     docker compose --env-file supabase/.env up -d
     ```
-4.  **Access Your Instance**
+5.  **Access Your Instance**
 
     Once all services are running, your Readspace instance should be accessible in your web browser.
 

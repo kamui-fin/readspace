@@ -1,0 +1,29 @@
+{
+	"extends": "expo/tsconfig.base",
+	"compilerOptions": {
+		"strict": true,
+		"paths": {
+			"@/*": ["./*"],
+			"@app/*": ["./src/app/*"],
+			"@components/*": ["./src/components/*"],
+			"@constants/*": ["./src/constants/*"],
+			"@context/*": ["./src/context/*"],
+			"@hooks/*": ["./src/hooks/*"],
+			"@lib/*": ["./src/lib/*"],
+			"@providers/*": ["./src/providers/*"],
+			"@src/*": ["./src/*"]
+		}
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.tsx",
+		"src/types/**/*.ts",
+		"expo-router/metro.config.js",
+		"metro.config.js",
+		"jest.config.js",
+		".expo/types/**/*.ts",
+		"expo-env.d.ts",
+		"nativewind-env.d.ts"
+	],
+	"exclude": ["node_modules"]
+}
