@@ -44,9 +44,9 @@ const Header: React.FC<HeaderProps> = ({
 }) => {
     return (
         <header
-            className={`${classAttributes} flex h-12 max-w-full shrink-0 items-center justify-between gap-2 transition-all pr-2`}
+            className={`${classAttributes} relative z-30 flex h-12 max-w-full shrink-0 items-center justify-between gap-2 bg-background/100 pr-2 transition-all supports-[backdrop-filter]:bg-background/100`}
         >
-            <div className="flex items-center gap-2 pl-4 flex-1 min-w-0">
+            <div className="flex flex-1 items-center gap-2 min-w-0 pl-4">
                 <SidebarLeftTrigger className="-ml-1" />
                 {breadcrumbItems.length > 0 && (
                     <Separator orientation="vertical" className="h-4" />
@@ -88,7 +88,7 @@ const Header: React.FC<HeaderProps> = ({
                     </BreadcrumbList>
                 </Breadcrumb>
             </div>
-            <div className="pl-3 flex gap-4 items-center">
+            <div className="flex items-center gap-4 pl-3">
                 {rightContent}
                 {children}
             </div>

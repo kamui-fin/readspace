@@ -8,6 +8,7 @@ import {
     SidebarFooter,
     SidebarHeader,
     SidebarLeft,
+    SidebarLeftMenuButton,
     SidebarMenu,
     SidebarMenuItem,
     useSidebarLeft
@@ -111,23 +112,33 @@ export function AppSidebar({
         <>
             <SidebarLeft
                 variant="inset"
+                collapsible="offcanvas"
                 {...props}
                 className={cn(props.className, { hidden: !user })}
-                collapsible="icon"
             >
                 <SidebarHeader>
                     <SidebarMenu>
-                        <SidebarMenuItem className="flex gap-2 items-center p-2 pl-0 pt-0">
-                            <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                                <Image
-                                    src="/readspace.svg"
-                                    width={30}
-                                    height={30}
-                                    alt=""
-                                    className="rounded"
-                                />
-                            </div>
-                            <h1 className="truncate font-logo text-xl font-medium tracking-normal">Readspace</h1>
+                        <SidebarMenuItem>
+                            <SidebarLeftMenuButton
+                                asChild
+                                className="data-[slot=sidebar-menu-button]:!p-1.5"
+                            >
+                                <a href="#" onClick={(e) => {
+                                    e.preventDefault()
+                                    toggleSidebar()
+                                }}>
+                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
+                                        <Image
+                                            src="/readspace.svg"
+                                            width={30}
+                                            height={30}
+                                            alt=""
+                                            className="rounded"
+                                        />
+                                    </div>
+                                    <span className="truncate font-logo text-xl font-medium tracking-normal">Readspace</span>
+                                </a>
+                            </SidebarLeftMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarHeader>

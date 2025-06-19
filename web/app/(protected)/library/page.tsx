@@ -7,7 +7,7 @@ import { UserBookLibrary } from "@/types/api"
 import { redirect } from "next/navigation"
 
 export const metadata = {
-    title: "Library | ReadSpace",
+    title: "Library | Readspace",
     description: "Your personal library of books",
 }
 

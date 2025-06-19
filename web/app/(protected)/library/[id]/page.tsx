@@ -44,19 +44,19 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
         if (!bookMetaData) {
             return {
-                title: "Book Not Found | ReadSpace",
+                title: "Book Not Found | Readspace",
                 description: "The requested book could not be found",
             }
         }
 
         return {
-            title: `${bookMetaData.title} | ReadSpace`,
+            title: `${bookMetaData.title} | Readspace`,
             description: bookMetaData.description ||
                 `Reading ${bookMetaData.title} by ${bookMetaData.author || "Unknown Author"}`,
         }
     } catch (error) {
         return {
-            title: "Book Not Found | ReadSpace",
+            title: "Book Not Found | Readspace",
             description: "The requested book could not be found",
         }
     }

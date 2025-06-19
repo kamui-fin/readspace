@@ -58,14 +58,14 @@ export default function useAutoBookmark() {
         const charAttr = elm.getAttribute("data-char-count") ?? "0"
         setCharsReadInChapter(parseInt(charAttr))
 
-        // Calculate progress percentage on scroll
-        const rect = elm.getBoundingClientRect()
-        const windowHeight = window.innerHeight
-        const scrollPercent = Math.min(
-            100,
-            Math.max(0, (windowHeight - rect.top) / windowHeight) * 100
-        )
-        setProgressPercentage(scrollPercent)
+        // Calculate progress percentage based on character position in the book
+        const totalChars = getTotalCharsInBook()
+        const cumulativeChars = getCumulativeCharsRead()
+        
+        if (totalChars > 0) {
+            const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+            setProgressPercentage(progressValue)
+        }
 
         if (sel && bookMeta) {
             const progressData = {
@@ -86,20 +86,14 @@ export default function useAutoBookmark() {
     }, 250)
 
     const calcReaderProgress = useDebouncedCallback(() => {
-        const container = document.getElementById("epub-container")
-        if (!container) return
-        const rect = container.getBoundingClientRect()
-        const containerTop = rect.top + window.scrollY
-        const containerHeight = rect.height
-        if (containerHeight <= window.innerHeight) {
-            setProgressPercentage(100)
-            return
+        // Calculate progress based on character position in the book, not scroll position
+        const totalChars = getTotalCharsInBook()
+        const cumulativeChars = getCumulativeCharsRead()
+        
+        if (totalChars > 0) {
+            const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+            setProgressPercentage(progressValue)
         }
-        const scrollPos = window.scrollY - containerTop
-        const distance = containerHeight - window.innerHeight
-        let progressValue = (scrollPos / distance) * 100
-        progressValue = Math.max(0, Math.min(progressValue, 100))
-        setProgressPercentage(progressValue)
     }, 20)
 
     const restorePoint = (point: EpubLocation) => {
@@ -134,7 +128,16 @@ export default function useAutoBookmark() {
                 progress: progressData,
             })
 
-            setProgressPercentage(0)
+            // Calculate initial progress based on character position
+            const totalChars = getTotalCharsInBook()
+            const cumulativeChars = getCumulativeCharsRead()
+            
+            if (totalChars > 0) {
+                const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+                setProgressPercentage(progressValue)
+            } else {
+                setProgressPercentage(0)
+            }
             setCharsReadInChapter(0)
         } else {
             const scrollElement = document.querySelector(
@@ -155,12 +158,11 @@ export default function useAutoBookmark() {
         restoreScroll()
 
         window.addEventListener("scroll", debouncedOnScroll)
-        window.addEventListener("scroll", calcReaderProgress)
+        // Remove the conflicting calcReaderProgress from scroll events
         return () => {
             window.removeEventListener("scroll", debouncedOnScroll)
-            window.removeEventListener("scroll", calcReaderProgress)
         }
-    }, [chapterHTML, debouncedOnScroll, calcReaderProgress, restoreScroll])
+    }, [chapterHTML, debouncedOnScroll, restoreScroll])
 
     return { restorePoint }
 }

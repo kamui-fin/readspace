@@ -6,6 +6,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useSidebarLeft } from "@/components/ui/sidebar"
 import { useReaderStore } from "@/stores/reader"
 import { useEffect, useRef, useState } from "react"
 import useHighlight from "../../hooks/reader/use-highlight"
@@ -47,6 +48,8 @@ export default function HighlightPopover({
 }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [showNoteForm, setShowNoteForm] = useState(false)
+
+    const { state: sidebarState } = useSidebarLeft()
 
     const { getPageProgress, highlights, currentPage } = useReaderStore(
         useShallow((state) => ({
@@ -135,13 +138,16 @@ export default function HighlightPopover({
     const spaceBelow = viewportHeight - rect.bottom
     const popoverHeight = 40 // Approximate height of the popover
 
+    // Calculate left offset based on sidebar state
+    const sidebarOffset = sidebarState === "expanded" ? -270 : 0 // 3rem = 48px
+
     const style = {
         position: "absolute",
         top:
             spaceAbove > popoverHeight
                 ? `${window.scrollY + rect.top - 10}px`
                 : `${window.scrollY + rect.bottom + 10}px`,
-        left: `${window.scrollX + rect.left + rect.width / 2}px`,
+        left: `${window.scrollX + rect.left + rect.width / 2 + sidebarOffset}px`,
         transform:
             spaceAbove > popoverHeight
                 ? "translate(-50%, -100%)"
