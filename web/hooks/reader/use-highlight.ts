@@ -1,6 +1,10 @@
 import { Json } from "@/database.types"
 import { ApiClient } from "@/lib/api/client"
-import { deserializeRange, serializeRange, scrollToRange } from "@/lib/reader/range-serialize"
+import {
+    deserializeRange,
+    serializeRange,
+    scrollToRange,
+} from "@/lib/reader/range-serialize"
 import { getTocItemForSection } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
 import { useMutation } from "@tanstack/react-query"
@@ -53,18 +57,26 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
 
     const addHighlightMutation = useMutation({
         mutationFn: async (data: any) => {
-            console.log("Creating highlight with data:", data, "Current bookMeta:", bookMeta);
+            console.log(
+                "Creating highlight with data:",
+                data,
+                "Current bookMeta:",
+                bookMeta
+            )
 
             if (bookMeta?.library_id) {
-                data.user_book_lib_id = bookMeta.library_id;
-                console.log("Using library_id from bookMeta:", bookMeta.library_id);
+                data.user_book_lib_id = bookMeta.library_id
+                console.log(
+                    "Using library_id from bookMeta:",
+                    bookMeta.library_id
+                )
             } else {
                 // This case should not happen if bookMeta is correctly populated.
                 // The server requires user_book_lib_id for all highlights.
                 console.warn(
                     "Attempting to create highlight without a readily available library_id in bookMeta.",
                     "This might lead to issues if user_book_lib_id is strictly required by the backend."
-                );
+                )
             }
 
             // Defensive check: Ensure user_book_lib_id is set before POSTing
@@ -72,25 +84,29 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             if (!data.user_book_lib_id) {
                 // If user_book_lib_id is still not found, we should not proceed with the API call
                 // as it will likely fail or associate the highlight incorrectly.
-                const errorMsg = "user_book_lib_id is missing. Cannot create highlight.";
-                console.error(errorMsg, data);
+                const errorMsg =
+                    "user_book_lib_id is missing. Cannot create highlight."
+                console.error(errorMsg, data)
                 // Optionally, throw an error to stop the mutation and provide feedback
-                throw new Error(errorMsg);
+                throw new Error(errorMsg)
             }
 
-            return ApiClient.post("/api/highlights/", data);
+            return ApiClient.post("/api/highlights/", data)
         },
         onError: (err: Error) => {
-            console.error("Failed to add highlight mutation:", err);
+            console.error("Failed to add highlight mutation:", err)
             // Potentially add user-facing error message here
         },
         onSuccess: (response) => {
-            console.log("Highlight created successfully:", response);
-        }
+            console.log("Highlight created successfully:", response)
+        },
     })
 
     const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) => ApiClient.delete(`/api/highlights/text/${encodeURIComponent(text)}`),
+        mutationFn: (text: string) =>
+            ApiClient.delete(
+                `/api/highlights/text/${encodeURIComponent(text)}`
+            ),
         onError: (err: Error) =>
             console.error("Failed to delete highlight:", err),
     })
@@ -171,9 +187,12 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             html_range: serialized as unknown as Json,
             pdf_rect_position: null,
         } as unknown as EpubHighlight
-        const highlightForStore = { highlight: newHighlightForClientState, removeFn }
+        const highlightForStore = {
+            highlight: newHighlightForClientState,
+            removeFn,
+        }
         insertHighlight(highlightForStore)
-        
+
         // Also add to allHighlights for the sidebar
         insertAllHighlight(highlightForStore)
 
@@ -192,31 +211,36 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             chapter_href: section.href,
             chapter_title: chapterTitle?.label.trim(),
             page: getPageProgress().current, // Added this field
-            pdf_rect_position: null // Explicitly null for EPUB highlights, as per HighlightBase
-        };
+            pdf_rect_position: null, // Explicitly null for EPUB highlights, as per HighlightBase
+        }
 
-        addHighlightMutation.mutate(payloadForServer);
+        addHighlightMutation.mutate(payloadForServer)
     }
 
     const handleRemoveHighlight = () => {
         if (!highlightedText) return
 
         const toRemove = highlights.filter(
-            (h) => (h.highlight as EpubHighlight).original_text === highlightedText
+            (h) =>
+                (h.highlight as EpubHighlight).original_text === highlightedText
         )
         toRemove.forEach((h) => h.removeFn())
 
         setHighlights(
             highlights.filter(
-                (hl) => (hl.highlight as EpubHighlight).original_text !== highlightedText
+                (hl) =>
+                    (hl.highlight as EpubHighlight).original_text !==
+                    highlightedText
             )
         )
-        
+
         // Also remove from allHighlights
         const { allHighlights } = useReaderStore.getState()
         setAllHighlights(
             allHighlights.filter(
-                (hl) => (hl.highlight as EpubHighlight).original_text !== highlightedText
+                (hl) =>
+                    (hl.highlight as EpubHighlight).original_text !==
+                    highlightedText
             )
         )
 
@@ -238,14 +262,14 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         if (epubDocRef == null) return
         // re-apply saved highlights
         console.log("re-applying saved highlights")
-        
+
         // Set all highlights for the sidebar (no filtering)
         const allHighlightsForStore = savedHighlights.map((highlight) => ({
             highlight,
-            removeFn: () => {} // Placeholder function since highlights in sidebar don't need removal
+            removeFn: () => {}, // Placeholder function since highlights in sidebar don't need removal
         }))
         setAllHighlights(allHighlightsForStore)
-        
+
         // Set current chapter highlights (filtered) for rendering in the text
         const loaded = savedHighlights
             .filter(
@@ -264,7 +288,9 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                     { class: `highlight-${highlight.color}` },
                     (elm) => {
                         rangeRef.current = elm
-                        setHighlightedText((highlight as EpubHighlight).original_text)
+                        setHighlightedText(
+                            (highlight as EpubHighlight).original_text
+                        )
                         setIsPopupOpen(true)
                     }
                 )
@@ -279,7 +305,10 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         if (epubDocRef && pendingHighlightScroll && chapterHTML) {
             // Small delay to ensure the DOM is fully rendered
             setTimeout(() => {
-                const range = deserializeRange(pendingHighlightScroll, epubDocRef)
+                const range = deserializeRange(
+                    pendingHighlightScroll,
+                    epubDocRef
+                )
                 if (range) {
                     scrollToRange(range)
                     // Clear the pending scroll
@@ -287,7 +316,12 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                 }
             }, 100)
         }
-    }, [epubDocRef, pendingHighlightScroll, chapterHTML, setPendingHighlightScroll])
+    }, [
+        epubDocRef,
+        pendingHighlightScroll,
+        chapterHTML,
+        setPendingHighlightScroll,
+    ])
 
     return {
         isPopupOpen,

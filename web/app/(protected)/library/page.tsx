@@ -16,11 +16,7 @@ interface LibraryErrorProps {
 }
 
 function LibraryError({ message }: LibraryErrorProps) {
-    return (
-        <div className="text-center text-red-500">
-            {message}
-        </div>
-    )
+    return <div className="text-center text-red-500">{message}</div>
 }
 
 interface LibraryLayoutProps {
@@ -30,7 +26,9 @@ interface LibraryLayoutProps {
 function LibraryLayout({ children }: LibraryLayoutProps) {
     return (
         <div className="flex flex-col min-h-screen">
-            <Header breadcrumbItems={[{ href: "/library", label: "Book Library" }]} />
+            <Header
+                breadcrumbItems={[{ href: "/library", label: "Book Library" }]}
+            />
             <main className="flex-1 container mx-auto px-8 py-8">
                 <div className="flex justify-between items-center mb-8">
                     <h1 className="text-3xl font-bold">Your Bookshelf</h1>
@@ -44,8 +42,9 @@ function LibraryLayout({ children }: LibraryLayoutProps) {
 
 export default async function Library() {
     try {
-        const books = await ApiClient.books.getUserBooks() as UserBookLibrary[]
-        
+        const books =
+            (await ApiClient.books.getUserBooks()) as UserBookLibrary[]
+
         return (
             <LibraryLayout>
                 <LibraryCatalog books={books} />

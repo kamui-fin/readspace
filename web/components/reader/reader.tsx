@@ -12,7 +12,7 @@ import { useShallow } from "zustand/react/shallow"
 import useChapterNavigation from "../../hooks/reader/use-chapter-navigation"
 import useAutoBookmark from "../../hooks/reader/useAutoBookmark"
 import { insertCharCountAttributes } from "../../lib/reader/reader-utils"
-import { BookMeta, EpubHighlight } from "../../types/library"
+import { BookViewProps, EpubHighlight } from "../../types/library"
 import HighlightPopover from "./highlight-popover"
 
 // Custom hook for scroll direction detection
@@ -42,7 +42,7 @@ const useScrollDirection = (
     return isScrollingUp
 }
 interface EpubReaderProps {
-    bookMeta: BookMeta
+    bookMeta: BookViewProps
     savedHighlights: EpubHighlight[]
 }
 
@@ -95,7 +95,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
             const prevChapterCharCount =
                 bookMeta.epub_chapter_char_counts
                     ?.slice(0, getCurrentChapterIdx())
-                    .reduce((sum, count) => sum + count, 0) || 0
+                    .reduce((sum: number, count: number) => sum + count, 0) || 0
 
             // Process the chapter content with our updated function
             const { html } = insertCharCountAttributes(
@@ -142,21 +142,21 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 breadcrumbItems={
                     isMobile
                         ? [
-                            {
-                                href: `/library/${bookId}`,
-                                label: bookMeta.title.slice(0, 15) + "...",
-                            },
-                        ]
+                              {
+                                  href: `/library/${bookId}`,
+                                  label: bookMeta.title.slice(0, 15) + "...",
+                              },
+                          ]
                         : [
-                            { href: "/library", label: "Home" },
-                            {
-                                href: `/library/${bookId}`,
-                                label:
-                                    bookMeta.title.length > 30
-                                        ? `${bookMeta.title.substring(0, 30)}...`
-                                        : bookMeta.title,
-                            },
-                        ]
+                              { href: "/library", label: "Home" },
+                              {
+                                  href: `/library/${bookId}`,
+                                  label:
+                                      bookMeta.title.length > 30
+                                          ? `${bookMeta.title.substring(0, 30)}...`
+                                          : bookMeta.title,
+                              },
+                          ]
                 }
             >
                 <ReaderNavActions />

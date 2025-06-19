@@ -11,7 +11,7 @@ import {
     SidebarLeftMenuButton,
     SidebarMenu,
     SidebarMenuItem,
-    useSidebarLeft
+    useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { createClient } from "@/lib/supabase/client"
@@ -123,10 +123,13 @@ export function AppSidebar({
                                 asChild
                                 className="data-[slot=sidebar-menu-button]:!p-1.5"
                             >
-                                <a href="#" onClick={(e) => {
-                                    e.preventDefault()
-                                    toggleSidebar()
-                                }}>
+                                <a
+                                    href="#"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        toggleSidebar()
+                                    }}
+                                >
                                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                                         <Image
                                             src="/readspace.svg"
@@ -136,7 +139,9 @@ export function AppSidebar({
                                             className="rounded"
                                         />
                                     </div>
-                                    <span className="truncate font-logo text-xl font-medium tracking-normal">Readspace</span>
+                                    <span className="truncate font-logo text-xl font-medium tracking-normal">
+                                        Readspace
+                                    </span>
                                 </a>
                             </SidebarLeftMenuButton>
                         </SidebarMenuItem>
@@ -144,7 +149,10 @@ export function AppSidebar({
                 </SidebarHeader>
                 <SidebarContent>
                     <NavMain />
-                    <NavSecondary items={data.navSecondary} className="mt-auto" />
+                    <NavSecondary
+                        items={data.navSecondary}
+                        className="mt-auto"
+                    />
                 </SidebarContent>
                 <SidebarFooter>
                     <NavUser

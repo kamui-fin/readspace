@@ -12,7 +12,6 @@ import type {
 } from "react-pdf-highlighter-extended"
 import { viewportPositionToScaled } from "./lib/coordinates"
 import screenshot from "./lib/screenshot"
-import { useReaderStore } from "@/stores/reader"
 
 type Coords = {
     x: number
@@ -132,12 +131,6 @@ export const MouseSelection = ({
     const [end, setEnd] = useState<Coords | null>(null)
     const [locked, setLocked] = useState(false)
     const rootRef = useRef<HTMLDivElement | null>(null)
-    const disableAreaSelection = useReaderStore(
-        (state) => state.disableAreaSelection
-    )
-    const isAreaSelectionActive = useReaderStore(
-        (state) => state.isAreaSelectionActive
-    )
 
     // Needed in order to grab the page info of a mouse selection
     const startTargetRef = useRef<HTMLElement | null>(null)

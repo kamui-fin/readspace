@@ -6,7 +6,7 @@ import {
     SidebarGroupContent,
     SidebarLeftMenuButton,
     SidebarMenu,
-    SidebarMenuItem
+    SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
 export function NavSecondary({

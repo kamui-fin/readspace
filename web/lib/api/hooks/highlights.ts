@@ -23,7 +23,10 @@ export function useCreateHighlight() {
     })
 }
 
-type UpdateHighlightVariables = { highlightId: string; highlight: HighlightUpdate }
+type UpdateHighlightVariables = {
+    highlightId: string
+    highlight: HighlightUpdate
+}
 export function useUpdateHighlight() {
     const queryClient = useQueryClient()
     return useMutation<Highlight, Error, UpdateHighlightVariables>({
@@ -65,11 +68,13 @@ export function useDeleteHighlightByText() {
 export function useUpdateHighlightNote() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ highlightId, note }: { highlightId: string; note: string }) =>
-            ApiClient.put(
-                `/api/highlights/${highlightId}/note`,
-                { note }
-            ),
+        mutationFn: ({
+            highlightId,
+            note,
+        }: {
+            highlightId: string
+            note: string
+        }) => ApiClient.put(`/api/highlights/${highlightId}/note`, { note }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },

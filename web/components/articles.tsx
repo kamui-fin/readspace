@@ -1,13 +1,40 @@
-'use client'
+"use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable"
+import {
+    ResizableHandle,
+    ResizablePanel,
+    ResizablePanelGroup,
+} from "@/components/ui/resizable"
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
-import { useArticle, useArticles, useBulkUpdateArticles, useFeeds, useReadLaterArticles, useRecentlyReadArticles, useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus, useUpdateArticle } from "@/lib/api/hooks/feeds"
+import {
+    useArticle,
+    useArticles,
+    useBulkUpdateArticles,
+    useFeeds,
+    useReadLaterArticles,
+    useRecentlyReadArticles,
+    useRefreshFeed,
+    useRefreshFolderFeeds,
+    useRefreshAllFeeds,
+    useRefreshStatus,
+    useUpdateArticle,
+} from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
-import { BookmarkIcon, CalendarIcon, CheckCircle2, Clock, Eye, EyeOff, Paperclip, RefreshCw, Globe, Check } from "lucide-react"
+import {
+    BookmarkIcon,
+    CalendarIcon,
+    CheckCircle2,
+    Clock,
+    Eye,
+    EyeOff,
+    Paperclip,
+    RefreshCw,
+    Globe,
+    Check,
+} from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -20,15 +47,15 @@ export function ArticlesView({
     libraryId,
     publishedSince,
     publishedUntil,
-    mode = 'allArticles'
+    mode = "allArticles",
 }: {
-    initialSidebarTitle?: string;
-    feedId?: string;
-    folderId?: string;
-    libraryId?: string;
-    publishedSince?: string;
-    publishedUntil?: string;
-    mode?: 'allArticles' | 'recentlyRead' | 'readLater';
+    initialSidebarTitle?: string
+    feedId?: string
+    folderId?: string
+    libraryId?: string
+    publishedSince?: string
+    publishedUntil?: string
+    mode?: "allArticles" | "recentlyRead" | "readLater"
 }) {
     const {
         initialSidebarTitle: viewInitialSidebarTitle,
@@ -37,22 +64,35 @@ export function ArticlesView({
         libraryId: viewLibraryId,
         publishedSince: viewPublishedSince,
         publishedUntil: viewPublishedUntil,
-        mode: viewMode = 'allArticles'
-    } = { initialSidebarTitle, feedId, folderId, libraryId, publishedSince, publishedUntil, mode };
-    const [page, setPage] = useState(1);
-    const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
-    const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-    const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null);
-    const [refreshType, setRefreshType] = useState<'folder' | 'all' | null>(null);
-    const router = useRouter();
-    const { data: allUserFeeds } = useFeeds();
+        mode: viewMode = "allArticles",
+    } = {
+        initialSidebarTitle,
+        feedId,
+        folderId,
+        libraryId,
+        publishedSince,
+        publishedUntil,
+        mode,
+    }
+    const [page, setPage] = useState(1)
+    const [selectedArticleId, setSelectedArticleId] = useState<string | null>(
+        null
+    )
+    const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+    const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null)
+    const [refreshType, setRefreshType] = useState<"folder" | "all" | null>(
+        null
+    )
+    const router = useRouter()
+    const { data: allUserFeeds } = useFeeds()
 
-    const isRecentlyReadMode = viewMode === 'recentlyRead';
-    const isReadLaterMode = viewMode === 'readLater';
-    const sidebarTitle =
-        isRecentlyReadMode ? "Recently Read" :
-            isReadLaterMode ? "Read Later" :
-                (viewInitialSidebarTitle || "All Articles");
+    const isRecentlyReadMode = viewMode === "recentlyRead"
+    const isReadLaterMode = viewMode === "readLater"
+    const sidebarTitle = isRecentlyReadMode
+        ? "Recently Read"
+        : isReadLaterMode
+          ? "Read Later"
+          : viewInitialSidebarTitle || "All Articles"
 
     const baseArticlesParams = {
         publishedSince: viewPublishedSince,
@@ -61,332 +101,409 @@ export function ArticlesView({
         size: 25,
         sortBy: "published_at",
         sortOrder: "desc",
-        isRead: showUnreadOnly ? false : undefined
-    };
+        isRead: showUnreadOnly ? false : undefined,
+    }
 
-    let queryKeyParams: any;
-    let articlesHook;
+    let queryKeyParams: any
+    let articlesHook
 
     if (isRecentlyReadMode) {
-        queryKeyParams = { page, size: 25 };
-        articlesHook = useRecentlyReadArticles;
+        queryKeyParams = { page, size: 25 }
+        articlesHook = useRecentlyReadArticles
     } else if (isReadLaterMode) {
-        queryKeyParams = { page, size: 25 };
-        articlesHook = useReadLaterArticles;
+        queryKeyParams = { page, size: 25 }
+        articlesHook = useReadLaterArticles
     } else {
         if (viewFolderId) {
             queryKeyParams = {
                 ...baseArticlesParams,
                 folderId: viewFolderId,
                 feedIds: undefined,
-            };
+            }
         } else if (viewFeedId) {
             queryKeyParams = {
                 ...baseArticlesParams,
                 feedIds: [viewFeedId],
                 folderId: undefined,
-            };
+            }
         } else {
             queryKeyParams = {
                 ...baseArticlesParams,
                 feedIds: undefined,
                 folderId: undefined,
-            };
+            }
         }
-        articlesHook = useArticles;
+        articlesHook = useArticles
     }
 
     const {
         data,
         isLoading: isArticlesLoading,
         isFetching,
-        refetch: refetchArticles
+        refetch: refetchArticles,
     } = articlesHook(queryKeyParams, {
         keepPreviousData: true,
         refetchOnMount: false,
-        refetchOnWindowFocus: false
-    });
+        refetchOnWindowFocus: false,
+    })
 
-    const articlesData: PaginatedResponse<Article> = data || { items: [], total: 0, page: 1, pages: 1, size: 25 };
-    const bulkUpdateArticles = useBulkUpdateArticles();
-    const refreshFeed = useRefreshFeed();
-    const refreshFolderFeeds = useRefreshFolderFeeds();
-    const refreshAllFeeds = useRefreshAllFeeds();
+    const articlesData: PaginatedResponse<Article> = data || {
+        items: [],
+        total: 0,
+        page: 1,
+        pages: 1,
+        size: 25,
+    }
+    const bulkUpdateArticles = useBulkUpdateArticles()
+    const refreshFeed = useRefreshFeed()
+    const refreshFolderFeeds = useRefreshFolderFeeds()
+    const refreshAllFeeds = useRefreshAllFeeds()
 
-    const { data: refreshStatus } = useRefreshStatus(refreshTaskId, !!refreshTaskId);
+    const { data: refreshStatus } = useRefreshStatus(
+        refreshTaskId,
+        !!refreshTaskId
+    )
 
-    const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(selectedArticleId || "");
-    const updateArticle = useUpdateArticle();
+    const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(
+        selectedArticleId || ""
+    )
+    const updateArticle = useUpdateArticle()
 
     useEffect(() => {
         if (articlesData.items.length > 0 && !selectedArticleId) {
-            setSelectedArticleId(articlesData.items[0].id);
+            setSelectedArticleId(articlesData.items[0].id)
         }
-    }, [articlesData, selectedArticleId]);
+    }, [articlesData, selectedArticleId])
 
     // Clear selected article if it's no longer in the articles list (e.g., removed from read later)
     useEffect(() => {
         if (selectedArticleId && articlesData.items.length > 0) {
-            const selectedArticleExists = articlesData.items.some(article => article.id === selectedArticleId);
+            const selectedArticleExists = articlesData.items.some(
+                (article) => article.id === selectedArticleId
+            )
             if (!selectedArticleExists) {
-                setSelectedArticleId(null);
+                setSelectedArticleId(null)
             }
         }
-    }, [selectedArticleId, articlesData.items]);
+    }, [selectedArticleId, articlesData.items])
 
     useEffect(() => {
         if (!isRecentlyReadMode && !isReadLaterMode) {
-            setPage(1);
-            setSelectedArticleId(null);
+            setPage(1)
+            setSelectedArticleId(null)
         }
-    }, [viewFeedId, viewFolderId, viewPublishedSince, viewPublishedUntil, isRecentlyReadMode, isReadLaterMode]);
+    }, [
+        viewFeedId,
+        viewFolderId,
+        viewPublishedSince,
+        viewPublishedUntil,
+        isRecentlyReadMode,
+        isReadLaterMode,
+    ])
 
     useEffect(() => {
         if (isRecentlyReadMode || isReadLaterMode) {
-            setPage(1);
+            setPage(1)
         }
-    }, [isRecentlyReadMode, isReadLaterMode]);
+    }, [isRecentlyReadMode, isReadLaterMode])
 
     // Handle refresh status updates
     useEffect(() => {
-        if (refreshStatus && typeof refreshStatus === 'object') {
-            const status = (refreshStatus as any).status;
-            if (status === 'completed') {
-                const result = (refreshStatus as any).result;
+        if (refreshStatus && typeof refreshStatus === "object") {
+            const status = (refreshStatus as any).status
+            if (status === "completed") {
+                const result = (refreshStatus as any).result
                 if (result) {
-                    let message = `Refresh completed! ${result.refreshed_count} feeds refreshed successfully`;
-                    
+                    let message = `Refresh completed! ${result.refreshed_count} feeds refreshed successfully`
+
                     if (result.failed_count > 0) {
-                        message += `, ${result.failed_count} failed`;
-                        
+                        message += `, ${result.failed_count} failed`
+
                         // Add error summary if available
                         if (result.error_summary) {
-                            const errorTypes = Object.entries(result.error_summary)
+                            const errorTypes = Object.entries(
+                                result.error_summary
+                            )
                                 .map(([type, count]: [string, any]) => {
                                     const typeLabels: Record<string, string> = {
-                                        timeout: 'timeouts',
-                                        not_found: '404s',
-                                        access_denied: 'access denied',
-                                        server_error: 'server errors',
-                                        parse_error: 'invalid feeds',
-                                        connection_error: 'connection issues',
-                                        data_error: 'data type errors',
-                                        other: 'other errors'
-                                    };
-                                    return `${count} ${typeLabels[type] || type}`;
+                                        timeout: "timeouts",
+                                        not_found: "404s",
+                                        access_denied: "access denied",
+                                        server_error: "server errors",
+                                        parse_error: "invalid feeds",
+                                        connection_error: "connection issues",
+                                        data_error: "data type errors",
+                                        other: "other errors",
+                                    }
+                                    return `${count} ${typeLabels[type] || type}`
                                 })
-                                .join(', ');
-                            message += ` (${errorTypes})`;
+                                .join(", ")
+                            message += ` (${errorTypes})`
                         }
                     }
-                    
-                    message += '.';
-                    
-                    toast.success(message, { 
-                        id: 'bulk-refresh',
-                        duration: result.failed_count > 0 ? 8000 : 4000 // Show longer if there were failures
-                    });
+
+                    message += "."
+
+                    toast.success(message, {
+                        id: "bulk-refresh",
+                        duration: result.failed_count > 0 ? 8000 : 4000, // Show longer if there were failures
+                    })
                 } else {
-                    toast.success('Refresh completed!', { id: 'bulk-refresh' });
+                    toast.success("Refresh completed!", { id: "bulk-refresh" })
                 }
-                setRefreshTaskId(null);
-                setRefreshType(null);
-                refetchArticles();
-            } else if (status === 'failed') {
-                toast.error('Refresh failed. Please try again.', { id: 'bulk-refresh' });
-                setRefreshTaskId(null);
-                setRefreshType(null);
-            } else if (status === 'in_progress') {
-                const progress = (refreshStatus as any).progress;
+                setRefreshTaskId(null)
+                setRefreshType(null)
+                refetchArticles()
+            } else if (status === "failed") {
+                toast.error("Refresh failed. Please try again.", {
+                    id: "bulk-refresh",
+                })
+                setRefreshTaskId(null)
+                setRefreshType(null)
+            } else if (status === "in_progress") {
+                const progress = (refreshStatus as any).progress
                 if (progress) {
-                    const refreshLabel = refreshType === 'folder' ? 'folder feeds' : 'feeds';
-                    let progressMessage = `Refreshing ${refreshLabel}: ${progress.completed}/${progress.total} completed`;
-                    
+                    const refreshLabel =
+                        refreshType === "folder" ? "folder feeds" : "feeds"
+                    let progressMessage = `Refreshing ${refreshLabel}: ${progress.completed}/${progress.total} completed`
+
                     if (progress.successful > 0 || progress.failed > 0) {
-                        progressMessage += ` (${progress.successful} successful`;
+                        progressMessage += ` (${progress.successful} successful`
                         if (progress.failed > 0) {
-                            progressMessage += `, ${progress.failed} failed`;
+                            progressMessage += `, ${progress.failed} failed`
                         }
-                        progressMessage += ')';
+                        progressMessage += ")"
                     }
-                    
-                    toast.loading(progressMessage, { 
-                        id: 'bulk-refresh',
-                        duration: 0
-                    });
+
+                    toast.loading(progressMessage, {
+                        id: "bulk-refresh",
+                        duration: 0,
+                    })
                 }
             }
         }
-    }, [refreshStatus, refreshType, refetchArticles]);
+    }, [refreshStatus, refreshType, refetchArticles])
 
     const groupedArticles = useMemo(() => {
         if (isRecentlyReadMode || articlesData.items.length === 0) {
-            return {};
+            return {}
         }
-        const groups: Record<string, { label: string, articles: Article[] }> = {};
+        const groups: Record<string, { label: string; articles: Article[] }> =
+            {}
         articlesData.items.forEach((article: Article) => {
-            if (!article.published_at) return;
-            const date = parseISO(article.published_at);
-            const today = new Date();
-            const yesterday = new Date();
-            yesterday.setDate(today.getDate() - 1);
-            let dateGroup: string;
-            let dateLabel: string;
+            if (!article.published_at) return
+            const date = parseISO(article.published_at)
+            const today = new Date()
+            const yesterday = new Date()
+            yesterday.setDate(today.getDate() - 1)
+            let dateGroup: string
+            let dateLabel: string
             if (date.toDateString() === today.toDateString()) {
-                dateGroup = "today";
-                dateLabel = "Today";
+                dateGroup = "today"
+                dateLabel = "Today"
             } else if (date.toDateString() === yesterday.toDateString()) {
-                dateGroup = "yesterday";
-                dateLabel = "Yesterday";
+                dateGroup = "yesterday"
+                dateLabel = "Yesterday"
             } else {
-                dateGroup = format(date, 'yyyy-MM-dd');
-                dateLabel = format(date, 'EEEE, MMMM d');
+                dateGroup = format(date, "yyyy-MM-dd")
+                dateLabel = format(date, "EEEE, MMMM d")
             }
             if (!groups[dateGroup]) {
                 groups[dateGroup] = {
                     label: dateLabel,
-                    articles: []
-                };
+                    articles: [],
+                }
             }
-            groups[dateGroup].articles.push(article);
-        });
-        return groups;
-    }, [articlesData, isRecentlyReadMode]);
+            groups[dateGroup].articles.push(article)
+        })
+        return groups
+    }, [articlesData, isRecentlyReadMode])
 
     const handleArticleClick = (articleId: string) => {
-        setSelectedArticleId(articleId);
-        const article = articlesData.items.find((a: Article) => a.id === articleId);
+        setSelectedArticleId(articleId)
+        const article = articlesData.items.find(
+            (a: Article) => a.id === articleId
+        )
         if (!isRecentlyReadMode && article && !article.is_read) {
             // Update the article in the UI optimistically
             const updatedArticles = articlesData.items.map((item: Article) =>
                 item.id === articleId ? { ...item, is_read: true } : item
-            );
+            )
 
             // Here we would ideally update the query cache optimistically
 
             // Then perform the actual update
             updateArticle.mutate({
                 articleId,
-                data: { is_read: true }
-            });
+                data: { is_read: true },
+            })
         }
-    };
+    }
 
     const handleRefresh = async () => {
         if (viewFeedId) {
             // Specific feed view: refresh this feed directly
-            refreshFeed.mutate({ feedId: viewFeedId, forceRefetch: true, silent: false });
+            refreshFeed.mutate({
+                feedId: viewFeedId,
+                forceRefetch: true,
+                silent: false,
+            })
         } else if (viewFolderId && allUserFeeds) {
             // Folder view: check if we should use bulk refresh
-            const feedsInFolder = allUserFeeds.filter(f => f.folder_id === viewFolderId);
+            const feedsInFolder = allUserFeeds.filter(
+                (f) => f.folder_id === viewFolderId
+            )
             if (feedsInFolder.length > 1) {
                 // Use bulk refresh for folders with many feeds
                 refreshFolderFeeds.mutate(viewFolderId, {
                     onSuccess: (data: any) => {
-                        setRefreshTaskId(data.task_id);
-                        setRefreshType('folder');
-                        toast.loading(`Refreshing ${feedsInFolder.length} feed(s) in folder...`, { 
-                            id: 'bulk-refresh',
-                            duration: 0 // Keep loading until we manually dismiss it
-                        });
-                    }
-                });
+                        setRefreshTaskId(data.task_id)
+                        setRefreshType("folder")
+                        toast.loading(
+                            `Refreshing ${feedsInFolder.length} feed(s) in folder...`,
+                            {
+                                id: "bulk-refresh",
+                                duration: 0, // Keep loading until we manually dismiss it
+                            }
+                        )
+                    },
+                })
             } else if (feedsInFolder.length > 0) {
                 // Use individual refresh for smaller folders
-                const toastId = 'individual-refresh';
-                toast.loading(`Refreshing ${feedsInFolder.length} feed(s) in folder...`, { id: toastId });
+                const toastId = "individual-refresh"
+                toast.loading(
+                    `Refreshing ${feedsInFolder.length} feed(s) in folder...`,
+                    { id: toastId }
+                )
                 try {
                     await Promise.all(
-                        feedsInFolder.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
-                    );
-                    toast.success(`Finished refreshing feeds in folder.`, { id: toastId });
+                        feedsInFolder.map((f) =>
+                            refreshFeed.mutateAsync({
+                                feedId: f.id,
+                                forceRefetch: true,
+                                silent: true,
+                            })
+                        )
+                    )
+                    toast.success(`Finished refreshing feeds in folder.`, {
+                        id: toastId,
+                    })
                 } catch (error) {
-                    toast.error("Some feeds in the folder might not have refreshed correctly.", { id: toastId });
-                    console.error("Error refreshing feeds in folder:", error);
+                    toast.error(
+                        "Some feeds in the folder might not have refreshed correctly.",
+                        { id: toastId }
+                    )
+                    console.error("Error refreshing feeds in folder:", error)
                 }
-                refetchArticles();
+                refetchArticles()
             } else {
-                toast("No feeds in this folder to refresh.");
-                refetchArticles();
+                toast("No feeds in this folder to refresh.")
+                refetchArticles()
             }
-        } else if (viewMode === 'allArticles' && allUserFeeds) {
+        } else if (viewMode === "allArticles" && allUserFeeds) {
             // "All Articles" view: check if we should use bulk refresh
             if (allUserFeeds.length > 10) {
                 // Use bulk refresh for many feeds
-                if (allUserFeeds.length > 50 && !window.confirm(`You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`)) {
-                    return;
+                if (
+                    allUserFeeds.length > 50 &&
+                    !window.confirm(
+                        `You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`
+                    )
+                ) {
+                    return
                 }
                 refreshAllFeeds.mutate(undefined, {
                     onSuccess: (data: any) => {
-                        setRefreshTaskId(data.task_id);
-                        setRefreshType('all');
-                        toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { 
-                            id: 'bulk-refresh',
-                            duration: 0 // Keep loading until we manually dismiss it
-                        });
-                    }
-                });
+                        setRefreshTaskId(data.task_id)
+                        setRefreshType("all")
+                        toast.loading(
+                            `Refreshing all ${allUserFeeds.length} feed(s)...`,
+                            {
+                                id: "bulk-refresh",
+                                duration: 0, // Keep loading until we manually dismiss it
+                            }
+                        )
+                    },
+                })
             } else {
                 // Use individual refresh for smaller numbers
-                const toastId = 'individual-refresh';
-                toast.loading(`Refreshing all ${allUserFeeds.length} feed(s)...`, { id: toastId });
+                const toastId = "individual-refresh"
+                toast.loading(
+                    `Refreshing all ${allUserFeeds.length} feed(s)...`,
+                    { id: toastId }
+                )
                 try {
                     await Promise.all(
-                        allUserFeeds.map(f => refreshFeed.mutateAsync({ feedId: f.id, forceRefetch: true, silent: true }))
-                    );
-                    toast.success(`Finished refreshing all feeds.`, { id: toastId });
+                        allUserFeeds.map((f) =>
+                            refreshFeed.mutateAsync({
+                                feedId: f.id,
+                                forceRefetch: true,
+                                silent: true,
+                            })
+                        )
+                    )
+                    toast.success(`Finished refreshing all feeds.`, {
+                        id: toastId,
+                    })
                 } catch (error) {
-                    toast.error("Some feeds might not have refreshed correctly.", { id: toastId });
-                    console.error("Error refreshing all feeds:", error);
+                    toast.error(
+                        "Some feeds might not have refreshed correctly.",
+                        { id: toastId }
+                    )
+                    console.error("Error refreshing all feeds:", error)
                 }
-                refetchArticles();
+                refetchArticles()
             }
         } else {
             // Read Later / Recently Read / Other views: Just refetch from DB
-            refetchArticles();
+            refetchArticles()
         }
-    };
+    }
 
     const handleMarkAllAsRead = () => {
         // Get all unread article IDs from the current view
         const unreadArticleIds = articlesData.items
-            .filter(article => !article.is_read)
-            .map(article => article.id);
+            .filter((article) => !article.is_read)
+            .map((article) => article.id)
 
-        if (unreadArticleIds.length === 0) return;
+        if (unreadArticleIds.length === 0) return
 
         // Update optimistically
-        const optimisticallyUpdatedArticles = articlesData.items.map(article =>
-            !article.is_read ? { ...article, is_read: true } : article
-        );
+        const optimisticallyUpdatedArticles = articlesData.items.map(
+            (article) =>
+                !article.is_read ? { ...article, is_read: true } : article
+        )
 
         // Update the cache optimistically
         const optimisticData = {
             ...articlesData,
-            items: optimisticallyUpdatedArticles
-        };
+            items: optimisticallyUpdatedArticles,
+        }
 
         // Update query cache with optimistic data
-        bulkUpdateArticles.mutate({
-            articleIds: unreadArticleIds,
-            action: "mark_as_read"
-        }, {
-            onSuccess: () => {
-                refetchArticles();
+        bulkUpdateArticles.mutate(
+            {
+                articleIds: unreadArticleIds,
+                action: "mark_as_read",
+            },
+            {
+                onSuccess: () => {
+                    refetchArticles()
+                },
             }
-        });
-    };
+        )
+    }
 
     const toggleShowUnreadOnly = () => {
-        setShowUnreadOnly(prev => !prev);
+        setShowUnreadOnly((prev) => !prev)
         // Reset to page 1 when toggling filter
-        setPage(1);
-    };
+        setPage(1)
+    }
 
     // Calculate unread count for the badge
     const unreadCount = useMemo(() => {
-        return articlesData.items.filter(article => !article.is_read).length;
-    }, [articlesData.items]);
+        return articlesData.items.filter((article) => !article.is_read).length
+    }, [articlesData.items])
 
     if (isArticlesLoading) {
         return (
@@ -397,7 +514,7 @@ export function ArticlesView({
                     <ArticleItemSkeleton />
                 </div>
             </div>
-        );
+        )
     }
 
     if (!isArticlesLoading && articlesData.items.length === 0) {
@@ -408,16 +525,23 @@ export function ArticlesView({
                         {showUnreadOnly
                             ? "No unread articles found matching your filters."
                             : isRecentlyReadMode
-                                ? "No recently read articles"
-                                : isReadLaterMode
-                                    ? "No articles in your Read Later list"
-                                    : "No articles found"}
+                              ? "No recently read articles"
+                              : isReadLaterMode
+                                ? "No articles in your Read Later list"
+                                : "No articles found"}
                     </p>
                     {/* Always show toggle if in a mode that supports it, or refresh otherwise */}
-                    {(!isRecentlyReadMode && !isReadLaterMode && (viewMode === 'allArticles' || viewFeedId || viewFolderId)) ? (
+                    {!isRecentlyReadMode &&
+                    !isReadLaterMode &&
+                    (viewMode === "allArticles" ||
+                        viewFeedId ||
+                        viewFolderId) ? (
                         <div className="flex flex-col items-center gap-2">
                             {showUnreadOnly && articlesData.total === 0 && (
-                                <Button variant="outline" onClick={toggleShowUnreadOnly}>
+                                <Button
+                                    variant="outline"
+                                    onClick={toggleShowUnreadOnly}
+                                >
                                     Show All Articles
                                 </Button>
                             )}
@@ -427,7 +551,10 @@ export function ArticlesView({
                             </Button>
                         </div>
                     ) : isRecentlyReadMode || isReadLaterMode ? (
-                        <Button variant="outline" onClick={() => router.push('/articles')}>
+                        <Button
+                            variant="outline"
+                            onClick={() => router.push("/articles")}
+                        >
                             Browse Articles
                         </Button>
                     ) : (
@@ -438,7 +565,7 @@ export function ArticlesView({
                     )}
                 </div>
             </div>
-        );
+        )
     }
 
     return (
@@ -448,13 +575,22 @@ export function ArticlesView({
                     <div className="flex h-full flex-col border-r">
                         <div className="flex h-14 items-center justify-between border-b px-4">
                             <div className="flex items-center space-x-2">
-                                <h2 className="font-semibold">{sidebarTitle}</h2>
-                                {!isRecentlyReadMode && !isReadLaterMode && unreadCount > 0 && (
-                                    <Badge variant="outline" className="min-w-3 px-1">{unreadCount}</Badge>
-                                )}
+                                <h2 className="font-semibold">
+                                    {sidebarTitle}
+                                </h2>
+                                {!isRecentlyReadMode &&
+                                    !isReadLaterMode &&
+                                    unreadCount > 0 && (
+                                        <Badge
+                                            variant="outline"
+                                            className="min-w-3 px-1"
+                                        >
+                                            {unreadCount}
+                                        </Badge>
+                                    )}
                             </div>
                             <div className="flex items-center gap-1">
-                                {(!isRecentlyReadMode && !isReadLaterMode) ? (
+                                {!isRecentlyReadMode && !isReadLaterMode ? (
                                     // Full controls for default article views (All, Folder, Feed)
                                     <>
                                         <Button
@@ -462,9 +598,17 @@ export function ArticlesView({
                                             size="icon"
                                             className="h-8 w-8"
                                             onClick={toggleShowUnreadOnly}
-                                            title={showUnreadOnly ? "Show all articles" : "Show unread only"}
+                                            title={
+                                                showUnreadOnly
+                                                    ? "Show all articles"
+                                                    : "Show unread only"
+                                            }
                                         >
-                                            {showUnreadOnly ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                                            {showUnreadOnly ? (
+                                                <Eye className="h-4 w-4" />
+                                            ) : (
+                                                <EyeOff className="h-4 w-4" />
+                                            )}
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -484,7 +628,9 @@ export function ArticlesView({
                                             title="Refresh"
                                             disabled={!!refreshTaskId}
                                         >
-                                            <RefreshCw className={`h-4 w-4 ${refreshTaskId ? 'animate-spin' : ''}`} />
+                                            <RefreshCw
+                                                className={`h-4 w-4 ${refreshTaskId ? "animate-spin" : ""}`}
+                                            />
                                         </Button>
                                     </>
                                 ) : (
@@ -497,59 +643,107 @@ export function ArticlesView({
                                         title="Refresh"
                                         disabled={!!refreshTaskId}
                                     >
-                                        <RefreshCw className={`h-4 w-4 ${refreshTaskId ? 'animate-spin' : ''}`} />
+                                        <RefreshCw
+                                            className={`h-4 w-4 ${refreshTaskId ? "animate-spin" : ""}`}
+                                        />
                                     </Button>
                                 )}
                             </div>
                         </div>
                         <div className="flex-1 overflow-y-auto">
                             <div className="flex flex-col">
-                                {isRecentlyReadMode || isReadLaterMode ? (
-                                    articlesData.items.map((article: Article, index: number) => (
-                                        <ArticleItem
-                                            key={article.id}
-                                            article={article}
-                                            isActive={article.id === selectedArticleId}
-                                            isLastInGroup={index === articlesData.items.length - 1}
-                                            onClick={() => handleArticleClick(article.id)}
-                                            isRecentlyReadMode={isRecentlyReadMode}
-                                            isReadLaterMode={isReadLaterMode}
-                                        />
-                                    ))
-                                ) : (
-                                    Object.entries(groupedArticles).map(([groupId, group]) => (
-                                        <div key={groupId}>
-                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
-                                                <div className="flex items-center gap-2">
-                                                    {group.label === "Today" || group.label === "Yesterday" ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                                                    ) : (
-                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                                    )}
-                                                    <span className="text-xs font-medium text-muted-foreground">{group.label}</span>
-                                                </div>
-                                            </div>
-                                            {group.articles.map((article: Article, index: number) => (
-                                                <ArticleItem
-                                                    key={article.id}
-                                                    article={article}
-                                                    isActive={article.id === selectedArticleId}
-                                                    isLastInGroup={index === group.articles.length - 1}
-                                                    onClick={() => handleArticleClick(article.id)}
-                                                />
-                                            ))}
-                                        </div>
-                                    ))
-                                )}
+                                {isRecentlyReadMode || isReadLaterMode
+                                    ? articlesData.items.map(
+                                          (article: Article, index: number) => (
+                                              <ArticleItem
+                                                  key={article.id}
+                                                  article={article}
+                                                  isActive={
+                                                      article.id ===
+                                                      selectedArticleId
+                                                  }
+                                                  isLastInGroup={
+                                                      index ===
+                                                      articlesData.items
+                                                          .length -
+                                                          1
+                                                  }
+                                                  onClick={() =>
+                                                      handleArticleClick(
+                                                          article.id
+                                                      )
+                                                  }
+                                                  isRecentlyReadMode={
+                                                      isRecentlyReadMode
+                                                  }
+                                                  isReadLaterMode={
+                                                      isReadLaterMode
+                                                  }
+                                              />
+                                          )
+                                      )
+                                    : Object.entries(groupedArticles).map(
+                                          ([groupId, group]) => (
+                                              <div key={groupId}>
+                                                  <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                      <div className="flex items-center gap-2">
+                                                          {group.label ===
+                                                              "Today" ||
+                                                          group.label ===
+                                                              "Yesterday" ? (
+                                                              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                          ) : (
+                                                              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                          )}
+                                                          <span className="text-xs font-medium text-muted-foreground">
+                                                              {group.label}
+                                                          </span>
+                                                      </div>
+                                                  </div>
+                                                  {group.articles.map(
+                                                      (
+                                                          article: Article,
+                                                          index: number
+                                                      ) => (
+                                                          <ArticleItem
+                                                              key={article.id}
+                                                              article={article}
+                                                              isActive={
+                                                                  article.id ===
+                                                                  selectedArticleId
+                                                              }
+                                                              isLastInGroup={
+                                                                  index ===
+                                                                  group.articles
+                                                                      .length -
+                                                                      1
+                                                              }
+                                                              onClick={() =>
+                                                                  handleArticleClick(
+                                                                      article.id
+                                                                  )
+                                                              }
+                                                          />
+                                                      )
+                                                  )}
+                                              </div>
+                                          )
+                                      )}
                                 {articlesData.page < articlesData.pages && (
                                     <div className="px-3 py-4 text-center">
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setPage(prevPage => prevPage + 1)}
+                                            onClick={() =>
+                                                setPage(
+                                                    (prevPage) => prevPage + 1
+                                                )
+                                            }
                                             disabled={isFetching}
                                         >
-                                            {isFetching ? "Loading..." : "Load More"}
+                                            {isFetching
+                                                ? "Loading..."
+                                                : "Load More"}
                                         </Button>
                                     </div>
                                 )}
@@ -567,12 +761,21 @@ export function ArticlesView({
                         )}
                         {!isArticleLoading && selectedArticle && (
                             <div className="p-6 md:p-10 h-full overflow-y-auto">
-                                <ArticleContentView article={selectedArticle} isRecentlyReadMode={isRecentlyReadMode} isReadLaterMode={isReadLaterMode} onArticleRemoved={() => setSelectedArticleId(null)} />
+                                <ArticleContentView
+                                    article={selectedArticle}
+                                    isRecentlyReadMode={isRecentlyReadMode}
+                                    isReadLaterMode={isReadLaterMode}
+                                    onArticleRemoved={() =>
+                                        setSelectedArticleId(null)
+                                    }
+                                />
                             </div>
                         )}
                         {!isArticleLoading && !selectedArticle && (
                             <div className="flex flex-1 items-center justify-center">
-                                <p className="text-muted-foreground">Select an article to read</p>
+                                <p className="text-muted-foreground">
+                                    Select an article to read
+                                </p>
                             </div>
                         )}
                     </div>
@@ -596,7 +799,7 @@ function ArticleItemSkeleton() {
             </div>
             <div className="h-16 w-16 bg-muted/30 rounded-md" />
         </div>
-    );
+    )
 }
 
 function ArticleContentSkeleton() {
@@ -621,144 +824,177 @@ function ArticleContentSkeleton() {
                 <div className="h-4 bg-muted/70 rounded w-4/6"></div>
             </div>
         </div>
-    );
+    )
 }
 
-function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode, onArticleRemoved }: {
-    article: Article,
-    isRecentlyReadMode?: boolean,
-    isReadLaterMode?: boolean,
+function ArticleContentView({
+    article,
+    isRecentlyReadMode,
+    isReadLaterMode,
+    onArticleRemoved,
+}: {
+    article: Article
+    isRecentlyReadMode?: boolean
+    isReadLaterMode?: boolean
     onArticleRemoved?: () => void
 }) {
-    const updateArticle = useUpdateArticle();
-    const { resolvedTheme } = useTheme();
-    const [optimisticReadLater, setOptimisticReadLater] = useState(article.is_read_later);
-    const contentRef = useRef<HTMLDivElement>(null);
-    const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read);
-    const [imageError, setImageError] = useState(false);
+    const updateArticle = useUpdateArticle()
+    const { resolvedTheme } = useTheme()
+    const [optimisticReadLater, setOptimisticReadLater] = useState(
+        article.is_read_later
+    )
+    const contentRef = useRef<HTMLDivElement>(null)
+    const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read)
+    const [imageError, setImageError] = useState(false)
 
     const handleToggleReadLater = () => {
-        const newReadLaterState = !optimisticReadLater;
-        setOptimisticReadLater(newReadLaterState);
+        const newReadLaterState = !optimisticReadLater
+        setOptimisticReadLater(newReadLaterState)
         updateArticle.mutate({
             articleId: article.id,
-            data: { is_read_later: newReadLaterState }
-        });
-    };
+            data: { is_read_later: newReadLaterState },
+        })
+    }
 
     const handleMarkAsRead = () => {
         // Mark as read and remove from read later
-        updateArticle.mutate({
-            articleId: article.id,
-            data: { is_read: true, is_read_later: false }
-        }, {
-            onSuccess: () => {
-                // If we're in read later mode, clear the selected article since it will be removed from the list
-                if (isReadLaterMode) {
-                    onArticleRemoved?.();
-                }
+        updateArticle.mutate(
+            {
+                articleId: article.id,
+                data: { is_read: true, is_read_later: false },
+            },
+            {
+                onSuccess: () => {
+                    // If we're in read later mode, clear the selected article since it will be removed from the list
+                    if (isReadLaterMode) {
+                        onArticleRemoved?.()
+                    }
+                },
             }
-        });
-    };
+        )
+    }
 
     useEffect(() => {
         // Update optimistic state when article changes
-        setOptimisticReadLater(article.is_read_later);
-    }, [article.is_read_later]);
+        setOptimisticReadLater(article.is_read_later)
+    }, [article.is_read_later])
 
     useEffect(() => {
-        if ((isRecentlyReadMode || isReadLaterMode) || !contentRef.current || hasMarkedRead) return;
-        const el = contentRef.current;
+        if (
+            isRecentlyReadMode ||
+            isReadLaterMode ||
+            !contentRef.current ||
+            hasMarkedRead
+        )
+            return
+        const el = contentRef.current
         const handleScroll = () => {
             if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
                 if (!hasMarkedRead) {
                     // Set optimistic UI update first
-                    setHasMarkedRead(true);
+                    setHasMarkedRead(true)
 
                     // Then perform the actual update
                     updateArticle.mutate({
                         articleId: article.id,
-                        data: { is_read: true }
-                    });
+                        data: { is_read: true },
+                    })
                 }
             }
-        };
-        el.addEventListener('scroll', handleScroll);
-        return () => el.removeEventListener('scroll', handleScroll);
-    }, [article.id, hasMarkedRead, updateArticle, isRecentlyReadMode, isReadLaterMode]);
+        }
+        el.addEventListener("scroll", handleScroll)
+        return () => el.removeEventListener("scroll", handleScroll)
+    }, [
+        article.id,
+        hasMarkedRead,
+        updateArticle,
+        isRecentlyReadMode,
+        isReadLaterMode,
+    ])
 
     // Handle scroll completion for read later mode
     useEffect(() => {
-        if (!isReadLaterMode || !contentRef.current || hasMarkedRead) return;
-        const el = contentRef.current;
+        if (!isReadLaterMode || !contentRef.current || hasMarkedRead) return
+        const el = contentRef.current
         const handleScroll = () => {
             if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
                 if (!hasMarkedRead) {
                     // Set optimistic UI update first
-                    setHasMarkedRead(true);
+                    setHasMarkedRead(true)
 
                     // Show toast asking about removal from read later
-                    toast((t) => (
-                        <div className="flex flex-col gap-2">
-                            <span>Article finished! What would you like to do?</span>
-                            <div className="flex gap-2">
-                                <Button
-                                    size="sm"
-                                    onClick={() => {
-                                        updateArticle.mutate({
-                                            articleId: article.id,
-                                            data: { is_read: true, is_read_later: false }
-                                        });
-                                        toast.dismiss(t.id);
-                                        onArticleRemoved?.();
-                                    }}
-                                >
-                                    Mark as Read
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => {
-                                        updateArticle.mutate({
-                                            articleId: article.id,
-                                            data: { is_read_later: false }
-                                        });
-                                        toast.dismiss(t.id);
-                                        onArticleRemoved?.();
-                                    }}
-                                >
-                                    Remove from Read Later
-                                </Button>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => toast.dismiss(t.id)}
-                                >
-                                    Keep
-                                </Button>
+                    toast(
+                        (t) => (
+                            <div className="flex flex-col gap-2">
+                                <span>
+                                    Article finished! What would you like to do?
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button
+                                        size="sm"
+                                        onClick={() => {
+                                            updateArticle.mutate({
+                                                articleId: article.id,
+                                                data: {
+                                                    is_read: true,
+                                                    is_read_later: false,
+                                                },
+                                            })
+                                            toast.dismiss(t.id)
+                                            onArticleRemoved?.()
+                                        }}
+                                    >
+                                        Mark as Read
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                            updateArticle.mutate({
+                                                articleId: article.id,
+                                                data: { is_read_later: false },
+                                            })
+                                            toast.dismiss(t.id)
+                                            onArticleRemoved?.()
+                                        }}
+                                    >
+                                        Remove from Read Later
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => toast.dismiss(t.id)}
+                                    >
+                                        Keep
+                                    </Button>
+                                </div>
                             </div>
-                        </div>
-                    ), { duration: 0 });
+                        ),
+                        { duration: 0 }
+                    )
                 }
             }
-        };
-        el.addEventListener('scroll', handleScroll);
-        return () => el.removeEventListener('scroll', handleScroll);
-    }, [article.id, hasMarkedRead, updateArticle, isReadLaterMode]);
+        }
+        el.addEventListener("scroll", handleScroll)
+        return () => el.removeEventListener("scroll", handleScroll)
+    }, [article.id, hasMarkedRead, updateArticle, isReadLaterMode])
 
-    const publishedAtString = article.published_at;
-    const readAtString = article.read_at;
+    const publishedAtString = article.published_at
+    const readAtString = article.read_at
 
     const publishedAtDisplay = publishedAtString
-        ? (isRecentlyReadMode && readAtString
+        ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
-            : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
-        : "Date unknown";
+            : formatDistanceToNow(parseISO(publishedAtString), {
+                  addSuffix: true,
+              })
+        : "Date unknown"
 
     // Extract priority for clipped articles
-    const priority = article.article_type === 'clipped' && article.priority
-        ? article.priority
-        : null;
+    const priority =
+        article.article_type === "clipped" && article.priority
+            ? article.priority
+            : null
 
     return (
         <article className="mx-auto max-w-4xl">
@@ -768,11 +1004,21 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode, onAr
             <div className="flex items-center justify-between mb-6 text-[10px]">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={article.feed?.image_url || article.image_url || "/placeholders/avatar.png"} />
-                        <AvatarFallback>{article.feed?.title?.substring(0, 2) || "N/A"}</AvatarFallback>
+                        <AvatarImage
+                            src={
+                                article.feed?.image_url ||
+                                article.image_url ||
+                                "/placeholders/avatar.png"
+                            }
+                        />
+                        <AvatarFallback>
+                            {article.feed?.title?.substring(0, 2) || "N/A"}
+                        </AvatarFallback>
                     </Avatar>
                     <span className="truncate max-w-[200px]">
-                        {article.author || article.feed?.title || "Unknown Source"}
+                        {article.author ||
+                            article.feed?.title ||
+                            "Unknown Source"}
                     </span>
                     <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
                         {publishedAtDisplay}
@@ -812,8 +1058,14 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode, onAr
                             className="h-6 w-6 p-0 rounded-full hover:bg-muted"
                             onClick={handleToggleReadLater}
                         >
-                            <BookmarkIcon className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`} />
-                            <span className="sr-only">{optimisticReadLater ? "Remove from read later" : "Save for later"}</span>
+                            <BookmarkIcon
+                                className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`}
+                            />
+                            <span className="sr-only">
+                                {optimisticReadLater
+                                    ? "Remove from read later"
+                                    : "Save for later"}
+                            </span>
                         </Button>
                     )}
                 </div>
@@ -847,22 +1099,22 @@ function ArticleContentView({ article, isRecentlyReadMode, isReadLaterMode, onAr
                           prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                         style={{
-                            fontFamily: 'var(--font-garamond-serif)',
-                            overflowWrap: 'break-word',
-                            wordWrap: 'break-word'
+                            fontFamily: "var(--font-garamond-serif)",
+                            overflowWrap: "break-word",
+                            wordWrap: "break-word",
                         }}
                     />
                 )}
             </div>
         </article>
-    );
+    )
 }
 
 const stripHTML = (html: string) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    return doc.body.textContent || '';
-};
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(html, "text/html")
+    return doc.body.textContent || ""
+}
 
 function ArticleItem({
     article,
@@ -870,46 +1122,53 @@ function ArticleItem({
     isLastInGroup = false,
     onClick,
     isRecentlyReadMode = false,
-    isReadLaterMode = false
+    isReadLaterMode = false,
 }: {
-    article: Article;
-    isActive?: boolean;
-    isLastInGroup?: boolean;
-    onClick: () => void;
-    isRecentlyReadMode?: boolean;
-    isReadLaterMode?: boolean;
+    article: Article
+    isActive?: boolean
+    isLastInGroup?: boolean
+    onClick: () => void
+    isRecentlyReadMode?: boolean
+    isReadLaterMode?: boolean
 }) {
-    const [feedImageError, setFeedImageError] = useState(false);
-    const [articleImageError, setArticleImageError] = useState(false);
-    
-    const publishedAtString = article.published_at;
-    const readAtString = article.read_at;
+    const [feedImageError, setFeedImageError] = useState(false)
+    const [articleImageError, setArticleImageError] = useState(false)
+
+    const publishedAtString = article.published_at
+    const readAtString = article.read_at
 
     const timeDisplay = publishedAtString
-        ? (isRecentlyReadMode && readAtString
+        ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
-            : formatDistanceToNow(parseISO(publishedAtString), { addSuffix: true }))
-        : "Date unknown";
+            : formatDistanceToNow(parseISO(publishedAtString), {
+                  addSuffix: true,
+              })
+        : "Date unknown"
 
     // Get priority color for clipped articles
     const getPriorityColor = (priority: string) => {
         switch (priority) {
-            case 'high': return 'text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-950 dark:border-red-800';
-            case 'medium': return 'text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800';
-            case 'low': return 'text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950 dark:border-green-800';
-            default: return 'text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-950 dark:border-gray-800';
+            case "high":
+                return "text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-950 dark:border-red-800"
+            case "medium":
+                return "text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800"
+            case "low":
+                return "text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950 dark:border-green-800"
+            default:
+                return "text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-950 dark:border-gray-800"
         }
-    };
+    }
 
     // Extract priority for clipped articles
-    const priority = article.article_type === 'clipped' && article.priority
-        ? article.priority
-        : null;
+    const priority =
+        article.article_type === "clipped" && article.priority
+            ? article.priority
+            : null
 
     return (
         <div
-            className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? 'border-b' : ''} 
-            ${!isActive ? 'hover:bg-muted/80 hover:border-l-accent' : ''}
+            className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? "border-b" : ""} 
+            ${!isActive ? "hover:bg-muted/80 hover:border-l-accent" : ""}
             active:bg-secondary/5
             transition-all duration-200 ease-out cursor-pointer 
             ${isActive ? "bg-secondary/5 border-l-2 border-l-secondary" : "border-l-2 border-l-transparent"}
@@ -920,10 +1179,14 @@ function ArticleItem({
                 <div className="flex-1 space-y-1.5 min-w-0">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
-                            {article.article_type === 'clipped' && priority && (
-                                <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority)}`}>
+                            {article.article_type === "clipped" && priority && (
+                                <div
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority)}`}
+                                >
                                     <Globe className="h-2.5 w-2.5" />
-                                    <span className="capitalize">{priority}</span>
+                                    <span className="capitalize">
+                                        {priority}
+                                    </span>
                                 </div>
                             )}
                             {article.feed?.image_url && !feedImageError ? (
@@ -945,18 +1208,28 @@ function ArticleItem({
                             {timeDisplay}
                         </span>
                     </div>
-                    <h3 className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}>{article.title}</h3>
+                    <h3
+                        className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}
+                    >
+                        {article.title}
+                    </h3>
                     {article.author && (
-                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">{article.author}</div>
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
+                            {article.author}
+                        </div>
                     )}
-                    {article.description && <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">{stripHTML(article.description)}</p>}
+                    {article.description && (
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">
+                            {stripHTML(article.description)}
+                        </p>
+                    )}
                 </div>
                 {article.image_url && !articleImageError && (
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors">
-                        <img 
-                            src={article.image_url} 
-                            alt={article.title || "Article image"} 
-                            className="h-full w-full object-cover" 
+                        <img
+                            src={article.image_url}
+                            alt={article.title || "Article image"}
+                            className="h-full w-full object-cover"
                             onError={() => setArticleImageError(true)}
                         />
                     </div>

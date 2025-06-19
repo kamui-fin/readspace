@@ -36,7 +36,9 @@ const HighlightedPopover = ({
     const formRef = useRef<HTMLDivElement>(null)
     const buttonRef = useRef<HTMLButtonElement>(null)
 
-    const highlightType = useReaderStore((state) => state.bookLibraryItem?.format)
+    const highlightType = useReaderStore(
+        (state) => state.bookLibraryItem?.format
+    )
 
     const onRemoveHighlight = () => {
         if (highlightType == "EPUB") {
@@ -113,10 +115,11 @@ const HighlightedPopover = ({
                     {showNoteForm && (
                         <div
                             ref={formRef}
-                            className={`absolute z-50 ${showAbove
-                                ? "bottom-[calc(100%+30px)]"
-                                : "top-[calc(100%+30px)]"
-                                } left-2 -translate-x-[20px] dark:bg-gray-800 p-4 rounded-md shadow-lg border bg-popover`}
+                            className={`absolute z-50 ${
+                                showAbove
+                                    ? "bottom-[calc(100%+30px)]"
+                                    : "top-[calc(100%+30px)]"
+                            } left-2 -translate-x-[20px] dark:bg-gray-800 p-4 rounded-md shadow-lg border bg-popover`}
                             style={{
                                 minWidth: "285px",
                             }}

@@ -66,14 +66,14 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
             position: selectionRef.current!.position,
             color: color,
             id: getNextId(),
-        };
+        }
 
         // Add library_id if available, which will be used to get user_book_lib_id
         if (bookMeta?.library_id) {
-            highlightData.library_id = bookMeta.library_id;
+            highlightData.library_id = bookMeta.library_id
         }
 
-        addHighlight(highlightData);
+        addHighlight(highlightData)
 
         removeGhostHighlight()
         setTip(null)

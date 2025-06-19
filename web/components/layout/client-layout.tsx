@@ -31,9 +31,7 @@ function ClientLayout({ children }: ClientLayoutProps) {
                     <SidebarRightProvider>{children}</SidebarRightProvider>
                 </SidebarLeftProvider>
             </ThemeProvider>
-            <Toaster
-                position="top-center"
-            />
+            <Toaster position="top-center" />
         </QueryClientProvider>
     )
 }

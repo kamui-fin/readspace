@@ -20,18 +20,24 @@ interface LibraryCatalogProps {
 }
 
 // Type guard to check if epub_progress has the expected structure
-function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+function isEpubProgressObject(
+    progress: any
+): progress is { globalProgress: { current: number; total: number } } {
     return (
         progress &&
-        typeof progress === 'object' &&
+        typeof progress === "object" &&
         progress.globalProgress &&
-        typeof progress.globalProgress === 'object' &&
-        typeof progress.globalProgress.current === 'number' &&
-        typeof progress.globalProgress.total === 'number'
+        typeof progress.globalProgress === "object" &&
+        typeof progress.globalProgress.current === "number" &&
+        typeof progress.globalProgress.total === "number"
     )
 }
 
-export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary[] }) {
+export function LibraryCatalog({
+    books: initialBooks,
+}: {
+    books: UserBookLibrary[]
+}) {
     const isMobile = useIsMobile()
     const [viewMode, setViewMode] = useState<"grid" | "list">(
         !isMobile ? "list" : "grid"
@@ -41,11 +47,13 @@ export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary
     const [sortBy, setSortBy] = useState("dateAdded")
 
     // Use React Query to keep books in sync with client-side mutations
-    const { data: books = initialBooks, isLoading: loading } = useQuery<UserBookLibrary[]>({
+    const { data: books = initialBooks, isLoading: loading } = useQuery<
+        UserBookLibrary[]
+    >({
         queryKey: [BOOKS_QUERY_KEY],
         queryFn: async () => {
-            const response = await ApiClient.books.getUserBooks();
-            return response as UserBookLibrary[];
+            const response = await ApiClient.books.getUserBooks()
+            return response as UserBookLibrary[]
         },
         initialData: initialBooks,
     })
@@ -64,13 +72,17 @@ export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary
         const progress =
             book.book_metadata.format === "PDF"
                 ? Math.round(
-                    ((book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)) * 100
-                )
+                      ((book.pdf_current_page || 0) /
+                          (book.book_metadata.num_pages || 1)) *
+                          100
+                  )
                 : Math.round(
-                    (isEpubProgressObject(book.epub_progress)
-                        ? (book.epub_progress.globalProgress.current / book.epub_progress.globalProgress.total) * 100
-                        : 0)
-                )
+                      isEpubProgressObject(book.epub_progress)
+                          ? (book.epub_progress.globalProgress.current /
+                                book.epub_progress.globalProgress.total) *
+                                100
+                          : 0
+                  )
 
         if (filter === "all") return matchesSearch
         if (filter === "completed") return matchesSearch && progress === 100
@@ -84,19 +96,24 @@ export function LibraryCatalog({ books: initialBooks }: { books: UserBookLibrary
     // Sort books
     const sortedBooks = [...filteredBooks].sort((a, b) => {
         const aProgress = isEpubProgressObject(a.epub_progress)
-            ? a.epub_progress.globalProgress.current / a.epub_progress.globalProgress.total
+            ? a.epub_progress.globalProgress.current /
+              a.epub_progress.globalProgress.total
             : 0
         const bProgress = isEpubProgressObject(b.epub_progress)
-            ? b.epub_progress.globalProgress.current / b.epub_progress.globalProgress.total
+            ? b.epub_progress.globalProgress.current /
+              b.epub_progress.globalProgress.total
             : 0
 
-        if (sortBy === "title") return a.book_metadata.title.localeCompare(b.book_metadata.title)
-        if (sortBy === "author") return (a.book_metadata.author || "").localeCompare(b.book_metadata.author || "")
+        if (sortBy === "title")
+            return a.book_metadata.title.localeCompare(b.book_metadata.title)
+        if (sortBy === "author")
+            return (a.book_metadata.author || "").localeCompare(
+                b.book_metadata.author || ""
+            )
         if (sortBy === "progress") return bProgress - aProgress
         // Default: sort by date_added (newest first)
         return (
-            new Date(b.date_added).getTime() -
-            new Date(a.date_added).getTime()
+            new Date(b.date_added).getTime() - new Date(a.date_added).getTime()
         )
     })
 

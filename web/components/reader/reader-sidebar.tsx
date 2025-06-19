@@ -352,8 +352,12 @@ export function HighlightCard({ highlight }: HighlightProps) {
         yellow: "bg-amber-500",
     }
     const setLocation = useReaderStore((state) => state.setLocation)
-    const setPendingHighlightScroll = useReaderStore((state) => state.setPendingHighlightScroll)
-    const getCurrentChapterIdx = useReaderStore((state) => state.getCurrentChapterIdx)
+    const setPendingHighlightScroll = useReaderStore(
+        (state) => state.setPendingHighlightScroll
+    )
+    const getCurrentChapterIdx = useReaderStore(
+        (state) => state.getCurrentChapterIdx
+    )
 
     const bookMeta = useReaderStore((state) => state.bookLibraryItem)
     const epubDocRef = useReaderStore((state) => state.epubDocRef)
@@ -363,11 +367,11 @@ export function HighlightCard({ highlight }: HighlightProps) {
 
     const navigateHighlight = () => {
         if (!epubDocRef && !pdfRef) return
-        
+
         if (highlightType === "EPUB" && epubDocRef) {
             const epubHighlight = highlight as EpubHighlight
             const currentChapterIdx = getCurrentChapterIdx()
-            
+
             // Check if we're already on the correct chapter
             if (currentChapterIdx === epubHighlight.chapter.idx) {
                 // We're already on the correct chapter, scroll immediately
@@ -412,19 +416,21 @@ export function HighlightCard({ highlight }: HighlightProps) {
                     </div>
                     <p className="text-sm text-card-foreground">
                         {highlightType === "EPUB"
-                            ? (highlight as EpubHighlight).original_text.slice(0, 150) +
-                            "..."
+                            ? (highlight as EpubHighlight).original_text.slice(
+                                  0,
+                                  150
+                              ) + "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
-                                0,
-                                150
-                            ) + "..."}
+                                  0,
+                                  150
+                              ) + "..."}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Page{" "}
                         {highlightType === "EPUB"
                             ? (highlight as EpubHighlight).page
                             : (highlight as PdfHighlight).position.boundingRect
-                                ?.pageNumber}
+                                  ?.pageNumber}
                     </p>
                 </div>
             </div>

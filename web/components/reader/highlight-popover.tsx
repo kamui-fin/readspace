@@ -70,7 +70,10 @@ export default function HighlightPopover({
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(`/api/highlights/text/${encodeURIComponent(text)}/note`, { note }),
+            ApiClient.put(
+                `/api/highlights/text/${encodeURIComponent(text)}/note`,
+                { note }
+            ),
         onError: (err: Error) =>
             console.error("Failed to add annotation:", err),
     })
@@ -121,7 +124,8 @@ export default function HighlightPopover({
         addAnnotationMutation.mutate({ note, text: highlightedText })
 
         const found = highlights.find(
-            (h) => (h.highlight as EpubHighlight).original_text === highlightedText
+            (h) =>
+                (h.highlight as EpubHighlight).original_text === highlightedText
         )
         if (found) found.highlight.note = note
         setIsPopupOpen(false)
@@ -186,9 +190,7 @@ export default function HighlightPopover({
             ) : (
                 <div className="flex flex-col gap-3 popover-animation bg-background/0">
                     {/* <GeneralPopover /> */}
-                    <HighlightColorOptions
-                        handleHighlight={handleHighlight}
-                    />
+                    <HighlightColorOptions handleHighlight={handleHighlight} />
                 </div>
             )}
         </div>

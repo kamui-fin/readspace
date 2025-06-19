@@ -1,7 +1,4 @@
-import {
-    cacheBook,
-    getEpubFromCache,
-} from "@/lib/reader/bookstore"
+import { cacheBook, getEpubFromCache } from "@/lib/reader/bookstore"
 import { getFileFromSupabase } from "@/lib/supabase/storage"
 import { BookViewProps, HighlightState } from "@/types/library"
 import ePub, { NavItem } from "epubjs"
@@ -25,7 +22,7 @@ interface ReaderState {
     highlights: HighlightState[] // Current chapter highlights (for rendering in text)
     allHighlights: HighlightState[] // All highlights for the book (for sidebar)
     charsReadInChapter: number // init to 0
-    
+
     // Pending highlight to scroll to after chapter loads
     pendingHighlightScroll: any | null
 
@@ -106,7 +103,8 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         setEpubDocRef: (ref: HTMLDivElement) => set({ epubDocRef: ref }),
         setHighlights: (highlights) => set({ highlights }),
         setAllHighlights: (highlights) => set({ allHighlights: highlights }),
-        setPendingHighlightScroll: (range: any | null) => set({ pendingHighlightScroll: range }),
+        setPendingHighlightScroll: (range: any | null) =>
+            set({ pendingHighlightScroll: range }),
         setPdfRef: (pdfRef) => set({ pdfRef }),
 
         insertHighlight: (highlight) => {
@@ -130,7 +128,8 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
 
             if (bookType === "EPUB") {
                 const currentChapterIdx = get().getCurrentChapterIdx()
-                const charCounts = bookLibraryItem.epub_chapter_char_counts || []
+                const charCounts =
+                    bookLibraryItem.epub_chapter_char_counts || []
 
                 return (
                     charCounts
@@ -186,7 +185,10 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         setIsLoading: (loading: boolean) => set({ isLoading: loading }),
 
         fetch: async (initialBookMeta) => {
-            console.log("Fetching book with initial meta (BookViewProps):", initialBookMeta)
+            console.log(
+                "Fetching book with initial meta (BookViewProps):",
+                initialBookMeta
+            )
             const bookId = initialBookMeta.id
             const bookType = initialBookMeta.format === "EPUB" ? "EPUB" : "PDF"
 
@@ -199,7 +201,9 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
 
                 if (!buffer && currentBookLibraryItem.file_url) {
                     const { data, success, error, message } =
-                        await getFileFromSupabase(currentBookLibraryItem.file_url)
+                        await getFileFromSupabase(
+                            currentBookLibraryItem.file_url
+                        )
 
                     if (!success || !data) {
                         console.error(
@@ -251,8 +255,16 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
                     })
                     const pdfUrl = URL.createObjectURL(pdfBlob)
 
-                    const pdfCurrentPage = typeof currentBookLibraryItem.pdf_current_page === 'number' ? currentBookLibraryItem.pdf_current_page :
-                        currentBookLibraryItem.pdf_current_page !== null && currentBookLibraryItem.pdf_current_page !== undefined ? Number(currentBookLibraryItem.pdf_current_page) : 1
+                    const pdfCurrentPage =
+                        typeof currentBookLibraryItem.pdf_current_page ===
+                        "number"
+                            ? currentBookLibraryItem.pdf_current_page
+                            : currentBookLibraryItem.pdf_current_page !==
+                                    null &&
+                                currentBookLibraryItem.pdf_current_page !==
+                                    undefined
+                              ? Number(currentBookLibraryItem.pdf_current_page)
+                              : 1
 
                     set({
                         bookType: "PDF",

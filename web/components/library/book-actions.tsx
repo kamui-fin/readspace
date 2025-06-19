@@ -16,14 +16,16 @@ interface BookActionsProps {
 }
 
 // Type guard to check if epub_progress has the expected structure
-function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+function isEpubProgressObject(
+    progress: any
+): progress is { globalProgress: { current: number; total: number } } {
     return (
         progress &&
-        typeof progress === 'object' &&
+        typeof progress === "object" &&
         progress.globalProgress &&
-        typeof progress.globalProgress === 'object' &&
-        typeof progress.globalProgress.current === 'number' &&
-        typeof progress.globalProgress.total === 'number'
+        typeof progress.globalProgress === "object" &&
+        typeof progress.globalProgress.current === "number" &&
+        typeof progress.globalProgress.total === "number"
     )
 }
 
@@ -36,7 +38,9 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.book_metadata?.id) {
-            toast.error("Failed to delete book - Could not determine book metadata ID.")
+            toast.error(
+                "Failed to delete book - Could not determine book metadata ID."
+            )
             return
         }
 
@@ -99,9 +103,10 @@ export function BookActions({ book }: BookActionsProps) {
             )
         } catch (error) {
             console.log(error)
-            const errorMessage = error instanceof Error && (error as any).response?.data?.detail
-                ? (error as any).response.data.detail
-                : "An error occurred while resetting progress."
+            const errorMessage =
+                error instanceof Error && (error as any).response?.data?.detail
+                    ? (error as any).response.data.detail
+                    : "An error occurred while resetting progress."
             toast.error(`Failed to reset progress - ${errorMessage}`)
         }
 
@@ -123,7 +128,9 @@ export function BookActions({ book }: BookActionsProps) {
             let updates: UserBookLibraryUpdate
 
             if (book.book_metadata.format === "PDF") {
-                updates = { pdf_current_page: book.book_metadata.num_pages || 0 }
+                updates = {
+                    pdf_current_page: book.book_metadata.num_pages || 0,
+                }
             } else {
                 // For EPUB, get the total from existing progress if available
                 let total = 0
@@ -150,12 +157,11 @@ export function BookActions({ book }: BookActionsProps) {
             )
         } catch (error) {
             console.log(error)
-            const errorMessage = error instanceof Error && (error as any).response?.data?.detail
-                ? (error as any).response.data.detail
-                : "An error occurred while marking the book as complete."
-            toast.error(
-                `Failed to mark as complete - ${errorMessage}`
-            )
+            const errorMessage =
+                error instanceof Error && (error as any).response?.data?.detail
+                    ? (error as any).response.data.detail
+                    : "An error occurred while marking the book as complete."
+            toast.error(`Failed to mark as complete - ${errorMessage}`)
         }
 
         setIsOpen(false)

@@ -12,10 +12,7 @@ import {
 } from "@/components/ui/dialog"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { HTTPError } from "@/lib/errors"
-import {
-    LoaderCircle,
-    Plus
-} from "lucide-react"
+import { LoaderCircle, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
@@ -86,11 +83,7 @@ export default function UploadBookDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button
-                    size="sm"
-                    className="gap-2"
-                    disabled={isUploading}
-                >
+                <Button size="sm" className="gap-2" disabled={isUploading}>
                     {isUploading ? (
                         <>
                             <LoaderCircle className="h-4 w-4 animate-spin" />

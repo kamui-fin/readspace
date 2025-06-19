@@ -57,17 +57,16 @@ import type {
 import PageNumberInput from "./page-selector"
 import { PdfZoom } from "./pdf-zoom"
 
-
 let EventBus: typeof TEventBus,
     PDFLinkService: typeof TPDFLinkService,
     PDFViewer: typeof TPDFViewer
-    ; (async () => {
-        // Due to breaking changes in PDF.js 4.0.189. See issue #17228
-        const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
-        EventBus = pdfjs.EventBus
-        PDFLinkService = pdfjs.PDFLinkService
-        PDFViewer = pdfjs.PDFViewer
-    })()
+;(async () => {
+    // Due to breaking changes in PDF.js 4.0.189. See issue #17228
+    const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
+    EventBus = pdfjs.EventBus
+    PDFLinkService = pdfjs.PDFLinkService
+    PDFViewer = pdfjs.PDFViewer
+})()
 
 const SCROLL_MARGIN = 10
 const DEFAULT_SCALE_VALUE = 0.1
@@ -332,7 +331,7 @@ export const PdfHighlighter = ({
     const scrolledToHighlightIdRef = useRef<string | null>(null)
     const isAreaSelectionInProgressRef = useRef(false)
     const isEditInProgressRef = useRef(false)
-    const updateTipPositionRef = useRef(() => { })
+    const updateTipPositionRef = useRef(() => {})
 
     const eventBusRef = useRef<InstanceType<typeof EventBus>>(new EventBus())
     const linkServiceRef = useRef<InstanceType<typeof PDFLinkService>>(
@@ -371,17 +370,25 @@ export const PdfHighlighter = ({
     }, [])
 
     useEffect(() => {
-        startPageRef.current = startPage;
-        console.log("PdfHighlighter: startPage prop updated to", startPage);
+        startPageRef.current = startPage
+        console.log("PdfHighlighter: startPage prop updated to", startPage)
 
         // If viewer is already ready, attempt to set the page when prop changes
-        if (isViewerReady && viewerRef.current && startPage && !initialPageSetRef.current) {
-            console.log("PdfHighlighter: Attempting to set page on prop change", startPage);
+        if (
+            isViewerReady &&
+            viewerRef.current &&
+            startPage &&
+            !initialPageSetRef.current
+        ) {
+            console.log(
+                "PdfHighlighter: Attempting to set page on prop change",
+                startPage
+            )
             try {
-                viewerRef.current.currentPageNumber = Number(startPage);
-                initialPageSetRef.current = true;
+                viewerRef.current.currentPageNumber = Number(startPage)
+                initialPageSetRef.current = true
             } catch (err) {
-                console.error("Error setting page on prop change:", err);
+                console.error("Error setting page on prop change:", err)
             }
         }
     }, [startPage, isViewerReady])
@@ -408,7 +415,7 @@ export const PdfHighlighter = ({
 
             // Apply initial zoom if provided
             if (pdfScaleValue && viewerRef.current) {
-                ; `Setting initial zoom to ${pdfScaleValue} during initialization`
+                ;`Setting initial zoom to ${pdfScaleValue} during initialization`
                 viewerRef.current.currentScaleValue = pdfScaleValue.toString()
             }
         }, 100)
@@ -434,18 +441,26 @@ export const PdfHighlighter = ({
                 return
             if (initialPageSetRef.current) return
 
-            console.log("PdfHighlighter: Setting initial page to", startPage, "viewer ready:", Boolean(viewerRef.current));
+            console.log(
+                "PdfHighlighter: Setting initial page to",
+                startPage,
+                "viewer ready:",
+                Boolean(viewerRef.current)
+            )
 
-            initialPageSetRef.current = true;
+            initialPageSetRef.current = true
 
             // Make multiple attempts to set the page, as sometimes the first ones can fail
             const setPageAttempt = (attempt = 1) => {
-                if (attempt > 5) return; // max 5 attempts
+                if (attempt > 5) return // max 5 attempts
 
                 try {
                     if (viewerRef.current) {
-                        console.log(`PdfHighlighter: Setting page attempt ${attempt}`, startPage);
-                        viewerRef.current.currentPageNumber = Number(startPage);
+                        console.log(
+                            `PdfHighlighter: Setting page attempt ${attempt}`,
+                            startPage
+                        )
+                        viewerRef.current.currentPageNumber = Number(startPage)
 
                         // Apply initial zoom when the viewer is ready
                         if (
@@ -453,22 +468,22 @@ export const PdfHighlighter = ({
                             pdfScaleValue?.toString() !== "[object Object]"
                         ) {
                             viewerRef.current.currentScaleValue =
-                                pdfScaleValue.toString();
+                                pdfScaleValue.toString()
                         }
                     }
                 } catch (err) {
-                    console.error("Error setting initial page:", err);
+                    console.error("Error setting initial page:", err)
                     // Try again with a slight delay
-                    setTimeout(() => setPageAttempt(attempt + 1), 100);
+                    setTimeout(() => setPageAttempt(attempt + 1), 100)
                 }
-            };
+            }
 
             // Make first attempt immediately
-            setPageAttempt();
+            setPageAttempt()
             // And schedule additional attempts with increasing delays
-            setTimeout(() => setPageAttempt(2), 100);
-            setTimeout(() => setPageAttempt(3), 300);
-            setTimeout(() => setPageAttempt(4), 600);
+            setTimeout(() => setPageAttempt(2), 100)
+            setTimeout(() => setPageAttempt(3), 300)
+            setTimeout(() => setPageAttempt(4), 600)
         }
 
         // Listen for the 'pagesloaded' event which indicates the PDF is fully loaded
@@ -876,15 +891,15 @@ export const PdfHighlighter = ({
                             isMobile
                                 ? []
                                 : [
-                                    { href: "/library", label: "Home" },
-                                    {
-                                        href: `/library/${bookId}`,
-                                        label:
-                                            bookTitle.length > 30
-                                                ? `${bookTitle.substring(0, 30)}...`
-                                                : bookTitle,
-                                    },
-                                ]
+                                      { href: "/library", label: "Home" },
+                                      {
+                                          href: `/library/${bookId}`,
+                                          label:
+                                              bookTitle.length > 30
+                                                  ? `${bookTitle.substring(0, 30)}...`
+                                                  : bookTitle,
+                                      },
+                                  ]
                         }
                     >
                         <div className="flex items-center gap-2">
@@ -925,8 +940,8 @@ export const PdfHighlighter = ({
                             <MouseSelection
                                 viewer={viewerRef.current!}
                                 onChange={(isVisible) =>
-                                (isAreaSelectionInProgressRef.current =
-                                    isVisible)
+                                    (isAreaSelectionInProgressRef.current =
+                                        isVisible)
                                 }
                                 enableAreaSelection={enableAreaSelection}
                                 style={mouseSelectionStyle}

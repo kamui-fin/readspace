@@ -1,5 +1,5 @@
-import { ArticlesView } from "@/components/articles";
+import { ArticlesView } from "@/components/articles"
 
 export default function ArticlesPage() {
-    return <ArticlesView />;
-} 
+    return <ArticlesView />
+}

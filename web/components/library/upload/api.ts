@@ -13,10 +13,7 @@ import {
 } from "./utils"
 
 // Helper function to upload file to cloud storage
-export const uploadToCloudStorage = async (
-    file: File,
-    bookId: string,
-) => {
+export const uploadToCloudStorage = async (file: File, bookId: string) => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("book_id", bookId)
@@ -53,16 +50,19 @@ export const useUploadBook = () => {
                     num_pages: metadata.total_pages,
                     ...(isPdf
                         ? {
-                            pdf_toc: sanitizeJsonRecursively(
-                                metadata.toc
-                            ) as Record<string, unknown>,
-                        }
+                              pdf_toc: sanitizeJsonRecursively(
+                                  metadata.toc
+                              ) as Record<string, unknown>,
+                          }
                         : {
-                            epub_chapter_char_counts: charCounts,
-                        }),
+                              epub_chapter_char_counts: charCounts,
+                          }),
                 }
 
-                const createdMetadata = await ApiClient.post<{ id: string }>("/api/books/metadata", bookMetadata)
+                const createdMetadata = await ApiClient.post<{ id: string }>(
+                    "/api/books/metadata",
+                    bookMetadata
+                )
 
                 // Upload cover image to Supabase storage using the metadata ID
                 const coverUrl = await uploadCoverImage(
@@ -74,19 +74,22 @@ export const useUploadBook = () => {
 
                 // Update metadata with cover_url if upload was successful
                 if (coverUrl && coverUrl !== metadata.coverUrl) {
-                    await ApiClient.put(`/api/books/metadata/${createdMetadata.id}`, {
-                        cover_url: coverUrl,
-                    })
+                    await ApiClient.put(
+                        `/api/books/metadata/${createdMetadata.id}`,
+                        {
+                            cover_url: coverUrl,
+                        }
+                    )
                 }
 
                 // Create progress object for EPUB
                 const progress = !isPdf
                     ? {
-                        globalProgress: {
-                            current: 0,
-                            total: charCounts.reduce((a, b) => a + b, 0),
-                        },
-                    }
+                          globalProgress: {
+                              current: 0,
+                              total: charCounts.reduce((a, b) => a + b, 0),
+                          },
+                      }
                     : undefined
 
                 // Add book to user's library
@@ -95,14 +98,17 @@ export const useUploadBook = () => {
                     book_metadata_id: createdMetadata.id,
                     ...(isPdf
                         ? {
-                            pdf_current_page: 0,
-                        }
+                              pdf_current_page: 0,
+                          }
                         : {
-                            epub_progress: progress,
-                        }),
+                              epub_progress: progress,
+                          }),
                 }
 
-                const libraryResult = await ApiClient.post<UserBookLibrary>("/api/books/", libraryData)
+                const libraryResult = await ApiClient.post<UserBookLibrary>(
+                    "/api/books/",
+                    libraryData
+                )
 
                 // Always cache the book in localforage for performance
                 await cacheBook(fileBuffer, createdMetadata.id)
@@ -110,13 +116,16 @@ export const useUploadBook = () => {
                 // Upload to Cloud Storage
                 const uploadResponse = await uploadToCloudStorage(
                     file,
-                    libraryResult.id,
+                    libraryResult.id
                 )
 
                 // Update the book metadata with the file URL
-                await ApiClient.put(`/api/books/metadata/${createdMetadata.id}`, {
-                    file_url: uploadResponse.file_path,
-                })
+                await ApiClient.put(
+                    `/api/books/metadata/${createdMetadata.id}`,
+                    {
+                        file_url: uploadResponse.file_path,
+                    }
+                )
 
                 toast.success("Book uploaded successfully")
 

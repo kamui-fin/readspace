@@ -1,4 +1,8 @@
-import { UserBookLibrary, UserBookLibraryCreate, UserBookLibraryUpdate } from "@/types/api"
+import {
+    UserBookLibrary,
+    UserBookLibraryCreate,
+    UserBookLibraryUpdate,
+} from "@/types/api"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ApiClient } from "../client"
 
@@ -7,7 +11,8 @@ export const BOOKS_QUERY_KEY = "books"
 export function useBooks(userId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, userId],
-        queryFn: () => ApiClient.get<UserBookLibrary[]>(`/api/books/?user_id=${userId}`),
+        queryFn: () =>
+            ApiClient.get<UserBookLibrary[]>(`/api/books/?user_id=${userId}`),
     })
 }
 
@@ -68,12 +73,18 @@ export function useDeleteBookMetadata() {
     })
 }
 
-type UpdateBookProgressVariables = { bookId: string; progress: UserBookLibraryUpdate }
+type UpdateBookProgressVariables = {
+    bookId: string
+    progress: UserBookLibraryUpdate
+}
 export function useUpdateBookProgress() {
     const queryClient = useQueryClient()
     return useMutation<UserBookLibrary, Error, UpdateBookProgressVariables>({
         mutationFn: ({ bookId, progress }) =>
-            ApiClient.put<UserBookLibrary>(`/api/books/${bookId}/progress`, progress),
+            ApiClient.put<UserBookLibrary>(
+                `/api/books/${bookId}/progress`,
+                progress
+            ),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
                 queryKey: [BOOKS_QUERY_KEY, bookId],

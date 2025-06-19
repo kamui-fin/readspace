@@ -21,12 +21,12 @@ const nextConfig = {
         ignoreBuildErrors: true,
     },
     serverExternalPackages: ["import-in-the-middle", "require-in-the-middle"],
-    
+
     async redirects() {
         return [
             {
-                source: '/',
-                destination: '/articles',
+                source: "/",
+                destination: "/articles",
                 permanent: true,
             },
         ]

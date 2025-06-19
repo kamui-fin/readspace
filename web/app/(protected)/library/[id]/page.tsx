@@ -25,7 +25,9 @@ interface BookNotFoundProps {
     message?: string
 }
 
-function BookNotFound({ message = "The book you're looking for doesn't exist or has been removed." }: BookNotFoundProps) {
+function BookNotFound({
+    message = "The book you're looking for doesn't exist or has been removed.",
+}: BookNotFoundProps) {
     return (
         <div className="flex items-center justify-center h-screen">
             <div className="text-center">
@@ -36,10 +38,14 @@ function BookNotFound({ message = "The book you're looking for doesn't exist or 
     )
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+    params,
+}: PageProps): Promise<Metadata> {
     const resolvedParams = await params
     try {
-        const libraryBook = await ApiClient.get<UserBookLibrary>(`/api/books/${resolvedParams.id}`)
+        const libraryBook = await ApiClient.get<UserBookLibrary>(
+            `/api/books/${resolvedParams.id}`
+        )
         const bookMetaData = libraryBook?.book_metadata
 
         if (!bookMetaData) {
@@ -51,7 +57,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
         return {
             title: `${bookMetaData.title} | Readspace`,
-            description: bookMetaData.description ||
+            description:
+                bookMetaData.description ||
                 `Reading ${bookMetaData.title} by ${bookMetaData.author || "Unknown Author"}`,
         }
     } catch (error) {
@@ -65,7 +72,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function BookReaderPage({ params }: PageProps) {
     const resolvedParams = await params
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+        data: { user },
+    } = await supabase.auth.getUser()
 
     if (!user) {
         redirect("/login")
@@ -73,9 +82,13 @@ export default async function BookReaderPage({ params }: PageProps) {
 
     let libraryBook: UserBookLibrary | null = null
     try {
-        libraryBook = await ApiClient.get<UserBookLibrary>(`/api/books/${resolvedParams.id}`)
+        libraryBook = await ApiClient.get<UserBookLibrary>(
+            `/api/books/${resolvedParams.id}`
+        )
     } catch (error) {
-        return <BookNotFound message="Failed to load the book. Please try again later." />
+        return (
+            <BookNotFound message="Failed to load the book. Please try again later." />
+        )
     }
 
     if (!libraryBook?.book_metadata) {
@@ -86,45 +99,49 @@ export default async function BookReaderPage({ params }: PageProps) {
         ...libraryBook.book_metadata,
         library_id: libraryBook.id,
         pdf_current_page: libraryBook.pdf_current_page,
-        epub_progress: libraryBook.epub_progress ?
-            libraryBook.epub_progress as unknown as EpubLocation :
-            null,
+        epub_progress: libraryBook.epub_progress
+            ? (libraryBook.epub_progress as unknown as EpubLocation)
+            : null,
     }
 
     const isPdf = bookViewProps.format === "PDF"
-    const fetchedHighlights = await ApiClient.get<Highlight[]>(`/api/highlights/book/${resolvedParams.id}`)
+    const fetchedHighlights = await ApiClient.get<Highlight[]>(
+        `/api/highlights/book/${resolvedParams.id}`
+    )
 
-    let highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map((h): EpubHighlight | PdfHighlight => {
-        if (isPdf) {
-            return {
-                id: h.id,
-                note: h.note || undefined,
-                color: h.color || undefined,
-                book_id: bookViewProps.id,
-                type: "text",
-                position: h.pdf_rect_position as unknown as PdfHighlight['position'],
-                content: { text: h.original_text },
-                user_book_lib_id: h.user_book_lib_id,
-                library_id: h.user_book_lib_id,
-            } as PdfHighlight;
-        } else {
-            return {
-                id: h.id,
-                user_book_lib_id: h.user_book_lib_id,
-                original_text: h.original_text,
-                color: h.color || undefined,
-                note: h.note || undefined,
-                range: h.html_range as unknown as EpubHighlight['range'],
-                chapter: {
-                    idx: h.chapter_idx || 0,
-                    href: h.chapter_href || "",
-                    title: h.chapter_title || undefined,
-                },
-                page: h.page || 0,
-            } as EpubHighlight;
+    let highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map(
+        (h): EpubHighlight | PdfHighlight => {
+            if (isPdf) {
+                return {
+                    id: h.id,
+                    note: h.note || undefined,
+                    color: h.color || undefined,
+                    book_id: bookViewProps.id,
+                    type: "text",
+                    position:
+                        h.pdf_rect_position as unknown as PdfHighlight["position"],
+                    content: { text: h.original_text },
+                    user_book_lib_id: h.user_book_lib_id,
+                    library_id: h.user_book_lib_id,
+                } as PdfHighlight
+            } else {
+                return {
+                    id: h.id,
+                    user_book_lib_id: h.user_book_lib_id,
+                    original_text: h.original_text,
+                    color: h.color || undefined,
+                    note: h.note || undefined,
+                    range: h.html_range as unknown as EpubHighlight["range"],
+                    chapter: {
+                        idx: h.chapter_idx || 0,
+                        href: h.chapter_href || "",
+                        title: h.chapter_title || undefined,
+                    },
+                    page: h.page || 0,
+                } as EpubHighlight
+            }
         }
-    });
-
+    )
 
     console.log(highlights)
 

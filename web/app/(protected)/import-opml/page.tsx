@@ -1,4 +1,4 @@
-'use client'
+"use client"
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
@@ -12,52 +12,57 @@ import { toast } from "react-hot-toast"
 
 // OPML import response types
 interface OPMLImportResponse {
-    processing_mode: 'background';
-    task_id: string;
-    message: string;
-    estimated_feeds: number;
-    check_status_url: string;
+    processing_mode: "background"
+    task_id: string
+    message: string
+    estimated_feeds: number
+    check_status_url: string
     // Results when completed
-    imported_count?: number;
-    failed_count?: number;
-    already_existed_count?: number;
-    total_feeds?: number;
+    imported_count?: number
+    failed_count?: number
+    already_existed_count?: number
+    total_feeds?: number
     errors?: Array<{
-        url: string;
-        title: string;
-        error: string;
-        status: string;
-    }>;
+        url: string
+        title: string
+        error: string
+        status: string
+    }>
     summary?: {
-        successful: number;
-        failed: number;
-        already_existed: number;
-    };
+        successful: number
+        failed: number
+        already_existed: number
+    }
 }
 
 interface ImportStatus {
-    task_id: string;
-    status: 'pending' | 'in_progress' | 'completed' | 'failed';
-    message: string;
-    result?: OPMLImportResponse;
-    error?: string;
+    task_id: string
+    status: "pending" | "in_progress" | "completed" | "failed"
+    message: string
+    result?: OPMLImportResponse
+    error?: string
     progress?: {
-        completed: number;
-        total: number;
-        successful: number;
-        failed: number;
-        already_existed: number;
-    };
+        completed: number
+        total: number
+        successful: number
+        failed: number
+        already_existed: number
+    }
 }
 
 export default function ImportOPMLPage() {
     const [isUploading, setIsUploading] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [importResult, setImportResult] = useState<OPMLImportResponse | null>(null)
-    const [backgroundTask, setBackgroundTask] = useState<{taskId: string, estimatedFeeds: number} | null>(null)
+    const [importResult, setImportResult] = useState<OPMLImportResponse | null>(
+        null
+    )
+    const [backgroundTask, setBackgroundTask] = useState<{
+        taskId: string
+        estimatedFeeds: number
+    } | null>(null)
     const [taskStatus, setTaskStatus] = useState<ImportStatus | null>(null)
     const [showDetails, setShowDetails] = useState(false)
-    
+
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -68,26 +73,40 @@ export default function ImportOPMLPage() {
 
         const pollStatus = async () => {
             try {
-                const status = await ApiClient.get<ImportStatus>(`/rss/opml/import/status/${backgroundTask.taskId}`)
+                const status = await ApiClient.get<ImportStatus>(
+                    `/rss/opml/import/status/${backgroundTask.taskId}`
+                )
                 setTaskStatus(status)
 
-                if (status.status === 'completed') {
+                if (status.status === "completed") {
                     setImportResult(status.result!)
                     setBackgroundTask(null)
                     // Invalidate queries
                     await Promise.all([
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] }),
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] }),
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] }),
-                        queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] })
+                        queryClient.invalidateQueries({
+                            queryKey: [RSS_QUERY_KEYS.FEEDS],
+                        }),
+                        queryClient.invalidateQueries({
+                            queryKey: [RSS_QUERY_KEYS.FOLDERS],
+                        }),
+                        queryClient.invalidateQueries({
+                            queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                        }),
+                        queryClient.invalidateQueries({
+                            queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                        }),
                     ])
-                    toast.success(`Import completed! ${status.result?.imported_count || 0} feeds imported.`)
-                } else if (status.status === 'failed') {
+                    toast.success(
+                        `Import completed! ${status.result?.imported_count || 0} feeds imported.`
+                    )
+                } else if (status.status === "failed") {
                     setBackgroundTask(null)
-                    toast.error(`Import failed: ${status.error || 'Unknown error'}`)
+                    toast.error(
+                        `Import failed: ${status.error || "Unknown error"}`
+                    )
                 }
             } catch (error) {
-                console.error('Error polling task status:', error)
+                console.error("Error polling task status:", error)
             }
         }
 
@@ -96,14 +115,17 @@ export default function ImportOPMLPage() {
     }, [backgroundTask, queryClient])
 
     const handleFileUpload = async (file: File) => {
-        if (!file || (!file.name.endsWith('.opml') && !file.name.endsWith('.xml'))) {
-            toast.error('Please select a valid OPML or XML file')
+        if (
+            !file ||
+            (!file.name.endsWith(".opml") && !file.name.endsWith(".xml"))
+        ) {
+            toast.error("Please select a valid OPML or XML file")
             return
         }
 
         const formData = new FormData()
-        formData.append('opml_file', file)
-        formData.append('default_folder_name', 'Imported Feeds')
+        formData.append("opml_file", file)
+        formData.append("default_folder_name", "Imported Feeds")
 
         setIsUploading(true)
         setImportResult(null)
@@ -111,18 +133,22 @@ export default function ImportOPMLPage() {
         setTaskStatus(null)
 
         try {
-            const data = await ApiClient.uploadFile('/rss/opml/import', formData) as OPMLImportResponse;
+            const data = (await ApiClient.uploadFile(
+                "/rss/opml/import",
+                formData
+            )) as OPMLImportResponse
 
             // All imports are now background
             setBackgroundTask({
                 taskId: data.task_id,
-                estimatedFeeds: data.estimated_feeds || 0
+                estimatedFeeds: data.estimated_feeds || 0,
             })
-            toast.success(`Queued ${data.estimated_feeds} feeds for import processing in parallel.`)
-            
+            toast.success(
+                `Queued ${data.estimated_feeds} feeds for import processing in parallel.`
+            )
         } catch (error) {
-            console.error('Error uploading OPML file:', error)
-            toast.error('Failed to import OPML file. Please try again.')
+            console.error("Error uploading OPML file:", error)
+            toast.error("Failed to import OPML file. Please try again.")
         } finally {
             setIsUploading(false)
         }
@@ -132,7 +158,10 @@ export default function ImportOPMLPage() {
         if (!importResult) return null
 
         const { summary, errors } = importResult
-        const totalProcessed = (summary?.successful || 0) + (summary?.failed || 0) + (summary?.already_existed || 0)
+        const totalProcessed =
+            (summary?.successful || 0) +
+            (summary?.failed || 0) +
+            (summary?.already_existed || 0)
 
         return (
             <div className="mt-6 space-y-4">
@@ -141,19 +170,31 @@ export default function ImportOPMLPage() {
                         <CheckCircle className="h-6 w-6 text-green-600" />
                         <h3 className="text-lg font-medium">Import Complete</h3>
                     </div>
-                    
+
                     <div className="grid grid-cols-3 gap-4 mb-4">
                         <div className="text-center">
-                            <div className="text-2xl font-semibold text-green-600">{summary?.successful || 0}</div>
-                            <div className="text-sm text-muted-foreground">Imported</div>
+                            <div className="text-2xl font-semibold text-green-600">
+                                {summary?.successful || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Imported
+                            </div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl font-semibold text-blue-600">{summary?.already_existed || 0}</div>
-                            <div className="text-sm text-muted-foreground">Already had</div>
+                            <div className="text-2xl font-semibold text-blue-600">
+                                {summary?.already_existed || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Already had
+                            </div>
                         </div>
                         <div className="text-center">
-                            <div className="text-2xl font-semibold text-red-600">{summary?.failed || 0}</div>
-                            <div className="text-sm text-muted-foreground">Failed</div>
+                            <div className="text-2xl font-semibold text-red-600">
+                                {summary?.failed || 0}
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                                Failed
+                            </div>
                         </div>
                     </div>
 
@@ -165,16 +206,26 @@ export default function ImportOPMLPage() {
                                 onClick={() => setShowDetails(!showDetails)}
                                 className="text-muted-foreground hover:text-foreground"
                             >
-                                {showDetails ? 'Hide' : 'Show'} failed feeds ({errors.length})
+                                {showDetails ? "Hide" : "Show"} failed feeds (
+                                {errors.length})
                             </Button>
-                            
+
                             {showDetails && (
                                 <div className="mt-3 max-h-48 overflow-y-auto space-y-2">
                                     {errors.map((error, index) => (
-                                        <div key={index} className="bg-red-50 border border-red-200 rounded p-3 text-sm">
-                                            <div className="font-medium text-red-900">{error.title || 'Unknown feed'}</div>
-                                            <div className="text-red-700 text-xs mt-1 truncate">{error.url}</div>
-                                            <div className="text-red-600 text-xs mt-1">{error.error}</div>
+                                        <div
+                                            key={index}
+                                            className="bg-red-50 border border-red-200 rounded p-3 text-sm"
+                                        >
+                                            <div className="font-medium text-red-900">
+                                                {error.title || "Unknown feed"}
+                                            </div>
+                                            <div className="text-red-700 text-xs mt-1 truncate">
+                                                {error.url}
+                                            </div>
+                                            <div className="text-red-600 text-xs mt-1">
+                                                {error.error}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -184,14 +235,20 @@ export default function ImportOPMLPage() {
                 </div>
 
                 <div className="flex gap-3">
-                    <Button onClick={() => window.location.href = '/articles'} className="flex-1">
+                    <Button
+                        onClick={() => (window.location.href = "/articles")}
+                        className="flex-1"
+                    >
                         View Articles
                     </Button>
-                    <Button variant="outline" onClick={() => {
-                        setImportResult(null)
-                        setShowDetails(false)
-                        setTaskStatus(null)
-                    }}>
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            setImportResult(null)
+                            setShowDetails(false)
+                            setTaskStatus(null)
+                        }}
+                    >
                         Import More
                     </Button>
                 </div>
@@ -208,38 +265,68 @@ export default function ImportOPMLPage() {
                     <Clock className="h-6 w-6 text-blue-600" />
                     <h3 className="text-lg font-medium">Processing Feeds</h3>
                 </div>
-                
+
                 <div className="space-y-4">
                     {taskStatus?.progress ? (
                         <div>
                             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                                <span>{taskStatus.progress.completed} of {taskStatus.progress.total} completed</span>
-                                <span>{taskStatus.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</span>
+                                <span>
+                                    {taskStatus.progress.completed} of{" "}
+                                    {taskStatus.progress.total} completed
+                                </span>
+                                <span>
+                                    {taskStatus.status
+                                        .replace("_", " ")
+                                        .replace(/\b\w/g, (l) =>
+                                            l.toUpperCase()
+                                        )}
+                                </span>
                             </div>
-                            <Progress 
-                                value={(taskStatus.progress.completed / taskStatus.progress.total) * 100} 
-                                className="h-2 mb-3" 
+                            <Progress
+                                value={
+                                    (taskStatus.progress.completed /
+                                        taskStatus.progress.total) *
+                                    100
+                                }
+                                className="h-2 mb-3"
                             />
                             <div className="grid grid-cols-3 gap-4 text-center text-sm">
                                 <div>
-                                    <div className="font-medium text-green-600">{taskStatus.progress.successful}</div>
-                                    <div className="text-xs text-muted-foreground">Imported</div>
+                                    <div className="font-medium text-green-600">
+                                        {taskStatus.progress.successful}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Imported
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="font-medium text-blue-600">{taskStatus.progress.already_existed}</div>
-                                    <div className="text-xs text-muted-foreground">Already had</div>
+                                    <div className="font-medium text-blue-600">
+                                        {taskStatus.progress.already_existed}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Already had
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="font-medium text-red-600">{taskStatus.progress.failed}</div>
-                                    <div className="text-xs text-muted-foreground">Failed</div>
+                                    <div className="font-medium text-red-600">
+                                        {taskStatus.progress.failed}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        Failed
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     ) : (
                         <div>
                             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                                <span>Processing {backgroundTask?.estimatedFeeds} feeds...</span>
-                                <span className="capitalize">{taskStatus?.status || 'pending'}</span>
+                                <span>
+                                    Processing {backgroundTask?.estimatedFeeds}{" "}
+                                    feeds...
+                                </span>
+                                <span className="capitalize">
+                                    {taskStatus?.status || "pending"}
+                                </span>
                             </div>
                             <Progress value={undefined} className="h-2" />
                         </div>
@@ -286,13 +373,17 @@ export default function ImportOPMLPage() {
                 <div className="max-w-xl w-full">
                     <h1 className="text-3xl font-semibold mb-2">OPML Import</h1>
                     <p className="text-muted-foreground mb-8">
-                        Import feeds from an OPML file exported from another RSS reader.
+                        Import feeds from an OPML file exported from another RSS
+                        reader.
                     </p>
 
                     {!importResult && !backgroundTask && (
                         <div
-                            className={`border-2 border-dashed rounded-xl p-12 text-center ${isDragging ? 'border-primary bg-primary/5' : 'border-muted-foreground/20'
-                                } transition-colors duration-200 ease-in-out`}
+                            className={`border-2 border-dashed rounded-xl p-12 text-center ${
+                                isDragging
+                                    ? "border-primary bg-primary/5"
+                                    : "border-muted-foreground/20"
+                            } transition-colors duration-200 ease-in-out`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
@@ -305,11 +396,16 @@ export default function ImportOPMLPage() {
                                 className="hidden"
                             />
                             <div className="flex flex-col items-center justify-center gap-4">
-                                <Upload size={48} className="text-muted-foreground" />
+                                <Upload
+                                    size={48}
+                                    className="text-muted-foreground"
+                                />
 
                                 <div className="space-y-2">
                                     <h3 className="text-lg font-medium">
-                                        {isDragging ? 'Drop your OPML file here' : 'Upload OPML File'}
+                                        {isDragging
+                                            ? "Drop your OPML file here"
+                                            : "Upload OPML File"}
                                     </h3>
                                     <p className="text-sm text-muted-foreground">
                                         Drag and drop or click to select
@@ -321,7 +417,9 @@ export default function ImportOPMLPage() {
                                     disabled={isUploading}
                                     className="mt-4"
                                 >
-                                    {isUploading ? 'Uploading...' : 'Choose File'}
+                                    {isUploading
+                                        ? "Uploading..."
+                                        : "Choose File"}
                                 </Button>
                             </div>
                         </div>
@@ -333,4 +431,4 @@ export default function ImportOPMLPage() {
             </div>
         </div>
     )
-} 
+}

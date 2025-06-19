@@ -61,9 +61,12 @@ export default function useAutoBookmark() {
         // Calculate progress percentage based on character position in the book
         const totalChars = getTotalCharsInBook()
         const cumulativeChars = getCumulativeCharsRead()
-        
+
         if (totalChars > 0) {
-            const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+            const progressValue = Math.min(
+                100,
+                Math.max(0, (cumulativeChars / totalChars) * 100)
+            )
             setProgressPercentage(progressValue)
         }
 
@@ -89,9 +92,12 @@ export default function useAutoBookmark() {
         // Calculate progress based on character position in the book, not scroll position
         const totalChars = getTotalCharsInBook()
         const cumulativeChars = getCumulativeCharsRead()
-        
+
         if (totalChars > 0) {
-            const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+            const progressValue = Math.min(
+                100,
+                Math.max(0, (cumulativeChars / totalChars) * 100)
+            )
             setProgressPercentage(progressValue)
         }
     }, 20)
@@ -131,9 +137,12 @@ export default function useAutoBookmark() {
             // Calculate initial progress based on character position
             const totalChars = getTotalCharsInBook()
             const cumulativeChars = getCumulativeCharsRead()
-            
+
             if (totalChars > 0) {
-                const progressValue = Math.min(100, Math.max(0, (cumulativeChars / totalChars) * 100))
+                const progressValue = Math.min(
+                    100,
+                    Math.max(0, (cumulativeChars / totalChars) * 100)
+                )
                 setProgressPercentage(progressValue)
             } else {
                 setProgressPercentage(0)

@@ -25,14 +25,16 @@ function roundToOneDecimal(num: number): number {
 }
 
 // Type guard to check if epub_progress has the expected structure
-function isEpubProgressObject(progress: any): progress is { globalProgress: { current: number; total: number } } {
+function isEpubProgressObject(
+    progress: any
+): progress is { globalProgress: { current: number; total: number } } {
     return (
         progress &&
-        typeof progress === 'object' &&
+        typeof progress === "object" &&
         progress.globalProgress &&
-        typeof progress.globalProgress === 'object' &&
-        typeof progress.globalProgress.current === 'number' &&
-        typeof progress.globalProgress.total === 'number'
+        typeof progress.globalProgress === "object" &&
+        typeof progress.globalProgress.current === "number" &&
+        typeof progress.globalProgress.total === "number"
     )
 }
 
@@ -43,7 +45,9 @@ export function BookCardList({ book }: BookCardListProps) {
         coverUrl = url
     } else {
         coverUrl =
-            book.book_metadata.format === "PDF" ? "/default_pdf_cover.png" : "/placeholder.svg"
+            book.book_metadata.format === "PDF"
+                ? "/default_pdf_cover.png"
+                : "/placeholder.svg"
     }
 
     // Calculate progress based on book type
@@ -51,14 +55,19 @@ export function BookCardList({ book }: BookCardListProps) {
         book.book_metadata.format === "PDF"
             ? (book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)
             : isEpubProgressObject(book.epub_progress)
-            ? book.epub_progress.globalProgress.current / book.epub_progress.globalProgress.total
-            : 0
+              ? book.epub_progress.globalProgress.current /
+                book.epub_progress.globalProgress.total
+              : 0
 
     const remainingNumChars =
         book.book_metadata.format === "PDF"
             ? 0 // PDF doesn't use character count
-            : (isEpubProgressObject(book.epub_progress) ? book.epub_progress.globalProgress.total : 0) -
-            (isEpubProgressObject(book.epub_progress) ? book.epub_progress.globalProgress.current : 0)
+            : (isEpubProgressObject(book.epub_progress)
+                  ? book.epub_progress.globalProgress.total
+                  : 0) -
+              (isEpubProgressObject(book.epub_progress)
+                  ? book.epub_progress.globalProgress.current
+                  : 0)
 
     const estReadingTimeLeft =
         book.book_metadata.format === "PDF"
@@ -103,13 +112,13 @@ export function BookCardList({ book }: BookCardListProps) {
                     </div>
 
                     <p className="text-xs sm:text-sm text-muted-foreground my-1 sm:my-2 line-clamp-1 sm:line-clamp-2 hidden xs:block">
-                        {book.book_metadata.description || "No description yet."}
+                        {book.book_metadata.description ||
+                            "No description yet."}
                     </p>
 
                     <div className="mt-auto flex items-center justify-between text-[10px] sm:text-xs text-muted-foreground">
                         <span className="hidden sm:inline">
-                            Added{" "}
-                            {formatDate(book.date_added)}
+                            Added {formatDate(book.date_added)}
                         </span>
                         <span className="sm:hidden">
                             {new Date(book.date_added).toLocaleDateString()}
