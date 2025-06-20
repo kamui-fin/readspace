@@ -42,4 +42,4 @@ COPY --chown=nextjs:nodejs --from=builder /app/package.json ./package.json
 
 USER nextjs
 
-CMD ["node_modules/.bin/next", "start", "-p", "8042"]
+CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "8042"]
