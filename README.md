@@ -29,13 +29,6 @@ Inspired by Google Reader's simplicity, Readspace modernizes RSS for today’s r
 * **Privacy & Control:** Zero ads, no analytics, fully self-hostable. Your data remains yours.
 * **Smart AI (Optional & Local):** Local summarization, noise filtering, auto-tagging, and personalized content discovery—all privacy-preserving.
 
-## Why Choose Readspace Over Feedly or Readwise?
-
-* **Feedly** has pivoted to enterprise threat detection, offers a severely limited free tier, and suffers from declining reliability.
-* **Readwise Reader** is not really geared towards RSS, still in beta after years, proprietary and paywalled.
-
-**Readspace** offers a superior, transparent, and open-source alternative. We're built by readers, for readers, with a singular focus on an exceptional reading experience.
-
 ## Built for Focused Reading
 
 * **Comprehensive Content:** Seamlessly integrate RSS feeds, newsletters, saved articles, books, Twitter threads, and Reddit posts.
@@ -64,47 +57,27 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 
 1.  **Clone the Repository**
 
-    Start by cloning the Readspace repository to your local machine:
-
     ```bash
     git clone https://github.com/kamui-fin/readspace.git
     cd readspace
     ```
 
-2.  **Set Up and Start Supabase Backend**
-
-    This step will prepare and launch your local Supabase services, which Readspace relies on for its backend database and authentication.
+2.  **Configure `.env` files**
 
     ```bash
-    # Navigate to the Supabase directory
-    cd supabase
-
-    # Generate necessary environment secrets for Supabase
-    ./gensecrets.sh
-
-    # Launch Supabase services using its specific docker-compose file
-    # This will bring up services like PostgreSQL, Auth, Storage, etc.
-    docker compose -f docker-compose.yml --env-file ./.env up -d
-
-    # Go back to the root directory
-    cd ..
+    ./setup.sh
     ```
 
-> [!NOTE]
-> Use [this](https://supabase.com/docs/guides/self-hosting/docker#generate-api-keys) to generate the **ANON_KEY** and **SERVICE_ROLE_KEY** from a **JWT_SECRET**
-
-4.  **Launch Readspace Application**
-
-    From the root of the `readspace` directory, use Docker Compose to bring up the main Readspace application services. This will connect to your local Supabase backend.
+3.  **Launch services**
 
     ```bash
-    docker compose --env-file supabase/.env up -d
+    ./start_docker.sh
     ```
-5.  **Access Your Instance**
+4.  **Access your instance**
 
-    Once all services are running, your Readspace instance should be accessible in your web browser.
+    After a bit, your Readspace instance should be accessible in your web browser.
 
-    Visit `localhost:8042`
+    Visit `localhost:8042`. Optionally, you can configure your reverse proxy to point to it.
 
 ## Community & Roadmap
 
@@ -113,4 +86,12 @@ We're building Readspace transparently and collaboratively. Join our growing com
 * **Discord:** [Join our community here](https://discord.gg/2Q5PtYwUQZ)
 * **GitHub:** Star us and help shape the product.
 
-Readspace is open-source, built by readers, for readers. We believe you'll feel the difference.
+
+## Why Choose Readspace Over Feedly or Readwise?
+
+* **Feedly** has pivoted to enterprise threat detection, offers a severely limited free tier, and suffers from declining reliability.
+* **Readwise Reader** is not really geared towards RSS, still in beta after years, proprietary and paywalled.
+
+**Readspace** offers a superior, transparent, and open-source alternative. We're built by readers, for readers, with a singular focus on an exceptional reading experience.
+
+We believe you'll feel the difference.

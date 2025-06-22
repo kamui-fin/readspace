@@ -14,14 +14,11 @@ services:
     build:
       context: ./web
       dockerfile: Dockerfile
-    network_mode: host
     container_name: readspace_web
     ports:
       - "8042:8042"
     environment:
-      - NODE_ENV=production
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-      - NEXT_PUBLIC_NODE_ENV=production
       - NEXT_PUBLIC_SUPABASE_URL=http://0.0.0.0:8000
       - NEXT_PUBLIC_API_BASE_URL=http://0.0.0.0:8008
     depends_on:
