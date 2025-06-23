@@ -16,41 +16,33 @@ All in one beautiful, modern UI, designed for focused reading.
 
 ## What is Readspace?
 
-Readspace is an **open-source, privacy-focused platform** that streamlines your digital reading. It's your personal, curated inbox for everything you want to read from across the web—**without ads, algorithms, or distractions.**
+Readspace is an **open-source, privacy-first reading hub** that brings all your favorite content into one clean, distraction-free inbox—**no ads, algorithms, or trackers**.
 
-Inspired by Google Reader's simplicity, Readspace modernizes RSS for today’s readers.
+* **Unified Inbox:** RSS feeds, newsletters, saved articles, Twitter threads, Reddit posts, books—all in one place.
+* **Chronological & Clean:** Feeds are delivered in order; you decide what stays and what goes.
+* **Privacy & Ownership:** Fully self-hostable, zero third‑party tracking, your data stays with you.
+* **Calm & Curated:** Leverage AI-powered summaries and noise filtering so you only see what matters, letting you focus on reading without overwhelm.
 
-> [!NOTE]
-> RSS empowers you to directly follow your favorite websites and creators, keeping your feed clean, chronological, and free from manipulative algorithms. Think of it as a quieter, more personal social feed, where *you* control what you see.
+> **What is RSS?** RSS is like a personal newswire: subscribe once and get updates from all your favorite sites in one simple, chronological feed. No ads, no algorithms—just the latest posts you choose.
 
-## Why You'll Love Readspace
+## Who Is This For?
 
-* **Beautiful UI/UX:** Intuitive, minimalistic, and crafted for enjoyable, focused reading.
-* **Privacy & Control:** Zero ads, no analytics, fully self-hostable. Your data remains yours.
-* **Smart AI (Optional & Local):** Local summarization, noise filtering, auto-tagging, and personalized content discovery—all privacy-preserving.
+Readspace is perfect if you:
 
-## Built for Focused Reading
-
-* **Comprehensive Content:** Seamlessly integrate RSS feeds, newsletters, saved articles, books, Twitter threads, and Reddit posts.
-* **Chrome Extension:** Quickly save articles and capture content directly from your browser.
-* **Enhanced Reading:** Enjoy EPUB/PDF reading, with robust annotation and highlighting tools.
-* **Cross-Platform:** Mobile apps built with React Native are in development.
-
-## Readspace is Perfect If You:
-
-* Are overwhelmed by endless tabs, bookmarks, and unread newsletters.
-* Want to effortlessly stay informed about your interests and current events.
-* Deeply value your privacy, open-source software, and full control over your data.
-
+* Hate endless tabs, bookmarks, and unread lists.
+* Crave a single place for news, newsletters, tweets, and more.
+* Value privacy and want full control over your reading data.
 
 ## Getting Started
+
+You can use our official cloud version at **[readspace.ai](https://readspace.ai)** or self-host for full control over your data.
 
 ### Prerequisites
 
 * **Git**: For cloning the repository.
 * **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
 
-### Self-Hosting
+### Self-Hosting with 3 steps
 
 Readspace is designed for easy self-hosting, giving you complete control over your data and experience.
 
@@ -79,6 +71,12 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 
     Visit `localhost:8042`. Optionally, you can configure your reverse proxy to point to it.
 
+## Contributing
+
+Readspace is built by the community and we welcome contributions of all kinds, from bug fixes to new features.
+
+To get started, please check out our **[Contributing Guide](CONTRIBUTING.md)**.
+
 ## Community & Roadmap
 
 We're building Readspace transparently and collaboratively. Join our growing community and help shape the future of focused reading:
@@ -86,8 +84,7 @@ We're building Readspace transparently and collaboratively. Join our growing com
 * **Discord:** [Join our community here](https://discord.gg/2Q5PtYwUQZ)
 * **GitHub:** Star us and help shape the product.
 
-
-## Why Choose Readspace Over Feedly or Readwise?
+## What about the alternatives?
 
 * **Feedly** has pivoted to enterprise threat detection, offers a severely limited free tier, and suffers from declining reliability.
 * **Readwise Reader** is not really geared towards RSS, still in beta after years, proprietary and paywalled.
