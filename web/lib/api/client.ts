@@ -1,6 +1,7 @@
 import { env } from "@/env"
 import { getSession } from "@/lib/auth/supabase"
 import { createClient } from "@/lib/supabase/server"
+import { UserBookLibrary, Highlight } from "@/types/api"
 
 export class ApiError extends Error {
     constructor(
@@ -138,36 +139,50 @@ export class ApiClient {
 
     // Book endpoints
     static books = {
-        getUserBooks: () => this.get("/api/books/"),
-        getBook: (id: string) => this.get(`/api/books/${id}`),
-        createBook: (data: any) => this.post("/api/books/", data),
-        updateBook: (id: string, data: any) =>
+        getUserBooks: (): Promise<UserBookLibrary[]> => this.get("/api/books/"),
+        getBook: (id: string): Promise<UserBookLibrary> => this.get(`/api/books/${id}`),
+        createBook: (data: any): Promise<UserBookLibrary> => this.post("/api/books/", data),
+        updateBook: (id: string, data: any): Promise<UserBookLibrary> =>
             this.put(`/api/books/${id}`, data),
-        deleteBook: (id: string) => this.delete(`/api/books/${id}`),
+        updateBookProgress: (id: string, data: any): Promise<UserBookLibrary> =>
+            this.put(`/api/books/${id}/progress`, data),
+        deleteBook: (id: string): Promise<void> => this.delete(`/api/books/${id}`),
+        deleteBookMetadata: (metadataId: string): Promise<void> =>
+            this.delete(`/api/books/metadata/${metadataId}`),
     }
 
     // Highlight endpoints
     static highlights = {
-        getBookHighlights: (bookId: string) =>
-            this.get(`/api/books/${bookId}/highlights`),
-        createHighlight: (bookId: string, data: any) =>
-            this.post(`/api/books/${bookId}/highlights`, data),
-        updateHighlight: (bookId: string, highlightId: string, data: any) =>
-            this.put(`/api/books/${bookId}/highlights/${highlightId}`, data),
-        deleteHighlight: (bookId: string, highlightId: string) =>
-            this.delete(`/api/books/${bookId}/highlights/${highlightId}`),
+        getBookHighlights: (bookId: string): Promise<Highlight[]> =>
+            this.get(`/api/highlights/book/${bookId}`),
+        createHighlight: (data: any): Promise<Highlight> =>
+            this.post("/api/highlights/", data),
+        updateHighlight: (highlightId: string, data: any): Promise<Highlight> =>
+            this.put(`/api/highlights/${highlightId}`, data),
+        updateHighlightNote: (highlightId: string, note: string): Promise<Highlight> =>
+            this.put(`/api/highlights/${highlightId}/note`, { note }),
+        deleteHighlight: (highlightId: string): Promise<void> =>
+            this.delete(`/api/highlights/${highlightId}`),
+        deleteHighlightByText: (text: string): Promise<void> =>
+            this.delete(`/api/highlights/text/${encodeURIComponent(text)}`),
     }
 
     // RSS endpoints
     static rss = {
         // Folders
-        getFolders: () => this.get("/api/rss/folders"),
+        getFolders: () => this.get("/api/rss/folders/"),
         getFolder: (id: string) => this.get(`/api/rss/folders/${id}`),
         createFolder: (data: { name: string }) =>
-            this.post("/api/rss/folders", data),
+            this.post("/api/rss/folders/", data),
         updateFolder: (id: string, data: { name: string }) =>
             this.put(`/api/rss/folders/${id}`, data),
         deleteFolder: (id: string) => this.delete(`/api/rss/folders/${id}`),
+
+        // OPML Import
+        importOPML: (formData: FormData) =>
+            this.uploadFile("/api/rss/opml/import", formData),
+        getImportTaskStatus: (taskId: string) =>
+            this.get(`/api/rss/opml/import/status/${taskId}`),
 
         // Feeds
         getFeeds: (params?: {
@@ -190,7 +205,7 @@ export class ApiClient {
 
             const queryString = queryParams.toString()
             return this.get(
-                `/api/rss/feeds${queryString ? `?${queryString}` : ""}`
+                `/api/rss/feeds/${queryString ? `?${queryString}` : ""}`
             )
         },
         getFeed: (id: string) => this.get(`/api/rss/feeds/${id}`),
@@ -198,7 +213,7 @@ export class ApiClient {
             url: string
             folder_id?: string
             tag_ids?: string[]
-        }) => this.post("/api/rss/feeds", data),
+        }) => this.post("/api/rss/feeds/", data),
         updateFeed: (
             id: string,
             data: {
@@ -273,7 +288,7 @@ export class ApiClient {
 
             const queryString = queryParams.toString()
             return this.get(
-                `/api/rss/articles${queryString ? `?${queryString}` : ""}`
+                `/api/rss/articles/${queryString ? `?${queryString}` : ""}`
             )
         },
         getRecentlyReadArticles: (page?: number, size?: number) => {

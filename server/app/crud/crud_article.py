@@ -441,6 +441,14 @@ class CRUDArticleUnified:
     ) -> FeedArticleResponse:
         """Create feed article using legacy ArticleCreate schema (for RSS system compatibility)"""
         
+        # Check if article with same feed_id and guid already exists
+        existing_article = await self.feed_article.get_by_feed_and_guid(
+            db, feed_id=obj_in.feed_id, guid=obj_in.guid
+        )
+        if existing_article:
+            # Return existing article if it already exists (it already has content loaded)
+            return FeedArticleResponse.model_validate(existing_article)
+        
         # Create article content first
         content_data = ArticleContentCreate(
             title=obj_in.title,

@@ -545,6 +545,7 @@ class RssService:
                          total_entries=total_entries, valid_articles=valid_articles_count)
             # Don't fail here, but log it for monitoring
         
+        newly_created_articles_count = 0
         if articles_to_create:
             # Use the unified CRUD system to create articles properly
             created_articles = []
@@ -552,10 +553,18 @@ class RssService:
                 try:
                     created_article = await crud_article.create_from_legacy_schema(self.db, obj_in=article_data)
                     created_articles.append(created_article)
+                except IntegrityError as e:
+                    # Handle integrity errors (like duplicate GUIDs) by rolling back and continuing
+                    await self.db.rollback()
+                    logger.warning(f"Failed to create article with GUID {article_data.guid} due to integrity error", error=str(e))
+                    continue
                 except Exception as e:
+                    # Handle other errors by rolling back and continuing
+                    await self.db.rollback()
                     logger.warning(f"Failed to create article with GUID {article_data.guid}", error=str(e))
                     continue
-            logger.info(f"Created {len(created_articles)} initial articles for feed", feed_id=db_feed.id, url=url)
+            newly_created_articles_count = len(created_articles)
+            logger.info(f"Created {newly_created_articles_count} new articles for feed", feed_id=db_feed.id, url=url)
 
         # Update the feed with metadata from the first fetch (ETag, Last-Modified, TTL, latest_article_date etc.)
         feed_http_headers = fetch_result.get("headers", {})
@@ -742,7 +751,14 @@ class RssService:
                 try:
                     created_article = await crud_article.create_from_legacy_schema(self.db, obj_in=article_data)
                     created_articles.append(created_article)
+                except IntegrityError as e:
+                    # Handle integrity errors (like duplicate GUIDs) by rolling back and continuing
+                    await self.db.rollback()
+                    logger.warning(f"Failed to create article with GUID {article_data.guid} due to integrity error", error=str(e))
+                    continue
                 except Exception as e:
+                    # Handle other errors by rolling back and continuing
+                    await self.db.rollback()
                     logger.warning(f"Failed to create article with GUID {article_data.guid}", error=str(e))
                     continue
             newly_created_articles_count = len(created_articles)

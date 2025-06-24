@@ -7,8 +7,7 @@ const HIGHLIGHTS_QUERY_KEY = "highlights"
 export function useBookHighlights(bookId: string) {
     return useQuery({
         queryKey: [HIGHLIGHTS_QUERY_KEY, bookId],
-        queryFn: () =>
-            ApiClient.get<Highlight[]>(`/api/highlights/book/${bookId}`),
+        queryFn: () => ApiClient.highlights.getBookHighlights(bookId),
     })
 }
 
@@ -16,7 +15,7 @@ export function useCreateHighlight() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (highlight: HighlightCreate) =>
-            ApiClient.post<Highlight>("/api/highlights/", highlight),
+            ApiClient.highlights.createHighlight(highlight),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -31,10 +30,7 @@ export function useUpdateHighlight() {
     const queryClient = useQueryClient()
     return useMutation<Highlight, Error, UpdateHighlightVariables>({
         mutationFn: ({ highlightId, highlight }) =>
-            ApiClient.put<Highlight>(
-                `/api/highlights/${highlightId}`,
-                highlight
-            ),
+            ApiClient.highlights.updateHighlight(highlightId, highlight),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -45,7 +41,7 @@ export function useDeleteHighlight() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (highlightId: string) =>
-            ApiClient.delete(`/api/highlights/${highlightId}`),
+            ApiClient.highlights.deleteHighlight(highlightId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -56,9 +52,7 @@ export function useDeleteHighlightByText() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (text: string) =>
-            ApiClient.delete(
-                `/api/highlights/text/${encodeURIComponent(text)}`
-            ),
+            ApiClient.highlights.deleteHighlightByText(text),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },
@@ -74,7 +68,7 @@ export function useUpdateHighlightNote() {
         }: {
             highlightId: string
             note: string
-        }) => ApiClient.put(`/api/highlights/${highlightId}/note`, { note }),
+        }) => ApiClient.highlights.updateHighlightNote(highlightId, note),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] })
         },

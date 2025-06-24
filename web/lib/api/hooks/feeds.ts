@@ -136,10 +136,7 @@ export function useImportOPML() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (formData: FormData) =>
-            ApiClient.uploadFile(
-                "/api/rss/opml/import",
-                formData
-            ) as Promise<OPMLImportResponse>,
+            ApiClient.rss.importOPML(formData) as Promise<OPMLImportResponse>,
         onSuccess: (data) => {
             // All imports are background now - queries will be invalidated when task completes
             // No immediate invalidation needed
@@ -153,10 +150,7 @@ export function useImportTaskStatus(
 ) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_STATUS, taskId],
-        queryFn: () =>
-            ApiClient.get<ImportTaskStatus>(
-                `/api/rss/opml/import/status/${taskId}`
-            ),
+        queryFn: () => ApiClient.rss.getImportTaskStatus(taskId!),
         enabled: !!taskId && enabled,
         refetchInterval: 3000, // Poll every 3 seconds - we'll handle stopping in the component
         retry: false, // Don't retry failed status checks
@@ -167,7 +161,7 @@ export function useImportTaskStatus(
 export function useFolders() {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.FOLDERS],
-        queryFn: () => ApiClient.get<Folder[]>("/api/rss/folders"),
+        queryFn: () => ApiClient.rss.getFolders(),
     })
 }
 
@@ -175,7 +169,7 @@ export function useCreateFolder() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (folder: { name: string }) =>
-            ApiClient.post<Folder>("/api/rss/folders", folder),
+            ApiClient.rss.createFolder(folder),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.FOLDERS],
@@ -188,7 +182,7 @@ export function useUpdateFolder() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: ({ folderId, name }: { folderId: string; name: string }) =>
-            ApiClient.put<Folder>(`/api/rss/folders/${folderId}`, { name }),
+            ApiClient.rss.updateFolder(folderId, { name }),
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.FOLDERS],
@@ -279,29 +273,21 @@ export function useFeeds(params?: {
     isFavorite?: boolean
     searchQuery?: string
 }) {
-    // Build query string from params
-    const queryParams = new URLSearchParams()
-    if (params?.folderId) queryParams.append("folder_id", params.folderId)
-    if (params?.tagNames)
-        params.tagNames.forEach((tag) => queryParams.append("tag_names", tag))
-    if (params?.isFavorite !== undefined)
-        queryParams.append("is_favorite", params.isFavorite.toString())
-    if (params?.searchQuery)
-        queryParams.append("search_query", params.searchQuery)
-
-    const queryString = queryParams.toString()
-    const url = `/api/rss/feeds${queryString ? `?${queryString}` : ""}`
-
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.FEEDS, params],
-        queryFn: () => ApiClient.get<Feed[]>(url),
+        queryFn: () => ApiClient.rss.getFeeds({
+            folder_id: params?.folderId,
+            tag_names: params?.tagNames,
+            is_favorite: params?.isFavorite,
+            search_query: params?.searchQuery,
+        }),
     })
 }
 
 export function useFeed(feedId: string) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
-        queryFn: () => ApiClient.get<Feed>(`/api/rss/feeds/${feedId}`),
+        queryFn: () => ApiClient.rss.getFeed(feedId),
         enabled: !!feedId,
     })
 }
@@ -313,7 +299,7 @@ export function useCreateFeed() {
             url: string
             folder_id?: string
             tag_ids?: string[]
-        }) => ApiClient.post<Feed>("/api/rss/feeds", feed),
+        }) => ApiClient.rss.createFeed(feed),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] })
         },
@@ -359,11 +345,7 @@ export function useRefreshFeed() {
             forceRefetch?: boolean
             silent?: boolean // Option to suppress toasts
         }) => {
-            const queryParams = new URLSearchParams()
-            if (forceRefetch) queryParams.append("force_refetch", "true")
-            return ApiClient.post<Feed>(
-                `/api/rss/feeds/${feedId}/refresh${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-            )
+            return ApiClient.rss.refreshFeed(feedId, forceRefetch)
         },
         onSuccess: (_, { feedId, silent }) => {
             if (!silent) {
@@ -396,7 +378,7 @@ export function useRefreshFeed() {
 export function useRefreshFolderFeeds() {
     return useMutation({
         mutationFn: (folderId: string) =>
-            ApiClient.post(`/api/rss/feeds/refresh_folder/${folderId}`),
+            ApiClient.rss.refreshFolderFeeds(folderId),
         onSuccess: (data) => {
             toast.success("Folder refresh started! Check status for progress.")
             return data
@@ -412,7 +394,7 @@ export function useRefreshFolderFeeds() {
 
 export function useRefreshAllFeeds() {
     return useMutation({
-        mutationFn: () => ApiClient.post("/api/rss/feeds/refresh_all"),
+        mutationFn: () => ApiClient.rss.refreshAllFeeds(),
         onSuccess: (data) => {
             toast.success(
                 "All feeds refresh started! Check status for progress."
@@ -434,7 +416,7 @@ export function useRefreshStatus(
 ) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.REFRESH_STATUS, taskId],
-        queryFn: () => ApiClient.get(`/api/rss/feeds/refresh_status/${taskId}`),
+        queryFn: () => ApiClient.rss.getRefreshStatus(taskId!),
         enabled: enabled && !!taskId,
         refetchInterval: 2000, // Poll every 2 seconds
         refetchIntervalInBackground: false,
@@ -527,36 +509,23 @@ export function useArticles(
         staleTime?: number
     }
 ) {
-    // Build query string from params
-    const queryParams = new URLSearchParams()
-    if (params.feedIds)
-        params.feedIds.forEach((id) => queryParams.append("feed_ids", id))
-    if (params.folderId) queryParams.append("folder_id", params.folderId)
-    if (params.isRead !== undefined)
-        queryParams.append("is_read", params.isRead.toString())
-    if (params.isReadLater !== undefined)
-        queryParams.append("is_read_later", params.isReadLater.toString())
-    if (params.isFavorite !== undefined)
-        queryParams.append("is_favorite", params.isFavorite.toString())
-    if (params.feedIsFavorite !== undefined)
-        queryParams.append("feed_is_favorite", params.feedIsFavorite.toString())
-    if (params.publishedSince)
-        queryParams.append("published_since", params.publishedSince)
-    if (params.publishedUntil)
-        queryParams.append("published_until", params.publishedUntil)
-    if (params.searchQuery)
-        queryParams.append("search_query", params.searchQuery)
-    if (params.sortBy) queryParams.append("sort_by", params.sortBy)
-    if (params.sortOrder) queryParams.append("sort_order", params.sortOrder)
-    if (params.page) queryParams.append("page", params.page.toString())
-    if (params.size) queryParams.append("size", params.size.toString())
-
-    const queryString = queryParams.toString()
-    const url = `/api/rss/articles${queryString ? `?${queryString}` : ""}`
-
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, params],
-        queryFn: () => ApiClient.get<PaginatedResponse<Article>>(url),
+        queryFn: () => ApiClient.rss.getArticles({
+            feed_ids: params.feedIds,
+            folder_id: params.folderId,
+            is_read: params.isRead,
+            is_read_later: params.isReadLater,
+            is_favorite: params.isFavorite,
+            feed_is_favorite: params.feedIsFavorite,
+            published_since: params.publishedSince,
+            published_until: params.publishedUntil,
+            search_query: params.searchQuery,
+            sort_by: params.sortBy,
+            sort_order: params.sortOrder,
+            page: params.page,
+            size: params.size,
+        }),
         ...options,
     })
 }
@@ -564,65 +533,32 @@ export function useArticles(
 export function useRecentlyReadArticles(
     params: { page?: number; size?: number } = {}
 ) {
-    const queryParams = new URLSearchParams()
-    if (params.page) queryParams.append("page", params.page.toString())
-    if (params.size) queryParams.append("size", params.size.toString())
-
-    const queryString = queryParams.toString()
-    const url = `/api/rss/articles/recently_read${queryString ? `?${queryString}` : ""}`
-
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, "recently_read", params],
-        queryFn: () => ApiClient.get<PaginatedResponse<Article>>(url),
+        queryFn: () => ApiClient.rss.getRecentlyReadArticles(params.page, params.size),
     })
 }
 
 export function useReadLaterArticles(
     params: { page?: number; size?: number } = {}
 ) {
-    const queryParams = new URLSearchParams()
-    if (params.page) queryParams.append("page", params.page.toString())
-    if (params.size) queryParams.append("size", params.size.toString())
-
-    const queryString = queryParams.toString()
-    const url = `/api/rss/articles/read_later${queryString ? `?${queryString}` : ""}`
-
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later", params],
-        queryFn: () => ApiClient.get<PaginatedResponse<Article>>(url),
+        queryFn: () => ApiClient.rss.getReadLaterArticles(params.page, params.size),
     })
 }
 
 export function useUnreadCounts(folderId?: string) {
-    const queryParams = new URLSearchParams()
-    if (folderId) queryParams.append("folder_id", folderId)
-
-    const queryString = queryParams.toString()
-    const url = `/api/rss/articles/unread_counts${queryString ? `?${queryString}` : ""}`
-
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS, folderId],
-        queryFn: () =>
-            ApiClient.get<{
-                total_unread: number
-                unread_by_folder?: {
-                    folder_id: string
-                    name: string
-                    unread_count: number
-                }[]
-                folder_unread?: {
-                    folder_id: string
-                    name: string
-                    count: number
-                }
-            }>(url),
+        queryFn: () => ApiClient.rss.getUnreadCounts(folderId),
     })
 }
 
 export function useArticle(articleId: string) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
-        queryFn: () => ApiClient.get<Article>(`/api/rss/articles/${articleId}`),
+        queryFn: () => ApiClient.rss.getArticle(articleId),
         enabled: !!articleId,
     })
 }
@@ -641,7 +577,7 @@ export function useUpdateArticle() {
                 is_read_later?: boolean
                 is_favorite?: boolean
             }
-        }) => ApiClient.put<Article>(`/api/rss/articles/${articleId}`, data),
+        }) => ApiClient.rss.updateArticle(articleId, data),
         onSuccess: (_, { articleId }) => {
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
@@ -671,14 +607,7 @@ export function useBulkUpdateArticles() {
                 | "unmark_as_read_later"
                 | "mark_as_favorite"
                 | "unmark_as_favorite"
-        }) =>
-            ApiClient.post<{ affected_articles: number }>(
-                `/api/rss/articles/bulk_update`,
-                {
-                    article_ids: articleIds,
-                    action,
-                }
-            ),
+        }) => ApiClient.rss.bulkUpdateArticles(articleIds, action),
         onMutate: async ({ articleIds, action }) => {
             await queryClient.cancelQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLES],

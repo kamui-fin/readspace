@@ -35,8 +35,6 @@ Readspace is perfect if you:
 
 ## Getting Started
 
-You can use our official cloud version at **[readspace.ai](https://readspace.ai)** or self-host for full control over your data.
-
 ### Prerequisites
 
 * **Git**: For cloning the repository.
