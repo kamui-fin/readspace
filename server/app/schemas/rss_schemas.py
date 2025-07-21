@@ -254,10 +254,6 @@ class ArticleResponse(ArticleBase):
 # Legacy schemas (kept for backward compatibility)
 Article = FeedArticleResponse
 
-class ArticleBulkUpdateRequest(BaseModel):
-    article_ids: List[UUID] = Field(..., min_length=1)
-    action: str = Field(..., pattern=r"^(mark_read|mark_unread|toggle_favorite|mark_read_later|remove_read_later)$")
-
 # ========= OPML Schemas =========
 class OpmlImportRequest(BaseModel):
     opml_content: str # The raw OPML XML content as a string

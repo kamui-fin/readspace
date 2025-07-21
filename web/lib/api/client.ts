@@ -170,19 +170,19 @@ export class ApiClient {
     // RSS endpoints
     static rss = {
         // Folders
-        getFolders: () => this.get("/api/rss/folders/"),
-        getFolder: (id: string) => this.get(`/api/rss/folders/${id}`),
+        getFolders: () => this.get<{ id: string; name: string; user_id: string; created_at: string }[]>("/api/rss/folders/"),
+        getFolder: (id: string) => this.get<{ id: string; name: string; user_id: string; created_at: string }>(`/api/rss/folders/${id}`),
         createFolder: (data: { name: string }) =>
-            this.post("/api/rss/folders/", data),
+            this.post<{ id: string; name: string; user_id: string; created_at: string }>("/api/rss/folders/", data),
         updateFolder: (id: string, data: { name: string }) =>
-            this.put(`/api/rss/folders/${id}`, data),
+            this.put<{ id: string; name: string; user_id: string; created_at: string }>(`/api/rss/folders/${id}`, data),
         deleteFolder: (id: string) => this.delete(`/api/rss/folders/${id}`),
 
         // OPML Import
         importOPML: (formData: FormData) =>
             this.uploadFile("/api/rss/opml/import", formData),
         getImportTaskStatus: (taskId: string) =>
-            this.get(`/api/rss/opml/import/status/${taskId}`),
+            this.get<{ task_id: string; status: string; progress?: number; completed?: number; total?: number; feeds_imported?: number; feeds_failed?: number }>(`/api/rss/opml/import/status/${taskId}`),
 
         // Feeds
         getFeeds: (params?: {
@@ -204,16 +204,61 @@ export class ApiClient {
                 queryParams.append("search_query", params.search_query)
 
             const queryString = queryParams.toString()
-            return this.get(
+            return this.get<{
+                id: string
+                title: string
+                url: string
+                description: string
+                image_url: string | null
+                folder_id: string | null
+                folder_name: string | null
+                is_favorite: boolean
+                last_fetched_at: string | null
+                tags: { id: string; name: string }[]
+                unread_count: number
+                fetch_error_count: number
+                last_error_message: string | null
+                last_article_published_at: string | null
+            }[]>(
                 `/api/rss/feeds/${queryString ? `?${queryString}` : ""}`
             )
         },
-        getFeed: (id: string) => this.get(`/api/rss/feeds/${id}`),
+        getFeed: (id: string) => this.get<{
+            id: string
+            title: string
+            url: string
+            description: string
+            image_url: string | null
+            folder_id: string | null
+            folder_name: string | null
+            is_favorite: boolean
+            last_fetched_at: string | null
+            tags: { id: string; name: string }[]
+            unread_count: number
+            fetch_error_count: number
+            last_error_message: string | null
+            last_article_published_at: string | null
+        }>(`/api/rss/feeds/${id}`),
         createFeed: (data: {
             url: string
             folder_id?: string
             tag_ids?: string[]
-        }) => this.post("/api/rss/feeds/", data),
+        }) => this.post<{
+            id: string
+            title: string
+            url: string
+            description: string
+            image_url: string | null
+            folder_id: string | null
+            folder_name: string | null
+            is_favorite: boolean
+            last_fetched_at: string | null
+            tags: { id: string; name: string }[]
+            unread_count: number
+            fetch_error_count: number
+            last_error_message: string | null
+            last_article_published_at: string | null
+        }>("/api/rss/feeds/", data),
         updateFeed: (
             id: string,
             data: {
@@ -222,19 +267,34 @@ export class ApiClient {
                 is_favorite?: boolean
                 title?: string
             }
-        ) => this.put(`/api/rss/feeds/${id}`, data),
+        ) => this.put<{
+            id: string
+            title: string
+            url: string
+            description: string
+            image_url: string | null
+            folder_id: string | null
+            folder_name: string | null
+            is_favorite: boolean
+            last_fetched_at: string | null
+            tags: { id: string; name: string }[]
+            unread_count: number
+            fetch_error_count: number
+            last_error_message: string | null
+            last_article_published_at: string | null
+        }>(`/api/rss/feeds/${id}`, data),
         refreshFeed: (id: string, forceRefetch: boolean = false) => {
             const queryParams = new URLSearchParams()
             if (forceRefetch) queryParams.append("force_refetch", "true")
-            return this.post(
+            return this.post<{ task_id: string; status: string }>(
                 `/api/rss/feeds/${id}/refresh${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
             )
         },
         refreshFolderFeeds: (folderId: string) =>
-            this.post(`/api/rss/feeds/refresh_folder/${folderId}`),
-        refreshAllFeeds: () => this.post("/api/rss/feeds/refresh_all"),
+            this.post<{ task_id: string; status: string }>(`/api/rss/feeds/refresh_folder/${folderId}`),
+        refreshAllFeeds: () => this.post<{ task_id: string; status: string }>("/api/rss/feeds/refresh_all"),
         getRefreshStatus: (taskId: string) =>
-            this.get(`/api/rss/feeds/refresh_status/${taskId}`),
+            this.get<{ task_id: string; status: string; progress?: number; completed?: number; total?: number }>(`/api/rss/feeds/refresh_status/${taskId}`),
         deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
 
         // Articles
@@ -287,7 +347,27 @@ export class ApiClient {
             if (params.size) queryParams.append("size", params.size.toString())
 
             const queryString = queryParams.toString()
-            return this.get(
+            return this.get<{
+                articles: Array<{
+                    id: string
+                    title: string
+                    url: string
+                    content: string
+                    published_at: string
+                    author: string | null
+                    is_read: boolean
+                    is_read_later: boolean
+                    is_favorite: boolean
+                    read_at: string | null
+                    feed_id: string
+                    feed_title: string
+                    feed_image_url: string | null
+                }>
+                total: number
+                page: number
+                size: number
+                total_pages: number
+            }>(
                 `/api/rss/articles/${queryString ? `?${queryString}` : ""}`
             )
         },
@@ -297,7 +377,27 @@ export class ApiClient {
             if (size) queryParams.append("size", size.toString())
 
             const queryString = queryParams.toString()
-            return this.get(
+            return this.get<{
+                articles: Array<{
+                    id: string
+                    title: string
+                    url: string
+                    content: string
+                    published_at: string
+                    author: string | null
+                    is_read: boolean
+                    is_read_later: boolean
+                    is_favorite: boolean
+                    read_at: string | null
+                    feed_id: string
+                    feed_title: string
+                    feed_image_url: string | null
+                }>
+                total: number
+                page: number
+                size: number
+                total_pages: number
+            }>(
                 `/api/rss/articles/recently_read${queryString ? `?${queryString}` : ""}`
             )
         },
@@ -307,7 +407,27 @@ export class ApiClient {
             if (size) queryParams.append("size", size.toString())
 
             const queryString = queryParams.toString()
-            return this.get(
+            return this.get<{
+                articles: Array<{
+                    id: string
+                    title: string
+                    url: string
+                    content: string
+                    published_at: string
+                    author: string | null
+                    is_read: boolean
+                    is_read_later: boolean
+                    is_favorite: boolean
+                    read_at: string | null
+                    feed_id: string
+                    feed_title: string
+                    feed_image_url: string | null
+                }>
+                total: number
+                page: number
+                size: number
+                total_pages: number
+            }>(
                 `/api/rss/articles/read_later${queryString ? `?${queryString}` : ""}`
             )
         },
@@ -316,11 +436,27 @@ export class ApiClient {
             if (folderId) queryParams.append("folder_id", folderId)
 
             const queryString = queryParams.toString()
-            return this.get(
+            return this.get<{
+                [feedId: string]: number
+            }>(
                 `/api/rss/articles/unread_counts${queryString ? `?${queryString}` : ""}`
             )
         },
-        getArticle: (id: string) => this.get(`/api/rss/articles/${id}`),
+        getArticle: (id: string) => this.get<{
+            id: string
+            title: string
+            url: string
+            content: string
+            published_at: string
+            author: string | null
+            is_read: boolean
+            is_read_later: boolean
+            is_favorite: boolean
+            read_at: string | null
+            feed_id: string
+            feed_title: string
+            feed_image_url: string | null
+        }>(`/api/rss/articles/${id}`),
         updateArticle: (
             id: string,
             data: {
@@ -329,19 +465,20 @@ export class ApiClient {
                 is_read_later?: boolean
                 is_favorite?: boolean
             }
-        ) => this.put(`/api/rss/articles/${id}`, data),
-        bulkUpdateArticles: (articleIds: string[], action: string) =>
-            this.post(`/api/rss/articles/bulk_update`, {
-                article_ids: articleIds,
-                action,
-            }),
-        markFeedAsRead: (feedId: string) =>
-            this.post<{ affected_articles: number }>(
-                `/api/rss/articles/feed/${feedId}/mark-all-as-read`
-            ),
-        markFolderAsRead: (folderId: string) =>
-            this.post<{ affected_articles: number }>(
-                `/api/rss/articles/folder/${folderId}/mark-all-as-read`
-            ),
+        ) => this.put<{
+            id: string
+            title: string
+            url: string
+            content: string
+            published_at: string
+            author: string | null
+            is_read: boolean
+            is_read_later: boolean
+            is_favorite: boolean
+            read_at: string | null
+            feed_id: string
+            feed_title: string
+            feed_image_url: string | null
+        }>(`/api/rss/articles/${id}`, data),
     }
 }

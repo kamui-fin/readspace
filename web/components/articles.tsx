@@ -10,17 +10,16 @@ import {
 } from "@/components/ui/resizable"
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
 import {
-    useArticle,
     useArticles,
-    useBulkUpdateArticles,
+    useArticle,
+    useUpdateArticle,
     useFeeds,
-    useReadLaterArticles,
-    useRecentlyReadArticles,
     useRefreshFeed,
     useRefreshFolderFeeds,
     useRefreshAllFeeds,
     useRefreshStatus,
-    useUpdateArticle,
+    useRecentlyReadArticles,
+    useReadLaterArticles,
 } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import {
@@ -86,6 +85,8 @@ export function ArticlesView({
     const router = useRouter()
     const { data: allUserFeeds } = useFeeds()
 
+    const typedAllUserFeeds = allUserFeeds as any[] || []
+
     const isRecentlyReadMode = viewMode === "recentlyRead"
     const isReadLaterMode = viewMode === "readLater"
     const sidebarTitle = isRecentlyReadMode
@@ -147,14 +148,13 @@ export function ArticlesView({
         refetchOnWindowFocus: false,
     })
 
-    const articlesData: PaginatedResponse<Article> = data || {
+    const articlesData: PaginatedResponse<Article> = (data as PaginatedResponse<Article>) || {
         items: [],
         total: 0,
         page: 1,
         pages: 1,
         size: 25,
     }
-    const bulkUpdateArticles = useBulkUpdateArticles()
     const refreshFeed = useRefreshFeed()
     const refreshFolderFeeds = useRefreshFolderFeeds()
     const refreshAllFeeds = useRefreshAllFeeds()
@@ -348,9 +348,9 @@ export function ArticlesView({
                 forceRefetch: true,
                 silent: false,
             })
-        } else if (viewFolderId && allUserFeeds) {
+        } else if (viewFolderId && typedAllUserFeeds) {
             // Folder view: check if we should use bulk refresh
-            const feedsInFolder = allUserFeeds.filter(
+            const feedsInFolder = typedAllUserFeeds.filter(
                 (f) => f.folder_id === viewFolderId
             )
             if (feedsInFolder.length > 1) {
@@ -400,14 +400,14 @@ export function ArticlesView({
                 toast("No feeds in this folder to refresh.")
                 refetchArticles()
             }
-        } else if (viewMode === "allArticles" && allUserFeeds) {
+        } else if (viewMode === "allArticles" && typedAllUserFeeds.length > 0) {
             // "All Articles" view: check if we should use bulk refresh
-            if (allUserFeeds.length > 10) {
+            if (typedAllUserFeeds.length > 10) {
                 // Use bulk refresh for many feeds
                 if (
-                    allUserFeeds.length > 50 &&
+                    typedAllUserFeeds.length > 50 &&
                     !window.confirm(
-                        `You are about to refresh ${allUserFeeds.length} feeds. This might take a while. Continue?`
+                        `You are about to refresh ${typedAllUserFeeds.length} feeds. This might take a while. Continue?`
                     )
                 ) {
                     return
@@ -417,7 +417,7 @@ export function ArticlesView({
                         setRefreshTaskId(data.task_id)
                         setRefreshType("all")
                         toast.loading(
-                            `Refreshing all ${allUserFeeds.length} feed(s)...`,
+                            `Refreshing all ${typedAllUserFeeds.length} feed(s)...`,
                             {
                                 id: "bulk-refresh",
                                 duration: 0, // Keep loading until we manually dismiss it
@@ -429,12 +429,12 @@ export function ArticlesView({
                 // Use individual refresh for smaller numbers
                 const toastId = "individual-refresh"
                 toast.loading(
-                    `Refreshing all ${allUserFeeds.length} feed(s)...`,
+                    `Refreshing all ${typedAllUserFeeds.length} feed(s)...`,
                     { id: toastId }
                 )
                 try {
                     await Promise.all(
-                        allUserFeeds.map((f) =>
+                        typedAllUserFeeds.map((f) =>
                             refreshFeed.mutateAsync({
                                 feedId: f.id,
                                 forceRefetch: true,
@@ -458,40 +458,6 @@ export function ArticlesView({
             // Read Later / Recently Read / Other views: Just refetch from DB
             refetchArticles()
         }
-    }
-
-    const handleMarkAllAsRead = () => {
-        // Get all unread article IDs from the current view
-        const unreadArticleIds = articlesData.items
-            .filter((article) => !article.is_read)
-            .map((article) => article.id)
-
-        if (unreadArticleIds.length === 0) return
-
-        // Update optimistically
-        const optimisticallyUpdatedArticles = articlesData.items.map(
-            (article) =>
-                !article.is_read ? { ...article, is_read: true } : article
-        )
-
-        // Update the cache optimistically
-        const optimisticData = {
-            ...articlesData,
-            items: optimisticallyUpdatedArticles,
-        }
-
-        // Update query cache with optimistic data
-        bulkUpdateArticles.mutate(
-            {
-                articleIds: unreadArticleIds,
-                action: "mark_as_read",
-            },
-            {
-                onSuccess: () => {
-                    refetchArticles()
-                },
-            }
-        )
     }
 
     const toggleShowUnreadOnly = () => {
@@ -609,16 +575,6 @@ export function ArticlesView({
                                             ) : (
                                                 <EyeOff className="h-4 w-4" />
                                             )}
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={handleMarkAllAsRead}
-                                            title="Mark all as read"
-                                            disabled={unreadCount === 0}
-                                        >
-                                            <CheckCircle2 className="h-4 w-4" />
                                         </Button>
                                         <Button
                                             variant="ghost"
@@ -759,10 +715,10 @@ export function ArticlesView({
                                 <ArticleContentSkeleton />
                             </div>
                         )}
-                        {!isArticleLoading && selectedArticle && (
+                        {!isArticleLoading && selectedArticle ? (
                             <div className="p-6 md:p-10 h-full overflow-y-auto">
                                 <ArticleContentView
-                                    article={selectedArticle}
+                                    article={selectedArticle as Article}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
                                     onArticleRemoved={() =>
@@ -770,7 +726,7 @@ export function ArticlesView({
                                     }
                                 />
                             </div>
-                        )}
+                        ) : null}
                         {!isArticleLoading && !selectedArticle && (
                             <div className="flex flex-1 items-center justify-center">
                                 <p className="text-muted-foreground">

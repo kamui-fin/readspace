@@ -6,7 +6,6 @@ import structlog
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import (
-    ArticleBulkUpdateRequest,
     ArticleResponse,
     ArticleUpdate,
     PaginatedResponse,
@@ -170,74 +169,4 @@ async def update_article_status(
         logger.warning("Article not found for update or access denied", article_id=article_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
     logger.info("Article status updated successfully", article_id=updated_article.id, user_id=current_user.sub)
-    return updated_article
-
-@router.post("/bulk_update", response_model=Dict[str, int])
-async def bulk_update_article_statuses(
-    update_request: ArticleBulkUpdateRequest = Body(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Bulk update status of multiple articles (e.g., mark as read, toggle favorite)."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
-    try:
-        affected_count = await rss_service.bulk_update_articles_status(
-            article_ids=update_request.article_ids,
-            action=update_request.action
-        )
-        logger.info(
-            "Bulk article status update processed", 
-            action=update_request.action, 
-            num_ids_provided=len(update_request.article_ids),
-            num_affected=affected_count, 
-            user_id=current_user.sub
-        )
-        return {"affected_articles": affected_count}
-    except ValueError as e:
-        logger.warning("Invalid action for bulk article update", error=str(e), user_id=current_user.sub, action=update_request.action)
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e:
-        logger.error("Unexpected error during bulk article update", error=str(e), user_id=current_user.sub)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
-
-@router.post("/feed/{feed_id}/mark-all-as-read", response_model=Dict[str, int])
-async def mark_all_feed_articles_as_read(
-    feed_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Marks all articles in a specific feed as read for the current user."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
-    try:
-        affected_count = await rss_service.mark_feed_articles_as_read(feed_id=feed_id)
-        logger.info(
-            "Marked all articles as read for feed", 
-            feed_id=feed_id, 
-            num_affected=affected_count, 
-            user_id=current_user.sub
-        )
-        return {"affected_articles": affected_count}
-    except Exception as e:
-        logger.error("Error marking feed articles as read", error=str(e), feed_id=feed_id, user_id=current_user.sub)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while marking articles as read.")
-
-@router.post("/folder/{folder_id}/mark-all-as-read", response_model=Dict[str, int])
-async def mark_all_folder_articles_as_read(
-    folder_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user)
-):
-    """Marks all articles in a specific folder as read for the current user."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
-    try:
-        affected_count = await rss_service.mark_folder_articles_as_read(folder_id=folder_id)
-        logger.info(
-            "Marked all articles as read for folder", 
-            folder_id=folder_id, 
-            num_affected=affected_count, 
-            user_id=current_user.sub
-        )
-        return {"affected_articles": affected_count}
-    except Exception as e:
-        logger.error("Error marking folder articles as read", error=str(e), folder_id=folder_id, user_id=current_user.sub)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while marking articles as read.") 
+    return updated_article 

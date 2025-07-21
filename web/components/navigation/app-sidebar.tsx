@@ -127,7 +127,7 @@ export function AppSidebar({
                                     href="#"
                                     onClick={(e) => {
                                         e.preventDefault()
-                                        toggleSidebar()
+                                        // Removed toggleSidebar() call
                                     }}
                                 >
                                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">

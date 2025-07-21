@@ -112,7 +112,7 @@ export function BookCard({ book }: BookCardProps) {
     const bookCardContent = (
         <Card className="transition-all duration-300 hover:shadow-md">
             <div className="relative">
-                <div className="aspect-[3/4] w-full relative rounded-t-lg overflow-hidden bg-muted">
+                <div className="aspect-[3/2] w-full relative rounded-t-lg overflow-hidden bg-muted">
                     <Image
                         src={coverUrl}
                         alt={`Cover of ${book.book_metadata.title}`}
@@ -122,13 +122,13 @@ export function BookCard({ book }: BookCardProps) {
                 </div>
             </div>
 
-            <CardContent className="flex-1 p-4">
+            <CardContent className="flex-1 p-3">
                 <div className="flex justify-between items-start">
                     <div className="space-y-1">
-                        <h3 className="font-semibold leading-tight line-clamp-1">
+                        <h3 className="font-semibold leading-tight line-clamp-1 text-sm">
                             {book.book_metadata.title}
                         </h3>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-xs text-muted-foreground">
                             {book.book_metadata.author}
                         </p>
                     </div>
@@ -136,7 +136,7 @@ export function BookCard({ book }: BookCardProps) {
                 </div>
 
                 {book.book_metadata.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
                         {book.book_metadata.description}
                     </p>
                 )}
@@ -151,34 +151,27 @@ export function BookCard({ book }: BookCardProps) {
                     </Badge>
                 </div>
 
-                <div className="mt-4 space-y-2">
-                    <div className="flex justify-between items-center text-sm text-muted-foreground">
-                        <span>Progress</span>
-                        <span>{Math.round(progress * 100)}%</span>
-                    </div>
-                    <Progress
-                        value={Math.round(progress * 100)}
-                        className="h-2"
-                    />
-                </div>
-
-                <div className="mt-2 text-xs text-muted-foreground text-center">
-                    {progress < 1 ? (
-                        <>
-                            {estReadingTimeLeft}{" "}
-                            {book.book_metadata.format === "PDF"
-                                ? "remaining"
-                                : "left"}
-                        </>
-                    ) : (
-                        "Completed"
-                    )}
-                </div>
-
-                <div className="mt-3 text-xs text-muted-foreground">
-                    Added {formatDate(book.date_added)}
+                <div className="mt-3 flex justify-between items-center text-xs text-muted-foreground">
+                    <span>Added {formatDate(book.date_added)}</span>
+                    <span>
+                        {progress < 1 ? (
+                            <>
+                                {estReadingTimeLeft}{" "}
+                                {book.book_metadata.format === "PDF"
+                                    ? "remaining"
+                                    : "left"}
+                            </>
+                        ) : (
+                            "Completed"
+                        )}
+                    </span>
                 </div>
             </CardContent>
+            <Progress
+                value={Math.round(progress * 100)}
+                className="h-1 w-full rounded-none bg-gray-200 dark:bg-sidebar"
+                indicatorClassName="bg-linear-to-r from-secondary to-primary transition-all duration-300 ease-in-out"
+            />
         </Card>
     )
 

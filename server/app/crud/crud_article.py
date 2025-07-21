@@ -206,86 +206,51 @@ async def update_article(
     return article_db
 
 
-async def bulk_update_articles_status(
-    db: AsyncSession, *, article_ids: List[UUID], user_id: UUID, updates: Dict[str, Any]
-) -> int:
-    if not article_ids or not updates:
-        return 0
-
-    values_to_update = {}
-    if "is_read" in updates and updates["is_read"]:
-        values_to_update["is_read"] = True
-        if "read_at" not in updates:
-            values_to_update["read_at"] = datetime.now(timezone.utc)
-    elif "is_read" in updates and not updates["is_read"]:
-        values_to_update["is_read"] = False
-        values_to_update["read_at"] = None
-    
-    if "read_at" in updates:
-        values_to_update["read_at"] = updates["read_at"]
-
-    if "is_read_later" in updates:
-        values_to_update["is_read_later"] = updates["is_read_later"]
-    
-    if "is_favorite" in updates:
-        values_to_update["is_favorite"] = updates["is_favorite"]
-
-    if not values_to_update:
-        return 0
-
-    values_to_update["updated_at"] = datetime.now(timezone.utc)
-
-    stmt = (
-        update(Article)
-        .where(Article.id.in_(article_ids), Article.user_id == user_id)
-        .values(**values_to_update)
-    )
-    result = await db.execute(stmt)
-    await db.commit()
-    return result.rowcount
-
-
-async def mark_articles_as_read_for_feed(db: AsyncSession, *, user_id: UUID, feed_id: UUID) -> int:
-    """Marks all unread articles for a specific feed as read for the user."""
-    now = datetime.now(timezone.utc)
-    stmt = (
-        update(Article)
-        .where(
-            Article.user_id == user_id,
-            Article.feed_id == feed_id,
-            Article.is_read == False,
-        )
-        .values(is_read=True, read_at=now, updated_at=now)
-    )
-    result = await db.execute(stmt)
-    await db.commit()
-    return result.rowcount
-
-
-async def mark_articles_as_read_for_folder(db: AsyncSession, *, user_id: UUID, folder_id: UUID) -> int:
-    """Marks all unread articles in a specific folder as read for the user."""
-    now = datetime.now(timezone.utc)
-    stmt = (
-        update(Article)
-        .where(
-            Article.user_id == user_id,
-            Article.feed_id.in_(select(Feed.id).where(Feed.folder_id == folder_id)), # Select feeds in the folder
-            Article.is_read == False,
-        )
-        .values(is_read=True, read_at=now, updated_at=now)
-    )
-    result = await db.execute(stmt)
-    await db.commit()
-    return result.rowcount
-
-
 async def get_recently_read_articles(
     db: AsyncSession, *, user_id: UUID, skip: int = 0, limit: int = 20
-) -> Tuple[List[Article], int]:
-    """Get the most recently read articles for a user."""
-    return await get_articles_by_user(
-        db, user_id=user_id, is_read=True, sort_by="read_at", skip=skip, limit=limit
+) -> Tuple[List[ArticleResponse], int]:
+    """Get the most recently read articles for a user, unified from feeds and clips."""
+    
+    # 1. Get recently read feed articles
+    feed_articles_query = (
+        select(FeedArticle)
+        .options(selectinload(FeedArticle.content), selectinload(FeedArticle.feed))
+        .filter(and_(FeedArticle.user_id == user_id, FeedArticle.is_read == True))
+        .order_by(desc(FeedArticle.read_at))
     )
+    
+    feed_articles_result = await db.execute(feed_articles_query)
+    feed_articles = feed_articles_result.scalars().all()
+    
+    # 2. Get recently read clipped articles
+    clipped_articles_query = (
+        select(ClippedArticle)
+        .options(selectinload(ClippedArticle.content))
+        .filter(and_(ClippedArticle.user_id == user_id, ClippedArticle.is_read == True))
+        .order_by(desc(ClippedArticle.read_at))
+    )
+    
+    clipped_articles_result = await db.execute(clipped_articles_query)
+    clipped_articles = clipped_articles_result.scalars().all()
+
+    # 3. Get crud_article instance for conversion functions
+    crud_article_instance = CRUDArticleUnified()
+    
+    # 4. Convert to unified response
+    unified_articles = [
+        crud_article_instance._convert_feed_article_to_unified(fa) for fa in feed_articles
+    ] + [
+        crud_article_instance._convert_clipped_article_to_unified(ca) for ca in clipped_articles
+    ]
+    
+    # 5. Sort by read_at (most recent first)
+    unified_articles.sort(key=lambda x: x.read_at or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    
+    # 6. Paginate
+    total_count = len(unified_articles)
+    paginated_articles = unified_articles[skip : skip + limit]
+    
+    return paginated_articles, total_count
 
 
 async def get_read_later_articles(
@@ -313,17 +278,20 @@ async def get_read_later_articles(
     clipped_articles_result = await db.execute(clipped_articles_query)
     clipped_articles = clipped_articles_result.scalars().all()
 
-    # 3. Convert to unified response
+    # 3. Get crud_article instance for conversion functions
+    crud_article_instance = CRUDArticleUnified()
+
+    # 4. Convert to unified response
     unified_articles = [
-        crud_article._convert_feed_article_to_unified(fa) for fa in feed_articles
+        crud_article_instance._convert_feed_article_to_unified(fa) for fa in feed_articles
     ] + [
-        crud_article._convert_clipped_article_to_unified(ca) for ca in clipped_articles
+        crud_article_instance._convert_clipped_article_to_unified(ca) for ca in clipped_articles
     ]
     
-    # 4. Sort by when they were created
+    # 5. Sort by when they were created
     unified_articles.sort(key=lambda x: x.created_at, reverse=True)
     
-    # 5. Paginate
+    # 6. Paginate
     total_count = len(unified_articles)
     paginated_articles = unified_articles[skip : skip + limit]
     

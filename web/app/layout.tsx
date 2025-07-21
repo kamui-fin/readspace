@@ -22,7 +22,7 @@ const logo = Figtree({
     subsets: ["latin"],
 })
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://beta.readspace.ai"
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.readspace.ai"
 
 export const metadata: Metadata = {
     title: "Readspace Beta | Your AI-powered reading workspace",

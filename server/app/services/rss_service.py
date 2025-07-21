@@ -12,13 +12,10 @@ from app.core.redis_cache import RedisCache  # Added
 from app.crud import crud_feed, crud_folder, crud_tag
 from app.crud.crud_article import (
     crud_article, 
-    bulk_update_articles_status,
     get_recently_read_articles,
     get_read_later_articles,
     count_unread_articles,
     get_unread_counts_by_folder,
-    mark_articles_as_read_for_feed,
-    mark_articles_as_read_for_folder
 )
 from app.models.rss_models import Tag
 from app.schemas.rss_schemas import (
@@ -971,42 +968,13 @@ class RssService:
         )
         return updated_article
 
-    async def bulk_update_articles_status(
-        self, article_ids: List[UUID], action: str # e.g. "mark_as_read", "toggle_favorite"
-    ) -> int:
-        """Bulk updates status of articles. Returns number of affected articles."""
-        updates: Dict[str, Any] = {}
-        if action == "mark_as_read":
-            updates["is_read"] = True
-        elif action == "mark_as_unread":
-            updates["is_read"] = False
-            updates["read_at"] = None 
-        elif action == "mark_as_read_later":
-            updates["is_read_later"] = True
-        elif action == "unmark_as_read_later":
-            updates["is_read_later"] = False
-        elif action == "mark_as_favorite":
-            updates["is_favorite"] = True
-        elif action == "unmark_as_favorite":
-            updates["is_favorite"] = False
-        else:
-            raise ValueError(f"Invalid bulk action: {action}")
-
-        if not updates:
-            return 0
-            
-        affected_rows = await bulk_update_articles_status(
-            self.db, article_ids=article_ids, user_id=self.user_id, updates=updates
-        )
-        return affected_rows
-
     async def get_recently_read_articles(self, page: int = 1, size: int = 20) -> PaginatedResponse[ArticleResponse]:
         skip = (page - 1) * size
         articles, total_count = await get_recently_read_articles(
             self.db, user_id=self.user_id, skip=skip, limit=size
         )
         return PaginatedResponse(
-            items=[ArticleResponse.model_validate(art) for art in articles],
+            items=articles,  # Already converted to ArticleResponse
             total=total_count,
             page=page,
             size=size,
@@ -1252,24 +1220,4 @@ class RssService:
         # ET.indent(opml_element) # For pretty printing, available in Python 3.9+
         opml_string = ET.tostring(opml_element, encoding="unicode", method="xml")
         logger.info("OPML export finished", user_id=self.user_id)
-        return opml_string
-
-    async def mark_feed_articles_as_read(self, feed_id: UUID) -> int:
-        """Marks all articles in a given feed as read for the current user."""
-        logger.info("Marking all articles as read for feed", feed_id=feed_id, user_id=self.user_id)
-        affected_count = await mark_articles_as_read_for_feed(
-            self.db, user_id=self.user_id, feed_id=feed_id
-        )
-        logger.info(f"{affected_count} articles marked as read for feed", feed_id=feed_id, user_id=self.user_id)
-        return affected_count
-
-    async def mark_folder_articles_as_read(self, folder_id: UUID) -> int:
-        """Marks all articles in a given folder as read for the current user."""
-        logger.info("Marking all articles as read for folder", folder_id=folder_id, user_id=self.user_id)
-        affected_count = await mark_articles_as_read_for_folder(
-            self.db, user_id=self.user_id, folder_id=folder_id
-        )
-        logger.info(f"{affected_count} articles marked as read for folder", folder_id=folder_id, user_id=self.user_id)
-        return affected_count
-
-    # ... (rest of RssService, if any) ... 
+        return opml_string 

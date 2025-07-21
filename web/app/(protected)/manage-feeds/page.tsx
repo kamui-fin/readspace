@@ -436,8 +436,8 @@ export default function ManageFeedsPage() {
                                         </Select>
                                     </TableCell>
                                     <TableCell className="hidden lg:table-cell">
-                                        {feed.tags.length > 0 ? (
-                                            feed.tags.map((tag) => (
+                                        {(feed.tags || []).length > 0 ? (
+                                            (feed.tags || []).map((tag) => (
                                                 <Badge
                                                     key={tag.id}
                                                     variant="outline"
@@ -646,8 +646,8 @@ export default function ManageFeedsPage() {
                             </DialogTitle>
                             <DialogDescription>
                                 Current tags:
-                                {currentFeed.tags.length > 0 ? (
-                                    currentFeed.tags.map((tag) => (
+                                {(currentFeed.tags || []).length > 0 ? (
+                                    (currentFeed.tags || []).map((tag) => (
                                         <Badge
                                             key={tag.id}
                                             variant="secondary"

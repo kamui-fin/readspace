@@ -139,7 +139,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
     const handleHighlight = (color: "yellow" | "green" | "blue") => {
         if (!bookMeta || !epubBook) return
 
-        const selection = selectionRef.current
+        const selection = window.getSelection()
         if (!selection) return
 
         const selectionText = selection.toString()

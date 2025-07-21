@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { toast } from "react-hot-toast"
+import { toast } from "sonner"
 import { ApiClient } from "../client"
 
 // Types based on API responses
@@ -203,55 +203,13 @@ export function useDeleteFolder() {
             // For now, let's assume it returns something like { ok: true } or throws on HTTP error.
             return response // Return the actual response from the API call
         },
-        onMutate: async (folderId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FOLDERS],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
-            }) // Feeds might be affected
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            }) // Articles might be affected
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            }) // Unread counts will be affected
-
-            const previousFolders = queryClient.getQueryData<Folder[]>([
-                RSS_QUERY_KEYS.FOLDERS,
-            ])
-            const previousFeeds = queryClient.getQueryData<Feed[]>([
-                RSS_QUERY_KEYS.FEEDS,
-            ])
-            // Articles and unread counts are harder to predict changes for optimistically in a simple way for folder deletion,
-            // as it involves cascading deletes. We'll rely on onSettled invalidation for these.
-
-            queryClient.setQueryData<Folder[]>(
-                [RSS_QUERY_KEYS.FOLDERS],
-                (old) => old?.filter((folder) => folder.id !== folderId)
-            )
-            queryClient.setQueryData<Feed[]>([RSS_QUERY_KEYS.FEEDS], (old) =>
-                old?.filter((feed) => feed.folder_id !== folderId)
-            )
-
-            return { previousFolders, previousFeeds }
-        },
-        onError: (_err, _folderId, context) => {
-            if (context?.previousFolders) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FOLDERS],
-                    context.previousFolders
-                )
-            }
-            if (context?.previousFeeds) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FEEDS],
-                    context.previousFeeds
-                )
-            }
-            toast.error("Failed to delete folder. Restoring previous state.")
-        },
-        onSettled: () => {
+        onSuccess: () => {
+            // Remove cached data first to force refresh
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] })
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLE] })
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] })
+            
+            // Then invalidate to trigger refetch
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.FOLDERS],
             })
@@ -260,8 +218,14 @@ export function useDeleteFolder() {
                 queryKey: [RSS_QUERY_KEYS.ARTICLES],
             })
             queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLE],
+            })
+            queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
             })
+        },
+        onError: (error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Failed to delete folder")
         },
     })
 }
@@ -302,6 +266,12 @@ export function useCreateFeed() {
         }) => ApiClient.rss.createFeed(feed),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
         },
     })
 }
@@ -328,6 +298,12 @@ export function useUpdateFeed() {
             })
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLE],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
             })
         },
     })
@@ -430,57 +406,26 @@ export function useDeleteFeed() {
             await ApiClient.rss.deleteFeed(feedId)
             return null // Explicitly return a non-JSON value after successful await
         },
-        onMutate: async (feedId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            }) // Articles for this feed will be gone
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            }) // Unread counts will change
-
-            const previousFeed = queryClient.getQueryData<Feed>([
-                RSS_QUERY_KEYS.FEEDS,
-                feedId,
-            ])
-            const previousFeeds = queryClient.getQueryData<Feed[]>([
-                RSS_QUERY_KEYS.FEEDS,
-            ])
-
-            queryClient.setQueryData<Feed[]>([RSS_QUERY_KEYS.FEEDS], (old) =>
-                old?.filter((feed) => feed.id !== feedId)
-            )
-            // Individual feed query might not be necessary to update if list is updated
-            // queryClient.setQueryData<Feed | undefined>([RSS_QUERY_KEYS.FEEDS, feedId], undefined);
-
-            return { previousFeed, previousFeeds }
-        },
-        onError: (_err, feedId, context) => {
-            if (context?.previousFeeds) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FEEDS],
-                    context.previousFeeds
-                )
-            }
-            // If you were storing individual feed data separately and optimistically removed it:
-            // if (context?.previousFeed) {
-            //     queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS, feedId], context.previousFeed);
-            // }
-            toast.error("Failed to unfollow feed. Restoring previous state.")
-        },
-        onSettled: () => {
+        onSuccess: () => {
+            // Remove cached data first to force refresh
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] })
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLE] })
+            queryClient.removeQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] })
+            
+            // Then invalidate to trigger refetch
             queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] })
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLES],
             })
             queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLE],
+            })
+            queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
             })
+        },
+        onError: (error: unknown) => {
+            toast.error(error instanceof Error ? error.message : "Failed to unfollow feed")
         },
     })
 }
@@ -587,399 +532,6 @@ export function useUpdateArticle() {
             })
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-        },
-    })
-}
-
-export function useBulkUpdateArticles() {
-    const queryClient = useQueryClient()
-    return useMutation({
-        mutationFn: ({
-            articleIds,
-            action,
-        }: {
-            articleIds: string[]
-            action:
-                | "mark_as_read"
-                | "mark_as_unread"
-                | "mark_as_read_later"
-                | "unmark_as_read_later"
-                | "mark_as_favorite"
-                | "unmark_as_favorite"
-        }) => ApiClient.rss.bulkUpdateArticles(articleIds, action),
-        onMutate: async ({ articleIds, action }) => {
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-
-            const previousArticlesPages = queryClient.getQueriesData<
-                PaginatedResponse<Article>
-            >({ queryKey: [RSS_QUERY_KEYS.ARTICLES] })
-            const previousUnreadCounts = queryClient.getQueryData([
-                RSS_QUERY_KEYS.UNREAD_COUNTS,
-            ])
-
-            queryClient.setQueriesData<PaginatedResponse<Article>>(
-                { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                (oldData) => {
-                    if (!oldData) return oldData
-                    return {
-                        ...oldData,
-                        items: oldData.items.map((article) => {
-                            if (articleIds.includes(article.id)) {
-                                switch (action) {
-                                    case "mark_as_read":
-                                        return { ...article, is_read: true }
-                                    case "mark_as_unread":
-                                        return { ...article, is_read: false }
-                                    case "mark_as_read_later":
-                                        return {
-                                            ...article,
-                                            is_read_later: true,
-                                        }
-                                    case "unmark_as_read_later":
-                                        return {
-                                            ...article,
-                                            is_read_later: false,
-                                        }
-                                    case "mark_as_favorite":
-                                        return { ...article, is_favorite: true }
-                                    case "unmark_as_favorite":
-                                        return {
-                                            ...article,
-                                            is_favorite: false,
-                                        }
-                                    default:
-                                        return article
-                                }
-                            }
-                            return article
-                        }),
-                    }
-                }
-            )
-
-            // Optimistically update unread counts if marking as read/unread
-            if (action === "mark_as_read" || action === "mark_as_unread") {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                    (oldCounts: any) => {
-                        if (!oldCounts) return oldCounts
-                        // This is a simplified optimistic update for unread counts.
-                        // A more accurate update would need to know which folder/feed these articles belong to.
-                        // For now, we rely on onSettled invalidation for accuracy here.
-                        // However, we can adjust total_unread at least based on the number of articles affected.
-                        let newTotalUnread = oldCounts.total_unread
-                        // To do this more accurately, we would need to check which of the articleIds were previously unread.
-                        // This requires having access to the article data itself or making assumptions.
-                        // For a truly accurate optimistic update of counts, a more complex logic or backend returning affected counts would be better.
-                        // For now, this is a placeholder for a more complex calculation if needed.
-                        // if (action === "mark_as_read") {
-                        //     newTotalUnread = Math.max(0, newTotalUnread - articleIds.length);
-                        // } else { // mark_as_unread
-                        //     newTotalUnread += articleIds.length;
-                        // }
-                        return { ...oldCounts, total_unread: newTotalUnread } // Temporarily not changing, relying on invalidation
-                    }
-                )
-            }
-
-            return { previousArticlesPages, previousUnreadCounts }
-        },
-        onError: (_err, _vars, context) => {
-            context?.previousArticlesPages?.forEach(([queryKey, data]) => {
-                queryClient.setQueryData(queryKey, data)
-            })
-            if (context?.previousUnreadCounts) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                    context.previousUnreadCounts
-                )
-            }
-            toast.error("Failed to update articles. Restoring previous state.")
-        },
-        onSuccess: () => {
-            // onSuccess is called after mutationFn is successful, but before onSettled
-            // We might want to invalidate here if we are confident in the optimistic update
-            // or wait for onSettled for a safer refetch.
-        },
-        onSettled: () => {
-            queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-        },
-    })
-}
-
-// Hook for marking all articles in a feed as read
-export const useMarkFeedAsRead = () => {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: (feedId: string) => ApiClient.rss.markFeedAsRead(feedId),
-        onMutate: async (feedId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
-            }) // For feed specific unread count
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
-            }) // For list of feeds unread count
-
-            const previousArticlesPages = queryClient.getQueriesData<
-                PaginatedResponse<Article>
-            >({ queryKey: [RSS_QUERY_KEYS.ARTICLES] })
-            const previousUnreadCounts = queryClient.getQueryData([
-                RSS_QUERY_KEYS.UNREAD_COUNTS,
-            ])
-            const previousFeed = queryClient.getQueryData<Feed>([
-                RSS_QUERY_KEYS.FEEDS,
-                feedId,
-            ])
-            const previousFeeds = queryClient.getQueryData<Feed[]>([
-                RSS_QUERY_KEYS.FEEDS,
-            ])
-
-            // Optimistically update articles
-            queryClient.setQueriesData<PaginatedResponse<Article>>(
-                { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                (oldData) => {
-                    if (!oldData) return oldData
-                    return {
-                        ...oldData,
-                        items: oldData.items.map((article) =>
-                            article.feed_id === feedId
-                                ? { ...article, is_read: true }
-                                : article
-                        ),
-                    }
-                }
-            )
-
-            // Optimistically update unread counts
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                (oldCounts: any) => {
-                    if (!oldCounts) return oldCounts
-                    // Find the feed and set its count to 0 for total_unread calculation
-                    // This is a simplification. A more robust way would involve knowing original unread count of the feed.
-                    return {
-                        ...oldCounts,
-                        total_unread: Math.max(
-                            0,
-                            oldCounts.total_unread -
-                                (previousFeed?.unread_count || 0)
-                        ),
-                    }
-                }
-            )
-
-            queryClient.setQueryData<Feed | undefined>(
-                [RSS_QUERY_KEYS.FEEDS, feedId],
-                (oldFeed) =>
-                    oldFeed ? { ...oldFeed, unread_count: 0 } : undefined
-            )
-            queryClient.setQueryData<Feed[]>(
-                [RSS_QUERY_KEYS.FEEDS],
-                (oldFeeds) =>
-                    oldFeeds?.map((f) =>
-                        f.id === feedId ? { ...f, unread_count: 0 } : f
-                    )
-            )
-
-            return {
-                previousArticlesPages,
-                previousUnreadCounts,
-                previousFeed,
-                previousFeeds,
-            }
-        },
-        onError: (_err, feedId, context) => {
-            context?.previousArticlesPages?.forEach(([queryKey, data]) => {
-                queryClient.setQueryData(queryKey, data)
-            })
-            if (context?.previousUnreadCounts) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                    context.previousUnreadCounts
-                )
-            }
-            if (context?.previousFeed) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FEEDS, feedId],
-                    context.previousFeed
-                )
-            }
-            if (context?.previousFeeds) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FEEDS],
-                    context.previousFeeds
-                )
-            }
-            toast.error(
-                "Failed to mark feed as read. Restoring previous state."
-            )
-        },
-        onSettled: async () => {
-            // Invalidate queries that might be affected
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
-            })
-        },
-    })
-}
-
-// Hook for marking all articles in a folder as read
-export const useMarkFolderAsRead = () => {
-    const queryClient = useQueryClient()
-
-    type UnreadCountsResponse = {
-        total_unread: number
-        unread_by_folder?: {
-            folder_id: string
-            name: string
-            unread_count: number
-        }[]
-        folder_unread?: { folder_id: string; name: string; count: number } // Assuming this might exist based on useUnreadCounts hook
-    }
-
-    return useMutation({
-        mutationFn: (folderId: string) =>
-            ApiClient.rss.markFolderAsRead(folderId),
-        onMutate: async (folderId: string) => {
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
-            }) // Feeds in folder have unread counts
-
-            const previousArticlesPages = queryClient.getQueriesData<
-                PaginatedResponse<Article>
-            >({ queryKey: [RSS_QUERY_KEYS.ARTICLES] })
-            const previousUnreadCounts =
-                queryClient.getQueryData<UnreadCountsResponse>([
-                    RSS_QUERY_KEYS.UNREAD_COUNTS,
-                ])
-            const previousFeeds = queryClient.getQueryData<Feed[]>([
-                RSS_QUERY_KEYS.FEEDS,
-            ])
-
-            // Optimistically update articles in the folder
-            queryClient.setQueriesData<PaginatedResponse<Article>>(
-                { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                (oldData) => {
-                    if (!oldData) return oldData
-                    return {
-                        ...oldData,
-                        items: oldData.items.map((article) => {
-                            // Need to know which feed an article belongs to, and then that feed's folder_id
-                            // This assumes article.feed.folder_id is available or article has direct folder_id
-                            // The current Article type has feed_id, then feed object has folder_id
-                            const articleFeed = previousFeeds?.find(
-                                (f) => f.id === article.feed_id
-                            )
-                            if (articleFeed?.folder_id === folderId) {
-                                return { ...article, is_read: true }
-                            }
-                            return article
-                        }),
-                    }
-                }
-            )
-
-            // Optimistically update unread counts for the folder and total
-            queryClient.setQueryData<UnreadCountsResponse | undefined>(
-                [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                (oldCounts) => {
-                    if (!oldCounts) return oldCounts
-                    let newTotalUnread = oldCounts.total_unread
-                    const folderUnread =
-                        oldCounts.unread_by_folder?.find(
-                            (f: any) => f.folder_id === folderId
-                        )?.unread_count || 0
-                    newTotalUnread = Math.max(0, newTotalUnread - folderUnread)
-
-                    const newUnreadByFolder = oldCounts.unread_by_folder?.map(
-                        (f: any) =>
-                            f.folder_id === folderId
-                                ? { ...f, unread_count: 0 }
-                                : f
-                    )
-                    return {
-                        ...oldCounts,
-                        total_unread: newTotalUnread,
-                        unread_by_folder: newUnreadByFolder,
-                    }
-                }
-            )
-
-            // Optimistically update unread counts on individual feeds within the folder
-            queryClient.setQueryData<Feed[]>(
-                [RSS_QUERY_KEYS.FEEDS],
-                (oldFeeds) =>
-                    oldFeeds?.map((f) =>
-                        f.folder_id === folderId ? { ...f, unread_count: 0 } : f
-                    )
-            )
-
-            return {
-                previousArticlesPages,
-                previousUnreadCounts,
-                previousFeeds,
-            }
-        },
-        onError: (_err, _folderId, context) => {
-            context?.previousArticlesPages?.forEach(([queryKey, data]) => {
-                queryClient.setQueryData(queryKey, data)
-            })
-            if (context?.previousUnreadCounts) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                    context.previousUnreadCounts
-                )
-            }
-            if (context?.previousFeeds) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.FEEDS],
-                    context.previousFeeds
-                )
-            }
-            toast.error(
-                "Failed to mark folder as read. Restoring previous state."
-            )
-        },
-        onSettled: async () => {
-            // Invalidate queries that might be affected
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.ARTICLES],
-            })
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            })
-            await queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS],
             })
         },
     })

@@ -2,10 +2,11 @@
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ApiClient } from "@/lib/api/client"
 import { RSS_QUERY_KEYS } from "@/lib/api/hooks/feeds"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckCircle, Upload, Clock } from "lucide-react"
+import { CheckCircle, Upload, Clock, AlertCircle, FileText, Activity } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
@@ -73,9 +74,7 @@ export default function ImportOPMLPage() {
 
         const pollStatus = async () => {
             try {
-                const status = await ApiClient.get<ImportStatus>(
-                    `/rss/opml/import/status/${backgroundTask.taskId}`
-                )
+                const status = await ApiClient.rss.getImportTaskStatus(backgroundTask.taskId) as ImportStatus
                 setTaskStatus(status)
 
                 if (status.status === "completed") {
@@ -96,9 +95,13 @@ export default function ImportOPMLPage() {
                             queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
                         }),
                     ])
-                    toast.success(
-                        `Import completed! ${status.result?.imported_count || 0} feeds imported.`
-                    )
+                    
+                    const summary = status.result?.summary
+                    if (summary) {
+                        toast.success(
+                            `Import completed! ${summary.successful} feeds imported, ${summary.already_existed} already existed, ${summary.failed} failed.`
+                        )
+                    }
                 } else if (status.status === "failed") {
                     setBackgroundTask(null)
                     toast.error(
@@ -107,10 +110,12 @@ export default function ImportOPMLPage() {
                 }
             } catch (error) {
                 console.error("Error polling task status:", error)
+                toast.error("Error checking import status")
             }
         }
 
-        const interval = setInterval(pollStatus, 3000) // Poll every 3 seconds
+        // Poll more frequently for better UX
+        const interval = setInterval(pollStatus, 2000) // Poll every 2 seconds
         return () => clearInterval(interval)
     }, [backgroundTask, queryClient])
 
@@ -133,10 +138,7 @@ export default function ImportOPMLPage() {
         setTaskStatus(null)
 
         try {
-            const data = (await ApiClient.uploadFile(
-                "/rss/opml/import",
-                formData
-            )) as OPMLImportResponse
+            const data = await ApiClient.rss.importOPML(formData) as OPMLImportResponse
 
             // All imports are now background
             setBackgroundTask({
@@ -144,7 +146,7 @@ export default function ImportOPMLPage() {
                 estimatedFeeds: data.estimated_feeds || 0,
             })
             toast.success(
-                `Queued ${data.estimated_feeds} feeds for import processing in parallel.`
+                `Queued ${data.estimated_feeds} feeds for import processing.`
             )
         } catch (error) {
             console.error("Error uploading OPML file:", error)
@@ -158,41 +160,41 @@ export default function ImportOPMLPage() {
         if (!importResult) return null
 
         const { summary, errors } = importResult
-        const totalProcessed =
-            (summary?.successful || 0) +
-            (summary?.failed || 0) +
-            (summary?.already_existed || 0)
 
         return (
-            <div className="mt-6 space-y-4">
-                <div className="bg-white border rounded-lg p-6">
-                    <div className="flex items-center gap-3 mb-4">
+            <Card className="mt-6">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
                         <CheckCircle className="h-6 w-6 text-green-600" />
-                        <h3 className="text-lg font-medium">Import Complete</h3>
+                        <CardTitle>Import Complete</CardTitle>
                     </div>
-
-                    <div className="grid grid-cols-3 gap-4 mb-4">
-                        <div className="text-center">
+                    <CardDescription>
+                        Your OPML file has been successfully processed.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 bg-green-50 rounded-lg">
                             <div className="text-2xl font-semibold text-green-600">
                                 {summary?.successful || 0}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-green-700">
                                 Imported
                             </div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center p-4 bg-blue-50 rounded-lg">
                             <div className="text-2xl font-semibold text-blue-600">
                                 {summary?.already_existed || 0}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-blue-700">
                                 Already had
                             </div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center p-4 bg-red-50 rounded-lg">
                             <div className="text-2xl font-semibold text-red-600">
                                 {summary?.failed || 0}
                             </div>
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-red-700">
                                 Failed
                             </div>
                         </div>
@@ -206,8 +208,7 @@ export default function ImportOPMLPage() {
                                 onClick={() => setShowDetails(!showDetails)}
                                 className="text-muted-foreground hover:text-foreground"
                             >
-                                {showDetails ? "Hide" : "Show"} failed feeds (
-                                {errors.length})
+                                {showDetails ? "Hide" : "Show"} failed feeds ({errors.length})
                             </Button>
 
                             {showDetails && (
@@ -232,98 +233,91 @@ export default function ImportOPMLPage() {
                             )}
                         </div>
                     )}
-                </div>
 
-                <div className="flex gap-3">
-                    <Button
-                        onClick={() => (window.location.href = "/articles")}
-                        className="flex-1"
-                    >
-                        View Articles
-                    </Button>
-                    <Button
-                        variant="outline"
-                        onClick={() => {
-                            setImportResult(null)
-                            setShowDetails(false)
-                            setTaskStatus(null)
-                        }}
-                    >
-                        Import More
-                    </Button>
-                </div>
-            </div>
+                    <div className="flex gap-3 pt-4">
+                        <Button
+                            onClick={() => router.push("/articles")}
+                            className="flex-1"
+                        >
+                            View Articles
+                        </Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setImportResult(null)
+                                setShowDetails(false)
+                                setTaskStatus(null)
+                            }}
+                        >
+                            Import More
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
         )
     }
 
     const renderBackgroundStatus = () => {
         if ((!backgroundTask && !taskStatus) || importResult) return null
 
-        return (
-            <div className="mt-6 bg-grey-50 border rounded-lg p-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <Clock className="h-6 w-6 text-blue-600" />
-                    <h3 className="text-lg font-medium">Processing Feeds</h3>
-                </div>
+        const progress = taskStatus?.progress
+        const hasProgress = progress && progress.total > 0
+        const progressPercentage = hasProgress ? (progress.completed / progress.total) * 100 : 0
 
-                <div className="space-y-4">
-                    {taskStatus?.progress ? (
-                        <div>
-                            <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                                <span>
-                                    {taskStatus.progress.completed} of{" "}
-                                    {taskStatus.progress.total} completed
-                                </span>
-                                <span>
-                                    {taskStatus.status
-                                        .replace("_", " ")
-                                        .replace(/\b\w/g, (l) =>
-                                            l.toUpperCase()
-                                        )}
-                                </span>
+        return (
+            <Card className="mt-6">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <Activity className="h-6 w-6 text-blue-600 animate-pulse" />
+                        <CardTitle>Processing Import</CardTitle>
+                    </div>
+                    <CardDescription>
+                        {hasProgress
+                            ? `Processing ${progress.completed} of ${progress.total} feeds`
+                            : `Processing ${backgroundTask?.estimatedFeeds || 0} feeds...`}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {hasProgress ? (
+                        <>
+                            <div className="space-y-2">
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                    <span>Progress</span>
+                                    <span>{Math.round(progressPercentage)}%</span>
+                                </div>
+                                <Progress value={progressPercentage} className="h-2" />
                             </div>
-                            <Progress
-                                value={
-                                    (taskStatus.progress.completed /
-                                        taskStatus.progress.total) *
-                                    100
-                                }
-                                className="h-2 mb-3"
-                            />
                             <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                                <div>
+                                <div className="p-3 bg-green-50 rounded">
                                     <div className="font-medium text-green-600">
-                                        {taskStatus.progress.successful}
+                                        {progress.successful}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
+                                    <div className="text-xs text-green-700">
                                         Imported
                                     </div>
                                 </div>
-                                <div>
+                                <div className="p-3 bg-blue-50 rounded">
                                     <div className="font-medium text-blue-600">
-                                        {taskStatus.progress.already_existed}
+                                        {progress.already_existed}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
+                                    <div className="text-xs text-blue-700">
                                         Already had
                                     </div>
                                 </div>
-                                <div>
+                                <div className="p-3 bg-red-50 rounded">
                                     <div className="font-medium text-red-600">
-                                        {taskStatus.progress.failed}
+                                        {progress.failed}
                                     </div>
-                                    <div className="text-xs text-muted-foreground">
+                                    <div className="text-xs text-red-700">
                                         Failed
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </>
                     ) : (
-                        <div>
-                            <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                                <span>
-                                    Processing {backgroundTask?.estimatedFeeds}{" "}
-                                    feeds...
-                                </span>
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-sm text-muted-foreground">
+                                <span>Initializing...</span>
                                 <span className="capitalize">
                                     {taskStatus?.status || "pending"}
                                 </span>
@@ -331,8 +325,8 @@ export default function ImportOPMLPage() {
                             <Progress value={undefined} className="h-2" />
                         </div>
                     )}
-                </div>
-            </div>
+                </CardContent>
+            </Card>
         )
     }
 
@@ -368,67 +362,74 @@ export default function ImportOPMLPage() {
     }
 
     return (
-        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
-            <div className="flex flex-col w-full p-6 items-center justify-center">
-                <div className="max-w-xl w-full">
-                    <h1 className="text-3xl font-semibold mb-2">OPML Import</h1>
-                    <p className="text-muted-foreground mb-8">
-                        Import feeds from an OPML file exported from another RSS
-                        reader.
-                    </p>
-
-                    {!importResult && !backgroundTask && (
-                        <div
-                            className={`border-2 border-dashed rounded-xl p-12 text-center ${
-                                isDragging
-                                    ? "border-primary bg-primary/5"
-                                    : "border-muted-foreground/20"
-                            } transition-colors duration-200 ease-in-out`}
-                            onDrop={handleFileDrop}
-                            onDragOver={handleDragOver}
-                            onDragLeave={handleDragLeave}
-                        >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileInputChange}
-                                accept=".opml,.xml"
-                                className="hidden"
-                            />
-                            <div className="flex flex-col items-center justify-center gap-4">
-                                <Upload
-                                    size={48}
-                                    className="text-muted-foreground"
-                                />
-
-                                <div className="space-y-2">
-                                    <h3 className="text-lg font-medium">
-                                        {isDragging
-                                            ? "Drop your OPML file here"
-                                            : "Upload OPML File"}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        Drag and drop or click to select
-                                    </p>
-                                </div>
-
-                                <Button
-                                    onClick={handleButtonClick}
-                                    disabled={isUploading}
-                                    className="mt-4"
-                                >
-                                    {isUploading
-                                        ? "Uploading..."
-                                        : "Choose File"}
-                                </Button>
-                            </div>
-                        </div>
-                    )}
-
-                    {renderBackgroundStatus()}
-                    {renderImportResults()}
-                </div>
+        <div className="container mx-auto p-6 max-w-4xl">
+            <div className="mb-8">
+                <h1 className="text-3xl font-bold mb-2">OPML Import</h1>
+                <p className="text-muted-foreground">
+                    Import feeds from an OPML file exported from another RSS reader.
+                </p>
             </div>
+
+            {!importResult && !backgroundTask && (
+                <Card
+                    className={`transition-colors duration-200 ${
+                        isDragging
+                            ? "border-primary bg-primary/5"
+                            : "border-dashed border-2"
+                    }`}
+                    onDrop={handleFileDrop}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                >
+                    <CardContent className="p-12">
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileInputChange}
+                            accept=".opml,.xml"
+                            className="hidden"
+                        />
+                        <div className="flex flex-col items-center justify-center gap-4 text-center">
+                            <div className="p-4 bg-muted rounded-full">
+                                <Upload size={48} className="text-muted-foreground" />
+                            </div>
+
+                            <div className="space-y-2">
+                                <h3 className="text-lg font-medium">
+                                    {isDragging
+                                        ? "Drop your OPML file here"
+                                        : "Upload OPML File"}
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Drag and drop or click to select a .opml or .xml file
+                                </p>
+                            </div>
+
+                            <Button
+                                onClick={handleButtonClick}
+                                disabled={isUploading}
+                                size="lg"
+                                className="mt-4"
+                            >
+                                {isUploading ? (
+                                    <>
+                                        <Clock className="mr-2 h-4 w-4 animate-spin" />
+                                        Uploading...
+                                    </>
+                                ) : (
+                                    <>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Choose File
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
+
+            {renderBackgroundStatus()}
+            {renderImportResults()}
         </div>
     )
 }

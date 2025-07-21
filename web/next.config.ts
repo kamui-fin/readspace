@@ -12,6 +12,12 @@ const nextConfig = {
                 port: "8000", // Leave empty if no specific port is required
                 pathname: "/**", // Allow all paths
             },
+            {
+                protocol: "https",
+                hostname: "hnqyngkyugiamvlhqoaf.supabase.co",
+                port: "",
+                pathname: "/**",
+            },
         ],
     },
     eslint: {
