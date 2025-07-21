@@ -25,5 +25,10 @@ export default function FeedArticlesPage() {
         )
     }
 
-    return <ArticlesView feedId={feedId} />
+    return (
+        <ArticlesView 
+            feedId={feedId} 
+            initialSidebarTitle={feed.title || "Unknown Feed"}
+        />
+    )
 }

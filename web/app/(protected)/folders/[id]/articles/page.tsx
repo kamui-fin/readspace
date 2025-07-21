@@ -27,5 +27,10 @@ export default function FolderArticlesPage() {
         )
     }
 
-    return <ArticlesView folderId={folderId} />
+    return (
+        <ArticlesView 
+            folderId={folderId} 
+            initialSidebarTitle={folder.name || "Unknown Folder"}
+        />
+    )
 }
