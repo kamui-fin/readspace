@@ -223,38 +223,6 @@ export class ApiClient {
             }>(`/api/rss/opml/import/status/${taskId}`),
 
         // Feeds
-        getSidebarData: () =>
-            this.get<{
-                feeds: Array<{
-                    id: string
-                    title: string
-                    url: string
-                    description: string
-                    image_url: string | null
-                    folder_id: string | null
-                    folder_name: string | null
-                    is_favorite: boolean
-                    last_fetched_at: string | null
-                    tags: { id: string; name: string }[]
-                    unread_count: number
-                    fetch_error_count: number
-                    last_error_message: string | null
-                    last_article_published_at: string | null
-                }>
-                folders: Array<{
-                    id: string
-                    name: string
-                    user_id: string
-                    created_at: string
-                }>
-                unread_counts: {
-                    total_unread?: number
-                    unread_by_folder?: Array<{
-                        folder_id: string
-                        unread_count: number
-                    }>
-                }
-            }>("/api/rss/feeds/sidebar-data"),
         getFeeds: (params?: {
             folder_id?: string
             tag_names?: string[]

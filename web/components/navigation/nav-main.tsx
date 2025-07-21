@@ -49,8 +49,6 @@ import {
     useUnreadCounts,
     useUpdateFeed,
     useUpdateFolder,
-    useSidebarData,
-    RSS_QUERY_KEYS,
 } from "@/lib/api/hooks/feeds"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
@@ -647,7 +645,13 @@ function MainNavigationItems({
 // Feeds Navigation component
 export function FeedsNavigation() {
     // Use the optimized combined sidebar data hook
-    const { data: sidebarData, isLoading: isSidebarLoading } = useSidebarData()
+    const { data: folders, isLoading: isFoldersLoading } = useFolders()
+    const { data: feeds, isLoading: isFeedsLoading } = useFeeds({})
+    const { data: unreadCounts, isLoading: isUnreadCountsLoading } =
+        useUnreadCounts()
+
+    const isSidebarLoading =
+        isFoldersLoading || isFeedsLoading || isUnreadCountsLoading
 
     const pathname = usePathname()
     const router = useRouter()
@@ -664,21 +668,17 @@ export function FeedsNavigation() {
     const [feedUrl, setFeedUrl] = useState("")
     const queryClient = useQueryClient()
 
-    // Extract data from the combined response
-    const folders = sidebarData?.folders || []
-    const feeds = sidebarData?.feeds || []
-    const unreadCounts = sidebarData?.unread_counts || {}
-
     // Type assertions for API data
-    const typedFolders = folders as Array<{ id: string; name: string }>
-    const typedFeeds = feeds as Array<{
-        id: string
-        title: string
-        folder_id: string | null
-        unread_count?: number
-        image_url?: string
-        is_favorite?: boolean
-    }>
+    const typedFolders = (folders as Array<{ id: string; name: string }>) || []
+    const typedFeeds =
+        (feeds as Array<{
+            id: string
+            title: string
+            folder_id: string | null
+            unread_count?: number
+            image_url?: string
+            is_favorite?: boolean
+        }>) || []
     const typedUnreadCounts =
         (unreadCounts as {
             total_unread?: number

@@ -132,16 +132,6 @@ export const RSS_QUERY_KEYS = {
     REFRESH_STATUS: "refresh-status",
 }
 
-// Sidebar data hook - optimized single request for all sidebar data
-export function useSidebarData() {
-    return useQuery({
-        queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-        queryFn: () => ApiClient.rss.getSidebarData(),
-        staleTime: 5 * 60 * 1000, // 5 minutes - sidebar data doesn't change often
-        refetchOnWindowFocus: false,
-    })
-}
-
 // OPML Import hooks
 export function useImportOPML() {
     const queryClient = useQueryClient()
