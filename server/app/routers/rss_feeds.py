@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from uuid import UUID
 
 import structlog
@@ -77,6 +77,37 @@ async def list_feeds(
         limit=limit
     )
     return feeds
+
+@router.get("/sidebar-data", response_model=Dict[str, Any])
+async def get_sidebar_data(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get combined sidebar data (feeds, folders, unread counts) in a single optimized request."""
+    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    
+    try:
+        # Fetch data sequentially to avoid database session conflicts
+        # Still much faster than 3 separate API calls since it's one HTTP request
+        
+        feeds = await rss_service.list_feeds(limit=500)  # Increase limit for sidebar
+        folders = await rss_service.list_folders(limit=100)
+        unread_counts = await rss_service.get_unread_counts()
+        
+        return {
+            "feeds": feeds,
+            "folders": folders,
+            "unread_counts": unread_counts
+        }
+        
+    except Exception as e:
+        logger.error("Unexpected error fetching sidebar data", error=str(e), user_id=current_user.sub)
+        # Return empty data instead of failing completely
+        return {
+            "feeds": [],
+            "folders": [],
+            "unread_counts": {"total_unread": 0}
+        }
 
 @router.get("/{feed_id}", response_model=FeedResponse)
 async def get_feed(

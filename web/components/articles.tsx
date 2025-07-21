@@ -101,11 +101,15 @@ export function ArticlesView({
     const { data: allUserFeeds } = useFeeds()
     const { data: unreadCounts } = useUnreadCounts()
 
-    const typedAllUserFeeds = allUserFeeds as any[] || []
-    const typedUnreadCounts = unreadCounts as { 
-        total_unread?: number; 
-        unread_by_folder?: Array<{ folder_id: string; unread_count: number }> 
-    } || {}
+    const typedAllUserFeeds = (allUserFeeds as any[]) || []
+    const typedUnreadCounts =
+        (unreadCounts as {
+            total_unread?: number
+            unread_by_folder?: Array<{
+                folder_id: string
+                unread_count: number
+            }>
+        }) || {}
 
     const isRecentlyReadMode = viewMode === "recentlyRead"
     const isReadLaterMode = viewMode === "readLater"
@@ -168,13 +172,64 @@ export function ArticlesView({
         refetchOnWindowFocus: false,
     })
 
-    const articlesData: PaginatedResponse<Article> = (data as PaginatedResponse<Article>) || {
-        items: [],
-        total: 0,
-        page: 1,
-        pages: 1,
-        size: 25,
-    }
+    // Transform API response to match expected structure
+    const articlesData: PaginatedResponse<Article> = useMemo(() => {
+        if (!data) {
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                pages: 1,
+                size: 25,
+            }
+        }
+
+        const apiData = data as any
+        // Handle both old and new API response formats
+        if (apiData.items) {
+            // Already in expected format
+            return apiData
+        } else if (apiData.articles) {
+            // Transform from API format to expected format
+            return {
+                items: apiData.articles.map((article: any) => ({
+                    ...article,
+                    link: article.url || article.link,
+                    description: article.description || null,
+                    image_url: article.image_url || null,
+                    created_at: article.created_at || new Date().toISOString(),
+                    updated_at: article.updated_at || new Date().toISOString(),
+                    user_id: article.user_id || "",
+                    guid: article.guid || article.id,
+                    estimated_read_time_minutes:
+                        article.estimated_read_time_minutes || null,
+                    custom_metadata: article.custom_metadata || null,
+                    feed: article.feed || {
+                        id: article.feed_id || null,
+                        title: article.feed_title || null,
+                        url: null,
+                        image_url: article.feed_image_url || null,
+                    },
+                    article_type: article.article_type || "feed",
+                    priority: article.priority || null,
+                    note: article.note || null,
+                })),
+                total: apiData.total,
+                page: apiData.page,
+                pages: apiData.total_pages || apiData.pages || 1,
+                size: apiData.size,
+            }
+        } else {
+            // Fallback
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                pages: 1,
+                size: 25,
+            }
+        }
+    }, [data])
     const refreshFeed = useRefreshFeed()
     const refreshFolderFeeds = useRefreshFolderFeeds()
     const refreshAllFeeds = useRefreshAllFeeds()
@@ -187,6 +242,35 @@ export function ArticlesView({
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(
         selectedArticleId || ""
     )
+
+    // Transform selected article to match expected Article type
+    const transformedSelectedArticle: Article | null = useMemo(() => {
+        if (!selectedArticle) return null
+
+        const article = selectedArticle as any
+        return {
+            ...article,
+            link: article.url || article.link,
+            description: article.description || null,
+            image_url: article.image_url || null,
+            created_at: article.created_at || new Date().toISOString(),
+            updated_at: article.updated_at || new Date().toISOString(),
+            user_id: article.user_id || "",
+            guid: article.guid || article.id,
+            estimated_read_time_minutes:
+                article.estimated_read_time_minutes || null,
+            custom_metadata: article.custom_metadata || null,
+            feed: article.feed || {
+                id: article.feed_id || null,
+                title: article.feed_title || null,
+                url: null,
+                image_url: article.feed_image_url || null,
+            },
+            article_type: article.article_type || "feed",
+            priority: article.priority || null,
+            note: article.note || null,
+        }
+    }, [selectedArticle])
     const updateArticle = useUpdateArticle()
 
     useEffect(() => {
@@ -368,7 +452,9 @@ export function ArticlesView({
             toast.success("Articles refreshed!", { id: "shallow-refresh" })
         } catch (error) {
             console.error("Shallow refresh failed:", error)
-            toast.error("Failed to refresh articles. Please try again.", { id: "shallow-refresh" })
+            toast.error("Failed to refresh articles. Please try again.", {
+                id: "shallow-refresh",
+            })
         }
     }
 
@@ -380,17 +466,19 @@ export function ArticlesView({
             toast.success("Articles refreshed!", { id: "refresh" })
         } catch (error) {
             console.error("Refresh failed:", error)
-            toast.error("Failed to refresh articles. Please try again.", { id: "refresh" })
+            toast.error("Failed to refresh articles. Please try again.", {
+                id: "refresh",
+            })
         }
     }
 
     // Deep refresh: poll external RSS feed (only for individual feeds)
     const handleDeepRefresh = async () => {
         if (!viewFeedId) return
-        
+
         setIsDeepRefreshing(true)
         toast.loading("Checking for new articles...", { id: "deep-refresh" })
-        
+
         try {
             await refreshFeed.mutateAsync({
                 feedId: viewFeedId,
@@ -399,10 +487,14 @@ export function ArticlesView({
             })
             // After deep refresh completes, do a shallow refresh to get the new articles
             refetchArticles()
-            toast.success("Check complete! Articles updated.", { id: "deep-refresh" })
+            toast.success("Check complete! Articles updated.", {
+                id: "deep-refresh",
+            })
         } catch (error) {
             console.error("Deep refresh failed:", error)
-            toast.error("Failed to check for new articles. Please try again.", { id: "deep-refresh" })
+            toast.error("Failed to check for new articles. Please try again.", {
+                id: "deep-refresh",
+            })
         } finally {
             setIsDeepRefreshing(false)
         }
@@ -421,19 +513,29 @@ export function ArticlesView({
 
         if (viewFeedId) {
             // Individual feed: get unread count from the feed data
-            const currentFeed = typedAllUserFeeds.find(f => f.id === viewFeedId)
+            const currentFeed = typedAllUserFeeds.find(
+                (f) => f.id === viewFeedId
+            )
             return currentFeed?.unread_count || 0
         } else if (viewFolderId) {
             // Folder view: get unread count for this folder
-            const folderUnreadCount = typedUnreadCounts?.unread_by_folder?.find(
-                item => item.folder_id === viewFolderId
-            )?.unread_count || 0
+            const folderUnreadCount =
+                typedUnreadCounts?.unread_by_folder?.find(
+                    (item) => item.folder_id === viewFolderId
+                )?.unread_count || 0
             return folderUnreadCount
         } else {
             // All articles view: get total unread count
             return typedUnreadCounts?.total_unread || 0
         }
-    }, [viewFeedId, viewFolderId, typedAllUserFeeds, typedUnreadCounts, isRecentlyReadMode, isReadLaterMode])
+    }, [
+        viewFeedId,
+        viewFolderId,
+        typedAllUserFeeds,
+        typedUnreadCounts,
+        isRecentlyReadMode,
+        isReadLaterMode,
+    ])
 
     if (isArticlesLoading) {
         return (
@@ -475,7 +577,14 @@ export function ArticlesView({
                                     Show All Articles
                                 </Button>
                             )}
-                            <Button variant="outline" onClick={() => handleRefreshWithMessage("Refreshing articles...")}>
+                            <Button
+                                variant="outline"
+                                onClick={() =>
+                                    handleRefreshWithMessage(
+                                        "Refreshing articles..."
+                                    )
+                                }
+                            >
                                 <RefreshCw className="mr-2 h-4 w-4" />
                                 Refresh
                             </Button>
@@ -488,7 +597,14 @@ export function ArticlesView({
                             Browse Articles
                         </Button>
                     ) : (
-                        <Button variant="outline" onClick={() => handleRefreshWithMessage("Refreshing articles...")}>
+                        <Button
+                            variant="outline"
+                            onClick={() =>
+                                handleRefreshWithMessage(
+                                    "Refreshing articles..."
+                                )
+                            }
+                        >
                             <RefreshCw className="mr-2 h-4 w-4" />
                             Refresh
                         </Button>
@@ -556,35 +672,55 @@ export function ArticlesView({
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 rounded-r-none border-r border-border/50"
-                                                    onClick={() => handleRefreshWithMessage("Quick refresh...")}
+                                                    onClick={() =>
+                                                        handleRefreshWithMessage(
+                                                            "Quick refresh..."
+                                                        )
+                                                    }
                                                     title="Quick refresh"
                                                     disabled={isDeepRefreshing}
                                                 >
                                                     <RefreshCw className="h-4 w-4" />
                                                 </Button>
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-4 rounded-l-none px-1"
                                                             title="More refresh options"
-                                                            disabled={isDeepRefreshing}
+                                                            disabled={
+                                                                isDeepRefreshing
+                                                            }
                                                         >
                                                             <MoreVertical className="h-3 w-3" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onClick={() => handleRefreshWithMessage("Quick refresh...")}>
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleRefreshWithMessage(
+                                                                    "Quick refresh..."
+                                                                )
+                                                            }
+                                                        >
                                                             <RefreshCw className="mr-2 h-4 w-4" />
                                                             Quick Refresh
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem 
-                                                            onClick={handleDeepRefresh}
-                                                            disabled={isDeepRefreshing}
+                                                        <DropdownMenuItem
+                                                            onClick={
+                                                                handleDeepRefresh
+                                                            }
+                                                            disabled={
+                                                                isDeepRefreshing
+                                                            }
                                                         >
                                                             <Globe className="mr-2 h-4 w-4" />
-                                                            {isDeepRefreshing ? "Checking..." : "Check for New Articles"}
+                                                            {isDeepRefreshing
+                                                                ? "Checking..."
+                                                                : "Check for New Articles"}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -595,7 +731,11 @@ export function ArticlesView({
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8"
-                                                onClick={() => handleRefreshWithMessage("Refreshing articles...")}
+                                                onClick={() =>
+                                                    handleRefreshWithMessage(
+                                                        "Refreshing articles..."
+                                                    )
+                                                }
                                                 title="Refresh"
                                             >
                                                 <RefreshCw className="h-4 w-4" />
@@ -610,11 +750,17 @@ export function ArticlesView({
                                         className="h-8 w-8"
                                         onClick={() => {
                                             if (isRecentlyReadMode) {
-                                                handleRefreshWithMessage("Refreshing recently read...")
+                                                handleRefreshWithMessage(
+                                                    "Refreshing recently read..."
+                                                )
                                             } else if (isReadLaterMode) {
-                                                handleRefreshWithMessage("Refreshing read later...")
+                                                handleRefreshWithMessage(
+                                                    "Refreshing read later..."
+                                                )
                                             } else {
-                                                handleRefreshWithMessage("Refreshing articles...")
+                                                handleRefreshWithMessage(
+                                                    "Refreshing articles..."
+                                                )
                                             }
                                         }}
                                         title="Refresh"
@@ -733,10 +879,10 @@ export function ArticlesView({
                                 <ArticleContentSkeleton />
                             </div>
                         )}
-                        {!isArticleLoading && selectedArticle ? (
+                        {!isArticleLoading && transformedSelectedArticle ? (
                             <div className="p-6 md:p-10 h-full overflow-y-auto">
                                 <ArticleContentView
-                                    article={selectedArticle as Article}
+                                    article={transformedSelectedArticle}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
                                     onArticleRemoved={() =>
@@ -745,7 +891,7 @@ export function ArticlesView({
                                 />
                             </div>
                         ) : null}
-                        {!isArticleLoading && !selectedArticle && (
+                        {!isArticleLoading && !transformedSelectedArticle && (
                             <div className="flex flex-1 items-center justify-center">
                                 <p className="text-muted-foreground">
                                     Select an article to read
@@ -761,7 +907,7 @@ export function ArticlesView({
 
 function ArticleItemSkeleton() {
     return (
-        <div className="flex gap-3 py-2.5 px-3 border-b animate-pulse">
+        <div className="flex gap-3 py-2.5 px-3 animate-pulse">
             <div className="flex-1 space-y-1.5 min-w-0">
                 <div className="flex items-center gap-2">
                     <div className="h-2 w-20 bg-muted rounded" />

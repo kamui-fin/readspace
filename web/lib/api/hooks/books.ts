@@ -12,6 +12,7 @@ export function useBooks(userId: string) {
     return useQuery({
         queryKey: [BOOKS_QUERY_KEY, userId],
         queryFn: () => ApiClient.books.getUserBooks(),
+        enabled: !!userId, // Only run query if userId exists
     })
 }
 
@@ -53,8 +54,7 @@ export function useUpdateBook() {
 export function useDeleteBook() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: (bookId: string) =>
-            ApiClient.books.deleteBook(bookId),
+        mutationFn: (bookId: string) => ApiClient.books.deleteBook(bookId),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
         },

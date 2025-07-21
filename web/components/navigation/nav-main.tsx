@@ -49,6 +49,8 @@ import {
     useUnreadCounts,
     useUpdateFeed,
     useUpdateFolder,
+    useSidebarData,
+    RSS_QUERY_KEYS,
 } from "@/lib/api/hooks/feeds"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
@@ -67,6 +69,10 @@ import {
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "sonner"
+import {
+    SidebarFeedsSkeleton,
+    SidebarLibrarySkeleton,
+} from "./sidebar-skeleton"
 
 // Types
 type MainNavItem = {
@@ -165,10 +171,6 @@ function FeedContextMenu({
                         onSuccess: () => {
                             setIsRenameModalOpen(false)
                             setNewName("")
-                            toast.success("Folder renamed successfully")
-                        },
-                        onError: (error: unknown) => {
-                            toast.error(error instanceof Error ? error.message : "Failed to rename folder")
                         },
                     }
                 )
@@ -179,10 +181,6 @@ function FeedContextMenu({
                         onSuccess: () => {
                             setIsRenameModalOpen(false)
                             setNewName("")
-                            toast.success("Feed renamed successfully")
-                        },
-                        onError: (error: unknown) => {
-                            toast.error(error instanceof Error ? error.message : "Failed to rename feed")
                         },
                     }
                 )
@@ -206,14 +204,13 @@ function FeedContextMenu({
             const deleteMutation = isFolder ? deleteFolder : deleteFeed
             await deleteMutation.mutateAsync(itemId)
             setIsDeleteModalOpen(false)
-            toast.success(`${isFolder ? "Folder" : "Feed"} deleted successfully`)
-            
+
             // Navigate away if we're currently viewing the deleted item
             if (pathname.includes(itemId)) {
                 router.push("/articles")
             }
         } catch (error: unknown) {
-            toast.error(error instanceof Error ? error.message : `Failed to delete ${isFolder ? "folder" : "feed"}`)
+            // Error toast is handled by the mutation
         } finally {
             setIsProcessingDelete(false)
         }
@@ -255,12 +252,18 @@ function FeedContextMenu({
             </DropdownMenuContent>
 
             {/* Rename Modal */}
-            <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+            <Dialog
+                open={isRenameModalOpen}
+                onOpenChange={setIsRenameModalOpen}
+            >
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Rename {isFolder ? "Folder" : "Feed"}</DialogTitle>
+                        <DialogTitle>
+                            Rename {isFolder ? "Folder" : "Feed"}
+                        </DialogTitle>
                         <DialogDescription>
-                            Enter a new name for this {isFolder ? "folder" : "feed"}.
+                            Enter a new name for this{" "}
+                            {isFolder ? "folder" : "feed"}.
                         </DialogDescription>
                     </DialogHeader>
                     <form onSubmit={handleRenameSubmit}>
@@ -287,16 +290,20 @@ function FeedContextMenu({
             </Dialog>
 
             {/* Delete Modal */}
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <Dialog
+                open={isDeleteModalOpen}
+                onOpenChange={setIsDeleteModalOpen}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>
                             {isFolder ? "Delete Folder" : "Unfollow Feed"}
                         </DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to {isFolder ? "delete" : "unfollow"} "
-                            {itemTitle}"?
-                            {isFolder && " This will also delete all feeds in this folder."}
+                            Are you sure you want to{" "}
+                            {isFolder ? "delete" : "unfollow"} "{itemTitle}"?
+                            {isFolder &&
+                                " This will also delete all feeds in this folder."}
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
@@ -312,7 +319,11 @@ function FeedContextMenu({
                             disabled={isProcessingDelete}
                             variant="destructive"
                         >
-                            {isProcessingDelete ? "Processing..." : isFolder ? "Delete" : "Unfollow"}
+                            {isProcessingDelete
+                                ? "Processing..."
+                                : isFolder
+                                  ? "Delete"
+                                  : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -330,6 +341,7 @@ function FeedDropdownMenu({
     itemTitle,
     isFavorite,
     isAll,
+    count,
     onAddFeed,
 }: {
     isFolder: boolean
@@ -339,11 +351,20 @@ function FeedDropdownMenu({
     itemTitle?: string
     isFavorite?: boolean
     isAll?: boolean
+    count?: number | null
     onAddFeed?: (folderId: string) => void
 }) {
     // Don't show context menu for "All" item
     if (isAll) {
-        return null
+        return (
+            <>
+                {count != null && count > 0 && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                        {count}
+                    </span>
+                )}
+            </>
+        )
     }
 
     return (
@@ -370,13 +391,17 @@ function FeedDropdownMenu({
                     <span className="sr-only">Add</span>
                 </Button>
             )}
-
             <FeedContextMenu
                 isFolder={isFolder}
                 itemId={itemId}
                 itemTitle={itemTitle}
                 isFavorite={isFavorite}
             />
+            {count != null && count > 0 && (
+                <span className="ml-1 text-xs text-muted-foreground">
+                    {count}
+                </span>
+            )}
         </>
     )
 }
@@ -399,7 +424,10 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
                         isActive={item.isActive}
                         className="py-0 flex-1"
                     >
-                        <Link href={item.url} className="flex w-full items-center">
+                        <Link
+                            href={item.url}
+                            className="flex w-full items-center"
+                        >
                             <div className="flex flex-grow items-center overflow-hidden pl-2">
                                 {item.image && !imageError ? (
                                     <img
@@ -413,13 +441,6 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
                                 )}
                                 <span className="truncate">{item.title}</span>
                             </div>
-                            <div className="ml-auto flex shrink-0 items-center">
-                                {item.count && (
-                                    <span className="ml-1.5 mr-2 text-xs text-muted-foreground">
-                                        {item.count}
-                                    </span>
-                                )}
-                            </div>
                         </Link>
                     </SidebarLeftMenuSubButton>
                     <div className="shrink-0 flex items-center pr-2">
@@ -429,6 +450,7 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
                             itemId={item.id}
                             itemTitle={item.title}
                             isFavorite={item.isFavorite}
+                            count={item.count}
                         />
                     </div>
                 </div>
@@ -438,7 +460,13 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
 }
 
 // Collapsible Feed Item component
-function CollapsibleFeedItem({ feed, onAddFeed }: { feed: FeedItem; onAddFeed: (folderId: string) => void }) {
+function CollapsibleFeedItem({
+    feed,
+    onAddFeed,
+}: {
+    feed: FeedItem
+    onAddFeed: (folderId: string) => void
+}) {
     const [isOpen, setIsOpen] = React.useState(feed.isOpen || false)
     const router = useRouter()
     const pathname = usePathname()
@@ -486,7 +514,9 @@ function CollapsibleFeedItem({ feed, onAddFeed }: { feed: FeedItem; onAddFeed: (
                     <SidebarLeftMenuButton
                         className={`justify-start flex-1 ${isActivePath ? "bg-muted" : ""}`}
                         aria-label={`Navigate to folder ${feed.title}`}
-                        onClick={() => router.push(`/folders/${feed.id}/articles`)}
+                        onClick={() =>
+                            router.push(`/folders/${feed.id}/articles`)
+                        }
                     >
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
                             {feed.icon &&
@@ -494,13 +524,6 @@ function CollapsibleFeedItem({ feed, onAddFeed }: { feed: FeedItem; onAddFeed: (
                                     className: "ml-1 mr-1 h-4 w-4 shrink-0",
                                 })}
                             <span className="ml-1 truncate">{feed.title}</span>
-                        </div>
-                        <div className="ml-auto flex shrink-0 items-center pr-2">
-                            {feed.count && (
-                                <span className="ml-1.5 text-xs text-muted-foreground">
-                                    {feed.count}
-                                </span>
-                            )}
                         </div>
                     </SidebarLeftMenuButton>
                     <div className="shrink-0 flex items-center pr-2">
@@ -511,6 +534,7 @@ function CollapsibleFeedItem({ feed, onAddFeed }: { feed: FeedItem; onAddFeed: (
                             itemId={feed.id}
                             itemTitle={feed.title}
                             isFavorite={feed.isFavorite}
+                            count={feed.count}
                             onAddFeed={onAddFeed}
                         />
                     </div>
@@ -566,13 +590,6 @@ function RegularFeedItem({ feed }: { feed: FeedItem }) {
                             )}
                             <span className="ml-1 truncate">{feed.title}</span>
                         </div>
-                        <div className="ml-auto flex shrink-0 items-center pr-2">
-                            {feed.count !== null && (
-                                <span className="ml-1.5 text-xs text-muted-foreground">
-                                    {feed.count}
-                                </span>
-                            )}
-                        </div>
                     </Link>
                 </SidebarLeftMenuButton>
                 <div className="shrink-0 flex items-center pr-2">
@@ -583,6 +600,7 @@ function RegularFeedItem({ feed }: { feed: FeedItem }) {
                         itemTitle={feed.title}
                         isFavorite={feed.isFavorite}
                         isAll={isAll}
+                        count={feed.count}
                     />
                 </div>
             </div>
@@ -628,36 +646,47 @@ function MainNavigationItems({
 
 // Feeds Navigation component
 export function FeedsNavigation() {
-    const { data: folders = [], isLoading: isFoldersLoading } = useFolders()
-    const { data: feeds = [], isLoading: isFeedsLoading } = useFeeds()
-    const { data: unreadCounts, isLoading: isUnreadCountsLoading } = useUnreadCounts()
+    // Use the optimized combined sidebar data hook
+    const { data: sidebarData, isLoading: isSidebarLoading } = useSidebarData()
+
     const pathname = usePathname()
     const router = useRouter()
     const createFolder = useCreateFolder()
     const createFeed = useCreateFeed()
-    
+
     // Local modal state management
     const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
     const [isFeedModalOpen, setIsFeedModalOpen] = useState(false)
-    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null)
+    const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
+        null
+    )
     const [folderName, setFolderName] = useState("")
     const [feedUrl, setFeedUrl] = useState("")
     const queryClient = useQueryClient()
 
+    // Extract data from the combined response
+    const folders = sidebarData?.folders || []
+    const feeds = sidebarData?.feeds || []
+    const unreadCounts = sidebarData?.unread_counts || {}
+
     // Type assertions for API data
     const typedFolders = folders as Array<{ id: string; name: string }>
-    const typedFeeds = feeds as Array<{ 
-        id: string; 
-        title: string; 
-        folder_id: string | null; 
-        unread_count?: number;
-        image_url?: string;
-        is_favorite?: boolean;
+    const typedFeeds = feeds as Array<{
+        id: string
+        title: string
+        folder_id: string | null
+        unread_count?: number
+        image_url?: string
+        is_favorite?: boolean
     }>
-    const typedUnreadCounts = unreadCounts as { 
-        total_unread?: number; 
-        unread_by_folder?: Array<{ folder_id: string; unread_count: number }> 
-    } || {}
+    const typedUnreadCounts =
+        (unreadCounts as {
+            total_unread?: number
+            unread_by_folder?: Array<{
+                folder_id: string
+                unread_count: number
+            }>
+        }) || {}
 
     // Group feeds by folder
     const feedsByFolder = React.useMemo(() => {
@@ -690,7 +719,9 @@ export function FeedsNavigation() {
         const items: FeedItem[] = []
 
         // Extract feed id from pathname if we're viewing a feed
-        const feedIdFromPath = pathname.match(/\/feeds\/([^\/]+)\/articles/)?.[1]
+        const feedIdFromPath = pathname.match(
+            /\/feeds\/([^\/]+)\/articles/
+        )?.[1]
         // Find the parent folder of the current feed if we're viewing a feed
         const currentFeedParentFolder = feedIdFromPath
             ? typedFeeds.find((feed) => feed.id === feedIdFromPath)?.folder_id
@@ -716,9 +747,12 @@ export function FeedsNavigation() {
                 )?.unread_count || null
 
             // Determine if this folder should be open
-            const isViewingThisFolder = pathname === `/folders/${folder.id}/articles`
-            const isViewingFeedInThisFolder = folder.id === currentFeedParentFolder
-            const shouldBeOpen = isViewingThisFolder || isViewingFeedInThisFolder
+            const isViewingThisFolder =
+                pathname === `/folders/${folder.id}/articles`
+            const isViewingFeedInThisFolder =
+                folder.id === currentFeedParentFolder
+            const shouldBeOpen =
+                isViewingThisFolder || isViewingFeedInThisFolder
 
             items.push({
                 id: folder.id,
@@ -799,21 +833,6 @@ export function FeedsNavigation() {
         }
     }
 
-    if (isFoldersLoading || isFeedsLoading || isUnreadCountsLoading) {
-        return (
-            <SidebarGroup className="mt-2">
-                <SidebarGroupLabel>Feeds</SidebarGroupLabel>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <div className="py-4 text-center text-muted-foreground text-sm">
-                            Loading feeds...
-                        </div>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-            </SidebarGroup>
-        )
-    }
-
     return (
         <SidebarGroup className="mt-2">
             <div className="flex items-center justify-between pr-2">
@@ -843,11 +862,19 @@ export function FeedsNavigation() {
                 </div>
             </div>
             <SidebarMenu>
-                {feedItems.map((feed) =>
-                    feed.isCollapsible ? (
-                        <CollapsibleFeedItem key={feed.id} feed={feed} onAddFeed={handleAddFeed} />
-                    ) : (
-                        <RegularFeedItem key={feed.id} feed={feed} />
+                {isSidebarLoading ? (
+                    <SidebarFeedsSkeleton />
+                ) : (
+                    feedItems.map((feed) =>
+                        feed.isCollapsible ? (
+                            <CollapsibleFeedItem
+                                key={feed.id}
+                                feed={feed}
+                                onAddFeed={handleAddFeed}
+                            />
+                        ) : (
+                            <RegularFeedItem key={feed.id} feed={feed} />
+                        )
                     )
                 )}
             </SidebarMenu>
@@ -884,15 +911,14 @@ export function FeedsNavigation() {
                                 }
                             >
                                 {createFolder.status === "pending"
-                                    ? "Adding..."
-                                    : "Add"}
+                                    ? "Creating..."
+                                    : "Create"}
                             </Button>
                         </DialogFooter>
                     </form>
                 </DialogContent>
             </Dialog>
 
-            {/* Modal for adding feed */}
             <Dialog open={isFeedModalOpen} onOpenChange={setIsFeedModalOpen}>
                 <DialogContent>
                     <DialogHeader>
@@ -934,6 +960,11 @@ export function FeedsNavigation() {
 
 function LibraryNavigation() {
     const pathname = usePathname()
+    const [isLoading] = useState(false) // We could add actual loading state if needed
+
+    if (isLoading) {
+        return <SidebarLibrarySkeleton />
+    }
 
     return (
         <SidebarGroup>

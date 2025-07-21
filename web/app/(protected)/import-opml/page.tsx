@@ -2,11 +2,24 @@
 
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
 import { ApiClient } from "@/lib/api/client"
 import { RSS_QUERY_KEYS } from "@/lib/api/hooks/feeds"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckCircle, Upload, Clock, AlertCircle, FileText, Activity } from "lucide-react"
+import {
+    CheckCircle,
+    Upload,
+    Clock,
+    AlertCircle,
+    FileText,
+    Activity,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState, useEffect } from "react"
 import { toast } from "react-hot-toast"
@@ -74,7 +87,9 @@ export default function ImportOPMLPage() {
 
         const pollStatus = async () => {
             try {
-                const status = await ApiClient.rss.getImportTaskStatus(backgroundTask.taskId) as ImportStatus
+                const status = (await ApiClient.rss.getImportTaskStatus(
+                    backgroundTask.taskId
+                )) as ImportStatus
                 setTaskStatus(status)
 
                 if (status.status === "completed") {
@@ -95,7 +110,7 @@ export default function ImportOPMLPage() {
                             queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
                         }),
                     ])
-                    
+
                     const summary = status.result?.summary
                     if (summary) {
                         toast.success(
@@ -138,7 +153,9 @@ export default function ImportOPMLPage() {
         setTaskStatus(null)
 
         try {
-            const data = await ApiClient.rss.importOPML(formData) as OPMLImportResponse
+            const data = (await ApiClient.rss.importOPML(
+                formData
+            )) as OPMLImportResponse
 
             // All imports are now background
             setBackgroundTask({
@@ -194,9 +211,7 @@ export default function ImportOPMLPage() {
                             <div className="text-2xl font-semibold text-red-600">
                                 {summary?.failed || 0}
                             </div>
-                            <div className="text-sm text-red-700">
-                                Failed
-                            </div>
+                            <div className="text-sm text-red-700">Failed</div>
                         </div>
                     </div>
 
@@ -208,7 +223,8 @@ export default function ImportOPMLPage() {
                                 onClick={() => setShowDetails(!showDetails)}
                                 className="text-muted-foreground hover:text-foreground"
                             >
-                                {showDetails ? "Hide" : "Show"} failed feeds ({errors.length})
+                                {showDetails ? "Hide" : "Show"} failed feeds (
+                                {errors.length})
                             </Button>
 
                             {showDetails && (
@@ -262,7 +278,9 @@ export default function ImportOPMLPage() {
 
         const progress = taskStatus?.progress
         const hasProgress = progress && progress.total > 0
-        const progressPercentage = hasProgress ? (progress.completed / progress.total) * 100 : 0
+        const progressPercentage = hasProgress
+            ? (progress.completed / progress.total) * 100
+            : 0
 
         return (
             <Card className="mt-6">
@@ -283,9 +301,14 @@ export default function ImportOPMLPage() {
                             <div className="space-y-2">
                                 <div className="flex justify-between text-sm text-muted-foreground">
                                     <span>Progress</span>
-                                    <span>{Math.round(progressPercentage)}%</span>
+                                    <span>
+                                        {Math.round(progressPercentage)}%
+                                    </span>
                                 </div>
-                                <Progress value={progressPercentage} className="h-2" />
+                                <Progress
+                                    value={progressPercentage}
+                                    className="h-2"
+                                />
                             </div>
                             <div className="grid grid-cols-3 gap-4 text-center text-sm">
                                 <div className="p-3 bg-green-50 rounded">
@@ -366,7 +389,8 @@ export default function ImportOPMLPage() {
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">OPML Import</h1>
                 <p className="text-muted-foreground">
-                    Import feeds from an OPML file exported from another RSS reader.
+                    Import feeds from an OPML file exported from another RSS
+                    reader.
                 </p>
             </div>
 
@@ -391,7 +415,10 @@ export default function ImportOPMLPage() {
                         />
                         <div className="flex flex-col items-center justify-center gap-4 text-center">
                             <div className="p-4 bg-muted rounded-full">
-                                <Upload size={48} className="text-muted-foreground" />
+                                <Upload
+                                    size={48}
+                                    className="text-muted-foreground"
+                                />
                             </div>
 
                             <div className="space-y-2">
@@ -401,7 +428,8 @@ export default function ImportOPMLPage() {
                                         : "Upload OPML File"}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">
-                                    Drag and drop or click to select a .opml or .xml file
+                                    Drag and drop or click to select a .opml or
+                                    .xml file
                                 </p>
                             </div>
 

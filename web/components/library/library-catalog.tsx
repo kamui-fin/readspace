@@ -132,16 +132,25 @@ export function LibraryCatalog({
 
             {loading ? (
                 <>
-                    {/* Responsive Grid Skeleton - always shown initially */}
-                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                        {Array.from({ length: 8 }).map((_, index) => (
+                    {/* Show appropriate skeleton based on view mode */}
+                    {viewMode === "grid" ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
+                            {Array.from({ length: 8 }).map((_, index) => (
+                                <BookCardSkeleton key={index} />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-4 hidden md:block">
+                            {Array.from({ length: 5 }).map((_, index) => (
+                                <BookCardListSkeleton key={index} />
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Mobile always shows grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:hidden">
+                        {Array.from({ length: 6 }).map((_, index) => (
                             <BookCardSkeleton key={index} />
-                        ))}
-                    </div>
-                    {/* List Skeleton - hidden on mobile */}
-                    <div className="hidden md:block space-y-4">
-                        {Array.from({ length: 5 }).map((_, index) => (
-                            <BookCardListSkeleton key={index} />
                         ))}
                     </div>
                 </>
