@@ -430,19 +430,57 @@ class RssService:
         return max(1, round(words / wpm))
 
     async def add_new_feed(
-        self, url: str, folder_id: UUID, tag_names: Optional[List[str]] = None
+        self, url: str, folder_id: UUID, tag_names: Optional[List[str]] = None, update_existing: bool = False
     ) -> FeedResponse:
-        """Adds a new feed by URL, parses it, and stores initial articles."""
-        logger.info("Attempting to add new feed", url=url, folder_id=folder_id, user_id=self.user_id)
+        """Adds a new feed by URL, parses it, and stores initial articles. 
+        
+        Args:
+            url: Feed URL to add
+            folder_id: Folder to place the feed in
+            tag_names: Optional list of tag names to associate
+            update_existing: If True, update existing feed's folder/tags instead of raising error
+        """
+        logger.info("Attempting to add new feed", url=url, folder_id=folder_id, user_id=self.user_id, update_existing=update_existing)
         
         # 0. Check if this feed URL already exists for the user
         existing_feed = await crud_feed.get_feed_by_url(self.db, url=url, user_id=self.user_id)
         if existing_feed:
             logger.info("Feed URL already exists for user", url=url, user_id=self.user_id, existing_feed_id=existing_feed.id)
-            # Option 1: Raise an error
-            raise ValueError(f"Feed with URL '{url}' already exists.")
-            # Option 2: Return the existing feed (potentially after updating its folder/tags if different)
-            # For now, raising an error is simpler.
+            
+            if update_existing:
+                # Update the existing feed's folder and tags
+                logger.info("Updating existing feed folder and tags", url=url, user_id=self.user_id, 
+                           old_folder_id=existing_feed.folder_id, new_folder_id=folder_id)
+                
+                # Check if new folder exists and belongs to user
+                folder = await crud_folder.get_folder(self.db, folder_id=folder_id, user_id=self.user_id)
+                if not folder:
+                    logger.warning("Target folder not found or does not belong to user", folder_id=folder_id, user_id=self.user_id)
+                    raise ValueError(f"Folder with ID '{folder_id}' not found or access denied.")
+                
+                # Prepare tags
+                db_tags_to_associate: List[Tag] = []
+                if tag_names:
+                    for name in tag_names:
+                        # Normalize tag name (e.g., lowercase, strip whitespace)
+                        normalized_name = name.strip().lower()
+                        if normalized_name:
+                            tag = await crud_tag.get_or_create_tag(self.db, name=normalized_name, user_id=self.user_id)
+                            db_tags_to_associate.append(tag)
+                
+                # Update the feed
+                from app.schemas.rss_schemas import FeedUpdate
+                feed_update = FeedUpdate(
+                    folder_id=folder_id,
+                    tag_ids=[t.id for t in db_tags_to_associate] if db_tags_to_associate else []
+                )
+                
+                updated_feed = await crud_feed.update_feed(self.db, feed_db=existing_feed, feed_in=feed_update)
+                logger.info("Successfully updated existing feed", url=url, user_id=self.user_id, feed_id=updated_feed.id)
+                return FeedResponse.model_validate(updated_feed)
+            else:
+                # Original behavior - raise error
+                raise ValueError(f"Feed with URL '{url}' already exists.")
 
         # 1. Check if folder exists and belongs to user (implicitly handled by FK constraint, but good to check)
         folder = await crud_folder.get_folder(self.db, folder_id=folder_id, user_id=self.user_id)

@@ -58,7 +58,7 @@ async def import_opml_file(
         return {
             "processing_mode": "background",
             "task_id": orchestration_task.id,
-            "message": f"OPML file ({file_size_mb:.1f}MB) queued for processing. Individual feed imports will be processed in parallel.",
+            "message": f"OPML file ({file_size_mb:.1f}MB) queued for processing. New feeds will be imported and existing feeds will be updated/reorganized as needed.",
             "estimated_feeds": content_str.count('xmlUrl'),  # Rough estimate
             "check_status_url": f"/api/rss/opml/import/status/{orchestration_task.id}"
         }
@@ -140,9 +140,13 @@ async def get_import_status(
                     task_data = feed_task_result.result
                     
                     if task_data.get("success"):
-                        if task_data.get("status") == "already_exists":
+                        task_status = task_data.get("status", "unknown")
+                        if task_status == "already_exists":
                             already_existed += 1
+                        elif task_status in ["imported", "imported_or_updated"]:
+                            successful_imports += 1
                         else:
+                            # Handle any other success statuses as successful
                             successful_imports += 1
                     else:
                         failed_imports += 1

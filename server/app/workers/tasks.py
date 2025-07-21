@@ -65,7 +65,7 @@ async def queue_feed_refresh_tasks(feeds: List, task_name: str) -> dict:
     }
 
 @celery.task(name="app.workers.tasks.import_single_feed_task", bind=True, max_retries=2, default_retry_delay=60)
-def import_single_feed_task(self, user_id: str, feed_url: str, folder_id: str, tag_names: Optional[List[str]] = None, feed_title: Optional[str] = None):
+def import_single_feed_task(self, user_id: str, feed_url: str, folder_id: str, tag_names: Optional[List[str]] = None, feed_title: Optional[str] = None, update_existing: bool = False):
     """Celery task to import a single feed."""
     async def _async_import_single_feed():
         engine, TaskAsyncSessionLocal = await create_task_db_session()
@@ -76,17 +76,33 @@ def import_single_feed_task(self, user_id: str, feed_url: str, folder_id: str, t
                 rss_service = RssService(db=db, user_id=user_uuid)
                 
                 try:
-                    await rss_service.add_new_feed(
+                    feed_response = await rss_service.add_new_feed(
                         url=feed_url,
                         folder_id=folder_uuid,
-                        tag_names=tag_names or []
+                        tag_names=tag_names or [],
+                        update_existing=update_existing
                     )
-                    return {
-                        "success": True,
-                        "url": feed_url,
-                        "title": feed_title or "Unknown",
-                        "status": "imported"
-                    }
+                    
+                    # Check if this was an existing feed that got updated
+                    # We can determine this by checking if the operation would have failed without update_existing
+                    if update_existing:
+                        # Try to detect if this was an update vs new feed
+                        # For now, we'll assume it was successful and could have been either
+                        return {
+                            "success": True,
+                            "url": feed_url,
+                            "title": feed_title or feed_response.title,
+                            "status": "imported_or_updated",
+                            "feed_id": str(feed_response.id)
+                        }
+                    else:
+                        return {
+                            "success": True,
+                            "url": feed_url,
+                            "title": feed_title or feed_response.title,
+                            "status": "imported",
+                            "feed_id": str(feed_response.id)
+                        }
                 except ValueError as e:
                     # Feed already exists or other validation error
                     error_msg = str(e).lower()
@@ -192,7 +208,8 @@ def import_opml_task(self, user_id: str, opml_content: str, default_folder_name:
                         feed_url=feed_data["url"],
                         folder_id=str(feed_data["folder_id"]),
                         tag_names=feed_data["tag_names"],
-                        feed_title=feed_data["title"]
+                        feed_title=feed_data["title"],
+                        update_existing=True  # Enable seamless updating of existing feeds
                     )
                     task_ids.append(task.id)
                 
