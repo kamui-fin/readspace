@@ -20,15 +20,6 @@ from app.services.rss_service import RssService
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
-# It is crucial to ensure that your Celery worker setup (version, execution pool, startup command)
-# correctly supports asyncio tasks. The error "Object of type coroutine is not JSON serializable"
-# typically means the Celery worker did not await the async task function, and tried to serialize
-# the coroutine object itself as the result.
-# Ensure Celery version is 5.3+ for robust Python 3.12 asyncio support.
-
-# Comment about Celery worker setup and asyncio remains relevant, 
-# but using asyncio.run() is a workaround if direct async task handling is problematic.
-
 async def create_task_db_session():
     """Create a database session for Celery tasks."""
     engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)

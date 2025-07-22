@@ -1,7 +1,7 @@
 from typing import Annotated, List, Optional
 from uuid import UUID
 
-from app.core.database import get_db
+from app.db.session import get_db
 from app.core.dependencies import get_current_user, get_highlight_repository
 from app.models.book_models import Highlight, UserBookLibrary
 from app.repositories.highlights import HighlightRepository

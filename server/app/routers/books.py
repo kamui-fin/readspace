@@ -2,7 +2,7 @@ from typing import Annotated, List
 from uuid import UUID
 
 import structlog  # Added for logging
-from app.core.database import get_db
+from app.db.session import get_db
 from app.models.book_models import (  # Added UserBookLibrary for type hint
     BookMetadata,
     UserBookLibrary,

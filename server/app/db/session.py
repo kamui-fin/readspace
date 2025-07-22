@@ -12,8 +12,10 @@ engine = create_async_engine(
     echo=settings.ENVIRONMENT == "development",
     future=True,
     pool_pre_ping=True,
-    pool_size=5,
-    max_overflow=10,
+    pool_size=20,            # Increased from 5 to handle more concurrent connections
+    max_overflow=30,         # Increased from 10 to allow more burst connections
+    pool_recycle=1800,       # Reduced from 3600 to 30 minutes to prevent stale connections
+    pool_timeout=30,         # Timeout for acquiring a connection from the pool
 )
 
 # Create async session factory
@@ -35,3 +37,6 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         except Exception:
             await session.rollback()
             raise
+        finally:
+            # Explicit session cleanup to ensure connections are properly returned
+            await session.close()
