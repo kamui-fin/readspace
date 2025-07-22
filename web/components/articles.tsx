@@ -970,13 +970,30 @@ function ArticleContentView({
     const handleToggleReadLater = () => {
         const newReadLaterState = !optimisticReadLater
         setOptimisticReadLater(newReadLaterState)
+        
+        // Show toast immediately for instant feedback
+        toast.success(
+            newReadLaterState 
+                ? "Article saved to Read Later" 
+                : "Article removed from Read Later"
+        )
+        
         updateArticle.mutate({
             articleId: article.id,
             data: { is_read_later: newReadLaterState },
+        }, {
+            onError: () => {
+                // Revert optimistic update on error and show error
+                setOptimisticReadLater(!newReadLaterState)
+                toast.error("Failed to update article. Please try again.")
+            }
         })
     }
 
     const handleMarkAsRead = () => {
+        // Show instant feedback
+        toast.success("Article marked as read")
+        
         // Mark as read and remove from read later
         updateArticle.mutate(
             {
@@ -990,6 +1007,9 @@ function ArticleContentView({
                         onArticleRemoved?.()
                     }
                 },
+                onError: () => {
+                    toast.error("Failed to mark article as read. Please try again.")
+                }
             }
         )
     }
@@ -1070,6 +1090,7 @@ function ArticleContentView({
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
+                                            toast.success("Article removed from Read Later")
                                             updateArticle.mutate({
                                                 articleId: article.id,
                                                 data: { is_read_later: false },

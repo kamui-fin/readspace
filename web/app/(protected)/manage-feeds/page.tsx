@@ -893,9 +893,6 @@ export default function ManageFeedsPage() {
                                 <SelectValue placeholder="Select new folder" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">
-                                    No Folder (Remove from current folder)
-                                </SelectItem>
                                 {folders.map((folder) => (
                                     <SelectItem
                                         key={folder.id}
@@ -930,11 +927,9 @@ export default function ManageFeedsPage() {
                                     updateFeedMutation.mutateAsync({
                                         feedId,
                                         data: {
-                                            folder_id:
-                                                targetBulkFolderId === "none"
-                                                    ? undefined
-                                                    : targetBulkFolderId,
+                                            folder_id: targetBulkFolderId,
                                         },
+                                        silent: true, // Suppress individual toasts for bulk operation
                                     })
                                 )
 

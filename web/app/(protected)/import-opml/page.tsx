@@ -385,7 +385,7 @@ export default function ImportOPMLPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 max-w-4xl">
+        <div className="container mx-auto p-6 pt-10 max-w-4xl">
             <div className="mb-8">
                 <h1 className="text-3xl font-bold mb-2">OPML Import</h1>
                 <p className="text-muted-foreground">

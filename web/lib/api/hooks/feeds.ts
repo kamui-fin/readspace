@@ -176,47 +176,17 @@ export function useCreateFolder() {
             await queryClient.cancelQueries({
                 queryKey: [RSS_QUERY_KEYS.FOLDERS],
             })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-            })
 
             // Snapshot the previous value
             const previousFolders = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FOLDERS,
             ])
-            const previousSidebarData = queryClient.getQueryData([
-                RSS_QUERY_KEYS.SIDEBAR_DATA,
-            ])
 
-            // Optimistically update to the new value
-            const optimisticFolder = {
-                id: `temp-${Date.now()}`,
-                name: newFolder.name,
-                user_id: "",
-                created_at: new Date().toISOString(),
-            }
-
-            queryClient.setQueryData([RSS_QUERY_KEYS.FOLDERS], (old: any) => {
-                if (!old) return [optimisticFolder]
-                return [...old, optimisticFolder]
-            })
-
-            // Also update sidebar data optimistically
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                (old: any) => {
-                    if (!old) return old
-                    return {
-                        ...old,
-                        folders: old.folders
-                            ? [...old.folders, optimisticFolder]
-                            : [optimisticFolder],
-                    }
-                }
-            )
+            // Don't do optimistic updates for folders to avoid "not found" errors
+            // The UI will update when the server responds
 
             // Return a context object with the snapshotted value
-            return { previousFolders, previousSidebarData, optimisticFolder }
+            return { previousFolders }
         },
         onError: (err, newFolder, context) => {
             // If the mutation fails, use the context returned from onMutate to roll back
@@ -224,12 +194,6 @@ export function useCreateFolder() {
                 queryClient.setQueryData(
                     [RSS_QUERY_KEYS.FOLDERS],
                     context.previousFolders
-                )
-            }
-            if (context?.previousSidebarData) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                    context.previousSidebarData
                 )
             }
             toast.error("Failed to create folder")
@@ -241,9 +205,6 @@ export function useCreateFolder() {
             // Only invalidate specific queries, don't remove cache to avoid skeleton reloading
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.FOLDERS],
-            })
-            queryClient.invalidateQueries({
-                queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
             })
         },
     })
@@ -325,6 +286,8 @@ export function useDeleteFolder() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: async (folderId: string) => {
+            // Add a small delay for more natural feel
+            await new Promise(resolve => setTimeout(resolve, 200))
             const response = await ApiClient.rss.deleteFolder(folderId)
             return response
         },
@@ -339,6 +302,9 @@ export function useDeleteFolder() {
             await queryClient.cancelQueries({
                 queryKey: [RSS_QUERY_KEYS.FEEDS],
             })
+            await queryClient.cancelQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
 
             // Snapshot the previous values
             const previousFolders = queryClient.getQueryData([
@@ -349,6 +315,9 @@ export function useDeleteFolder() {
             ])
             const previousFeeds = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FEEDS,
+            ])
+            const previousUnreadCounts = queryClient.getQueryData([
+                RSS_QUERY_KEYS.UNREAD_COUNTS,
             ])
 
             // Optimistically remove the folder from all caches
@@ -384,10 +353,24 @@ export function useDeleteFolder() {
                 return old.filter((feed: any) => feed.folder_id !== folderId)
             })
 
+            // Update unread counts to remove counts for this folder
+            queryClient.setQueryData([RSS_QUERY_KEYS.UNREAD_COUNTS], (old: any) => {
+                if (!old) return old
+                // Remove folder-specific unread counts
+                const newCounts = { ...old }
+                if (newCounts.unread_by_folder) {
+                    newCounts.unread_by_folder = newCounts.unread_by_folder.filter(
+                        (item: any) => item.folder_id !== folderId
+                    )
+                }
+                return newCounts
+            })
+
             return {
                 previousFolders,
                 previousSidebarData,
                 previousFeeds,
+                previousUnreadCounts,
                 folderId,
             }
         },
@@ -411,12 +394,35 @@ export function useDeleteFolder() {
                     context.previousFeeds
                 )
             }
+            if (context?.previousUnreadCounts) {
+                queryClient.setQueryData(
+                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                    context.previousUnreadCounts
+                )
+            }
             toast.error("Failed to delete folder")
         },
         onSuccess: () => {
             toast.success("Folder deleted successfully")
         },
-        // Don't invalidate queries to avoid skeleton reloading - optimistic updates handle the UI
+        onSettled: () => {
+            // Invalidate unread counts to ensure they're refreshed
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
+            // Invalidate articles to refetch current view
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            // Invalidate folders to ensure sidebar updates
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FOLDERS],
+            })
+            // Invalidate feeds to ensure sidebar updates
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FEEDS],
+            })
+        },
     })
 }
 
@@ -460,57 +466,17 @@ export function useCreateFeed() {
             await queryClient.cancelQueries({
                 queryKey: [RSS_QUERY_KEYS.FEEDS],
             })
-            await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-            })
 
             // Snapshot the previous value
             const previousFeeds = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FEEDS,
             ])
-            const previousSidebarData = queryClient.getQueryData([
-                RSS_QUERY_KEYS.SIDEBAR_DATA,
-            ])
 
-            // Optimistically update to the new value
-            const optimisticFeed = {
-                id: `temp-${Date.now()}`,
-                title: "Loading...",
-                url: newFeed.url,
-                description: "",
-                image_url: null,
-                folder_id: newFeed.folder_id || null,
-                folder_name: null,
-                is_favorite: false,
-                last_fetched_at: null,
-                tags: [],
-                unread_count: 0,
-                fetch_error_count: 0,
-                last_error_message: null,
-                last_article_published_at: null,
-            }
-
-            queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS], (old: any) => {
-                if (!old) return [optimisticFeed]
-                return [...old, optimisticFeed]
-            })
-
-            // Also update sidebar data optimistically
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                (old: any) => {
-                    if (!old) return old
-                    return {
-                        ...old,
-                        feeds: old.feeds
-                            ? [...old.feeds, optimisticFeed]
-                            : [optimisticFeed],
-                    }
-                }
-            )
+            // Don't do optimistic updates for feeds to avoid issues with fast clicking
+            // The UI will update when the server responds
 
             // Return a context object with the snapshotted value
-            return { previousFeeds, previousSidebarData, optimisticFeed }
+            return { previousFeeds }
         },
         onError: (err, newFeed, context) => {
             // If the mutation fails, use the context returned from onMutate to roll back
@@ -520,16 +486,10 @@ export function useCreateFeed() {
                     context.previousFeeds
                 )
             }
-            if (context?.previousSidebarData) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                    context.previousSidebarData
-                )
-            }
             toast.error("Failed to add feed")
         },
         onSuccess: (data, variables, context) => {
-            toast.success("Feed added successfully")
+            // Success toast is handled by the component
         },
         onSettled: () => {
             // Only invalidate specific queries, don't remove cache to avoid skeleton reloading
@@ -553,6 +513,7 @@ export function useUpdateFeed() {
         mutationFn: ({
             feedId,
             data,
+            silent = false,
         }: {
             feedId: string
             data: {
@@ -561,6 +522,7 @@ export function useUpdateFeed() {
                 is_favorite?: boolean
                 title?: string
             }
+            silent?: boolean
         }) => ApiClient.rss.updateFeed(feedId, data),
         onMutate: async ({ feedId, data }) => {
             // Cancel any outgoing refetches to prevent conflicts
@@ -568,22 +530,22 @@ export function useUpdateFeed() {
                 queryKey: [RSS_QUERY_KEYS.FEEDS],
             })
             await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
+                queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
             })
             await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
             })
 
             // Snapshot the previous values
             const previousFeeds = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FEEDS,
             ])
-            const previousSidebarData = queryClient.getQueryData([
-                RSS_QUERY_KEYS.SIDEBAR_DATA,
-            ])
             const previousFeed = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FEEDS,
                 feedId,
+            ])
+            const previousUnreadCounts = queryClient.getQueryData([
+                RSS_QUERY_KEYS.UNREAD_COUNTS,
             ])
 
             // Optimistically update the feed in feeds cache
@@ -593,24 +555,6 @@ export function useUpdateFeed() {
                     feed.id === feedId ? { ...feed, ...data } : feed
                 )
             })
-
-            // Optimistically update the feed in sidebar data
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                (old: any) => {
-                    if (!old) return old
-                    return {
-                        ...old,
-                        feeds: old.feeds
-                            ? old.feeds.map((feed: any) =>
-                                  feed.id === feedId
-                                      ? { ...feed, ...data }
-                                      : feed
-                              )
-                            : [],
-                    }
-                }
-            )
 
             // Optimistically update individual feed cache
             queryClient.setQueryData(
@@ -623,8 +567,8 @@ export function useUpdateFeed() {
 
             return {
                 previousFeeds,
-                previousSidebarData,
                 previousFeed,
+                previousUnreadCounts,
                 feedId,
                 data,
             }
@@ -637,26 +581,40 @@ export function useUpdateFeed() {
                     context.previousFeeds
                 )
             }
-            if (context?.previousSidebarData) {
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                    context.previousSidebarData
-                )
-            }
             if (context?.previousFeed) {
                 queryClient.setQueryData(
                     [RSS_QUERY_KEYS.FEEDS, context.feedId],
                     context.previousFeed
                 )
             }
+            if (context?.previousUnreadCounts) {
+                queryClient.setQueryData(
+                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                    context.previousUnreadCounts
+                )
+            }
             toast.error("Failed to update feed")
         },
-        onSuccess: (_, { data }) => {
-            if (data.title) {
-                toast.success("Feed renamed successfully")
-            } else {
-                toast.success("Feed updated successfully")
+        onSuccess: (_, { data, silent }) => {
+            if (!silent) {
+                if (data.title) {
+                    toast.success("Feed renamed successfully")
+                } else {
+                    toast.success("Feed updated successfully")
+                }
             }
+        },
+        onSettled: () => {
+            // Invalidate all relevant queries to ensure sidebar and manage page stay in sync
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FEEDS],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FOLDERS],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
         },
     })
 }
@@ -755,6 +713,8 @@ export function useDeleteFeed() {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: async (feedId: string) => {
+            // Add a small delay for more natural feel
+            await new Promise(resolve => setTimeout(resolve, 150))
             await ApiClient.rss.deleteFeed(feedId)
             return null
         },
@@ -764,15 +724,15 @@ export function useDeleteFeed() {
                 queryKey: [RSS_QUERY_KEYS.FEEDS],
             })
             await queryClient.cancelQueries({
-                queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
             })
 
             // Snapshot the previous values
             const previousFeeds = queryClient.getQueryData([
                 RSS_QUERY_KEYS.FEEDS,
             ])
-            const previousSidebarData = queryClient.getQueryData([
-                RSS_QUERY_KEYS.SIDEBAR_DATA,
+            const previousUnreadCounts = queryClient.getQueryData([
+                RSS_QUERY_KEYS.UNREAD_COUNTS,
             ])
 
             // Optimistically remove the feed from feeds list
@@ -781,23 +741,39 @@ export function useDeleteFeed() {
                 return old.filter((feed: any) => feed.id !== feedId)
             })
 
-            // Optimistically remove the feed from sidebar data
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                (old: any) => {
-                    if (!old) return old
-                    return {
-                        ...old,
-                        feeds: old.feeds
-                            ? old.feeds.filter(
-                                  (feed: any) => feed.id !== feedId
-                              )
-                            : [],
-                    }
-                }
-            )
+            // Get the feed being deleted to remove its unread count
+            const feedBeingDeleted = Array.isArray(previousFeeds) 
+                ? previousFeeds.find((feed: any) => feed.id === feedId)
+                : null
 
-            return { previousFeeds, previousSidebarData, feedId }
+            // Optimistically update unread counts
+            queryClient.setQueryData([RSS_QUERY_KEYS.UNREAD_COUNTS], (old: any) => {
+                if (!old || !feedBeingDeleted) return old
+                
+                const updatedCounts = { ...old }
+                
+                // Reduce total unread count
+                if (updatedCounts.total_unread && feedBeingDeleted.unread_count) {
+                    updatedCounts.total_unread = Math.max(0, updatedCounts.total_unread - feedBeingDeleted.unread_count)
+                }
+                
+                // Reduce folder unread count if the feed was in a folder
+                if (updatedCounts.unread_by_folder && feedBeingDeleted.folder_id && feedBeingDeleted.unread_count) {
+                    updatedCounts.unread_by_folder = updatedCounts.unread_by_folder.map((folder: any) => {
+                        if (folder.folder_id === feedBeingDeleted.folder_id) {
+                            return {
+                                ...folder,
+                                unread_count: Math.max(0, folder.unread_count - feedBeingDeleted.unread_count)
+                            }
+                        }
+                        return folder
+                    })
+                }
+                
+                return updatedCounts
+            })
+
+            return { previousFeeds, previousUnreadCounts, feedId }
         },
         onError: (error: unknown, feedId, context) => {
             // Rollback on error
@@ -807,10 +783,10 @@ export function useDeleteFeed() {
                     context.previousFeeds
                 )
             }
-            if (context?.previousSidebarData) {
+            if (context?.previousUnreadCounts) {
                 queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.SIDEBAR_DATA],
-                    context.previousSidebarData
+                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                    context.previousUnreadCounts
                 )
             }
             toast.error("Failed to remove feed")
@@ -818,7 +794,20 @@ export function useDeleteFeed() {
         onSuccess: () => {
             toast.success("Feed removed successfully")
         },
-        // Don't invalidate queries to avoid skeleton reloading - optimistic updates handle the UI
+        onSettled: () => {
+            // Invalidate unread counts to ensure they're refreshed
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
+            // Invalidate articles to refetch current view
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            // Invalidate sidebar data to ensure instant updates
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FEEDS],
+            })
+        },
     })
 }
 

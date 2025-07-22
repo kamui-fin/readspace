@@ -59,6 +59,7 @@ import {
     Clock,
     Diamond,
     Inbox,
+    Loader2,
     MoreHorizontal,
     Pencil,
     Plus,
@@ -66,7 +67,7 @@ import {
     Trash2,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
-import { toast } from "sonner"
+import { toast } from "react-hot-toast"
 import {
     SidebarFeedsSkeleton,
     SidebarLibrarySkeleton,
@@ -198,15 +199,18 @@ function FeedContextMenu({
     const handleDeleteConfirm = async () => {
         if (!itemId) return
         setIsProcessingDelete(true)
+        
+        // Navigate immediately before deletion to prevent "not found" errors
+        if (isFolder && pathname.includes(`/folders/${itemId}`)) {
+            router.push("/articles")
+        } else if (!isFolder && pathname.includes(itemId)) {
+            router.push("/articles")
+        }
+        
         try {
             const deleteMutation = isFolder ? deleteFolder : deleteFeed
             await deleteMutation.mutateAsync(itemId)
             setIsDeleteModalOpen(false)
-
-            // Navigate away if we're currently viewing the deleted item
-            if (pathname.includes(itemId)) {
-                router.push("/articles")
-            }
         } catch (error: unknown) {
             // Error toast is handled by the mutation
         } finally {
@@ -827,6 +831,13 @@ export function FeedsNavigation() {
                         setIsFeedModalOpen(false)
                         setFeedUrl("")
                         setSelectedFolderId(null)
+                        toast.success("Feed added successfully!")
+                    },
+                    onError: (error) => {
+                        toast.error(error.message || "Failed to add feed.")
+                    },
+                    onSettled: () => {
+                        queryClient.invalidateQueries({ queryKey: ["feeds"] })
                     },
                 }
             )
@@ -946,9 +957,14 @@ export function FeedsNavigation() {
                                     !feedUrl.trim()
                                 }
                             >
-                                {createFeed.status === "pending"
-                                    ? "Adding..."
-                                    : "Add"}
+                                {createFeed.status === "pending" ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Adding...
+                                    </>
+                                ) : (
+                                    "Add"
+                                )}
                             </Button>
                         </DialogFooter>
                     </form>

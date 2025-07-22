@@ -68,7 +68,9 @@ class RssService:
         # Use custom timeout if provided, otherwise use default
         timeout = timeout_seconds if timeout_seconds is not None else 30.0
 
-        request_headers = {}
+        request_headers = {
+            "User-Agent": "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
+        }
         if etag:
             request_headers["If-None-Match"] = etag
         if last_modified:
@@ -715,8 +717,17 @@ class RssService:
 
         # Update feed metadata (title, description, link might change)
         # User-settable fields like is_favorite, folder_id, tags are NOT changed here.
+        # Preserve user-customized titles by only updating if title appears to be auto-generated
         feed_http_headers = fetch_result.get("headers", {})
         updated_feed_info = self._extract_feed_metadata(parsed_feed, str(db_feed.url))
+        
+        # Only update title if it appears to be auto-generated (empty, None, or matches the URL)
+        should_update_title = (
+            not db_feed.title or 
+            db_feed.title.strip() == "" or 
+            db_feed.title == str(db_feed.url)
+        )
+        title_to_update = updated_feed_info.title if should_update_title else None
 
         # Extract and properly convert TTL and scheduling data
         ttl_value = None
@@ -752,7 +763,7 @@ class RssService:
         db_feed = await crud_feed.update_feed_fetch_metadata(
             self.db, 
             feed_db=db_feed, 
-            title=updated_feed_info.title,
+            title=title_to_update, # Use the determined title_to_update
             description=updated_feed_info.description,
             link=str(updated_feed_info.link) if updated_feed_info.link else None,
             language=updated_feed_info.language,
