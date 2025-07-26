@@ -98,6 +98,7 @@
         "react-hook-form": "^7.54.2",
         "react-hot-toast": "^2.5.2",
         "react-hotkeys-hook": "^5.0.1",
+        "react-infinite-scroll-component": "^6.1.0",
         "react-markdown": "^10.1.0",
         "react-pdf": "latest",
         "react-pdf-highlighter-extended": "^8.1.0",

@@ -41,10 +41,11 @@ import {
     Globe,
     Check,
     MoreVertical,
+    Loader2,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState, useCallback } from "react"
 import { toast } from "react-hot-toast"
 import {
     Tooltip,
@@ -52,6 +53,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import InfiniteScroll from "react-infinite-scroll-component"
 
 export function ArticlesView({
     initialSidebarTitle,
@@ -97,6 +99,8 @@ export function ArticlesView({
         null
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
+    const [allArticles, setAllArticles] = useState<Article[]>([])
+    const [hasMorePages, setHasMorePages] = useState(true)
     const router = useRouter()
     const { data: allUserFeeds } = useFeeds()
     const { data: unreadCounts } = useUnreadCounts()
@@ -119,6 +123,7 @@ export function ArticlesView({
           ? "Read Later"
           : viewInitialSidebarTitle || "All Articles"
 
+    // Base params without unread filter for server requests
     const baseArticlesParams = {
         publishedSince: viewPublishedSince,
         publishedUntil: viewPublishedUntil,
@@ -126,7 +131,7 @@ export function ArticlesView({
         size: 25,
         sortBy: "published_at",
         sortOrder: "desc",
-        isRead: showUnreadOnly ? false : undefined,
+        // Remove isRead from server params - we'll filter client-side
     }
 
     let queryKeyParams: any
@@ -230,6 +235,33 @@ export function ArticlesView({
             }
         }
     }, [data])
+
+    // Update allArticles when new data comes in
+    useEffect(() => {
+        if (articlesData.items.length > 0) {
+            if (page === 1) {
+                // Fresh load or refresh - replace all articles
+                setAllArticles(articlesData.items)
+            } else {
+                // Loading more pages - append new articles
+                setAllArticles(prev => {
+                    const existingIds = new Set(prev.map(a => a.id))
+                    const newArticles = articlesData.items.filter(a => !existingIds.has(a.id))
+                    return [...prev, ...newArticles]
+                })
+            }
+            setHasMorePages(page < articlesData.pages)
+        }
+    }, [articlesData, page])
+
+    // Client-side filtered articles based on unread toggle
+    const filteredArticles = useMemo(() => {
+        if (showUnreadOnly) {
+            return allArticles.filter(article => !article.is_read)
+        }
+        return allArticles
+    }, [allArticles, showUnreadOnly])
+
     const refreshFeed = useRefreshFeed()
     const refreshFolderFeeds = useRefreshFolderFeeds()
     const refreshAllFeeds = useRefreshAllFeeds()
@@ -273,28 +305,36 @@ export function ArticlesView({
     }, [selectedArticle])
     const updateArticle = useUpdateArticle()
 
-    useEffect(() => {
-        if (articlesData.items.length > 0 && !selectedArticleId) {
-            setSelectedArticleId(articlesData.items[0].id)
+    // Function to fetch more articles for infinite scroll
+    const fetchMoreArticles = useCallback(() => {
+        if (!isFetching && hasMorePages) {
+            setPage(prevPage => prevPage + 1)
         }
-    }, [articlesData, selectedArticleId])
+    }, [isFetching, hasMorePages])
+
+    useEffect(() => {
+        if (filteredArticles.length > 0 && !selectedArticleId) {
+            setSelectedArticleId(filteredArticles[0].id)
+        }
+    }, [filteredArticles, selectedArticleId])
 
     // Clear selected article if it's no longer in the articles list (e.g., removed from read later)
     useEffect(() => {
-        if (selectedArticleId && articlesData.items.length > 0) {
-            const selectedArticleExists = articlesData.items.some(
+        if (selectedArticleId && filteredArticles.length > 0) {
+            const selectedArticleExists = filteredArticles.some(
                 (article) => article.id === selectedArticleId
             )
             if (!selectedArticleExists) {
                 setSelectedArticleId(null)
             }
         }
-    }, [selectedArticleId, articlesData.items])
+    }, [selectedArticleId, filteredArticles])
 
     useEffect(() => {
         if (!isRecentlyReadMode && !isReadLaterMode) {
             setPage(1)
             setSelectedArticleId(null)
+            setAllArticles([])
         }
     }, [
         viewFeedId,
@@ -308,6 +348,7 @@ export function ArticlesView({
     useEffect(() => {
         if (isRecentlyReadMode || isReadLaterMode) {
             setPage(1)
+            setAllArticles([])
         }
     }, [isRecentlyReadMode, isReadLaterMode])
 
@@ -389,12 +430,12 @@ export function ArticlesView({
     }, [refreshStatus, refreshType, refetchArticles])
 
     const groupedArticles = useMemo(() => {
-        if (isRecentlyReadMode || articlesData.items.length === 0) {
+        if (isRecentlyReadMode || filteredArticles.length === 0) {
             return {}
         }
         const groups: Record<string, { label: string; articles: Article[] }> =
             {}
-        articlesData.items.forEach((article: Article) => {
+        filteredArticles.forEach((article: Article) => {
             if (!article.published_at) return
             const date = parseISO(article.published_at)
             const today = new Date()
@@ -421,20 +462,18 @@ export function ArticlesView({
             groups[dateGroup].articles.push(article)
         })
         return groups
-    }, [articlesData, isRecentlyReadMode])
+    }, [filteredArticles, isRecentlyReadMode])
 
     const handleArticleClick = (articleId: string) => {
         setSelectedArticleId(articleId)
-        const article = articlesData.items.find(
+        const article = filteredArticles.find(
             (a: Article) => a.id === articleId
         )
         if (!isRecentlyReadMode && article && !article.is_read) {
             // Update the article in the UI optimistically
-            const updatedArticles = articlesData.items.map((item: Article) =>
+            setAllArticles(prev => prev.map(item => 
                 item.id === articleId ? { ...item, is_read: true } : item
-            )
-
-            // Here we would ideally update the query cache optimistically
+            ))
 
             // Then perform the actual update
             updateArticle.mutate({
@@ -448,6 +487,8 @@ export function ArticlesView({
     const handleShallowRefresh = async () => {
         toast.loading("Refreshing articles...", { id: "shallow-refresh" })
         try {
+            setPage(1)
+            setAllArticles([])
             await refetchArticles()
             toast.success("Articles refreshed!", { id: "shallow-refresh" })
         } catch (error) {
@@ -462,6 +503,8 @@ export function ArticlesView({
     const handleRefreshWithMessage = async (message: string) => {
         toast.loading(message, { id: "refresh" })
         try {
+            setPage(1)
+            setAllArticles([])
             await refetchArticles()
             toast.success("Articles refreshed!", { id: "refresh" })
         } catch (error) {
@@ -486,6 +529,8 @@ export function ArticlesView({
                 silent: true, // We'll handle our own toasts
             })
             // After deep refresh completes, do a shallow refresh to get the new articles
+            setPage(1)
+            setAllArticles([])
             refetchArticles()
             toast.success("Check complete! Articles updated.", {
                 id: "deep-refresh",
@@ -502,8 +547,7 @@ export function ArticlesView({
 
     const toggleShowUnreadOnly = () => {
         setShowUnreadOnly((prev) => !prev)
-        // Reset to page 1 when toggling filter
-        setPage(1)
+        // No need to reset page or refetch - we're filtering client-side now!
     }
 
     // Calculate unread count for the badge based on current view
@@ -537,7 +581,7 @@ export function ArticlesView({
         isReadLaterMode,
     ])
 
-    if (isArticlesLoading) {
+    if (isArticlesLoading && allArticles.length === 0) {
         return (
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
                 <div className="w-full flex flex-col gap-4 p-8">
@@ -549,16 +593,14 @@ export function ArticlesView({
         )
     }
 
-    if (!isArticlesLoading && articlesData.items.length === 0) {
+    if (!isArticlesLoading && filteredArticles.length === 0 && allArticles.length === 0) {
         return (
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
                 <div className="w-full flex flex-col items-center justify-center gap-4">
                     <p className="text-muted-foreground">
-                        {showUnreadOnly
-                            ? "No unread articles found matching your filters."
-                            : isRecentlyReadMode
-                              ? "No recently read articles"
-                              : isReadLaterMode
+                        {isRecentlyReadMode
+                            ? "No recently read articles"
+                            : isReadLaterMode
                                 ? "No articles in your Read Later list"
                                 : "No articles found"}
                     </p>
@@ -569,14 +611,6 @@ export function ArticlesView({
                         viewFeedId ||
                         viewFolderId) ? (
                         <div className="flex flex-col items-center gap-2">
-                            {showUnreadOnly && articlesData.total === 0 && (
-                                <Button
-                                    variant="outline"
-                                    onClick={toggleShowUnreadOnly}
-                                >
-                                    Show All Articles
-                                </Button>
-                            )}
                             <Button
                                 variant="outline"
                                 onClick={() =>
@@ -609,6 +643,25 @@ export function ArticlesView({
                             Refresh
                         </Button>
                     )}
+                </div>
+            </div>
+        )
+    }
+
+    if (filteredArticles.length === 0 && allArticles.length > 0) {
+        // Show message when filtering hides all articles
+        return (
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
+                <div className="w-full flex flex-col items-center justify-center gap-4">
+                    <p className="text-muted-foreground">
+                        No unread articles found matching your filters.
+                    </p>
+                    <Button
+                        variant="outline"
+                        onClick={toggleShowUnreadOnly}
+                    >
+                        Show All Articles
+                    </Button>
                 </div>
             </div>
         )
@@ -770,10 +823,28 @@ export function ArticlesView({
                                 )}
                             </div>
                         </div>
-                        <div className="flex-1 overflow-y-auto">
-                            <div className="flex flex-col">
+                        <div 
+                            id="articles-scroll-container"
+                            className="flex-1 overflow-auto"
+                        >
+                            <InfiniteScroll
+                                dataLength={filteredArticles.length}
+                                next={fetchMoreArticles}
+                                hasMore={hasMorePages}
+                                loader={
+                                    <div className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    </div>
+                                }
+                                endMessage={
+                                    <div className="text-center py-6 text-muted-foreground text-sm">
+                                        <b>You've seen all articles!</b>
+                                    </div>
+                                }
+                                scrollableTarget="articles-scroll-container"
+                            >
                                 {isRecentlyReadMode || isReadLaterMode
-                                    ? articlesData.items.map(
+                                    ? filteredArticles.map(
                                           (article: Article, index: number) => (
                                               <ArticleItem
                                                   key={article.id}
@@ -784,8 +855,7 @@ export function ArticlesView({
                                                   }
                                                   isLastInGroup={
                                                       index ===
-                                                      articlesData.items
-                                                          .length -
+                                                      filteredArticles.length -
                                                           1
                                                   }
                                                   onClick={() =>
@@ -849,25 +919,7 @@ export function ArticlesView({
                                               </div>
                                           )
                                       )}
-                                {articlesData.page < articlesData.pages && (
-                                    <div className="px-3 py-4 text-center">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            onClick={() =>
-                                                setPage(
-                                                    (prevPage) => prevPage + 1
-                                                )
-                                            }
-                                            disabled={isFetching}
-                                        >
-                                            {isFetching
-                                                ? "Loading..."
-                                                : "Load More"}
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
+                            </InfiniteScroll>
                         </div>
                     </div>
                 </ResizablePanel>
