@@ -4,11 +4,9 @@
 services:
   worker:
     build:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.celery
     container_name: readspace_worker
-    command: celery -A core.celery_app  worker -l info
-    volumes:
-      - ./:/app
+    command: celery -A app.core.celery_app  worker -l info
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
@@ -16,11 +14,9 @@ services:
 
   beat:
     build:
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.celery
     container_name: readspace_beat
-    command: celery -A core.celery_app beat -l info
-    volumes:
-      - ./:/app
+    command: celery -A app.core.celery_app beat -l info
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
