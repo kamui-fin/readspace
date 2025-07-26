@@ -210,7 +210,7 @@ export class ApiClient {
 
         // OPML Import
         importOPML: (formData: FormData) =>
-            this.uploadFile("/api/rss/opml/import", formData),
+            this.uploadFile("/api/rss/opml/import/", formData),
         getImportTaskStatus: (taskId: string) =>
             this.get<{
                 task_id: string
