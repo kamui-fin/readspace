@@ -11,6 +11,8 @@ services:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
+    networks:
+      - coolify
 
   beat:
     build:
@@ -21,3 +23,10 @@ services:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    name: coolify
+    external: true
