@@ -15,6 +15,7 @@ import {
     SidebarRight,
     SidebarRightMenuButton,
 } from "@/components/ui/sidebar"
+import { useBookHighlights } from "@/lib/api/hooks/highlights"
 import { deserializeRange, scrollToRange } from "@/lib/reader/range-serialize"
 import { cn } from "@/lib/utils"
 import { useReaderStore } from "@/stores/reader"
@@ -234,8 +235,6 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
     const bookType = useReaderStore((state) => state.bookType)
     const currentPage = useReaderStore((state) => state.currentPage)
 
-    console.log(toc, bookType)
-
     // For PDFs, find the active chapter once at the top level
     const activeChapter = useMemo(() => {
         if (bookType === "PDF") {
@@ -318,8 +317,57 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
 }
 
 export function HighlightsTab() {
+    const bookMeta = useReaderStore((state) => state.bookLibraryItem)
     const allHighlights = useReaderStore((state) => state.allHighlights)
-    const highlights = allHighlights.map(({ highlight }) => highlight)
+
+    // Use React Query to get fresh highlights, fallback to store
+    // Use library_id (not metadata id) since highlights are stored with user_book_lib_id
+    const { data: queryHighlights } = useBookHighlights(bookMeta?.library_id || "")
+
+    // Use fresh highlights from query if available, otherwise use store
+    const highlights =
+        queryHighlights && queryHighlights.length > 0
+            ? queryHighlights
+                  .filter((h) => h.color) // Filter out highlights without color
+                  .map((h): EpubHighlight | PdfHighlight => {
+                      if (bookMeta?.format === "PDF") {
+                          return {
+                              id: h.id,
+                              note: h.note || undefined,
+                              color: h.color || undefined,
+                              book_id: bookMeta.id,
+                              type: "text",
+                              position:
+                                  h.pdf_rect_position as unknown as PdfHighlight["position"],
+                              content: { text: h.original_text },
+                              user_book_lib_id: h.user_book_lib_id,
+                              library_id: h.user_book_lib_id,
+                          } as PdfHighlight
+                      } else {
+                          return {
+                              id: h.id,
+                              user_book_lib_id: h.user_book_lib_id,
+                              original_text: h.original_text,
+                              color: h.color,
+                              note: h.note || undefined,
+                              range: h.html_range as unknown as EpubHighlight["range"],
+                              chapter: {
+                                  idx: h.chapter_idx || 0,
+                                  href: h.chapter_href || "",
+                                  title: h.chapter_title || undefined,
+                              },
+                              page: h.page || 0,
+                              // Add missing database fields for type compatibility
+                              chapter_href: h.chapter_href || "",
+                              chapter_idx: h.chapter_idx || 0,
+                              chapter_title: h.chapter_title || null,
+                              html_range: h.html_range,
+                              pdf_rect_position: h.pdf_rect_position,
+                          } as EpubHighlight
+                      }
+                  })
+            : allHighlights.map(({ highlight }) => highlight)
+
     if (!highlights.length) {
         return (
             <div className="flex flex-col items-left justify-center p-4 text-left">
@@ -334,7 +382,10 @@ export function HighlightsTab() {
         <ScrollArea className="h-[calc(100vh-2.5rem)]">
             <div className="space-y-4 p-4">
                 {highlights.map((highlight, id) => (
-                    <HighlightCard key={id} highlight={highlight} />
+                    <HighlightCard
+                        key={highlight.id || id}
+                        highlight={highlight}
+                    />
                 ))}
             </div>
         </ScrollArea>
@@ -347,6 +398,10 @@ interface HighlightProps {
 
 export function HighlightCard({ highlight }: HighlightProps) {
     const colorMap = {
+        GREEN: "bg-emerald-500",
+        BLUE: "bg-blue-500", 
+        YELLOW: "bg-amber-500",
+        // Also support lowercase for backwards compatibility
         green: "bg-emerald-500",
         blue: "bg-blue-500",
         yellow: "bg-amber-500",

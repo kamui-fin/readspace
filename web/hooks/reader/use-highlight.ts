@@ -1,5 +1,6 @@
 import { Json } from "@/database.types"
 import { ApiClient } from "@/lib/api/client"
+import { useCreateHighlight, useDeleteHighlightByText } from "@/lib/api/hooks/highlights"
 import {
     deserializeRange,
     serializeRange,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/reader/range-serialize"
 import { getTocItemForSection } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { highlightRange } from "../../lib/reader/highlight-range"
@@ -17,6 +18,7 @@ import { useCurrentUser } from "../use-current-user"
 export default function useHighlight(savedHighlights: EpubHighlight[]) {
     const { user } = useCurrentUser()
     const { role: userRole } = user || {}
+    const queryClient = useQueryClient()
 
     const selectionRef = useRef<Selection>(null)
     const rangeRef = useRef<RangeRefElement>(null)
@@ -55,61 +57,9 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         }))
     )
 
-    const addHighlightMutation = useMutation({
-        mutationFn: async (data: any) => {
-            console.log(
-                "Creating highlight with data:",
-                data,
-                "Current bookMeta:",
-                bookMeta
-            )
-
-            if (bookMeta?.library_id) {
-                data.user_book_lib_id = bookMeta.library_id
-                console.log(
-                    "Using library_id from bookMeta:",
-                    bookMeta.library_id
-                )
-            } else {
-                // This case should not happen if bookMeta is correctly populated.
-                // The server requires user_book_lib_id for all highlights.
-                console.warn(
-                    "Attempting to create highlight without a readily available library_id in bookMeta.",
-                    "This might lead to issues if user_book_lib_id is strictly required by the backend."
-                )
-            }
-
-            // Defensive check: Ensure user_book_lib_id is set before POSTing
-            // The backend currently makes this a required field for the query to find UserBookLibrary.
-            if (!data.user_book_lib_id) {
-                // If user_book_lib_id is still not found, we should not proceed with the API call
-                // as it will likely fail or associate the highlight incorrectly.
-                const errorMsg =
-                    "user_book_lib_id is missing. Cannot create highlight."
-                console.error(errorMsg, data)
-                // Optionally, throw an error to stop the mutation and provide feedback
-                throw new Error(errorMsg)
-            }
-
-            return ApiClient.post("/api/highlights/", data)
-        },
-        onError: (err: Error) => {
-            console.error("Failed to add highlight mutation:", err)
-            // Potentially add user-facing error message here
-        },
-        onSuccess: (response) => {
-            console.log("Highlight created successfully:", response)
-        },
-    })
-
-    const deleteHighlightMutation = useMutation({
-        mutationFn: (text: string) =>
-            ApiClient.delete(
-                `/api/highlights/text/${encodeURIComponent(text)}`
-            ),
-        onError: (err: Error) =>
-            console.error("Failed to delete highlight:", err),
-    })
+    // Use the proper React Query hooks for creating and deleting highlights
+    const createHighlightMutation = useCreateHighlight()
+    const deleteHighlightByTextMutation = useDeleteHighlightByText()
 
     const onSelectStart = () => {
         selectionRef.current = null
@@ -166,10 +116,13 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             epubBook as ePub.Book
         )
 
+        // Ensure color is properly formatted for the highlight object
+        const normalizedColor = color.toUpperCase() as "YELLOW" | "GREEN" | "BLUE"
+
         const newHighlightForClientState = {
             id: crypto.randomUUID(), // Generate a temporary ID for client state
             library_id: bookMeta.id, // For client-side state model
-            color: color.toUpperCase() as "YELLOW" | "GREEN" | "BLUE",
+            color: normalizedColor, // Use normalized color
             range: serialized,
             original_text: selectionText,
             note: null,
@@ -202,19 +155,53 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
 
         // Construct payload for the server, matching HighlightCreate schema (via HighlightBase)
         const payloadForServer = {
-            // user_book_lib_id will be added in addHighlightMutation's mutationFn
+            user_book_lib_id: bookMeta.library_id || "", // Use library_id from bookMeta
             original_text: selectionText,
-            color: color.toUpperCase(),
+            color: normalizedColor, // Use normalized color
             note: null,
             html_range: serialized as unknown as Json,
             chapter_idx: chapterIdx,
             chapter_href: section.href,
-            chapter_title: chapterTitle?.label.trim(),
-            page: getPageProgress().current, // Added this field
+            chapter_title: chapterTitle?.label.trim() || null, // Convert undefined to null
+            page: getPageProgress().current,
             pdf_rect_position: null, // Explicitly null for EPUB highlights, as per HighlightBase
         }
 
-        addHighlightMutation.mutate(payloadForServer)
+        // Use the React Query mutation which will handle cache invalidation
+        createHighlightMutation.mutate(payloadForServer, {
+            onSuccess: (response) => {
+                console.log("Highlight created successfully:", response)
+                // Manually invalidate cache with correct book ID
+                const bookId = bookMeta?.library_id // Use library_id to match React Query book ID
+                if (bookId) {
+                    queryClient.invalidateQueries({
+                        queryKey: ["highlights", bookId],
+                    })
+                }
+                // Optionally update the temporary highlight with the real ID from server
+                // This ensures consistency between client and server state
+            },
+            onError: (error) => {
+                console.error("Failed to create highlight:", error)
+                // Remove the highlight from local state if server creation failed
+                setHighlights(
+                    highlights.filter(
+                        (hl) =>
+                            (hl.highlight as EpubHighlight).original_text !==
+                            selectionText
+                    )
+                )
+                const { allHighlights } = useReaderStore.getState()
+                setAllHighlights(
+                    allHighlights.filter(
+                        (hl) =>
+                            (hl.highlight as EpubHighlight).original_text !==
+                            selectionText
+                    )
+                )
+                removeFn() // Remove the highlight visualization
+            },
+        })
     }
 
     const handleRemoveHighlight = () => {
@@ -244,7 +231,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             )
         )
 
-        deleteHighlightMutation.mutate(highlightedText)
+        deleteHighlightByTextMutation.mutate(highlightedText)
         setIsPopupOpen(false)
         rangeRef.current = null
     }
@@ -261,7 +248,6 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
     useEffect(() => {
         if (epubDocRef == null) return
         // re-apply saved highlights
-        console.log("re-applying saved highlights")
 
         // Set all highlights for the sidebar (no filtering)
         const allHighlightsForStore = savedHighlights.map((highlight) => ({
@@ -285,7 +271,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
                 const removeFn = highlightRange(
                     range,
                     "mark",
-                    { class: `highlight-${highlight.color}` },
+                    { class: `highlight-${highlight.color?.toLowerCase()}` }, // Ensure lowercase for CSS class
                     (elm) => {
                         rangeRef.current = elm
                         setHighlightedText(

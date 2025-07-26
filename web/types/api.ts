@@ -27,9 +27,7 @@ export type UserBookLibraryCreate = Omit<
 export type HighlightCreate = Omit<
     Highlight,
     "id" | "created_at" | "updated_at"
-> & {
-    locations: Omit<Highlight, "id" | "created_at" | "highlight_id">[]
-}
+>
 
 // Update types
 export type BookMetadataUpdate = Partial<
