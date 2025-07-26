@@ -4,8 +4,8 @@ import Image from "next/image"
 import { redirect } from "next/navigation"
 
 export const metadata = {
-    title: "Sign up | Readspace Beta",
-    description: "Create your free Readspace account.",
+    title: "Sign up | Readspace",
+    description: "Create your free Readspace account and start your calm reading journey.",
 }
 
 export default async function SignupPage() {

@@ -4,7 +4,8 @@ import Image from "next/image"
 import { redirect } from "next/navigation"
 
 export const metadata = {
-    title: "Log in | Readspace Beta",
+    title: "Log in | Readspace",
+    description: "Sign in to your calm reading inbox for RSS, newsletters, threads, and books.",
 }
 
 export default async function LoginPage() {

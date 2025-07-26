@@ -58,7 +58,7 @@
     "manifest_version": 3,
     "name": "Readspace",
     "version": "1.0.0",
-    "description": "The read-it-later extension for Readspace, your calm reading space for the web.",
+    "description": "Save articles to Readspace, your calm inbox for reading RSS, newsletters, threads, and books.",
     "icons": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

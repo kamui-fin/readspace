@@ -25,19 +25,26 @@ const logo = Figtree({
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.readspace.ai"
 
 export const metadata: Metadata = {
-    title: "Readspace Beta | Your AI-powered reading workspace",
+    title: "Readspace | A calm inbox for your reading",
     description:
-        "Access your personalized reading space powered by AI. Read, understand, and retain what matters — all in one place.",
+        "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books. Open-source, distraction-free, and self-hostable.",
     metadataBase: new URL(baseUrl),
     generator: "Next.js",
     applicationName: "Readspace",
     referrer: "origin-when-cross-origin",
     keywords: [
-        "reading",
-        "AI",
-        "learning",
-        "retention",
-        "knowledge management",
+        "RSS reader",
+        "newsletter inbox",
+        "reading app",
+        "privacy-first",
+        "open source",
+        "self-hosted",
+        "distraction-free reading",
+        "content aggregation",
+        "Twitter threads",
+        "Reddit posts",
+        "book reading",
+        "calm reading",
     ],
     authors: [{ name: "Readspace Team" }],
     creator: "Readspace",
@@ -55,9 +62,9 @@ export const metadata: Metadata = {
         apple: [{ url: "/apple-touch-icon.png" }],
     },
     openGraph: {
-        title: "Readspace Beta | Your AI-powered reading workspace",
+        title: "Readspace | A calm inbox for your reading",
         description:
-            "Access your personalized reading space powered by AI. Read, understand, and retain what matters — all in one place.",
+            "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books. Open-source, distraction-free, and self-hostable.",
         url: baseUrl,
         siteName: "Readspace",
         locale: "en_US",
@@ -65,9 +72,9 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: "summary",
-        title: "Readspace Beta | Your AI-powered reading workspace",
+        title: "Readspace | A calm inbox for your reading",
         description:
-            "Access your personalized reading space powered by AI. Read, understand, and retain what matters — all in one place.",
+            "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books. Open-source, distraction-free, and self-hostable.",
         creator: "@readspace_ai",
     },
     robots: {
