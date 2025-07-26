@@ -1,0 +1,32 @@
+# Only for coolify deployment
+# Temporary, need to find a better consolidated solution
+
+services:
+  worker:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: readspace_worker
+    command: celery -A app.core.celery_app  worker -l info
+    volumes:
+      - ./server:/app
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
+
+  beat:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: readspace_beat
+    command: celery -A app.core.celery_app beat -l info
+    volumes:
+      - ./server:/app
+    environment:
+      - PYTHONPATH=/app
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
