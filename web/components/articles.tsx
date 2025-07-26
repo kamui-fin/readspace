@@ -138,10 +138,18 @@ export function ArticlesView({
     let articlesHook
 
     if (isRecentlyReadMode) {
-        queryKeyParams = { page, size: 25 }
+        queryKeyParams = { 
+            page, 
+            size: 25,
+            mode: 'recently_read'
+        }
         articlesHook = useRecentlyReadArticles
     } else if (isReadLaterMode) {
-        queryKeyParams = { page, size: 25 }
+        queryKeyParams = { 
+            page, 
+            size: 25,
+            mode: 'read_later'
+        }
         articlesHook = useReadLaterArticles
     } else {
         if (viewFolderId) {
@@ -149,18 +157,24 @@ export function ArticlesView({
                 ...baseArticlesParams,
                 folderId: viewFolderId,
                 feedIds: undefined,
+                viewType: 'folder',
+                viewId: viewFolderId, // Add explicit view identifier
             }
         } else if (viewFeedId) {
             queryKeyParams = {
                 ...baseArticlesParams,
                 feedIds: [viewFeedId],
                 folderId: undefined,
+                viewType: 'feed',
+                viewId: viewFeedId, // Add explicit view identifier
             }
         } else {
             queryKeyParams = {
                 ...baseArticlesParams,
                 feedIds: undefined,
                 folderId: undefined,
+                viewType: 'all',
+                viewId: 'all', // Add explicit view identifier
             }
         }
         articlesHook = useArticles
@@ -172,7 +186,7 @@ export function ArticlesView({
         isFetching,
         refetch: refetchArticles,
     } = articlesHook(queryKeyParams, {
-        keepPreviousData: true,
+        keepPreviousData: true, // Restore for better UX
         refetchOnMount: false,
         refetchOnWindowFocus: false,
     })
@@ -238,18 +252,17 @@ export function ArticlesView({
 
     // Update allArticles when new data comes in
     useEffect(() => {
-        if (articlesData.items.length > 0) {
-            if (page === 1) {
-                // Fresh load or refresh - replace all articles
-                setAllArticles(articlesData.items)
-            } else {
-                // Loading more pages - append new articles
-                setAllArticles(prev => {
-                    const existingIds = new Set(prev.map(a => a.id))
-                    const newArticles = articlesData.items.filter(a => !existingIds.has(a.id))
-                    return [...prev, ...newArticles]
-                })
-            }
+        if (page === 1) {
+            // Fresh load or refresh - always replace all articles (even if empty)
+            setAllArticles(articlesData.items)
+            setHasMorePages(articlesData.pages > 1)
+        } else if (articlesData.items.length > 0) {
+            // Loading more pages - append new articles
+            setAllArticles(prev => {
+                const existingIds = new Set(prev.map(a => a.id))
+                const newArticles = articlesData.items.filter(a => !existingIds.has(a.id))
+                return [...prev, ...newArticles]
+            })
             setHasMorePages(page < articlesData.pages)
         }
     }, [articlesData, page])

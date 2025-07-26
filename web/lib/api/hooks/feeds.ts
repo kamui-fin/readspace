@@ -827,6 +827,8 @@ export function useArticles(
         sortOrder?: string
         page?: number
         size?: number
+        viewType?: string // Add viewType for better cache distinction
+        viewId?: string // Add viewId for unique identification
     },
     options?: {
         keepPreviousData?: boolean
