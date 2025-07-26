@@ -670,7 +670,7 @@ export function ArticlesView({
     return (
         <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
             <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+                <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
                     <div className="flex h-full flex-col border-r">
                         <div className="flex h-14 items-center justify-between border-b px-4">
                             <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -1190,7 +1190,7 @@ function ArticleContentView({
             : null
 
     return (
-        <article className="mx-auto max-w-4xl">
+        <article className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-3">
                 <h1 className="text-2xl font-semibold">{article.title}</h1>
             </div>
@@ -1369,7 +1369,7 @@ function ArticleItem({
             onClick={onClick}
         >
             <div className="flex gap-3">
-                <div className="flex-1 space-y-1.5 min-w-0">
+                <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             {article.article_type === "clipped" && priority && (
@@ -1402,7 +1402,7 @@ function ArticleItem({
                         </span>
                     </div>
                     <h3
-                        className={`text-sm leading-tight ${article.is_read ? "font-normal" : "font-medium"}`}
+                        className={`text-sm leading-tight truncate ${article.is_read ? "font-normal" : "font-medium"}`}
                     >
                         {article.title}
                     </h3>
@@ -1412,7 +1412,7 @@ function ArticleItem({
                         </div>
                     )}
                     {article.description && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-all">
                             {stripHTML(article.description)}
                         </p>
                     )}
