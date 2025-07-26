@@ -1415,7 +1415,7 @@ function ArticleItem({
                         </span>
                     </div>
                     <h3
-                        className={`text-sm leading-tight truncate ${article.is_read ? "font-normal" : "font-medium"}`}
+                        className={`text-sm leading-tight line-clamp-1 break-all ${article.is_read ? "font-normal" : "font-medium"}`}
                     >
                         {article.title}
                     </h3>
