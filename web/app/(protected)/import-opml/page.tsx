@@ -292,22 +292,6 @@ export default function ImportOPMLPage() {
                     </div>
                 </CardContent>
             </Card>
-
-            {/* Info Card */}
-            <Card className="mt-6 border-blue-200 bg-blue-50/50">
-                <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <Info className="h-5 w-5 text-blue-600" />
-                        <CardTitle className="text-lg">Import Information</CardTitle>
-                    </div>
-                </CardHeader>
-                <CardContent className="space-y-2 text-sm text-muted-foreground">
-                    <p>• Imports run in the background, so you can continue using the app</p>
-                    <p>• Each import gets its own tracking page with real-time progress</p>
-                    <p>• Existing feeds will be updated with new folder/tag assignments</p>
-                    <p>• You can run multiple imports simultaneously</p>
-                </CardContent>
-            </Card>
         </div>
     )
 }
