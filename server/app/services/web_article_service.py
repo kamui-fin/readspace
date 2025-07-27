@@ -30,26 +30,21 @@ class WebArticleService:
     ) -> ClippedArticleResponse:
         """Save a web article with content provided by the extension."""
         
-        # Check if we already have this content
-        existing_content = await crud_article_content.get_by_link(self.db, link=url)
+        if not content:
+            raise ValueError("No content provided. Content must be extracted by the extension.")
         
-        if existing_content:
-            # Check if user already has this article clipped
-            existing_clipped = await crud_clipped_article.get_by_user_and_content(
-                self.db, user_id=self.user_id, content_id=existing_content.id
-            )
-            if existing_clipped:
-                logger.info("Article already clipped by user", 
-                           article_id=existing_clipped.id, user_id=self.user_id, url=url)
-                return ClippedArticleResponse.model_validate(existing_clipped)
-            
-            # Use existing content but create new clipped article for this user
-            content_record = existing_content
+        # First, check if we already have content extracted by the chrome extension for this URL
+        existing_extracted_content = await crud_article_content.get_by_link_extracted_by_extension(
+            self.db, link=url
+        )
+        
+        if existing_extracted_content:
+            # We have extension-extracted content, use it
+            content_record = existing_extracted_content
+            logger.info("Found existing chrome extension extracted content", 
+                       url=url, content_id=content_record.id, content_length=len(content_record.content or ''))
         else:
-            # Create new content record from extension data
-            if not content:
-                raise ValueError("No content provided. Content must be extracted by the extension.")
-            
+            # No extension-extracted content exists, create new content from extension data
             logger.info("Creating new article content from extension data", 
                        url=url, content_length=len(content), title=title)
             
@@ -64,12 +59,12 @@ class WebArticleService:
                 else:
                     published_at = published_override
             
-            # Create new content
+            # Create new content with full extracted content
             content_create = ArticleContentCreate(
                 title=title or 'Untitled Article',
                 link=str(url),
                 description=metadata.get('description') if metadata else None,
-                content=content,
+                content=content,  # Full extracted HTML content
                 author=metadata.get('author') if metadata else None,
                 image_url=metadata.get('image_url') if metadata else None,
                 published_at=published_at,
@@ -77,7 +72,7 @@ class WebArticleService:
                 custom_metadata={
                     'extraction_timestamp': datetime.now(timezone.utc).isoformat(),
                     'source_url': url,
-                    'extracted_by': 'chrome_extension',
+                    'extracted_by': 'chrome_extension',  # Mark as extension-extracted
                     'content_length': len(content),
                     **(metadata or {})
                 }
@@ -88,7 +83,16 @@ class WebArticleService:
                         published_at=content_create.published_at)
             content_record = await crud_article_content.create(self.db, obj_in=content_create)
         
-        # Create clipped article
+        # Now check if user already has this specific content clipped
+        existing_clipped = await crud_clipped_article.get_by_user_and_content(
+            self.db, user_id=self.user_id, content_id=content_record.id
+        )
+        if existing_clipped:
+            logger.info("Article already clipped by user", 
+                       article_id=existing_clipped.id, user_id=self.user_id, url=url)
+            return ClippedArticleResponse.model_validate(existing_clipped)
+        
+        # Create clipped article with the extension-extracted content
         clipped_article_create = ClippedArticleCreate(
             user_id=self.user_id,
             content_id=content_record.id,

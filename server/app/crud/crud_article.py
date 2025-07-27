@@ -347,6 +347,23 @@ class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleC
         result = await db.execute(select(self.model).filter(self.model.link == link))
         return result.scalars().first()
 
+    async def get_by_link_extracted_by_extension(self, db: AsyncSession, *, link: str) -> Optional[ArticleContent]:
+        """Get article content by URL that was extracted by chrome extension."""
+        # First get all content records with this URL
+        result = await db.execute(
+            select(self.model).filter(self.model.link == link)
+        )
+        all_content_with_url = result.scalars().all()
+        
+        # Filter in Python to find the one extracted by chrome extension
+        for content in all_content_with_url:
+            if (content.custom_metadata and 
+                isinstance(content.custom_metadata, dict) and 
+                content.custom_metadata.get('extracted_by') == 'chrome_extension'):
+                return content
+        
+        return None
+
 
 class CRUDFeedArticle(CRUDBase[FeedArticle, FeedArticleCreate, FeedArticleUpdate]):
     """CRUD operations for RSS feed articles"""
