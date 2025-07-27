@@ -9,6 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { ApiClient } from "@/lib/api/client"
 import { RSS_QUERY_KEYS } from "@/lib/api/hooks/feeds"
 import { useQueryClient } from "@tanstack/react-query"
@@ -19,6 +20,8 @@ import {
     AlertCircle,
     FileText,
     Activity,
+    ExternalLink,
+    Info,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState, useEffect } from "react"
@@ -31,108 +34,46 @@ interface OPMLImportResponse {
     message: string
     estimated_feeds: number
     check_status_url: string
-    // Results when completed
-    imported_count?: number
-    failed_count?: number
-    already_existed_count?: number
-    total_feeds?: number
-    errors?: Array<{
-        url: string
-        title: string
-        error: string
-        status: string
-    }>
-    summary?: {
-        successful: number
-        failed: number
-        already_existed: number
-    }
+    status_page_url: string
 }
 
-interface ImportStatus {
+interface ActiveImportTask {
+    user_id: string
     task_id: string
-    status: "pending" | "in_progress" | "completed" | "failed"
-    message: string
-    result?: OPMLImportResponse
-    error?: string
-    progress?: {
-        completed: number
-        total: number
-        successful: number
-        failed: number
-        already_existed: number
-    }
+    estimated_feeds: number
+    filename: string
+    created_at: string
+    status: string
+    current_status?: string
 }
 
 export default function ImportOPMLPage() {
     const [isUploading, setIsUploading] = useState(false)
     const [isDragging, setIsDragging] = useState(false)
-    const [importResult, setImportResult] = useState<OPMLImportResponse | null>(
-        null
-    )
-    const [backgroundTask, setBackgroundTask] = useState<{
-        taskId: string
-        estimatedFeeds: number
-    } | null>(null)
-    const [taskStatus, setTaskStatus] = useState<ImportStatus | null>(null)
-    const [showDetails, setShowDetails] = useState(false)
+    const [activeImports, setActiveImports] = useState<ActiveImportTask[]>([])
+    const [isLoadingActiveImports, setIsLoadingActiveImports] = useState(true)
 
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
     const queryClient = useQueryClient()
 
-    // Poll for background task status
+    // Check for active imports when page loads
     useEffect(() => {
-        if (!backgroundTask) return
-
-        const pollStatus = async () => {
+        const checkActiveImports = async () => {
             try {
-                const status = (await ApiClient.rss.getImportTaskStatus(
-                    backgroundTask.taskId
-                )) as ImportStatus
-                setTaskStatus(status)
-
-                if (status.status === "completed") {
-                    setImportResult(status.result!)
-                    setBackgroundTask(null)
-                    // Invalidate queries
-                    await Promise.all([
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.FEEDS],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.FOLDERS],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.ARTICLES],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                        }),
-                    ])
-
-                    const summary = status.result?.summary
-                    if (summary) {
-                        toast.success(
-                            `Import completed! ${summary.successful} feeds imported, ${summary.already_existed} already existed, ${summary.failed} failed.`
-                        )
-                    }
-                } else if (status.status === "failed") {
-                    setBackgroundTask(null)
-                    toast.error(
-                        `Import failed: ${status.error || "Unknown error"}`
-                    )
-                }
+                const tasks = await ApiClient.rss.listImportTasks()
+                setActiveImports(tasks)
             } catch (error) {
-                console.error("Error polling task status:", error)
-                toast.error("Error checking import status")
+                console.error("Error checking active imports:", error)
+                // Don't show error to user for this, just log it
+                // This is not critical functionality
+            } finally {
+                setIsLoadingActiveImports(false)
             }
         }
 
-        // Poll more frequently for better UX
-        const interval = setInterval(pollStatus, 2000) // Poll every 2 seconds
-        return () => clearInterval(interval)
-    }, [backgroundTask, queryClient])
+        checkActiveImports()
+    }, [])
 
     const handleFileUpload = async (file: File) => {
         if (
@@ -148,208 +89,98 @@ export default function ImportOPMLPage() {
         formData.append("default_folder_name", "Imported Feeds")
 
         setIsUploading(true)
-        setImportResult(null)
-        setBackgroundTask(null)
-        setTaskStatus(null)
 
         try {
             const data = (await ApiClient.rss.importOPML(
                 formData
             )) as OPMLImportResponse
 
-            // All imports are now background
-            setBackgroundTask({
-                taskId: data.task_id,
-                estimatedFeeds: data.estimated_feeds || 0,
-            })
+            // Show success message
             toast.success(
                 `Queued ${data.estimated_feeds} feeds for import processing.`
             )
+
+            // Redirect to the status page
+            router.push(`/import-opml/status/${data.task_id}`)
+
         } catch (error) {
             console.error("Error uploading OPML file:", error)
             toast.error("Failed to import OPML file. Please try again.")
-        } finally {
             setIsUploading(false)
         }
     }
 
-    const renderImportResults = () => {
-        if (!importResult) return null
+    const renderActiveImports = () => {
+        if (isLoadingActiveImports) {
+            return (
+                <Card>
+                    <CardHeader>
+                        <div className="flex items-center gap-3">
+                            <Activity className="h-5 w-5 text-blue-600 animate-pulse" />
+                            <CardTitle className="text-lg">Checking for active imports...</CardTitle>
+                        </div>
+                    </CardHeader>
+                </Card>
+            )
+        }
 
-        const { summary, errors } = importResult
+        if (activeImports.length === 0) {
+            return null
+        }
 
         return (
-            <Card className="mt-6">
-                <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <CheckCircle className="h-6 w-6 text-green-600" />
-                        <CardTitle>Import Complete</CardTitle>
-                    </div>
-                    <CardDescription>
-                        Your OPML file has been successfully processed.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="text-center p-4 bg-green-50 rounded-lg">
-                            <div className="text-2xl font-semibold text-green-600">
-                                {summary?.successful || 0}
-                            </div>
-                            <div className="text-sm text-green-700">
-                                Imported
-                            </div>
-                        </div>
-                        <div className="text-center p-4 bg-blue-50 rounded-lg">
-                            <div className="text-2xl font-semibold text-blue-600">
-                                {summary?.already_existed || 0}
-                            </div>
-                            <div className="text-sm text-blue-700">
-                                Already had
-                            </div>
-                        </div>
-                        <div className="text-center p-4 bg-red-50 rounded-lg">
-                            <div className="text-2xl font-semibold text-red-600">
-                                {summary?.failed || 0}
-                            </div>
-                            <div className="text-sm text-red-700">Failed</div>
-                        </div>
-                    </div>
+            <div className="space-y-4">
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                        You have {activeImports.length} active import{activeImports.length > 1 ? 's' : ''} in progress.
+                    </AlertDescription>
+                </Alert>
 
-                    {errors && errors.length > 0 && (
-                        <div className="border-t pt-4">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setShowDetails(!showDetails)}
-                                className="text-muted-foreground hover:text-foreground"
-                            >
-                                {showDetails ? "Hide" : "Show"} failed feeds (
-                                {errors.length})
-                            </Button>
-
-                            {showDetails && (
-                                <div className="mt-3 max-h-48 overflow-y-auto space-y-2">
-                                    {errors.map((error, index) => (
-                                        <div
-                                            key={index}
-                                            className="bg-red-50 border border-red-200 rounded p-3 text-sm"
-                                        >
-                                            <div className="font-medium text-red-900">
-                                                {error.title || "Unknown feed"}
-                                            </div>
-                                            <div className="text-red-700 text-xs mt-1 truncate">
-                                                {error.url}
-                                            </div>
-                                            <div className="text-red-600 text-xs mt-1">
-                                                {error.error}
-                                            </div>
+                <div className="grid gap-4">
+                    {activeImports.map((task) => (
+                        <Card key={task.task_id} className="border border-blue-200 bg-blue-50/50">
+                            <CardHeader className="pb-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Activity className="h-5 w-5 text-blue-600" />
+                                        <div>
+                                            <CardTitle className="text-lg flex items-center gap-2">
+                                                Import in Progress
+                                                {task.current_status && (
+                                                    <span className="text-sm font-normal text-muted-foreground capitalize">
+                                                        ({task.current_status.replace('_', ' ')})
+                                                    </span>
+                                                )}
+                                            </CardTitle>
+                                            <CardDescription className="flex items-center gap-2">
+                                                <FileText className="h-4 w-4" />
+                                                {task.filename} • {task.estimated_feeds} feeds
+                                            </CardDescription>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="flex gap-3 pt-4">
-                        <Button
-                            onClick={() => router.push("/articles")}
-                            className="flex-1"
-                        >
-                            View Articles
-                        </Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setImportResult(null)
-                                setShowDetails(false)
-                                setTaskStatus(null)
-                            }}
-                        >
-                            Import More
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        )
-    }
-
-    const renderBackgroundStatus = () => {
-        if ((!backgroundTask && !taskStatus) || importResult) return null
-
-        const progress = taskStatus?.progress
-        const hasProgress = progress && progress.total > 0
-        const progressPercentage = hasProgress
-            ? (progress.completed / progress.total) * 100
-            : 0
-
-        return (
-            <Card className="mt-6">
-                <CardHeader>
-                    <div className="flex items-center gap-3">
-                        <Activity className="h-6 w-6 text-blue-600 animate-pulse" />
-                        <CardTitle>Processing Import</CardTitle>
-                    </div>
-                    <CardDescription>
-                        {hasProgress
-                            ? `Processing ${progress.completed} of ${progress.total} feeds`
-                            : `Processing ${backgroundTask?.estimatedFeeds || 0} feeds...`}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    {hasProgress ? (
-                        <>
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm text-muted-foreground">
-                                    <span>Progress</span>
-                                    <span>
-                                        {Math.round(progressPercentage)}%
-                                    </span>
-                                </div>
-                                <Progress
-                                    value={progressPercentage}
-                                    className="h-2"
-                                />
-                            </div>
-                            <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                                <div className="p-3 bg-green-50 rounded">
-                                    <div className="font-medium text-green-600">
-                                        {progress.successful}
                                     </div>
-                                    <div className="text-xs text-green-700">
-                                        Imported
+                                    <div className="text-right">
+                                        <div className="text-sm text-muted-foreground">
+                                            Started: {new Date(task.created_at).toLocaleString()}
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="p-3 bg-blue-50 rounded">
-                                    <div className="font-medium text-blue-600">
-                                        {progress.already_existed}
-                                    </div>
-                                    <div className="text-xs text-blue-700">
-                                        Already had
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-red-50 rounded">
-                                    <div className="font-medium text-red-600">
-                                        {progress.failed}
-                                    </div>
-                                    <div className="text-xs text-red-700">
-                                        Failed
-                                    </div>
-                                </div>
-                            </div>
-                        </>
-                    ) : (
-                        <div className="space-y-2">
-                            <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>Initializing...</span>
-                                <span className="capitalize">
-                                    {taskStatus?.status || "pending"}
-                                </span>
-                            </div>
-                            <Progress value={undefined} className="h-2" />
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                            </CardHeader>
+                            <CardContent className="pt-0">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => router.push(`/import-opml/status/${task.task_id}`)}
+                                    className="w-full"
+                                >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    View Progress
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            </div>
         )
     }
 
@@ -394,70 +225,89 @@ export default function ImportOPMLPage() {
                 </p>
             </div>
 
-            {!importResult && !backgroundTask && (
-                <Card
-                    className={`transition-colors duration-200 ${
-                        isDragging
-                            ? "border-primary bg-primary/5"
-                            : "border-dashed border-2"
-                    }`}
-                    onDrop={handleFileDrop}
-                    onDragOver={handleDragOver}
-                    onDragLeave={handleDragLeave}
-                >
-                    <CardContent className="p-12">
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            onChange={handleFileInputChange}
-                            accept=".opml,.xml"
-                            className="hidden"
-                        />
-                        <div className="flex flex-col items-center justify-center gap-4 text-center">
-                            <div className="p-4 bg-muted rounded-full">
-                                <Upload
-                                    size={48}
-                                    className="text-muted-foreground"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-medium">
-                                    {isDragging
-                                        ? "Drop your OPML file here"
-                                        : "Upload OPML File"}
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Drag and drop or click to select a .opml or
-                                    .xml file
-                                </p>
-                            </div>
-
-                            <Button
-                                onClick={handleButtonClick}
-                                disabled={isUploading}
-                                size="lg"
-                                className="mt-4"
-                            >
-                                {isUploading ? (
-                                    <>
-                                        <Clock className="mr-2 h-4 w-4 animate-spin" />
-                                        Uploading...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Choose File
-                                    </>
-                                )}
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+            {/* Active Imports Section */}
+            {(activeImports.length > 0 || isLoadingActiveImports) && (
+                <div className="mb-8">
+                    {renderActiveImports()}
+                </div>
             )}
 
-            {renderBackgroundStatus()}
-            {renderImportResults()}
+            {/* Upload Section */}
+            <Card
+                className={`transition-colors duration-200 ${
+                    isDragging
+                        ? "border-primary bg-primary/5"
+                        : "border-dashed border-2"
+                }`}
+                onDrop={handleFileDrop}
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+            >
+                <CardContent className="p-12">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileInputChange}
+                        accept=".opml,.xml"
+                        className="hidden"
+                    />
+                    <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="p-4 bg-muted rounded-full">
+                            <Upload
+                                size={48}
+                                className="text-muted-foreground"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-medium">
+                                {isDragging
+                                    ? "Drop your OPML file here"
+                                    : "Upload OPML File"}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Drag and drop or click to select a .opml or
+                                .xml file
+                            </p>
+                        </div>
+
+                        <Button
+                            onClick={handleButtonClick}
+                            disabled={isUploading}
+                            size="lg"
+                            className="mt-4"
+                        >
+                            {isUploading ? (
+                                <>
+                                    <Clock className="mr-2 h-4 w-4 animate-spin" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <FileText className="mr-2 h-4 w-4" />
+                                    Choose File
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Info Card */}
+            <Card className="mt-6 border-blue-200 bg-blue-50/50">
+                <CardHeader>
+                    <div className="flex items-center gap-3">
+                        <Info className="h-5 w-5 text-blue-600" />
+                        <CardTitle className="text-lg">Import Information</CardTitle>
+                    </div>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                    <p>• Imports run in the background, so you can continue using the app</p>
+                    <p>• Each import gets its own tracking page with real-time progress</p>
+                    <p>• Existing feeds will be updated with new folder/tag assignments</p>
+                    <p>• You can run multiple imports simultaneously</p>
+                </CardContent>
+            </Card>
         </div>
     )
 }

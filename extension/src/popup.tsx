@@ -8,7 +8,7 @@ import { LoginForm } from './components/LoginForm'
 import { Settings } from './components/Settings'
 import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
-import { Settings as SettingsIcon, ExternalLink } from 'lucide-react'
+import { Settings as SettingsIcon, ExternalLink, AlertTriangle } from 'lucide-react'
 import { SaveOptions, PageMetadata } from './types'
 
 function Popup() {
@@ -25,6 +25,7 @@ function Popup() {
   const [currentView, setCurrentView] = useState<'main' | 'settings' | 'login' | 'advanced-save'>('main')
   const [currentTab, setCurrentTab] = useState<chrome.tabs.Tab | null>(null)
   const [readingTime, setReadingTime] = useState<number | undefined>()
+  const [isUnsupportedPage, setIsUnsupportedPage] = useState(false)
 
   useEffect(() => {
     // Check for existing session on load
@@ -34,6 +35,15 @@ function Popup() {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         setCurrentTab(tabs[0])
+        
+        // Check if the URL is supported (http/https)
+        const url = tabs[0].url
+        if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
+          setIsUnsupportedPage(true)
+          return
+        }
+        
+        setIsUnsupportedPage(false)
         // Extract metadata from current page
         extractPageMetadata(tabs[0])
       }
@@ -121,10 +131,43 @@ function Popup() {
     chrome.tabs.create({ url: settings.readspace_url })
   }
 
+  // Show unsupported page message
+  if (isUnsupportedPage) {
+    return (
+      <div className="w-100 min-h-[500px] p-6">
+        <div className="text-center space-y-4">
+          {/* Unsupported page message */}
+          <div className="space-y-3">
+            <div className="flex justify-center">
+              <AlertTriangle className="w-16 h-16 text-amber-500" />
+            </div>
+            <h2 className="text-lg font-semibold">Page Not Supported</h2>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Readspace extension only works on websites (http:// and https:// pages). 
+              This page type is not supported for saving articles.
+            </p>
+            <div className="pt-2">
+              <p className="text-xs text-muted-foreground">
+                Current page: <span className="font-mono text-xs">{currentTab?.url?.substring(0, 50)}...</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Settings overlay */}
+        {currentView === 'settings' && (
+          <div className="absolute inset-0 bg-background">
+            <Settings onBack={() => setCurrentView('main')} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="w-96 min-h-[500px] p-6">
+      <div className="w-100 min-h-[500px] p-6">
         {currentView === 'settings' ? (
           <Settings onBack={() => setCurrentView('main')} />
         ) : (
@@ -176,7 +219,7 @@ function Popup() {
 
   // Main authenticated view
   return (
-    <div className="w-96 min-h-[500px] p-4">
+    <div className="w-100 max-w-[400px] min-h-[500px] p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

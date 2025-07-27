@@ -180,7 +180,7 @@ export class ReadspaceAPI {
   }
 
   async createFeed(data: { url: string; folder_id?: string; tag_ids?: string[] }): Promise<Feed> {
-    return this.request<Feed>('/api/rss/feeds', {
+    return this.request<Feed>('/api/rss/feeds/', {
       method: 'POST',
       body: JSON.stringify(data),
     })

@@ -54,9 +54,9 @@ interface ExtensionState {
 }
 
 const defaultSettings: ExtensionSettings = {
-  readspace_url: 'http://0.0.0.0:8008',
-  supabase_url: 'http://localhost:54321',
-  supabase_anon_key: '',
+  readspace_url: 'https://api.readspace.ai',
+  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
+  supabase_anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
   auto_save: false,
   show_reading_time: true,
   theme: 'system',
@@ -332,7 +332,7 @@ export const useExtensionStore = create<ExtensionState>()(
           // Recreate API instance on rehydration
           const api = new ReadspaceAPI(state.settings.readspace_url, state.settings.access_token)
           state.api = api
-          console.log('API instance recreated on rehydration')
+          console.log('API instance recreated on rehydration with token', state.settings.access_token)
         }
       },
     }

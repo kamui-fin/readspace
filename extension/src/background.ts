@@ -1,39 +1,76 @@
 // Background script for Readspace extension
-console.log('Readspace background script loaded')
+import { browser, getBrowserName, storage } from '@/lib/browser'
+import type { Menus, Runtime } from 'webextension-polyfill'
+
+// Type for content extraction result
+interface ContentExtractionResult {
+  content?: string
+  title?: string
+  description?: string
+  author?: string
+  published_at?: string
+  image_url?: string
+}
+
+console.log(`Readspace background script loaded on ${getBrowserName()}`)
+
+// Check if URL is supported (http/https)
+function isSupportedUrl(url: string): boolean {
+  return url.startsWith('http://') || url.startsWith('https://')
+}
 
 // Context menu setup
-chrome.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(() => {
   // Create context menu items
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'save-to-readspace',
     title: 'Save to Readspace',
     contexts: ['page', 'link'],
+    documentUrlPatterns: ['http://*/*', 'https://*/*']
   })
 
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'save-link-to-readspace',
     title: 'Save link to Readspace',
     contexts: ['link'],
+    documentUrlPatterns: ['http://*/*', 'https://*/*']
   })
 
-  chrome.contextMenus.create({
+  browser.contextMenus.create({
     id: 'discover-feeds',
     title: 'Discover RSS feeds',
     contexts: ['page'],
+    documentUrlPatterns: ['http://*/*', 'https://*/*']
   })
 })
 
 // Handle context menu clicks
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab?.id) return
+browser.contextMenus.onClicked.addListener((info: Menus.OnClickData, tab?: browser.Tabs.Tab) => {
+  if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
+    console.log('Context menu clicked on unsupported page:', tab?.url)
+    browser.notifications.create('unsupported-page', {
+      type: 'basic',
+      iconUrl: 'icons/icon-48.png',
+      title: 'Readspace',
+      message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).'
+    })
+    return
+  }
 
   switch (info.menuItemId) {
     case 'save-to-readspace':
       handleSaveToReadspace(tab.url || info.pageUrl || '', tab)
       break
     case 'save-link-to-readspace':
-      if (info.linkUrl) {
+      if (info.linkUrl && isSupportedUrl(info.linkUrl)) {
         handleSaveToReadspace(info.linkUrl, tab)
+      } else {
+        browser.notifications.create('unsupported-link', {
+          type: 'basic',
+          iconUrl: 'icons/icon-48.png',
+          title: 'Readspace',
+          message: 'This link type is not supported.'
+        })
       }
       break
     case 'discover-feeds':
@@ -43,10 +80,19 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 })
 
 // Handle keyboard shortcuts
-chrome.commands.onCommand.addListener((command) => {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+browser.commands.onCommand.addListener((command: string) => {
+  browser.tabs.query({ active: true, currentWindow: true }).then((tabs: browser.Tabs.Tab[]) => {
     const tab = tabs[0]
-    if (!tab?.id) return
+    if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
+      console.log('Keyboard shortcut used on unsupported page:', tab?.url)
+      browser.notifications.create('unsupported-shortcut', {
+        type: 'basic',
+        iconUrl: 'icons/icon-48.png',
+        title: 'Readspace',
+        message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).'
+      })
+      return
+    }
 
     switch (command) {
       case 'save-current-page':
@@ -60,40 +106,59 @@ chrome.commands.onCommand.addListener((command) => {
 })
 
 // Handle messages from content script and popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  switch (request.action) {
-    case 'saveArticle':
-      handleSaveToReadspace(request.url, sender.tab)
-      break
-    case 'extractContent':
+// @ts-ignore
+browser.runtime.onMessage.addListener((request: any, sender: Runtime.MessageSender, sendResponse: (response?: any) => void): boolean | void => {
+  // Handle the async extractContent case
+  if (request.action === 'extractContent') {
+    if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
       handleExtractContent(sender.tab?.id, request.url)
         .then(sendResponse)
         .catch(error => sendResponse({ error: error.message }))
       return true // Keep message channel open for async response
+    } else {
+      sendResponse({ error: 'Unsupported page type' })
+      return // Synchronous response, don't return anything
+    }
+  }
+
+  // Handle synchronous cases - these don't need to return anything
+  switch (request.action) {
+    case 'saveArticle':
+      if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
+        handleSaveToReadspace(request.url, sender.tab)
+      } else {
+        console.log('Save article requested from unsupported page:', sender.tab?.url)
+      }
+      break
     case 'discoverFeeds':
-      handleDiscoverFeeds(sender.tab)
+      if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
+        handleDiscoverFeeds(sender.tab)
+      } else {
+        console.log('Feed discovery requested from unsupported page:', sender.tab?.url)
+      }
       break
   }
+  // No return statement for sync cases (implicitly returns undefined)
 })
 
-async function handleSaveToReadspace(url: string, tab?: chrome.tabs.Tab) {
+async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
   try {
     console.log('handleSaveToReadspace called with:', { url, tabId: tab?.id, tabTitle: tab?.title })
     
-    // Get extension settings
-    const result = await chrome.storage.local.get(['readspace-extension'])
-    const settings = result['readspace-extension']?.state?.settings
+    // Get extension settings using our storage helper
+    const settings = await storage.get('readspace-extension')
+    const settingsData = (settings as any)?.state?.settings
     
     console.log('Extension settings loaded:', {
-      hasAccessToken: !!settings?.access_token,
-      readspaceUrl: settings?.readspace_url,
-      settings: settings
+      hasAccessToken: !!settingsData?.access_token,
+      readspaceUrl: settingsData?.readspace_url,
+      settings: settingsData
     })
 
-    if (!settings?.access_token) {
+    if (!settingsData?.access_token) {
       console.log('No access token found, showing authentication notification')
       // Show notification that user needs to authenticate
-      chrome.notifications.create({
+      browser.notifications.create('auth-required', {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
@@ -131,11 +196,11 @@ async function handleSaveToReadspace(url: string, tab?: chrome.tabs.Tab) {
     console.log('Saving to Readspace API with request:', requestBody)
     
     // Save to Readspace API
-    const response = await fetch(`${settings.readspace_url}/api/v1/articles/save`, {
+    const response = await fetch(`${settingsData.readspace_url}/api/v1/articles/save`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settings.access_token}`
+        'Authorization': `Bearer ${settingsData.access_token}`
       },
       body: JSON.stringify(requestBody)
     })
@@ -149,7 +214,7 @@ async function handleSaveToReadspace(url: string, tab?: chrome.tabs.Tab) {
     if (response.ok) {
       const responseData = await response.json()
       console.log('Article saved successfully:', responseData)
-      chrome.notifications.create({
+      browser.notifications.create('save-success', {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
@@ -162,7 +227,7 @@ async function handleSaveToReadspace(url: string, tab?: chrome.tabs.Tab) {
     }
   } catch (error) {
     console.error('Failed to save article:', error)
-    chrome.notifications.create({
+    browser.notifications.create('save-error', {
       type: 'basic',
       iconUrl: 'icons/icon-48.png',
       title: 'Readspace',
@@ -171,7 +236,7 @@ async function handleSaveToReadspace(url: string, tab?: chrome.tabs.Tab) {
   }
 }
 
-async function handleExtractContent(tabId?: number, url?: string) {
+async function handleExtractContent(tabId?: number, url?: string): Promise<ContentExtractionResult | null> {
   if (!tabId) {
     console.log('handleExtractContent: no tabId provided')
     return null
@@ -180,10 +245,10 @@ async function handleExtractContent(tabId?: number, url?: string) {
   try {
     console.log('handleExtractContent: sending message to content script', { tabId, url })
     // Send message to content script to extract content
-    const content = await chrome.tabs.sendMessage(tabId, { 
+    const content = await browser.tabs.sendMessage(tabId, { 
       action: 'extractContent',
       url 
-    })
+    }) as ContentExtractionResult
     console.log('handleExtractContent: received response from content script:', content)
     return content
   } catch (error) {
@@ -192,19 +257,19 @@ async function handleExtractContent(tabId?: number, url?: string) {
   }
 }
 
-async function handleDiscoverFeeds(tab?: chrome.tabs.Tab) {
+async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
   if (!tab?.id) return
 
   try {
-    const feeds = await chrome.tabs.sendMessage(tab.id, { 
+    const feeds = await browser.tabs.sendMessage(tab.id, { 
       action: 'discoverFeeds' 
-    })
+    }) as any[]
     
     if (feeds?.length > 0) {
       // TODO: Show feed subscription interface
       console.log('Discovered feeds:', feeds)
     } else {
-      chrome.notifications.create({
+      browser.notifications.create('no-feeds', {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
@@ -218,12 +283,12 @@ async function handleDiscoverFeeds(tab?: chrome.tabs.Tab) {
 
 async function handleOpenReadspace() {
   try {
-    const result = await chrome.storage.local.get(['readspace-extension'])
-    const settings = result['readspace-extension']?.state?.settings
-    const url = settings?.readspace_url || 'https://app.readspace.ai'
+    const settings = await storage.get('readspace-extension')
+    const settingsData = (settings as any)?.state?.settings
+    const url = settingsData?.readspace_url || 'https://api.readspace.ai'
     
-    chrome.tabs.create({ url })
+    browser.tabs.create({ url })
   } catch (error) {
-    chrome.tabs.create({ url: 'https://app.readspace.ai' })
+    browser.tabs.create({ url: 'https://api.readspace.ai' })
   }
 } 

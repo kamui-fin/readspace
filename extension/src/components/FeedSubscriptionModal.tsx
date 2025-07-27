@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { DiscoveredFeed } from '@/types'
-import { Rss, BellPlus, Loader2, X } from 'lucide-react'
+import { Rss, BellPlus, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useExtensionStore } from '@/store'
 
@@ -23,7 +23,6 @@ export function FeedSubscriptionModal({
   const { subscribeToFeed, folders, tags } = useExtensionStore()
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-  const [isSubscribing, setIsSubscribing] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,24 +32,24 @@ export function FeedSubscriptionModal({
       return
     }
 
-    setIsSubscribing(true)
-    const toastId = toast.loading('Subscribing to feed...')
-    
+    // Optimistic update - show success immediately and close modal
+    toast.success('Successfully subscribed to RSS feed!')
+    onSuccess?.()
+    onClose()
+
+    // Make the actual API call in the background
     try {
       await subscribeToFeed(feed.url, {
         folder_id: selectedFolderId,
         tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       })
-      
-      toast.success('Successfully subscribed to RSS feed!', { id: toastId })
-      onSuccess?.()
-      onClose()
     } catch (error) {
       console.error('Failed to subscribe to RSS feed:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      toast.error(`Failed to subscribe to feed: ${errorMessage}`, { id: toastId })
-    } finally {
-      setIsSubscribing(false)
+      // Show error toast, but modal is already closed
+      toast.error(`Feed subscription failed: ${errorMessage}`, {
+        duration: 5000, // Show longer since user might miss it
+      })
     }
   }
 
@@ -160,27 +159,17 @@ export function FeedSubscriptionModal({
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                disabled={isSubscribing}
                 className="flex-1"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
-                disabled={isSubscribing || !selectedFolderId}
+                disabled={!selectedFolderId}
                 className="flex-1"
               >
-                {isSubscribing ? (
-                  <>
-                    <Loader2 className="w-3 h-3 animate-spin mr-2" />
-                    Subscribing...
-                  </>
-                ) : (
-                  <>
-                    <BellPlus className="w-3 h-3 mr-2" />
-                    Subscribe
-                  </>
-                )}
+                <BellPlus className="w-3 h-3 mr-2" />
+                Subscribe
               </Button>
             </div>
           </form>

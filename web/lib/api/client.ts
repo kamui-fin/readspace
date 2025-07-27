@@ -215,12 +215,59 @@ export class ApiClient {
             this.get<{
                 task_id: string
                 status: string
-                progress?: number
-                completed?: number
-                total?: number
-                feeds_imported?: number
-                feeds_failed?: number
+                progress?: {
+                    completed: number
+                    total: number
+                    successful: number
+                    failed: number
+                    already_existed: number
+                }
+                result?: {
+                    imported_count: number
+                    failed_count: number
+                    already_existed_count: number
+                    total_feeds: number
+                    summary: {
+                        successful: number
+                        failed: number
+                        already_existed: number
+                    }
+                    errors?: Array<{
+                        url: string
+                        title: string
+                        error: string
+                        status: string
+                    }>
+                }
+                metadata?: {
+                    user_id: string
+                    task_id: string
+                    estimated_feeds: number
+                    filename: string
+                    created_at: string
+                    status: string
+                }
             }>(`/api/rss/opml/import/status/${taskId}`),
+        getActiveImportTask: () =>
+            this.get<{
+                user_id: string
+                task_id: string
+                estimated_feeds: number
+                filename: string
+                created_at: string
+                status: string
+                current_status?: string
+            } | null>("/api/rss/opml/import/active"),
+        listImportTasks: () =>
+            this.get<Array<{
+                user_id: string
+                task_id: string
+                estimated_feeds: number
+                filename: string
+                created_at: string
+                status: string
+                current_status?: string
+            }>>("/api/rss/opml/import/tasks"),
 
         // Feeds
         getFeeds: (params?: {
