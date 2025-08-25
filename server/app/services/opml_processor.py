@@ -128,10 +128,10 @@ class OpmlProcessor:
         title.text = "Readspace Feeds Export"
 
         # Add creation date
-        from datetime import datetime
+        from datetime import datetime, UTC
 
         date_created = ET.SubElement(head, "dateCreated")
-        date_created.text = datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        date_created.text = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         # Add body element
         body = ET.SubElement(opml, "body")

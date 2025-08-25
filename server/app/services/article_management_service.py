@@ -20,6 +20,7 @@ from app.crud.crud_article import (
 from app.crud.crud_article import (
     update_article as crud_update_article,
 )
+from app.crud.crud_unified_articles import crud_unified_articles
 from app.crud.transformers.article_transformer import ArticleTransformer
 from app.schemas.rss_schemas import (
     ArticleResponse,
@@ -145,17 +146,18 @@ class ArticleManagementService:
         skip: int = 0,
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
-        """Get articles marked as read later."""
-        articles_db, total_count = await get_read_later_articles(
+        """Get articles marked as read later (includes both RSS feed and clipped articles)."""
+        articles, total_count = await crud_unified_articles.get_unified_articles_by_user(
             db=self.db,
             user_id=self.user_id,
+            is_read_later=True,
             skip=skip,
             limit=limit,
+            sort_by="published_at",
+            sort_order="desc",
+            include_feed_articles=True,
+            include_clipped_articles=True,
         )
-
-        articles = [
-            self.transformer.feed_to_unified(article) for article in articles_db
-        ]
 
         page = skip // limit + 1
         pages = (total_count + limit - 1) // limit if limit > 0 else 0

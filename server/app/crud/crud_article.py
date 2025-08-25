@@ -10,12 +10,10 @@ from app.crud.article_specialized_queries import ArticleSpecializedQueries
 from app.crud.base import CRUDBase
 from app.models.rss_models import (
     Article,
-    ArticleContent,
     ClippedArticle,
     FeedArticle,
 )
 from app.schemas.rss_schemas import (
-    ArticleContentCreate,
     ArticleCreate,
     ArticleUpdate,
     ClippedArticleCreate,
@@ -164,14 +162,6 @@ async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
 
 
 # CRUD classes for different article types
-class CRUDArticleContent(
-    CRUDBase[ArticleContent, ArticleContentCreate, ArticleContentCreate]
-):
-    """CRUD operations for article content."""
-
-    pass
-
-
 class CRUDFeedArticle(CRUDBase[FeedArticle, FeedArticleCreate, FeedArticleUpdate]):
     """CRUD operations for feed articles."""
 
@@ -207,7 +197,9 @@ class CRUDArticleUnified:
     """Unified CRUD operations that work with both feed and clipped articles"""
 
     def __init__(self):
-        self.content = CRUDArticleContent(ArticleContent)
+        from .crud_article_content import crud_article_content
+        
+        self.content = crud_article_content
         self.feed_article = CRUDFeedArticle(FeedArticle)
         self.clipped_article = CRUDClippedArticle(ClippedArticle)
 
@@ -225,8 +217,8 @@ class CRUDArticleUnified:
         )
 
 
+# Import the properly implemented CRUD instance
+
 # Initialize CRUD instances
 crud_article = CRUDArticleUnified()
-crud_article_content = CRUDArticleContent(ArticleContent)
 crud_feed_article = CRUDFeedArticle(FeedArticle)
-crud_clipped_article = CRUDClippedArticle(ClippedArticle)

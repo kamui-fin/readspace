@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import String, asc, desc, func, or_, select, union_all
+from sqlalchemy import String, asc, desc, func, literal, or_, select, union_all
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import selectinload
 
@@ -195,7 +195,11 @@ class ArticleQueryBuilder:
             ),  # Placeholder
             Feed.title.label("feed_title"),
             Feed.link.label("feed_link"),
-            func.literal("feed").label("article_type"),
+            literal("feed").label("article_type"),
+            subq.c.created_at,
+            subq.c.updated_at,
+            func.cast(None, String).label("priority"),  # Placeholder for feed articles
+            func.cast(None, String).label("note"),  # Placeholder for feed articles
         ).select_from(
             subq.join(ArticleContent, subq.c.content_id == ArticleContent.id).join(
                 Feed, subq.c.feed_id == Feed.id
@@ -224,7 +228,11 @@ class ArticleQueryBuilder:
             subq.c.id.label("clipped_article_id"),
             func.cast(None, String).label("feed_title"),  # Placeholder
             func.cast(None, String).label("feed_link"),  # Placeholder
-            func.literal("clipped").label("article_type"),
+            literal("clipped").label("article_type"),
+            subq.c.created_at,
+            subq.c.created_at.label("updated_at"),  # ClippedArticle doesn't have updated_at, use created_at
+            subq.c.priority,  # Add priority field
+            subq.c.note,  # Add note field
         ).select_from(subq.join(ArticleContent, subq.c.content_id == ArticleContent.id))
 
     def _get_sort_column(self, table, sort_by: str):

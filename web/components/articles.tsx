@@ -177,7 +177,7 @@ export function ArticlesView({
     const allArticles = useMemo(() => {
         if (!data?.pages) return []
         
-        return data.pages.flatMap((page: any) => {
+        const articles = data.pages.flatMap((page: any) => {
             // Handle different API response formats
             if (page.items) {
                 return page.items
@@ -206,6 +206,8 @@ export function ArticlesView({
             }
             return []
         })
+        
+        return articles
     }, [data])
 
     // Client-side filtered articles based on unread toggle
@@ -1115,6 +1117,23 @@ function ArticleContentView({
         article.article_type === "clipped" && article.priority
             ? article.priority
             : null
+    
+    // Get priority color for clipped articles
+    const getPriorityColor = (priority: string) => {
+        switch (priority) {
+            case "high":
+                return "text-red-700 bg-red-100 border-red-300 dark:text-red-400 dark:bg-red-950 dark:border-red-800"
+            case "medium":
+                return "text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800"
+            case "low":
+                return "text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950 dark:border-green-800"
+            case "default":
+            case "clipped":
+                return "text-blue-700 bg-blue-100 border-blue-300 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800"
+            default:
+                return "text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-950 dark:border-gray-800"
+        }
+    }
 
     return (
         <article className="max-w-4xl mx-auto">
@@ -1140,6 +1159,16 @@ function ArticleContentView({
                             article.feed?.title ||
                             "Unknown Source"}
                     </span>
+                    {article.article_type === "clipped" && (
+                        <div
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority || "default")}`}
+                        >
+                            <Paperclip className="h-2.5 w-2.5" />
+                            <span className="capitalize">
+                                {priority || "clipped"}
+                            </span>
+                        </div>
+                    )}
                     <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
                         {publishedAtDisplay}
                     </span>
@@ -1201,15 +1230,15 @@ function ArticleContentView({
                         />
                     </div>
                 )}
-                {/* {article.description && (
+                {((article.note && !article.description) || (!article.note && article.description)) && (
                     <div
                         className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
-                        dangerouslySetInnerHTML={{ __html: `<blockquote>${article.description}</blockquote>` }}
+                        dangerouslySetInnerHTML={{ __html: `<blockquote>${(article.note && !article.description) ? article.note : article.description}</blockquote>` }}
                         style={{
                             fontFamily: 'var(--font-garamond-serif)'
                         }}
                     />
-                )} */}
+                )}
                 {article.content && (
                     <div
                         ref={contentRef}
@@ -1274,6 +1303,9 @@ function ArticleItem({
                 return "text-orange-700 bg-orange-100 border-orange-300 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800"
             case "low":
                 return "text-green-700 bg-green-100 border-green-300 dark:text-green-400 dark:bg-green-950 dark:border-green-800"
+            case "default":
+            case "clipped":
+                return "text-blue-700 bg-blue-100 border-blue-300 dark:text-blue-400 dark:bg-blue-950 dark:border-blue-800"
             default:
                 return "text-gray-700 bg-gray-100 border-gray-300 dark:text-gray-400 dark:bg-gray-950 dark:border-gray-800"
         }
@@ -1299,13 +1331,13 @@ function ArticleItem({
                 <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
-                            {article.article_type === "clipped" && priority && (
+                            {article.article_type === "clipped" && (
                                 <div
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority)}`}
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority || "default")}`}
                                 >
-                                    <Globe className="h-2.5 w-2.5" />
+                                    <Paperclip className="h-2.5 w-2.5" />
                                     <span className="capitalize">
-                                        {priority}
+                                        {priority || "clipped"}
                                     </span>
                                 </div>
                             )}
@@ -1319,9 +1351,11 @@ function ArticleItem({
                             ) : article.feed?.image_url ? (
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
                             ) : null}
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                                {article.feed?.title || "Unknown Source"}
-                            </span>
+                            {article.article_type !== "clipped" && (
+                                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                                    {article.feed?.title || "Unknown Source"}
+                                </span>
+                            )}
                         </div>
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
                             <Clock className="h-3 w-3" />
@@ -1338,9 +1372,9 @@ function ArticleItem({
                             {article.author}
                         </div>
                     )}
-                    {article.description && (
+                    {((article.note && !article.description) || (!article.note && article.description)) && (
                         <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-all">
-                            {stripHTML(article.description)}
+                            {(article.note && !article.description) ? article.note : stripHTML(article.description)}
                         </p>
                     )}
                 </div>

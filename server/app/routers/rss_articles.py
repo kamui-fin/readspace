@@ -17,6 +17,7 @@ from app.schemas.rss_schemas import (
 )
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
+from app.services.user_service import UserService
 from app.services.web_article_service import WebArticleService
 
 logger = structlog.get_logger(__name__)
@@ -41,6 +42,10 @@ async def save_web_article(
     current_user: TokenData = Depends(get_current_user),
 ):
     """Save a web article from URL for read-later functionality."""
+    # Ensure user profile exists in database
+    user_service = UserService(db=db)
+    await user_service.ensure_user_profile_exists(current_user)
+    
     web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
 
     try:

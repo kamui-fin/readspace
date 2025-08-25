@@ -182,9 +182,9 @@ class TestArticleManagementService:
         total_count = 1
         
         with pytest.MonkeyPatch().context() as m:
-            mock_get_read_later = AsyncMock()
-            mock_get_read_later.return_value = (mock_articles, total_count)
-            m.setattr("app.services.article_management_service.get_read_later_articles", mock_get_read_later)
+            mock_get_unified_articles = AsyncMock()
+            mock_get_unified_articles.return_value = (mock_articles, total_count)
+            m.setattr("app.services.article_management_service.crud_unified_articles.get_unified_articles_by_user", mock_get_unified_articles)
             
             result = await self.service.get_read_later_articles(skip=5, limit=15)
             
@@ -192,11 +192,16 @@ class TestArticleManagementService:
             assert len(result.items) == 1
             assert result.total == 1
             
-            mock_get_read_later.assert_called_once_with(
+            mock_get_unified_articles.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
+                is_read_later=True,
                 skip=5,
                 limit=15,
+                sort_by="published_at",
+                sort_order="desc",
+                include_feed_articles=True,
+                include_clipped_articles=True,
             )
 
     @pytest.mark.asyncio
