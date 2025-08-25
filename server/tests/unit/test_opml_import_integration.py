@@ -309,7 +309,11 @@ class TestImportOpmlTask:
         ]
         
         with patch.object(service, 'extract_feeds_from_opml', return_value=test_feeds), \
-             patch('celery.group') as mock_group:
+             patch('app.workers.tasks.import_single_feed_task') as mock_task, \
+             patch('app.services.rss_orchestration_service.group') as mock_group:
+            
+            # Mock Celery task
+            mock_task.s.return_value = MagicMock()
             
             # Mock Celery group result
             mock_task_results = [MagicMock(task_id=f"task_{i}") for i in range(2)]
