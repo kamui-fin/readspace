@@ -8,6 +8,8 @@
         "start": "next start -p 8042",
         "lint": "next lint",
         "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+        "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
+        "type-check": "tsc --noEmit",
         "prepare": "husky",
         "migrate": "ts-node scripts/migrate-to-supabase.ts"
     },

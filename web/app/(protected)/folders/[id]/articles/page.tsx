@@ -1,28 +1,25 @@
-"use client"
-
+import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesView } from "@/components/articles"
-import { useFolders } from "@/lib/api/hooks/feeds"
-import { useParams } from "next/navigation"
-import { Loader2 } from "lucide-react"
+import { ServerApiClient } from "@/lib/api/server"
+import { RSS_QUERY_KEYS } from "@/lib/query-keys"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
-export default function FolderArticlesPage() {
-    const params = useParams()
-    const folderId = params.id as string
-    const { data: folders = [], isLoading } = useFolders()
+// Force dynamic rendering since we're fetching user-specific data
+export const dynamic = 'force-dynamic'
 
-    const folder = folders.find((f) => f.id === folderId)
+interface PageProps {
+    params: Promise<{ id: string }>
+}
 
-    if (isLoading) {
-        return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
-                <div className="w-full flex flex-col items-center justify-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-muted-foreground">Loading folder...</p>
-                </div>
-            </div>
-        )
-    }
+export default async function FolderArticlesPage({ params }: PageProps) {
+    const resolvedParams = await params
+    const folderId = resolvedParams.id
 
+    const queryClient = getQueryClient()
+    
+    // Fetch folder data first to get the name
+    const folder = await ServerApiClient.getFolder(folderId)
+    
     if (!folder) {
         return (
             <div className="flex h-full w-full items-center justify-center">
@@ -37,10 +34,47 @@ export default function FolderArticlesPage() {
         )
     }
 
+    // Prefetch infinite query parameters to match client-side useInfiniteArticles
+    const infiniteQueryParams = {
+        feedIds: undefined,
+        folderId: folderId,
+        publishedSince: undefined,
+        publishedUntil: undefined,
+        sortBy: "published_at",
+        sortOrder: "desc",
+        size: 25,
+        viewType: 'folder',
+        viewId: folderId,
+    }
+
+    // Prefetch the folder-specific infinite articles that this page needs
+    await queryClient.prefetchInfiniteQuery({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', infiniteQueryParams],
+        queryFn: ({ pageParam = 1 }) => ServerApiClient.getArticles({
+            feed_ids: infiniteQueryParams.feedIds,
+            folder_id: infiniteQueryParams.folderId,
+            published_since: infiniteQueryParams.publishedSince,
+            published_until: infiniteQueryParams.publishedUntil,
+            sort_by: infiniteQueryParams.sortBy,
+            sort_order: infiniteQueryParams.sortOrder,
+            page: pageParam,
+            size: infiniteQueryParams.size,
+        }),
+        initialPageParam: 1,
+        getNextPageParam: (lastPage: any) => {
+            const currentPage = lastPage.page || 1
+            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            return currentPage < totalPages ? currentPage + 1 : undefined
+        },
+        staleTime: 5 * 60 * 1000, // 5 minutes to match client
+    })
+
     return (
-        <ArticlesView
-            folderId={folderId}
-            initialSidebarTitle={folder.name || "Unknown Folder"}
-        />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <ArticlesView
+                folderId={folderId}
+                initialSidebarTitle={folder.name || "Unknown Folder"}
+            />
+        </HydrationBoundary>
     )
 }

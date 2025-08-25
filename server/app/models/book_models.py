@@ -2,8 +2,6 @@ import uuid
 from datetime import datetime
 from enum import Enum as PyEnum
 
-from app.db.base_class import Base
-from app.models.user_models import Profile  # noqa: F401
 from sqlalchemy import (
     ARRAY,
     JSON,
@@ -19,6 +17,9 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
+from app.db.base_class import Base
+from app.models.user_models import Profile  # noqa: F401
+
 
 class BookFormat(PyEnum):
     EPUB = "EPUB"
@@ -26,9 +27,9 @@ class BookFormat(PyEnum):
 
 
 class HighlightColor(PyEnum):
-    YELLOW = "yellow"
-    GREEN = "green"
-    BLUE = "blue"
+    YELLOW = "YELLOW"
+    GREEN = "GREEN"
+    BLUE = "BLUE"
 
 
 class BookMetadata(Base):
@@ -40,7 +41,7 @@ class BookMetadata(Base):
     description = Column(Text)
     cover_url = Column(Text)
     file_url = Column(Text, nullable=False)
-    format = Column(Enum(BookFormat), nullable=False)
+    format = Column(Enum(BookFormat, name="bookformat"), nullable=False)
     num_pages = Column(Integer)
     file_size_bytes = Column(BigInteger)
 
@@ -95,11 +96,11 @@ class Highlight(Base):
     user_book_lib_id = Column(
         PGUUID, ForeignKey("user_book_library.id", ondelete="CASCADE"), nullable=False
     )
-    color = Column(Enum(HighlightColor), nullable=False)
+    color = Column(Enum(HighlightColor, name="highlightcolor"), nullable=False)
     original_text = Column(Text, nullable=False)
     note = Column(Text)
-    
-    # Location fields 
+
+    # Location fields
     chapter_idx = Column(Integer)
     chapter_href = Column(Text)
     chapter_title = Column(Text)

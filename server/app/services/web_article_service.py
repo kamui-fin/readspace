@@ -1,17 +1,20 @@
 import re
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 import structlog
-from app.crud import crud_article_content, crud_clipped_article
-from app.schemas.rss_schemas import (
-    ArticleContentCreate, ClippedArticleCreate, 
-    ClippedArticleResponse
-)
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud import crud_article_content, crud_clipped_article
+from app.schemas.rss_schemas import (
+    ArticleContentCreate,
+    ClippedArticleCreate,
+    ClippedArticleResponse,
+)
+
 logger = structlog.get_logger(__name__)
+
 
 class WebArticleService:
     def __init__(self, db: AsyncSession, user_id: UUID):
@@ -21,123 +24,155 @@ class WebArticleService:
     async def save_article_from_url(
         self,
         url: str,
-        title: Optional[str] = None,
-        content: Optional[str] = None,  # Extracted content from extension
-        metadata: Optional[Dict[str, Any]] = None,
-        tag_ids: Optional[List[UUID]] = None,
-        note: Optional[str] = None,
-        priority: Optional[str] = None
+        title: str | None = None,
+        content: str | None = None,  # Extracted content from extension
+        metadata: dict[str, Any] | None = None,
+        tag_ids: list[UUID] | None = None,
+        note: str | None = None,
+        priority: str | None = None,
     ) -> ClippedArticleResponse:
         """Save a web article with content provided by the extension."""
-        
+
         if not content:
-            raise ValueError("No content provided. Content must be extracted by the extension.")
-        
+            raise ValueError(
+                "No content provided. Content must be extracted by the extension."
+            )
+
         # First, check if we already have content extracted by the chrome extension for this URL
-        existing_extracted_content = await crud_article_content.get_by_link_extracted_by_extension(
-            self.db, link=url
+        existing_extracted_content = (
+            await crud_article_content.get_by_link_extracted_by_extension(
+                self.db, link=url
+            )
         )
-        
+
         if existing_extracted_content:
             # We have extension-extracted content, use it
             content_record = existing_extracted_content
-            logger.info("Found existing chrome extension extracted content", 
-                       url=url, content_id=content_record.id, content_length=len(content_record.content or ''))
+            logger.info(
+                "Found existing chrome extension extracted content",
+                url=url,
+                content_id=content_record.id,
+                content_length=len(content_record.content or ""),
+            )
         else:
             # No extension-extracted content exists, create new content from extension data
-            logger.info("Creating new article content from extension data", 
-                       url=url, content_length=len(content), title=title)
-            
+            logger.info(
+                "Creating new article content from extension data",
+                url=url,
+                content_length=len(content),
+                title=title,
+            )
+
             # Parse published date from metadata if provided
             published_at = None
-            if metadata and metadata.get('published_at'):
-                published_override = metadata['published_at']
+            if metadata and metadata.get("published_at"):
+                published_override = metadata["published_at"]
                 if isinstance(published_override, str):
                     published_at = self._parse_datetime_string(published_override)
-                    logger.debug("Parsed metadata published_at", 
-                               original=published_override, parsed=published_at)
+                    logger.debug(
+                        "Parsed metadata published_at",
+                        original=published_override,
+                        parsed=published_at,
+                    )
                 else:
                     published_at = published_override
-            
+
             # Create new content with full extracted content
             content_create = ArticleContentCreate(
-                title=title or 'Untitled Article',
+                title=title or "Untitled Article",
                 link=str(url),
-                description=metadata.get('description') if metadata else None,
+                description=metadata.get("description") if metadata else None,
                 content=content,  # Full extracted HTML content
-                author=metadata.get('author') if metadata else None,
-                image_url=metadata.get('image_url') if metadata else None,
+                author=metadata.get("author") if metadata else None,
+                image_url=metadata.get("image_url") if metadata else None,
                 published_at=published_at,
                 estimated_read_time_minutes=self._calculate_reading_time(content),
                 custom_metadata={
-                    'extraction_timestamp': datetime.now(timezone.utc).isoformat(),
-                    'source_url': url,
-                    'extracted_by': 'chrome_extension',  # Mark as extension-extracted
-                    'content_length': len(content),
-                    **(metadata or {})
-                }
+                    "extraction_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "source_url": url,
+                    "extracted_by": "chrome_extension",  # Mark as extension-extracted
+                    "content_length": len(content),
+                    **(metadata or {}),
+                },
             )
-            
-            logger.debug("Creating ArticleContentCreate", 
-                        title=content_create.title, 
-                        published_at=content_create.published_at)
-            content_record = await crud_article_content.create(self.db, obj_in=content_create)
-        
+
+            logger.debug(
+                "Creating ArticleContentCreate",
+                title=content_create.title,
+                published_at=content_create.published_at,
+            )
+            content_record = await crud_article_content.create(
+                self.db, obj_in=content_create
+            )
+
         # Now check if user already has this specific content clipped
         existing_clipped = await crud_clipped_article.get_by_user_and_content(
             self.db, user_id=self.user_id, content_id=content_record.id
         )
         if existing_clipped:
-            logger.info("Article already clipped by user", 
-                       article_id=existing_clipped.id, user_id=self.user_id, url=url)
+            logger.info(
+                "Article already clipped by user",
+                article_id=existing_clipped.id,
+                user_id=self.user_id,
+                url=url,
+            )
             return ClippedArticleResponse.model_validate(existing_clipped)
-        
+
         # Create clipped article with the extension-extracted content
         clipped_article_create = ClippedArticleCreate(
             user_id=self.user_id,
             content_id=content_record.id,
-            priority=priority or 'medium',
+            priority=priority or "medium",
             note=note,
             is_read=False,
-            is_favorite=priority == 'high'  # High priority articles become favorites
+            is_favorite=priority == "high",  # High priority articles become favorites
         )
-        
+
         # Save to database
-        clipped_article = await crud_clipped_article.create(self.db, obj_in=clipped_article_create)
-        
+        clipped_article = await crud_clipped_article.create(
+            self.db, obj_in=clipped_article_create
+        )
+
         # Load with content for response
-        clipped_with_content = await crud_clipped_article.get_with_content(self.db, article_id=clipped_article.id)
-        
+        clipped_with_content = await crud_clipped_article.get_with_content(
+            self.db, article_id=clipped_article.id
+        )
+
         # Associate with tags if provided (TODO: implement tag association)
         if tag_ids:
             await self._associate_article_tags(clipped_article.id, tag_ids)
-        
-        logger.info("Web article clipped successfully", 
-                   article_id=clipped_article.id, user_id=self.user_id, url=url, priority=priority)
-        
+
+        logger.info(
+            "Web article clipped successfully",
+            article_id=clipped_article.id,
+            user_id=self.user_id,
+            url=url,
+            priority=priority,
+        )
+
         return ClippedArticleResponse.model_validate(clipped_with_content)
 
-    def _parse_datetime_string(self, date_str: str) -> Optional[datetime]:
+    def _parse_datetime_string(self, date_str: str) -> datetime | None:
         """Parse datetime string with various formats."""
         if not date_str:
             return None
-        
+
         logger.debug("Parsing datetime string", date_str=date_str)
-        
+
         try:
             # Handle ISO format with Z
-            if date_str.endswith('Z'):
-                result = datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+            if date_str.endswith("Z"):
+                result = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
                 logger.debug("Parsed ISO Z format", result=result)
                 return result
-            
+
             # Handle timezone with space separator like '2023-05-31 07:02:04 -0500'
-            space_tz_pattern = r'^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}$'
+            space_tz_pattern = r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}$"
             if re.match(space_tz_pattern, date_str):
                 logger.debug("Matched space timezone pattern")
                 # Convert space-separated timezone to colon format
-                parts = date_str.rsplit(' ', 1)
-                date_part = parts[0].replace(' ', 'T')
+                parts = date_str.rsplit(" ", 1)
+                date_part = parts[0].replace(" ", "T")
                 tz_part = parts[1]
                 # Insert colon in timezone: -0500 -> -05:00
                 tz_formatted = f"{tz_part[:3]}:{tz_part[3:]}"
@@ -145,67 +180,72 @@ class WebArticleService:
                 result = datetime.fromisoformat(formatted_str)
                 logger.debug("Successfully parsed space timezone format", result=result)
                 return result
-            
+
             # Handle timezone with T separator like '2023-05-31T07:02:04-0500'
-            t_tz_pattern = r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$'
+            t_tz_pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{4}$"
             if re.match(t_tz_pattern, date_str):
                 logger.debug("Matched T timezone pattern")
-                if date_str[-5] in ['+', '-']:
+                if date_str[-5] in ["+", "-"]:
                     formatted_str = f"{date_str[:-2]}:{date_str[-2:]}"
                     result = datetime.fromisoformat(formatted_str)
                     logger.debug("Successfully parsed T timezone format", result=result)
                     return result
-            
+
             # Try standard ISO format
             result = datetime.fromisoformat(date_str)
             logger.debug("Parsed standard ISO format", result=result)
             return result
-            
+
         except ValueError:
             try:
                 # Try parsing common formats with strptime
                 formats = [
-                    '%Y-%m-%d %H:%M:%S',
-                    '%Y-%m-%dT%H:%M:%S',
-                    '%Y-%m-%d',
-                    '%Y/%m/%d %H:%M:%S',
-                    '%Y/%m/%d',
-                    '%d/%m/%Y %H:%M:%S',
-                    '%d/%m/%Y',
-                    '%m/%d/%Y %H:%M:%S',
-                    '%m/%d/%Y'
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d",
+                    "%Y/%m/%d %H:%M:%S",
+                    "%Y/%m/%d",
+                    "%d/%m/%Y %H:%M:%S",
+                    "%d/%m/%Y",
+                    "%m/%d/%Y %H:%M:%S",
+                    "%m/%d/%Y",
                 ]
-                
+
                 for fmt in formats:
                     try:
-                        result = datetime.strptime(date_str, fmt).replace(tzinfo=timezone.utc)
+                        result = datetime.strptime(date_str, fmt).replace(
+                            tzinfo=timezone.utc
+                        )
                         logger.debug("Parsed with strptime", format=fmt, result=result)
                         return result
                     except ValueError:
                         continue
-                        
+
             except Exception as e:
                 logger.debug("Failed to parse with strptime", error=str(e))
-        
+
         logger.warning("Failed to parse datetime string", date_str=date_str)
         return None
 
-    def _calculate_reading_time(self, content: Optional[str]) -> Optional[int]:
+    def _calculate_reading_time(self, content: str | None) -> int | None:
         """Calculate estimated reading time in minutes."""
         if not content:
             return None
-        
+
         # Clean content and count words (strip HTML tags for word count)
-        clean_text = re.sub(r'<[^>]*>', ' ', content)  # Remove HTML tags
-        clean_text = re.sub(r'[^\w\s]', ' ', clean_text)  # Remove punctuation
+        clean_text = re.sub(r"<[^>]*>", " ", content)  # Remove HTML tags
+        clean_text = re.sub(r"[^\w\s]", " ", clean_text)  # Remove punctuation
         word_count = len(clean_text.split())
-        
+
         # Average reading speed is 200-250 WPM, use 230
         reading_time = max(1, round(word_count / 230))
         return reading_time
 
-    async def _associate_article_tags(self, article_id: UUID, tag_ids: List[UUID]):
+    async def _associate_article_tags(self, article_id: UUID, tag_ids: list[UUID]):
         """Associate article with tags (TODO: implement based on your tag system)."""
-        logger.info("Tag association requested but not implemented", 
-                   article_id=article_id, tag_ids=tag_ids)
-        pass 
+        logger.info(
+            "Tag association requested but not implemented",
+            article_id=article_id,
+            tag_ids=tag_ids,
+        )
+        pass

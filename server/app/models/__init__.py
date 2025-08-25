@@ -9,4 +9,4 @@ from .rss_models import Article, Feed, Folder, Tag
 from .user_models import AuthUser, Profile
 
 # If you have other model files, import their models here as well
-# Example: from .another_model_file import AnotherModel 
+# Example: from .another_model_file import AnotherModel

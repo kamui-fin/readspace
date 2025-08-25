@@ -1,5 +1,8 @@
-from typing import List, Optional
 from uuid import UUID
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.exceptions import StorageError
 from app.models.book_models import BookMetadata, UserBookLibrary
@@ -8,9 +11,6 @@ from app.schemas.books import (
     UserBookLibraryResponse,
     UserBookLibraryUpdate,
 )
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 
 class BookRepository:
@@ -19,9 +19,7 @@ class BookRepository:
     def __init__(self):
         self.model = BookMetadata
 
-    async def get_by_title(
-        self, db: AsyncSession, title: str
-    ) -> Optional[BookMetadata]:
+    async def get_by_title(self, db: AsyncSession, title: str) -> BookMetadata | None:
         """Get a book by its title."""
         try:
             query = select(self.model).where(self.model.title == title)
@@ -32,7 +30,7 @@ class BookRepository:
 
     async def get_user_books(
         self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
-    ) -> List[UserBookLibraryResponse]:
+    ) -> list[UserBookLibraryResponse]:
         """Get all books in a user's library."""
         query = (
             select(UserBookLibrary)
@@ -46,15 +44,12 @@ class BookRepository:
 
     async def get_user_book(
         self, db: AsyncSession, library_id: UUID, user_id: UUID
-    ) -> Optional[UserBookLibraryResponse]:
+    ) -> UserBookLibraryResponse | None:
         """Get a specific book from a user's library."""
         stmt = (
             select(UserBookLibrary)
             .join(BookMetadata, UserBookLibrary.book_metadata_id == BookMetadata.id)
-            .where(
-                UserBookLibrary.id == library_id,
-                UserBookLibrary.user_id == user_id
-            )
+            .where(UserBookLibrary.id == library_id, UserBookLibrary.user_id == user_id)
         )
         result = await db.execute(stmt)
         db_obj = result.scalar_one_or_none()
@@ -82,16 +77,13 @@ class BookRepository:
         db: AsyncSession,
         library_id: UUID,
         user_id: UUID,
-        obj_in: UserBookLibraryUpdate
-    ) -> Optional[UserBookLibraryResponse]:
+        obj_in: UserBookLibraryUpdate,
+    ) -> UserBookLibraryResponse | None:
         """Update a book in user's library."""
         query = (
             select(UserBookLibrary)
             .options(selectinload(UserBookLibrary.book_metadata))
-            .where(
-                UserBookLibrary.id == library_id,
-                UserBookLibrary.user_id == user_id
-            )
+            .where(UserBookLibrary.id == library_id, UserBookLibrary.user_id == user_id)
         )
         result = await db.execute(query)
         db_obj = result.scalar_one_or_none()
@@ -111,8 +103,7 @@ class BookRepository:
     ) -> bool:
         """Remove a book from user's library."""
         query = select(UserBookLibrary).where(
-            UserBookLibrary.id == library_id,
-            UserBookLibrary.user_id == user_id
+            UserBookLibrary.id == library_id, UserBookLibrary.user_id == user_id
         )
         result = await db.execute(query)
         db_obj = result.scalar_one_or_none()
@@ -150,7 +141,7 @@ class BookRepository:
 
     async def get_with_highlights(
         self, db: AsyncSession, book_id: UUID
-    ) -> Optional[BookMetadata]:
+    ) -> BookMetadata | None:
         """Get a book with its highlights."""
         try:
             query = (

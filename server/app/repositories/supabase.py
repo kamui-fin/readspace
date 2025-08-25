@@ -1,10 +1,9 @@
 import uuid
-from typing import Optional
 
 import structlog
-from app.core.config import get_settings
-
 from supabase import Client, create_client
+
+from app.core.config import get_settings
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -53,7 +52,7 @@ class SupabaseStorageClient:
         self,
         object_name: str,
         file_bytes: bytes,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> str:
         """
         Upload a file to Supabase storage.

@@ -4,4 +4,6 @@
 .env.local
 .env.prod
 supabase/volumes/db/data
+CLAUDE.md
+GEMINI.md
 supabase/volumes/storage/stub

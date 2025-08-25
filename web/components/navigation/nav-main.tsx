@@ -621,26 +621,60 @@ function MainNavigationItems({
     toggleSidebar: () => void
 }) {
     const pathname = usePathname()
+    const { data: unreadCounts } = useUnreadCounts(undefined, {
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 0, // Always consider stale so invalidation works immediately
+    })
+
+    const typedUnreadCounts = unreadCounts as {
+        read_later_count?: number
+        today_count?: number
+    } || {}
+
+    const getCountForItem = (title: string): number | null => {
+        switch (title) {
+            case "Today":
+                return typedUnreadCounts.today_count || 0
+            case "Read Later":
+                return typedUnreadCounts.read_later_count || 0
+            default:
+                return null
+        }
+    }
 
     return (
         <SidebarGroup>
             <SidebarMenu>
-                {items.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                            asChild
-                            tooltip={item.title}
-                            isMobile={isMobile}
-                            toggleSidebar={toggleSidebar}
-                            isActive={pathname === item.url}
-                        >
-                            <Link href={item.url}>
-                                <item.icon className="h-4 w-4" />
-                                <span>{item.title}</span>
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                ))}
+                {items.map((item) => {
+                    const count = getCountForItem(item.title)
+                    return (
+                        <SidebarMenuItem key={item.title}>
+                            <div className="flex items-center w-full group/item">
+                                <SidebarMenuButton
+                                    asChild
+                                    tooltip={item.title}
+                                    isMobile={isMobile}
+                                    toggleSidebar={toggleSidebar}
+                                    isActive={pathname === item.url}
+                                    className="flex-1"
+                                >
+                                    <Link href={item.url}>
+                                        <item.icon className="h-4 w-4" />
+                                        <span>{item.title}</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                                <div className="shrink-0 flex items-center pr-2">
+                                    {count != null && count > 0 && (
+                                        <span className="ml-1 text-xs text-muted-foreground">
+                                            {count}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        </SidebarMenuItem>
+                    )
+                })}
             </SidebarMenu>
         </SidebarGroup>
     )
@@ -648,11 +682,23 @@ function MainNavigationItems({
 
 // Feeds Navigation component
 export function FeedsNavigation() {
-    // Use the optimized combined sidebar data hook
-    const { data: folders, isLoading: isFoldersLoading } = useFolders()
-    const { data: feeds, isLoading: isFeedsLoading } = useFeeds({})
+    // Use the optimized combined sidebar data hook with proper cache configuration
+    const { data: folders, isLoading: isFoldersLoading } = useFolders({
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
+    })
+    const { data: feeds, isLoading: isFeedsLoading } = useFeeds({}, {
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
+    })
     const { data: unreadCounts, isLoading: isUnreadCountsLoading } =
-        useUnreadCounts()
+        useUnreadCounts(undefined, {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
+        })
 
     const isSidebarLoading =
         isFoldersLoading || isFeedsLoading || isUnreadCountsLoading

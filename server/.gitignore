@@ -2,3 +2,8 @@ __pycache__
 .venv
 .env*
 celerybeat-schedule*
+.coverage*
+.claude
+htmlcov
+coverage.xml
+.python-version

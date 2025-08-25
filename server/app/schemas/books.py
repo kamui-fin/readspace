@@ -1,8 +1,8 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class BookMetadataBase(BaseModel):
@@ -11,14 +11,16 @@ class BookMetadataBase(BaseModel):
     title: str
     author: str
     description: str = ""
-    cover_url: Optional[str] = None
+    cover_url: str | None = None
     format: str  # "PDF" or "EPUB"
     file_url: str
-    file_size_bytes: Optional[int] = None
-    num_pages: Optional[int] = None
-    pdf_toc: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None  # Allow both dict and list
-    epub_chapter_char_counts: Optional[List[int]] = None
-    epub_page_char_counts: Optional[List[int]] = None
+    file_size_bytes: int | None = None
+    num_pages: int | None = None
+    pdf_toc: dict[str, Any] | list[dict[str, Any]] | None = (
+        None  # Allow both dict and list
+    )
+    epub_chapter_char_counts: list[int] | None = None
+    epub_page_char_counts: list[int] | None = None
 
     @field_validator("format")
     @classmethod
@@ -37,15 +39,17 @@ class BookMetadataCreate(BookMetadataBase):
 class BookMetadataUpdate(BaseModel):
     """Model for updating book metadata."""
 
-    title: Optional[str] = None
-    author: Optional[str] = None
-    description: Optional[str] = None
-    cover_url: Optional[str] = None
-    file_url: Optional[str] = None
-    file_size_bytes: Optional[int] = None
-    num_pages: Optional[int] = None
-    pdf_toc: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]] = None  # Allow both dict and list
-    epub_chapter_char_counts: Optional[List[int]] = None
+    title: str | None = None
+    author: str | None = None
+    description: str | None = None
+    cover_url: str | None = None
+    file_url: str | None = None
+    file_size_bytes: int | None = None
+    num_pages: int | None = None
+    pdf_toc: dict[str, Any] | list[dict[str, Any]] | None = (
+        None  # Allow both dict and list
+    )
+    epub_chapter_char_counts: list[int] | None = None
 
 
 class BookMetadataResponse(BookMetadataBase):
@@ -53,12 +57,11 @@ class BookMetadataResponse(BookMetadataBase):
 
     id: UUID
     # Allow created_at to be either string or datetime
-    created_at: Union[str, datetime]
+    created_at: str | datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-    @field_validator('created_at', mode='before')
+    @field_validator("created_at", mode="before")
     @classmethod
     def validate_datetime(cls, value):
         """Convert datetime to string if it's a datetime object."""
@@ -72,8 +75,8 @@ class UserBookLibraryBase(BaseModel):
 
     user_id: UUID
     book_metadata_id: UUID
-    pdf_current_page: Optional[int] = None
-    epub_progress: Optional[Dict[str, Any]] = None
+    pdf_current_page: int | None = None
+    epub_progress: dict[str, Any] | None = None
 
 
 class UserBookLibraryCreate(UserBookLibraryBase):
@@ -85,8 +88,8 @@ class UserBookLibraryCreate(UserBookLibraryBase):
 class UserBookLibraryUpdate(BaseModel):
     """Model for updating user book library."""
 
-    pdf_current_page: Optional[int] = None
-    epub_progress: Optional[Dict[str, Any]] = None
+    pdf_current_page: int | None = None
+    epub_progress: dict[str, Any] | None = None
 
 
 class UserBookLibraryResponse(UserBookLibraryBase):
@@ -94,16 +97,15 @@ class UserBookLibraryResponse(UserBookLibraryBase):
 
     id: UUID
     # Allow date_added to be either string or datetime
-    date_added: Union[str, datetime]
+    date_added: str | datetime
     book_metadata: BookMetadataResponse
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
-    @field_validator('date_added', mode='before')
+    @field_validator("date_added", mode="before")
     @classmethod
     def validate_date_added(cls, value):
         """Convert datetime to string if it's a datetime object."""
         if isinstance(value, datetime):
             return value.isoformat()
-        return value 
+        return value

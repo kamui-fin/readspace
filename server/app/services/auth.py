@@ -1,11 +1,11 @@
 import functools
-from typing import Optional
 
 import structlog
-from app.core.config import get_settings
-from app.schemas.auth import TokenData
 from fastapi import HTTPException, Request, status
 from jose import JWTError, jwt
+
+from app.core.config import get_settings
+from app.schemas.auth import TokenData
 
 logger = structlog.get_logger()
 
@@ -48,9 +48,8 @@ def get_current_user(request: Request) -> TokenData:
     return token_data
 
 
-
 # Optional dependency that doesn't require auth but provides user if available
-def get_optional_user(request: Request) -> Optional[TokenData]:
+def get_optional_user(request: Request) -> TokenData | None:
     """FastAPI dependency to get the current user if available, but doesn't require auth."""
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):

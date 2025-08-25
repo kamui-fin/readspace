@@ -9,7 +9,7 @@ import {
 import { CatalogHeader } from "@/components/library/catalog-header"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { ApiClient } from "@/lib/api/client"
-import { BOOKS_QUERY_KEY } from "@/lib/api/hooks/books"
+import { BOOK_QUERY_KEYS } from "@/lib/query-keys"
 import { UserBookLibrary } from "@/types/api"
 import { useQuery } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
@@ -50,7 +50,7 @@ export function LibraryCatalog({
     const { data: books = initialBooks, isLoading: loading } = useQuery<
         UserBookLibrary[]
     >({
-        queryKey: [BOOKS_QUERY_KEY],
+        queryKey: [BOOK_QUERY_KEYS.BOOKS],
         queryFn: async () => {
             const response = await ApiClient.books.getUserBooks()
             return response as UserBookLibrary[]

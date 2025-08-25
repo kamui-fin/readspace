@@ -5,12 +5,11 @@ import {
 } from "@/types/api"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ApiClient } from "../client"
-
-export const BOOKS_QUERY_KEY = "books"
+import { BOOK_QUERY_KEYS } from "../../query-keys"
 
 export function useBooks(userId: string) {
     return useQuery({
-        queryKey: [BOOKS_QUERY_KEY, userId],
+        queryKey: [BOOK_QUERY_KEYS.BOOKS, userId],
         queryFn: () => ApiClient.books.getUserBooks(),
         enabled: !!userId, // Only run query if userId exists
     })
@@ -18,7 +17,7 @@ export function useBooks(userId: string) {
 
 export function useBook(bookId: string) {
     return useQuery({
-        queryKey: [BOOKS_QUERY_KEY, bookId],
+        queryKey: [BOOK_QUERY_KEYS.BOOK, bookId],
         queryFn: () => ApiClient.books.getBook(bookId),
     })
 }
@@ -29,7 +28,7 @@ export function useCreateBook() {
         mutationFn: (book: UserBookLibraryCreate) =>
             ApiClient.books.createBook(book),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
+            queryClient.invalidateQueries({ queryKey: [BOOK_QUERY_KEYS.BOOKS] })
         },
     })
 }
@@ -42,10 +41,10 @@ export function useUpdateBook() {
             ApiClient.books.updateBook(bookId, book),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
-                queryKey: [BOOKS_QUERY_KEY, bookId],
+                queryKey: [BOOK_QUERY_KEYS.BOOK, bookId],
             })
             queryClient.invalidateQueries({
-                queryKey: [BOOKS_QUERY_KEY],
+                queryKey: [BOOK_QUERY_KEYS.BOOKS],
             })
         },
     })
@@ -56,7 +55,7 @@ export function useDeleteBook() {
     return useMutation({
         mutationFn: (bookId: string) => ApiClient.books.deleteBook(bookId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
+            queryClient.invalidateQueries({ queryKey: [BOOK_QUERY_KEYS.BOOKS] })
         },
     })
 }
@@ -67,7 +66,7 @@ export function useDeleteBookMetadata() {
         mutationFn: (metadataId: string) =>
             ApiClient.books.deleteBookMetadata(metadataId),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: [BOOKS_QUERY_KEY] })
+            queryClient.invalidateQueries({ queryKey: [BOOK_QUERY_KEYS.BOOKS] })
         },
     })
 }
@@ -83,10 +82,10 @@ export function useUpdateBookProgress() {
             ApiClient.books.updateBookProgress(bookId, progress),
         onSuccess: (_, { bookId }) => {
             queryClient.invalidateQueries({
-                queryKey: [BOOKS_QUERY_KEY, bookId],
+                queryKey: [BOOK_QUERY_KEYS.BOOK, bookId],
             })
             queryClient.invalidateQueries({
-                queryKey: [BOOKS_QUERY_KEY],
+                queryKey: [BOOK_QUERY_KEYS.BOOKS],
             })
         },
     })
