@@ -40,8 +40,15 @@ target_metadata = [Base.metadata]
 # ... etc.
 
 def get_url():
+    import os
     settings = get_settings()
-    return settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
+    
+    # Use ALEMBIC_DB_URL if it exists, otherwise fall back to SUPABASE_DB_CONNECTION
+    db_url = os.getenv("ALEMBIC_DB_URL")
+    if not db_url:
+        db_url = settings.SUPABASE_DB_CONNECTION
+    
+    return db_url.replace("postgresql://", "postgresql+asyncpg://")
 
 def include_object(obj, name, type_, reflected, compare_to):
     print(obj, name, type_, reflected, compare_to)
