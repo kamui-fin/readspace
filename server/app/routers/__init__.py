@@ -1,10 +1,10 @@
 import structlog
-from app.services.auth import TokenData, get_current_user
 from fastapi import APIRouter, Depends
+
+from app.services.auth import TokenData, get_current_user
 
 from . import (
     books,
-    feedback,
     highlights,
     rss_articles,
     rss_feeds,
@@ -18,7 +18,6 @@ router = APIRouter()
 
 # Include all route modules
 router.include_router(books.router, tags=["Books"])
-router.include_router(feedback.router, tags=["Feedback"])
 router.include_router(highlights.router, tags=["Highlights"])
 router.include_router(upload.router, prefix="/upload", tags=["Upload"])
 

@@ -3,13 +3,6 @@ from typing import Annotated
 from uuid import UUID
 
 import structlog
-from app.core.config import get_settings
-from app.repositories.supabase import (
-    SupabaseStorageClient,
-    get_storage_client,
-)
-from app.schemas.auth import TokenData
-from app.services.auth import get_current_user
 from fastapi import (
     APIRouter,
     Depends,
@@ -19,6 +12,14 @@ from fastapi import (
     status,
 )
 from pydantic import BaseModel, Field
+
+from app.core.config import get_settings
+from app.repositories.supabase import (
+    SupabaseStorageClient,
+    get_storage_client,
+)
+from app.schemas.auth import TokenData
+from app.services.auth import get_current_user
 
 router = APIRouter()
 logger = structlog.get_logger()

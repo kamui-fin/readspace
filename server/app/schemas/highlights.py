@@ -1,41 +1,41 @@
-from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class HighlightBase(BaseModel):
     """Base schema for highlight data."""
 
     original_text: str
-    color: Optional[str] = None
-    note: Optional[str] = None
-    html_range: Optional[Dict[str, Any]] = None
-    chapter_href: Optional[str] = None
-    chapter_idx: Optional[int] = None
-    chapter_title: Optional[str] = None
-    page: Optional[int] = None
-    pdf_rect_position: Optional[Dict[str, Any]] = None
+    color: str | None = None
+    note: str | None = None
+    html_range: dict[str, Any] | None = None
+    chapter_href: str | None = None
+    chapter_idx: int | None = None
+    chapter_title: str | None = None
+    page: int | None = None
+    pdf_rect_position: dict[str, Any] | None = None
 
 
 class HighlightCreate(HighlightBase):
     """Schema for creating a new highlight."""
+
     user_book_lib_id: UUID
 
 
 class HighlightUpdate(BaseModel):
     """Schema for updating a highlight."""
 
-    original_text: Optional[str] = None
-    color: Optional[str] = None
-    note: Optional[str] = None
-    html_range: Optional[Dict[str, Any]] = None
-    chapter_href: Optional[str] = None
-    chapter_idx: Optional[int] = None
-    chapter_title: Optional[str] = None
-    page: Optional[int] = None
-    pdf_rect_position: Optional[Dict[str, Any]] = None
+    original_text: str | None = None
+    color: str | None = None
+    note: str | None = None
+    html_range: dict[str, Any] | None = None
+    chapter_href: str | None = None
+    chapter_idx: int | None = None
+    chapter_title: str | None = None
+    page: int | None = None
+    pdf_rect_position: dict[str, Any] | None = None
 
 
 class HighlightResponse(HighlightBase):
@@ -44,5 +44,4 @@ class HighlightResponse(HighlightBase):
     id: UUID
     user_book_lib_id: UUID
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

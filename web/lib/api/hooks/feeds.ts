@@ -1,6 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
 import { ApiClient } from "../client"
+import { RSS_QUERY_KEYS } from "../../query-keys"
 
 // Types based on API responses
 type Folder = {
@@ -120,18 +121,6 @@ export type PaginatedResponse<T> = {
     pages: number
 }
 
-// Query keys
-export const RSS_QUERY_KEYS = {
-    FOLDERS: "rss-folders",
-    FEEDS: "rss-feeds",
-    ARTICLES: "rss-articles",
-    ARTICLE: "rss-article",
-    UNREAD_COUNTS: "rss-unread-counts",
-    SIDEBAR_DATA: "rss-sidebar-data",
-    OPML_IMPORT_STATUS: "opml-import-status",
-    REFRESH_STATUS: "refresh-status",
-}
-
 // OPML Import hooks
 export function useImportOPML() {
     const queryClient = useQueryClient()
@@ -159,10 +148,17 @@ export function useImportTaskStatus(
 }
 
 // Legacy individual hooks - kept for backward compatibility and specific use cases
-export function useFolders() {
+export function useFolders(
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
+) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.FOLDERS],
         queryFn: () => ApiClient.rss.getFolders(),
+        ...options,
     })
 }
 
@@ -427,12 +423,19 @@ export function useDeleteFolder() {
 }
 
 // Feed hooks
-export function useFeeds(params?: {
-    folderId?: string
-    tagNames?: string[]
-    isFavorite?: boolean
-    searchQuery?: string
-}) {
+export function useFeeds(
+    params?: {
+        folderId?: string
+        tagNames?: string[]
+        isFavorite?: boolean
+        searchQuery?: string
+    },
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
+) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.FEEDS, params],
         queryFn: () =>
@@ -442,6 +445,7 @@ export function useFeeds(params?: {
                 is_favorite: params?.isFavorite,
                 search_query: params?.searchQuery,
             }),
+        ...options,
     })
 }
 
@@ -712,13 +716,13 @@ export function useRefreshStatus(
 export function useDeleteFeed() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: async (feedId: string) => {
+        mutationFn: async ({ feedId, silent = false }: { feedId: string; silent?: boolean }) => {
             // Add a small delay for more natural feel
             await new Promise(resolve => setTimeout(resolve, 150))
             await ApiClient.rss.deleteFeed(feedId)
-            return null
+            return { feedId, silent }
         },
-        onMutate: async (feedId) => {
+        onMutate: async ({ feedId }) => {
             // Cancel any outgoing refetches to prevent conflicts
             await queryClient.cancelQueries({
                 queryKey: [RSS_QUERY_KEYS.FEEDS],
@@ -775,7 +779,7 @@ export function useDeleteFeed() {
 
             return { previousFeeds, previousUnreadCounts, feedId }
         },
-        onError: (error: unknown, feedId, context) => {
+        onError: (error: unknown, { feedId, silent }, context) => {
             // Rollback on error
             if (context?.previousFeeds) {
                 queryClient.setQueryData(
@@ -789,10 +793,14 @@ export function useDeleteFeed() {
                     context.previousUnreadCounts
                 )
             }
-            toast.error("Failed to remove feed")
+            if (!silent) {
+                toast.error("Failed to remove feed")
+            }
         },
-        onSuccess: () => {
-            toast.success("Feed removed successfully")
+        onSuccess: (_, { silent }) => {
+            if (!silent) {
+                toast.success("Feed removed successfully")
+            }
         },
         onSettled: () => {
             // Invalidate unread counts to ensure they're refreshed
@@ -860,37 +868,68 @@ export function useArticles(
 }
 
 export function useRecentlyReadArticles(
-    params: { page?: number; size?: number } = {}
+    params: { page?: number; size?: number } = {},
+    options?: {
+        keepPreviousData?: boolean
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
 ) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, "recently_read", params],
         queryFn: () =>
             ApiClient.rss.getRecentlyReadArticles(params.page, params.size),
+        ...options,
     })
 }
 
 export function useReadLaterArticles(
-    params: { page?: number; size?: number } = {}
+    params: { page?: number; size?: number } = {},
+    options?: {
+        keepPreviousData?: boolean
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
 ) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later", params],
         queryFn: () =>
             ApiClient.rss.getReadLaterArticles(params.page, params.size),
+        ...options,
     })
 }
 
-export function useUnreadCounts(folderId?: string) {
+export function useUnreadCounts(
+    folderId?: string,
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
+) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS, folderId],
         queryFn: () => ApiClient.rss.getUnreadCounts(folderId),
+        ...options,
     })
 }
 
-export function useArticle(articleId: string) {
+export function useArticle(
+    articleId: string,
+    options?: {
+        enabled?: boolean
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+    }
+) {
     return useQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
         queryFn: () => ApiClient.rss.getArticle(articleId),
         enabled: !!articleId,
+        ...options,
     })
 }
 
@@ -916,9 +955,110 @@ export function useUpdateArticle() {
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLES],
             })
+            // Invalidate all unread count queries (both with and without folderId)
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                refetchType: 'active',
             })
         },
+    })
+}
+
+// Infinite Query Hooks
+export function useInfiniteArticles(
+    params: {
+        feedIds?: string[]
+        folderId?: string
+        isRead?: boolean
+        isReadLater?: boolean
+        isFavorite?: boolean
+        feedIsFavorite?: boolean
+        publishedSince?: string
+        publishedUntil?: string
+        searchQuery?: string
+        sortBy?: string
+        sortOrder?: string
+        size?: number
+        viewType?: string
+        viewId?: string
+    },
+    options?: {
+        refetchOnMount?: boolean | "always"
+        refetchOnWindowFocus?: boolean | "always"
+        staleTime?: number
+        enabled?: boolean
+    }
+) {
+    return useInfiniteQuery({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', params],
+        queryFn: ({ pageParam = 1 }) =>
+            ApiClient.rss.getArticles({
+                feed_ids: params.feedIds,
+                folder_id: params.folderId,
+                is_read: params.isRead,
+                is_read_later: params.isReadLater,
+                is_favorite: params.isFavorite,
+                feed_is_favorite: params.feedIsFavorite,
+                published_since: params.publishedSince,
+                published_until: params.publishedUntil,
+                search_query: params.searchQuery,
+                sort_by: params.sortBy,
+                sort_order: params.sortOrder,
+                page: pageParam,
+                size: params.size || 25,
+            }),
+        getNextPageParam: (lastPage: any) => {
+            const currentPage = lastPage.page || 1
+            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            return currentPage < totalPages ? currentPage + 1 : undefined
+        },
+        initialPageParam: 1,
+        ...options,
+    })
+}
+
+export function useInfiniteRecentlyReadArticles(
+    params: { size?: number } = {},
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+        enabled?: boolean
+    }
+) {
+    return useInfiniteQuery({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', 'recently_read', params],
+        queryFn: ({ pageParam = 1 }) =>
+            ApiClient.rss.getRecentlyReadArticles(pageParam, params.size || 25),
+        getNextPageParam: (lastPage: any) => {
+            const currentPage = lastPage.page || 1
+            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            return currentPage < totalPages ? currentPage + 1 : undefined
+        },
+        initialPageParam: 1,
+        ...options,
+    })
+}
+
+export function useInfiniteReadLaterArticles(
+    params: { size?: number } = {},
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+        enabled?: boolean
+    }
+) {
+    return useInfiniteQuery({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', 'read_later', params],
+        queryFn: ({ pageParam = 1 }) =>
+            ApiClient.rss.getReadLaterArticles(pageParam, params.size || 25),
+        getNextPageParam: (lastPage: any) => {
+            const currentPage = lastPage.page || 1
+            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            return currentPage < totalPages ? currentPage + 1 : undefined
+        },
+        initialPageParam: 1,
+        ...options,
     })
 }

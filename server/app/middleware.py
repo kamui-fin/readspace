@@ -1,12 +1,12 @@
 import time
 import uuid
-from typing import Callable, List, Optional
+from collections.abc import Callable
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
-from app.schemas.settings import Settings
+from app.core.config import Settings
 from app.services.auth import get_optional_user
 
 logger = structlog.get_logger()
@@ -23,7 +23,7 @@ def create_error_response(
         status_code=status_code,
         content={"detail": detail},
     )
-    origin = request.headers.get("Origin", "*")
+    origin = request.headers.get("Origin") or "*"
     response.headers["Access-Control-Allow-Origin"] = origin
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "*"
@@ -31,7 +31,7 @@ def create_error_response(
     return response
 
 
-def setup_middleware(app: FastAPI, public_paths: Optional[List[str]] = None):
+def setup_middleware(app: FastAPI, public_paths: list[str] | None = None):
     """
     Setup all middleware for FastAPI application.
 

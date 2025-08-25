@@ -16,7 +16,9 @@ import {
 } from "@/components/ui/resizable"
 import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
 import {
-    useArticles,
+    useInfiniteArticles,
+    useInfiniteRecentlyReadArticles,
+    useInfiniteReadLaterArticles,
     useArticle,
     useUpdateArticle,
     useFeeds,
@@ -24,8 +26,6 @@ import {
     useRefreshFolderFeeds,
     useRefreshAllFeeds,
     useRefreshStatus,
-    useRecentlyReadArticles,
-    useReadLaterArticles,
     useUnreadCounts,
 } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
@@ -89,7 +89,6 @@ export function ArticlesView({
         publishedUntil,
         mode,
     }
-    const [page, setPage] = useState(1)
     const [selectedArticleId, setSelectedArticleId] = useState<string | null>(
         null
     )
@@ -99,11 +98,18 @@ export function ArticlesView({
         null
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
-    const [allArticles, setAllArticles] = useState<Article[]>([])
-    const [hasMorePages, setHasMorePages] = useState(true)
     const router = useRouter()
-    const { data: allUserFeeds } = useFeeds()
-    const { data: unreadCounts } = useUnreadCounts()
+    
+    const { data: allUserFeeds } = useFeeds({}, {
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000,
+    })
+    const { data: unreadCounts } = useUnreadCounts(undefined, {
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000,
+    })
 
     const typedAllUserFeeds = (allUserFeeds as any[]) || []
     const typedUnreadCounts =
@@ -123,95 +129,60 @@ export function ArticlesView({
           ? "Read Later"
           : viewInitialSidebarTitle || "All Articles"
 
-    // Base params without unread filter for server requests
-    const baseArticlesParams = {
-        publishedSince: viewPublishedSince,
-        publishedUntil: viewPublishedUntil,
-        page,
-        size: 25,
-        sortBy: "published_at",
-        sortOrder: "desc",
-        // Remove isRead from server params - we'll filter client-side
-    }
-
-    let queryKeyParams: any
-    let articlesHook
-
+    // Use infinite queries based on mode
+    let infiniteQuery: any
+    
     if (isRecentlyReadMode) {
-        queryKeyParams = { 
-            page, 
-            size: 25,
-            mode: 'recently_read'
-        }
-        articlesHook = useRecentlyReadArticles
+        infiniteQuery = useInfiniteRecentlyReadArticles({ size: 25 }, {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000,
+        })
     } else if (isReadLaterMode) {
-        queryKeyParams = { 
-            page, 
-            size: 25,
-            mode: 'read_later'
-        }
-        articlesHook = useReadLaterArticles
+        infiniteQuery = useInfiniteReadLaterArticles({ size: 25 }, {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000,
+        })
     } else {
-        if (viewFolderId) {
-            queryKeyParams = {
-                ...baseArticlesParams,
-                folderId: viewFolderId,
-                feedIds: undefined,
-                viewType: 'folder',
-                viewId: viewFolderId, // Add explicit view identifier
-            }
-        } else if (viewFeedId) {
-            queryKeyParams = {
-                ...baseArticlesParams,
-                feedIds: [viewFeedId],
-                folderId: undefined,
-                viewType: 'feed',
-                viewId: viewFeedId, // Add explicit view identifier
-            }
-        } else {
-            queryKeyParams = {
-                ...baseArticlesParams,
-                feedIds: undefined,
-                folderId: undefined,
-                viewType: 'all',
-                viewId: 'all', // Add explicit view identifier
-            }
+        const params = {
+            feedIds: viewFeedId ? [viewFeedId] : undefined,
+            folderId: viewFolderId,
+            publishedSince: viewPublishedSince,
+            publishedUntil: viewPublishedUntil,
+            sortBy: "published_at",
+            sortOrder: "desc",
+            size: 25,
+            viewType: viewFolderId ? 'folder' : viewFeedId ? 'feed' : 'all',
+            viewId: viewFolderId || viewFeedId || 'all',
         }
-        articlesHook = useArticles
+        
+        infiniteQuery = useInfiniteArticles(params, {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000,
+        })
     }
 
     const {
         data,
         isLoading: isArticlesLoading,
         isFetching,
+        fetchNextPage,
+        hasNextPage,
         refetch: refetchArticles,
-    } = articlesHook(queryKeyParams, {
-        keepPreviousData: true, // Restore for better UX
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-    })
+    } = infiniteQuery
 
-    // Transform API response to match expected structure
-    const articlesData: PaginatedResponse<Article> = useMemo(() => {
-        if (!data) {
-            return {
-                items: [],
-                total: 0,
-                page: 1,
-                pages: 1,
-                size: 25,
-            }
-        }
-
-        const apiData = data as any
-        // Handle both old and new API response formats
-        if (apiData.items) {
-            // Already in expected format
-            return apiData
-        } else if (apiData.articles) {
-            // Transform from API format to expected format
-            return {
-                items: apiData.articles.map((article: any) => ({
+    // Transform and flatten all pages of articles
+    const allArticles = useMemo(() => {
+        if (!data?.pages) return []
+        
+        return data.pages.flatMap((page: any) => {
+            // Handle different API response formats
+            if (page.items) {
+                return page.items
+            } else if (page.articles) {
+                return page.articles.map((article: any) => ({
                     ...article,
                     link: article.url || article.link,
                     description: article.description || null,
@@ -220,8 +191,7 @@ export function ArticlesView({
                     updated_at: article.updated_at || new Date().toISOString(),
                     user_id: article.user_id || "",
                     guid: article.guid || article.id,
-                    estimated_read_time_minutes:
-                        article.estimated_read_time_minutes || null,
+                    estimated_read_time_minutes: article.estimated_read_time_minutes || null,
                     custom_metadata: article.custom_metadata || null,
                     feed: article.feed || {
                         id: article.feed_id || null,
@@ -232,45 +202,16 @@ export function ArticlesView({
                     article_type: article.article_type || "feed",
                     priority: article.priority || null,
                     note: article.note || null,
-                })),
-                total: apiData.total,
-                page: apiData.page,
-                pages: apiData.total_pages || apiData.pages || 1,
-                size: apiData.size,
+                } as Article))
             }
-        } else {
-            // Fallback
-            return {
-                items: [],
-                total: 0,
-                page: 1,
-                pages: 1,
-                size: 25,
-            }
-        }
+            return []
+        })
     }, [data])
-
-    // Update allArticles when new data comes in
-    useEffect(() => {
-        if (page === 1) {
-            // Fresh load or refresh - always replace all articles (even if empty)
-            setAllArticles(articlesData.items)
-            setHasMorePages(articlesData.pages > 1)
-        } else if (articlesData.items.length > 0) {
-            // Loading more pages - append new articles
-            setAllArticles(prev => {
-                const existingIds = new Set(prev.map(a => a.id))
-                const newArticles = articlesData.items.filter(a => !existingIds.has(a.id))
-                return [...prev, ...newArticles]
-            })
-            setHasMorePages(page < articlesData.pages)
-        }
-    }, [articlesData, page])
 
     // Client-side filtered articles based on unread toggle
     const filteredArticles = useMemo(() => {
         if (showUnreadOnly) {
-            return allArticles.filter(article => !article.is_read)
+            return allArticles.filter((article: Article) => !article.is_read)
         }
         return allArticles
     }, [allArticles, showUnreadOnly])
@@ -285,14 +226,20 @@ export function ArticlesView({
     )
 
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(
-        selectedArticleId || ""
+        selectedArticleId || "",
+        {
+            enabled: !!selectedArticleId, // Only fetch when article is selected
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
+        }
     )
 
     // Transform selected article to match expected Article type
     const transformedSelectedArticle: Article | null = useMemo(() => {
         if (!selectedArticle) return null
 
-        const article = selectedArticle as any
+        const article: any = selectedArticle
         return {
             ...article,
             link: article.url || article.link,
@@ -320,10 +267,10 @@ export function ArticlesView({
 
     // Function to fetch more articles for infinite scroll
     const fetchMoreArticles = useCallback(() => {
-        if (!isFetching && hasMorePages) {
-            setPage(prevPage => prevPage + 1)
+        if (!isFetching && hasNextPage) {
+            fetchNextPage()
         }
-    }, [isFetching, hasMorePages])
+    }, [isFetching, hasNextPage, fetchNextPage])
 
     useEffect(() => {
         if (filteredArticles.length > 0 && !selectedArticleId) {
@@ -335,35 +282,13 @@ export function ArticlesView({
     useEffect(() => {
         if (selectedArticleId && filteredArticles.length > 0) {
             const selectedArticleExists = filteredArticles.some(
-                (article) => article.id === selectedArticleId
+                (article: Article) => article.id === selectedArticleId
             )
             if (!selectedArticleExists) {
                 setSelectedArticleId(null)
             }
         }
     }, [selectedArticleId, filteredArticles])
-
-    useEffect(() => {
-        if (!isRecentlyReadMode && !isReadLaterMode) {
-            setPage(1)
-            setSelectedArticleId(null)
-            setAllArticles([])
-        }
-    }, [
-        viewFeedId,
-        viewFolderId,
-        viewPublishedSince,
-        viewPublishedUntil,
-        isRecentlyReadMode,
-        isReadLaterMode,
-    ])
-
-    useEffect(() => {
-        if (isRecentlyReadMode || isReadLaterMode) {
-            setPage(1)
-            setAllArticles([])
-        }
-    }, [isRecentlyReadMode, isReadLaterMode])
 
     // Handle refresh status updates
     useEffect(() => {
@@ -483,12 +408,7 @@ export function ArticlesView({
             (a: Article) => a.id === articleId
         )
         if (!isRecentlyReadMode && article && !article.is_read) {
-            // Update the article in the UI optimistically
-            setAllArticles(prev => prev.map(item => 
-                item.id === articleId ? { ...item, is_read: true } : item
-            ))
-
-            // Then perform the actual update
+            // Perform the actual update - React Query will handle optimistic updates
             updateArticle.mutate({
                 articleId,
                 data: { is_read: true },
@@ -500,8 +420,6 @@ export function ArticlesView({
     const handleShallowRefresh = async () => {
         toast.loading("Refreshing articles...", { id: "shallow-refresh" })
         try {
-            setPage(1)
-            setAllArticles([])
             await refetchArticles()
             toast.success("Articles refreshed!", { id: "shallow-refresh" })
         } catch (error) {
@@ -516,8 +434,6 @@ export function ArticlesView({
     const handleRefreshWithMessage = async (message: string) => {
         toast.loading(message, { id: "refresh" })
         try {
-            setPage(1)
-            setAllArticles([])
             await refetchArticles()
             toast.success("Articles refreshed!", { id: "refresh" })
         } catch (error) {
@@ -541,9 +457,7 @@ export function ArticlesView({
                 forceRefetch: true,
                 silent: true, // We'll handle our own toasts
             })
-            // After deep refresh completes, do a shallow refresh to get the new articles
-            setPage(1)
-            setAllArticles([])
+            // After deep refresh completes, refetch articles
             refetchArticles()
             toast.success("Check complete! Articles updated.", {
                 id: "deep-refresh",
@@ -843,7 +757,7 @@ export function ArticlesView({
                             <InfiniteScroll
                                 dataLength={filteredArticles.length}
                                 next={fetchMoreArticles}
-                                hasMore={hasMorePages}
+                                hasMore={!!hasNextPage}
                                 loader={
                                     <div className="flex items-center justify-center py-8">
                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />

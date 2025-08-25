@@ -9,9 +9,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { ApiClient } from "@/lib/api/client"
-import { RSS_QUERY_KEYS } from "@/lib/api/hooks/feeds"
+import { RSS_QUERY_KEYS } from "@/lib/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     CheckCircle,
@@ -22,6 +21,7 @@ import {
     XCircle,
     ChevronLeft,
     Download,
+    X,
 } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
 import { useEffect, useState } from "react"
@@ -78,6 +78,20 @@ export default function ImportStatusPage() {
     const queryClient = useQueryClient()
     const taskId = params.task_id as string
 
+    const handleCancelImport = async () => {
+        try {
+            await ApiClient.rss.cancelImportTask(taskId)
+            toast.success("Import cancelled successfully")
+            
+            // Force refresh the task status
+            const status = await ApiClient.rss.getImportTaskStatus(taskId)
+            setTaskStatus(status as ImportTaskStatus)
+        } catch (error) {
+            console.error("Error cancelling import task:", error)
+            toast.error("Failed to cancel import. It may have already completed.")
+        }
+    }
+
     // Poll for task status
     useEffect(() => {
         if (!taskId) return
@@ -106,13 +120,6 @@ export default function ImportStatusPage() {
                             queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
                         }),
                     ])
-
-                    const summary = status.result?.summary
-                    if (summary) {
-                        toast.success(
-                            `Import completed! ${summary.successful} feeds imported, ${summary.already_existed} already existed, ${summary.failed} failed.`
-                        )
-                    }
                 } else if (status.status === "failed") {
                     toast.error(
                         `Import failed: ${status.error || "Unknown error"}`
@@ -218,93 +225,36 @@ export default function ImportStatusPage() {
 
         const { status, progress, result, metadata } = taskStatus
 
-        // Helper function to get status color and icon
-        const getStatusInfo = () => {
-            switch (status) {
-                case "pending":
-                    return {
-                        icon: Clock,
-                        color: "text-yellow-600",
-                        bgColor: "bg-yellow-50",
-                        badge: "warning",
-                    }
-                case "in_progress":
-                    return {
-                        icon: Activity,
-                        color: "text-blue-600",
-                        bgColor: "bg-blue-50",
-                        badge: "default",
-                    }
-                case "completed":
-                    return {
-                        icon: CheckCircle,
-                        color: "text-green-600",
-                        bgColor: "bg-green-50",
-                        badge: "success",
-                    }
-                case "failed":
-                    return {
-                        icon: XCircle,
-                        color: "text-red-600",
-                        bgColor: "bg-red-50",
-                        badge: "destructive",
-                    }
-                default:
-                    return {
-                        icon: Clock,
-                        color: "text-gray-600",
-                        bgColor: "bg-gray-50",
-                        badge: "secondary",
-                    }
-            }
-        }
-
-        const statusInfo = getStatusInfo()
-        const Icon = statusInfo.icon
 
         return (
             <div className="space-y-6">
-                {/* Header Card */}
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Icon className={`h-6 w-6 ${statusInfo.color} ${status === "in_progress" ? "animate-pulse" : ""}`} />
-                                <div>
-                                    <CardTitle className="flex items-center gap-2">
-                                        Import Status
-                                        <Badge variant={statusInfo.badge as any}>
-                                            {status.charAt(0).toUpperCase() + status.slice(1).replace("_", " ")}
-                                        </Badge>
-                                    </CardTitle>
-                                    <CardDescription>
-                                        {metadata?.filename && (
-                                            <span className="flex items-center gap-2 mt-1">
-                                                <FileText className="h-4 w-4" />
-                                                {metadata.filename}
-                                            </span>
-                                        )}
-                                    </CardDescription>
-                                </div>
-                            </div>
-                            
-                            {metadata?.created_at && (
-                                <div className="text-sm text-muted-foreground">
-                                    Started: {new Date(metadata.created_at).toLocaleString()}
-                                </div>
-                            )}
-                        </div>
-                    </CardHeader>
-                </Card>
 
                 {/* Progress Card (for in-progress imports) */}
                 {status === "in_progress" && progress && (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Import Progress</CardTitle>
-                            <CardDescription>
-                                Processing {progress.completed} of {progress.total} feeds
-                            </CardDescription>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Activity className="h-6 w-6 text-blue-600 animate-pulse" />
+                                    <div>
+                                        <CardTitle>Import in Progress</CardTitle>
+                                        <CardDescription className="flex items-center gap-2">
+                                            {metadata?.filename && (
+                                                <>
+                                                    <FileText className="h-4 w-4" />
+                                                    {metadata.filename} •
+                                                </>
+                                            )}
+                                            Processing {progress.completed} of {progress.total} feeds
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                {metadata?.created_at && (
+                                    <div className="text-sm text-muted-foreground">
+                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                    </div>
+                                )}
+                            </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
@@ -345,6 +295,17 @@ export default function ImportStatusPage() {
                                     </div>
                                 </div>
                             </div>
+                            <div className="pt-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleCancelImport}
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                >
+                                    <X className="h-4 w-4 mr-2" />
+                                    Cancel Import
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 )}
@@ -353,13 +314,28 @@ export default function ImportStatusPage() {
                 {status === "completed" && result && (
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <CheckCircle className="h-6 w-6 text-green-600" />
-                                <CardTitle>Import Complete</CardTitle>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                    <div>
+                                        <CardTitle>Import Complete</CardTitle>
+                                        <CardDescription className="flex items-center gap-2">
+                                            {metadata?.filename && (
+                                                <>
+                                                    <FileText className="h-4 w-4" />
+                                                    {metadata.filename} •
+                                                </>
+                                            )}
+                                            Your OPML file has been successfully processed.
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                {metadata?.created_at && (
+                                    <div className="text-sm text-muted-foreground">
+                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                    </div>
+                                )}
                             </div>
-                            <CardDescription>
-                                Your OPML file has been successfully processed.
-                            </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-3 gap-4">
@@ -444,17 +420,43 @@ export default function ImportStatusPage() {
                 {status === "pending" && (
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <Clock className="h-6 w-6 text-yellow-600" />
-                                <CardTitle>Import Queued</CardTitle>
-                            </div>
-                            <CardDescription>
-                                Your OPML import is queued and will start processing shortly.
-                                {metadata?.estimated_feeds && (
-                                    <span> Estimated {metadata.estimated_feeds} feeds to process.</span>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Clock className="h-6 w-6 text-yellow-600" />
+                                    <div>
+                                        <CardTitle>Import Queued</CardTitle>
+                                        <CardDescription className="flex items-center gap-2">
+                                            {metadata?.filename && (
+                                                <>
+                                                    <FileText className="h-4 w-4" />
+                                                    {metadata.filename} •
+                                                </>
+                                            )}
+                                            Your OPML import is queued and will start processing shortly.
+                                            {metadata?.estimated_feeds && (
+                                                <span> Estimated {metadata.estimated_feeds} feeds to process.</span>
+                                            )}
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                {metadata?.created_at && (
+                                    <div className="text-sm text-muted-foreground">
+                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                    </div>
                                 )}
-                            </CardDescription>
+                            </div>
                         </CardHeader>
+                        <CardContent>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={handleCancelImport}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                                <X className="h-4 w-4 mr-2" />
+                                Cancel Import
+                            </Button>
+                        </CardContent>
                     </Card>
                 )}
 
@@ -462,13 +464,28 @@ export default function ImportStatusPage() {
                 {status === "failed" && (
                     <Card>
                         <CardHeader>
-                            <div className="flex items-center gap-3">
-                                <XCircle className="h-6 w-6 text-red-600" />
-                                <CardTitle>Import Failed</CardTitle>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <XCircle className="h-6 w-6 text-red-600" />
+                                    <div>
+                                        <CardTitle>Import Failed</CardTitle>
+                                        <CardDescription className="flex items-center gap-2">
+                                            {metadata?.filename && (
+                                                <>
+                                                    <FileText className="h-4 w-4" />
+                                                    {metadata.filename} •
+                                                </>
+                                            )}
+                                            {taskStatus.error || "The import process encountered an error."}
+                                        </CardDescription>
+                                    </div>
+                                </div>
+                                {metadata?.created_at && (
+                                    <div className="text-sm text-muted-foreground">
+                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                    </div>
+                                )}
                             </div>
-                            <CardDescription>
-                                {taskStatus.error || "The import process encountered an error."}
-                            </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="flex gap-3">

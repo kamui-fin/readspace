@@ -1,27 +1,25 @@
-"use client"
-
+import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesView } from "@/components/articles"
-import { useFeed } from "@/lib/api/hooks/feeds"
-import { useParams } from "next/navigation"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Loader2 } from "lucide-react"
+import { ServerApiClient } from "@/lib/api/server"
+import { RSS_QUERY_KEYS } from "@/lib/query-keys"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
-export default function FeedArticlesPage() {
-    const params = useParams()
-    const feedId = params.id as string
-    const { data: feed, isLoading } = useFeed(feedId)
+// Force dynamic rendering since we're fetching user-specific data
+export const dynamic = 'force-dynamic'
 
-    if (isLoading) {
-        return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
-                <div className="w-full flex flex-col items-center justify-center gap-4">
-                    <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    <p className="text-muted-foreground">Loading feed...</p>
-                </div>
-            </div>
-        )
-    }
+interface PageProps {
+    params: Promise<{ id: string }>
+}
 
+export default async function FeedArticlesPage({ params }: PageProps) {
+    const resolvedParams = await params
+    const feedId = resolvedParams.id
+
+    const queryClient = getQueryClient()
+    
+    // Fetch feed data first to get the title
+    const feed = await ServerApiClient.getFeed(feedId)
+    
     if (!feed) {
         return (
             <div className="flex h-full w-full items-center justify-center">
@@ -36,10 +34,54 @@ export default function FeedArticlesPage() {
         )
     }
 
+    // Prefetch infinite query parameters to match client-side useInfiniteArticles
+    const infiniteQueryParams = {
+        feedIds: [feedId],
+        folderId: undefined,
+        publishedSince: undefined,
+        publishedUntil: undefined,
+        sortBy: "published_at",
+        sortOrder: "desc",
+        size: 25,
+        viewType: 'feed',
+        viewId: feedId,
+    }
+    
+    // Prefetch the feed data and infinite articles that this page needs
+    await Promise.all([
+        queryClient.prefetchQuery({
+            queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
+            queryFn: () => feed,
+            staleTime: 5 * 60 * 1000,
+        }),
+        queryClient.prefetchInfiniteQuery({
+            queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', infiniteQueryParams],
+            queryFn: ({ pageParam = 1 }) => ServerApiClient.getArticles({
+                feed_ids: infiniteQueryParams.feedIds,
+                folder_id: infiniteQueryParams.folderId,
+                published_since: infiniteQueryParams.publishedSince,
+                published_until: infiniteQueryParams.publishedUntil,
+                sort_by: infiniteQueryParams.sortBy,
+                sort_order: infiniteQueryParams.sortOrder,
+                page: pageParam,
+                size: infiniteQueryParams.size,
+            }),
+            initialPageParam: 1,
+            getNextPageParam: (lastPage: any) => {
+                const currentPage = lastPage.page || 1
+                const totalPages = lastPage.pages || lastPage.total_pages || 1
+                return currentPage < totalPages ? currentPage + 1 : undefined
+            },
+            staleTime: 5 * 60 * 1000, // 5 minutes to match client
+        })
+    ])
+
     return (
-        <ArticlesView
-            feedId={feedId}
-            initialSidebarTitle={feed.title || "Unknown Feed"}
-        />
+        <HydrationBoundary state={dehydrate(queryClient)}>
+            <ArticlesView
+                feedId={feedId}
+                initialSidebarTitle={feed.title || "Unknown Feed"}
+            />
+        </HydrationBoundary>
     )
 }

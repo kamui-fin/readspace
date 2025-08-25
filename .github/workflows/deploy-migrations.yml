@@ -1,0 +1,69 @@
+name: Deploy Database Migrations
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  PYTHON_VERSION: '3.12'
+  POETRY_VERSION: '1.8.2'
+
+jobs:
+  deploy-migrations:
+    name: Deploy Database Migrations
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    environment: 
+      name: ${{ github.event.inputs.environment || 'production' }}
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Install dependencies
+        working-directory: ./server
+        run: poetry install --no-interaction --no-root --only=main
+
+      - name: Set up production environment variables
+        working-directory: ./server
+        run: |
+          echo "SUPABASE_DB_CONNECTION=${{ secrets.SUPABASE_DB_CONNECTION }}" >> $GITHUB_ENV
+
+      - name: Run database migrations
+        working-directory: ./server
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+          poetry run alembic upgrade head
+
+      - name: Verify migration status
+        working-directory: ./server
+        run: |
+          export PYTHONPATH="${PYTHONPATH}:$(pwd)"
+          poetry run alembic current

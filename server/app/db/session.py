@@ -1,8 +1,9 @@
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
-from app.core.config import get_settings
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
+
+from app.core.config import get_settings
 
 settings = get_settings()
 
@@ -12,10 +13,10 @@ engine = create_async_engine(
     echo=settings.ENVIRONMENT == "development",
     future=True,
     pool_pre_ping=True,
-    pool_size=20,            # Increased from 5 to handle more concurrent connections
-    max_overflow=30,         # Increased from 10 to allow more burst connections
-    pool_recycle=1800,       # Reduced from 3600 to 30 minutes to prevent stale connections
-    pool_timeout=30,         # Timeout for acquiring a connection from the pool
+    pool_size=20,  # Increased from 5 to handle more concurrent connections
+    max_overflow=30,  # Increased from 10 to allow more burst connections
+    pool_recycle=1800,  # Reduced from 3600 to 30 minutes to prevent stale connections
+    pool_timeout=30,  # Timeout for acquiring a connection from the pool
 )
 
 # Create async session factory

@@ -8,9 +8,10 @@ from app.db.base_class import Base
 
 class AuthUser(Base):
     __tablename__ = "users"
-    __table_args__ = {"schema": "auth"}
+    __table_args__ = {"schema": "auth", "keep_existing": True}
 
     id = Column(PGUUID, primary_key=True)
+
 
 class Profile(Base):
     __tablename__ = "profiles"

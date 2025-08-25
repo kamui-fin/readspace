@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
@@ -7,124 +7,141 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 
 # Generic Paginated Response
 class PaginatedResponse[T](BaseModel):
-    items: List[T]
+    items: list[T]
     total: int
     page: int
     size: int
     pages: int
 
+
 # ========= Folder Schemas =========
 class FolderBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
 
+
 class FolderCreate(FolderBase):
     pass
 
+
 class FolderUpdate(FolderBase):
-    name: Optional[str] = Field(None, min_length=1, max_length=255)
+    name: str | None = Field(None, min_length=1, max_length=255)
+
 
 class FolderResponse(FolderBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+
 
 # ========= Tag Schemas =========
 class TagBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
 
+
 class TagCreate(TagBase):
     pass
 
+
 class TagUpdate(BaseModel):
-    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    name: str | None = Field(None, min_length=1, max_length=100)
+
 
 class TagResponse(TagBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     created_at: datetime
     updated_at: datetime
+
 
 # ========= Feed Schemas =========
 class FeedBase(BaseModel):
     url: HttpUrl
-    title: Optional[str] = Field(None, max_length=500)
-    description: Optional[str] = None
-    link: Optional[HttpUrl] = None
-    language: Optional[str] = Field(None, max_length=50)
-    image_url: Optional[HttpUrl] = None
+    title: str | None = Field(None, max_length=500)
+    description: str | None = None
+    link: HttpUrl | None = None
+    language: str | None = Field(None, max_length=50)
+    image_url: HttpUrl | None = None
     is_favorite: bool = False
-    ttl: Optional[int] = Field(None, gt=0)
-    skip_hours: Optional[List[int]] = Field(None, min_length=0, max_length=24)
-    skip_days: Optional[List[str]] = Field(None, min_length=0, max_length=7)
+    ttl: int | None = Field(None, gt=0)
+    skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
+    skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
+
 
 class FeedCreate(FeedBase):
     folder_id: UUID
-    tag_ids: Optional[List[UUID]] = None
+    tag_ids: list[UUID] | None = None
 
+
+# TODO: can't this be based on FeedBase
 class FeedUpdate(BaseModel):
-    url: Optional[HttpUrl] = None
-    title: Optional[str] = Field(None, max_length=500)
-    description: Optional[str] = None
-    link: Optional[HttpUrl] = None
-    language: Optional[str] = Field(None, max_length=50)
-    image_url: Optional[HttpUrl] = None
-    folder_id: Optional[UUID] = None
-    is_favorite: Optional[bool] = None
-    ttl: Optional[int] = Field(None, gt=0)
-    skip_hours: Optional[List[int]] = Field(None, min_length=0, max_length=24)
-    skip_days: Optional[List[str]] = Field(None, min_length=0, max_length=7)
+    url: HttpUrl | None = None
+    title: str | None = Field(None, max_length=500)
+    description: str | None = None
+    link: HttpUrl | None = None
+    language: str | None = Field(None, max_length=50)
+    image_url: HttpUrl | None = None
+    folder_id: UUID | None = None
+    is_favorite: bool | None = None
+    ttl: int | None = Field(None, gt=0)
+    skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
+    skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
+
 
 class FeedResponse(FeedBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     user_id: UUID
     folder_id: UUID
-    last_fetched_at: Optional[datetime] = None
-    last_modified_header: Optional[str] = None
-    etag_header: Optional[str] = None
-    last_article_published_at: Optional[datetime] = None
+    last_fetched_at: datetime | None = None
+    last_modified_header: str | None = None
+    etag_header: str | None = None
+    last_article_published_at: datetime | None = None
     fetch_error_count: int
-    last_error_message: Optional[str] = None
+    last_error_message: str | None = None
     created_at: datetime
     updated_at: datetime
 
+
 # Minimal feed info for nesting in Article
 class FeedBasicInfo(BaseModel):
-    id: UUID
-    title: Optional[str]
-    url: HttpUrl
-    image_url: Optional[HttpUrl]
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        from_attributes = True
+    id: UUID
+    title: str | None
+    url: HttpUrl
+    image_url: HttpUrl | None
+
 
 # ========= Article Schemas =========
 class ArticleContentBase(BaseModel):
-    title: Optional[str] = None
+    title: str | None = None
     link: HttpUrl
-    description: Optional[str] = None
-    content: Optional[str] = None
-    image_url: Optional[HttpUrl] = None
-    author: Optional[str] = Field(None, max_length=500)
-    published_at: Optional[datetime] = None
-    estimated_read_time_minutes: Optional[int] = Field(None, ge=0)
-    custom_metadata: Optional[Dict[str, Any]] = None
+    description: str | None = None
+    content: str | None = None
+    image_url: HttpUrl | None = None
+    author: str | None = Field(None, max_length=500)
+    published_at: datetime | None = None
+    estimated_read_time_minutes: int | None = Field(None, ge=0)
+    custom_metadata: dict[str, Any] | None = None
+
 
 class ArticleContentCreate(ArticleContentBase):
     pass
 
+
 class ArticleContentResponse(ArticleContentBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     created_at: datetime
     updated_at: datetime
+
 
 # FeedArticle schemas (RSS articles)
 class FeedArticleBase(BaseModel):
@@ -133,143 +150,162 @@ class FeedArticleBase(BaseModel):
     is_read_later: bool = False
     is_favorite: bool = False
 
+
 class FeedArticleCreate(FeedArticleBase):
     feed_id: UUID
     user_id: UUID
     content_id: UUID
 
+
 class FeedArticleUpdate(BaseModel):
-    is_read: Optional[bool] = None
-    is_read_later: Optional[bool] = None
-    is_favorite: Optional[bool] = None
+    is_read: bool | None = None
+    is_read_later: bool | None = None
+    is_favorite: bool | None = None
+
 
 class FeedArticleResponse(FeedArticleBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     feed_id: UUID
     content_id: UUID
     user_id: UUID
-    read_at: Optional[datetime] = None
+    read_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
-    
+
     # Include the content
     content: ArticleContentResponse
+
 
 # ClippedArticle schemas (manually saved web articles)
 class ClippedArticleBase(BaseModel):
     priority: str = Field("medium", pattern="^(low|medium|high)$")
-    note: Optional[str] = None
+    note: str | None = None
     is_read: bool = False
     is_read_later: bool = True
     is_favorite: bool = False
+
 
 class ClippedArticleCreate(ClippedArticleBase):
     user_id: UUID
     content_id: UUID
 
+
 class ClippedArticleUpdate(BaseModel):
-    priority: Optional[str] = Field(None, pattern="^(low|medium|high)$")
-    note: Optional[str] = None
-    is_read: Optional[bool] = None
-    is_read_later: Optional[bool] = None
-    is_favorite: Optional[bool] = None
-    read_at: Optional[datetime] = None
+    priority: str | None = Field(None, pattern="^(low|medium|high)$")
+    note: str | None = None
+    is_read: bool | None = None
+    is_read_later: bool | None = None
+    is_favorite: bool | None = None
+    read_at: datetime | None = None
+
 
 class ClippedArticleResponse(ClippedArticleBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     content_id: UUID
     user_id: UUID
-    read_at: Optional[datetime] = None
+    read_at: datetime | None = None
     created_at: datetime
-    
+
     # Include the content
     content: ArticleContentResponse
+
 
 # Unified Article schemas (for backward compatibility and API responses)
 class ArticleBase(BaseModel):
     """Unified article schema that can represent both feed and clipped articles"""
+
     # Core content (from ArticleContent)
-    title: Optional[str] = None
+    title: str | None = None
     link: HttpUrl
-    description: Optional[str] = None
-    content: Optional[str] = None
-    image_url: Optional[HttpUrl] = None
-    author: Optional[str] = Field(None, max_length=500)
-    published_at: Optional[datetime] = None
-    estimated_read_time_minutes: Optional[int] = Field(None, ge=0)
-    
+    description: str | None = None
+    content: str | None = None
+    image_url: HttpUrl | None = None
+    author: str | None = Field(None, max_length=500)
+    published_at: datetime | None = None
+    estimated_read_time_minutes: int | None = Field(None, ge=0)
+
     # User interaction state
     is_read: bool = False
     is_read_later: bool = False
     is_favorite: bool = False
-    read_at: Optional[datetime] = None
-    
+    read_at: datetime | None = None
+
     # Clipped article specific (only present for clipped articles)
-    priority: Optional[str] = None
-    note: Optional[str] = None
-    
+    priority: str | None = None
+    note: str | None = None
+
     # Feed specific (only present for feed articles)
-    feed_id: Optional[UUID] = None
-    guid: Optional[str] = None
-    folder_id: Optional[UUID] = None  # From feed's folder for feed articles
+    feed_id: UUID | None = None
+    guid: str | None = None
+    folder_id: UUID | None = None  # From feed's folder for feed articles
+
 
 class ArticleCreate(BaseModel):
     """For backward compatibility with RSS system"""
+
     feed_id: UUID
     user_id: UUID
     guid: str
-    title: Optional[str] = None
+    title: str | None = None
     link: HttpUrl
-    description: Optional[str] = None
-    content: Optional[str] = None
-    author: Optional[str] = None
-    image_url: Optional[HttpUrl] = None
-    published_at: Optional[datetime] = None
-    estimated_read_time_minutes: Optional[int] = None
-    custom_metadata: Optional[Dict[str, Any]] = None
+    description: str | None = None
+    content: str | None = None
+    author: str | None = None
+    image_url: HttpUrl | None = None
+    published_at: datetime | None = None
+    estimated_read_time_minutes: int | None = None
+    custom_metadata: dict[str, Any] | None = None
     is_read: bool = False
     is_read_later: bool = False
     is_favorite: bool = False
 
+
 class ArticleUpdate(BaseModel):
-    is_read: Optional[bool] = None
-    is_read_later: Optional[bool] = None
-    is_favorite: Optional[bool] = None
+    is_read: bool | None = None
+    is_read_later: bool | None = None
+    is_favorite: bool | None = None
+
 
 class ArticleResponse(ArticleBase):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: UUID
     created_at: datetime
     updated_at: datetime
-    
+
     # Additional metadata for API consumers
     article_type: str  # "feed" or "clipped"
-    feed: Optional[Dict[str, Any]] = None  # Nested feed info for both RSS and clipped articles
+    feed: dict[str, Any] | None = (
+        None  # Nested feed info for both RSS and clipped articles
+    )
+
 
 # Legacy schemas (kept for backward compatibility)
 Article = FeedArticleResponse
 
+
 # ========= OPML Schemas =========
 class OpmlImportRequest(BaseModel):
-    opml_content: str # The raw OPML XML content as a string
+    opml_content: str  # The raw OPML XML content as a string
+
 
 class OpmlOutline(BaseModel):
-    text: Optional[str] = None
-    title: Optional[str] = None
-    type: Optional[str] = None
-    xmlUrl: Optional[HttpUrl] = None
-    htmlUrl: Optional[HttpUrl] = None
+    text: str | None = None
+    title: str | None = None
+    type: str | None = None
+    xmlUrl: HttpUrl | None = None
+    htmlUrl: HttpUrl | None = None
     # For nested outlines/folders
-    children: Optional[List['OpmlOutline']] = None
+    children: list["OpmlOutline"] | None = None
 
 
 class OpmlExport(BaseModel):
     opml_content: str
+
 
 # For parsing OPML structure
 OpmlOutline.model_rebuild()
@@ -277,4 +313,4 @@ OpmlOutline.model_rebuild()
 
 # Response for feed with its articles (example)
 class FeedWithArticlesResponse(FeedResponse):
-    articles: List[ArticleResponse] = [] 
+    articles: list[ArticleResponse] = []

@@ -268,6 +268,14 @@ export class ApiClient {
                 status: string
                 current_status?: string
             }>>("/api/rss/opml/import/tasks"),
+        cancelImportTask: (taskId: string) =>
+            this.delete<{
+                task_id: string
+                message: string
+                cancelled: boolean
+                cancelled_subtasks?: number
+                previous_state?: string
+            }>(`/api/rss/opml/import/cancel/${taskId}`),
 
         // Feeds
         getFeeds: (params?: {
