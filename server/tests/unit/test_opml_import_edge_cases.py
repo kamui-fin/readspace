@@ -308,26 +308,40 @@ class TestOpmlImportEdgeCases:
         
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
+        folder1_id = uuid4()
         folder1 = MagicMock()
-        folder1.id = uuid4()
+        folder1.id = folder1_id
         folder1.name = "Folder with & symbols <>"
         
+        folder2_id = uuid4()
         folder2 = MagicMock()
-        folder2.id = uuid4() 
+        folder2.id = folder2_id
         folder2.name = "Folder with üñíçödé"
         
-        self.service.folder_service.create_folder.side_effect = [folder1, folder2]
+        # Mock list_folders to return empty list initially
+        self.service.folder_service.list_folders.return_value = []
+        
+        # Mock create_folder to return folders based on the folder name being created
+        def create_folder_side_effect(folder_create):
+            if folder_create.name == "Folder with & symbols <>":
+                return folder1
+            elif folder_create.name == "Folder with üñíçödé":
+                return folder2
+            else:
+                raise ValueError(f"Unexpected folder name: {folder_create.name}")
+        
+        self.service.folder_service.create_folder.side_effect = create_folder_side_effect
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
         assert len(result) == 2
         
-        # Verify folder assignments
+        # Verify folder assignments - the method returns string IDs
         feed1 = next(f for f in result if f["title"] == "Feed")
         feed2 = next(f for f in result if f["title"] == "Unicode Feed")
         
-        assert feed1["folder_id"] == folder1.id
-        assert feed2["folder_id"] == folder2.id
+        assert feed1["folder_id"] == folder1_id
+        assert feed2["folder_id"] == folder2_id
 
         # Verify folder creation was called with correct names
         assert self.service.folder_service.create_folder.call_count == 2

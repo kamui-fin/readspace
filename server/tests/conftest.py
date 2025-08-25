@@ -1,11 +1,43 @@
 """
 Shared fixtures and test configuration
 """
+import os
 import pytest
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_models import Profile
+
+# Set test environment variables immediately at module import
+# This ensures they're available during test collection phase
+os.environ.update({
+    "SUPABASE_URL": "http://localhost:54321",
+    "SUPABASE_JWT_SECRET": "test-jwt-secret",
+    "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
+    "SUPABASE_DB_CONNECTION": "postgresql://postgres:postgres@localhost:54322/postgres",
+    "REDIS_URL": "redis://localhost:6379/0",
+    "CELERY_BROKER_URL": "redis://localhost:6379/0", 
+    "CELERY_RESULT_BACKEND": "redis://localhost:6379/1",
+    "ENVIRONMENT": "test"
+})
+
+
+@pytest.fixture(scope="session", autouse=True)
+def test_settings():
+    """Override settings for tests to provide default values."""
+    test_env = {
+        "SUPABASE_URL": "http://localhost:54321",
+        "SUPABASE_JWT_SECRET": "test-jwt-secret",
+        "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
+        "SUPABASE_DB_CONNECTION": "postgresql://postgres:postgres@localhost:54322/postgres",
+        "REDIS_URL": "redis://localhost:6379/0",
+        "CELERY_BROKER_URL": "redis://localhost:6379/0", 
+        "CELERY_RESULT_BACKEND": "redis://localhost:6379/1",
+        "ENVIRONMENT": "test"
+    }
+    
+    with patch.dict(os.environ, test_env, clear=False):
+        yield
 
 @pytest.fixture(scope="function")
 def test_user() -> Profile:
