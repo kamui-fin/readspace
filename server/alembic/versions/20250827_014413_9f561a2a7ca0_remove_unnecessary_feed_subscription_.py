@@ -21,16 +21,46 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     """Upgrade schema."""
-    # Remove unnecessary fields from feed_subscriptions table
-    op.drop_column('feed_subscriptions', 'is_paused')
-    op.drop_column('feed_subscriptions', 'custom_ttl')
-    op.drop_column('feed_subscriptions', 'custom_skip_hours')
-    op.drop_column('feed_subscriptions', 'custom_skip_days')
-    op.drop_column('feed_subscriptions', 'last_viewed_at')
-    op.drop_column('feed_subscriptions', 'subscribed_at')
+    from sqlalchemy import text
+    
+    # Get connection to check for existing objects
+    connection = op.get_bind()
+    
+    # Helper function to safely drop column if table and column exist
+    def safe_drop_column(table_name, column_name):
+        # Check if table exists
+        table_result = connection.execute(text(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = :table_name"
+        ), {"table_name": table_name})
+        
+        if table_result.fetchone():
+            # Check if column exists
+            column_result = connection.execute(text(
+                "SELECT 1 FROM information_schema.columns WHERE table_name = :table_name AND column_name = :column_name"
+            ), {"table_name": table_name, "column_name": column_name})
+            
+            if column_result.fetchone():
+                op.drop_column(table_name, column_name)
+    
+    # Helper function to safely create table if it doesn't exist
+    def safe_create_table(table_name, *args, **kwargs):
+        result = connection.execute(text(
+            "SELECT 1 FROM information_schema.tables WHERE table_name = :table_name"
+        ), {"table_name": table_name})
+        
+        if not result.fetchone():
+            op.create_table(table_name, *args, **kwargs)
+    
+    # Remove unnecessary fields from feed_subscriptions table (if it exists)
+    safe_drop_column('feed_subscriptions', 'is_paused')
+    safe_drop_column('feed_subscriptions', 'custom_ttl')
+    safe_drop_column('feed_subscriptions', 'custom_skip_hours')
+    safe_drop_column('feed_subscriptions', 'custom_skip_days')
+    safe_drop_column('feed_subscriptions', 'last_viewed_at')
+    safe_drop_column('feed_subscriptions', 'subscribed_at')
     
     # Create feed_tag_association table (tags table already exists)
-    op.create_table('feed_tag_association',
+    safe_create_table('feed_tag_association',
         sa.Column('feed_id', sa.UUID(), nullable=False),
         sa.Column('tag_id', sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(['feed_id'], ['feeds.id'], ondelete='CASCADE'),
