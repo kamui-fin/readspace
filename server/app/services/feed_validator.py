@@ -4,7 +4,7 @@ from typing import Any
 
 import structlog
 
-from app.core.custom_exceptions import ValidationError
+from app.core.custom_exceptions import FeedValidationError
 
 logger = structlog.get_logger(__name__)
 
@@ -23,24 +23,24 @@ class FeedValidator:
             parsed_feed: feedparser.FeedParserDict object
 
         Raises:
-            ValidationError: If the feed structure is invalid
+            FeedValidationError: If the feed structure is invalid
         """
         if not parsed_feed or not parsed_feed.get("feed"):
-            raise ValidationError("Invalid feed format: No feed data found")
+            raise FeedValidationError("Invalid feed format: No feed data found")
 
         feed_info = parsed_feed.feed
 
         # Check for required feed metadata
         if not feed_info.get("title"):
-            raise ValidationError("Invalid feed format: Feed title is missing")
+            raise FeedValidationError("Invalid feed format: Feed title is missing")
 
         # Check for entries
         entries = parsed_feed.get("entries", [])
         if not entries:
-            raise ValidationError("Invalid feed format: No articles found in feed")
+            raise FeedValidationError("Invalid feed format: No articles found in feed")
 
         if len(entries) < MIN_ARTICLE_COUNT:
-            raise ValidationError(
+            raise FeedValidationError(
                 f"Feed has insufficient content: Found {len(entries)} articles, minimum {MIN_ARTICLE_COUNT} required"
             )
 
@@ -111,24 +111,24 @@ class FeedValidator:
             url: Feed URL to validate
 
         Raises:
-            ValidationError: If URL is invalid
+            FeedValidationError: If URL is invalid
         """
         if not url or not url.strip():
-            raise ValidationError("Feed URL cannot be empty")
+            raise FeedValidationError("Feed URL cannot be empty")
 
         url = url.strip()
 
         if not url.startswith(("http://", "https://")):
-            raise ValidationError("Feed URL must start with http:// or https://")
+            raise FeedValidationError("Feed URL must start with http:// or https://")
 
         # Basic URL format validation
         if len(url) > 2000:
-            raise ValidationError("Feed URL is too long (max 2000 characters)")
+            raise FeedValidationError("Feed URL is too long (max 2000 characters)")
 
         # Check for common invalid characters
         invalid_chars = [" ", "\n", "\r", "\t"]
         if any(char in url for char in invalid_chars):
-            raise ValidationError("Feed URL contains invalid characters")
+            raise FeedValidationError("Feed URL contains invalid characters")
 
     def extract_feed_metadata(self, parsed_feed: Any) -> dict:
         """Extract and validate feed metadata.

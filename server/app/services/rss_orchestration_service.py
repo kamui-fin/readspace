@@ -317,20 +317,26 @@ class RssOrchestrationService:
         # Identify folders that need to be created
         folders_to_create = [name for name in folder_names if name not in folder_cache]
 
-        # Bulk create new folders
-        for folder_name in folders_to_create:
+        # Bulk create new folders using atomic batch operation to prevent race conditions
+        if folders_to_create:
             try:
-                folder_resp = await self.folder_service.create_folder(
-                    FolderCreate(name=folder_name)
+                created_folders = await self.folder_service.create_folders_batch(folders_to_create)
+                folder_cache.update(created_folders)
+                
+                logger.info(
+                    "Batch folder creation completed",
+                    created_count=len(created_folders),
+                    requested_count=len(folders_to_create),
+                    user_id=self.user_id
                 )
-                folder_cache[folder_name] = folder_resp.id
-            except Exception:
-                # Folder might have been created concurrently, try to find it
-                folders = await self.folder_service.list_folders()
-                for folder in folders:
-                    if folder.name == folder_name:
-                        folder_cache[folder_name] = folder.id
-                        break
+            except Exception as e:
+                logger.error(
+                    "Failed to batch create folders", 
+                    error=str(e), 
+                    folder_names=folders_to_create,
+                    user_id=self.user_id
+                )
+                raise
 
         return folder_cache
 

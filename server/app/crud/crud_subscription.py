@@ -135,9 +135,7 @@ async def create_subscription(
 
         feed_base = FeedBase(**feed_data)
         feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
-    else:
-        # Increment subscriber count
-        await crud_feed.update_subscriber_count(db, feed_id=feed_db.id, delta=1)
+    # Feed exists, no need to increment count as subscriber_count field was removed
 
     # Create subscription
     subscription_data = {
@@ -237,9 +235,6 @@ async def delete_subscription(
 
     # Delete the subscription
     await db.delete(subscription)
-
-    # Decrement subscriber count
-    await crud_feed.update_subscriber_count(db, feed_id=feed_id, delta=-1)
 
     await db.commit()
     return subscription

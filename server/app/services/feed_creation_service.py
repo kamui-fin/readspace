@@ -7,6 +7,13 @@ from uuid import UUID
 import feedparser
 import structlog
 
+from app.core.custom_exceptions import (
+    FeedConnectionError,
+    FeedParsingError,
+    FeedSubscriptionError,
+    FeedValidationError,
+    NotFoundError,
+)
 from app.crud import crud_feed, crud_folder, crud_subscription
 from app.crud.crud_article import create_articles_batch
 from app.models.rss_models import Tag
@@ -43,8 +50,18 @@ class FeedCreationService(BaseFeedService):
             update_existing=update_existing,
         )
 
-        # Check if feed already exists
-        existing_feed = await crud_feed.get_feed_by_url(self.db, url=url)
+        # Normalize URL to prevent duplicates
+        from app.utils.url_normalizer import normalize_feed_url
+        normalized_url = normalize_feed_url(url)
+        
+        logger.info(
+            "URL normalized for duplicate checking",
+            original_url=url,
+            normalized_url=normalized_url,
+        )
+
+        # Check if feed already exists using normalized URL
+        existing_feed = await crud_feed.get_feed_by_url(self.db, url=normalized_url)
         if existing_feed:
             return await self._handle_existing_feed(
                 existing_feed, url, folder_id, tag_names, update_existing
@@ -53,11 +70,11 @@ class FeedCreationService(BaseFeedService):
         # Validate folder exists
         await self._validate_folder(folder_id)
 
-        # Fetch and parse feed
+        # Fetch and parse feed using original URL (in case normalized URL doesn't work)
         parsed_feed = await self._fetch_and_parse_feed(url)
 
-        # Create the feed
-        return await self._create_new_feed(url, folder_id, tag_names, parsed_feed)
+        # Create the feed with normalized URL for storage
+        return await self._create_new_feed(normalized_url, folder_id, tag_names, parsed_feed)
 
     async def _handle_existing_feed(
         self,
@@ -82,7 +99,7 @@ class FeedCreationService(BaseFeedService):
 
         if existing_subscription:
             if not update_existing:
-                raise ValueError(f"You are already subscribed to feed '{url}'.")
+                raise FeedSubscriptionError(f"You are already subscribed to feed '{url}'.")
 
             # Update existing subscription
             logger.info(
@@ -168,7 +185,7 @@ class FeedCreationService(BaseFeedService):
                 folder_id=folder_id,
                 user_id=self.user_id,
             )
-            raise ValueError(
+            raise NotFoundError(
                 f"Folder with ID '{folder_id}' not found or access denied."
             )
 
@@ -183,7 +200,7 @@ class FeedCreationService(BaseFeedService):
                     url=url,
                     status=fetch_result.get("status"),
                 )
-                raise ValueError("Could not fetch feed content.")
+                raise FeedConnectionError("Could not fetch feed content.")
 
             # Parse content using parent class method
             parsed_feed = self._parse_feed_data(fetch_result["content"], url)
@@ -255,13 +272,15 @@ class FeedCreationService(BaseFeedService):
         latest_article_date: datetime | None = None
 
         # Handle cases where entries might not be a list (e.g., parsing errors)
-        entries = parsed_feed.entries if hasattr(parsed_feed, "entries") else []
-        if not isinstance(entries, list):
+        raw_entries = parsed_feed.entries if hasattr(parsed_feed, "entries") else []
+        if not isinstance(raw_entries, list):
             logger.warning(
-                f"Feed entries is not a list (type: {type(entries)}) for URL {url}. "
+                f"Feed entries is not a list (type: {type(raw_entries)}) for URL {url}. "
                 f"Setting to empty list. Feed might be malformed."
             )
             entries = []
+        else:
+            entries = raw_entries
 
         total_entries = len(entries)
 
@@ -316,7 +335,7 @@ class FeedCreationService(BaseFeedService):
                 logger.warning(
                     "Feed has no entries at all", url=url, user_id=self.user_id
                 )
-                raise ValueError("Feed appears to be broken: no entries found in feed")
+                raise FeedValidationError("Feed appears to be broken: no entries found in feed")
             else:
                 logger.warning(
                     "Feed has entries but no valid articles",
@@ -324,7 +343,7 @@ class FeedCreationService(BaseFeedService):
                     user_id=self.user_id,
                     total_entries=total_entries,
                 )
-                raise ValueError(
+                raise FeedValidationError(
                     "Feed appears to be broken: no valid articles found despite having entries"
                 )
 
@@ -355,7 +374,7 @@ class FeedCreationService(BaseFeedService):
         skip_days = self._extract_skip_days(parsed_feed, db_feed.id)
 
         # Update feed with all metadata
-        await crud_feed.update_feed_fetch_metadata(
+        await crud_feed.update_feed_metadata(
             self.db,
             feed_db=db_feed,
             title=updated_feed_info.title,
@@ -467,20 +486,20 @@ class FeedCreationService(BaseFeedService):
             status_code = result.get("status_code", 500)
 
             if error_type == "timeout":
-                raise ConnectionError(f"Feed timed out: {url}")
+                raise FeedConnectionError(f"Feed timed out: {url}")
             elif error_type.startswith("http_"):
                 if status_code == 404:
-                    raise ConnectionError(f"Feed not found (404): {url}")
+                    raise FeedConnectionError(f"Feed not found (404): {url}")
                 elif status_code == 403:
-                    raise ConnectionError(f"Access denied to feed (403): {url}")
+                    raise FeedConnectionError(f"Access denied to feed (403): {url}")
                 elif status_code in [500, 502, 503]:
-                    raise ConnectionError(f"Feed server error ({status_code}): {url}")
+                    raise FeedConnectionError(f"Feed server error ({status_code}): {url}")
                 else:
-                    raise ConnectionError(
+                    raise FeedConnectionError(
                         f"HTTP error {status_code} while fetching feed: {url}"
                     )
             else:
-                raise ConnectionError(f"Network error fetching feed: {url}")
+                raise FeedConnectionError(f"Network error fetching feed: {url}")
 
         return {
             "status": result.get("status_code", 200),
@@ -496,7 +515,7 @@ class FeedCreationService(BaseFeedService):
             parsed_feed = feedparser.parse(feed_content_text)
         except Exception as e:
             logger.error("Failed to parse feed content", url=url, error=str(e))
-            raise ValueError(f"Unable to parse feed content: {e}")
+            raise FeedParsingError(f"Unable to parse feed content: {e}")
 
         # Handle feedparser's bozo flag (malformed XML)
         if parsed_feed.bozo:
@@ -528,13 +547,13 @@ class FeedCreationService(BaseFeedService):
                         url=url,
                         bozo_type=bozo_type,
                     )
-                    raise ValueError(f"Feed has severe parsing errors: {bozo_message}")
+                    raise FeedParsingError(f"Feed has severe parsing errors: {bozo_message}")
 
         # Use FeedValidator to validate structure
         try:
             self.feed_validator.validate_feed_structure(parsed_feed)
         except Exception as e:
-            raise ValueError(str(e))
+            raise FeedValidationError(str(e))
 
         return parsed_feed
 

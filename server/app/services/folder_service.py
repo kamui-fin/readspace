@@ -74,3 +74,27 @@ class FolderService:
                 "Folder not found or couldn't be deleted", folder_id=folder_id
             )
         return result
+
+    async def create_folders_batch(self, folder_names: list[str]) -> dict[str, UUID]:
+        """
+        Bulk create multiple folders, handling race conditions and duplicates.
+        Returns a mapping of folder name to folder ID.
+        """
+        logger.info(
+            "Bulk creating folders",
+            folder_count=len(folder_names),
+            user_id=self.user_id,
+            folder_names=folder_names[:5]  # Log first 5 for debugging
+        )
+        
+        folder_name_to_id = await crud_folder.create_folders_batch(
+            db=self.db, folder_names=folder_names, user_id=self.user_id
+        )
+        
+        logger.info(
+            "Bulk folder creation completed",
+            created_count=len(folder_name_to_id),
+            user_id=self.user_id
+        )
+        
+        return folder_name_to_id

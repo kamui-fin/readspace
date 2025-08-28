@@ -1,6 +1,8 @@
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -107,3 +109,65 @@ async def delete_folder(
         await db.delete(db_folder)
         await db.commit()
     return db_folder
+
+
+async def create_folders_batch(
+    db: AsyncSession, *, folder_names: list[str], user_id: UUID
+) -> dict[str, UUID]:
+    """
+    Bulk create multiple folders for a user, handling race conditions.
+    Returns a mapping of folder name to folder ID.
+    """
+    if not folder_names:
+        return {}
+
+    try:
+        # Step 1: Prepare bulk insert data
+        current_time = datetime.now(timezone.utc)
+        folder_mappings = []
+        
+        for name in folder_names:
+            folder_mappings.append({
+                "name": name,
+                "user_id": user_id,
+                "created_at": current_time,
+                "updated_at": current_time,
+            })
+
+        # Step 2: Bulk insert with ON CONFLICT DO NOTHING to handle race conditions
+        folder_insert_stmt = insert(Folder).values(folder_mappings)
+        folder_insert_stmt = folder_insert_stmt.on_conflict_do_nothing(
+            index_elements=["user_id", "name"]  # Based on unique constraint
+        ).returning(
+            Folder.id,
+            Folder.name,
+        )
+
+        result = await db.execute(folder_insert_stmt)
+        created_folders = result.fetchall()
+        
+        # Step 3: Handle any folders that weren't created due to conflicts
+        created_folder_names = {row.name for row in created_folders}
+        missing_folder_names = set(folder_names) - created_folder_names
+        
+        folder_name_to_id = {row.name: row.id for row in created_folders}
+        
+        # Step 4: Fetch existing folders for any that had conflicts
+        if missing_folder_names:
+            existing_result = await db.execute(
+                select(Folder.id, Folder.name).filter(
+                    Folder.user_id == user_id,
+                    Folder.name.in_(missing_folder_names)
+                )
+            )
+            existing_folders = existing_result.fetchall()
+            
+            for row in existing_folders:
+                folder_name_to_id[row.name] = row.id
+
+        await db.commit()
+        return folder_name_to_id
+
+    except Exception as e:
+        await db.rollback()
+        raise e

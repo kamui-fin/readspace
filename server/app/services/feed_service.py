@@ -77,12 +77,7 @@ class FeedService:
                     f"Failed to fetch content: status {fetch_result.get('status_code')}"
                 )
                 logger.error("Feed fetch failed", feed_id=feed_id, error=error_msg)
-
-                # Update error count
-                await crud_feed.update_feed_error(
-                    self.db, feed_db=feed_db, error_message=error_msg
-                )
-                return FeedResponse.model_validate(feed_db)
+                return None
 
             # Parse the feed content
             parsed_feed = self.feed_parser.parse_feed_data(
@@ -220,7 +215,7 @@ class FeedService:
             # Step 2: Bulk create content first
             content_insert_stmt = insert(ArticleContent).values(content_to_create)
             content_result = await self.db.execute(
-                content_insert_stmt.returning(ArticleContent.id, ArticleContent.link)
+                content_insert_stmt.returning(ArticleContent.id)
             )
             content_rows = content_result.fetchall()
             await self.db.flush()
@@ -229,7 +224,7 @@ class FeedService:
             article_insert_data = []
             for i, content_row in enumerate(content_rows):
                 if i < len(articles_to_create):
-                    guid, content_index = articles_to_create[i]
+                    guid, _ = articles_to_create[i]
                     article_insert_data.append(
                         {
                             "feed_id": feed_db.id,
@@ -269,21 +264,11 @@ class FeedService:
 
         except Exception as e:
             await self.db.rollback()
-            # Use the passed feed_db.id directly to avoid lazy loading in Celery context
-            feed_id_str = str(feed_db.id) if hasattr(feed_db, "id") else "unknown"
             logger.error(
-                "Error in bulk article creation", feed_id=feed_id_str, error=str(e)
+                "Error in bulk article creation", feed_id=str(feed_db.id), error=str(e)
             )
             raise
 
     async def get_feeds_needing_refresh(self, *, limit: int = 100) -> list[Feed]:
         """Get global feeds that need refreshing."""
         return await crud_feed.get_feeds_needing_refresh(self.db, limit=limit)
-
-    async def update_subscriber_count(
-        self, *, feed_id: UUID, delta: int
-    ) -> Feed | None:
-        """Update subscriber count for a feed."""
-        return await crud_feed.update_subscriber_count(
-            self.db, feed_id=feed_id, delta=delta
-        )

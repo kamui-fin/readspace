@@ -187,7 +187,6 @@ class FeedManagementService:
                 "folder_id": subscription.folder_id,
                 "is_favorite": subscription.is_favorite,
                 "unread_count": unread_count,
-                "tags": [],
             }
             feed_responses.append(FeedResponse(**feed_data))
 
@@ -264,7 +263,6 @@ class FeedManagementService:
                 "folder_id": updated_subscription.folder_id,
                 "is_favorite": updated_subscription.is_favorite,
                 "unread_count": unread_count,
-                "tags": [],
             }
             return FeedResponse(**feed_data)
         return None

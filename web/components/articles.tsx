@@ -14,45 +14,43 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import type { Article, PaginatedResponse } from "@/lib/api/hooks/feeds"
-import {
-    useInfiniteArticles,
-    useInfiniteRecentlyReadArticles,
-    useInfiniteReadLaterArticles,
-    useArticle,
-    useUpdateArticle,
-    useFeeds,
-    useRefreshFeed,
-    useRefreshFolderFeeds,
-    useRefreshAllFeeds,
-    useRefreshStatus,
-    useUnreadCounts,
-} from "@/lib/api/hooks/feeds"
-import { format, formatDistanceToNow, parseISO } from "date-fns"
-import {
-    BookmarkIcon,
-    CalendarIcon,
-    CheckCircle2,
-    Clock,
-    Eye,
-    EyeOff,
-    Paperclip,
-    RefreshCw,
-    Globe,
-    Check,
-    MoreVertical,
-    Loader2,
-} from "lucide-react"
-import { useTheme } from "next-themes"
-import { useRouter } from "next/navigation"
-import { useEffect, useMemo, useRef, useState, useCallback } from "react"
-import { toast } from "react-hot-toast"
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import type { Article } from "@/lib/api/hooks/feeds"
+import {
+    useArticle,
+    useFeeds,
+    useInfiniteArticles,
+    useInfiniteReadLaterArticles,
+    useInfiniteRecentlyReadArticles,
+    useRefreshFeed,
+    useRefreshStatus,
+    useUnreadCounts,
+    useUpdateArticle
+} from "@/lib/api/hooks/feeds"
+import { format, formatDistanceToNow, parseISO } from "date-fns"
+import {
+    BookmarkIcon,
+    CalendarIcon,
+    Check,
+    CheckCircle2,
+    Clock,
+    Eye,
+    EyeOff,
+    Globe,
+    Loader2,
+    MoreVertical,
+    Paperclip,
+    RefreshCw,
+} from "lucide-react"
+import { useTheme } from "next-themes"
+import { useRouter } from "next/navigation"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { toast } from "react-hot-toast"
 import InfiniteScroll from "react-infinite-scroll-component"
 
 export function ArticlesView({
@@ -99,7 +97,7 @@ export function ArticlesView({
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
     const router = useRouter()
-    
+
     const { data: allUserFeeds } = useFeeds({}, {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -126,12 +124,12 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : viewInitialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : viewInitialSidebarTitle || "All Articles"
 
     // Use infinite queries based on mode
     let infiniteQuery: any
-    
+
     if (isRecentlyReadMode) {
         infiniteQuery = useInfiniteRecentlyReadArticles({ size: 25 }, {
             refetchOnMount: false,
@@ -156,7 +154,7 @@ export function ArticlesView({
             viewType: viewFolderId ? 'folder' : viewFeedId ? 'feed' : 'all',
             viewId: viewFolderId || viewFeedId || 'all',
         }
-        
+
         infiniteQuery = useInfiniteArticles(params, {
             refetchOnMount: false,
             refetchOnWindowFocus: false,
@@ -176,7 +174,7 @@ export function ArticlesView({
     // Transform and flatten all pages of articles
     const allArticles = useMemo(() => {
         if (!data?.pages) return []
-        
+
         const articles = data.pages.flatMap((page: any) => {
             // Handle different API response formats
             if (page.items) {
@@ -206,7 +204,7 @@ export function ArticlesView({
             }
             return []
         })
-        
+
         return articles
     }, [data])
 
@@ -219,8 +217,6 @@ export function ArticlesView({
     }, [allArticles, showUnreadOnly])
 
     const refreshFeed = useRefreshFeed()
-    const refreshFolderFeeds = useRefreshFolderFeeds()
-    const refreshAllFeeds = useRefreshAllFeeds()
 
     const { data: refreshStatus } = useRefreshStatus(
         refreshTaskId,
@@ -535,10 +531,10 @@ export function ArticlesView({
                     </p>
                     {/* Always show toggle if in a mode that supports it, or refresh otherwise */}
                     {!isRecentlyReadMode &&
-                    !isReadLaterMode &&
-                    (viewMode === "allArticles" ||
-                        viewFeedId ||
-                        viewFolderId) ? (
+                        !isReadLaterMode &&
+                        (viewMode === "allArticles" ||
+                            viewFeedId ||
+                            viewFolderId) ? (
                         <div className="flex flex-col items-center gap-2">
                             <Button
                                 variant="outline"
@@ -752,7 +748,7 @@ export function ArticlesView({
                                 )}
                             </div>
                         </div>
-                        <div 
+                        <div
                             id="articles-scroll-container"
                             className="flex-1 overflow-auto min-h-0"
                             style={{ height: '100%' }}
@@ -776,80 +772,80 @@ export function ArticlesView({
                             >
                                 {isRecentlyReadMode || isReadLaterMode
                                     ? filteredArticles.map(
-                                          (article: Article, index: number) => (
-                                              <ArticleItem
-                                                  key={article.id}
-                                                  article={article}
-                                                  isActive={
-                                                      article.id ===
-                                                      selectedArticleId
-                                                  }
-                                                  isLastInGroup={
-                                                      index ===
-                                                      filteredArticles.length -
-                                                          1
-                                                  }
-                                                  onClick={() =>
-                                                      handleArticleClick(
-                                                          article.id
-                                                      )
-                                                  }
-                                                  isRecentlyReadMode={
-                                                      isRecentlyReadMode
-                                                  }
-                                                  isReadLaterMode={
-                                                      isReadLaterMode
-                                                  }
-                                              />
-                                          )
-                                      )
+                                        (article: Article, index: number) => (
+                                            <ArticleItem
+                                                key={article.id}
+                                                article={article}
+                                                isActive={
+                                                    article.id ===
+                                                    selectedArticleId
+                                                }
+                                                isLastInGroup={
+                                                    index ===
+                                                    filteredArticles.length -
+                                                    1
+                                                }
+                                                onClick={() =>
+                                                    handleArticleClick(
+                                                        article.id
+                                                    )
+                                                }
+                                                isRecentlyReadMode={
+                                                    isRecentlyReadMode
+                                                }
+                                                isReadLaterMode={
+                                                    isReadLaterMode
+                                                }
+                                            />
+                                        )
+                                    )
                                     : Object.entries(groupedArticles).map(
-                                          ([groupId, group]) => (
-                                              <div key={groupId}>
-                                                  <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
-                                                      <div className="flex items-center gap-2">
-                                                          {group.label ===
-                                                              "Today" ||
-                                                          group.label ===
-                                                              "Yesterday" ? (
-                                                              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
-                                                          ) : (
-                                                              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                                                          )}
-                                                          <span className="text-xs font-medium text-muted-foreground">
-                                                              {group.label}
-                                                          </span>
-                                                      </div>
-                                                  </div>
-                                                  {group.articles.map(
-                                                      (
-                                                          article: Article,
-                                                          index: number
-                                                      ) => (
-                                                          <ArticleItem
-                                                              key={article.id}
-                                                              article={article}
-                                                              isActive={
-                                                                  article.id ===
-                                                                  selectedArticleId
-                                                              }
-                                                              isLastInGroup={
-                                                                  index ===
-                                                                  group.articles
-                                                                      .length -
-                                                                      1
-                                                              }
-                                                              onClick={() =>
-                                                                  handleArticleClick(
-                                                                      article.id
-                                                                  )
-                                                              }
-                                                          />
-                                                      )
-                                                  )}
-                                              </div>
-                                          )
-                                      )}
+                                        ([groupId, group]) => (
+                                            <div key={groupId}>
+                                                <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                    <div className="flex items-center gap-2">
+                                                        {group.label ===
+                                                            "Today" ||
+                                                            group.label ===
+                                                            "Yesterday" ? (
+                                                            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                        ) : (
+                                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                        )}
+                                                        <span className="text-xs font-medium text-muted-foreground">
+                                                            {group.label}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {group.articles.map(
+                                                    (
+                                                        article: Article,
+                                                        index: number
+                                                    ) => (
+                                                        <ArticleItem
+                                                            key={article.id}
+                                                            article={article}
+                                                            isActive={
+                                                                article.id ===
+                                                                selectedArticleId
+                                                            }
+                                                            isLastInGroup={
+                                                                index ===
+                                                                group.articles
+                                                                    .length -
+                                                                1
+                                                            }
+                                                            onClick={() =>
+                                                                handleArticleClick(
+                                                                    article.id
+                                                                )
+                                                            }
+                                                        />
+                                                    )
+                                                )}
+                                            </div>
+                                        )
+                                    )}
                             </InfiniteScroll>
                         </div>
                     </div>
@@ -953,14 +949,14 @@ function ArticleContentView({
     const handleToggleReadLater = () => {
         const newReadLaterState = !optimisticReadLater
         setOptimisticReadLater(newReadLaterState)
-        
+
         // Show toast immediately for instant feedback
         toast.success(
-            newReadLaterState 
-                ? "Article saved to Read Later" 
+            newReadLaterState
+                ? "Article saved to Read Later"
                 : "Article removed from Read Later"
         )
-        
+
         updateArticle.mutate({
             articleId: article.id,
             data: { is_read_later: newReadLaterState },
@@ -976,7 +972,7 @@ function ArticleContentView({
     const handleMarkAsRead = () => {
         // Show instant feedback
         toast.success("Article marked as read")
-        
+
         // Mark as read and remove from read later
         updateArticle.mutate(
             {
@@ -1110,8 +1106,8 @@ function ArticleContentView({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -1119,7 +1115,7 @@ function ArticleContentView({
         article.article_type === "clipped" && article.priority
             ? article.priority
             : null
-    
+
     // Get priority color for clipped articles
     const getPriorityColor = (priority: string) => {
         switch (priority) {
@@ -1265,7 +1261,7 @@ function ArticleContentView({
                     </div>
                 )}
             </div>
-            
+
             {/* Visit Website button at the bottom */}
             {article.link && (
                 <div className="flex justify-center mt-8 pt-6 border-t">
@@ -1315,8 +1311,8 @@ function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Get priority color for clipped articles

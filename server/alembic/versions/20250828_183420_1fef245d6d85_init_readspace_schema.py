@@ -85,6 +85,7 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['feed_id'], ['feeds.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index('idx_feed_articles_feed_guid', 'feed_articles', ['feed_id', 'guid'], unique=True)
     op.create_table('profiles',
     sa.Column('id', sa.UUID(), nullable=False),
     sa.Column('email', sa.Text(), nullable=False),
@@ -154,6 +155,50 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['profiles.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_index('idx_user_states_user_article', 'user_article_states', ['user_id', 'article_id'], unique=False)
+    # Add proper unique constraint to prevent duplicate user-article state records
+    op.create_unique_constraint('uq_user_article_state', 'user_article_states', ['user_id', 'article_id'])
+    
+    # Add data quality constraints for better data integrity
+    # Reasonable bounds for published dates (not before 1990, not more than 1 year in future)
+    op.execute("""
+        ALTER TABLE article_contents 
+        ADD CONSTRAINT chk_published_date_bounds 
+        CHECK (published_at IS NULL OR (
+            published_at >= '1990-01-01'::date 
+            AND published_at <= NOW() + INTERVAL '1 year'
+        ))
+    """)
+    
+    # Ensure feed URLs are not empty strings
+    op.execute("""
+        ALTER TABLE feeds 
+        ADD CONSTRAINT chk_url_not_empty 
+        CHECK (url IS NOT NULL AND length(trim(url)) > 0)
+    """)
+    
+    # Ensure article GUIDs are not empty strings
+    op.execute("""
+        ALTER TABLE feed_articles 
+        ADD CONSTRAINT chk_guid_not_empty 
+        CHECK (guid IS NOT NULL AND length(trim(guid)) > 0)
+    """)
+    
+    # Ensure reasonable read time estimates (0 to 500 minutes max)
+    op.execute("""
+        ALTER TABLE article_contents 
+        ADD CONSTRAINT chk_read_time_bounds 
+        CHECK (estimated_read_time_minutes IS NULL OR (
+            estimated_read_time_minutes >= 0 
+            AND estimated_read_time_minutes <= 500
+        ))
+    """)
+    
+    # Add performance indexes for article queries as recommended in findings
+    # Critical for article query performance with user article states
+    op.create_index('idx_user_states_compound', 'user_article_states', ['user_id', 'article_id', 'is_read', 'is_read_later'], unique=False)
+    op.create_index('idx_feed_articles_feed_content', 'feed_articles', ['feed_id', 'content_id'], unique=False)
+    op.create_index('idx_article_content_published', 'article_contents', ['published_at'], unique=False, postgresql_where=sa.text('published_at IS NOT NULL'))
     op.create_table('user_book_library',
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('user_id', sa.UUID(), nullable=False),
@@ -235,6 +280,19 @@ def downgrade() -> None:
     op.drop_table('feed_tag_association')
     op.drop_table('feed_subscriptions')
     op.drop_table('user_book_library')
+    # Drop performance indexes
+    op.drop_index('idx_user_states_compound', table_name='user_article_states')
+    op.drop_index('idx_feed_articles_feed_content', table_name='feed_articles')
+    op.drop_index('idx_article_content_published', table_name='article_contents')
+    
+    # Drop data quality constraints
+    op.execute('ALTER TABLE article_contents DROP CONSTRAINT IF EXISTS chk_published_date_bounds')
+    op.execute('ALTER TABLE feeds DROP CONSTRAINT IF EXISTS chk_url_not_empty')
+    op.execute('ALTER TABLE feed_articles DROP CONSTRAINT IF EXISTS chk_guid_not_empty')
+    op.execute('ALTER TABLE article_contents DROP CONSTRAINT IF EXISTS chk_read_time_bounds')
+    
+    op.drop_constraint('uq_user_article_state', 'user_article_states', type_='unique')
+    op.drop_index('idx_user_states_user_article', table_name='user_article_states')
     op.drop_table('user_article_states')
     op.drop_index(op.f('ix_tags_user_id'), table_name='tags')
     op.drop_index(op.f('ix_tags_name'), table_name='tags')
@@ -249,6 +307,7 @@ def downgrade() -> None:
     op.drop_index(op.f('ix_clipped_articles_content_id'), table_name='clipped_articles')
     op.drop_table('clipped_articles')
     op.drop_table('profiles')
+    op.drop_index('idx_feed_articles_feed_guid', table_name='feed_articles')
     op.drop_table('feed_articles')
     op.drop_table('feeds')
     op.drop_table('book_metadata')

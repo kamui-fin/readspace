@@ -5,16 +5,19 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import crud_folder, crud_tag
+from app.core.custom_exceptions import (
+    FeedConnectionError,
+    FeedParsingError,
+    FeedSubscriptionError,
+    FeedValidationError,
+    NotFoundError,
+)
+from app.crud import crud_tag
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
-from app.workers.tasks import (  # Import the background tasks
-    refresh_all_user_feeds_task,
-    refresh_folder_feeds_task,
-)
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
@@ -58,15 +61,15 @@ async def add_new_feed(
             url=feed_in.url,
         )
         return feed
-    except ValueError as e:
+    except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
         logger.warning(
-            "Failed to add feed due to value error",
+            "Failed to add feed due to validation error",
             error=str(e),
             user_id=current_user.sub,
             url=feed_in.url,
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ConnectionError as e:
+    except FeedConnectionError as e:
         logger.error(
             "Connection error adding feed",
             error=str(e),
@@ -164,7 +167,7 @@ async def update_feed_settings(
             user_id=current_user.sub,
         )
         return updated_feed
-    except ValueError as e:
+    except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
         logger.warning(
             f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}"
         )
@@ -213,7 +216,7 @@ async def refresh_feed(
             user_id=current_user.sub,
         )
         return refreshed_feed
-    except ConnectionError as e:
+    except FeedConnectionError as e:
         logger.error(
             "Connection error refreshing feed",
             error=str(e),
@@ -224,9 +227,9 @@ async def refresh_feed(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not connect to feed URL during refresh: {e}",
         )
-    except ValueError as e:
+    except (FeedValidationError, FeedParsingError) as e:
         logger.warning(
-            "Value error during feed refresh",
+            "Validation/parsing error during feed refresh",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
@@ -248,91 +251,12 @@ async def refresh_feed(
         )
 
 
-@router.post("/refresh_folder/{folder_id}", response_model=dict)
-async def refresh_folder_feeds(
-    folder_id: UUID,
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
-):
-    """Trigger background refresh of all feeds in a specific folder."""
-    # Verify folder exists and belongs to user
-    folder = await crud_folder.get_folder(
-        db, folder_id=folder_id, user_id=UUID(current_user.sub)
-    )
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-        )
-
-    try:
-        # Queue the background task
-        task = refresh_folder_feeds_task.delay(
-            user_id=current_user.sub, folder_id=str(folder_id)
-        )
-
-        logger.info(
-            "Folder refresh task queued",
-            folder_id=folder_id,
-            task_id=task.id,
-            user_id=current_user.sub,
-        )
-
-        return {
-            "processing_mode": "background",
-            "task_id": task.id,
-            "message": "Folder refresh queued for processing. Individual feeds will be refreshed in parallel.",
-            "check_status_url": f"/api/rss/feeds/refresh_status/{task.id}",
-        }
-
-    except Exception as e:
-        logger.error(
-            "Error queuing folder refresh task",
-            folder_id=folder_id,
-            error=str(e),
-            user_id=current_user.sub,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to queue folder refresh task.",
-        )
-
-
-@router.post("/refresh_all", response_model=dict)
-async def refresh_all_feeds(
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
-):
-    """Trigger background refresh of all feeds for the current user."""
-    try:
-        # Queue the background task
-        task = refresh_all_user_feeds_task.delay(user_id=current_user.sub)
-
-        logger.info(
-            "All feeds refresh task queued", task_id=task.id, user_id=current_user.sub
-        )
-
-        return {
-            "processing_mode": "background",
-            "task_id": task.id,
-            "message": "All feeds refresh queued for processing. Individual feeds will be refreshed in parallel.",
-            "check_status_url": f"/api/rss/feeds/refresh_status/{task.id}",
-        }
-
-    except Exception as e:
-        logger.error(
-            "Error queuing all feeds refresh task",
-            error=str(e),
-            user_id=current_user.sub,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to queue all feeds refresh task.",
-        )
-
-
 @router.get("/refresh_status/{task_id}", response_model=dict)
 async def get_refresh_status(
-    task_id: str, current_user: TokenData = Depends(get_current_user)
+    task_id: str, 
+    page: int = Query(1, ge=1, description="Page number for paginated task checking"),
+    page_size: int = Query(100, ge=1, le=500, description="Number of tasks to check per page"),
+    current_user: TokenData = Depends(get_current_user)
 ):
     """Get the status of a background feed refresh task."""
     try:
@@ -371,38 +295,93 @@ async def get_refresh_status(
                     },
                 }
 
-            # Check status of individual feed refresh tasks
+            # Implement pagination to handle large imports efficiently
+            total_tasks = len(feed_task_ids)
+            start_idx = (page - 1) * page_size
+            end_idx = start_idx + page_size
+            paginated_task_ids = feed_task_ids[start_idx:end_idx]
+            
+            # Calculate pagination info
+            total_pages = (total_tasks + page_size - 1) // page_size
+            has_more_pages = page < total_pages
+            
+            logger.info(
+                "Checking status of individual feed refresh tasks (paginated)",
+                total_tasks=total_tasks,
+                current_page=page,
+                total_pages=total_pages,
+                tasks_this_page=len(paginated_task_ids),
+                task_id=task_id,
+            )
+            
+            # Check status of individual feed refresh tasks using batch operations
             completed_tasks = 0
             successful_refreshes = 0
             failed_refreshes = 0
             failed_feeds = []  # Track which feeds failed and why
 
-            logger.info(
-                "Checking status of individual feed refresh tasks",
-                total_tasks=len(feed_task_ids),
-                task_id=task_id,
-            )
-
-            for i, feed_task_id in enumerate(feed_task_ids):
-                feed_task_result = celery.AsyncResult(feed_task_id)
+            # Use Redis pipeline for efficient batch operations instead of individual calls
+            from redis import Redis
+            from app.core.config import get_settings
+            
+            settings = get_settings()
+            
+            # Get Redis connection from Celery backend
+            redis_client = None
+            if hasattr(celery, 'backend') and hasattr(celery.backend, 'client'):
+                redis_client = celery.backend.client
+            
+            # Fallback to creating new Redis connection if needed
+            if not redis_client:
+                redis_client = Redis.from_url(settings.CELERY_BROKER_URL)
+            
+            # Batch fetch task states using Redis pipeline for efficiency (paginated)
+            task_results = {}
+            if redis_client:
+                with redis_client.pipeline() as pipe:
+                    # Batch get task results for current page only
+                    for task_id in paginated_task_ids:
+                        pipe.get(f"celery-task-meta-{task_id}")
+                    results = pipe.execute()
+                    
+                    # Parse results
+                    import json
+                    for task_id, result in zip(paginated_task_ids, results):
+                        if result:
+                            try:
+                                task_data = json.loads(result.decode('utf-8'))
+                                task_results[task_id] = task_data.get('status', 'PENDING')
+                            except (json.JSONDecodeError, AttributeError):
+                                task_results[task_id] = 'PENDING'
+                        else:
+                            task_results[task_id] = 'PENDING'
+            else:
+                # Fallback to individual calls if Redis pipeline fails
+                task_results = {task_id: celery.AsyncResult(task_id).state for task_id in paginated_task_ids}
+            
+            # Process paginated task states efficiently
+            for i, feed_task_id in enumerate(paginated_task_ids):
+                task_state = task_results.get(feed_task_id, 'PENDING')
                 logger.debug(
                     "Checking feed refresh task",
                     task_index=i,
                     feed_task_id=feed_task_id,
-                    state=feed_task_result.state,
+                    state=task_state,
                 )
 
-                if feed_task_result.state == "SUCCESS":
+                if task_state == "SUCCESS":
                     completed_tasks += 1
                     successful_refreshes += 1
                     logger.debug("Feed refresh task SUCCESS", feed_task_id=feed_task_id)
-                elif feed_task_result.state == "FAILURE":
+                elif task_state == "FAILURE":
                     completed_tasks += 1
                     failed_refreshes += 1
 
                     # Try to get detailed error information
                     error_info = {"task_id": feed_task_id, "error": "Unknown error"}
                     try:
+                        # For failed tasks, we need to get the full task result for error details
+                        feed_task_result = celery.AsyncResult(feed_task_id)
                         if hasattr(feed_task_result, "info") and feed_task_result.info:
                             error_str = str(feed_task_result.info)
                             # Categorize common errors for better user understanding
@@ -443,9 +422,8 @@ async def get_refresh_status(
                                 error_info["error"] = "Feed contains invalid data types"
                                 error_info["category"] = "data_error"
                             else:
-                                error_info["error"] = error_str[
-                                    :200
-                                ]  # Truncate long errors
+                                # Don't expose internal error details - provide generic message
+                                error_info["error"] = "Feed refresh failed"
                                 error_info["category"] = "other"
                     except Exception as e:
                         logger.debug(
@@ -468,68 +446,86 @@ async def get_refresh_status(
                     )
 
             total_feeds = len(feed_task_ids)
-            is_complete = completed_tasks == total_feeds
-
+            
+            # For pagination, we need to return page-specific information
+            # The client needs to check all pages to determine overall completion
+            
             logger.info(
-                "Refresh task status summary",
-                completed=completed_tasks,
-                total=total_feeds,
-                successful=successful_refreshes,
-                failed=failed_refreshes,
-                is_complete=is_complete,
+                "Refresh task status summary (paginated)",
+                page_completed=completed_tasks,
+                page_tasks=len(paginated_task_ids),
+                page_successful=successful_refreshes,
+                page_failed=failed_refreshes,
+                total_feeds=total_feeds,
+                current_page=page,
+                total_pages=total_pages,
             )
 
-            if is_complete:
-                result = {
+            # Return paginated results - client determines overall completion
+            if len(paginated_task_ids) == 0:
+                return {
                     "task_id": task_id,
                     "status": "completed",
+                    "pagination": {
+                        "current_page": page,
+                        "total_pages": total_pages,
+                        "page_size": page_size,
+                        "total_tasks": total_feeds,
+                        "has_more": has_more_pages,
+                    },
                     "result": {
-                        "refreshed_count": successful_refreshes,
-                        "failed_count": failed_refreshes,
+                        "page_refreshed_count": 0,
+                        "page_failed_count": 0,
+                        "page_completed_count": 0,
                         "total_feeds": total_feeds,
-                        "summary": {
-                            "successful": successful_refreshes,
-                            "failed": failed_refreshes,
-                        },
+                        "message": "Page contains no tasks.",
                     },
                 }
-
-                # Include failed feeds details if any failed
-                if failed_feeds:
-                    result["result"]["failed_feeds"] = failed_feeds
-                    # Summarize error categories
-                    error_categories = {}
-                    for failed_feed in failed_feeds:
-                        category = failed_feed.get("category", "other")
-                        error_categories[category] = (
-                            error_categories.get(category, 0) + 1
-                        )
-                    result["result"]["error_summary"] = error_categories
-
-                return result
-            else:
-                progress_result = {
-                    "task_id": task_id,
-                    "status": "in_progress",
-                    "message": f"Refreshing feeds: {completed_tasks}/{total_feeds} completed",
-                    "progress": {
-                        "completed": completed_tasks,
-                        "total": total_feeds,
-                        "successful": successful_refreshes,
-                        "failed": failed_refreshes,
+            
+            # Always return in_progress for paginated results
+            # Client must check all pages to determine completion
+            result = {
+                "task_id": task_id,
+                "status": "in_progress",
+                "pagination": {
+                    "current_page": page,
+                    "total_pages": total_pages, 
+                    "page_size": page_size,
+                    "total_tasks": total_feeds,
+                    "has_more": has_more_pages,
+                },
+                "result": {
+                    "page_refreshed_count": successful_refreshes,
+                    "page_failed_count": failed_refreshes,
+                    "page_completed_count": completed_tasks,
+                    "page_total_count": len(paginated_task_ids),
+                    "total_feeds": total_feeds,
+                    "summary": {
+                        "page_successful": successful_refreshes,
+                        "page_failed": failed_refreshes,
+                        "page_pending": len(paginated_task_ids) - completed_tasks,
                     },
-                }
+                },
+            }
 
-                # Include failed feeds details if any failed so far
-                if failed_feeds:
-                    progress_result["progress"]["failed_feeds"] = failed_feeds
+            # Include failed feeds details if any failed on this page
+            if failed_feeds:
+                result["result"]["failed_feeds"] = failed_feeds
+                # Summarize error categories for this page
+                error_categories = {}
+                for failed_feed in failed_feeds:
+                    category = failed_feed.get("category", "other")
+                    error_categories[category] = (
+                        error_categories.get(category, 0) + 1
+                    )
+                result["result"]["error_summary"] = error_categories
 
-                return progress_result
+            return result
         elif orchestration_result.state == "FAILURE":
             return {
                 "task_id": task_id,
                 "status": "failed",
-                "error": str(orchestration_result.info),
+                "error": "Background task failed",
                 "message": "Feed refresh failed. Please try again.",
             }
         else:

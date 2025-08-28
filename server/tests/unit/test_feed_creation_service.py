@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from app.services.feed_creation_service import FeedCreationService
 from app.schemas.rss_schemas import FeedResponse, ArticleCreate, FeedBase
-from app.core.custom_exceptions import ValidationError
+from app.core.custom_exceptions import ValidationError, FeedSubscriptionError, FeedValidationError, NotFoundError, FeedConnectionError
 
 
 @pytest.mark.unit
@@ -65,7 +65,7 @@ class TestFeedCreationService:
             # Mock that subscription already exists to trigger error
             existing_subscription = Mock()
             with patch('app.crud.crud_subscription.get_subscription_by_feed_id', return_value=existing_subscription):
-                with pytest.raises(ValueError, match="You are already subscribed to feed"):
+                with pytest.raises(FeedSubscriptionError, match="You are already subscribed to feed"):
                     await self.service.add_new_feed(url, folder_id, update_existing=False)
 
     @pytest.mark.asyncio
@@ -108,7 +108,7 @@ class TestFeedCreationService:
         folder_id = uuid4()
         
         with patch('app.crud.crud_folder.get_folder', return_value=None):
-            with pytest.raises(ValueError, match="Folder with ID .* not found"):
+            with pytest.raises(NotFoundError, match="Folder with ID .* not found"):
                 await self.service._validate_folder(folder_id)
 
     @pytest.mark.asyncio
@@ -156,7 +156,7 @@ class TestFeedCreationService:
             "content": None
         }
         
-        with pytest.raises(ValueError, match="Could not fetch feed content"):
+        with pytest.raises(FeedConnectionError, match="Could not fetch feed content"):
             await self.service._fetch_and_parse_feed(url)
 
     @pytest.mark.asyncio
@@ -190,7 +190,7 @@ class TestFeedCreationService:
         total_entries = 0
         url = "https://example.com/feed.xml"
         
-        with pytest.raises(ValueError, match="Feed appears to be broken: no entries found"):
+        with pytest.raises(FeedValidationError, match="Feed appears to be broken: no entries found"):
             await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     @pytest.mark.asyncio
@@ -202,7 +202,7 @@ class TestFeedCreationService:
         total_entries = 5  # But has entries
         url = "https://example.com/feed.xml"
         
-        with pytest.raises(ValueError, match="no valid articles found despite having entries"):
+        with pytest.raises(FeedValidationError, match="no valid articles found despite having entries"):
             await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     def test_extract_ttl_valid(self):

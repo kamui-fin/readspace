@@ -135,29 +135,6 @@ async def update_feed_metadata(
     return feed_db
 
 
-async def update_feed_error(
-    db: AsyncSession, *, feed_db: Feed, error_message: str
-) -> Feed:
-    """Update feed error information."""
-    # Note: Error tracking columns removed from model
-    # Only update last_fetched_at to indicate attempt was made
-    feed_db.last_fetched_at = datetime.now(timezone.utc)
-
-    db.add(feed_db)
-    await db.commit()
-    await db.refresh(feed_db)
-    return feed_db
-
-
-async def update_subscriber_count(
-    db: AsyncSession, *, feed_id: UUID, delta: int
-) -> Feed | None:
-    """Update subscriber count for a feed."""
-    # Note: Subscriber count column removed from model
-    # Subscriber tracking is now managed via FeedSubscription table count
-    feed_db = await get_feed_by_id(db, feed_id=feed_id)
-    return feed_db
-
 
 async def get_feeds_needing_refresh(
     db: AsyncSession, *, limit: int = 100
@@ -285,7 +262,7 @@ async def get_feeds_by_user(
         select(Feed, FeedSubscription)
         .join(FeedSubscription, Feed.id == FeedSubscription.feed_id)
         .filter(FeedSubscription.user_id == user_id)
-        .options(selectinload(Feed.tags))  # Eagerly load tags relationship
+        # Removed selectinload(Feed.tags) to prevent N+1 - tags not used in feed list
     )
 
     if folder_id:

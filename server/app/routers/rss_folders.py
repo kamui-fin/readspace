@@ -37,7 +37,7 @@ async def create_folder(
             user_id=current_user.sub,
             folder_name=folder_in.name,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
     except Exception as e:
         logger.error(
             "Unexpected error creating folder",
@@ -120,7 +120,7 @@ async def update_folder(
             user_id=current_user.sub,
             folder_id=folder_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
     except Exception as e:
         logger.error(
             "Unexpected error updating folder",
@@ -179,7 +179,7 @@ async def delete_folder(
             user_id=current_user.sub,
             folder_id=folder_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
     except Exception as e:
         logger.error(
             "Unexpected error deleting folder",
@@ -190,5 +190,5 @@ async def delete_folder(
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An unexpected error occurred while deleting the folder: {str(e)}",
+            detail="An unexpected error occurred while deleting the folder",
         )

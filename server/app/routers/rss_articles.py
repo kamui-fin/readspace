@@ -4,7 +4,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -27,12 +27,38 @@ router = APIRouter(prefix="/articles", tags=["RSS Articles"])
 # TODO: shouldn't this be in models?
 class SaveArticleRequest(BaseModel):
     url: HttpUrl
-    title: str | None = None
-    content: str | None = None  # Extracted HTML content from extension
-    metadata: dict[str, Any] | None = None
-    priority: str | None = None
-    tag_ids: list[UUID] | None = None
-    note: str | None = None
+    title: str | None = Field(None, max_length=1000)  # Reasonable title limit
+    content: str | None = Field(None, max_length=5_000_000)  # 5MB content limit to prevent abuse
+    metadata: dict[str, Any] | None = Field(None, max_length=50)  # Limit metadata keys to prevent abuse
+    priority: str | None = Field(None, max_length=20)  # Reasonable priority string limit
+    tag_ids: list[UUID] | None = Field(None, max_length=50)  # Limit number of tags
+    note: str | None = Field(None, max_length=10_000)  # 10k character note limit
+
+    @field_validator('metadata')
+    @classmethod
+    def validate_metadata(cls, v):
+        if v is None:
+            return v
+        
+        # Limit total metadata size by serialized JSON length
+        import json
+        serialized = json.dumps(v)
+        if len(serialized) > 100_000:  # 100KB limit for metadata JSON
+            raise ValueError("Metadata too large - maximum 100KB when serialized")
+        
+        # Prevent deeply nested objects to avoid DoS
+        def check_depth(obj, max_depth=10, current_depth=0):
+            if current_depth > max_depth:
+                raise ValueError("Metadata nesting too deep - maximum 10 levels")
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    check_depth(value, max_depth, current_depth + 1)
+            elif isinstance(obj, list):
+                for item in obj:
+                    check_depth(item, max_depth, current_depth + 1)
+        
+        check_depth(v)
+        return v
 
 
 @router.post("/save", response_model=ClippedArticleResponse)

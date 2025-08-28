@@ -28,20 +28,24 @@ class ArticleQueryBuilder:
             select(FeedArticle, UserArticleState)
             .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
             .outerjoin(
                 UserArticleState,
                 (UserArticleState.article_id == FeedArticle.id)
                 & (UserArticleState.user_id == self.user_id),
             )
+            .filter(FeedSubscription.user_id == self.user_id)
         )
         count_stmt = (
             select(func.count(FeedArticle.id))
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
             .outerjoin(
                 UserArticleState,
                 (UserArticleState.article_id == FeedArticle.id)
                 & (UserArticleState.user_id == self.user_id),
             )
+            .filter(FeedSubscription.user_id == self.user_id)
         )
         return stmt, count_stmt
 
@@ -57,25 +61,9 @@ class ArticleQueryBuilder:
         self, stmt: Select, count_stmt: Select, folder_id: UUID
     ) -> tuple[Select, Select]:
         """Apply folder filter to queries."""
-        stmt = (
-            stmt.join(Feed, FeedArticle.feed_id == Feed.id)
-            .join(
-                FeedSubscription,
-                (FeedSubscription.feed_id == Feed.id)
-                & (FeedSubscription.user_id == self.user_id),
-            )
-            .filter(FeedSubscription.folder_id == folder_id)
-        )
-
-        count_stmt = (
-            count_stmt.join(Feed, FeedArticle.feed_id == Feed.id)
-            .join(
-                FeedSubscription,
-                (FeedSubscription.feed_id == Feed.id)
-                & (FeedSubscription.user_id == self.user_id),
-            )
-            .filter(FeedSubscription.folder_id == folder_id)
-        )
+        # FeedSubscription join is already done in build_base_query, just add filter
+        stmt = stmt.filter(FeedSubscription.folder_id == folder_id)
+        count_stmt = count_stmt.filter(FeedSubscription.folder_id == folder_id)
         return stmt, count_stmt
 
     def apply_read_status_filter(
@@ -158,17 +146,7 @@ class ArticleQueryBuilder:
         folder_joined: bool = False,
     ) -> tuple[Select, Select]:
         """Apply feed favorite filter to queries."""
-        if not folder_joined:  # Only join FeedSubscription if we haven't already
-            stmt = stmt.join(Feed, FeedArticle.feed_id == Feed.id).join(
-                FeedSubscription,
-                (FeedSubscription.feed_id == Feed.id)
-                & (FeedSubscription.user_id == self.user_id),
-            )
-            count_stmt = count_stmt.join(Feed, FeedArticle.feed_id == Feed.id).join(
-                FeedSubscription,
-                (FeedSubscription.feed_id == Feed.id)
-                & (FeedSubscription.user_id == self.user_id),
-            )
+        # FeedSubscription join is already done in build_base_query, just add filter
         stmt = stmt.filter(FeedSubscription.is_favorite == feed_is_favorite)
         count_stmt = count_stmt.filter(FeedSubscription.is_favorite == feed_is_favorite)
         return stmt, count_stmt

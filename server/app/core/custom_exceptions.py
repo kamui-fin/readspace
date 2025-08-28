@@ -58,6 +58,24 @@ class FeedParsingError(ExternalServiceError):
     pass
 
 
+class FeedConnectionError(ExternalServiceError):
+    """Raised when feed URL cannot be reached"""
+
+    pass
+
+
+class FeedValidationError(ValidationError):
+    """Raised when feed content is invalid"""
+
+    pass
+
+
+class FeedSubscriptionError(DuplicateResourceError):
+    """Raised when feed subscription conflicts occur"""
+
+    pass
+
+
 class StorageError(ExternalServiceError):
     """Raised when file storage operations fail"""
 
