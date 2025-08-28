@@ -34,12 +34,17 @@ export function LoginForm({
     const supabase = createClient()
 
     const signInAction = async (values: LoginFormBody) => {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error, data } = await supabase.auth.signInWithPassword({
             email: values.email,
             password: values.password,
         })
 
         if (error) throw error
+        
+        // Get username from email (part before @)
+        const username = data?.user?.email?.split('@')[0] || 'there'
+        
+        toast.success(`Welcome back, ${username}!`)
         router.push("/")
     }
 
@@ -72,7 +77,6 @@ export function LoginForm({
         onSubmit: async (values) => {
             try {
                 await signInAction(values)
-                toast.success("Successfully logged in!")
             } catch (error: unknown) {
                 toast.error(
                     error instanceof Error

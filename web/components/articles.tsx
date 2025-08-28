@@ -754,12 +754,14 @@ export function ArticlesView({
                         </div>
                         <div 
                             id="articles-scroll-container"
-                            className="flex-1 overflow-auto"
+                            className="flex-1 overflow-auto min-h-0"
+                            style={{ height: '100%' }}
                         >
                             <InfiniteScroll
                                 dataLength={filteredArticles.length}
                                 next={fetchMoreArticles}
                                 hasMore={!!hasNextPage}
+                                threshold={150}
                                 loader={
                                     <div className="flex items-center justify-center py-8">
                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -1239,7 +1241,7 @@ function ArticleContentView({
                         }}
                     />
                 )}
-                {article.content && (
+                {article.content ? (
                     <div
                         ref={contentRef}
                         className="article-content prose prose-lg dark:prose-invert max-w-none 
@@ -1253,8 +1255,31 @@ function ArticleContentView({
                             wordWrap: "break-word",
                         }}
                     />
+                ) : (
+                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                        <div className="mx-auto max-w-md">
+                            <p className="text-muted-foreground">
+                                This article doesn't have any content available.
+                            </p>
+                        </div>
+                    </div>
                 )}
             </div>
+            
+            {/* Visit Website button at the bottom */}
+            {article.link && (
+                <div className="flex justify-center mt-8 pt-6 border-t">
+                    <Button
+                        variant="outline"
+                        size="lg"
+                        onClick={() => window.open(article.link, '_blank', 'noopener,noreferrer')}
+                        className="inline-flex items-center gap-2"
+                    >
+                        <Globe className="h-4 w-4" />
+                        Visit Website
+                    </Button>
+                </div>
+            )}
         </article>
     )
 }
@@ -1348,9 +1373,9 @@ function ArticleItem({
                                     className="h-3 w-3 shrink-0 rounded"
                                     onError={() => setFeedImageError(true)}
                                 />
-                            ) : article.feed?.image_url ? (
+                            ) : (
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
-                            ) : null}
+                            )}
                             {article.article_type !== "clipped" && (
                                 <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
                                     {article.feed?.title || "Unknown Source"}

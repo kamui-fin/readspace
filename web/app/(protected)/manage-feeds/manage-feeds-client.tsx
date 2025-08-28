@@ -97,9 +97,6 @@ function ManageFeedsPageSkeleton() {
                             <TableHead className="hidden md:table-cell">
                                 <Skeleton className="h-4 w-16" />
                             </TableHead>
-                            <TableHead className="hidden lg:table-cell">
-                                <Skeleton className="h-4 w-12" />
-                            </TableHead>
                             <TableHead className="hidden lg:table-cell text-center">
                                 <Skeleton className="h-4 w-16 mx-auto" />
                             </TableHead>
@@ -129,23 +126,13 @@ function ManageFeedsPageSkeleton() {
                                 <TableCell className="hidden md:table-cell">
                                     <Skeleton className="h-8 w-32" />
                                 </TableCell>
-                                <TableCell className="hidden lg:table-cell">
-                                    <div className="flex gap-1">
-                                        <Skeleton className="h-5 w-12 rounded-full" />
-                                        <Skeleton className="h-5 w-16 rounded-full" />
-                                    </div>
-                                </TableCell>
                                 <TableCell className="hidden lg:table-cell text-center">
                                     <div className="flex justify-center">
                                         <Skeleton className="h-6 w-16 rounded-full" />
                                     </div>
                                 </TableCell>
                                 <TableCell className="hidden md:table-cell text-right">
-                                    <div className="space-y-1">
-                                        <Skeleton className="h-3 w-20 ml-auto" />
-                                        <Skeleton className="h-3 w-24 ml-auto" />
-                                        <Skeleton className="h-3 w-16 ml-auto" />
-                                    </div>
+                                    <Skeleton className="h-3 w-20 ml-auto" />
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Skeleton className="h-8 w-8 ml-auto rounded-md" />
@@ -285,18 +272,13 @@ export default function ManageFeedsPageClient() {
 
     const handleChangeFolder = (feedId: string, newFolderId: string | null) => {
         if (!newFolderId) return
-        updateFeedMutation.mutate(
-            {
-                feedId,
-                data: {
-                    folder_id: newFolderId === "none" ? undefined : newFolderId,
-                },
+        updateFeedMutation.mutate({
+            feedId,
+            data: {
+                folder_id: newFolderId === "none" ? undefined : newFolderId,
             },
-            {
-                onSuccess: () => toast.success("Feed folder updated."),
-                onError: () => toast.error("Failed to update feed folder."),
-            }
-        )
+            silent: false, // Use built-in toast notifications
+        })
     }
 
     const handleDeleteSelected = () => {
@@ -427,14 +409,11 @@ export default function ManageFeedsPageClient() {
                             <TableHead className="hidden md:table-cell">
                                 Folder
                             </TableHead>
-                            <TableHead className="hidden lg:table-cell">
-                                Tags
-                            </TableHead>
                             <TableHead className="hidden lg:table-cell text-center">
                                 Status
                             </TableHead>
                             <TableHead className="hidden md:table-cell text-right">
-                                Last Active
+                                Last Post
                             </TableHead>
                             {/* <TableHead className="hidden xl:table-cell text-right">Frequency</TableHead> */}
                             <TableHead className="w-[100px] text-right">
@@ -446,7 +425,7 @@ export default function ManageFeedsPageClient() {
                         {filteredFeeds.length === 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={8}
+                                    colSpan={6}
                                     className="text-center h-24"
                                 >
                                     No feeds match your criteria.
@@ -529,24 +508,6 @@ export default function ManageFeedsPageClient() {
                                             </SelectContent>
                                         </Select>
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell">
-                                        {(feed.tags || []).length > 0 ? (
-                                            (feed.tags || []).map((tag) => (
-                                                <Badge
-                                                    key={tag.id}
-                                                    variant="outline"
-                                                    className="mr-1 mb-1 text-xs"
-                                                >
-                                                    {tag.name}
-                                                </Badge>
-                                            ))
-                                        ) : (
-                                            <span className="text-xs text-muted-foreground">
-                                                No tags
-                                            </span>
-                                        )}
-                                        {/* TODO: Add/Edit Tags Button */}
-                                    </TableCell>
                                     <TableCell className="hidden lg:table-cell text-center">
                                         {dead ? (
                                             <Badge
@@ -572,10 +533,8 @@ export default function ManageFeedsPageClient() {
                                         )}
                                     </TableCell>
                                     <TableCell className="hidden md:table-cell text-right text-xs">
-                                        <div>{getLastUpdateTime(feed)}</div>
-                                        {feed.last_article_published_at && (
-                                            <div className="text-muted-foreground/80">
-                                                Last post:{" "}
+                                        {feed.last_article_published_at ? (
+                                            <div className="text-muted-foreground">
                                                 {formatDistanceToNow(
                                                     parseISO(
                                                         feed.last_article_published_at
@@ -583,13 +542,9 @@ export default function ManageFeedsPageClient() {
                                                     { addSuffix: true }
                                                 )}
                                             </div>
-                                        )}
-                                        {feed.last_error_message && (
-                                            <div
-                                                className="text-destructive/80"
-                                                title={feed.last_error_message}
-                                            >
-                                                Error: {getLastErrorTime(feed)}
+                                        ) : (
+                                            <div className="text-muted-foreground">
+                                                No posts yet
                                             </div>
                                         )}
                                     </TableCell>
@@ -697,18 +652,12 @@ export default function ManageFeedsPageClient() {
                                             data: {
                                                 title: editFeedTitle.trim(),
                                             },
+                                            silent: false, // Use built-in toast notifications
                                         },
                                         {
                                             onSuccess: () => {
-                                                toast.success(
-                                                    "Feed title updated."
-                                                )
                                                 setIsEditModalOpen(false)
                                             },
-                                            onError: () =>
-                                                toast.error(
-                                                    "Failed to update feed title."
-                                                ),
                                         }
                                     )
                                 }}
@@ -815,11 +764,8 @@ export default function ManageFeedsPageClient() {
                             <Button
                                 variant="destructive"
                                 onClick={() => {
-                                    deleteFeedMutation.mutate({ feedId: currentFeed.id, silent: true }, {
+                                    deleteFeedMutation.mutate({ feedId: currentFeed.id, silent: false }, {
                                         onSuccess: () => {
-                                            toast.success(
-                                                `Feed "${currentFeed.title}" deleted.`
-                                            )
                                             setIsDeleteConfirmModalOpen(false)
                                             if (
                                                 selectedFeedIds.includes(
@@ -836,11 +782,7 @@ export default function ManageFeedsPageClient() {
                                             }
                                             setCurrentFeed(null) // Clear current feed after deletion
                                         },
-                                        onError: (err: any) => {
-                                            toast.error(
-                                                err.message ||
-                                                    `Failed to delete feed "${currentFeed.title}".`
-                                            )
+                                        onError: () => {
                                             setIsDeleteConfirmModalOpen(false)
                                         },
                                     })

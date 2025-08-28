@@ -3,20 +3,45 @@
 from typing import Any
 from urllib.parse import urlparse
 
-from app.models.rss_models import ClippedArticle, Feed, FeedArticle
+from app.models.rss_models import ClippedArticle, Feed, FeedArticle, UserArticleState
 from app.schemas.rss_schemas import ArticleResponse
 
 
 class ArticleTransformer:
     """Transforms articles between different representations."""
 
-    def feed_to_unified(self, feed_article: FeedArticle) -> ArticleResponse:
+    def feed_to_unified(
+        self, feed_article: FeedArticle | tuple[FeedArticle, UserArticleState]
+    ) -> ArticleResponse:
         """Convert FeedArticle to unified ArticleResponse."""
-        content = feed_article.content
-        feed = feed_article.feed
+        # Handle both single FeedArticle and tuple of (FeedArticle, UserArticleState)
+        if isinstance(feed_article, tuple):
+            article, user_state = feed_article
+            # Handle case where user_state is None (from LEFT OUTER JOIN)
+            if user_state is not None:
+                is_read = user_state.is_read
+                is_read_later = user_state.is_read_later
+                is_favorite = user_state.is_favorite
+                read_at = user_state.read_at
+            else:
+                # Default values when no user state exists yet
+                is_read = False
+                is_read_later = False
+                is_favorite = False
+                read_at = None
+        else:
+            # Legacy single FeedArticle (for backward compatibility)
+            article = feed_article
+            is_read = getattr(feed_article, "is_read", False)
+            is_read_later = getattr(feed_article, "is_read_later", False)
+            is_favorite = getattr(feed_article, "is_favorite", False)
+            read_at = getattr(feed_article, "read_at", None)
+
+        content = article.content
+        feed = article.feed
 
         return ArticleResponse(
-            id=feed_article.id,
+            id=article.id,
             title=content.title if content else None,
             link=content.link if content else None,
             description=content.description if content else None,
@@ -27,15 +52,16 @@ class ArticleTransformer:
             estimated_read_time_minutes=content.estimated_read_time_minutes
             if content
             else None,
-            is_read=feed_article.is_read,
-            is_read_later=feed_article.is_read_later,
-            is_favorite=feed_article.is_favorite,
-            feed_id=feed_article.feed_id,
-            guid=getattr(feed_article, "guid", None),
-            folder_id=getattr(feed, "folder_id", None) if feed else None,
+            is_read=is_read,
+            is_read_later=is_read_later,
+            is_favorite=is_favorite,
+            read_at=read_at,
+            feed_id=article.feed_id,
+            guid=getattr(article, "guid", None),
+            folder_id=None,  # Will be determined from feed subscription
             article_type="feed",
-            created_at=feed_article.created_at,
-            updated_at=feed_article.updated_at,
+            created_at=article.created_at,
+            updated_at=article.updated_at,
             feed=self._extract_feed_info(feed),
         )
 
@@ -122,6 +148,22 @@ class ArticleTransformer:
             return parsed.netloc
         except Exception:
             return None
+
+    def to_unified(self, article: Any) -> ArticleResponse:
+        """Convert any article type to unified ArticleResponse."""
+        # Check the actual type to determine which transformer to use
+        if isinstance(article, tuple):
+            # This is a tuple of (FeedArticle, UserArticleState)
+            return self.feed_to_unified(article)
+        elif hasattr(article, "feed"):
+            # This is a FeedArticle (legacy format)
+            return self.feed_to_unified(article)
+        elif hasattr(article, "content") and not hasattr(article, "feed"):
+            # This is a ClippedArticle (has content but no feed)
+            return self.clipped_to_unified(article)
+        else:
+            # Unknown type, try feed_to_unified as fallback
+            return self.feed_to_unified(article)
 
     def _extract_feed_info(self, feed: Feed | None) -> dict[str, Any] | None:
         """Extract feed information for response."""

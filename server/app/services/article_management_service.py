@@ -13,7 +13,6 @@ from app.crud.crud_article import (
     count_unread_articles_by_folder,
     get_article,
     get_articles_by_user,
-    get_read_later_articles,
     get_recently_read_articles,
     get_unread_counts_by_folder,
 )
@@ -102,7 +101,17 @@ class ArticleManagementService:
         )
 
         if article:
-            return self.transformer.feed_to_unified(article)
+            # Handle both FeedArticle tuples and ClippedArticle types
+            from app.models.rss_models import ClippedArticle, FeedArticle
+
+            if isinstance(article, ClippedArticle):
+                return self.transformer.clipped_to_unified(article)
+            elif isinstance(article, tuple):
+                # This is a (FeedArticle, UserArticleState) tuple
+                return self.transformer.feed_to_unified(article)
+            elif isinstance(article, FeedArticle):
+                # Legacy single FeedArticle (shouldn't happen with new schema but kept for safety)
+                return self.transformer.feed_to_unified(article)
         return None
 
     async def get_unread_articles(
@@ -147,7 +156,10 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles marked as read later (includes both RSS feed and clipped articles)."""
-        articles, total_count = await crud_unified_articles.get_unified_articles_by_user(
+        (
+            articles,
+            total_count,
+        ) = await crud_unified_articles.get_unified_articles_by_user(
             db=self.db,
             user_id=self.user_id,
             is_read_later=True,
@@ -212,7 +224,7 @@ class ArticleManagementService:
         )
 
         if updated_article:
-            return self.transformer.feed_to_unified(updated_article)
+            return self.transformer.to_unified(updated_article)
         return None
 
     async def get_unread_counts_by_folder(self) -> dict[str, int]:

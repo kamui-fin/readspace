@@ -8,17 +8,14 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 export const dynamic = 'force-dynamic'
 
 export default async function TodayPage() {
-    const today = new Date()
-    const startOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate()
-    )
-    const endOfDay = new Date(
-        today.getFullYear(),
-        today.getMonth(),
-        today.getDate() + 1
-    )
+    const now = new Date()
+    // Set to start of today in UTC
+    const startOfDay = new Date(now)
+    startOfDay.setUTCHours(0, 0, 0, 0)
+    
+    // Set to end of today in UTC (23:59:59.999)
+    const endOfDay = new Date(now)
+    endOfDay.setUTCHours(23, 59, 59, 999)
 
     const publishedSince = startOfDay.toISOString()
     const publishedUntil = endOfDay.toISOString()

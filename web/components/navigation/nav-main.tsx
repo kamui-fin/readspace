@@ -170,6 +170,7 @@ function FeedContextMenu({
                         onSuccess: () => {
                             setIsRenameModalOpen(false)
                             setNewName("")
+                            toast.success("Folder renamed successfully!")
                         },
                     }
                 )
@@ -208,8 +209,11 @@ function FeedContextMenu({
         }
         
         try {
-            const deleteMutation = isFolder ? deleteFolder : deleteFeed
-            await deleteMutation.mutateAsync(itemId)
+            if (isFolder) {
+                await deleteFolder.mutateAsync(itemId)
+            } else {
+                await deleteFeed.mutateAsync({ feedId: itemId })
+            }
             setIsDeleteModalOpen(false)
         } catch (error: unknown) {
             // Error toast is handled by the mutation
@@ -716,6 +720,7 @@ export function FeedsNavigation() {
     )
     const [folderName, setFolderName] = useState("")
     const [feedUrl, setFeedUrl] = useState("")
+    const [feedError, setFeedError] = useState<string | null>(null)
     const queryClient = useQueryClient()
 
     // Type assertions for API data
@@ -848,6 +853,7 @@ export function FeedsNavigation() {
 
     const handleAddFeed = (folderId: string) => {
         setSelectedFolderId(folderId)
+        setFeedError(null) // Clear any previous errors
         setIsFeedModalOpen(true)
     }
 
@@ -869,18 +875,38 @@ export function FeedsNavigation() {
     // Add Feed Modal
     const handleFeedModalSubmit = (e: React.FormEvent) => {
         e.preventDefault()
+        setFeedError(null) // Clear any previous errors
+        
         if (feedUrl.trim() && selectedFolderId) {
             createFeed.mutate(
-                { url: feedUrl.trim(), folder_id: selectedFolderId },
+                { url: feedUrl.trim(), folder_id: selectedFolderId, silent: true },
                 {
                     onSuccess: () => {
                         setIsFeedModalOpen(false)
                         setFeedUrl("")
                         setSelectedFolderId(null)
+                        setFeedError(null)
                         toast.success("Feed added successfully!")
                     },
-                    onError: (error) => {
-                        toast.error(error.message || "Failed to add feed.")
+                    onError: (error: any) => {
+                        // Debug: log the error structure to understand what we're receiving
+                        console.error("Feed creation error:", error)
+                        
+                        // Extract error message from various possible structures
+                        let errorMessage = "Failed to add feed."
+                        if (error?.message) {
+                            errorMessage = error.message
+                        } else if (error?.detail) {
+                            errorMessage = error.detail
+                        } else if (typeof error === 'string') {
+                            errorMessage = error
+                        } else if (error?.response?.data?.detail) {
+                            errorMessage = error.response.data.detail
+                        } else if (error?.response?.data?.message) {
+                            errorMessage = error.response.data.message
+                        }
+                        
+                        setFeedError(errorMessage)
                     },
                     onSettled: () => {
                         queryClient.invalidateQueries({ queryKey: ["feeds"] })
@@ -939,7 +965,12 @@ export function FeedsNavigation() {
             {/* Modal for adding folder */}
             <Dialog
                 open={isFolderModalOpen}
-                onOpenChange={setIsFolderModalOpen}
+                onOpenChange={(open) => {
+                    setIsFolderModalOpen(open)
+                    if (!open) {
+                        setFolderName("")
+                    }
+                }}
             >
                 <DialogContent>
                     <DialogHeader>
@@ -976,7 +1007,14 @@ export function FeedsNavigation() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isFeedModalOpen} onOpenChange={setIsFeedModalOpen}>
+            <Dialog open={isFeedModalOpen} onOpenChange={(open) => {
+                setIsFeedModalOpen(open)
+                if (!open) {
+                    setFeedError(null) // Clear errors when closing
+                    setFeedUrl("")
+                    setSelectedFolderId(null)
+                }
+            }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Add New Feed</DialogTitle>
@@ -988,6 +1026,11 @@ export function FeedsNavigation() {
                             value={feedUrl}
                             onChange={(e) => setFeedUrl(e.target.value)}
                         />
+                        {feedError && (
+                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                                <p className="text-sm text-red-600">{feedError}</p>
+                            </div>
+                        )}
                         <DialogFooter className="mt-4 flex gap-2">
                             <Button
                                 type="button"

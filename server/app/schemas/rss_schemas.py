@@ -102,8 +102,8 @@ class FeedResponse(FeedBase):
     last_modified_header: str | None = None
     etag_header: str | None = None
     last_article_published_at: datetime | None = None
-    fetch_error_count: int
-    last_error_message: str | None = None
+    unread_count: int = 0
+    # Note: Error tracking fields removed from model
     created_at: datetime
     updated_at: datetime
 

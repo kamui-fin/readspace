@@ -464,6 +464,7 @@ export function useCreateFeed() {
             url: string
             folder_id?: string
             tag_ids?: string[]
+            silent?: boolean
         }) => ApiClient.rss.createFeed(feed),
         onMutate: async (newFeed) => {
             // Cancel any outgoing refetches
@@ -490,7 +491,9 @@ export function useCreateFeed() {
                     context.previousFeeds
                 )
             }
-            toast.error("Failed to add feed")
+            if (!newFeed.silent) {
+                toast.error("Failed to add feed")
+            }
         },
         onSuccess: (data, variables, context) => {
             // Success toast is handled by the component

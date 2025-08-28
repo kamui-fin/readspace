@@ -3,7 +3,19 @@
 # Import the Base from the central location
 from app.db.base_class import Base
 
-from .rss_models import Article, Feed, Folder, Tag
+from .rss_models import (
+    ArticleContent,
+    ClippedArticle,
+    Feed,
+    FeedArticle,
+    FeedSubscription,
+    Folder,
+    Tag,
+    UserArticleState,
+)
+
+# Backward compatibility alias
+Article = FeedArticle
 
 # Import all your model classes here to ensure they are registered with Base.metadata
 from .user_models import AuthUser, Profile

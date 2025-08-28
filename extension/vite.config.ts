@@ -36,6 +36,9 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: resolve(__dirname, 'index.html'),
         },
+        output: {
+          manualChunks: undefined, // Disable code splitting for service worker
+        }
       },
     },
     define: {

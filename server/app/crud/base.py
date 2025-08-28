@@ -1,6 +1,8 @@
 from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
+from sqlalchemy import update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -24,11 +26,15 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         return result.scalar_one_or_none()
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
+        """Create a new record using INSERT...RETURNING for optimal performance."""
         obj_in_data = obj_in.model_dump()
-        db_obj = self.model(**obj_in_data)
-        db.add(db_obj)
+
+        # Use INSERT...RETURNING to get the created object without refresh()
+        insert_stmt = insert(self.model).values(**obj_in_data)
+        result = await db.execute(insert_stmt.returning(self.model))
+        db_obj = result.scalar_one()
+
         await db.commit()
-        await db.refresh(db_obj)
         return db_obj
 
     async def update(
@@ -38,18 +44,27 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
     ) -> ModelType:
+        """Update a record using UPDATE...RETURNING for optimal performance."""
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
             update_data = obj_in.model_dump(exclude_unset=True)
 
-        for field, value in update_data.items():
-            setattr(db_obj, field, value)
+        if not update_data:  # No changes to make
+            return db_obj
 
-        db.add(db_obj)
+        # Use UPDATE...RETURNING to get the updated object without refresh()
+        update_stmt = (
+            update(self.model)
+            .where(self.model.id == db_obj.id)
+            .values(**update_data)
+            .returning(self.model)
+        )
+        result = await db.execute(update_stmt)
+        updated_obj = result.scalar_one()
+
         await db.commit()
-        await db.refresh(db_obj)
-        return db_obj
+        return updated_obj
 
     async def remove(self, db: AsyncSession, *, id: int) -> ModelType:
         obj = await self.get(db, id=id)

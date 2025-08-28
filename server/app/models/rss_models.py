@@ -1,5 +1,8 @@
+"""New feed models for the subscription-based architecture."""
+
 import uuid
 from datetime import datetime, timezone
+from uuid import UUID
 
 from sqlalchemy import (
     Boolean,
@@ -13,8 +16,9 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.dialects.postgresql import UUID as UUIDType
 from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
@@ -24,137 +28,17 @@ feed_tag_association = Table(
     Base.metadata,
     Column(
         "feed_id",
-        PGUUID(as_uuid=True),
+        UUIDType(as_uuid=True),
         ForeignKey("feeds.id", ondelete="CASCADE"),
         primary_key=True,
     ),
     Column(
         "tag_id",
-        PGUUID(as_uuid=True),
+        UUIDType(as_uuid=True),
         ForeignKey("tags.id", ondelete="CASCADE"),
         primary_key=True,
     ),
 )
-
-
-class Folder(Base):
-    __tablename__ = "folders"
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(255), nullable=False)
-    user_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-
-    feeds = relationship("Feed", back_populates="folder", cascade="all, delete-orphan")
-    # user = relationship("Profile", back_populates="folders") # Assuming Profile model has a 'folders' relationship
-
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_folder_user_name"),)
-
-
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(
-        String(100), nullable=False, index=True
-    )  # Consider uniqueness constraint per user
-    user_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-
-    feeds = relationship(
-        "Feed",
-        secondary=feed_tag_association,
-        back_populates="tags",
-        cascade="all, delete",
-    )
-    # user = relationship("Profile", back_populates="tags") # Assuming Profile model has a 'tags' relationship
-
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_tag_user_name"),)
-
-
-class Feed(Base):
-    __tablename__ = "feeds"
-
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-    folder_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("folders.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    url = Column(String(2048), nullable=False, index=True)  # Unique per user_id
-    title = Column(String(500))
-    description = Column(Text)
-    link = Column(String(2048))  # Website link
-    language = Column(String(50))
-    image_url = Column(String(2048))  # From feed <image>
-
-    ttl = Column(Integer)  # Cache Time-To-Live in minutes
-    skip_hours = Column(ARRAY(Integer))  # List of hours to skip
-    skip_days = Column(
-        ARRAY(String)
-    )  # List of days to skip (e.g., ['Saturday', 'Sunday'])
-
-    last_fetched_at = Column(DateTime(timezone=True))
-    last_modified_header = Column(String(255))  # HTTP Last-Modified header value
-    etag_header = Column(String(255))  # HTTP ETag header value
-    last_article_published_at = Column(
-        DateTime(timezone=True), nullable=True
-    )  # Timestamp of the newest article from this feed
-
-    is_favorite = Column(Boolean, default=False, nullable=False)
-
-    fetch_error_count = Column(Integer, default=0)  # To track consecutive fetch errors
-    last_error_message = Column(Text)
-
-    created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-
-    folder = relationship("Folder", back_populates="feeds")
-    tags = relationship("Tag", secondary=feed_tag_association, back_populates="feeds")
-    feed_articles = relationship(
-        "FeedArticle", back_populates="feed", cascade="all, delete-orphan"
-    )
-    # user = relationship("Profile", back_populates="feeds") # Assuming Profile model has a 'feeds' relationship
-
-    __table_args__ = (UniqueConstraint("user_id", "url", name="uq_feed_user_url"),)
 
 
 class ArticleContent(Base):
@@ -162,7 +46,7 @@ class ArticleContent(Base):
 
     __tablename__ = "article_contents"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Core article data
     title = Column(Text)
@@ -194,45 +78,217 @@ class ArticleContent(Base):
     clipped_articles = relationship("ClippedArticle", back_populates="content")
 
 
-class FeedArticle(Base):
-    """RSS feed articles - links feeds to article content"""
+class Feed(Base):
+    """Global feed table - shared across all users."""
 
-    __tablename__ = "feed_articles"
+    __tablename__ = "feeds"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    feed_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("feeds.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+    id: Column[UUID] = Column(
+        UUIDType(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
     )
-    content_id = Column(
-        PGUUID(as_uuid=True),
-        ForeignKey("article_contents.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
+    url: Column[str] = Column(String(2048), nullable=False, unique=True)
+    title: Column[str | None] = Column(String(500), nullable=True)
+    description: Column[str | None] = Column(Text, nullable=True)
+    link: Column[str | None] = Column(String(2048), nullable=True)
+    language: Column[str | None] = Column(String(50), nullable=True)
+    image_url: Column[str | None] = Column(String(2048), nullable=True)
+
+    # RSS-specific metadata
+    ttl: Column[int | None] = Column(Integer, nullable=True)
+    skip_hours: Column[list[int] | None] = Column(ARRAY(Integer), nullable=True)
+    skip_days: Column[list[str] | None] = Column(ARRAY(String), nullable=True)
+
+    # Feed fetching state
+    last_fetched_at: Column[datetime | None] = Column(
+        DateTime(timezone=True), nullable=True
     )
-    user_id = Column(
-        PGUUID(as_uuid=True),
+    last_modified_header: Column[str | None] = Column(String(255), nullable=True)
+    etag_header: Column[str | None] = Column(String(255), nullable=True)
+    last_article_published_at: Column[datetime | None] = Column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Relationships
+    subscriptions = relationship(
+        "FeedSubscription", back_populates="feed", cascade="all, delete-orphan"
+    )
+    articles = relationship(
+        "FeedArticle", back_populates="feed", cascade="all, delete-orphan"
+    )
+    tags = relationship("Tag", secondary=feed_tag_association, back_populates="feeds")
+
+
+class Tag(Base):
+    __tablename__ = "tags"
+
+    id: Column[UUID] = Column(
+        UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    name: Column[str] = Column(String(100), nullable=False, index=True)
+    user_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
-    )  # Denormalized for easier querying
+    )
 
-    guid = Column(
-        String(1024), nullable=False, index=True
-    )  # Unique identifier from feed
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
+    updated_at: Column[datetime] = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
 
-    # User interaction state
-    is_read = Column(Boolean, default=False, nullable=False, index=True)
-    read_at = Column(DateTime(timezone=True))  # Timestamp for "Recently Read"
-    is_read_later = Column(Boolean, default=False, nullable=False, index=True)
-    is_favorite = Column(
-        Boolean, default=False, nullable=False, index=True
-    )  # Article-level favorite
+    # Relationships
+    feeds = relationship(
+        "Feed",
+        secondary=feed_tag_association,
+        back_populates="tags",
+        cascade="all, delete",
+    )
 
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_tag_user_name"),)
+
+
+class FeedSubscription(Base):
+    """User-specific feed subscription table."""
+
+    __tablename__ = "feed_subscriptions"
+
+    id: Column[UUID] = Column(
+        UUIDType(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    user_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    feed_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("feeds.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    folder_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # User-specific feed settings
+    is_favorite: Column[bool] = Column(Boolean, nullable=False, default=False)
+    custom_title: Column[str | None] = Column(String(500), nullable=True)
+
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Relationships
+    feed = relationship("Feed", back_populates="subscriptions")
+    user = relationship("Profile", foreign_keys=[user_id])
+    folder = relationship("Folder", foreign_keys=[folder_id])
+
+
+class FeedArticle(Base):
+    """New feed articles table without user-specific fields."""
+
+    __tablename__ = "feed_articles"
+
+    id: Column[UUID] = Column(
+        UUIDType(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    feed_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("feeds.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    content_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("article_contents.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    guid: Column[str] = Column(String(1024), nullable=False)
+
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Relationships
+    feed = relationship("Feed", back_populates="articles")
+    content = relationship("ArticleContent", foreign_keys=[content_id])
+    user_states = relationship(
+        "UserArticleState", back_populates="article", cascade="all, delete-orphan"
+    )
+
+
+class UserArticleState(Base):
+    """User-specific article interaction states."""
+
+    __tablename__ = "user_article_states"
+
+    id: Column[UUID] = Column(
+        UUIDType(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    user_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    article_id: Column[UUID] = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("feed_articles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+
+    # User interaction states
+    is_read: Column[bool] = Column(Boolean, nullable=False, default=False)
+    read_at: Column[datetime | None] = Column(DateTime(timezone=True), nullable=True)
+    is_read_later: Column[bool] = Column(Boolean, nullable=False, default=False)
+    is_favorite: Column[bool] = Column(Boolean, nullable=False, default=False)
+
+    # User-specific metadata
+    user_note: Column[str | None] = Column(Text, nullable=True)
+    user_tags: Column[list[str] | None] = Column(ARRAY(String), nullable=True)
+
+    created_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    updated_at: Column[datetime] = Column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    # Relationships
+    user = relationship("Profile", foreign_keys=[user_id])
+    article = relationship("FeedArticle", back_populates="user_states")
+
+
+class Folder(Base):
+    __tablename__ = "folders"
+
+    id = Column(UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False)
+    user_id = Column(
+        UUIDType(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     created_at = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
     )
     updated_at = Column(
         DateTime(timezone=True),
@@ -240,13 +296,7 @@ class FeedArticle(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    # Relationships
-    feed = relationship("Feed", back_populates="feed_articles")
-    content = relationship("ArticleContent", back_populates="feed_articles")
-
-    __table_args__ = (
-        UniqueConstraint("feed_id", "guid", name="uq_feed_article_feed_guid"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_folder_user_name"),)
 
 
 class ClippedArticle(Base):
@@ -254,15 +304,15 @@ class ClippedArticle(Base):
 
     __tablename__ = "clipped_articles"
 
-    id = Column(PGUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4)
     content_id = Column(
-        PGUUID(as_uuid=True),
+        UUIDType(as_uuid=True),
         ForeignKey("article_contents.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
     user_id = Column(
-        PGUUID(as_uuid=True),
+        UUIDType(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
         index=True,

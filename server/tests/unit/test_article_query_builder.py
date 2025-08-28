@@ -1,187 +1,292 @@
-"""Unit tests for ArticleQueryBuilder."""
-import pytest
+"""Tests for article query builder functionality."""
+
 from datetime import datetime, timezone
 from uuid import uuid4
 
+import pytest
 from sqlalchemy import select
-from app.crud.article_query_builder import ArticleQueryBuilder
-from app.models.rss_models import Article, ArticleContent, Feed
+from sqlalchemy.sql import Select
+
+from app.crud.query_builders.article_query_builder import ArticleQueryBuilder
+from app.models.rss_models import ClippedArticle, FeedArticle
 
 
 @pytest.mark.unit
 class TestArticleQueryBuilder:
-    """Test cases for ArticleQueryBuilder."""
-
     def setup_method(self):
-        """Set up test fixtures."""
+        self.builder = ArticleQueryBuilder()
         self.user_id = uuid4()
-        self.builder = ArticleQueryBuilder(user_id=self.user_id)
+        self.feed_id = uuid4()
+        self.folder_id = uuid4()
+        self.test_time = datetime.now(timezone.utc)
 
-    def test_build_base_query(self):
-        """Test building base query and count query."""
-        stmt, count_stmt = self.builder.build_base_query()
+    def test_build_feed_article_query_basic(self):
+        """Test building basic feed article query."""
+        filters = {}
+        query = self.builder.build_feed_article_query(self.user_id, filters)
         
-        # Basic checks that queries are built correctly
-        assert stmt is not None
-        assert count_stmt is not None
-        
-        # Check that user_id filter is applied
-        # Note: In a real test environment, you'd want to verify the SQL structure
-        # but for unit tests, we're focusing on the method logic
+        assert isinstance(query, Select)
+        # Query should filter by user_id
+        query_str = str(query)
+        assert "feed_subscriptions.user_id = " in query_str
 
-    def test_apply_feed_filter(self):
-        """Test applying feed ID filter."""
-        stmt, count_stmt = self.builder.build_base_query()
+    def test_build_feed_article_query_with_feed_ids(self):
+        """Test building feed article query with feed_ids filter."""
         feed_ids = [uuid4(), uuid4()]
+        filters = {"feed_ids": feed_ids}
         
-        filtered_stmt, filtered_count = self.builder.apply_feed_filter(stmt, count_stmt, feed_ids)
+        query = self.builder.build_feed_article_query(self.user_id, filters)
         
-        # Verify that the method returns statements (exact SQL verification would require more setup)
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        # Should contain feed_id filter
+        query_str = str(query)
+        assert "feed_id" in query_str.lower()
 
-    def test_apply_folder_filter(self):
-        """Test applying folder filter."""
-        stmt, count_stmt = self.builder.build_base_query()
-        folder_id = uuid4()
+    def test_build_feed_article_query_with_folder_id(self):
+        """Test building feed article query with folder_id filter."""
+        filters = {"folder_id": self.folder_id}
         
-        filtered_stmt, filtered_count = self.builder.apply_folder_filter(stmt, count_stmt, folder_id)
+        query = self.builder.build_feed_article_query(self.user_id, filters)
         
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        # Should contain join with Feed table
+        query_str = str(query)
+        assert "feed" in query_str.lower()
 
-    def test_apply_read_status_filter(self):
-        """Test applying read status filter."""
-        stmt, count_stmt = self.builder.build_base_query()
+    def test_build_feed_article_query_with_boolean_filters(self):
+        """Test building feed article query with boolean filters."""
+        filters = {
+            "is_read": True,
+            "is_read_later": False,
+            "is_favorite": True,
+            "feed_is_favorite": False,
+        }
         
-        # Test with is_read=True
-        filtered_stmt, filtered_count = self.builder.apply_read_status_filter(stmt, count_stmt, True)
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        query = self.builder.build_feed_article_query(self.user_id, filters)
         
-        # Test with is_read=False
-        filtered_stmt, filtered_count = self.builder.apply_read_status_filter(stmt, count_stmt, False)
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        query_str = str(query)
+        assert "is_read" in query_str.lower()
 
-    def test_apply_date_range_filter(self):
-        """Test applying date range filter."""
-        stmt, count_stmt = self.builder.build_base_query()
-        since_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
-        until_date = datetime(2023, 12, 31, tzinfo=timezone.utc)
+    def test_build_feed_article_query_with_date_filters(self):
+        """Test building feed article query with date range filters."""
+        filters = {
+            "published_since": self.test_time,
+            "published_until": self.test_time,
+        }
         
-        # Test with both dates
-        filtered_stmt, filtered_count = self.builder.apply_date_range_filter(
-            stmt, count_stmt, since_date, until_date
+        query = self.builder.build_feed_article_query(self.user_id, filters)
+        
+        # Should join with ArticleContent for published_at
+        query_str = str(query)
+        assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
+
+    def test_build_feed_article_query_with_search(self):
+        """Test building feed article query with search query."""
+        filters = {"search_query": "test search"}
+        
+        query = self.builder.build_feed_article_query(self.user_id, filters)
+        
+        # Should join with ArticleContent for search
+        query_str = str(query)
+        assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
+
+    def test_build_clipped_article_query_basic(self):
+        """Test building basic clipped article query."""
+        filters = {}
+        query = self.builder.build_clipped_article_query(self.user_id, filters)
+        
+        assert isinstance(query, Select)
+        # Should filter by user_id
+        query_str = str(query)
+        assert "clipped_articles.user_id = :user_id" in query_str
+
+    def test_build_clipped_article_query_with_filters(self):
+        """Test building clipped article query with various filters."""
+        filters = {
+            "is_read": True,
+            "is_read_later": False,
+            "is_favorite": True,
+            "published_since": self.test_time,
+            "published_until": self.test_time,
+            "search_query": "test search",
+        }
+        
+        query = self.builder.build_clipped_article_query(self.user_id, filters)
+        
+        query_str = str(query)
+        assert "is_read" in query_str.lower()
+
+    def test_apply_feed_article_filters_all_filters(self):
+        """Test applying all possible filters to feed article query."""
+        base_query = select(FeedArticle)
+        filters = {
+            "feed_ids": [uuid4()],
+            "folder_id": self.folder_id,
+            "is_read": True,
+            "is_read_later": False,
+            "is_favorite": True,
+            "feed_is_favorite": False,
+            "published_since": self.test_time,
+            "published_until": self.test_time,
+            "search_query": "test",
+        }
+        
+        result_query = self.builder._apply_feed_article_filters(base_query, filters)
+        
+        assert isinstance(result_query, Select)
+        query_str = str(result_query)
+        assert "feed_id" in query_str.lower()
+
+    def test_apply_clipped_article_filters_all_filters(self):
+        """Test applying all possible filters to clipped article query."""
+        base_query = select(ClippedArticle)
+        filters = {
+            "is_read": True,
+            "is_read_later": False,
+            "is_favorite": True,
+            "published_since": self.test_time,
+            "published_until": self.test_time,
+            "search_query": "test",
+        }
+        
+        result_query = self.builder._apply_clipped_article_filters(base_query, filters)
+        
+        assert isinstance(result_query, Select)
+        query_str = str(result_query)
+        assert "is_read" in query_str.lower()
+
+    def test_apply_feed_article_filters_none_values(self):
+        """Test that None filter values are properly ignored."""
+        base_query = select(FeedArticle)
+        filters = {
+            "is_read": None,
+            "is_read_later": None,
+            "is_favorite": None,
+            "feed_is_favorite": None,
+        }
+        
+        result_query = self.builder._apply_feed_article_filters(base_query, filters)
+        
+        # Query should be essentially unchanged (only user filter)
+        assert isinstance(result_query, Select)
+
+    def test_apply_clipped_article_filters_none_values(self):
+        """Test that None filter values are properly ignored for clipped articles."""
+        base_query = select(ClippedArticle)
+        filters = {
+            "is_read": None,
+            "is_read_later": None,
+            "is_favorite": None,
+        }
+        
+        result_query = self.builder._apply_clipped_article_filters(base_query, filters)
+        
+        # Query should be essentially unchanged
+        assert isinstance(result_query, Select)
+
+    def test_normalize_feed_article_query(self):
+        """Test normalizing feed article query for union."""
+        base_query = self.builder.build_feed_article_query(self.user_id, {})
+        normalized = self.builder._normalize_feed_article_query(base_query)
+        
+        assert isinstance(normalized, Select)
+        # Should select specific columns
+        query_str = str(normalized)
+        assert "feed_article" in query_str.lower() or "feedarticle" in query_str.lower()
+
+    def test_normalize_clipped_article_query(self):
+        """Test normalizing clipped article query for union."""
+        base_query = select(ClippedArticle)
+        normalized = self.builder._normalize_clipped_article_query(base_query)
+        
+        assert isinstance(normalized, Select)
+        # Should select specific columns
+        query_str = str(normalized)
+        assert "clipped" in query_str.lower()
+
+    def test_get_sort_column_published_at(self):
+        """Test getting sort column for published_at."""
+        from unittest.mock import MagicMock
+        
+        mock_table = MagicMock()
+        mock_table.c.published_at = "published_at_column"
+        
+        result = self.builder._get_sort_column(mock_table, "published_at")
+        assert result == "published_at_column"
+
+    def test_get_sort_column_title(self):
+        """Test getting sort column for title."""
+        from unittest.mock import MagicMock
+        
+        mock_table = MagicMock()
+        mock_table.c.title = "title_column"
+        
+        result = self.builder._get_sort_column(mock_table, "title")
+        assert result == "title_column"
+
+    def test_get_sort_column_created_at(self):
+        """Test getting sort column for created_at (maps to published_at)."""
+        from unittest.mock import MagicMock
+        
+        mock_table = MagicMock()
+        mock_table.c.published_at = "published_at_column"
+        
+        result = self.builder._get_sort_column(mock_table, "created_at")
+        assert result == "published_at_column"
+
+    def test_get_sort_column_default(self):
+        """Test getting sort column for unknown sort_by (defaults to published_at)."""
+        from unittest.mock import MagicMock
+        
+        mock_table = MagicMock()
+        mock_table.c.published_at = "published_at_column"
+        
+        result = self.builder._get_sort_column(mock_table, "unknown_column")
+        assert result == "published_at_column"
+
+    def test_build_count_query(self):
+        """Test building count query from base query."""
+        base_query = select(FeedArticle)
+        count_query = self.builder.build_count_query(base_query)
+        
+        assert isinstance(count_query, Select)
+        # Should contain count function
+        query_str = str(count_query)
+        assert "count" in query_str.lower()
+
+    def test_build_union_query_basic(self):
+        """Test building basic union query."""
+        feed_query = self.builder.build_feed_article_query(self.user_id, {})
+        clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
+        
+        union_query = self.builder.build_union_query(
+            feed_query, clipped_query, sort_by="published_at", sort_order="desc"
         )
-        assert filtered_stmt is not None
-        assert filtered_count is not None
         
-        # Test with only since date
-        filtered_stmt, filtered_count = self.builder.apply_date_range_filter(
-            stmt, count_stmt, published_since=since_date
-        )
-        assert filtered_stmt is not None
-        assert filtered_count is not None
-        
-        # Test with only until date
-        filtered_stmt, filtered_count = self.builder.apply_date_range_filter(
-            stmt, count_stmt, published_until=until_date
-        )
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        assert isinstance(union_query, Select)
 
-    def test_apply_search_filter(self):
-        """Test applying search filter."""
-        stmt, count_stmt = self.builder.build_base_query()
-        search_query = "python programming"
+    def test_build_union_query_with_pagination(self):
+        """Test building union query with pagination."""
+        feed_query = self.builder.build_feed_article_query(self.user_id, {})
+        clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
         
-        filtered_stmt, filtered_count = self.builder.apply_search_filter(stmt, count_stmt, search_query)
-        
-        assert filtered_stmt is not None
-        assert filtered_count is not None
-
-    def test_apply_sorting_default(self):
-        """Test applying default sorting."""
-        stmt, _ = self.builder.build_base_query()
-        
-        sorted_stmt = self.builder.apply_sorting(stmt)
-        
-        assert sorted_stmt is not None
-
-    def test_apply_sorting_custom(self):
-        """Test applying custom sorting."""
-        stmt, _ = self.builder.build_base_query()
-        
-        # Test different sort combinations
-        sort_combinations = [
-            ("published_at", "asc"),
-            ("created_at", "desc"),
-            ("read_at", "asc"),
-            ("title", "desc"),
-            ("invalid_field", "asc"),  # Should default to published_at
-        ]
-        
-        for sort_by, sort_order in sort_combinations:
-            sorted_stmt = self.builder.apply_sorting(stmt, sort_by, sort_order)
-            assert sorted_stmt is not None
-
-    def test_build_filtered_query_comprehensive(self):
-        """Test building a comprehensive filtered query with all options."""
-        feed_ids = [uuid4(), uuid4()]
-        folder_id = uuid4()
-        since_date = datetime(2023, 1, 1, tzinfo=timezone.utc)
-        until_date = datetime(2023, 12, 31, tzinfo=timezone.utc)
-        
-        stmt, count_stmt = self.builder.build_filtered_query(
-            feed_ids=feed_ids,
-            folder_id=folder_id,
-            is_read=False,
-            is_read_later=True,
-            is_favorite=False,
-            feed_is_favorite=True,
-            published_since=since_date,
-            published_until=until_date,
-            search_query="machine learning",
-            sort_by="published_at",
-            sort_order="desc",
-            skip=20,
-            limit=50,
+        union_query = self.builder.build_union_query(
+            feed_query, clipped_query, skip=10, limit=20
         )
         
-        assert stmt is not None
-        assert count_stmt is not None
+        assert isinstance(union_query, Select)
+        # Should contain limit and offset
+        query_str = str(union_query)
+        assert "limit" in query_str.lower() or "offset" in query_str.lower()
 
-    def test_build_filtered_query_minimal(self):
-        """Test building a filtered query with minimal options."""
-        stmt, count_stmt = self.builder.build_filtered_query()
+    def test_build_union_query_ascending_order(self):
+        """Test building union query with ascending order."""
+        feed_query = self.builder.build_feed_article_query(self.user_id, {})
+        clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
         
-        assert stmt is not None
-        assert count_stmt is not None
-
-    def test_apply_feed_favorite_filter_with_folder_joined(self):
-        """Test applying feed favorite filter when folder is already joined."""
-        stmt, count_stmt = self.builder.build_base_query()
-        
-        # First apply folder filter (which joins Feed table)
-        stmt, count_stmt = self.builder.apply_folder_filter(stmt, count_stmt, uuid4())
-        
-        # Then apply feed favorite filter (should not join again)
-        filtered_stmt, filtered_count = self.builder.apply_feed_favorite_filter(
-            stmt, count_stmt, True, folder_joined=True
+        union_query = self.builder.build_union_query(
+            feed_query, clipped_query, sort_order="asc"
         )
         
-        assert filtered_stmt is not None
-        assert filtered_count is not None
-
-    def test_apply_feed_favorite_filter_without_folder_joined(self):
-        """Test applying feed favorite filter when folder is not joined."""
-        stmt, count_stmt = self.builder.build_base_query()
-        
-        # Apply feed favorite filter without prior folder join
-        filtered_stmt, filtered_count = self.builder.apply_feed_favorite_filter(
-            stmt, count_stmt, False, folder_joined=False
-        )
-        
-        assert filtered_stmt is not None
-        assert filtered_count is not None
+        assert isinstance(union_query, Select)
+        # Should contain ascending order
+        query_str = str(union_query)
+        assert "asc" in query_str.lower() or "order" in query_str.lower()

@@ -44,11 +44,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
         const error = await response
             .json()
-            .catch(() => ({ message: "An error occurred" }))
-        throw new ApiError(
-            response.status,
-            error.message || "An error occurred"
-        )
+            .catch(() => ({ detail: "An error occurred" }))
+        // FastAPI uses 'detail' field for error messages, fallback to 'message' for other APIs
+        const errorMessage = error.detail || error.message || "An error occurred"
+        throw new ApiError(response.status, errorMessage)
     }
     return response.json()
 }
@@ -513,25 +512,37 @@ export class ApiClient {
 
             const queryString = queryParams.toString()
             return this.get<{
-                articles: Array<{
+                items: Array<{
                     id: string
                     title: string
-                    url: string
+                    link: string
+                    description: string
                     content: string
                     published_at: string
                     author: string | null
+                    image_url: string | null
+                    estimated_read_time_minutes: number | null
                     is_read: boolean
                     is_read_later: boolean
                     is_favorite: boolean
-                    read_at: string | null
-                    feed_id: string
-                    feed_title: string
-                    feed_image_url: string | null
+                    feed_id: string | null
+                    guid: string | null
+                    folder_id: string | null
+                    article_type: string
+                    priority: string | null
+                    note: string | null
+                    created_at: string
+                    updated_at: string
+                    feed: {
+                        title: string
+                        link: string
+                        image_url: string | null
+                    } | null
                 }>
                 total: number
                 page: number
                 size: number
-                total_pages: number
+                pages: number
             }>(
                 `/api/rss/articles/read_later${queryString ? `?${queryString}` : ""}`
             )

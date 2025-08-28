@@ -111,6 +111,7 @@ function Popup() {
     }
   }
 
+
   const handleSaveArticle = async (options?: Partial<SaveOptions>) => {
     if (!currentTab?.url) return
     
@@ -128,13 +129,17 @@ function Popup() {
   }
 
   const openReadspace = () => {
-    chrome.tabs.create({ url: settings.readspace_url })
+    // Use the app URL, not the API URL
+    const appUrl = settings.readspace_url === 'https://api.readspace.ai' 
+      ? 'https://app.readspace.ai' 
+      : settings.readspace_url.replace('/api', '') // For self-hosted, remove /api if present
+    chrome.tabs.create({ url: appUrl })
   }
 
   // Show unsupported page message
   if (isUnsupportedPage) {
     return (
-      <div className="w-100 min-h-[500px] p-6">
+      <div className="w-[450px] min-h-[500px] p-6">
         <div className="text-center space-y-4">
           {/* Unsupported page message */}
           <div className="space-y-3">
@@ -167,7 +172,7 @@ function Popup() {
   // Show login form if not authenticated
   if (!isAuthenticated) {
     return (
-      <div className="w-100 min-h-[500px] p-6">
+      <div className="w-[450px] min-h-[500px] p-6">
         {currentView === 'settings' ? (
           <Settings onBack={() => setCurrentView('main')} />
         ) : (
@@ -194,7 +199,7 @@ function Popup() {
               <p className="text-sm text-muted-foreground">
                 New to Readspace?{' '}
                 <button 
-                  onClick={() => window.open('https://readspace.ai/signup', '_blank')}
+                  onClick={() => window.open('https://app.readspace.ai/signup', '_blank')}
                   className="text-primary hover:underline font-medium"
                 >
                   Create account
@@ -219,7 +224,7 @@ function Popup() {
 
   // Main authenticated view
   return (
-    <div className="w-100 max-w-[400px] min-h-[500px] p-4">
+    <div className="w-[450px] min-h-[500px] p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">

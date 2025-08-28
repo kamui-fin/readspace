@@ -3,15 +3,21 @@
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.rss_models import Article, ArticleContent, Feed
+from app.models.rss_models import (
+    ArticleContent,
+    Feed,
+    FeedArticle,
+    FeedSubscription,
+    UserArticleState,
+)
 
 
 class ArticleSpecializedQueries:
-    """Specialized queries for specific article use cases."""
+    """Specialized queries for specific article use cases using new architecture."""
 
     @staticmethod
     async def get_recently_read_articles(
@@ -21,51 +27,69 @@ class ArticleSpecializedQueries:
         skip: int = 0,
         limit: int = 50,
         days_back: int = 30,
-    ) -> tuple[list[Article], int]:
+    ) -> tuple[list[FeedArticle], int]:
         """Get recently read articles for a user."""
         since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
 
+        # Build the query for recently read articles
         stmt = (
-            select(Article)
-            .options(selectinload(Article.feed), selectinload(Article.content))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+            select(FeedArticle)
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
             .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read == True,
-                    Article.read_at >= since_date,
+                    FeedSubscription.user_id == user_id,
+                    UserArticleState.user_id == user_id,
+                    UserArticleState.is_read == True,
+                    UserArticleState.read_at >= since_date,
                 )
             )
-            .order_by(desc(Article.read_at))
+            .order_by(desc(UserArticleState.read_at))
+            .options(
+                selectinload(FeedArticle.feed).selectinload(Feed.subscriptions),
+                selectinload(FeedArticle.content),
+                selectinload(FeedArticle.user_states),
+            )
             .offset(skip)
             .limit(limit)
         )
 
-        count_stmt = select(func.count(Article.id)).filter(
-            and_(
-                Article.user_id == user_id,
-                Article.is_read == True,
-                Article.read_at >= since_date,
+        articles_result = await db.execute(stmt)
+        articles = articles_result.scalars().all()
+
+        # Count query
+        count_stmt = (
+            select(func.count(FeedArticle.id))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
+            .filter(
+                and_(
+                    FeedSubscription.user_id == user_id,
+                    UserArticleState.user_id == user_id,
+                    UserArticleState.is_read == True,
+                    UserArticleState.read_at >= since_date,
+                )
             )
         )
 
-        total_count_result = await db.execute(count_stmt)
-        total_count = total_count_result.scalar_one_or_none() or 0
-
-        articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        count_result = await db.execute(count_stmt)
+        total_count = count_result.scalar_one_or_none() or 0
 
         return articles, total_count
 
     @staticmethod
     async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles marked as read later for a user."""
+        """Count articles marked as read later for a user."""
         result = await db.execute(
-            select(func.count(Article.id)).filter(
+            select(func.count(FeedArticle.id))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
+            .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read_later == True,
-                    Article.is_read == False,  # Only count unread articles
+                    FeedSubscription.user_id == user_id,
+                    UserArticleState.user_id == user_id,
+                    UserArticleState.is_read_later == True,
                 )
             )
         )
@@ -80,12 +104,24 @@ class ArticleSpecializedQueries:
         today_end = today_start + timedelta(days=1)
 
         result = await db.execute(
-            select(func.count(Article.id))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+            select(func.count(FeedArticle.id))
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == user_id,
+                ),
+            )
             .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read == False,  # Only count unread articles
+                    FeedSubscription.user_id == user_id,
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
                     ArticleContent.published_at >= today_start,
                     ArticleContent.published_at < today_end,
                 )
@@ -95,83 +131,80 @@ class ArticleSpecializedQueries:
 
     @staticmethod
     async def get_read_later_articles(
-        db: AsyncSession, *, user_id: UUID, skip: int = 0, limit: int = 50
-    ) -> tuple[list[Article], int]:
-        """Get unread articles marked as read later for a user."""
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> tuple[list[FeedArticle], int]:
+        """Get articles marked as read later for a user."""
+        # Build the query for read later articles
         stmt = (
-            select(Article)
-            .options(selectinload(Article.feed), selectinload(Article.content))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+            select(FeedArticle)
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
             .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read_later == True,
-                    Article.is_read == False,  # Only show unread articles
+                    FeedSubscription.user_id == user_id,
+                    UserArticleState.user_id == user_id,
+                    UserArticleState.is_read_later == True,
                 )
             )
             .order_by(desc(ArticleContent.published_at))
+            .options(
+                selectinload(FeedArticle.feed).selectinload(Feed.subscriptions),
+                selectinload(FeedArticle.content),
+                selectinload(FeedArticle.user_states),
+            )
             .offset(skip)
             .limit(limit)
         )
 
-        count_stmt = select(func.count(Article.id)).filter(
-            and_(
-                Article.user_id == user_id,
-                Article.is_read_later == True,
-                Article.is_read == False,  # Only count unread articles
-            )
-        )
-
-        total_count_result = await db.execute(count_stmt)
-        total_count = total_count_result.scalar_one_or_none() or 0
-
         articles_result = await db.execute(stmt)
         articles = articles_result.scalars().all()
 
-        return articles, total_count
-
-    @staticmethod
-    async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles marked as read later for a user."""
-        result = await db.execute(
-            select(func.count(Article.id)).filter(
-                and_(
-                    Article.user_id == user_id,
-                    Article.is_read_later == True,
-                    Article.is_read == False,  # Only count unread articles
-                )
-            )
-        )
-        return result.scalar_one_or_none() or 0
-
-    @staticmethod
-    async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles published today for a user."""
-        today_start = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        today_end = today_start + timedelta(days=1)
-
-        result = await db.execute(
-            select(func.count(Article.id))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+        # Count query
+        count_stmt = (
+            select(func.count(FeedArticle.id))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
             .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read == False,  # Only count unread articles
-                    ArticleContent.published_at >= today_start,
-                    ArticleContent.published_at < today_end,
+                    FeedSubscription.user_id == user_id,
+                    UserArticleState.user_id == user_id,
+                    UserArticleState.is_read_later == True,
                 )
             )
         )
-        return result.scalar_one_or_none() or 0
+
+        count_result = await db.execute(count_stmt)
+        total_count = count_result.scalar_one_or_none() or 0
+
+        return articles, total_count
 
     @staticmethod
     async def count_unread_articles(db: AsyncSession, *, user_id: UUID) -> int:
         """Count total unread articles for a user."""
         result = await db.execute(
-            select(func.count(Article.id)).filter(
-                and_(Article.user_id == user_id, Article.is_read == False)
+            select(func.count(FeedArticle.id))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == user_id,
+                ),
+            )
+            .filter(
+                and_(
+                    FeedSubscription.user_id == user_id,
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
+                )
             )
         )
         return result.scalar_one_or_none() or 0
@@ -180,33 +213,60 @@ class ArticleSpecializedQueries:
     async def get_unread_counts_by_folder(
         db: AsyncSession, *, user_id: UUID
     ) -> dict[UUID, int]:
-        """Get unread article counts grouped by folder_id."""
-        stmt = (
-            select(Feed.folder_id, func.count(Article.id))
-            .join(Article.feed)  # Join Article to Feed
-            .filter(Article.user_id == user_id, Article.is_read == False)
-            .filter(Feed.folder_id.is_not(None))  # Ensure folder_id is not null
-            .group_by(Feed.folder_id)
+        """Get unread article counts grouped by folder ID."""
+        result = await db.execute(
+            select(
+                FeedSubscription.folder_id,
+                func.count(FeedArticle.id).label("unread_count"),
+            )
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == user_id,
+                ),
+            )
+            .filter(
+                and_(
+                    FeedSubscription.user_id == user_id,
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
+                )
+            )
+            .group_by(FeedSubscription.folder_id)
         )
 
-        result = await db.execute(stmt)
-        rows = result.all()
-
-        return {folder_id: count for folder_id, count in rows}
+        rows = result.fetchall()
+        return {row.folder_id: row.unread_count for row in rows}
 
     @staticmethod
     async def count_unread_articles_by_folder(
         db: AsyncSession, *, user_id: UUID, folder_id: UUID
     ) -> int:
-        """Count unread articles for a user in a specific folder."""
+        """Count unread articles in a specific folder for a user."""
         result = await db.execute(
-            select(func.count(Article.id))
-            .join(Article.feed)
+            select(func.count(FeedArticle.id))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == user_id,
+                ),
+            )
             .filter(
                 and_(
-                    Article.user_id == user_id,
-                    Article.is_read == False,
-                    Feed.folder_id == folder_id,
+                    FeedSubscription.user_id == user_id,
+                    FeedSubscription.folder_id == folder_id,
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
                 )
             )
         )
@@ -217,78 +277,59 @@ class ArticleSpecializedQueries:
         db: AsyncSession,
         *,
         user_id: UUID,
-        days_back: int = 7,
         skip: int = 0,
         limit: int = 50,
-    ) -> tuple[list[Article], int]:
-        """Get trending articles based on recent publish date and user's feeds."""
+        days_back: int = 7,
+    ) -> tuple[list[FeedArticle], int]:
+        """Get trending articles for a user based on recent engagement."""
         since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
 
+        # For simplicity, we'll order by publish date for now
+        # In the future, this could include engagement metrics
         stmt = (
-            select(Article)
-            .options(selectinload(Article.feed), selectinload(Article.content))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+            select(FeedArticle)
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == user_id,
+                ),
+            )
             .filter(
                 and_(
-                    Article.user_id == user_id,
+                    FeedSubscription.user_id == user_id,
                     ArticleContent.published_at >= since_date,
                 )
             )
             .order_by(desc(ArticleContent.published_at))
+            .options(
+                selectinload(FeedArticle.feed).selectinload(Feed.subscriptions),
+                selectinload(FeedArticle.content),
+                selectinload(FeedArticle.user_states),
+            )
             .offset(skip)
             .limit(limit)
         )
 
+        articles_result = await db.execute(stmt)
+        articles = articles_result.scalars().all()
+
+        # Count query
         count_stmt = (
-            select(func.count(Article.id))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
+            select(func.count(FeedArticle.id))
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
             .filter(
                 and_(
-                    Article.user_id == user_id,
+                    FeedSubscription.user_id == user_id,
                     ArticleContent.published_at >= since_date,
                 )
             )
         )
 
-        total_count_result = await db.execute(count_stmt)
-        total_count = total_count_result.scalar_one_or_none() or 0
-
-        articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        count_result = await db.execute(count_stmt)
+        total_count = count_result.scalar_one_or_none() or 0
 
         return articles, total_count
-
-    @staticmethod
-    async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles marked as read later for a user."""
-        result = await db.execute(
-            select(func.count(Article.id)).filter(
-                and_(
-                    Article.user_id == user_id,
-                    Article.is_read_later == True,
-                )
-            )
-        )
-        return result.scalar_one_or_none() or 0
-
-    @staticmethod
-    async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles published today for a user."""
-        today_start = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        today_end = today_start + timedelta(days=1)
-
-        result = await db.execute(
-            select(func.count(Article.id))
-            .join(ArticleContent, Article.content_id == ArticleContent.id)
-            .filter(
-                and_(
-                    Article.user_id == user_id,
-                    Article.is_read == False,  # Only count unread articles
-                    ArticleContent.published_at >= today_start,
-                    ArticleContent.published_at < today_end,
-                )
-            )
-        )
-        return result.scalar_one_or_none() or 0

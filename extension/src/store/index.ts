@@ -12,7 +12,7 @@ import {
   DiscoveredFeed,
 } from '@/types'
 import { ReadspaceAPI } from '@/lib/api'
-import { getSupabaseClient } from '@/lib/supabase'
+import { getSupabaseClient, resetSupabaseClient } from '@/lib/supabase'
 
 interface ExtensionState {
   // Settings
@@ -92,7 +92,6 @@ export const useExtensionStore = create<ExtensionState>()(
 
         // Reset Supabase client if settings changed to force recreation with new settings
         if (newSettings.supabase_url || newSettings.supabase_anon_key) {
-          const { resetSupabaseClient } = await import('@/lib/supabase')
           resetSupabaseClient()
           console.log('Supabase client reset for new settings')
         }
@@ -164,10 +163,10 @@ export const useExtensionStore = create<ExtensionState>()(
       logout: () => {
         const { settings } = get()
         
-        // Sign out from Supabase
+        // Sign out from Supabase with local scope to avoid affecting other apps
         const supabase = getSupabaseClient(settings.supabase_url, settings.supabase_anon_key)
         if (supabase) {
-          supabase.auth.signOut().catch(error => {
+          supabase.auth.signOut({ scope: 'local' }).catch(error => {
             console.error('Failed to sign out from Supabase:', error)
           })
         }

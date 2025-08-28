@@ -43,7 +43,8 @@ class UserService:
             "User profile ensured",
             user_id=profile.id,
             email=profile.email,
-            created_new=profile.created_at.replace(microsecond=0) == profile.updated_at.replace(microsecond=0),
+            created_new=profile.created_at.replace(microsecond=0)
+            == profile.updated_at.replace(microsecond=0),
         )
 
         return profile

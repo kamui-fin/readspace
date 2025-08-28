@@ -219,37 +219,39 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       'link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="application/json"], link[rel="alternate"]',
     )
 
+    console.log('Feed discovery: found', feedLinks.length, 'feed links')
+
     feedLinks.forEach(link => {
       const href = link.getAttribute('href')
       const title = link.getAttribute('title')
       const type = link.getAttribute('type')
+      const rel = link.getAttribute('rel')
 
-      if (
-        href &&
-        (type?.includes('rss') || type?.includes('atom') || type?.includes('json'))
-      ) {
+      console.log('Checking feed link:', { href, title, type, rel })
+
+      // Include alternate links that might be feeds
+      if (href && (
+        type?.includes('rss') || 
+        type?.includes('atom') || 
+        type?.includes('json') ||
+        (rel === 'alternate' && type?.includes('xml'))
+      )) {
+        const feedType = type?.includes('atom') 
+          ? 'atom' 
+          : type?.includes('json') 
+            ? 'json' 
+            : 'rss'
+            
         feeds.push({
           url: makeAbsoluteUrl(href),
           title: title || undefined,
-          type: type.includes('atom')
-            ? 'atom'
-            : type.includes('json')
-              ? 'json'
-              : 'rss',
+          type: feedType,
         })
+        console.log('Added feed:', makeAbsoluteUrl(href))
       }
     })
 
-    // Look for common feed URLs
-    const commonFeeds = ['/feed', '/rss', '/atom.xml', '/feed.xml', '/rss.xml']
-    for (const feedPath of commonFeeds) {
-      const feedUrl = makeAbsoluteUrl(feedPath)
-      if (!feeds.some(f => f.url === feedUrl)) {
-        // We could check if these URLs exist, but that would require network requests
-        // For now, just add them as potential feeds
-      }
-    }
-
+    console.log('Feed discovery complete. Found', feeds.length, 'feeds:', feeds)
     return feeds
   }
 

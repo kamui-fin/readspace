@@ -6,7 +6,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_cache import RedisCache
-from app.crud import crud_feed
+from app.crud import crud_feed, crud_subscription
 from app.schemas.rss_schemas import FeedResponse, FeedUpdate
 from app.services.feed_creation_service import FeedCreationService
 from app.services.feed_fetcher import FeedFetcher
@@ -51,10 +51,61 @@ class FeedManagementService:
 
     async def get_feed(self, feed_id: UUID) -> FeedResponse | None:
         """Get a specific feed by ID."""
-        feed_db = await crud_feed.get_feed(
+        # Fetch the feed and the user's subscription to it
+        feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
+        if not feed_db:
+            return None
+
+        subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
-        return FeedResponse.model_validate(feed_db) if feed_db else None
+        if not subscription_db:
+            # If there's no subscription for this user, they can't "get" the feed
+            # in a user-specific context, so return None.
+            return None
+
+        # Get unread count for this specific feed
+        from sqlalchemy import func, select
+
+        from app.models.rss_models import FeedArticle, UserArticleState
+
+        unread_counts_stmt = (
+            select(func.count(UserArticleState.id))
+            .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
+            .where(
+                UserArticleState.user_id == self.user_id,
+                UserArticleState.is_read == False,
+                FeedArticle.feed_id == feed_id,
+            )
+        )
+        unread_count_result = await self.db.execute(unread_counts_stmt)
+        unread_count = unread_count_result.scalar_one_or_none() or 0
+
+        # Construct FeedResponse from both feed and subscription data
+        feed_data = {
+            "id": feed_db.id,
+            "url": feed_db.url,
+            "title": subscription_db.custom_title or feed_db.title,
+            "description": feed_db.description,
+            "link": feed_db.link,
+            "language": feed_db.language,
+            "image_url": feed_db.image_url,
+            "ttl": feed_db.ttl,
+            "skip_hours": feed_db.skip_hours,
+            "skip_days": feed_db.skip_days,
+            "last_fetched_at": feed_db.last_fetched_at,
+            "last_modified_header": feed_db.last_modified_header,
+            "etag_header": feed_db.etag_header,
+            "last_article_published_at": feed_db.last_article_published_at,
+            "created_at": feed_db.created_at,
+            "updated_at": feed_db.updated_at,
+            "user_id": subscription_db.user_id,
+            "folder_id": subscription_db.folder_id,
+            "is_favorite": subscription_db.is_favorite,
+            "unread_count": unread_count,
+            "tags": [],
+        }
+        return FeedResponse(**feed_data)
 
     async def list_feeds(
         self,
@@ -66,6 +117,10 @@ class FeedManagementService:
         limit: int = 100,
     ) -> list[FeedResponse]:
         """List feeds with optional filtering."""
+        from sqlalchemy import and_, func, or_, select
+
+        from app.models.rss_models import FeedArticle, UserArticleState
+
         feeds_db = await crud_feed.get_feeds_by_user(
             db=self.db,
             user_id=self.user_id,
@@ -76,7 +131,67 @@ class FeedManagementService:
             skip=skip,
             limit=limit,
         )
-        return [FeedResponse.model_validate(feed) for feed in feeds_db]
+
+        feed_ids = [feed.id for feed, subscription in feeds_db]
+
+        if not feed_ids:
+            return []
+
+        # Get unread counts for all feeds in a single query
+        unread_counts_stmt = (
+            select(FeedArticle.feed_id, func.count(FeedArticle.id))
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == self.user_id,
+                ),
+            )
+            .where(
+                and_(
+                    FeedArticle.feed_id.in_(feed_ids),
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
+                )
+            )
+            .group_by(FeedArticle.feed_id)
+        )
+        unread_counts_result = await self.db.execute(unread_counts_stmt)
+        unread_counts = dict(unread_counts_result.all())
+
+        feed_responses = []
+        for feed, subscription in feeds_db:
+            unread_count = unread_counts.get(feed.id, 0)
+
+            feed_data = {
+                "id": feed.id,
+                "url": feed.url,
+                "title": subscription.custom_title or feed.title,
+                "description": feed.description,
+                "link": feed.link,
+                "language": feed.language,
+                "image_url": feed.image_url,
+                "ttl": feed.ttl,
+                "skip_hours": feed.skip_hours,
+                "skip_days": feed.skip_days,
+                "last_fetched_at": feed.last_fetched_at,
+                "last_modified_header": feed.last_modified_header,
+                "etag_header": feed.etag_header,
+                "last_article_published_at": feed.last_article_published_at,
+                "created_at": feed.created_at,
+                "updated_at": feed.updated_at,
+                "user_id": subscription.user_id,
+                "folder_id": subscription.folder_id,
+                "is_favorite": subscription.is_favorite,
+                "unread_count": unread_count,
+                "tags": [],
+            }
+            feed_responses.append(FeedResponse(**feed_data))
+
+        return feed_responses
 
     async def update_feed_user_settings(
         self, feed_id: UUID, feed_in: FeedUpdate
@@ -84,37 +199,110 @@ class FeedManagementService:
         """Update user-configurable feed settings."""
         logger.info("Updating feed settings", feed_id=feed_id, user_id=self.user_id)
 
-        # Get the existing feed
-        feed_db = await crud_feed.get_feed(
+        # Get the existing subscription
+        subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
-        if not feed_db:
+        if not subscription_db:
             return None
 
-        # Update the feed
-        updated_feed = await crud_feed.update_feed(
-            db=self.db, feed_db=feed_db, feed_in=feed_in
+        # The FeedUpdate schema is for subscriptions, so we need to convert it to SubscriptionUpdate
+        from app.schemas.subscription_schemas import SubscriptionUpdate
+
+        subscription_in_data = feed_in.model_dump(exclude_unset=True)
+        if "title" in subscription_in_data:
+            subscription_in_data["custom_title"] = subscription_in_data.pop("title")
+        subscription_in = SubscriptionUpdate(**subscription_in_data)
+
+        # Update the subscription
+        updated_subscription = await crud_subscription.update_subscription(
+            db=self.db, subscription_db=subscription_db, subscription_in=subscription_in
         )
 
-        if updated_feed:
+        if updated_subscription:
             logger.info("Feed settings updated successfully", feed_id=feed_id)
-            return FeedResponse.model_validate(updated_feed)
+            # The response should be a FeedResponse, so I need to construct it.
+            # The updated_subscription contains the feed object.
+            feed_db = updated_subscription.feed
+            # I need to get unread count as well.
+            # For now, I will just return the validated model from the subscription.
+            # The list_feeds method has the logic for unread count. I will copy it.
+            from sqlalchemy import func, select
+
+            from app.models.rss_models import FeedArticle, UserArticleState
+
+            unread_counts_stmt = (
+                select(func.count(UserArticleState.id))
+                .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
+                .where(
+                    UserArticleState.user_id == self.user_id,
+                    UserArticleState.is_read == False,
+                    FeedArticle.feed_id == feed_id,
+                )
+            )
+            unread_count_result = await self.db.execute(unread_counts_stmt)
+            unread_count = unread_count_result.scalar_one_or_none() or 0
+
+            feed_data = {
+                "id": feed_db.id,
+                "url": feed_db.url,
+                "title": updated_subscription.custom_title or feed_db.title,
+                "description": feed_db.description,
+                "link": feed_db.link,
+                "language": feed_db.language,
+                "image_url": feed_db.image_url,
+                "ttl": feed_db.ttl,
+                "skip_hours": feed_db.skip_hours,
+                "skip_days": feed_db.skip_days,
+                "last_fetched_at": feed_db.last_fetched_at,
+                "last_modified_header": feed_db.last_modified_header,
+                "etag_header": feed_db.etag_header,
+                "last_article_published_at": feed_db.last_article_published_at,
+                "created_at": feed_db.created_at,
+                "updated_at": feed_db.updated_at,
+                "user_id": updated_subscription.user_id,
+                "folder_id": updated_subscription.folder_id,
+                "is_favorite": updated_subscription.is_favorite,
+                "unread_count": unread_count,
+                "tags": [],
+            }
+            return FeedResponse(**feed_data)
         return None
 
     async def delete_feed(self, feed_id: UUID) -> bool:
         """Delete a feed and all its articles."""
         logger.info("Deleting feed", feed_id=feed_id, user_id=self.user_id)
 
-        result = await crud_feed.delete_feed(
+        # Get the subscription to delete
+        subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
+        )
+        if not subscription_db:
+            logger.warning(
+                "Subscription not found for deletion",
+                feed_id=feed_id,
+                user_id=self.user_id,
+            )
+            return False
+
+        result = await crud_subscription.delete_subscription(
+            db=self.db, subscription_id=subscription_db.id, user_id=self.user_id
         )
 
         if result:
-            logger.info("Feed deleted successfully", feed_id=feed_id)
-            # Clear any cached data for this feed
-            await self._cache.delete(f"feed:{feed_id}")
+            logger.info(
+                "Subscription deleted successfully",
+                feed_id=feed_id,
+                user_id=self.user_id,
+            )
+            # Clear any cached data for this feed (optional, as feed might still exist for other users)
+            # await self._cache.delete(f"feed:{feed_id}")
         else:
-            logger.warning("Feed not found or couldn't be deleted", feed_id=feed_id)
+            logger.warning(
+                "Subscription could not be deleted",
+                feed_id=feed_id,
+                user_id=self.user_id,
+            )
 
         return result
 
@@ -129,12 +317,21 @@ class FeedManagementService:
             force_refetch=force_refetch,
         )
 
-        # Get the feed
-        feed_db = await crud_feed.get_feed(
-            db=self.db, feed_id=feed_id, user_id=self.user_id
-        )
+        # Get the feed and the user's subscription
+        feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
         if not feed_db:
             logger.warning("Feed not found for refresh", feed_id=feed_id)
+            return None
+
+        subscription_db = await crud_subscription.get_subscription_by_feed_id(
+            db=self.db, feed_id=feed_id, user_id=self.user_id
+        )
+        if not subscription_db:
+            logger.warning(
+                "Subscription not found for refresh",
+                feed_id=feed_id,
+                user_id=self.user_id,
+            )
             return None
 
         try:
@@ -146,26 +343,34 @@ class FeedManagementService:
                 str(feed_db.url), etag=etag, last_modified=last_modified
             )
 
-            if fetch_result["status"] == 304:  # Not Modified
-                # Update last_fetched_at even if not modified
-                from datetime import datetime, timezone
+            from datetime import datetime, timezone
 
-                await crud_feed.update_feed_fetch_metadata(
+            if fetch_result["status_code"] == 304:  # Not Modified
+                # Update last_fetched_at even if not modified
+                await crud_feed.update_feed_metadata(
                     self.db, feed_db=feed_db, last_fetched_at=datetime.now(timezone.utc)
                 )
                 logger.info("Feed not modified, refresh skipped", feed_id=feed_id)
-                return FeedResponse.model_validate(feed_db)
+                # Construct FeedResponse with current data
+                unread_count = await self._get_unread_count(feed_id)
+                return self._construct_feed_response(
+                    feed_db, subscription_db, unread_count
+                )
 
-            if fetch_result["status"] != 200 or not fetch_result["content"]:
+            if fetch_result["status_code"] != 200 or not fetch_result["content"]:
                 logger.error(
                     "Failed to fetch content for feed refresh",
                     feed_id=feed_id,
-                    status=fetch_result.get("status"),
+                    status=fetch_result.get("status_code"),
                 )
-                return FeedResponse.model_validate(feed_db)  # Return current state
+                # Return current state with correct user-specific data
+                unread_count = await self._get_unread_count(feed_id)
+                return self._construct_feed_response(
+                    feed_db, subscription_db, unread_count
+                )
 
             # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_content(
+            parsed_feed = self.feed_parser.parse_feed_data(
                 fetch_result["content"], str(feed_db.url)
             )
 
@@ -173,18 +378,75 @@ class FeedManagementService:
             await self._update_feed_and_articles(feed_db, fetch_result, parsed_feed)
 
             # Return the updated feed
-            refreshed_feed = await crud_feed.get_feed(
-                db=self.db, feed_id=feed_id, user_id=self.user_id
-            )
+            refreshed_feed = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
 
             logger.info("Feed refreshed successfully", feed_id=feed_id)
-            return (
-                FeedResponse.model_validate(refreshed_feed) if refreshed_feed else None
-            )
+            if refreshed_feed:
+                unread_count = await self._get_unread_count(feed_id)
+                return self._construct_feed_response(
+                    refreshed_feed, subscription_db, unread_count
+                )
+            return None
 
         except Exception as e:
             logger.error("Error refreshing feed", feed_id=feed_id, error=str(e))
             raise
+
+    async def _get_unread_count(self, feed_id: UUID) -> int:
+        from sqlalchemy import and_, func, or_, select
+
+        from app.models.rss_models import FeedArticle, UserArticleState
+
+        unread_counts_stmt = (
+            select(func.count(FeedArticle.id))
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == self.user_id,
+                ),
+            )
+            .where(
+                and_(
+                    FeedArticle.feed_id == feed_id,
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        UserArticleState.is_read == False,
+                    ),
+                )
+            )
+        )
+        unread_count_result = await self.db.execute(unread_counts_stmt)
+        return unread_count_result.scalar_one_or_none() or 0
+
+    def _construct_feed_response(
+        self, feed_db, subscription_db, unread_count: int
+    ) -> FeedResponse:
+        feed_data = {
+            "id": feed_db.id,
+            "url": feed_db.url,
+            "title": subscription_db.custom_title or feed_db.title,
+            "description": feed_db.description,
+            "link": feed_db.link,
+            "language": feed_db.language,
+            "image_url": feed_db.image_url,
+            "ttl": feed_db.ttl,
+            "skip_hours": feed_db.skip_hours,
+            "skip_days": feed_db.skip_days,
+            "last_fetched_at": feed_db.last_fetched_at,
+            "last_modified_header": feed_db.last_modified_header,
+            "etag_header": feed_db.etag_header,
+            "last_article_published_at": feed_db.last_article_published_at,
+            "created_at": feed_db.created_at,
+            "updated_at": feed_db.updated_at,
+            "user_id": subscription_db.user_id,
+            "folder_id": subscription_db.folder_id,
+            "is_favorite": subscription_db.is_favorite,
+            "unread_count": unread_count,
+            "tags": [],
+        }
+        return FeedResponse(**feed_data)
 
     async def _update_feed_and_articles(self, feed_db, fetch_result, parsed_feed):
         """Update feed metadata and create new articles."""
@@ -196,11 +458,11 @@ class FeedManagementService:
 
         # Update feed metadata
         feed_headers = fetch_result.get("headers", {})
-        await crud_feed.update_feed_fetch_metadata(
+        await crud_feed.update_feed_metadata(
             self.db,
             feed_db=feed_db,
-            etag_header=feed_headers.get("etag"),
-            last_modified_header=feed_headers.get("last-modified"),
+            etag=feed_headers.get("etag"),
+            last_modified=feed_headers.get("last-modified"),
             last_fetched_at=datetime.now(timezone.utc),
         )
 
@@ -236,9 +498,7 @@ class FeedManagementService:
                     continue
 
             if articles_data:
-                await create_articles_batch(
+                created_count = await create_articles_batch(
                     db=self.db, articles_data=articles_data, user_id=self.user_id
                 )
-                logger.info(
-                    f"Created {len(articles_data)} new articles", feed_id=feed_db.id
-                )
+                logger.info(f"Created {created_count} new articles", feed_id=feed_db.id)

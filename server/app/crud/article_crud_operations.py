@@ -1,14 +1,22 @@
-"""Core article CRUD operations."""
+"""Core article CRUD operations - FIXED VERSION."""
 
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.crud.article_query_builder import ArticleQueryBuilder
-from app.models.rss_models import Article, ArticleContent
+from app.models.rss_models import (
+    Article,
+    ArticleContent,
+    ClippedArticle,
+    FeedArticle,
+    FeedSubscription,
+    UserArticleState,
+)
 from app.schemas.rss_schemas import ArticleCreate, ArticleUpdate
 
 
@@ -18,12 +26,30 @@ class ArticleCrudOperations:
     @staticmethod
     async def get_article_by_id(
         db: AsyncSession, *, article_id: UUID, user_id: UUID
-    ) -> Article | None:
+    ) -> tuple[FeedArticle, UserArticleState] | ClippedArticle | None:
         """Get a specific article by its ID, ensuring it belongs to the user."""
+        # First try to get from feed_articles (RSS articles) with user state
+        # Need to join with FeedSubscription to ensure user has access to this feed
         result = await db.execute(
-            select(Article)
-            .options(selectinload(Article.feed), selectinload(Article.content))
-            .filter(Article.id == article_id, Article.user_id == user_id)
+            select(FeedArticle, UserArticleState)
+            .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
+            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+            .outerjoin(
+                UserArticleState,
+                (UserArticleState.article_id == FeedArticle.id)
+                & (UserArticleState.user_id == user_id),
+            )
+            .filter(FeedArticle.id == article_id, FeedSubscription.user_id == user_id)
+        )
+        row = result.first()
+        if row:
+            return (row[0], row[1])  # (FeedArticle, UserArticleState)
+
+        # If not found, try clipped_articles (manually saved articles)
+        result = await db.execute(
+            select(ClippedArticle)
+            .options(selectinload(ClippedArticle.content))
+            .filter(ClippedArticle.id == article_id, ClippedArticle.user_id == user_id)
         )
         return result.scalars().first()
 
@@ -55,7 +81,7 @@ class ArticleCrudOperations:
         sort_order: str = "desc",
         skip: int = 0,
         limit: int = 100,
-    ) -> tuple[list[Article], int]:
+    ) -> tuple[list[tuple[FeedArticle, UserArticleState]], int]:
         """Get articles for a user with comprehensive filtering and sorting."""
         query_builder = ArticleQueryBuilder(user_id)
 
@@ -79,7 +105,11 @@ class ArticleCrudOperations:
         total_count = total_count_result.scalar_one_or_none() or 0
 
         articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        rows = articles_result.all()  # Get all rows
+        # Extract the FeedArticle and UserArticleState objects from each row
+        articles = [
+            (row[0], row[1]) for row in rows
+        ]  # row[0] is FeedArticle, row[1] is UserArticleState
         return articles, total_count
 
     @staticmethod
@@ -135,65 +165,86 @@ class ArticleCrudOperations:
                 }
             )
 
-        # Bulk insert content
-        await db.execute(ArticleContent.__table__.insert(), content_mappings)
-        await db.flush()
-
-        # Step 4: Get the inserted content IDs (we need to query them back)
+        # Bulk insert content with RETURNING to get IDs directly
+        content_insert_stmt = insert(ArticleContent).values(content_mappings)
         content_result = await db.execute(
-            select(ArticleContent.id, ArticleContent.title, ArticleContent.link)
-            .filter(ArticleContent.created_at == current_time)
-            .order_by(ArticleContent.id)
+            content_insert_stmt.returning(ArticleContent.id, ArticleContent.link)
         )
         content_rows = content_result.fetchall()
+        await db.flush()
 
-        # Step 5: Bulk create articles
+        # Step 5: Bulk create articles and user article states
         article_mappings = []
-        created_articles = []
+        user_article_state_mappings = []
+        created_articles_list = []  # To store the actual Article objects created
 
-        for i, (article_in, content_row) in enumerate(
-            zip(new_articles, content_rows, strict=False)
-        ):
-            article_data = {
+        for article_in, content_row in zip(new_articles, content_rows, strict=False):
+            # Data for the Article table (global article info)
+            article_map = {
                 "feed_id": article_in.feed_id,
-                "user_id": user_id,
                 "content_id": content_row.id,
                 "guid": article_in.guid,
-                "is_read": False,
-                "is_read_later": False,
-                "is_favorite": False,
                 "created_at": current_time,
             }
-            article_mappings.append(article_data)
+            article_mappings.append(article_map)
 
-        # Bulk insert articles
-        result = await db.execute(Article.__table__.insert(), article_mappings)
+        # Bulk insert articles with ON CONFLICT DO NOTHING for safety
+        # Use insert().returning() to get the IDs of the newly created articles
+        article_insert_stmt = insert(Article).values(article_mappings)
+        article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(
+            index_elements=["feed_id", "guid"]
+        ).returning(
+            Article.id,
+            Article.feed_id,
+            Article.guid,
+            Article.content_id,
+            Article.created_at,
+        )  # Include all columns needed to reconstruct Article object
+
+        result = await db.execute(article_insert_stmt)
+        newly_inserted_articles_data = result.fetchall()
+
+        # Create UserArticleState entries for each newly inserted article
+        for article_data_tuple in newly_inserted_articles_data:
+            # Reconstruct a temporary Article object from the returned data
+            # This is a simplified reconstruction, assuming the order of returning() matches Article constructor
+            temp_article = Article(
+                id=article_data_tuple[0],
+                feed_id=article_data_tuple[1],
+                guid=article_data_tuple[2],
+                content_id=article_data_tuple[3],
+                created_at=article_data_tuple[4],
+                # Add other fields if necessary, or fetch full objects later
+            )
+            created_articles_list.append(temp_article)
+
+            user_article_state_mappings.append(
+                {
+                    "user_id": user_id,
+                    "article_id": temp_article.id,
+                    "is_read": False,
+                    "is_read_later": False,
+                    "is_favorite": False,
+                    "created_at": current_time,
+                    "updated_at": current_time,
+                }
+            )
+
+        if user_article_state_mappings:
+            # Bulk insert UserArticleState entries
+            user_state_insert_stmt = insert(UserArticleState).values(
+                user_article_state_mappings
+            )
+            # On conflict, do nothing for user states as well
+            user_state_insert_stmt = user_state_insert_stmt.on_conflict_do_nothing(
+                index_elements=["user_id", "article_id"]
+            )
+            await db.execute(user_state_insert_stmt)
 
         await db.commit()
 
-        # Return the created articles by querying them back
-        article_ids = []
-        if hasattr(result, "inserted_primary_key_rows"):
-            article_ids = [row[0] for row in result.inserted_primary_key_rows]
-        else:
-            # Fallback: query by creation time and user_id
-            result_articles = await db.execute(
-                select(Article.id)
-                .filter(Article.user_id == user_id, Article.created_at == current_time)
-                .order_by(Article.id)
-            )
-            article_ids = [row[0] for row in result_articles.fetchall()]
-
-        # Get the full article objects
-        if article_ids:
-            final_result = await db.execute(
-                select(Article)
-                .options(selectinload(Article.content))
-                .filter(Article.id.in_(article_ids))
-            )
-            created_articles = final_result.scalars().all()
-
-        return created_articles
+        # Return the count of newly created articles (from the Article table)
+        return len(created_articles_list)
 
     @staticmethod
     async def update_article_status(
@@ -204,17 +255,30 @@ class ArticleCrudOperations:
         user_id: UUID,
     ) -> Article | None:
         """Update article status (read, favorite, etc.)."""
-        from app.models.rss_models import FeedArticle
-
-        # Try to find as FeedArticle first (new architecture)
+        # First, find the FeedArticle (new architecture)
         feed_article_result = await db.execute(
             select(FeedArticle)
             .options(selectinload(FeedArticle.content), selectinload(FeedArticle.feed))
-            .where(and_(FeedArticle.id == article_id, FeedArticle.user_id == user_id))
+            .where(FeedArticle.id == article_id)
         )
         feed_article = feed_article_result.scalar_one_or_none()
 
         if feed_article:
+            # Verify user has access to this article via subscription
+            subscription_result = await db.execute(
+                select(FeedSubscription).where(
+                    and_(
+                        FeedSubscription.user_id == user_id,
+                        FeedSubscription.feed_id == feed_article.feed_id,
+                    )
+                )
+            )
+            subscription = subscription_result.scalar_one_or_none()
+
+            if not subscription:
+                # User doesn't have access to this feed
+                return None
+
             update_data = article_in.model_dump(exclude_unset=True)
 
             # Handle read_at timestamp
@@ -223,42 +287,71 @@ class ArticleCrudOperations:
             elif "is_read" in update_data and not update_data["is_read"]:
                 update_data["read_at"] = None
 
-            # Update the feed article directly on the object
-            for field, value in update_data.items():
-                if hasattr(feed_article, field):
-                    setattr(feed_article, field, value)
+            # Update or create UserArticleState
+            user_state_result = await db.execute(
+                select(UserArticleState).where(
+                    and_(
+                        UserArticleState.user_id == user_id,
+                        UserArticleState.article_id == article_id,
+                    )
+                )
+            )
+            user_state = user_state_result.scalar_one_or_none()
+
+            if user_state:
+                # Update existing state
+                for field, value in update_data.items():
+                    if hasattr(user_state, field):
+                        setattr(user_state, field, value)
+            else:
+                # Create new state
+                user_state = UserArticleState(
+                    user_id=user_id, article_id=article_id, **update_data
+                )
+                db.add(user_state)
 
             # Commit the changes
             await db.commit()
 
-            # Refresh the object to get the latest state from DB
+            # Refresh both objects
             await db.refresh(feed_article)
+            await db.refresh(user_state)
+
+            # Return the feed article (maintaining compatibility)
             return feed_article
 
-        # Fall back to legacy Article model
-        article = await ArticleCrudOperations.get_article_by_id(
-            db, article_id=article_id, user_id=user_id
+        # If not found in feed articles, try clipped articles
+        clipped_article_result = await db.execute(
+            select(ClippedArticle)
+            .options(selectinload(ClippedArticle.content))
+            .where(
+                and_(ClippedArticle.id == article_id, ClippedArticle.user_id == user_id)
+            )
         )
-        if not article:
-            return None
+        clipped_article = clipped_article_result.scalar_one_or_none()
 
-        update_data = article_in.model_dump(exclude_unset=True)
+        if clipped_article:
+            update_data = article_in.model_dump(exclude_unset=True)
 
-        # Handle read_at timestamp
-        if update_data.get("is_read"):
-            update_data["read_at"] = datetime.now(timezone.utc)
-        elif "is_read" in update_data and not update_data["is_read"]:
-            update_data["read_at"] = None
+            # Handle read_at timestamp
+            if update_data.get("is_read"):
+                update_data["read_at"] = datetime.now(timezone.utc)
+            elif "is_read" in update_data and not update_data["is_read"]:
+                update_data["read_at"] = None
 
-        # Update the article
-        await db.execute(
-            update(Article)
-            .where(and_(Article.id == article_id, Article.user_id == user_id))
-            .values(**update_data)
-        )
-        await db.commit()
+            # Update clipped article directly (it stores its own state)
+            for field, value in update_data.items():
+                if hasattr(clipped_article, field):
+                    setattr(clipped_article, field, value)
 
-        # Return the updated article
-        return await ArticleCrudOperations.get_article_by_id(
-            db, article_id=article_id, user_id=user_id
-        )
+            # Commit the changes
+            await db.commit()
+
+            # Refresh the object
+            await db.refresh(clipped_article)
+
+            # Return the clipped article
+            return clipped_article
+
+        # Article not found or user doesn't have access
+        return None

@@ -45,7 +45,7 @@ async def save_web_article(
     # Ensure user profile exists in database
     user_service = UserService(db=db)
     await user_service.ensure_user_profile_exists(current_user)
-    
+
     web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
 
     try:

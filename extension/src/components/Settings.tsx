@@ -5,7 +5,7 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { Badge } from './ui/badge'
-import { ArrowLeft, LogOut, AlertTriangle, Cloud } from 'lucide-react'
+import { ArrowLeft, LogOut, AlertTriangle, Cloud, Server } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface SettingsProps {
@@ -14,6 +14,7 @@ interface SettingsProps {
 
 const PRODUCTION_DEFAULTS = {
   readspace_url: 'https://api.readspace.ai',
+  readspace_app_url: 'https://app.readspace.ai',
   supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
   supabase_anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
 }
@@ -73,7 +74,7 @@ export function Settings({ onBack }: SettingsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center gap-2">
         <Button
@@ -89,18 +90,18 @@ export function Settings({ onBack }: SettingsProps) {
 
       {/* Connection Status */}
       <div className="p-4 bg-muted rounded-lg">
-        <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-2">
           {isUsingProduction ? (
             <>
               <Cloud className="w-4 h-4 text-green-600" />
               <span className="font-medium text-sm">Connected to Readspace Cloud</span>
               <Badge variant="secondary" className="text-xs">
-                Production
+                Official
               </Badge>
             </>
           ) : (
             <>
-              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <Server className="w-4 h-4 text-amber-500" />
               <span className="font-medium text-sm">Using Self-Hosted Server</span>
               <Badge variant="outline" className="text-xs">
                 Custom
@@ -108,12 +109,6 @@ export function Settings({ onBack }: SettingsProps) {
             </>
           )}
         </div>
-        <p className="text-xs text-muted-foreground">
-          {isUsingProduction 
-            ? 'You\'re using the official Readspace cloud service at api.readspace.ai'
-            : 'You\'re connected to a custom self-hosted Readspace server'
-          }
-        </p>
       </div>
 
       {/* User Info */}
@@ -149,56 +144,49 @@ export function Settings({ onBack }: SettingsProps) {
 
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            <strong>Note:</strong> Leave these fields empty to use the official Readspace cloud service. 
-            Only fill them out if you're running your own self-hosted Readspace server.
+            Leave empty to use official Readspace. Don't modify unless you know what you're doing.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="readspaceUrl">Custom Readspace Server URL (optional)</Label>
+            <Label htmlFor="readspaceUrl">Server URL</Label>
             <Input
               id="readspaceUrl"
               type="url"
-              placeholder="https://api.readspace.ai (production default)"
+              placeholder="http://localhost:8008"
               value={readspaceUrl}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReadspaceUrl(e.target.value)}
+              className="w-full text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use the official Readspace cloud service.
-            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="supabaseUrl">Custom Supabase URL (optional)</Label>
+            <Label htmlFor="supabaseUrl">Supabase URL</Label>
             <Input
               id="supabaseUrl"
               type="url"
-              placeholder="https://hnqyngkyugiamvlhqoaf.supabase.co (production default)"
+              placeholder="http://localhost:8000"
               value={supabaseUrl}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSupabaseUrl(e.target.value)}
+              className="w-full text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use the production Supabase instance.
-            </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="supabaseAnonKey">Custom Supabase Anonymous Key (optional)</Label>
+            <Label htmlFor="supabaseAnonKey">Supabase Anonymous Key</Label>
             <Input
               id="supabaseAnonKey"
               type="password"
-              placeholder="Production key configured automatically"
+              placeholder="Your Supabase anon key"
               value={supabaseAnonKey}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSupabaseAnonKey(e.target.value)}
+              className="w-full text-sm"
             />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use the production anonymous key.
-            </p>
           </div>
 
           <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save Configuration'}
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </div>
       </div>

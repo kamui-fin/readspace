@@ -2,6 +2,7 @@
 import { browser, getBrowserName, storage } from '@/lib/browser'
 import type { Menus, Runtime } from 'webextension-polyfill'
 
+
 // Type for content extraction result
 interface ContentExtractionResult {
   content?: string
@@ -18,6 +19,97 @@ console.log(`Readspace background script loaded on ${getBrowserName()}`)
 function isSupportedUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://')
 }
+
+
+// Update badge with RSS feed count
+async function updateFeedBadge(tabId: number, feedCount: number) {
+  try {
+    if (feedCount > 0) {
+      // Try MV3 action API first (Chrome)
+      try {
+        await browser.action.setBadgeText({ 
+          text: feedCount.toString(), 
+          tabId 
+        })
+        await browser.action.setBadgeBackgroundColor({ 
+          color: '#FF6B35', // Orange color for RSS
+          tabId 
+        })
+      } catch {
+        // Fallback to MV2 browserAction API (Firefox)
+        await browser.browserAction.setBadgeText({ 
+          text: feedCount.toString(), 
+          tabId 
+        })
+        await browser.browserAction.setBadgeBackgroundColor({ 
+          color: '#FF6B35', // Orange color for RSS
+          tabId 
+        })
+        // Firefox supports text color
+        try {
+          await browser.browserAction.setBadgeTextColor({ 
+            color: '#FFFFFF',
+            tabId 
+          })
+        } catch {
+          // Some versions might not support this
+        }
+      }
+    } else {
+      // Clear badge
+      try {
+        await browser.action.setBadgeText({ text: '', tabId })
+      } catch {
+        await browser.browserAction.setBadgeText({ text: '', tabId })
+      }
+    }
+  } catch (error) {
+    console.error('Failed to update badge:', error)
+  }
+}
+
+// Check for RSS feeds when tab is updated
+browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
+    try {
+      // Wait a bit for the page to fully load
+      setTimeout(async () => {
+        try {
+          // Get full metadata which includes feeds
+          const metadata = await browser.tabs.sendMessage(tabId, { 
+            action: 'extractMetadata' 
+          }) as any
+          
+          const feedCount = metadata?.feeds?.length || 0
+          console.log(`Found ${feedCount} feeds on tab ${tabId}:`, metadata?.feeds)
+          
+          await updateFeedBadge(tabId, feedCount)
+        } catch (error) {
+          // Content script might not be available yet, ignore error
+          console.log('Could not check for feeds, content script not available:', error)
+          await updateFeedBadge(tabId, 0)
+        }
+      }, 2000) // Increased timeout to ensure content script is ready
+    } catch (error) {
+      console.error('Error checking for RSS feeds:', error)
+    }
+  } else {
+    // Clear badge for non-supported URLs or incomplete loads
+    await updateFeedBadge(tabId, 0)
+  }
+})
+
+// Clear badge when switching tabs or navigating away from supported pages
+browser.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await browser.tabs.get(activeInfo.tabId)
+    if (!tab.url || !isSupportedUrl(tab.url)) {
+      await updateFeedBadge(activeInfo.tabId, 0)
+    }
+  } catch (error) {
+    console.error('Error handling tab activation:', error)
+  }
+})
 
 // Context menu setup
 browser.runtime.onInstalled.addListener(() => {

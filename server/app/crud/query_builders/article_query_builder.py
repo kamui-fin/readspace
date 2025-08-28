@@ -4,13 +4,14 @@ from uuid import UUID
 
 from sqlalchemy import String, asc, desc, func, literal, or_, select, union_all
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import selectinload
 
 from app.models.rss_models import (
     ArticleContent,
     ClippedArticle,
     Feed,
     FeedArticle,
+    FeedSubscription,
+    UserArticleState,
 )
 
 
@@ -18,14 +19,34 @@ class ArticleQueryBuilder:
     """Builder for complex article queries with filtering and sorting."""
 
     def build_feed_article_query(self, user_id: UUID, filters: dict) -> select:
-        """Build query for feed articles with filters."""
+        """Build query for feed articles with filters using new architecture."""
+        # Join FeedArticle with UserArticleState and FeedSubscription to get user-specific data
+        # Use explicit column selection to avoid naming conflicts
         query = (
-            select(FeedArticle)
-            .options(
-                selectinload(FeedArticle.content),
-                selectinload(FeedArticle.feed),
+            select(
+                FeedArticle.id.label("article_id"),
+                FeedArticle.feed_id,
+                FeedArticle.content_id,
+                FeedArticle.guid,
+                FeedArticle.created_at.label("article_created_at"),
+                FeedArticle.updated_at.label("article_updated_at"),
+                UserArticleState.user_id,
+                UserArticleState.is_read,
+                UserArticleState.read_at,
+                UserArticleState.is_read_later,
+                UserArticleState.is_favorite,
+                UserArticleState.user_note,
+                UserArticleState.user_tags,
+                UserArticleState.created_at.label("state_created_at"),
+                UserArticleState.updated_at.label("state_updated_at"),
             )
-            .filter(FeedArticle.user_id == user_id)
+            .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
+            .outerjoin(
+                UserArticleState,
+                (UserArticleState.article_id == FeedArticle.id)
+                & (UserArticleState.user_id == user_id),
+            )
+            .filter(FeedSubscription.user_id == user_id)
         )
 
         return self._apply_feed_article_filters(query, filters)
@@ -82,27 +103,43 @@ class ArticleQueryBuilder:
 
         folder_id = filters.get("folder_id")
         if folder_id:
-            query = query.join(Feed, FeedArticle.feed_id == Feed.id).filter(
-                Feed.folder_id == folder_id
-            )
+            # In the new architecture, folder relationship is through FeedSubscription
+            query = query.filter(FeedSubscription.folder_id == folder_id)
 
         is_read = filters.get("is_read")
         if is_read is not None:
-            query = query.filter(FeedArticle.is_read == is_read)
+            if is_read:
+                query = query.filter(UserArticleState.is_read == True)
+            else:
+                query = query.filter(
+                    (UserArticleState.is_read == False)
+                    | (UserArticleState.is_read.is_(None))
+                )
 
         is_read_later = filters.get("is_read_later")
         if is_read_later is not None:
-            query = query.filter(FeedArticle.is_read_later == is_read_later)
+            if is_read_later:
+                query = query.filter(UserArticleState.is_read_later == True)
+            else:
+                query = query.filter(
+                    (UserArticleState.is_read_later == False)
+                    | (UserArticleState.is_read_later.is_(None))
+                )
 
         is_favorite = filters.get("is_favorite")
         if is_favorite is not None:
-            query = query.filter(FeedArticle.is_favorite == is_favorite)
+            if is_favorite:
+                query = query.filter(UserArticleState.is_favorite == True)
+            else:
+                query = query.filter(
+                    (UserArticleState.is_favorite == False)
+                    | (UserArticleState.is_favorite.is_(None))
+                )
 
         feed_is_favorite = filters.get("feed_is_favorite")
         if feed_is_favorite is not None:
-            if not folder_id:  # Only join if not already joined
-                query = query.join(Feed, FeedArticle.feed_id == Feed.id)
-            query = query.filter(Feed.is_favorite == feed_is_favorite)
+            # In the new architecture, favorite feeds are tracked in FeedSubscription
+            query = query.filter(FeedSubscription.is_favorite == feed_is_favorite)
 
         # Date range filters
         published_since = filters.get("published_since")
@@ -176,9 +213,10 @@ class ArticleQueryBuilder:
         subq = query.subquery()
 
         # Select common fields that exist in both article types
+        # Using explicit column labels from the feed article query
         return select(
-            subq.c.id,
-            subq.c.user_id,
+            subq.c.article_id.label("id"),  # FeedArticle.id (labeled as article_id)
+            subq.c.user_id.label("user_id"),  # From UserArticleState
             ArticleContent.title,
             ArticleContent.link,
             ArticleContent.description,
@@ -186,20 +224,21 @@ class ArticleQueryBuilder:
             ArticleContent.published_at,
             ArticleContent.image_url,
             ArticleContent.estimated_read_time_minutes.label("read_time"),
-            subq.c.is_read,
-            subq.c.is_read_later,
-            subq.c.is_favorite,
-            subq.c.feed_id,
+            func.coalesce(subq.c.is_read, False).label("is_read"),
+            func.coalesce(subq.c.is_read_later, False).label("is_read_later"),
+            func.coalesce(subq.c.is_favorite, False).label("is_favorite"),
+            subq.c.feed_id.label("feed_id"),
             func.cast(None, PGUUID(as_uuid=True)).label(
                 "clipped_article_id"
             ),  # Placeholder
             Feed.title.label("feed_title"),
             Feed.link.label("feed_link"),
+            Feed.image_url.label("feed_image_url"),
             literal("feed").label("article_type"),
-            subq.c.created_at,
-            subq.c.updated_at,
+            subq.c.article_created_at.label("created_at"),
+            subq.c.article_updated_at.label("updated_at"),
             func.cast(None, String).label("priority"),  # Placeholder for feed articles
-            func.cast(None, String).label("note"),  # Placeholder for feed articles
+            func.coalesce(subq.c.user_note, func.cast(None, String)).label("note"),
         ).select_from(
             subq.join(ArticleContent, subq.c.content_id == ArticleContent.id).join(
                 Feed, subq.c.feed_id == Feed.id
@@ -228,9 +267,12 @@ class ArticleQueryBuilder:
             subq.c.id.label("clipped_article_id"),
             func.cast(None, String).label("feed_title"),  # Placeholder
             func.cast(None, String).label("feed_link"),  # Placeholder
+            func.cast(None, String).label("feed_image_url"),  # Placeholder
             literal("clipped").label("article_type"),
             subq.c.created_at,
-            subq.c.created_at.label("updated_at"),  # ClippedArticle doesn't have updated_at, use created_at
+            subq.c.created_at.label(
+                "updated_at"
+            ),  # ClippedArticle doesn't have updated_at, use created_at
             subq.c.priority,  # Add priority field
             subq.c.note,  # Add note field
         ).select_from(subq.join(ArticleContent, subq.c.content_id == ArticleContent.id))

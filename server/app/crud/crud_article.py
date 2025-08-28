@@ -198,7 +198,7 @@ class CRUDArticleUnified:
 
     def __init__(self):
         from .crud_article_content import crud_article_content
-        
+
         self.content = crud_article_content
         self.feed_article = CRUDFeedArticle(FeedArticle)
         self.clipped_article = CRUDClippedArticle(ClippedArticle)

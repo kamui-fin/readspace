@@ -47,12 +47,19 @@ class FolderService:
     ) -> FolderResponse | None:
         """Update folder name or other editable attributes."""
         logger.info("Updating folder", folder_id=folder_id, user_id=self.user_id)
-        updated_folder = await crud_folder.update_folder(
-            db=self.db, folder_id=folder_id, folder_in=folder_in, user_id=self.user_id
+        
+        # First get the folder to ensure it exists and belongs to the user
+        folder_db = await crud_folder.get_folder(
+            db=self.db, folder_id=folder_id, user_id=self.user_id
         )
-        if updated_folder:
-            return FolderResponse.model_validate(updated_folder)
-        return None
+        if not folder_db:
+            return None
+            
+        # Now update it with the CRUD function that expects the database object
+        updated_folder = await crud_folder.update_folder(
+            db=self.db, folder_db=folder_db, folder_in=folder_in
+        )
+        return FolderResponse.model_validate(updated_folder)
 
     async def delete_folder(self, folder_id: UUID) -> bool:
         """Delete a folder. Associated feeds will be moved to the default folder."""

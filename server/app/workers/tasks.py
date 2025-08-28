@@ -15,7 +15,6 @@ from app.crud import crud_feed
 
 # AsyncSessionLocal is no longer imported directly from app.db.session for use in tasks
 # from app.db.session import AsyncSessionLocal
-from app.services.rss_service import RssService
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
@@ -23,7 +22,10 @@ settings = get_settings()
 
 async def create_task_db_session():
     """Create a database session for Celery tasks."""
-    engine = create_async_engine(settings.SUPABASE_DB_CONNECTION, poolclass=NullPool)
+    engine = create_async_engine(
+        settings.SUPABASE_DB_CONNECTION,
+        poolclass=NullPool,
+    )
     TaskAsyncSessionLocal = sessionmaker(
         bind=engine,
         class_=AsyncSession,
@@ -254,38 +256,40 @@ def import_opml_task(
     default_retry_delay=60,
 )
 def refresh_single_feed_task(self, feed_id: str):
-    """Celery task to refresh a single RSS feed."""
+    """Celery task to refresh a single global RSS feed."""
 
     async def _async_refresh_single_feed():
         engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            logger.info("Starting refresh_single_feed_task", feed_id=feed_id)
+            logger.info(
+                "Starting refresh_single_feed_task (new version)", feed_id=feed_id
+            )
 
             async with TaskAsyncSessionLocal() as db:
+                from app.services.feed_service import FeedService
+
                 feed_uuid = UUID(feed_id)
-                feed_to_refresh = await crud_feed.get_feed_by_id_for_system(
-                    db, feed_id=feed_uuid
-                )
+                feed_service = FeedService(db=db)
+
+                # Get the global feed
+                feed_to_refresh = await feed_service.get_feed_by_id(feed_id=feed_uuid)
 
                 if not feed_to_refresh:
                     logger.warning(
-                        "Feed not found in task, skipping refresh", feed_id=feed_id
+                        "Global feed not found in task, skipping refresh",
+                        feed_id=feed_id,
                     )
                     return None
 
-                if not feed_to_refresh.user_id:
-                    logger.error(
-                        "User ID not found on feed, cannot refresh", feed_id=feed_id
-                    )
-                    return None
-
-                rss_service = RssService(db=db, user_id=feed_to_refresh.user_id)
-                await rss_service.refresh_feed(feed_id=feed_uuid)
-                logger.info("Successfully refreshed feed via task", feed_id=feed_id)
+                # Refresh the global feed (will create articles for all subscribers)
+                await feed_service.refresh_feed(feed_id=feed_uuid)
+                logger.info(
+                    "Successfully refreshed global feed via task", feed_id=feed_id
+                )
             return None
         except Exception as exc:
             logger.error(
-                "Error in _async_refresh_single_feed",
+                "Error in _async_refresh_single_feed (new version)",
                 feed_id=feed_id,
                 error=str(exc),
                 exc_info=True,
@@ -367,9 +371,12 @@ def refresh_folder_feeds_task(self, user_id: str, folder_id: str):
             async with TaskAsyncSessionLocal() as db:
                 user_uuid = UUID(user_id)
                 folder_uuid = UUID(folder_id)
-                feeds = await crud_feed.get_feeds_by_user(
+                feeds_tuples = await crud_feed.get_feeds_by_user(
                     db, user_id=user_uuid, folder_id=folder_uuid
                 )
+                feeds = [
+                    feed for feed, subscription in feeds_tuples
+                ]  # Extract Feed objects
                 return await queue_feed_refresh_tasks(feeds, f"folder {folder_id}")
 
         except Exception as exc:
@@ -422,7 +429,10 @@ def refresh_all_user_feeds_task(self, user_id: str):
 
             async with TaskAsyncSessionLocal() as db:
                 user_uuid = UUID(user_id)
-                feeds = await crud_feed.get_feeds_by_user(db, user_id=user_uuid)
+                feeds_tuples = await crud_feed.get_feeds_by_user(db, user_id=user_uuid)
+                feeds = [
+                    feed for feed, subscription in feeds_tuples
+                ]  # Extract Feed objects
                 return await queue_feed_refresh_tasks(feeds, "all user feeds")
 
         except Exception as exc:
@@ -458,20 +468,21 @@ def refresh_all_user_feeds_task(self, user_id: str):
 
 @celery.task(name="app.workers.tasks.schedule_all_feed_refreshes_task")
 def schedule_all_feed_refreshes_task():
-    """Celery Beat task to find feeds needing refresh and dispatch individual refresh tasks."""
+    """Celery Beat task to find global feeds needing refresh and dispatch individual refresh tasks."""
 
     async def _async_schedule_all_feeds():
         engine, TaskAsyncSessionLocal = await create_task_db_session()
         try:
-            logger.info("Starting schedule_all_feed_refreshes_task")
+            logger.info("Starting schedule_all_feed_refreshes_task (new version)")
 
             async with TaskAsyncSessionLocal() as db:
-                feeds_to_check = await crud_feed.get_feeds_needing_refresh(
-                    db, limit=200
-                )
+                from app.services.feed_service import FeedService
+
+                feed_service = FeedService(db=db)
+                feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=200)
 
                 logger.info(
-                    f"Found {len(feeds_to_check)} feeds to potentially refresh."
+                    f"Found {len(feeds_to_check)} global feeds to potentially refresh."
                 )
 
                 # Bulk queue all refresh tasks at once for better performance
@@ -481,15 +492,19 @@ def schedule_all_feed_refreshes_task():
                         refresh_single_feed_task.delay(feed_id) for feed_id in feed_ids
                     ]
                     dispatched_count = len(tasks)
+
+                    # Log efficiency metrics
                     logger.info(
-                        f"Bulk dispatched {dispatched_count} feed refresh tasks."
+                        f"Bulk dispatched {dispatched_count} global feed refresh tasks"
                     )
                 else:
                     dispatched_count = 0
             return None
         except Exception as e:
             logger.error(
-                "Error in _async_schedule_all_feeds", error=str(e), exc_info=True
+                "Error in _async_schedule_all_feeds (new version)",
+                error=str(e),
+                exc_info=True,
             )
             raise  # Re-raise to be handled by the outer sync function/Celery
         finally:

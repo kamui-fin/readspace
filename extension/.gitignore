@@ -45,3 +45,5 @@ logs/
 *.temp 
 
 dist-firefox/
+
+SOURCE_CODE_README.md

@@ -59,9 +59,14 @@ class TestFeedCreationService:
         folder_id = uuid4()
         
         existing_feed = Mock()
+        existing_feed.id = uuid4()
+        
         with patch('app.crud.crud_feed.get_feed_by_url', return_value=existing_feed):
-            with pytest.raises(ValueError, match="Feed with URL .* already exists"):
-                await self.service.add_new_feed(url, folder_id, update_existing=False)
+            # Mock that subscription already exists to trigger error
+            existing_subscription = Mock()
+            with patch('app.crud.crud_subscription.get_subscription_by_feed_id', return_value=existing_subscription):
+                with pytest.raises(ValueError, match="You are already subscribed to feed"):
+                    await self.service.add_new_feed(url, folder_id, update_existing=False)
 
     @pytest.mark.asyncio
     async def test_add_new_feed_existing_feed_update_true(self):
@@ -185,11 +190,8 @@ class TestFeedCreationService:
         total_entries = 0
         url = "https://example.com/feed.xml"
         
-        with patch('app.crud.crud_feed.delete_feed') as mock_delete:
-            with pytest.raises(ValueError, match="Feed appears to be broken: no entries found"):
-                await self.service._validate_articles(db_feed, articles, total_entries, url)
-            
-            mock_delete.assert_called_once_with(self.db, feed_id=db_feed.id, user_id=self.user_id)
+        with pytest.raises(ValueError, match="Feed appears to be broken: no entries found"):
+            await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     @pytest.mark.asyncio
     async def test_validate_articles_has_entries_no_valid_articles(self):
@@ -200,11 +202,8 @@ class TestFeedCreationService:
         total_entries = 5  # But has entries
         url = "https://example.com/feed.xml"
         
-        with patch('app.crud.crud_feed.delete_feed') as mock_delete:
-            with pytest.raises(ValueError, match="no valid articles found despite having entries"):
-                await self.service._validate_articles(db_feed, articles, total_entries, url)
-            
-            mock_delete.assert_called_once()
+        with pytest.raises(ValueError, match="no valid articles found despite having entries"):
+            await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     def test_extract_ttl_valid(self):
         """Test TTL extraction with valid value."""

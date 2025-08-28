@@ -6,12 +6,12 @@ from uuid import UUID
 
 import feedparser
 import structlog
-from sqlalchemy.exc import IntegrityError
 
-from app.crud import crud_feed, crud_folder
+from app.crud import crud_feed, crud_folder, crud_subscription
 from app.crud.crud_article import create_articles_batch
 from app.models.rss_models import Tag
-from app.schemas.rss_schemas import ArticleCreate, FeedCreate, FeedResponse, FeedUpdate
+from app.schemas.rss_schemas import ArticleCreate
+from app.schemas.subscription_schemas import LegacyFeedResponse, SubscriptionCreate
 from app.services.base_feed_service import BaseFeedService
 
 logger = structlog.get_logger(__name__)
@@ -26,7 +26,7 @@ class FeedCreationService(BaseFeedService):
         folder_id: UUID,
         tag_names: list[str] | None = None,
         update_existing: bool = False,
-    ) -> FeedResponse:
+    ) -> LegacyFeedResponse:
         """Adds a new feed by URL, parses it, and stores initial articles.
 
         Args:
@@ -44,9 +44,7 @@ class FeedCreationService(BaseFeedService):
         )
 
         # Check if feed already exists
-        existing_feed = await crud_feed.get_feed_by_url(
-            self.db, url=url, user_id=self.user_id
-        )
+        existing_feed = await crud_feed.get_feed_by_url(self.db, url=url)
         if existing_feed:
             return await self._handle_existing_feed(
                 existing_feed, url, folder_id, tag_names, update_existing
@@ -68,17 +66,42 @@ class FeedCreationService(BaseFeedService):
         folder_id: UUID,
         tag_names: list[str] | None,
         update_existing: bool,
-    ) -> FeedResponse:
+    ) -> LegacyFeedResponse:
         """Handle case where feed already exists."""
         logger.info(
-            "Feed URL already exists for user",
+            "Feed URL already exists globally",
             url=url,
             user_id=self.user_id,
             existing_feed_id=existing_feed.id,
         )
 
-        if not update_existing:
-            raise ValueError(f"Feed with URL '{url}' already exists.")
+        # Check if user already has a subscription to this feed
+        existing_subscription = await crud_subscription.get_subscription_by_feed_id(
+            self.db, feed_id=existing_feed.id, user_id=self.user_id
+        )
+
+        if existing_subscription:
+            if not update_existing:
+                raise ValueError(f"You are already subscribed to feed '{url}'.")
+
+            # Update existing subscription
+            logger.info(
+                "Updating existing subscription",
+                url=url,
+                user_id=self.user_id,
+                subscription_id=existing_subscription.id,
+            )
+            # This would require implementing subscription update logic
+            # For now, just return the existing subscription info
+            return self._create_legacy_feed_response(existing_subscription)
+
+        # User doesn't have a subscription to this feed, create one
+        logger.info(
+            "Creating new subscription to existing feed",
+            url=url,
+            user_id=self.user_id,
+            existing_feed_id=existing_feed.id,
+        )
 
         # Validate target folder
         await self._validate_folder(folder_id)
@@ -86,22 +109,53 @@ class FeedCreationService(BaseFeedService):
         # Prepare tags
         db_tags = await self._get_or_create_tags(tag_names) if tag_names else []
 
-        # Update existing feed
-        feed_update = FeedUpdate(
+        # Create subscription
+        subscription_data = SubscriptionCreate(
+            url=url,
             folder_id=folder_id,
             tag_ids=[t.id for t in db_tags] if db_tags else [],
         )
 
-        updated_feed = await crud_feed.update_feed(
-            self.db, feed_db=existing_feed, feed_in=feed_update
+        # Create subscription (this will reuse the existing global feed)
+        subscription = await crud_subscription.create_subscription(
+            self.db,
+            subscription_in=subscription_data,
+            user_id=self.user_id,
         )
+
         logger.info(
-            "Successfully updated existing feed",
+            "Successfully created subscription to existing feed",
             url=url,
             user_id=self.user_id,
-            feed_id=updated_feed.id,
+            feed_id=existing_feed.id,
+            subscription_id=subscription.id,
         )
-        return FeedResponse.model_validate(updated_feed)
+        return self._create_legacy_feed_response(subscription)
+
+    def _create_legacy_feed_response(self, subscription) -> LegacyFeedResponse:
+        """Create a legacy feed response from subscription data for backward compatibility."""
+        feed = subscription.feed
+        return LegacyFeedResponse(
+            id=subscription.id,  # Use subscription ID for compatibility
+            user_id=subscription.user_id,
+            folder_id=subscription.folder_id,
+            url=feed.url,
+            title=feed.title,
+            description=feed.description,
+            link=feed.link,
+            language=feed.language,
+            image_url=feed.image_url,
+            is_favorite=subscription.is_favorite,
+            ttl=feed.ttl,
+            skip_hours=feed.skip_hours,
+            skip_days=feed.skip_days,
+            last_fetched_at=feed.last_fetched_at,
+            last_modified_header=feed.last_modified_header,
+            etag_header=feed.etag_header,
+            last_article_published_at=feed.last_article_published_at,
+            created_at=feed.created_at,
+            updated_at=feed.updated_at,
+        )
 
     async def _validate_folder(self, folder_id: UUID) -> None:
         """Validate that folder exists and belongs to user."""
@@ -148,7 +202,7 @@ class FeedCreationService(BaseFeedService):
         folder_id: UUID,
         tag_names: list[str] | None,
         parsed_feed: feedparser.FeedParserDict,
-    ) -> FeedResponse:
+    ) -> LegacyFeedResponse:
         """Create a new feed with articles."""
         # Extract feed metadata
         initial_feed_data = self._extract_feed_metadata(parsed_feed, url)
@@ -156,9 +210,10 @@ class FeedCreationService(BaseFeedService):
         # Prepare tags
         db_tags = await self._get_or_create_tags(tag_names) if tag_names else []
 
-        # Create feed in database
-        db_feed = await self._create_feed_db_entry(
-            url, folder_id, db_tags, initial_feed_data
+        # Create global feed
+        db_feed = await crud_feed.create_feed(
+            self.db,
+            feed_data=initial_feed_data,
         )
 
         # Extract and create articles
@@ -169,11 +224,20 @@ class FeedCreationService(BaseFeedService):
         # Update feed with additional metadata
         await self._update_feed_metadata(db_feed, parsed_feed, latest_article_date)
 
-        # Return the complete feed with relationships
-        refreshed_feed = await crud_feed.get_feed(
-            self.db, feed_id=db_feed.id, user_id=self.user_id
+        # Create subscription
+        subscription_data = SubscriptionCreate(
+            url=url,
+            folder_id=folder_id,
+            tag_ids=[t.id for t in db_tags] if db_tags else [],
         )
-        return FeedResponse.model_validate(refreshed_feed)
+
+        subscription = await crud_subscription.create_subscription(
+            self.db,
+            subscription_in=subscription_data,
+            user_id=self.user_id,
+        )
+
+        return self._create_legacy_feed_response(subscription)
 
     async def _get_or_create_tags(self, tag_names: list[str]) -> list[Tag]:
         """Get or create tags for the feed."""
@@ -183,66 +247,25 @@ class FeedCreationService(BaseFeedService):
             self.db, names=tag_names, user_id=self.user_id
         )
 
-    async def _create_feed_db_entry(
-        self, url: str, folder_id: UUID, db_tags: list[Tag], initial_feed_data: Any
-    ) -> Any:
-        """Create the feed database entry."""
-        feed_create_schema = FeedCreate(
-            url=initial_feed_data.url,
-            folder_id=folder_id,
-            tag_ids=[t.id for t in db_tags] if db_tags else [],
-        )
-
-        try:
-            db_feed = await crud_feed.create_feed(
-                self.db,
-                feed_in=feed_create_schema,
-                user_id=self.user_id,
-                initial_feed_data=initial_feed_data,
-            )
-            return db_feed
-
-        except IntegrityError as e:
-            logger.warning(
-                "Integrity error creating feed, likely duplicate (race condition)",
-                url=url,
-                user_id=self.user_id,
-                error=str(e),
-            )
-            await self.db.rollback()
-
-            # Check again for race condition
-            existing_feed = await crud_feed.get_feed_by_url(
-                self.db, url=url, user_id=self.user_id
-            )
-            if existing_feed:
-                raise ValueError(
-                    f"Feed with URL '{url}' already exists (detected after race condition)."
-                )
-            else:
-                raise ValueError(
-                    f"Failed to create feed due to a database integrity issue: {str(e)}"
-                ) from e
-
-        except Exception as e:
-            logger.error(
-                "Unexpected error during feed DB creation",
-                url=url,
-                user_id=self.user_id,
-                error=str(e),
-            )
-            await self.db.rollback()
-            raise
-
     async def _create_initial_articles(
         self, db_feed: Any, parsed_feed: feedparser.FeedParserDict, url: str
     ) -> datetime | None:
         """Extract and create initial articles from the feed."""
         articles_to_create: list[ArticleCreate] = []
         latest_article_date: datetime | None = None
-        total_entries = len(parsed_feed.entries)
 
-        for entry in parsed_feed.entries:
+        # Handle cases where entries might not be a list (e.g., parsing errors)
+        entries = parsed_feed.entries if hasattr(parsed_feed, "entries") else []
+        if not isinstance(entries, list):
+            logger.warning(
+                f"Feed entries is not a list (type: {type(entries)}) for URL {url}. "
+                f"Setting to empty list. Feed might be malformed."
+            )
+            entries = []
+
+        total_entries = len(entries)
+
+        for entry in entries:
             article_schema = self._extract_article_data(
                 entry, db_feed.id, self.user_id, url
             )
@@ -288,10 +311,7 @@ class FeedCreationService(BaseFeedService):
         )
 
         if valid_articles_count == 0:
-            # Delete the feed we just created since it has no articles
-            await crud_feed.delete_feed(
-                self.db, feed_id=db_feed.id, user_id=self.user_id
-            )
+            # Don't need to delete feed - transaction will be rolled back
             if total_entries == 0:
                 logger.warning(
                     "Feed has no entries at all", url=url, user_id=self.user_id

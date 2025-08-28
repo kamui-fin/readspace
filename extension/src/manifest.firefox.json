@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Readspace",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Save articles to Readspace, your calm inbox for reading RSS, newsletters, threads, and books.",
   "icons": {
     "16": "icons/icon16.png",
@@ -25,7 +25,9 @@
     "default_title": "Save to Readspace"
   },
   "background": {
-    "scripts": ["src/background.ts"]
+    "scripts": ["src/background.ts"],
+    "persistent": false,
+    "type": "module"
   },
   "content_scripts": [
     {
