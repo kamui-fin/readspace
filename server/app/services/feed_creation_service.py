@@ -128,7 +128,7 @@ class FeedCreationService(BaseFeedService):
 
         # Create subscription
         subscription_data = SubscriptionCreate(
-            url=url,
+            url=existing_feed.url,
             folder_id=folder_id,
             tag_ids=[t.id for t in db_tags] if db_tags else [],
         )
