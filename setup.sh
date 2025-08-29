@@ -80,11 +80,9 @@ exp=$(("$iat" + 5 * 365 * 24 * 3600))
 # The function uses the global $JWT_SECRET, $header_base64, $iat, and $exp.
 gen_token() {
   local payload
-  payload=(
-    # Use jq to inject the iat and exp timestamps into the payload.
-    echo "$1" | jq --arg jq_iat "$iat" --arg jq_exp "$exp" \
-      '.iat=($jq_iat | tonumber) | .exp=($jq_exp | tonumber)'
-  )
+  # Use jq to inject the iat and exp timestamps into the payload.
+  payload=$(echo "$1" | jq --arg jq_iat "$iat" --arg jq_exp "$exp" \
+      '.iat=($jq_iat | tonumber) | .exp=($jq_exp | tonumber)')
 
   local payload_base64
   payload_base64=$(printf %s "$payload" | base64_url_encode)
@@ -123,16 +121,16 @@ fi
 
 echo "📝 Creating supabase/.env file..."
 sed \
-  -e "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$POSTGRES_PASSWORD|"
-  -e "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|"
-  -e "s|ANON_KEY=.*|ANON_KEY=$ANON_KEY|"
-  -e "s|SERVICE_ROLE_KEY=.*|SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY|"
-  -e "s|DASHBOARD_PASSWORD.*|DASHBOARD_PASSWORD=not_being_used|"
-  -e "s|SECRET_KEY_BASE.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|"
-  -e "s|VAULT_ENC_KEY.*|VAULT_ENC_KEY=$VAULT_ENC_KEY|"
-  -e "s|API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://$DOMAIN|"
-  -e "s|SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://$DOMAIN|"
-  -e "s|ENABLE_EMAIL_AUTOCONFIRM=.*|ENABLE_EMAIL_AUTOCONFIRM=$AUTO_CONFIRM_EMAIL|"
+  -e "s|POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$POSTGRES_PASSWORD|" \
+  -e "s|JWT_SECRET=.*|JWT_SECRET=$JWT_SECRET|" \
+  -e "s|ANON_KEY=.*|ANON_KEY=$ANON_KEY|" \
+  -e "s|SERVICE_ROLE_KEY=.*|SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY|" \
+  -e "s|DASHBOARD_PASSWORD.*|DASHBOARD_PASSWORD=not_being_used|" \
+  -e "s|SECRET_KEY_BASE.*|SECRET_KEY_BASE=$SECRET_KEY_BASE|" \
+  -e "s|VAULT_ENC_KEY.*|VAULT_ENC_KEY=$VAULT_ENC_KEY|" \
+  -e "s|API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://$DOMAIN|" \
+  -e "s|SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://$DOMAIN|" \
+  -e "s|ENABLE_EMAIL_AUTOCONFIRM=.*|ENABLE_EMAIL_AUTOCONFIRM=$AUTO_CONFIRM_EMAIL|" \
   supabase/.env.example > supabase/.env
 echo "✅ supabase/.env created."
 
