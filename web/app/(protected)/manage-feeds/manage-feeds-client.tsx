@@ -46,6 +46,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import Header from "@/components/navigation/header"
 
 import {
     useDeleteFeed,
@@ -94,14 +95,17 @@ function ManageFeedsPageSkeleton() {
                             <TableHead>
                                 <Skeleton className="h-4 w-32" />
                             </TableHead>
-                            <TableHead className="hidden md:table-cell">
+                            <TableHead>
                                 <Skeleton className="h-4 w-16" />
                             </TableHead>
-                            <TableHead className="hidden lg:table-cell text-center">
+                            <TableHead className="text-center">
                                 <Skeleton className="h-4 w-16 mx-auto" />
                             </TableHead>
-                            <TableHead className="hidden md:table-cell text-right">
+                            <TableHead className="text-right">
                                 <Skeleton className="h-4 w-20 ml-auto" />
+                            </TableHead>
+                            <TableHead className="text-right">
+                                <Skeleton className="h-4 w-16 ml-auto" />
                             </TableHead>
                             <TableHead className="w-[100px] text-right">
                                 <Skeleton className="h-4 w-16 ml-auto" />
@@ -123,16 +127,19 @@ function ManageFeedsPageSkeleton() {
                                         </div>
                                     </div>
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell">
+                                <TableCell>
                                     <Skeleton className="h-8 w-32" />
                                 </TableCell>
-                                <TableCell className="hidden lg:table-cell text-center">
+                                <TableCell className="text-center">
                                     <div className="flex justify-center">
                                         <Skeleton className="h-6 w-16 rounded-full" />
                                     </div>
                                 </TableCell>
-                                <TableCell className="hidden md:table-cell text-right">
+                                <TableCell className="text-right">
                                     <Skeleton className="h-3 w-20 ml-auto" />
+                                </TableCell>
+                                <TableCell className="text-right">
+                                    <Skeleton className="h-3 w-16 ml-auto" />
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <Skeleton className="h-8 w-8 ml-auto rounded-md" />
@@ -326,18 +333,23 @@ export default function ManageFeedsPageClient() {
     }
 
     return (
-        <div className="container mx-auto p-4 md:p-8 space-y-6">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <h1 className="text-2xl sm:text-3xl font-bold">Manage Feeds</h1>
-                    <p className="text-muted-foreground">
-                        View, edit, and organize your RSS feeds.
-                    </p>
-                </div>
-                {/* <Button onClick={() => alert("Add New Feed functionality TBD")} className="w-full md:w-auto">
-                    Add New Feed
-                </Button> */}
-            </header>
+        <div className="flex flex-col min-h-screen">
+            <Header
+                breadcrumbItems={[{ href: "/manage-feeds", label: "Manage Feeds" }]}
+            />
+            <main className="flex-1">
+                <div className="container mx-auto p-4 md:p-8 space-y-6">
+                    <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h1 className="text-2xl sm:text-3xl font-bold">Manage Feeds</h1>
+                            <p className="text-muted-foreground">
+                                View, edit, and organize your RSS feeds.
+                            </p>
+                        </div>
+                        {/* <Button onClick={() => alert("Add New Feed functionality TBD")} className="w-full md:w-auto">
+                            Add New Feed
+                        </Button> */}
+                    </header>
 
             {/* Filters and Bulk Actions */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -388,7 +400,7 @@ export default function ManageFeedsPageClient() {
             </div>
 
             {/* Feeds Table */}
-            <div className="rounded-lg border overflow-hidden">
+            <div className="rounded-lg border overflow-hidden overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -406,16 +418,16 @@ export default function ManageFeedsPageClient() {
                                 />
                             </TableHead>
                             <TableHead>Feed Title & URL</TableHead>
-                            <TableHead className="hidden md:table-cell">
+                            <TableHead>
                                 Folder
                             </TableHead>
-                            <TableHead className="hidden lg:table-cell text-center">
+                            <TableHead className="text-center">
                                 Status
                             </TableHead>
-                            <TableHead className="hidden md:table-cell text-right">
+                            <TableHead className="text-right">
                                 Last Post
                             </TableHead>
-                            {/* <TableHead className="hidden xl:table-cell text-right">Frequency</TableHead> */}
+                            <TableHead className="text-right">Frequency</TableHead>
                             <TableHead className="w-[100px] text-right">
                                 Actions
                             </TableHead>
@@ -425,7 +437,7 @@ export default function ManageFeedsPageClient() {
                         {filteredFeeds.length === 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={6}
+                                    colSpan={7}
                                     className="text-center h-24"
                                 >
                                     No feeds match your criteria.
@@ -483,7 +495,7 @@ export default function ManageFeedsPageClient() {
                                             </div>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell">
+                                    <TableCell>
                                         <Select
                                             value={feed.folder_id || "none"}
                                             onValueChange={(newFolderId) =>
@@ -508,7 +520,7 @@ export default function ManageFeedsPageClient() {
                                             </SelectContent>
                                         </Select>
                                     </TableCell>
-                                    <TableCell className="hidden lg:table-cell text-center">
+                                    <TableCell className="text-center">
                                         {dead ? (
                                             <Badge
                                                 variant="destructive"
@@ -532,7 +544,7 @@ export default function ManageFeedsPageClient() {
                                             </Badge>
                                         )}
                                     </TableCell>
-                                    <TableCell className="hidden md:table-cell text-right text-xs">
+                                    <TableCell className="text-right text-xs">
                                         {feed.last_article_published_at ? (
                                             <div className="text-muted-foreground">
                                                 {formatDistanceToNow(
@@ -548,7 +560,7 @@ export default function ManageFeedsPageClient() {
                                             </div>
                                         )}
                                     </TableCell>
-                                    {/* <TableCell className="hidden xl:table-cell text-right text-xs">{getPostFrequency(feed)}</TableCell> */}
+                                    <TableCell className="text-right text-xs">{getPostFrequency(feed)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -895,6 +907,8 @@ export default function ManageFeedsPageClient() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+                </div>
+            </main>
         </div>
     )
 }

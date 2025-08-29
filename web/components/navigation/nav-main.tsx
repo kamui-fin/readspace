@@ -848,10 +848,16 @@ export function FeedsNavigation() {
     }, [typedFolders, typedFeeds, feedsByFolder, typedUnreadCounts, pathname])
 
     const handleAddFolder = () => {
+        if (isMobile) {
+            toggleSidebar()
+        }
         setIsFolderModalOpen(true)
     }
 
     const handleAddFeed = (folderId: string) => {
+        if (isMobile) {
+            toggleSidebar()
+        }
         setSelectedFolderId(folderId)
         setFeedError(null) // Clear any previous errors
         setIsFeedModalOpen(true)
@@ -921,17 +927,16 @@ export function FeedsNavigation() {
             <div className="flex items-center justify-between pr-2">
                 <SidebarGroupLabel>Feeds</SidebarGroupLabel>
                 <div>
-                    <Link href="/manage-feeds">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0"
-                            title="Manage Feeds"
-                        >
+                    <SidebarLeftMenuButton
+                        asChild
+                        className="h-6 w-6 p-0"
+                        title="Manage Feeds"
+                    >
+                        <Link href="/manage-feeds">
                             <Settings2 className="h-4 w-4" />
                             <span className="sr-only">Settings</span>
-                        </Button>
-                    </Link>
+                        </Link>
+                    </SidebarLeftMenuButton>
                     <Button
                         variant="ghost"
                         size="sm"
