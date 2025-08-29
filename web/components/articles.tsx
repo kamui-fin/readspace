@@ -1454,10 +1454,10 @@ function ArticleContentView({
     }
 
     return (
-        <article className="max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-3">
+        <article className="max-w-4xl mx-auto w-full min-w-0">
+            <div className="flex justify-between items-start mb-3">
                 <h1 
-                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight"
+                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight break-words flex-1 min-w-0 pr-2"
                     onClick={() => {
                         console.log('Title clicked - attempting to mark as read')
                         if (onMarkAsRead && !article.is_read) {
@@ -1588,11 +1588,12 @@ function ArticleContentView({
                 {article.content ? (
                     <div
                         ref={contentRef}
-                        className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none 
+                        className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
                           prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
-                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline
-                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm
-                          cursor-default"
+                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
+                          prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto
+                          prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
+                          cursor-default break-words"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                         onClick={(e) => {
                             // Only mark as read if clicking on the content itself (not links)
@@ -1609,6 +1610,8 @@ function ArticleContentView({
                             wordWrap: "break-word",
                             fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
                             lineHeight: "1.6",
+                            width: "100%",
+                            maxWidth: "100%",
                         }}
                     />
                 ) : (

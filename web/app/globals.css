@@ -191,3 +191,48 @@
 pre {
     @apply text-foreground;
 }
+
+/* Prevent horizontal overflow in article content */
+.article-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    hyphens: auto;
+}
+
+.article-content * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.article-content img,
+.article-content video,
+.article-content iframe,
+.article-content embed,
+.article-content object {
+    max-width: 100% !important;
+    height: auto !important;
+    width: auto !important;
+}
+
+.article-content pre,
+.article-content code {
+    overflow-x: auto !important;
+    white-space: pre-wrap !important;
+    word-break: break-all !important;
+}
+
+.article-content table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    overflow-x: auto !important;
+    display: block !important;
+    white-space: nowrap !important;
+}
+
+@media (max-width: 768px) {
+    .article-content table {
+        font-size: 0.875rem !important;
+    }
+}
