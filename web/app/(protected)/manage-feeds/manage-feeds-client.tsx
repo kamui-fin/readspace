@@ -221,41 +221,7 @@ export default function ManageFeedsPageClient() {
         }
     }
 
-    // Placeholder for actual calculations
-    const getPostFrequency = (feed: Feed): string => {
-        // This would ideally come from aggregated data on the backend per feed
-        // For now, a placeholder or a very rough client-side estimate if articles were available
-        // Example: if feed.articles_last_30_days is available, return `${feed.articles_last_30_days} / month`
-        if (feed.last_article_published_at) {
-            const lastPostDate = parseISO(feed.last_article_published_at)
-            const daysSinceLastPost =
-                (new Date().getTime() - lastPostDate.getTime()) /
-                (1000 * 3600 * 24)
-            if (daysSinceLastPost < 30) return "~1-5 / week" // Very rough guess
-            if (daysSinceLastPost < 90) return "~1-5 / month"
-            return "Infrequent"
-        }
-        return "N/A"
-    }
 
-    const getLastUpdateTime = (feed: Feed): string => {
-        if (feed.last_fetched_at) {
-            return formatDistanceToNow(parseISO(feed.last_fetched_at), {
-                addSuffix: true,
-            })
-        }
-        return "Never"
-    }
-
-    const getLastErrorTime = (feed: Feed): string => {
-        // Assuming last_fetched_at is updated on error too, or a dedicated last_error_at field.
-        if (feed.last_error_message && feed.last_fetched_at) {
-            return formatDistanceToNow(parseISO(feed.last_fetched_at), {
-                addSuffix: true,
-            })
-        }
-        return "-"
-    }
 
     const isFeedDead = (feed: Feed): boolean => {
         if (feed.fetch_error_count > 5) return true
@@ -400,7 +366,7 @@ export default function ManageFeedsPageClient() {
             </div>
 
             {/* Feeds Table */}
-            <div className="rounded-lg border overflow-hidden overflow-x-auto">
+            <div className="w-full overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -418,26 +384,17 @@ export default function ManageFeedsPageClient() {
                                 />
                             </TableHead>
                             <TableHead>Feed Title & URL</TableHead>
-                            <TableHead>
-                                Folder
-                            </TableHead>
-                            <TableHead className="text-center">
-                                Status
-                            </TableHead>
-                            <TableHead className="text-right">
-                                Last Post
-                            </TableHead>
-                            <TableHead className="text-right">Frequency</TableHead>
-                            <TableHead className="w-[100px] text-right">
-                                Actions
-                            </TableHead>
+                            <TableHead>Folder</TableHead>
+                            <TableHead className="text-center w-[90px]">Status</TableHead>
+                            <TableHead className="text-right">Last Post</TableHead>
+                            <TableHead className="w-[100px] text-right">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {filteredFeeds.length === 0 && (
                             <TableRow>
                                 <TableCell
-                                    colSpan={7}
+                                    colSpan={6}
                                     className="text-center h-24"
                                 >
                                     No feeds match your criteria.
@@ -477,7 +434,7 @@ export default function ManageFeedsPageClient() {
                                             )}
                                             <div className="flex flex-col">
                                                 <span
-                                                    className="truncate max-w-[200px] md:max-w-[300px]"
+                                                    className="whitespace-nowrap"
                                                     title={feed.title || "N/A"}
                                                 >
                                                     {feed.title || "N/A"}
@@ -486,7 +443,7 @@ export default function ManageFeedsPageClient() {
                                                     href={feed.url}
                                                     target="_blank"
                                                     rel="noopener noreferrer"
-                                                    className="text-xs text-muted-foreground hover:text-primary truncate max-w-[200px] md:max-w-[300px]"
+                                                    className="text-xs text-muted-foreground hover:text-primary whitespace-nowrap"
                                                     title={feed.url}
                                                 >
                                                     {feed.url}{" "}
@@ -505,7 +462,7 @@ export default function ManageFeedsPageClient() {
                                                 )
                                             }
                                         >
-                                            <SelectTrigger className="h-8 text-xs w-auto min-w-[120px] max-w-[180px]">
+                                            <SelectTrigger className="h-8 text-xs">
                                                 <SelectValue placeholder="Select folder" />
                                             </SelectTrigger>
                                             <SelectContent>
@@ -524,6 +481,7 @@ export default function ManageFeedsPageClient() {
                                         {dead ? (
                                             <Badge
                                                 variant="destructive"
+                                                className="whitespace-nowrap"
                                                 title={`Error count: ${feed.fetch_error_count}. ${feed.last_error_message || ""}`}
                                             >
                                                 <AlertTriangle className="h-3 w-3 mr-1" />{" "}
@@ -532,13 +490,14 @@ export default function ManageFeedsPageClient() {
                                         ) : feed.fetch_error_count > 0 ? (
                                             <Badge
                                                 variant="orange"
+                                                className="whitespace-nowrap"
                                                 title={`Error count: ${feed.fetch_error_count}. ${feed.last_error_message || ""}`}
                                             >
                                                 <AlertTriangle className="h-3 w-3 mr-1" />{" "}
                                                 Warning
                                             </Badge>
                                         ) : (
-                                            <Badge variant="secondary">
+                                            <Badge variant="secondary" className="whitespace-nowrap">
                                                 <CheckCircle className="h-3 w-3 mr-1" />{" "}
                                                 Active
                                             </Badge>
@@ -546,7 +505,7 @@ export default function ManageFeedsPageClient() {
                                     </TableCell>
                                     <TableCell className="text-right text-xs">
                                         {feed.last_article_published_at ? (
-                                            <div className="text-muted-foreground">
+                                            <div className="text-muted-foreground whitespace-nowrap">
                                                 {formatDistanceToNow(
                                                     parseISO(
                                                         feed.last_article_published_at
@@ -555,12 +514,11 @@ export default function ManageFeedsPageClient() {
                                                 )}
                                             </div>
                                         ) : (
-                                            <div className="text-muted-foreground">
+                                            <div className="text-muted-foreground whitespace-nowrap">
                                                 No posts yet
                                             </div>
                                         )}
                                     </TableCell>
-                                    <TableCell className="text-right text-xs">{getPostFrequency(feed)}</TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>

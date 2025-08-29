@@ -685,7 +685,7 @@ function MainNavigationItems({
 }
 
 // Feeds Navigation component
-export function FeedsNavigation() {
+export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean, toggleSidebar: () => void }) {
     // Use the optimized combined sidebar data hook with proper cache configuration
     const { data: folders, isLoading: isFoldersLoading } = useFolders({
         refetchOnMount: false,
@@ -848,18 +848,12 @@ export function FeedsNavigation() {
     }, [typedFolders, typedFeeds, feedsByFolder, typedUnreadCounts, pathname])
 
     const handleAddFolder = () => {
-        if (isMobile) {
-            toggleSidebar()
-        }
         setIsFolderModalOpen(true)
     }
 
     const handleAddFeed = (folderId: string) => {
-        if (isMobile) {
-            toggleSidebar()
-        }
         setSelectedFolderId(folderId)
-        setFeedError(null) // Clear any previous errors
+        setFeedError(null)
         setIsFeedModalOpen(true)
     }
 
@@ -927,16 +921,22 @@ export function FeedsNavigation() {
             <div className="flex items-center justify-between pr-2">
                 <SidebarGroupLabel>Feeds</SidebarGroupLabel>
                 <div>
-                    <SidebarLeftMenuButton
-                        asChild
-                        className="h-6 w-6 p-0"
-                        title="Manage Feeds"
-                    >
-                        <Link href="/manage-feeds">
+                    <Link href="/manage-feeds">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            title="Manage Feeds"
+                            onClick={() => {
+                                if (isMobile) {
+                                    toggleSidebar()
+                                }
+                            }}
+                        >
                             <Settings2 className="h-4 w-4" />
                             <span className="sr-only">Settings</span>
-                        </Link>
-                    </SidebarLeftMenuButton>
+                        </Button>
+                    </Link>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -1116,7 +1116,7 @@ export function NavMain() {
                 isMobile={isMobile}
                 toggleSidebar={toggleSidebar}
             />
-            <FeedsNavigation />
+            <FeedsNavigation isMobile={isMobile} toggleSidebar={toggleSidebar} />
             <LibraryNavigation />
         </>
     )
