@@ -34,6 +34,7 @@ import {
 } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import {
+    ArrowLeft,
     BookmarkIcon,
     CalendarIcon,
     Check,
@@ -43,6 +44,7 @@ import {
     EyeOff,
     Globe,
     Loader2,
+    Menu,
     MoreVertical,
     Paperclip,
     RefreshCw,
@@ -90,6 +92,7 @@ export function ArticlesView({
     const [selectedArticleId, setSelectedArticleId] = useState<string | null>(
         null
     )
+    const [showContent, setShowContent] = useState(false)
     const [showUnreadOnly, setShowUnreadOnly] = useState(false)
     const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null)
     const [refreshType, setRefreshType] = useState<"folder" | "all" | null>(
@@ -321,6 +324,7 @@ export function ArticlesView({
     // Reset selected article when view changes (feed/folder/mode change)
     useEffect(() => {
         setSelectedArticleId(null)
+        setShowContent(false) // Reset to list view on mobile
     }, [viewFeedId, viewFolderId, viewMode, publishedSince, publishedUntil])
 
     // Handle refresh status updates
@@ -437,6 +441,7 @@ export function ArticlesView({
 
     const handleArticleClick = (articleId: string) => {
         setSelectedArticleId(articleId)
+        setShowContent(true) // Show content on mobile
         const article = filteredArticles.find(
             (a: Article) => a.id === articleId
         )
@@ -630,23 +635,25 @@ export function ArticlesView({
 
     return (
         <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
-                    <div className="flex h-full flex-col border-r">
-                        <div className="flex h-14 items-center justify-between border-b px-4">
-                            <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <h2 className="font-semibold truncate">
-                                                {sidebarTitle}
-                                            </h2>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{sidebarTitle}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+            {/* Desktop: Resizable panels */}
+            <div className="hidden md:flex w-full">
+                <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
+                        <div className="flex h-full flex-col border-r">
+                            <div className="flex h-14 items-center justify-between border-b px-4">
+                                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <h2 className="font-semibold truncate">
+                                                    {sidebarTitle}
+                                                </h2>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{sidebarTitle}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 {!isRecentlyReadMode &&
                                     !isReadLaterMode &&
                                     unreadCount > 0 && (
@@ -959,6 +966,225 @@ export function ArticlesView({
                     </div>
                 </ResizablePanel>
             </ResizablePanelGroup>
+            </div>
+            
+            {/* Mobile: Stacked layout */}
+            <div className="flex md:hidden w-full h-full">
+                {/* Article List View */}
+                <div className={`w-full h-full flex-col ${showContent ? 'hidden' : 'flex'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <h2 className="font-semibold truncate text-lg">
+                                {sidebarTitle}
+                            </h2>
+                            {!isRecentlyReadMode &&
+                                !isReadLaterMode &&
+                                unreadCount > 0 && (
+                                    <Badge
+                                        variant="outline"
+                                        className="min-w-3 px-1 flex-shrink-0"
+                                    >
+                                        {unreadCount}
+                                    </Badge>
+                                )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {!isRecentlyReadMode && !isReadLaterMode && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={toggleShowUnreadOnly}
+                                    title={
+                                        showUnreadOnly
+                                            ? "Show all articles"
+                                            : "Show unread only"
+                                    }
+                                >
+                                    {showUnreadOnly ? (
+                                        <Eye className="h-4 w-4" />
+                                    ) : (
+                                        <EyeOff className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                    handleRefreshWithMessage("Refreshing articles...")
+                                }
+                                title="Refresh"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto min-h-0">
+                        <InfiniteScroll
+                            dataLength={filteredArticles.length}
+                            next={fetchMoreArticles}
+                            hasMore={!!hasNextPage}
+                            loader={
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            }
+                            endMessage={
+                                <div className="text-center py-6 text-muted-foreground text-sm">
+                                    <b>You've seen all articles!</b>
+                                </div>
+                            }
+                            style={{ height: '100%', overflow: 'visible' }}
+                        >
+                            {isRecentlyReadMode || isReadLaterMode
+                                ? filteredArticles.map(
+                                    (article: Article, index: number) => (
+                                        <ArticleItem
+                                            key={article.id}
+                                            article={article}
+                                            isActive={
+                                                article.id === selectedArticleId
+                                            }
+                                            isLastInGroup={
+                                                index === filteredArticles.length - 1
+                                            }
+                                            onClick={() =>
+                                                handleArticleClick(article.id)
+                                            }
+                                            isRecentlyReadMode={isRecentlyReadMode}
+                                            isReadLaterMode={isReadLaterMode}
+                                        />
+                                    )
+                                )
+                                : Object.entries(groupedArticles).map(
+                                    ([groupId, group]) => (
+                                        <div key={groupId}>
+                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    {group.label === "Today" ||
+                                                        group.label === "Yesterday" ? (
+                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        {group.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {group.articles.map(
+                                                (article: Article, index: number) => (
+                                                    <ArticleItem
+                                                        key={article.id}
+                                                        article={article}
+                                                        isActive={
+                                                            article.id === selectedArticleId
+                                                        }
+                                                        isLastInGroup={
+                                                            index === group.articles.length - 1
+                                                        }
+                                                        onClick={() =>
+                                                            handleArticleClick(article.id)
+                                                        }
+                                                    />
+                                                )
+                                            )}
+                                        </div>
+                                    )
+                                )}
+                        </InfiniteScroll>
+                    </div>
+                </div>
+
+                {/* Article Content View */}
+                <div className={`w-full h-full flex-col ${showContent ? 'flex' : 'hidden'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setShowContent(false)}
+                            title="Back to articles"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <div className="flex items-center gap-1">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                    handleRefreshWithMessage("Refreshing articles...")
+                                }
+                                title="Refresh"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                        {isArticleLoading && (
+                            <div className="flex-1 p-4">
+                                <ArticleContentSkeleton />
+                            </div>
+                        )}
+                        {!isArticleLoading && transformedSelectedArticle ? (
+                            <div 
+                                className="p-4 h-full overflow-y-auto cursor-default"
+                                onClick={() => {
+                                    if (!isRecentlyReadMode && !transformedSelectedArticle.is_read) {
+                                        updateArticle.mutate({
+                                            articleId: transformedSelectedArticle.id,
+                                            data: { is_read: true },
+                                            articleType: transformedSelectedArticle.article_type,
+                                        })
+                                    }
+                                }}
+                                onScroll={(e) => {
+                                    const target = e.currentTarget
+                                    if (target.scrollTop > 50 && !isRecentlyReadMode && !transformedSelectedArticle.is_read) {
+                                        updateArticle.mutate({
+                                            articleId: transformedSelectedArticle.id,
+                                            data: { is_read: true },
+                                            articleType: transformedSelectedArticle.article_type,
+                                        })
+                                    }
+                                }}
+                            >
+                                <ArticleContentView
+                                    article={transformedSelectedArticle}
+                                    isRecentlyReadMode={isRecentlyReadMode}
+                                    isReadLaterMode={isReadLaterMode}
+                                    onArticleRemoved={() => {
+                                        setSelectedArticleId(null)
+                                        setShowContent(false)
+                                    }}
+                                    onMarkAsRead={() => {
+                                        if (
+                                            !isRecentlyReadMode && 
+                                            !transformedSelectedArticle.is_read
+                                        ) {
+                                            updateArticle.mutate({
+                                                articleId: transformedSelectedArticle.id,
+                                                data: { is_read: true },
+                                                articleType: transformedSelectedArticle.article_type,
+                                            })
+                                        }
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className="flex flex-1 items-center justify-center">
+                                <p className="text-muted-foreground">
+                                    Select an article to read
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -1231,7 +1457,7 @@ function ArticleContentView({
         <article className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-3">
                 <h1 
-                    className="text-2xl font-semibold cursor-default"
+                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight"
                     onClick={() => {
                         console.log('Title clicked - attempting to mark as read')
                         if (onMarkAsRead && !article.is_read) {
@@ -1243,7 +1469,7 @@ function ArticleContentView({
                     {article.title}
                 </h1>
             </div>
-            <div className="flex items-center justify-between mb-6 text-[10px]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 text-[10px] gap-2 sm:gap-0">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                         <AvatarImage
@@ -1266,7 +1492,7 @@ function ArticleContentView({
                             {article.feed?.title?.substring(0, 2) || "N/A"}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="truncate max-w-[200px]">
+                    <span className="truncate max-w-[150px] sm:max-w-[200px]">
                         {article.author ||
                             article.feed?.title ||
                             (article.article_type === "clipped" && article.link 
@@ -1298,7 +1524,7 @@ function ArticleContentView({
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                     {article.link && (
                         <a
                             href={article.link}
@@ -1341,7 +1567,7 @@ function ArticleContentView({
             </div>
             <div className="space-y-6">
                 {article.image_url && !imageError && (
-                    <div className="aspect-video w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
+                    <div className="aspect-video w-full sm:w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
@@ -1362,10 +1588,10 @@ function ArticleContentView({
                 {article.content ? (
                     <div
                         ref={contentRef}
-                        className="article-content prose prose-lg dark:prose-invert max-w-none 
-                          prose-headings:font-semibold prose-h1:text-xl prose-h2:text-lg
+                        className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none 
+                          prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
                           prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline
-                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md
+                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm
                           cursor-default"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                         onClick={(e) => {
@@ -1381,6 +1607,8 @@ function ArticleContentView({
                             fontFamily: "var(--font-garamond-serif)",
                             overflowWrap: "break-word",
                             wordWrap: "break-word",
+                            fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
+                            lineHeight: "1.6",
                         }}
                     />
                 ) : (

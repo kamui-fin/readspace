@@ -233,9 +233,9 @@ export default function ImportOPMLPageClient() {
     }
 
     return (
-        <div className="container mx-auto p-6 pt-10 max-w-4xl">
+        <div className="container mx-auto p-4 sm:p-6 pt-6 sm:pt-10 max-w-4xl">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">OPML Import</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2">OPML Import</h1>
                 <p className="text-muted-foreground">
                     Import feeds from an OPML file exported from another RSS
                     reader.
