@@ -942,6 +942,7 @@ export function useUpdateArticle() {
         mutationFn: ({
             articleId,
             data,
+            articleType = "feed",
         }: {
             articleId: string
             data: {
@@ -950,7 +951,8 @@ export function useUpdateArticle() {
                 is_read_later?: boolean
                 is_favorite?: boolean
             }
-        }) => ApiClient.rss.updateArticle(articleId, data),
+            articleType?: "feed" | "clipped"
+        }) => ApiClient.rss.updateArticle(articleId, data, articleType),
         onSuccess: (_, { articleId }) => {
             queryClient.invalidateQueries({
                 queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],

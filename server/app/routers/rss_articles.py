@@ -39,13 +39,13 @@ class SaveArticleRequest(BaseModel):
     def validate_metadata(cls, v):
         if v is None:
             return v
-        
+
         # Limit total metadata size by serialized JSON length
         import json
         serialized = json.dumps(v)
         if len(serialized) > 100_000:  # 100KB limit for metadata JSON
             raise ValueError("Metadata too large - maximum 100KB when serialized")
-        
+
         # Prevent deeply nested objects to avoid DoS
         def check_depth(obj, max_depth=10, current_depth=0):
             if current_depth > max_depth:
@@ -56,7 +56,7 @@ class SaveArticleRequest(BaseModel):
             elif isinstance(obj, list):
                 for item in obj:
                     check_depth(item, max_depth, current_depth + 1)
-        
+
         check_depth(v)
         return v
 
@@ -254,13 +254,14 @@ async def get_article(
 async def update_article(
     article_id: UUID,
     article_in: ArticleUpdate = Body(...),
+    article_type: str = Query("feed", pattern="^(feed|clipped)$", description="Article type: feed or clipped"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ):
     """Update an article's status (e.g., is_read, is_read_later, is_favorite)."""
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     updated_article = await rss_service.update_article(
-        article_id=article_id, article_in=article_in
+        article_id=article_id, article_in=article_in, article_type=article_type
     )
     if not updated_article:
         logger.warning(

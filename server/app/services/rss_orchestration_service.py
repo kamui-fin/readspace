@@ -218,10 +218,10 @@ class RssOrchestrationService:
         )
 
     async def update_article(
-        self, article_id: UUID, article_in: ArticleUpdate
+        self, article_id: UUID, article_in: ArticleUpdate, article_type: str = "feed"
     ) -> ArticleResponse | None:
         """Update an article."""
-        return await self.article_service.update_article(article_id, article_in)
+        return await self.article_service.update_article(article_id, article_in, article_type)
 
     async def get_unread_counts_by_folder(self) -> dict[str, int]:
         """Get unread counts by folder."""
@@ -308,7 +308,6 @@ class RssOrchestrationService:
         if not folder_names:
             return {}
 
-        from app.schemas.rss_schemas import FolderCreate
 
         # Get existing folders first
         existing_folders = await self.folder_service.list_folders()
@@ -322,7 +321,7 @@ class RssOrchestrationService:
             try:
                 created_folders = await self.folder_service.create_folders_batch(folders_to_create)
                 folder_cache.update(created_folders)
-                
+
                 logger.info(
                     "Batch folder creation completed",
                     created_count=len(created_folders),
@@ -331,8 +330,8 @@ class RssOrchestrationService:
                 )
             except Exception as e:
                 logger.error(
-                    "Failed to batch create folders", 
-                    error=str(e), 
+                    "Failed to batch create folders",
+                    error=str(e),
                     folder_names=folders_to_create,
                     user_id=self.user_id
                 )

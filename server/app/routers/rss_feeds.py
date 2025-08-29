@@ -253,7 +253,7 @@ async def refresh_feed(
 
 @router.get("/refresh_status/{task_id}", response_model=dict)
 async def get_refresh_status(
-    task_id: str, 
+    task_id: str,
     page: int = Query(1, ge=1, description="Page number for paginated task checking"),
     page_size: int = Query(100, ge=1, le=500, description="Number of tasks to check per page"),
     current_user: TokenData = Depends(get_current_user)
@@ -300,11 +300,11 @@ async def get_refresh_status(
             start_idx = (page - 1) * page_size
             end_idx = start_idx + page_size
             paginated_task_ids = feed_task_ids[start_idx:end_idx]
-            
+
             # Calculate pagination info
             total_pages = (total_tasks + page_size - 1) // page_size
             has_more_pages = page < total_pages
-            
+
             logger.info(
                 "Checking status of individual feed refresh tasks (paginated)",
                 total_tasks=total_tasks,
@@ -313,7 +313,7 @@ async def get_refresh_status(
                 tasks_this_page=len(paginated_task_ids),
                 task_id=task_id,
             )
-            
+
             # Check status of individual feed refresh tasks using batch operations
             completed_tasks = 0
             successful_refreshes = 0
@@ -322,19 +322,20 @@ async def get_refresh_status(
 
             # Use Redis pipeline for efficient batch operations instead of individual calls
             from redis import Redis
+
             from app.core.config import get_settings
-            
+
             settings = get_settings()
-            
+
             # Get Redis connection from Celery backend
             redis_client = None
             if hasattr(celery, 'backend') and hasattr(celery.backend, 'client'):
                 redis_client = celery.backend.client
-            
+
             # Fallback to creating new Redis connection if needed
             if not redis_client:
                 redis_client = Redis.from_url(settings.CELERY_BROKER_URL)
-            
+
             # Batch fetch task states using Redis pipeline for efficiency (paginated)
             task_results = {}
             if redis_client:
@@ -343,10 +344,10 @@ async def get_refresh_status(
                     for task_id in paginated_task_ids:
                         pipe.get(f"celery-task-meta-{task_id}")
                     results = pipe.execute()
-                    
+
                     # Parse results
                     import json
-                    for task_id, result in zip(paginated_task_ids, results):
+                    for task_id, result in zip(paginated_task_ids, results, strict=False):
                         if result:
                             try:
                                 task_data = json.loads(result.decode('utf-8'))
@@ -358,7 +359,7 @@ async def get_refresh_status(
             else:
                 # Fallback to individual calls if Redis pipeline fails
                 task_results = {task_id: celery.AsyncResult(task_id).state for task_id in paginated_task_ids}
-            
+
             # Process paginated task states efficiently
             for i, feed_task_id in enumerate(paginated_task_ids):
                 task_state = task_results.get(feed_task_id, 'PENDING')
@@ -446,10 +447,10 @@ async def get_refresh_status(
                     )
 
             total_feeds = len(feed_task_ids)
-            
+
             # For pagination, we need to return page-specific information
             # The client needs to check all pages to determine overall completion
-            
+
             logger.info(
                 "Refresh task status summary (paginated)",
                 page_completed=completed_tasks,
@@ -481,7 +482,7 @@ async def get_refresh_status(
                         "message": "Page contains no tasks.",
                     },
                 }
-            
+
             # Always return in_progress for paginated results
             # Client must check all pages to determine completion
             result = {
@@ -489,7 +490,7 @@ async def get_refresh_status(
                 "status": "in_progress",
                 "pagination": {
                     "current_page": page,
-                    "total_pages": total_pages, 
+                    "total_pages": total_pages,
                     "page_size": page_size,
                     "total_tasks": total_feeds,
                     "has_more": has_more_pages,

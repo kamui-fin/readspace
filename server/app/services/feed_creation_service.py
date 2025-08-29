@@ -53,7 +53,7 @@ class FeedCreationService(BaseFeedService):
         # Normalize URL to prevent duplicates
         from app.utils.url_normalizer import normalize_feed_url
         normalized_url = normalize_feed_url(url)
-        
+
         logger.info(
             "URL normalized for duplicate checking",
             original_url=url,

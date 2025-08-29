@@ -49,10 +49,10 @@ class ArticleContent(Base):
     id = Column(UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Core article data
-    title = Column(Text)
+    title = Column(String(1000))  # Conservative limit for titles
     link = Column(String(2048), nullable=False)
-    description = Column(Text)  # Summary
-    content = Column(Text)  # Full content
+    description = Column(String(5000))  # Conservative limit for summaries
+    content = Column(Text)  # Keep unlimited for full content
     image_url = Column(String(2048))  # Best representative cover image
     author = Column(String(500))
 
@@ -320,7 +320,7 @@ class ClippedArticle(Base):
 
     # Clipped article specific fields
     priority = Column(String(20), default="medium", nullable=False)  # low, medium, high
-    note = Column(Text)  # User's personal note about the article
+    note = Column(String(2000))  # User's personal note about the article
 
     # User interaction state
     is_read = Column(Boolean, default=False, nullable=False, index=True)

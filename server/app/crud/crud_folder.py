@@ -125,7 +125,7 @@ async def create_folders_batch(
         # Step 1: Prepare bulk insert data
         current_time = datetime.now(timezone.utc)
         folder_mappings = []
-        
+
         for name in folder_names:
             folder_mappings.append({
                 "name": name,
@@ -145,13 +145,13 @@ async def create_folders_batch(
 
         result = await db.execute(folder_insert_stmt)
         created_folders = result.fetchall()
-        
+
         # Step 3: Handle any folders that weren't created due to conflicts
         created_folder_names = {row.name for row in created_folders}
         missing_folder_names = set(folder_names) - created_folder_names
-        
+
         folder_name_to_id = {row.name: row.id for row in created_folders}
-        
+
         # Step 4: Fetch existing folders for any that had conflicts
         if missing_folder_names:
             existing_result = await db.execute(
@@ -161,7 +161,7 @@ async def create_folders_batch(
                 )
             )
             existing_folders = existing_result.fetchall()
-            
+
             for row in existing_folders:
                 folder_name_to_id[row.name] = row.id
 

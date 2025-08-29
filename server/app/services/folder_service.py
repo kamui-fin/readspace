@@ -47,14 +47,14 @@ class FolderService:
     ) -> FolderResponse | None:
         """Update folder name or other editable attributes."""
         logger.info("Updating folder", folder_id=folder_id, user_id=self.user_id)
-        
+
         # First get the folder to ensure it exists and belongs to the user
         folder_db = await crud_folder.get_folder(
             db=self.db, folder_id=folder_id, user_id=self.user_id
         )
         if not folder_db:
             return None
-            
+
         # Now update it with the CRUD function that expects the database object
         updated_folder = await crud_folder.update_folder(
             db=self.db, folder_db=folder_db, folder_in=folder_in
@@ -86,15 +86,15 @@ class FolderService:
             user_id=self.user_id,
             folder_names=folder_names[:5]  # Log first 5 for debugging
         )
-        
+
         folder_name_to_id = await crud_folder.create_folders_batch(
             db=self.db, folder_names=folder_names, user_id=self.user_id
         )
-        
+
         logger.info(
             "Bulk folder creation completed",
             created_count=len(folder_name_to_id),
             user_id=self.user_id
         )
-        
+
         return folder_name_to_id

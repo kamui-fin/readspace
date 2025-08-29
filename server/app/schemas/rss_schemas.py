@@ -268,6 +268,7 @@ class ArticleUpdate(BaseModel):
     is_read: bool | None = None
     is_read_later: bool | None = None
     is_favorite: bool | None = None
+    article_type: str | None = Field(None, pattern="^(feed|clipped)$")
 
 
 class ArticleResponse(ArticleBase):

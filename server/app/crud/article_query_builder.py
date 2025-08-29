@@ -9,7 +9,6 @@ from sqlalchemy.sql import Select
 
 from app.models.rss_models import (
     ArticleContent,
-    Feed,
     FeedArticle,
     FeedSubscription,
     UserArticleState,
@@ -201,13 +200,13 @@ class ArticleQueryBuilder:
             sort_column = ArticleContent.published_at
 
         if sort_order.lower() == "asc":
-            if sort_by == "read_at":
+            if sort_by in ["read_at", "published_at"]:
                 stmt = stmt.order_by(asc(sort_column).nulls_last())
             else:
                 stmt = stmt.order_by(asc(sort_column))
         else:
-            if sort_by == "read_at":
-                stmt = stmt.order_by(desc(sort_column).nulls_first())
+            if sort_by in ["read_at", "published_at"]:
+                stmt = stmt.order_by(desc(sort_column).nulls_last())
             else:
                 stmt = stmt.order_by(desc(sort_column))
 

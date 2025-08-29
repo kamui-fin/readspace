@@ -223,10 +223,16 @@ export function ArticlesView({
         !!refreshTaskId
     )
 
+    // Check if the selected article is in the current filtered list
+    const isSelectedArticleInFilteredList = useMemo(() => {
+        if (!selectedArticleId || filteredArticles.length === 0) return false
+        return filteredArticles.some((article: Article) => article.id === selectedArticleId)
+    }, [selectedArticleId, filteredArticles])
+
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(
         selectedArticleId || "",
         {
-            enabled: !!selectedArticleId, // Only fetch when article is selected
+            enabled: !!selectedArticleId && isSelectedArticleInFilteredList, // Only fetch when article is selected AND in current list
             refetchOnMount: false,
             refetchOnWindowFocus: false,
             staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
@@ -270,9 +276,33 @@ export function ArticlesView({
         }
     }, [isFetching, hasNextPage, fetchNextPage])
 
+    // Force load more articles if there are more to load but no scrollbar appears
     useEffect(() => {
+        const container = document.getElementById('articles-scroll-container')
+        if (container && hasNextPage && !isFetching && filteredArticles.length > 0) {
+            // Check if container has no scrollbar but there's more content
+            if (container.scrollHeight <= container.clientHeight) {
+                // Add a small delay to avoid rapid calls
+                const timer = setTimeout(() => {
+                    fetchNextPage()
+                }, 100)
+                return () => clearTimeout(timer)
+            }
+        }
+    }, [filteredArticles, hasNextPage, isFetching, fetchNextPage])
+
+    useEffect(() => {
+        // Auto-select first article when we have articles but no current selection
         if (filteredArticles.length > 0 && !selectedArticleId) {
-            setSelectedArticleId(filteredArticles[0].id)
+            // Use a small timeout to ensure data has stabilized
+            const timer = setTimeout(() => {
+                if (filteredArticles.length > 0 && !selectedArticleId) {
+                    const firstArticle = filteredArticles[0]
+                    setSelectedArticleId(firstArticle.id)
+                }
+            }, 50)
+            
+            return () => clearTimeout(timer)
         }
     }, [filteredArticles, selectedArticleId])
 
@@ -286,7 +316,12 @@ export function ArticlesView({
                 setSelectedArticleId(null)
             }
         }
-    }, [selectedArticleId, filteredArticles])
+    }, [selectedArticleId, filteredArticles, viewFeedId, viewFolderId])
+
+    // Reset selected article when view changes (feed/folder/mode change)
+    useEffect(() => {
+        setSelectedArticleId(null)
+    }, [viewFeedId, viewFolderId, viewMode, publishedSince, publishedUntil])
 
     // Handle refresh status updates
     useEffect(() => {
@@ -410,6 +445,7 @@ export function ArticlesView({
             updateArticle.mutate({
                 articleId,
                 data: { is_read: true },
+                articleType: article.article_type,
             })
         }
     }
@@ -751,13 +787,12 @@ export function ArticlesView({
                         <div
                             id="articles-scroll-container"
                             className="flex-1 overflow-auto min-h-0"
-                            style={{ height: '100%' }}
+                            style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}
                         >
                             <InfiniteScroll
                                 dataLength={filteredArticles.length}
                                 next={fetchMoreArticles}
                                 hasMore={!!hasNextPage}
-                                threshold={150}
                                 loader={
                                     <div className="flex items-center justify-center py-8">
                                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -769,6 +804,7 @@ export function ArticlesView({
                                     </div>
                                 }
                                 scrollableTarget="articles-scroll-container"
+                                style={{ height: '100%', overflow: 'visible' }}
                             >
                                 {isRecentlyReadMode || isReadLaterMode
                                     ? filteredArticles.map(
@@ -859,7 +895,31 @@ export function ArticlesView({
                             </div>
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
-                            <div className="p-6 md:p-10 h-full overflow-y-auto">
+                            <div 
+                                className="p-6 md:p-10 h-full overflow-y-auto cursor-default"
+                                onClick={() => {
+                                    console.log('Container clicked - attempting to mark as read')
+                                    if (!isRecentlyReadMode && !transformedSelectedArticle.is_read) {
+                                        console.log('Calling updateArticle.mutate from container click')
+                                        updateArticle.mutate({
+                                            articleId: transformedSelectedArticle.id,
+                                            data: { is_read: true },
+                                            articleType: transformedSelectedArticle.article_type,
+                                        })
+                                    }
+                                }}
+                                onScroll={(e) => {
+                                    const target = e.currentTarget
+                                    if (target.scrollTop > 50 && !isRecentlyReadMode && !transformedSelectedArticle.is_read) {
+                                        console.log('Container scroll - attempting to mark as read')
+                                        updateArticle.mutate({
+                                            articleId: transformedSelectedArticle.id,
+                                            data: { is_read: true },
+                                            articleType: transformedSelectedArticle.article_type,
+                                        })
+                                    }
+                                }}
+                            >
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
                                     isRecentlyReadMode={isRecentlyReadMode}
@@ -867,6 +927,25 @@ export function ArticlesView({
                                     onArticleRemoved={() =>
                                         setSelectedArticleId(null)
                                     }
+                                    onMarkAsRead={() => {
+                                        console.log('onMarkAsRead callback called:', {
+                                            isRecentlyReadMode,
+                                            isRead: transformedSelectedArticle.is_read,
+                                            articleId: transformedSelectedArticle.id,
+                                            shouldUpdate: !isRecentlyReadMode && !transformedSelectedArticle.is_read
+                                        })
+                                        if (
+                                            !isRecentlyReadMode && 
+                                            !transformedSelectedArticle.is_read
+                                        ) {
+                                            console.log('Calling updateArticle.mutate')
+                                            updateArticle.mutate({
+                                                articleId: transformedSelectedArticle.id,
+                                                data: { is_read: true },
+                                                articleType: transformedSelectedArticle.article_type,
+                                            })
+                                        }
+                                    }}
                                 />
                             </div>
                         ) : null}
@@ -931,11 +1010,13 @@ function ArticleContentView({
     isRecentlyReadMode,
     isReadLaterMode,
     onArticleRemoved,
+    onMarkAsRead,
 }: {
     article: Article
     isRecentlyReadMode?: boolean
     isReadLaterMode?: boolean
     onArticleRemoved?: () => void
+    onMarkAsRead?: () => void
 }) {
     const updateArticle = useUpdateArticle()
     const { resolvedTheme } = useTheme()
@@ -945,6 +1026,11 @@ function ArticleContentView({
     const contentRef = useRef<HTMLDivElement>(null)
     const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read)
     const [imageError, setImageError] = useState(false)
+
+    // Reset hasMarkedRead when article changes
+    useEffect(() => {
+        setHasMarkedRead(article.is_read)
+    }, [article.id, article.is_read])
 
     const handleToggleReadLater = () => {
         const newReadLaterState = !optimisticReadLater
@@ -960,6 +1046,7 @@ function ArticleContentView({
         updateArticle.mutate({
             articleId: article.id,
             data: { is_read_later: newReadLaterState },
+            articleType: article.article_type,
         }, {
             onError: () => {
                 // Revert optimistic update on error and show error
@@ -978,6 +1065,7 @@ function ArticleContentView({
             {
                 articleId: article.id,
                 data: { is_read: true, is_read_later: false },
+                articleType: article.article_type,
             },
             {
                 onSuccess: () => {
@@ -1008,15 +1096,18 @@ function ArticleContentView({
             return
         const el = contentRef.current
         const handleScroll = () => {
-            if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
-                if (!hasMarkedRead) {
-                    // Set optimistic UI update first
-                    setHasMarkedRead(true)
+            // Mark as read on ANY scroll, not just bottom
+            if (el.scrollTop > 0 && !hasMarkedRead && !article.is_read) {
+                console.log('Scroll detected - attempting to mark as read')
+                setHasMarkedRead(true)
 
-                    // Then perform the actual update
+                if (onMarkAsRead) {
+                    onMarkAsRead()
+                } else {
                     updateArticle.mutate({
                         articleId: article.id,
                         data: { is_read: true },
+                        articleType: article.article_type,
                     })
                 }
             }
@@ -1029,6 +1120,7 @@ function ArticleContentView({
         updateArticle,
         isRecentlyReadMode,
         isReadLaterMode,
+        onMarkAsRead,
     ])
 
     // Handle scroll completion for read later mode
@@ -1058,6 +1150,7 @@ function ArticleContentView({
                                                     is_read: true,
                                                     is_read_later: false,
                                                 },
+                                                articleType: article.article_type,
                                             })
                                             toast.dismiss(t.id)
                                             onArticleRemoved?.()
@@ -1073,6 +1166,7 @@ function ArticleContentView({
                                             updateArticle.mutate({
                                                 articleId: article.id,
                                                 data: { is_read_later: false },
+                                                articleType: article.article_type,
                                             })
                                             toast.dismiss(t.id)
                                             onArticleRemoved?.()
@@ -1136,7 +1230,18 @@ function ArticleContentView({
     return (
         <article className="max-w-4xl mx-auto">
             <div className="flex justify-between items-center mb-3">
-                <h1 className="text-2xl font-semibold">{article.title}</h1>
+                <h1 
+                    className="text-2xl font-semibold cursor-default"
+                    onClick={() => {
+                        console.log('Title clicked - attempting to mark as read')
+                        if (onMarkAsRead && !article.is_read) {
+                            setHasMarkedRead(true)
+                            onMarkAsRead()
+                        }
+                    }}
+                >
+                    {article.title}
+                </h1>
             </div>
             <div className="flex items-center justify-between mb-6 text-[10px]">
                 <div className="flex items-center gap-2">
@@ -1144,7 +1249,16 @@ function ArticleContentView({
                         <AvatarImage
                             src={
                                 article.feed?.image_url ||
-                                article.image_url ||
+                                (article.article_type === "clipped" && article.link
+                                    ? (() => {
+                                        try {
+                                            const domain = new URL(article.link).hostname
+                                            return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+                                        } catch {
+                                            return article.image_url || "/placeholders/avatar.png"
+                                        }
+                                    })()
+                                    : article.image_url) ||
                                 "/placeholders/avatar.png"
                             }
                         />
@@ -1155,7 +1269,15 @@ function ArticleContentView({
                     <span className="truncate max-w-[200px]">
                         {article.author ||
                             article.feed?.title ||
-                            "Unknown Source"}
+                            (article.article_type === "clipped" && article.link 
+                                ? (() => {
+                                    try {
+                                        return new URL(article.link).hostname
+                                    } catch {
+                                        return "Unknown Source"
+                                    }
+                                })()
+                                : "Unknown Source")}
                     </span>
                     {article.article_type === "clipped" && (
                         <div
@@ -1243,8 +1365,18 @@ function ArticleContentView({
                         className="article-content prose prose-lg dark:prose-invert max-w-none 
                           prose-headings:font-semibold prose-h1:text-xl prose-h2:text-lg
                           prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline
-                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md"
+                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md
+                          cursor-default"
                         dangerouslySetInnerHTML={{ __html: article.content }}
+                        onClick={(e) => {
+                            // Only mark as read if clicking on the content itself (not links)
+                            const target = e.target as HTMLElement
+                            console.log('Content clicked - attempting to mark as read')
+                            if (target.tagName !== 'A' && onMarkAsRead && !article.is_read) {
+                                setHasMarkedRead(true)
+                                onMarkAsRead()
+                            }
+                        }}
                         style={{
                             fontFamily: "var(--font-garamond-serif)",
                             overflowWrap: "break-word",
@@ -1362,9 +1494,16 @@ function ArticleItem({
                                     </span>
                                 </div>
                             )}
-                            {article.feed?.image_url && !feedImageError ? (
+                            {(article.feed?.image_url || (article.article_type === "clipped" && article.link)) && !feedImageError ? (
                                 <img
-                                    src={article.feed.image_url}
+                                    src={article.feed?.image_url || (() => {
+                                        try {
+                                            const domain = new URL(article.link).hostname
+                                            return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
+                                        } catch {
+                                            return "/placeholders/avatar.png"
+                                        }
+                                    })()}
                                     alt=""
                                     className="h-3 w-3 shrink-0 rounded"
                                     onError={() => setFeedImageError(true)}
@@ -1372,11 +1511,17 @@ function ArticleItem({
                             ) : (
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
                             )}
-                            {article.article_type !== "clipped" && (
-                                <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                                    {article.feed?.title || "Unknown Source"}
-                                </span>
-                            )}
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                                {article.article_type === "clipped" && article.link 
+                                    ? (() => {
+                                        try {
+                                            return new URL(article.link).hostname
+                                        } catch {
+                                            return "Unknown Source"
+                                        }
+                                    })()
+                                    : article.feed?.title || "Unknown Source"}
+                            </span>
                         </div>
                         <span className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
                             <Clock className="h-3 w-3" />
@@ -1395,7 +1540,7 @@ function ArticleItem({
                     )}
                     {((article.note && !article.description) || (!article.note && article.description)) && (
                         <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-all">
-                            {(article.note && !article.description) ? article.note : stripHTML(article.description)}
+                            {(article.note && !article.description) ? article.note : stripHTML(article.description || "")}
                         </p>
                     )}
                 </div>

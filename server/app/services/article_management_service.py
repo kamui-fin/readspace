@@ -211,16 +211,17 @@ class ArticleManagementService:
         )
 
     async def update_article(
-        self, article_id: UUID, article_in: ArticleUpdate
+        self, article_id: UUID, article_in: ArticleUpdate, article_type: str = "feed"
     ) -> ArticleResponse | None:
         """Update an article (mark as read/unread, favorite, etc.)."""
-        logger.info("Updating article", article_id=article_id, user_id=self.user_id)
+        logger.info("Updating article", article_id=article_id, user_id=self.user_id, article_type=article_type)
 
         updated_article = await crud_update_article(
             db=self.db,
             article_id=article_id,
             article_in=article_in,
             user_id=self.user_id,
+            article_type=article_type,
         )
 
         if updated_article:

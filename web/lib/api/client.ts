@@ -581,7 +581,8 @@ export class ApiClient {
                 read_at?: string
                 is_read_later?: boolean
                 is_favorite?: boolean
-            }
+            },
+            articleType: "feed" | "clipped" = "feed"
         ) =>
             this.put<{
                 id: string
@@ -597,6 +598,6 @@ export class ApiClient {
                 feed_id: string
                 feed_title: string
                 feed_image_url: string | null
-            }>(`/api/rss/articles/${id}`, data),
+            }>(`/api/rss/articles/${id}?article_type=${articleType}`, data),
     }
 }

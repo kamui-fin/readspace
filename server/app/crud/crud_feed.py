@@ -6,7 +6,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy import case, func, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm import aliased
 
 from app.models.rss_models import Feed, FeedSubscription, Tag
 from app.schemas.rss_schemas import FeedBase

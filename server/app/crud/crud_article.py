@@ -95,10 +95,11 @@ async def update_article(
     article_id: UUID,
     article_in: ArticleUpdate,
     user_id: UUID,
+    article_type: str = "feed",
 ) -> Article | None:
     """Update article status."""
     return await ArticleCrudOperations.update_article_status(
-        db, article_id=article_id, article_in=article_in, user_id=user_id
+        db, article_id=article_id, article_in=article_in, user_id=user_id, article_type=article_type
     )
 
 

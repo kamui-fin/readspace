@@ -260,38 +260,9 @@ class ArticleCrudOperations:
         article_id: UUID,
         article_in: ArticleUpdate,
         user_id: UUID,
+        article_type: str = "feed",
     ) -> Article | None:
         """Update article status (read, favorite, etc.)."""
-        # Combined query: get FeedArticle, verify subscription, and get existing UserArticleState in one query
-        combined_result = await db.execute(
-            select(FeedArticle, FeedSubscription, UserArticleState)
-            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
-            .outerjoin(
-                UserArticleState,
-                and_(
-                    UserArticleState.user_id == user_id,
-                    UserArticleState.article_id == article_id,
-                )
-            )
-            .options(
-                selectinload(FeedArticle.content), 
-                selectinload(FeedArticle.feed)
-            )
-            .where(
-                and_(
-                    FeedArticle.id == article_id,
-                    FeedSubscription.user_id == user_id,
-                )
-            )
-        )
-        result_tuple = combined_result.first()
-        
-        if not result_tuple:
-            # Either article doesn't exist or user doesn't have access to the feed
-            return None
-            
-        feed_article, subscription, user_state = result_tuple
-
         update_data = article_in.model_dump(exclude_unset=True)
 
         # Handle read_at timestamp
@@ -300,46 +271,19 @@ class ArticleCrudOperations:
         elif "is_read" in update_data and not update_data["is_read"]:
             update_data["read_at"] = None
 
-        if user_state:
-            # Update existing state
-            for field, value in update_data.items():
-                if hasattr(user_state, field):
-                    setattr(user_state, field, value)
-        else:
-            # Create new state
-            user_state = UserArticleState(
-                user_id=user_id, article_id=article_id, **update_data
+        if article_type == "clipped":
+            # Handle clipped articles
+            clipped_article_result = await db.execute(
+                select(ClippedArticle)
+                .options(selectinload(ClippedArticle.content))
+                .where(
+                    and_(ClippedArticle.id == article_id, ClippedArticle.user_id == user_id)
+                )
             )
-            db.add(user_state)
+            clipped_article = clipped_article_result.scalar_one_or_none()
 
-        # Commit the changes
-        await db.commit()
-
-        # Refresh both objects
-        await db.refresh(feed_article)
-        await db.refresh(user_state)
-
-        # Return the feed article (maintaining compatibility)
-        return feed_article
-
-        # If not found in feed articles, try clipped articles
-        clipped_article_result = await db.execute(
-            select(ClippedArticle)
-            .options(selectinload(ClippedArticle.content))
-            .where(
-                and_(ClippedArticle.id == article_id, ClippedArticle.user_id == user_id)
-            )
-        )
-        clipped_article = clipped_article_result.scalar_one_or_none()
-
-        if clipped_article:
-            update_data = article_in.model_dump(exclude_unset=True)
-
-            # Handle read_at timestamp
-            if update_data.get("is_read"):
-                update_data["read_at"] = datetime.now(timezone.utc)
-            elif "is_read" in update_data and not update_data["is_read"]:
-                update_data["read_at"] = None
+            if not clipped_article:
+                return None
 
             # Update clipped article directly (it stores its own state)
             for field, value in update_data.items():
@@ -355,5 +299,54 @@ class ArticleCrudOperations:
             # Return the clipped article
             return clipped_article
 
-        # Article not found or user doesn't have access
-        return None
+        else:
+            # Handle feed articles
+            combined_result = await db.execute(
+                select(FeedArticle, FeedSubscription, UserArticleState)
+                .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+                .outerjoin(
+                    UserArticleState,
+                    and_(
+                        UserArticleState.user_id == user_id,
+                        UserArticleState.article_id == article_id,
+                    )
+                )
+                .options(
+                    selectinload(FeedArticle.content),
+                    selectinload(FeedArticle.feed)
+                )
+                .where(
+                    and_(
+                        FeedArticle.id == article_id,
+                        FeedSubscription.user_id == user_id,
+                    )
+                )
+            )
+            result_tuple = combined_result.first()
+
+            if not result_tuple:
+                return None
+
+            feed_article, subscription, user_state = result_tuple
+
+            if user_state:
+                # Update existing state
+                for field, value in update_data.items():
+                    if hasattr(user_state, field):
+                        setattr(user_state, field, value)
+            else:
+                # Create new state
+                user_state = UserArticleState(
+                    user_id=user_id, article_id=article_id, **update_data
+                )
+                db.add(user_state)
+
+            # Commit the changes
+            await db.commit()
+
+            # Refresh both objects
+            await db.refresh(feed_article)
+            await db.refresh(user_state)
+
+            # Return the feed article (maintaining compatibility)
+            return feed_article
