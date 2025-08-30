@@ -209,7 +209,7 @@ export function ArticlesView({
                 } as Article))
             }
             return []
-        })
+        }).filter((article: any) => article && article.id) // Filter out articles without an ID to prevent key errors
 
         return articles
     }, [data])
@@ -287,25 +287,7 @@ export function ArticlesView({
         }
     }, [isFetching, hasNextPage, fetchNextPage])
 
-    // Force load more articles if there are more to load but no scrollbar appears
-    useEffect(() => {
-        if (!hasNextPage || isFetching || (isMobile && showContent)) return
-        
-        const containerId = isMobile ? 'articles-scroll-container-mobile' : 'articles-scroll-container'
-        const container = document.getElementById(containerId)
-        if (container && allArticles.length > 0) {
-            // Check if container has no scrollbar but there's more content
-            if (container.scrollHeight <= container.clientHeight) {
-                // Add a delay to avoid rapid calls and debounce
-                const timer = setTimeout(() => {
-                    if (hasNextPage && !isFetching && !(isMobile && showContent)) {
-                        fetchNextPage()
-                    }
-                }, 300)
-                return () => clearTimeout(timer)
-            }
-        }
-    }, [allArticles.length, hasNextPage, isFetching, fetchNextPage, isMobile, showContent])
+    
 
     useEffect(() => {
         // Auto-select first article when we have articles but no current selection (desktop only)
@@ -1040,7 +1022,6 @@ export function ArticlesView({
                                 </div>
                             }
                             scrollableTarget="articles-scroll-container-mobile"
-                            style={{ height: '100%', overflow: 'visible' }}
                         >
                             {isRecentlyReadMode || isReadLaterMode
                                 ? filteredArticles.map(

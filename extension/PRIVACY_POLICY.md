@@ -1,8 +1,5 @@
 # Privacy Policy for Readspace Browser Extension
 
-**Effective Date:** [Date]
-**Last Updated:** [Date]
-
 ## Overview
 
 Readspace is a browser extension that helps users save articles and subscribe to RSS feeds for organized, distraction-free reading. This privacy policy explains how the Readspace browser extension collects, uses, and protects your information.
@@ -99,10 +96,7 @@ Permissions are used exclusively for the extension's core functionality. We do n
 ## Your Rights and Controls
 
 ### Data Control
-- **Access:** View and manage your saved content through your Readspace account
-- **Deletion:** Remove saved articles and feeds through the Readspace interface
-- **Export:** Export your data using Readspace's export features
-- **Account Deletion:** Delete your account and all associated data through Readspace account settings
+For any requests related to accessing, deleting, exporting, or otherwise controlling your data, please email us at admin@readspace.ai and we will handle your request.
 
 ### Extension Management
 - **Disable:** Turn off the extension at any time through browser settings
@@ -116,23 +110,6 @@ If you use a self-hosted Readspace instance:
 - This privacy policy applies to the extension's behavior, not your server's data handling
 - You control all aspects of data storage, retention, and security on your self-hosted instance
 
-## Children's Privacy
-
-The extension is not intended for use by children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided personal information through the extension, please contact us immediately.
-
-## Changes to This Privacy Policy
-
-We may update this privacy policy periodically. When we make changes:
-- The "Last Updated" date will be revised
-- Significant changes will be communicated through extension update notes
-- Continued use of the extension after changes constitutes acceptance of the updated policy
-
-## Contact Information
-
-For questions about this privacy policy or the extension's data practices:
-- **GitHub Issues:** [https://github.com/kamui-fin/readspace/issues](https://github.com/kamui-fin/readspace/issues)
-- **Email:** [Contact email if available]
-
 ## Compliance
 
 This privacy policy is designed to comply with:
@@ -140,7 +117,3 @@ This privacy policy is designed to comply with:
 - Mozilla Add-on Policies
 - General Data Protection Regulation (GDPR) principles
 - California Consumer Privacy Act (CCPA) principles
-
----
-
-**Summary:** The Readspace browser extension only collects data necessary for saving articles and RSS feeds to your personal reading library. We do not sell, share, or misuse your data. All content is sent directly to your chosen Readspace server, and you maintain full control over your data.
