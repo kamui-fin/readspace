@@ -10,55 +10,106 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+import toast from "react-hot-toast"
 import { cn } from "@/lib/utils"
 import { useFormik } from "formik"
+import { MailIcon } from "lucide-react"
 import * as React from "react"
-import toast from "react-hot-toast"
 import { z } from "zod"
 import { toFormikValidationSchema } from "zod-formik-adapter"
 import { signUp } from "./actions"
+import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { useRouter } from "next/navigation"
 
-const signUpSchema = z
-    .object({
+const createSignUpSchema = (isCloudProd: boolean) => {
+    const baseSchema = z.object({
         email: z.string().email(),
         username: z.string().min(3),
         password: z.string().min(6),
         confirmPassword: z.string(),
     })
-    .refine((data) => data.password === data.confirmPassword, {
+
+    const cloudSchema = baseSchema.extend({
+        acceptTerms: z.boolean().refine((val) => val === true, {
+            message: "You must accept the terms and conditions",
+        }),
+    })
+
+    const schema = isCloudProd ? cloudSchema : baseSchema
+
+    return schema.refine((data) => data.password === data.confirmPassword, {
         message: "Passwords don't match",
         path: ["confirmPassword"],
     })
+}
+
+function VerificationNotice() {
+    return (
+        <Card className="bg-white">
+            <CardContent className="flex flex-col items-center py-12">
+                <MailIcon className="w-12 h-12 mb-6 text-primary" />
+
+                <div className="text-xl font-medium mb-2">
+                    Verify your email address
+                </div>
+                <div className="text-center text-muted-foreground max-w-xs">
+                    Please click on the link in the email we just sent you to
+                    confirm your email address.
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
 
 export function SignupForm({
     className,
     ...props
 }: React.ComponentProps<"div">) {
+    const [isAwaitingVerification, setIsAwaitingVerification] =
+        React.useState(false)
+    const isCloudProd = useIsCloudProd()
+    const router = useRouter()
+
     const formik = useFormik({
         initialValues: {
             email: "",
             username: "",
             password: "",
             confirmPassword: "",
+            acceptTerms: false,
         },
-        validationSchema: toFormikValidationSchema(signUpSchema),
-        onSubmit: async (values) => {
+        validationSchema: toFormikValidationSchema(createSignUpSchema(isCloudProd)),
+        onSubmit: async (values, { setTouched }) => {
+            // Mark terms as touched to show validation error if not checked (only for cloud)
+            if (isCloudProd && !values.acceptTerms) {
+                setTouched({ ...formik.touched, acceptTerms: true })
+                return
+            }
             try {
-                const result = await signUp(values)
+                const result = await signUp(values, isCloudProd)
 
                 if (result?.error) {
                     toast.error(result.error)
                     return
                 }
 
-                // Redirect to login page on successful signup
-                window.location.href = "/login"
+                if (isCloudProd) {
+                    setIsAwaitingVerification(true)
+                } else {
+                    // For self-hosted, redirect directly to login
+                    router.push("/login")
+                }
             } catch (error) {
                 toast.error("Something went wrong. Please try again.")
                 console.error(error)
             }
         },
     })
+
+    if (isAwaitingVerification) {
+        return <VerificationNotice />
+    }
 
     return (
         <div className={cn("flex flex-col gap-6", className)} {...props}>
@@ -186,6 +237,45 @@ export function SignupForm({
                     </form>
                 </CardContent>
             </Card>
+            {isCloudProd && (
+                <>
+                    <div className="flex items-center justify-center space-x-2">
+                        <Checkbox
+                            id="acceptTerms"
+                            name="acceptTerms"
+                            checked={formik.values.acceptTerms}
+                            onCheckedChange={(checked) => {
+                                formik.setFieldValue("acceptTerms", checked)
+                            }}
+                        />
+                        <label
+                            htmlFor="acceptTerms"
+                            className="text-sm font-medium leading-none text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-60"
+                        >
+                            By clicking continue, you agree to our{" "}
+                            <a
+                                href="https://readspace.ai/terms"
+                                className="underline underline-offset-4"
+                            >
+                                Terms of Service
+                            </a>{" "}
+                            and{" "}
+                            <a
+                                href="https://readspace.ai/privacy"
+                                className="underline underline-offset-4"
+                            >
+                                Privacy Policy
+                            </a>
+                            .
+                        </label>
+                    </div>
+                    {formik.touched.acceptTerms && formik.errors.acceptTerms && (
+                        <p className="text-sm text-red-500 text-start mt-2">
+                            {formik.errors.acceptTerms}
+                        </p>
+                    )}
+                </>
+            )}
         </div>
     )
 }

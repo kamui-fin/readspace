@@ -10,6 +10,7 @@ import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
 import { Settings as SettingsIcon, ExternalLink, AlertTriangle } from 'lucide-react'
 import { SaveOptions, PageMetadata } from './types'
+import { browser } from '@/lib/browser'
 
 function Popup() {
   const {
@@ -136,7 +137,76 @@ function Popup() {
     chrome.tabs.create({ url: appUrl })
   }
 
-  // Show unsupported page message
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="w-[450px] min-h-[500px] p-6">
+        {currentView === 'settings' ? (
+          <Settings onBack={() => setCurrentView('main')} />
+        ) : (
+          <div className="space-y-6">
+            {/* Logo and Title */}
+            <div className="text-center mb-2">
+              <div className="flex items-center justify-center mb-4">
+                <div className="w-12 h-12">
+                  <img 
+                    src={browser.runtime.getURL("src/assets/readspace.svg")} 
+                    alt="Readspace" 
+                    className="w-full h-full rounded"
+                  />
+                </div>
+              </div>
+              <h1 className="text-lg font-semibold">Sign in to Readspace</h1>
+            </div>
+            
+            {/* Embedded Login Form */}
+            <LoginForm />
+            
+            {/* New to Readspace link */}
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                New to Readspace?{' '}
+                <button 
+                  onClick={() => window.open('https://app.readspace.ai/signup', '_blank')}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Create account
+                </button>
+              </p>
+            </div>
+            
+            {/* Instance info / settings link at bottom */}
+            <div className="pt-4 border-t">
+              {/* Check if using production settings */}
+              {settings.readspace_url === 'https://api.readspace.ai' && 
+               settings.supabase_url === 'https://hnqyngkyugiamvlhqoaf.supabase.co' ? (
+                <button 
+                  onClick={() => setCurrentView('settings')}
+                  className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center"
+                >
+                  Have a self-hosted server?
+                </button>
+              ) : (
+                <div className="text-center space-y-2">
+                  <p className="text-xs text-muted-foreground">
+                    Using instance: <span className="font-mono">{settings.readspace_url}</span>
+                  </p>
+                  <button 
+                    onClick={() => setCurrentView('settings')}
+                    className="text-sm text-muted-foreground hover:text-foreground underline"
+                  >
+                    Change server settings
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // Show unsupported page message (only when authenticated)
   if (isUnsupportedPage) {
     return (
       <div className="w-[450px] min-h-[500px] p-6">
@@ -169,59 +239,6 @@ function Popup() {
     )
   }
 
-  // Show login form if not authenticated
-  if (!isAuthenticated) {
-    return (
-      <div className="w-[450px] min-h-[500px] p-6">
-        {currentView === 'settings' ? (
-          <Settings onBack={() => setCurrentView('main')} />
-        ) : (
-          <div className="space-y-6">
-            {/* Logo and Title */}
-            <div className="text-center mb-2">
-              <div className="flex items-center justify-center mb-4">
-                <div className="w-12 h-12">
-                  <img 
-                    src="/src/assets/readspace.svg" 
-                    alt="Readspace" 
-                    className="w-full h-full rounded"
-                  />
-                </div>
-              </div>
-              <h1 className="text-lg font-semibold">Sign in to Readspace</h1>
-            </div>
-            
-            {/* Embedded Login Form */}
-            <LoginForm />
-            
-            {/* New to Readspace link */}
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                New to Readspace?{' '}
-                <button 
-                  onClick={() => window.open('https://app.readspace.ai/signup', '_blank')}
-                  className="text-primary hover:underline font-medium"
-                >
-                  Create account
-                </button>
-              </p>
-            </div>
-            
-            {/* Self-hosted link at bottom */}
-            <div className="pt-4 border-t">
-              <button 
-                onClick={() => setCurrentView('settings')}
-                className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center"
-              >
-                Have a self-hosted server?
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-    )
-  }
-
   // Main authenticated view
   return (
     <div className="w-[450px] min-h-[500px] p-4">
@@ -230,7 +247,7 @@ function Popup() {
         <div className="flex items-center gap-2">
           <div className="w-5 h-5">
             <img 
-              src="/src/assets/readspace.svg" 
+              src={browser.runtime.getURL("src/assets/readspace.svg")} 
               alt="Readspace" 
               className="w-full h-full"
             />

@@ -1,6 +1,7 @@
 // Background script for Readspace extension
 import { browser, getBrowserName, storage } from '@/lib/browser'
-import type { Menus, Runtime } from 'webextension-polyfill'
+import { trimSaveArticleRequest } from '@/lib/data-trimmer'
+import type { Runtime } from 'webextension-polyfill'
 
 
 // Type for content extraction result
@@ -113,63 +114,11 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
 
 // Context menu setup
 browser.runtime.onInstalled.addListener(() => {
-  // Create context menu items
-  browser.contextMenus.create({
-    id: 'save-to-readspace',
-    title: 'Save to Readspace',
-    contexts: ['page', 'link'],
-    documentUrlPatterns: ['http://*/*', 'https://*/*']
-  })
-
-  browser.contextMenus.create({
-    id: 'save-link-to-readspace',
-    title: 'Save link to Readspace',
-    contexts: ['link'],
-    documentUrlPatterns: ['http://*/*', 'https://*/*']
-  })
-
-  browser.contextMenus.create({
-    id: 'discover-feeds',
-    title: 'Discover RSS feeds',
-    contexts: ['page'],
-    documentUrlPatterns: ['http://*/*', 'https://*/*']
-  })
+  // Extension installed
 })
 
-// Handle context menu clicks
-browser.contextMenus.onClicked.addListener((info: Menus.OnClickData, tab?: browser.Tabs.Tab) => {
-  if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
-    console.log('Context menu clicked on unsupported page:', tab?.url)
-    browser.notifications.create('unsupported-page', {
-      type: 'basic',
-      iconUrl: 'icons/icon-48.png',
-      title: 'Readspace',
-      message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).'
-    })
-    return
-  }
-
-  switch (info.menuItemId) {
-    case 'save-to-readspace':
-      handleSaveToReadspace(tab.url || info.pageUrl || '', tab)
-      break
-    case 'save-link-to-readspace':
-      if (info.linkUrl && isSupportedUrl(info.linkUrl)) {
-        handleSaveToReadspace(info.linkUrl, tab)
-      } else {
-        browser.notifications.create('unsupported-link', {
-          type: 'basic',
-          iconUrl: 'icons/icon-48.png',
-          title: 'Readspace',
-          message: 'This link type is not supported.'
-        })
-      }
-      break
-    case 'discover-feeds':
-      handleDiscoverFeeds(tab)
-      break
-  }
-})
+// Handle context menu clicks (removed)
+// Context menu functionality removed
 
 // Handle keyboard shortcuts
 browser.commands.onCommand.addListener((command: string) => {
@@ -272,7 +221,7 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       fullContent: content
     })
     
-    const requestBody = {
+    const requestBody = trimSaveArticleRequest({
       url,
       title: content?.title || tab?.title,
       content: content?.content,
@@ -283,7 +232,7 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
         image_url: content?.image_url,
         favicon: tab?.favIconUrl
       }
-    }
+    })
     
     console.log('Saving to Readspace API with request:', requestBody)
     

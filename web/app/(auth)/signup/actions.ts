@@ -1,20 +1,31 @@
 import { createClient } from "@/lib/supabase/client"
 import { z } from "zod"
 
-const signUpSchema = z
-    .object({
+const createSignUpSchema = (isCloudProd: boolean) => {
+    const baseSchema = z.object({
         email: z.string().email(),
         username: z.string().min(3),
         password: z.string().min(6),
         confirmPassword: z.string(),
     })
-    .refine((data) => data.password === data.confirmPassword, {
+
+    const cloudSchema = baseSchema.extend({
+        acceptTerms: z.boolean().refine((val) => val === true, {
+            message: "You must accept the terms and conditions",
+        }),
+    })
+
+    const schema = isCloudProd ? cloudSchema : baseSchema
+
+    return schema.refine((data) => data.password === data.confirmPassword, {
         message: "Passwords don't match",
         path: ["confirmPassword"],
     })
+}
 
-export async function signUp(formData: z.infer<typeof signUpSchema>) {
+export async function signUp(formData: any, isCloudProd: boolean = false) {
     try {
+        const signUpSchema = createSignUpSchema(isCloudProd)
         const validatedData = signUpSchema.parse(formData)
         const supabase = createClient()
         const { error } = await supabase.auth.signUp({
@@ -24,8 +35,9 @@ export async function signUp(formData: z.infer<typeof signUpSchema>) {
                 data: {
                     display_name: validatedData.username,
                 },
-                // Add new_user=true parameter to trigger onboarding after signup
-                emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/`,
+                ...(isCloudProd && {
+                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/`,
+                }),
             },
         })
         console.log(error)

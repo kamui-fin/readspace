@@ -19,7 +19,7 @@ const StreamingContent = ({ content }: { content: string }) => {
     }, [content, startStreaming])
 
     return (
-        <Markdown className="prose max-w-full dark:prose-invert prose-base prose-headings:!mt-4 prose-headings:!mb-2 prose-p:!my-4 prose-li:!my-0 prose-pre:!bg-muted prose-pre:!p-2 prose-pre:!rounded text-black">
+        <Markdown className="prose max-w-full dark:prose-invert prose-base prose-headings:!mt-4 prose-headings:!mb-2 prose-p:!my-4 prose-li:!my-0 prose-pre:!bg-muted prose-pre:!p-2 prose-pre:!rounded text-foreground">
             {displayedText}
         </Markdown>
     )

@@ -1,6 +1,7 @@
 import { Metadata, Viewport } from "next"
 import { EB_Garamond, Figtree, Geist, Geist_Mono } from "next/font/google"
 import { QueryProvider } from "@/components/providers/query-provider"
+import { PostHogProvider } from "./providers"
 import "./globals.css"
 
 const geistSans = Geist({
@@ -96,8 +97,8 @@ export const viewport: Viewport = {
     themeColor: "#6A994E",
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
+    maximumScale: 5,
+    userScalable: true,
 }
 
 export default async function RootLayout({
@@ -113,9 +114,11 @@ export default async function RootLayout({
             <body
                 className={`${geistSans.variable} ${geistMono.variable} ${eb_garamond.variable} ${logo.variable} font-sans antialiased mt-0`}
             >
-                <QueryProvider>
-                    <main className="w-full">{children}</main>
-                </QueryProvider>
+                <PostHogProvider>
+                    <QueryProvider>
+                        <main className="w-full">{children}</main>
+                    </QueryProvider>
+                </PostHogProvider>
             </body>
         </html>
     )

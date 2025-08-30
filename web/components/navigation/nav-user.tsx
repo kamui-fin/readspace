@@ -124,6 +124,12 @@ export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
                             </DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
+                                <div className="px-2 py-1.5">
+                                    <ThemeSwitcher />
+                                </div>
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
                                 <DropdownMenuItem onClick={handleSignOut}>
                                     <LogOut className="mr-2 h-4 w-4" />
                                     Log out

@@ -469,9 +469,13 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
 function CollapsibleFeedItem({
     feed,
     onAddFeed,
+    isMobile,
+    toggleSidebar,
 }: {
     feed: FeedItem
     onAddFeed: (folderId: string) => void
+    isMobile: boolean
+    toggleSidebar: () => void
 }) {
     const [isOpen, setIsOpen] = React.useState(feed.isOpen || false)
     const router = useRouter()
@@ -520,9 +524,12 @@ function CollapsibleFeedItem({
                     <SidebarLeftMenuButton
                         className={`justify-start flex-1 ${isActivePath ? "bg-muted" : ""}`}
                         aria-label={`Navigate to folder ${feed.title}`}
-                        onClick={() =>
+                        onClick={() => {
                             router.push(`/folders/${feed.id}/articles`)
-                        }
+                            if (isMobile) {
+                                toggleSidebar()
+                            }
+                        }}
                     >
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
                             {feed.icon &&
@@ -959,6 +966,8 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                                 key={feed.id}
                                 feed={feed}
                                 onAddFeed={handleAddFeed}
+                                isMobile={isMobile}
+                                toggleSidebar={toggleSidebar}
                             />
                         ) : (
                             <RegularFeedItem key={feed.id} feed={feed} />

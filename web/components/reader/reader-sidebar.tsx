@@ -273,7 +273,7 @@ export function ReaderSidebar({ ...props }: ReaderSidebarProps) {
                         }
                         className="w-full"
                     >
-                        <TabsList className="grid w-full grid-cols-2 mb-2">
+                        <TabsList className="hidden md:grid w-full grid-cols-2 mb-2">
                             <TabsTrigger
                                 value="contents"
                                 className="text-[0.8rem]"

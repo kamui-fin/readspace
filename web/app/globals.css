@@ -109,6 +109,15 @@
         --chart-4: 97.6 32.47% 48.29%;
         --chart-5: 131.74 32.11% 30.98%;
         --radius: 0.5rem;
+
+        --sidebar: 240 2.47% 13.51%;
+        --sidebar-foreground: var(--foreground);
+        --sidebar-primary: var(--primary);
+        --sidebar-primary-foreground: var(--primary-foreground);
+        --sidebar-accent: var(--accent);
+        --sidebar-accent-foreground: var(--accent-foreground);
+        --sidebar-border: var(--border);
+        --sidebar-ring: var(--ring);
     }
 }
 
@@ -153,7 +162,7 @@
     h1,
     h2,
     h3 {
-        @apply text-[#111112];
+        @apply text-foreground;
     }
 }
 

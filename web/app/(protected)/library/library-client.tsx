@@ -2,6 +2,7 @@
 
 import { LibraryCatalog } from "@/components/library/library-catalog"
 import FloatingUploadButton from "@/components/library/floating-upload-button"
+import UploadBookDialog from "@/components/library/upload-book"
 import Header from "@/components/navigation/header"
 import { useBooks } from "@/lib/api/hooks/books"
 import { UserBookLibrary } from "@/types/api"
@@ -30,6 +31,8 @@ interface LibraryLayoutProps {
 }
 
 function LibraryLayout({ children }: LibraryLayoutProps) {
+    const isMobile = useIsMobile()
+    
     return (
         <div className="flex flex-col min-h-screen">
             <Header
@@ -38,6 +41,7 @@ function LibraryLayout({ children }: LibraryLayoutProps) {
             <main className="flex-1 px-4 py-6 md:px-6 overflow-x-hidden max-w-full">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Your Bookshelf</h1>
+                    {!isMobile && <UploadBookDialog />}
                 </div>
                 {children}
             </main>

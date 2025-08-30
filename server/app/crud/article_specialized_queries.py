@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.rss_models import (
     ArticleContent,
+    ClippedArticle,
     Feed,
     FeedArticle,
     FeedSubscription,
@@ -80,8 +81,9 @@ class ArticleSpecializedQueries:
 
     @staticmethod
     async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count articles marked as read later for a user."""
-        result = await db.execute(
+        """Count articles marked as read later for a user (includes both feed and clipped articles)."""
+        # Count feed articles marked as read later
+        feed_result = await db.execute(
             select(func.count(FeedArticle.id))
             .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
             .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
@@ -93,7 +95,21 @@ class ArticleSpecializedQueries:
                 )
             )
         )
-        return result.scalar_one_or_none() or 0
+        feed_count = feed_result.scalar_one_or_none() or 0
+
+        # Count clipped articles marked as read later
+        clipped_result = await db.execute(
+            select(func.count(ClippedArticle.id))
+            .filter(
+                and_(
+                    ClippedArticle.user_id == user_id,
+                    ClippedArticle.is_read_later == True,
+                )
+            )
+        )
+        clipped_count = clipped_result.scalar_one_or_none() or 0
+
+        return feed_count + clipped_count
 
     @staticmethod
     async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:

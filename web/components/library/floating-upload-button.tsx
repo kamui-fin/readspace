@@ -11,6 +11,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { HTTPError } from "@/lib/errors"
 import { LoaderCircle, Plus } from "lucide-react"
 import { useState } from "react"
@@ -35,6 +36,7 @@ export default function FloatingUploadButton() {
     const [uploadedBookId, setUploadedBookId] = useState<string>("")
 
     const { user } = useCurrentUser()
+    const isMobile = useIsMobile()
     const queryClient = useQueryClient()
     const uploadBook = useUploadBook()
 
@@ -81,6 +83,10 @@ export default function FloatingUploadButton() {
         } finally {
             setIsUploading(false)
         }
+    }
+
+    if (!isMobile) {
+        return null
     }
 
     return (

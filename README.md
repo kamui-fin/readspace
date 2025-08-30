@@ -39,6 +39,7 @@ Readspace is perfect if you:
 
 * **Git**: For cloning the repository.
 * **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
+* **jq**: Command-line JSON processor used by setup scripts.
 
 ### Self-Hosting with 3 steps
 

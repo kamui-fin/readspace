@@ -11,6 +11,7 @@ import { useReaderStore } from "@/stores/reader"
 import { useEffect, useRef, useState } from "react"
 import useHighlight from "../../hooks/reader/use-highlight"
 import { EpubHighlight } from "../../types/library"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 import { ApiClient } from "@/lib/api/client"
 import { useMutation } from "@tanstack/react-query"
@@ -48,6 +49,7 @@ export default function HighlightPopover({
 }) {
     const containerRef = useRef<HTMLDivElement>(null)
     const [showNoteForm, setShowNoteForm] = useState(false)
+    const isMobile = useIsMobile()
 
     const { state: sidebarState } = useSidebarLeft()
 
@@ -131,7 +133,7 @@ export default function HighlightPopover({
         setIsPopupOpen(false)
     }
 
-    if (!rangeRef.current || !isPopupOpen) {
+    if (!rangeRef.current || !isPopupOpen || isMobile) {
         return null
     }
 

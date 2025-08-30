@@ -44,11 +44,42 @@ export function Settings({ onBack }: SettingsProps) {
     const toastId = toast.loading('Saving settings...')
     
     try {
-      // Use production defaults if fields are empty
+      // Check if user is trying to configure self-hosted settings
+      const hasAnyCustomField = readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
+      
+      // If any field is filled (indicating self-hosted setup), all 3 fields are required
+      if (hasAnyCustomField) {
+        if (!readspaceUrl.trim() || !supabaseUrl.trim() || !supabaseAnonKey.trim()) {
+          toast.error('For self-hosted configuration, all 3 fields are required', { id: toastId })
+          setIsSaving(false)
+          return
+        }
+      }
+      
+      // Use production defaults if fields are empty, otherwise use custom values
       const finalSettings = {
         readspace_url: readspaceUrl.trim() || PRODUCTION_DEFAULTS.readspace_url,
         supabase_url: supabaseUrl.trim() || PRODUCTION_DEFAULTS.supabase_url,
         supabase_anon_key: supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key
+      }
+
+      // Check if switching from cloud to self-hosted or vice versa
+      const switchingToSelfHosted = isUsingProduction && (
+        finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
+        finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
+        finalSettings.supabase_anon_key !== PRODUCTION_DEFAULTS.supabase_anon_key
+      )
+      
+      const switchingToCloud = !isUsingProduction && (
+        finalSettings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
+        finalSettings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
+        finalSettings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
+      )
+
+      // If user is authenticated and switching configurations, log them out first
+      if (user && (switchingToSelfHosted || switchingToCloud)) {
+        console.log('Configuration change detected, signing out user...')
+        logout()
       }
 
       await updateSettings(finalSettings)
@@ -56,7 +87,11 @@ export function Settings({ onBack }: SettingsProps) {
       // Reset Supabase client to use new settings
       resetSupabaseClient()
       
-      toast.success('Settings saved successfully!', { id: toastId })
+      if (switchingToSelfHosted || switchingToCloud) {
+        toast.success('Settings saved! Please sign in again.', { id: toastId })
+      } else {
+        toast.success('Settings saved successfully!', { id: toastId })
+      }
       onBack()
     } catch (error) {
       console.error('Failed to save settings:', error)
@@ -71,6 +106,38 @@ export function Settings({ onBack }: SettingsProps) {
     logout()
     toast.success('Successfully signed out')
     onBack()
+  }
+
+  const handleUseCloudConfig = async () => {
+    setIsSaving(true)
+    const toastId = toast.loading('Switching to Readspace Cloud...')
+    
+    try {
+      // If user is authenticated with self-hosted, log them out first
+      if (user && !isUsingProduction) {
+        console.log('Switching to cloud config, signing out user...')
+        logout()
+      }
+
+      // Reset to production defaults (empty the form fields)
+      setReadspaceUrl('')
+      setSupabaseUrl('')
+      setSupabaseAnonKey('')
+
+      await updateSettings(PRODUCTION_DEFAULTS)
+      
+      // Reset Supabase client to use new settings
+      resetSupabaseClient()
+      
+      toast.success('Switched to Readspace Cloud! Please sign in.', { id: toastId })
+      onBack()
+    } catch (error) {
+      console.error('Failed to switch to cloud config:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Failed to switch to cloud config'
+      toast.error(errorMessage, { id: toastId })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -185,9 +252,23 @@ export function Settings({ onBack }: SettingsProps) {
             />
           </div>
 
-          <Button onClick={handleSave} className="w-full" disabled={isSaving}>
-            {isSaving ? 'Saving...' : 'Save'}
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={handleSave} className="w-full" disabled={isSaving}>
+              {isSaving ? 'Saving...' : 'Save'}
+            </Button>
+            
+            {!isUsingProduction && (
+              <Button 
+                variant="outline" 
+                onClick={handleUseCloudConfig} 
+                className="w-full" 
+                disabled={isSaving}
+              >
+                <Cloud className="w-4 h-4 mr-2" />
+                Use Readspace Cloud
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>

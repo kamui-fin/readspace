@@ -116,7 +116,7 @@ class WebArticleService:
                 user_id=self.user_id,
                 url=url,
             )
-            return ClippedArticleResponse.model_validate(existing_clipped)
+            raise ValueError("This article has already been saved to your library.")
 
         # Create clipped article with the extension-extracted content
         clipped_article_create = ClippedArticleCreate(

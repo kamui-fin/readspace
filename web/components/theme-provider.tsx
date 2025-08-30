@@ -16,7 +16,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <NextThemesProvider forcedTheme="light" attribute="class">
+        <NextThemesProvider attribute="class" defaultTheme="light" enableSystem>
             {children}
         </NextThemesProvider>
     ) // Wrap children with ThemeProvider after mount

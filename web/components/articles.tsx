@@ -639,7 +639,7 @@ export function ArticlesView({
     if (filteredArticles.length === 0 && allArticles.length > 0) {
         // Show message when filtering hides all articles
         return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
+            <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
                 <div className="w-full flex flex-col items-center justify-center gap-4">
                     <p className="text-muted-foreground">
                         No unread articles found matching your filters.
@@ -656,7 +656,7 @@ export function ArticlesView({
     }
 
     return (
-        <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
+        <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
                 <ResizablePanelGroup direction="horizontal">
@@ -816,7 +816,6 @@ export function ArticlesView({
                         <div
                             id="articles-scroll-container"
                             className="flex-1 overflow-auto min-h-0"
-                            style={{ height: 'calc(100vh - 200px)', minHeight: '400px' }}
                         >
                             <InfiniteScroll
                                 dataLength={filteredArticles.length}
@@ -969,13 +968,13 @@ export function ArticlesView({
             </div>
             
             {/* Mobile: Stacked layout */}
-            <div className="flex md:hidden w-full h-full">
+            <div className="flex md:hidden w-full h-full max-w-screen-sm mx-auto overflow-x-hidden">
                 {/* Article List View */}
-                <div className={`w-full h-full flex-col ${showContent ? 'hidden' : 'flex'}`}>
-                    <div className="flex h-14 items-center justify-between border-b px-4">
-                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                <div className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? 'hidden' : 'flex'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1 max-w-[calc(100vw-6rem)]">
                             <SidebarLeftTrigger className="-ml-1" />
-                            <h2 className="font-semibold truncate text-lg">
+                            <h2 className="font-semibold truncate text-lg max-w-[calc(100vw-10rem)]">
                                 {sidebarTitle}
                             </h2>
                             {!isRecentlyReadMode &&
@@ -1024,7 +1023,7 @@ export function ArticlesView({
                     </div>
                     <div 
                         id="articles-scroll-container-mobile"
-                        className="flex-1 overflow-auto min-h-0"
+                        className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden"
                     >
                         <InfiniteScroll
                             dataLength={filteredArticles.length}
@@ -1104,8 +1103,8 @@ export function ArticlesView({
                 </div>
 
                 {/* Article Content View */}
-                <div className={`w-full h-full flex-col ${showContent ? 'flex' : 'hidden'}`}>
-                    <div className="flex h-14 items-center justify-between border-b px-4">
+                <div className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? 'flex' : 'hidden'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
                         <Button
                             variant="ghost"
                             size="icon"
@@ -1124,7 +1123,7 @@ export function ArticlesView({
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
                             <div 
-                                className="p-4 h-full overflow-y-auto overflow-x-hidden cursor-default"
+                                className="p-4 h-full overflow-y-auto overflow-x-hidden cursor-default max-w-full"
                             >
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
@@ -1418,15 +1417,17 @@ function ArticleContentView({
     }
 
     return (
-        <article className="max-w-4xl mx-auto w-full min-w-0">
+        <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
             <div className="mb-3 w-full min-w-0">
                 <h1 
-                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight break-words w-full hyphens-auto"
+                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight break-words w-full hyphens-auto max-w-full"
                     style={{ 
-                        wordBreak: "break-word", 
-                        overflowWrap: "break-word",
+                        wordBreak: "break-all", 
+                        overflowWrap: "anywhere",
                         wordWrap: "break-word",
-                        hyphens: "auto"
+                        hyphens: "auto",
+                        width: "100%",
+                        maxWidth: "100%"
                     }}
                 >
                     {article.title}
@@ -1455,7 +1456,7 @@ function ArticleContentView({
                             {article.feed?.title?.substring(0, 2) || "N/A"}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="truncate max-w-[150px] sm:max-w-[200px]">
+                    <span className="truncate max-w-[min(150px,calc(50vw))] sm:max-w-[200px]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
                         {article.author ||
                             article.feed?.title ||
                             (article.article_type === "clipped" && article.link 
@@ -1670,8 +1671,8 @@ function ArticleItem({
             ${article.is_read ? "opacity-70" : ""}`}
             onClick={onClick}
         >
-            <div className="flex gap-3 w-full min-w-0">
-                <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden max-w-full">
+            <div className={`flex gap-3 w-full min-w-0 max-w-full overflow-hidden ${!article.image_url || articleImageError ? 'pr-0' : ''}`}>
+                <div className={`flex-1 space-y-1.5 min-w-0 overflow-hidden ${!article.image_url || articleImageError ? 'max-w-full' : 'max-w-[calc(100vw-5rem)]'}`}>
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             {article.article_type === "clipped" && (
@@ -1701,7 +1702,7 @@ function ArticleItem({
                             ) : (
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
                             )}
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[min(120px,calc(100vw-12rem))]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
                                 {article.article_type === "clipped" && article.link 
                                     ? (() => {
                                         try {
@@ -1719,28 +1720,30 @@ function ArticleItem({
                         </span>
                     </div>
                     <h3
-                        className={`text-sm leading-tight line-clamp-2 break-words overflow-hidden ${article.is_read ? "font-normal" : "font-medium"}`}
+                        className={`text-sm leading-tight line-clamp-2 break-words overflow-hidden max-w-full ${article.is_read ? "font-normal" : "font-medium"}`}
                         style={{
-                            wordBreak: "break-word",
-                            overflowWrap: "break-word",
-                            hyphens: "auto"
+                            wordBreak: "break-all",
+                            overflowWrap: "anywhere",
+                            hyphens: "auto",
+                            width: "100%",
+                            maxWidth: "100%"
                         }}
                     >
                         {article.title}
                     </h3>
                     {article.author && (
-                        <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
+                        <div className="text-[10px] text-muted-foreground truncate max-w-[calc(100vw-7rem)]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
                             {article.author}
                         </div>
                     )}
                     {((article.note && !article.description) || (!article.note && article.description)) && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden">
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden w-full" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
                             {(article.note && !article.description) ? article.note : stripHTML(article.description || "")}
                         </p>
                     )}
                 </div>
                 {article.image_url && !articleImageError && (
-                    <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors">
+                    <div className="h-16 w-16 md:h-16 md:w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors flex items-center justify-center">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
