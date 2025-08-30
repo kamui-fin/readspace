@@ -1,6 +1,6 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ArticlesView } from "@/components/articles"
+import { ArticlesSuspenseWrapper } from "@/components/articles/articles-suspense-wrapper"
 import { ServerApiClient } from "@/lib/api/server"
 import { RSS_QUERY_KEYS } from "@/lib/query-keys"
 
@@ -47,7 +47,11 @@ export default async function ArticlesPage() {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ArticlesView />
+            <ArticlesSuspenseWrapper 
+                title="All Articles"
+                showUnreadBadge={true}
+                initialSidebarTitle="All Articles"
+            />
         </HydrationBoundary>
     )
 }

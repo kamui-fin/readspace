@@ -56,6 +56,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
 import useInfiniteScroll from "react-infinite-scroll-hook"
+import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
 
 export function ArticlesView({
     initialSidebarTitle,
@@ -103,6 +104,7 @@ export function ArticlesView({
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
     const router = useRouter()
+    const { clearPending } = useClearPendingNavigation()
 
     const { data: allUserFeeds } = useFeeds({}, {
         refetchOnMount: false,
@@ -334,6 +336,11 @@ export function ArticlesView({
             }
         }
     }, [selectedArticleId, allArticles, viewFeedId, viewFolderId, isMobile])
+
+    // Clear pending navigation state when component mounts (navigation completed)
+    useEffect(() => {
+        clearPending()
+    }, [viewFeedId, viewFolderId, viewMode, clearPending])
 
     // Reset selected article when view changes (feed/folder/mode change)
     useEffect(() => {
@@ -947,11 +954,21 @@ export function ArticlesView({
                             </div>
                         ) : null}
                         {!isArticleLoading && !transformedSelectedArticle && (
-                            <div className="flex flex-1 items-center justify-center">
-                                <p className="text-muted-foreground">
-                                    Select an article to read
-                                </p>
-                            </div>
+                            <>
+                                {/* Show skeleton on desktop when we have articles (auto-select will happen soon) */}
+                                {!isMobile && allArticles.length > 0 ? (
+                                    <div className="flex-1 p-8">
+                                        <ArticleContentSkeleton />
+                                    </div>
+                                ) : (
+                                    /* Show select message on mobile or when no articles */
+                                    <div className="flex flex-1 items-center justify-center">
+                                        <p className="text-muted-foreground">
+                                            {allArticles.length === 0 ? "Loading articles..." : "Select an article to read"}
+                                        </p>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </ResizablePanel>

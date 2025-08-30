@@ -72,6 +72,7 @@ import {
     SidebarFeedsSkeleton,
     SidebarLibrarySkeleton,
 } from "./sidebar-skeleton"
+import { useNavigationState, useOptimisticNavigation } from "@/hooks/use-navigation-state"
 
 // Types
 type MainNavItem = {
@@ -415,6 +416,11 @@ function FeedDropdownMenu({
 // Sub Feed Item component
 function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
     const [imageError, setImageError] = useState(false)
+    const { handleOptimisticClick } = useOptimisticNavigation()
+    const { pendingPath } = useNavigationState()
+    
+    const isOptimisticallyActive = pendingPath === item.url
+    const isActiveState = item.isActive || isOptimisticallyActive
 
     return (
         <motion.div
@@ -427,12 +433,13 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
                 <div className="flex items-center w-full group/item">
                     <SidebarLeftMenuSubButton
                         asChild
-                        isActive={item.isActive}
+                        isActive={isActiveState}
                         className="py-0 flex-1"
                     >
                         <Link
                             href={item.url}
                             className="flex w-full items-center"
+                            onClick={() => handleOptimisticClick(item.url)}
                         >
                             <div className="flex flex-grow items-center overflow-hidden pl-2">
                                 {item.image && !imageError ? (
@@ -480,6 +487,8 @@ function CollapsibleFeedItem({
     const [isOpen, setIsOpen] = React.useState(feed.isOpen || false)
     const router = useRouter()
     const pathname = usePathname()
+    const { handleOptimisticClick } = useOptimisticNavigation()
+    const { pendingPath } = useNavigationState()
 
     React.useEffect(() => {
         const storedState = localStorage.getItem(`folder-${feed.id}-collapsed`)
@@ -494,6 +503,8 @@ function CollapsibleFeedItem({
     }
 
     const isActivePath = pathname === `/folders/${feed.id}/articles`
+    const isOptimisticallyActive = pendingPath === `/folders/${feed.id}/articles`
+    const isActiveState = isActivePath || isOptimisticallyActive
 
     return (
         <Collapsible key={feed.title} open={isOpen} onOpenChange={handleToggle}>
@@ -522,9 +533,11 @@ function CollapsibleFeedItem({
                         </button>
                     </CollapsibleTrigger>
                     <SidebarLeftMenuButton
-                        className={`justify-start flex-1 ${isActivePath ? "bg-muted" : ""}`}
+                        className={`justify-start flex-1`}
+                        isActive={isActiveState}
                         aria-label={`Navigate to folder ${feed.title}`}
                         onClick={() => {
+                            handleOptimisticClick(`/folders/${feed.id}/articles`)
                             router.push(`/folders/${feed.id}/articles`)
                             if (isMobile) {
                                 toggleSidebar()
@@ -587,12 +600,17 @@ function CollapsibleFeedItem({
 // Regular Feed Item component
 function RegularFeedItem({ feed }: { feed: FeedItem }) {
     const isAll = feed.id === "all"
+    const { handleOptimisticClick } = useOptimisticNavigation()
+    const { pendingPath } = useNavigationState()
+    
+    const isOptimisticallyActive = pendingPath === feed.url
+    const isActiveState = feed.isActive || isOptimisticallyActive
 
     return (
         <SidebarMenuItem key={feed.title}>
             <div className="flex items-center w-full group/item">
-                <SidebarLeftMenuButton asChild className="justify-start flex-1">
-                    <Link href={feed.url}>
+                <SidebarLeftMenuButton asChild className="justify-start flex-1" isActive={isActiveState}>
+                    <Link href={feed.url} onClick={() => handleOptimisticClick(feed.url)}>
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
                             {feed.icon &&
                                 React.createElement(feed.icon, {
@@ -632,6 +650,8 @@ function MainNavigationItems({
     toggleSidebar: () => void
 }) {
     const pathname = usePathname()
+    const { handleOptimisticClick } = useOptimisticNavigation()
+    const { pendingPath } = useNavigationState()
     const { data: unreadCounts } = useUnreadCounts(undefined, {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -659,6 +679,9 @@ function MainNavigationItems({
             <SidebarMenu>
                 {items.map((item) => {
                     const count = getCountForItem(item.title)
+                    const isOptimisticallyActive = pendingPath === item.url
+                    const isActiveState = pathname === item.url || isOptimisticallyActive
+                    
                     return (
                         <SidebarMenuItem key={item.title}>
                             <div className="flex items-center w-full group/item">
@@ -667,10 +690,10 @@ function MainNavigationItems({
                                     tooltip={item.title}
                                     isMobile={isMobile}
                                     toggleSidebar={toggleSidebar}
-                                    isActive={pathname === item.url}
+                                    isActive={isActiveState}
                                     className="flex-1"
                                 >
-                                    <Link href={item.url}>
+                                    <Link href={item.url} onClick={() => handleOptimisticClick(item.url)}>
                                         <item.icon className="h-4 w-4" />
                                         <span>{item.title}</span>
                                     </Link>

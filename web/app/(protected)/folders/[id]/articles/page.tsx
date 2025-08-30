@@ -1,5 +1,5 @@
 import { getQueryClient } from "@/lib/get-query-client"
-import { ArticlesView } from "@/components/articles"
+import { ArticlesSuspenseWrapper } from "@/components/articles/articles-suspense-wrapper"
 import { ServerApiClient } from "@/lib/api/server"
 import { RSS_QUERY_KEYS } from "@/lib/query-keys"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
@@ -71,7 +71,9 @@ export default async function FolderArticlesPage({ params }: PageProps) {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ArticlesView
+            <ArticlesSuspenseWrapper
+                title={folder.name || "Folder"}
+                showUnreadBadge={true}
                 folderId={folderId}
                 initialSidebarTitle={folder.name || "Unknown Folder"}
             />
