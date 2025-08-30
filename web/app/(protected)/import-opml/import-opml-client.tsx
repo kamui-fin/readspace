@@ -246,10 +246,9 @@ export default function ImportOPMLPageClient() {
             <main className="flex-1">
                 <div className="container mx-auto p-4 sm:p-6 pt-6 sm:pt-10 max-w-4xl">
                     <div className="mb-8">
-                        <h1 className="text-2xl sm:text-3xl font-bold mb-2">OPML Import</h1>
-                        <p className="text-muted-foreground">
-                            Import feeds from an OPML file exported from another RSS
-                            reader.
+                        <h1 className="text-2xl sm:text-3xl font-bold mb-3">OPML Import</h1>
+                        <p className="text-muted-foreground leading-relaxed max-w-2xl">
+                            Import feeds from an OPML file exported from another RSS reader.
                         </p>
                     </div>
 
@@ -272,7 +271,7 @@ export default function ImportOPMLPageClient() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                 >
-                    <CardContent className="p-12">
+                    <CardContent className="p-8 sm:p-12">
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -280,7 +279,7 @@ export default function ImportOPMLPageClient() {
                             accept=".opml,.xml"
                             className="hidden"
                         />
-                        <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-6 text-center">
                             <div className="p-4 bg-muted rounded-full">
                                 <Upload
                                     size={48}
@@ -288,15 +287,14 @@ export default function ImportOPMLPageClient() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-medium">
+                            <div className="space-y-3 max-w-md">
+                                <h3 className="text-lg sm:text-xl font-medium">
                                     {isDragging
                                         ? "Drop your OPML file here"
                                         : "Upload OPML File"}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Drag and drop or click to select a .opml or
-                                    .xml file
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Drag and drop or click to select a .opml or .xml file from your RSS reader export
                                 </p>
                             </div>
 
@@ -304,7 +302,7 @@ export default function ImportOPMLPageClient() {
                                 onClick={handleButtonClick}
                                 disabled={isUploading}
                                 size="lg"
-                                className="mt-4"
+                                className="mt-2 w-full sm:w-auto"
                             >
                                 {isUploading ? (
                                     <>
@@ -326,16 +324,16 @@ export default function ImportOPMLPageClient() {
             {/* Message when upload is disabled due to active import */}
             {activeImports.length > 0 && (
                 <Card className="border-gray-200 bg-gray-50/50">
-                    <CardContent className="p-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-4">
+                    <CardContent className="p-8 sm:p-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-6">
                             <div className="p-4 bg-gray-200 rounded-full">
                                 <Upload size={48} className="text-gray-400" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-3 max-w-md">
                                 <h3 className="text-lg font-medium text-gray-600">
                                     Upload Disabled
                                 </h3>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 leading-relaxed">
                                     Complete or cancel your current import before starting a new one
                                 </p>
                             </div>
