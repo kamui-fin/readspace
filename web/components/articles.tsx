@@ -55,7 +55,7 @@ import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
-import InfiniteScroll from "react-infinite-scroll-component"
+import useInfiniteScroll from "react-infinite-scroll-hook"
 
 export function ArticlesView({
     initialSidebarTitle,
@@ -286,6 +286,22 @@ export function ArticlesView({
             fetchNextPage()
         }
     }, [isFetching, hasNextPage, fetchNextPage])
+
+    const [sentinelRef] = useInfiniteScroll({
+        loading: isFetching,
+        hasNextPage: !!hasNextPage,
+        onLoadMore: fetchMoreArticles,
+        disabled: false,
+        rootMargin: '0px 0px 200px 0px',
+    })
+
+    const [mobileSentinelRef] = useInfiniteScroll({
+        loading: isFetching,
+        hasNextPage: !!hasNextPage,
+        onLoadMore: fetchMoreArticles,
+        disabled: false,
+        rootMargin: '0px 0px 200px 0px',
+    })
 
     
 
@@ -796,26 +812,9 @@ export function ArticlesView({
                             </div>
                         </div>
                         <div
-                            id="articles-scroll-container"
                             className="flex-1 overflow-auto min-h-0"
                         >
-                            <InfiniteScroll
-                                dataLength={filteredArticles.length}
-                                next={fetchMoreArticles}
-                                hasMore={!!hasNextPage}
-                                loader={
-                                    <div className="flex items-center justify-center py-8">
-                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                    </div>
-                                }
-                                endMessage={
-                                    <div className="text-center py-6 text-muted-foreground text-sm">
-                                        <b>You've seen all articles!</b>
-                                    </div>
-                                }
-                                scrollableTarget="articles-scroll-container"
-                                style={{ height: '100%', overflow: 'visible' }}
-                            >
+                            <div className="h-full overflow-visible">
                                 {isRecentlyReadMode || isReadLaterMode
                                     ? filteredArticles.map(
                                         (article: Article, index: number) => (
@@ -892,7 +891,17 @@ export function ArticlesView({
                                             </div>
                                         )
                                     )}
-                            </InfiniteScroll>
+                                {hasNextPage && (
+                                    <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                    </div>
+                                )}
+                                {!hasNextPage && filteredArticles.length > 0 && (
+                                    <div className="text-center py-6 text-muted-foreground text-sm">
+                                        <b>You've seen all articles!</b>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </ResizablePanel>
@@ -1004,25 +1013,9 @@ export function ArticlesView({
                         </div>
                     </div>
                     <div 
-                        id="articles-scroll-container-mobile"
                         className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden"
                     >
-                        <InfiniteScroll
-                            dataLength={filteredArticles.length}
-                            next={fetchMoreArticles}
-                            hasMore={!!hasNextPage}
-                            loader={
-                                <div className="flex items-center justify-center py-8">
-                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                </div>
-                            }
-                            endMessage={
-                                <div className="text-center py-6 text-muted-foreground text-sm">
-                                    <b>You've seen all articles!</b>
-                                </div>
-                            }
-                            scrollableTarget="articles-scroll-container-mobile"
-                        >
+                        <div className="h-full">
                             {isRecentlyReadMode || isReadLaterMode
                                 ? filteredArticles.map(
                                     (article: Article, index: number) => (
@@ -1079,7 +1072,17 @@ export function ArticlesView({
                                         </div>
                                     )
                                 )}
-                        </InfiniteScroll>
+                            {hasNextPage && (
+                                <div ref={mobileSentinelRef} className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            )}
+                            {!hasNextPage && filteredArticles.length > 0 && (
+                                <div className="text-center py-6 text-muted-foreground text-sm">
+                                    <b>You've seen all articles!</b>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
