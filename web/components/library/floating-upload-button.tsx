@@ -13,13 +13,14 @@ import {
 import { useCurrentUser } from "@/hooks/use-current-user"
 import { HTTPError } from "@/lib/errors"
 import { LoaderCircle, Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
+import { useQueryClient } from "@tanstack/react-query"
+import { BOOK_QUERY_KEYS } from "@/lib/query-keys"
 import { pdfjs } from "react-pdf"
-import { DragDropBook } from "../upload-book"
-import { useUploadBook } from "./api"
-import { processFileMetadata } from "./utils"
+import { DragDropBook } from "./upload-book"
+import { useUploadBook } from "./upload/api"
+import { processFileMetadata } from "./upload/utils"
 
 // Set PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -27,14 +28,14 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url
 ).toString()
 
-export default function UploadBookDialog() {
+export default function FloatingUploadButton() {
     const [isOpen, setIsOpen] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
     const [uploadedBookId, setUploadedBookId] = useState<string>("")
 
     const { user } = useCurrentUser()
-    const router = useRouter()
+    const queryClient = useQueryClient()
     const uploadBook = useUploadBook()
 
     const handleFileUpload = async () => {
@@ -61,7 +62,9 @@ export default function UploadBookDialog() {
 
             setUploadedBookId(bookId)
             setIsOpen(false)
-            router.push(`/library/${bookId}`)
+            // Invalidate books query to refresh the catalog
+            queryClient.invalidateQueries({ queryKey: [BOOK_QUERY_KEYS.BOOKS] })
+            toast.success("Book added to library")
         } catch (err) {
             console.error("Error during file upload process:", err)
 
@@ -73,7 +76,7 @@ export default function UploadBookDialog() {
             toast.error(
                 err instanceof Error
                     ? err.message
-                    : "Upload failed. Try again."
+                    : "Upload failed. Please try again."
             )
         } finally {
             setIsUploading(false)
@@ -83,18 +86,16 @@ export default function UploadBookDialog() {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="gap-2" disabled={isUploading}>
+                <Button
+                    className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 z-50 p-0"
+                    disabled={isUploading}
+                >
                     {isUploading ? (
-                        <>
-                            <LoaderCircle className="h-4 w-4 animate-spin" />
-                            Uploading...
-                        </>
+                        <LoaderCircle className="h-6 w-6 animate-spin" />
                     ) : (
-                        <>
-                            <Plus className="h-4 w-4" />
-                            Upload Book
-                        </>
+                        <Plus className="h-6 w-6" />
                     )}
+                    <span className="sr-only">Upload Book</span>
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">

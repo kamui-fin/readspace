@@ -1,7 +1,7 @@
 "use client"
 
 import { LibraryCatalog } from "@/components/library/library-catalog"
-import UploadBookDialog from "@/components/library/upload-book"
+import FloatingUploadButton from "@/components/library/floating-upload-button"
 import Header from "@/components/navigation/header"
 import { useBooks } from "@/lib/api/hooks/books"
 import { UserBookLibrary } from "@/types/api"
@@ -35,13 +35,13 @@ function LibraryLayout({ children }: LibraryLayoutProps) {
             <Header
                 breadcrumbItems={[{ href: "/library", label: "Book Library" }]}
             />
-            <main className="flex-1 container mx-auto px-8 py-8">
-                <div className="flex justify-between items-center mb-8">
+            <main className="flex-1 px-4 py-6 md:px-6 overflow-x-hidden max-w-full">
+                <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Your Bookshelf</h1>
-                    <UploadBookDialog />
                 </div>
                 {children}
             </main>
+            <FloatingUploadButton />
         </div>
     )
 }

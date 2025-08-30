@@ -14,6 +14,7 @@ import {
     ResizablePanel,
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
+import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import {
     Tooltip,
     TooltipContent,
@@ -34,6 +35,7 @@ import {
 } from "@/lib/api/hooks/feeds"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import {
+    ArrowLeft,
     BookmarkIcon,
     CalendarIcon,
     Check,
@@ -43,6 +45,7 @@ import {
     EyeOff,
     Globe,
     Loader2,
+    Menu,
     MoreVertical,
     Paperclip,
     RefreshCw,
@@ -50,6 +53,7 @@ import {
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
 import InfiniteScroll from "react-infinite-scroll-component"
 
@@ -90,7 +94,9 @@ export function ArticlesView({
     const [selectedArticleId, setSelectedArticleId] = useState<string | null>(
         null
     )
+    const [showContent, setShowContent] = useState(false)
     const [showUnreadOnly, setShowUnreadOnly] = useState(false)
+    const isMobile = useIsMobile()
     const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null)
     const [refreshType, setRefreshType] = useState<"folder" | "all" | null>(
         null
@@ -225,9 +231,14 @@ export function ArticlesView({
 
     // Check if the selected article is in the current filtered list
     const isSelectedArticleInFilteredList = useMemo(() => {
-        if (!selectedArticleId || filteredArticles.length === 0) return false
-        return filteredArticles.some((article: Article) => article.id === selectedArticleId)
-    }, [selectedArticleId, filteredArticles])
+        if (!selectedArticleId || allArticles.length === 0) return false
+        const article = allArticles.find((a: Article) => a.id === selectedArticleId)
+        if (!article) return false
+        
+        // Apply same filtering logic without recreating array
+        if (showUnreadOnly && article.is_read) return false
+        return true
+    }, [selectedArticleId, allArticles, showUnreadOnly])
 
     const { data: selectedArticle, isLoading: isArticleLoading } = useArticle(
         selectedArticleId || "",
@@ -278,49 +289,58 @@ export function ArticlesView({
 
     // Force load more articles if there are more to load but no scrollbar appears
     useEffect(() => {
-        const container = document.getElementById('articles-scroll-container')
-        if (container && hasNextPage && !isFetching && filteredArticles.length > 0) {
+        if (!hasNextPage || isFetching || (isMobile && showContent)) return
+        
+        const containerId = isMobile ? 'articles-scroll-container-mobile' : 'articles-scroll-container'
+        const container = document.getElementById(containerId)
+        if (container && allArticles.length > 0) {
             // Check if container has no scrollbar but there's more content
             if (container.scrollHeight <= container.clientHeight) {
-                // Add a small delay to avoid rapid calls
+                // Add a delay to avoid rapid calls and debounce
                 const timer = setTimeout(() => {
-                    fetchNextPage()
-                }, 100)
+                    if (hasNextPage && !isFetching && !(isMobile && showContent)) {
+                        fetchNextPage()
+                    }
+                }, 300)
                 return () => clearTimeout(timer)
             }
         }
-    }, [filteredArticles, hasNextPage, isFetching, fetchNextPage])
+    }, [allArticles.length, hasNextPage, isFetching, fetchNextPage, isMobile, showContent])
 
     useEffect(() => {
-        // Auto-select first article when we have articles but no current selection
-        if (filteredArticles.length > 0 && !selectedArticleId) {
+        // Auto-select first article when we have articles but no current selection (desktop only)
+        if (allArticles.length > 0 && !selectedArticleId && !isMobile && !showContent) {
             // Use a small timeout to ensure data has stabilized
             const timer = setTimeout(() => {
-                if (filteredArticles.length > 0 && !selectedArticleId) {
-                    const firstArticle = filteredArticles[0]
+                if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
+                    const firstArticle = showUnreadOnly 
+                        ? allArticles.find(a => !a.is_read) || allArticles[0]
+                        : allArticles[0]
                     setSelectedArticleId(firstArticle.id)
                 }
-            }, 50)
+            }, 100)
             
             return () => clearTimeout(timer)
         }
-    }, [filteredArticles, selectedArticleId])
+    }, [allArticles.length, selectedArticleId, isMobile, showContent, showUnreadOnly])
 
     // Clear selected article if it's no longer in the articles list (e.g., removed from read later)
     useEffect(() => {
-        if (selectedArticleId && filteredArticles.length > 0) {
-            const selectedArticleExists = filteredArticles.some(
+        if (selectedArticleId && allArticles.length > 0) {
+            const selectedArticleExists = allArticles.some(
                 (article: Article) => article.id === selectedArticleId
             )
             if (!selectedArticleExists) {
                 setSelectedArticleId(null)
+                if (isMobile) setShowContent(false)
             }
         }
-    }, [selectedArticleId, filteredArticles, viewFeedId, viewFolderId])
+    }, [selectedArticleId, allArticles, viewFeedId, viewFolderId, isMobile])
 
     // Reset selected article when view changes (feed/folder/mode change)
     useEffect(() => {
         setSelectedArticleId(null)
+        setShowContent(false) // Reset to list view on mobile
     }, [viewFeedId, viewFolderId, viewMode, publishedSince, publishedUntil])
 
     // Handle refresh status updates
@@ -435,20 +455,27 @@ export function ArticlesView({
         return groups
     }, [filteredArticles, isRecentlyReadMode])
 
-    const handleArticleClick = (articleId: string) => {
+    const handleArticleClick = useCallback((articleId: string) => {
         setSelectedArticleId(articleId)
-        const article = filteredArticles.find(
-            (a: Article) => a.id === articleId
-        )
-        if (!isRecentlyReadMode && article && !article.is_read) {
-            // Perform the actual update - React Query will handle optimistic updates
-            updateArticle.mutate({
-                articleId,
-                data: { is_read: true },
-                articleType: article.article_type,
-            })
+        // Only auto-show content on mobile if user actually clicked
+        if (isMobile) {
+            setShowContent(true)
         }
-    }
+        // Don't auto-mark as read on mobile click to prevent re-render loops
+        if (!isMobile) {
+            const article = allArticles.find(
+                (a: Article) => a.id === articleId
+            )
+            if (!isRecentlyReadMode && article && !article.is_read) {
+                // Perform the actual update - React Query will handle optimistic updates
+                updateArticle.mutate({
+                    articleId,
+                    data: { is_read: true },
+                    articleType: article.article_type,
+                })
+            }
+        }
+    }, [allArticles, isRecentlyReadMode, updateArticle, isMobile])
 
     // Simplified refresh: always shallow refresh (just refetch from DB)
     const handleShallowRefresh = async () => {
@@ -630,23 +657,25 @@ export function ArticlesView({
 
     return (
         <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
-            <ResizablePanelGroup direction="horizontal">
-                <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
-                    <div className="flex h-full flex-col border-r">
-                        <div className="flex h-14 items-center justify-between border-b px-4">
-                            <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <h2 className="font-semibold truncate">
-                                                {sidebarTitle}
-                                            </h2>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>{sidebarTitle}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+            {/* Desktop: Resizable panels */}
+            <div className="hidden md:flex w-full">
+                <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
+                        <div className="flex h-full flex-col border-r">
+                            <div className="flex h-14 items-center justify-between border-b px-4">
+                                <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <h2 className="font-semibold truncate">
+                                                    {sidebarTitle}
+                                                </h2>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p>{sidebarTitle}</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 {!isRecentlyReadMode &&
                                     !isReadLaterMode &&
                                     unreadCount > 0 && (
@@ -897,28 +926,6 @@ export function ArticlesView({
                         {!isArticleLoading && transformedSelectedArticle ? (
                             <div 
                                 className="p-6 md:p-10 h-full overflow-y-auto cursor-default"
-                                onClick={() => {
-                                    console.log('Container clicked - attempting to mark as read')
-                                    if (!isRecentlyReadMode && !transformedSelectedArticle.is_read) {
-                                        console.log('Calling updateArticle.mutate from container click')
-                                        updateArticle.mutate({
-                                            articleId: transformedSelectedArticle.id,
-                                            data: { is_read: true },
-                                            articleType: transformedSelectedArticle.article_type,
-                                        })
-                                    }
-                                }}
-                                onScroll={(e) => {
-                                    const target = e.currentTarget
-                                    if (target.scrollTop > 50 && !isRecentlyReadMode && !transformedSelectedArticle.is_read) {
-                                        console.log('Container scroll - attempting to mark as read')
-                                        updateArticle.mutate({
-                                            articleId: transformedSelectedArticle.id,
-                                            data: { is_read: true },
-                                            articleType: transformedSelectedArticle.article_type,
-                                        })
-                                    }
-                                }}
                             >
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
@@ -959,6 +966,187 @@ export function ArticlesView({
                     </div>
                 </ResizablePanel>
             </ResizablePanelGroup>
+            </div>
+            
+            {/* Mobile: Stacked layout */}
+            <div className="flex md:hidden w-full h-full">
+                {/* Article List View */}
+                <div className={`w-full h-full flex-col ${showContent ? 'hidden' : 'flex'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4">
+                        <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <SidebarLeftTrigger className="-ml-1" />
+                            <h2 className="font-semibold truncate text-lg">
+                                {sidebarTitle}
+                            </h2>
+                            {!isRecentlyReadMode &&
+                                !isReadLaterMode &&
+                                unreadCount > 0 && (
+                                    <Badge
+                                        variant="outline"
+                                        className="min-w-3 px-1 flex-shrink-0"
+                                    >
+                                        {unreadCount}
+                                    </Badge>
+                                )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                            {!isRecentlyReadMode && !isReadLaterMode && (
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={toggleShowUnreadOnly}
+                                    title={
+                                        showUnreadOnly
+                                            ? "Show all articles"
+                                            : "Show unread only"
+                                    }
+                                >
+                                    {showUnreadOnly ? (
+                                        <Eye className="h-4 w-4" />
+                                    ) : (
+                                        <EyeOff className="h-4 w-4" />
+                                    )}
+                                </Button>
+                            )}
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={() =>
+                                    handleRefreshWithMessage("Refreshing articles...")
+                                }
+                                title="Refresh"
+                            >
+                                <RefreshCw className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                    <div 
+                        id="articles-scroll-container-mobile"
+                        className="flex-1 overflow-auto min-h-0"
+                    >
+                        <InfiniteScroll
+                            dataLength={filteredArticles.length}
+                            next={fetchMoreArticles}
+                            hasMore={!!hasNextPage}
+                            loader={
+                                <div className="flex items-center justify-center py-8">
+                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                </div>
+                            }
+                            endMessage={
+                                <div className="text-center py-6 text-muted-foreground text-sm">
+                                    <b>You've seen all articles!</b>
+                                </div>
+                            }
+                            scrollableTarget="articles-scroll-container-mobile"
+                            style={{ height: '100%', overflow: 'visible' }}
+                        >
+                            {isRecentlyReadMode || isReadLaterMode
+                                ? filteredArticles.map(
+                                    (article: Article, index: number) => (
+                                        <ArticleItem
+                                            key={article.id}
+                                            article={article}
+                                            isActive={
+                                                article.id === selectedArticleId
+                                            }
+                                            isLastInGroup={
+                                                index === filteredArticles.length - 1
+                                            }
+                                            onClick={() =>
+                                                handleArticleClick(article.id)
+                                            }
+                                            isRecentlyReadMode={isRecentlyReadMode}
+                                            isReadLaterMode={isReadLaterMode}
+                                        />
+                                    )
+                                )
+                                : Object.entries(groupedArticles).map(
+                                    ([groupId, group]) => (
+                                        <div key={groupId}>
+                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    {group.label === "Today" ||
+                                                        group.label === "Yesterday" ? (
+                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                    ) : (
+                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                    )}
+                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                        {group.label}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            {group.articles.map(
+                                                (article: Article, index: number) => (
+                                                    <ArticleItem
+                                                        key={article.id}
+                                                        article={article}
+                                                        isActive={
+                                                            article.id === selectedArticleId
+                                                        }
+                                                        isLastInGroup={
+                                                            index === group.articles.length - 1
+                                                        }
+                                                        onClick={() =>
+                                                            handleArticleClick(article.id)
+                                                        }
+                                                    />
+                                                )
+                                            )}
+                                        </div>
+                                    )
+                                )}
+                        </InfiniteScroll>
+                    </div>
+                </div>
+
+                {/* Article Content View */}
+                <div className={`w-full h-full flex-col ${showContent ? 'flex' : 'hidden'}`}>
+                    <div className="flex h-14 items-center justify-between border-b px-4">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => setShowContent(false)}
+                            title="Back to articles"
+                        >
+                            <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                    </div>
+                    <div className="flex-1 overflow-auto">
+                        {isArticleLoading && (
+                            <div className="flex-1 p-4">
+                                <ArticleContentSkeleton />
+                            </div>
+                        )}
+                        {!isArticleLoading && transformedSelectedArticle ? (
+                            <div 
+                                className="p-4 h-full overflow-y-auto overflow-x-hidden cursor-default"
+                            >
+                                <ArticleContentView
+                                    article={transformedSelectedArticle}
+                                    isRecentlyReadMode={isRecentlyReadMode}
+                                    isReadLaterMode={isReadLaterMode}
+                                    onArticleRemoved={() => {
+                                        setSelectedArticleId(null)
+                                        setShowContent(false)
+                                    }}
+                                    onMarkAsRead={undefined}
+                                />
+                            </div>
+                        ) : !selectedArticleId ? (
+                            <div className="flex flex-1 items-center justify-center">
+                                <p className="text-muted-foreground">
+                                    Select an article to read
+                                </p>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }
@@ -1086,12 +1274,14 @@ function ArticleContentView({
         setOptimisticReadLater(article.is_read_later)
     }, [article.is_read_later])
 
+    // Only enable scroll-based read marking on desktop
     useEffect(() => {
         if (
             isRecentlyReadMode ||
             isReadLaterMode ||
             !contentRef.current ||
-            hasMarkedRead
+            hasMarkedRead ||
+            typeof window !== 'undefined' && window.innerWidth < 768 // Disable on mobile
         )
             return
         const el = contentRef.current
@@ -1228,22 +1418,21 @@ function ArticleContentView({
     }
 
     return (
-        <article className="max-w-4xl mx-auto">
-            <div className="flex justify-between items-center mb-3">
+        <article className="max-w-4xl mx-auto w-full min-w-0">
+            <div className="mb-3 w-full min-w-0">
                 <h1 
-                    className="text-2xl font-semibold cursor-default"
-                    onClick={() => {
-                        console.log('Title clicked - attempting to mark as read')
-                        if (onMarkAsRead && !article.is_read) {
-                            setHasMarkedRead(true)
-                            onMarkAsRead()
-                        }
+                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight break-words w-full hyphens-auto"
+                    style={{ 
+                        wordBreak: "break-word", 
+                        overflowWrap: "break-word",
+                        wordWrap: "break-word",
+                        hyphens: "auto"
                     }}
                 >
                     {article.title}
                 </h1>
             </div>
-            <div className="flex items-center justify-between mb-6 text-[10px]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 text-[10px] gap-2 sm:gap-0">
                 <div className="flex items-center gap-2">
                     <Avatar className="h-6 w-6">
                         <AvatarImage
@@ -1266,7 +1455,7 @@ function ArticleContentView({
                             {article.feed?.title?.substring(0, 2) || "N/A"}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="truncate max-w-[200px]">
+                    <span className="truncate max-w-[150px] sm:max-w-[200px]">
                         {article.author ||
                             article.feed?.title ||
                             (article.article_type === "clipped" && article.link 
@@ -1298,7 +1487,7 @@ function ArticleContentView({
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
                     {article.link && (
                         <a
                             href={article.link}
@@ -1341,7 +1530,7 @@ function ArticleContentView({
             </div>
             <div className="space-y-6">
                 {article.image_url && !imageError && (
-                    <div className="aspect-video w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
+                    <div className="aspect-video w-full sm:w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
@@ -1350,46 +1539,47 @@ function ArticleContentView({
                         />
                     </div>
                 )}
-                {((article.note && !article.description) || (!article.note && article.description)) && (
-                    <div
-                        className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
-                        dangerouslySetInnerHTML={{ __html: `<blockquote>${(article.note && !article.description) ? article.note : article.description}</blockquote>` }}
-                        style={{
-                            fontFamily: 'var(--font-garamond-serif)'
-                        }}
-                    />
-                )}
                 {article.content ? (
                     <div
                         ref={contentRef}
-                        className="article-content prose prose-lg dark:prose-invert max-w-none 
-                          prose-headings:font-semibold prose-h1:text-xl prose-h2:text-lg
-                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline
-                          prose-img:rounded-md prose-img:mx-auto prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-md
-                          cursor-default"
+                        className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
+                          prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
+                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
+                          prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-img:w-auto
+                          prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto prose-pre:max-w-full
+                          prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                          prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
+                          cursor-default break-words overflow-hidden"
                         dangerouslySetInnerHTML={{ __html: article.content }}
-                        onClick={(e) => {
-                            // Only mark as read if clicking on the content itself (not links)
-                            const target = e.target as HTMLElement
-                            console.log('Content clicked - attempting to mark as read')
-                            if (target.tagName !== 'A' && onMarkAsRead && !article.is_read) {
-                                setHasMarkedRead(true)
-                                onMarkAsRead()
-                            }
-                        }}
                         style={{
                             fontFamily: "var(--font-garamond-serif)",
                             overflowWrap: "break-word",
                             wordWrap: "break-word",
+                            fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
+                            lineHeight: "1.6",
+                            width: "100%",
+                            maxWidth: "100%",
                         }}
                     />
                 ) : (
-                    <div className="flex flex-col items-center justify-center py-16 text-center">
-                        <div className="mx-auto max-w-md">
-                            <p className="text-muted-foreground">
-                                This article doesn't have any content available.
-                            </p>
-                        </div>
+                    <div>
+                        {((article.note && !article.description) || (!article.note && article.description)) ? (
+                            <div
+                                className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
+                                dangerouslySetInnerHTML={{ __html: `<blockquote>${(article.note && !article.description) ? article.note : article.description}</blockquote>` }}
+                                style={{
+                                    fontFamily: 'var(--font-garamond-serif)'
+                                }}
+                            />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-16 text-center">
+                                <div className="mx-auto max-w-md">
+                                    <p className="text-muted-foreground">
+                                        This article doesn't have any content available.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -1480,8 +1670,8 @@ function ArticleItem({
             ${article.is_read ? "opacity-70" : ""}`}
             onClick={onClick}
         >
-            <div className="flex gap-3">
-                <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden">
+            <div className="flex gap-3 w-full min-w-0">
+                <div className="flex-1 space-y-1.5 min-w-0 overflow-hidden max-w-full">
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             {article.article_type === "clipped" && (
@@ -1529,7 +1719,12 @@ function ArticleItem({
                         </span>
                     </div>
                     <h3
-                        className={`text-sm leading-tight line-clamp-1 break-all ${article.is_read ? "font-normal" : "font-medium"}`}
+                        className={`text-sm leading-tight line-clamp-2 break-words overflow-hidden ${article.is_read ? "font-normal" : "font-medium"}`}
+                        style={{
+                            wordBreak: "break-word",
+                            overflowWrap: "break-word",
+                            hyphens: "auto"
+                        }}
                     >
                         {article.title}
                     </h3>
@@ -1539,7 +1734,7 @@ function ArticleItem({
                         </div>
                     )}
                     {((article.note && !article.description) || (!article.note && article.description)) && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-all">
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden">
                             {(article.note && !article.description) ? article.note : stripHTML(article.description || "")}
                         </p>
                     )}

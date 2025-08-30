@@ -10,6 +10,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import Header from "@/components/navigation/header"
 import { ApiClient } from "@/lib/api/client"
 import { RSS_QUERY_KEYS } from "@/lib/query-keys"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
@@ -149,33 +150,38 @@ export default function ImportOPMLPageClient() {
 
                 <Card className="border border-blue-200 bg-blue-50/50">
                     <CardHeader className="pb-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <Activity className="h-5 w-5 text-blue-600" />
-                                <div>
-                                    <CardTitle className="text-lg flex items-center gap-2">
-                                        Import in Progress
+                                <div className="min-w-0 flex-1">
+                                    <CardTitle className="text-base sm:text-lg flex flex-col sm:flex-row sm:items-center gap-2">
+                                        <span>Import in Progress</span>
                                         {activeImport.current_status && (
                                             <span className="text-sm font-normal text-muted-foreground capitalize">
                                                 ({activeImport.current_status.replace('_', ' ')})
                                             </span>
                                         )}
                                     </CardTitle>
-                                    <CardDescription className="flex items-center gap-2">
-                                        <FileText className="h-4 w-4" />
-                                        {activeImport.filename} • {activeImport.estimated_feeds} feeds
+                                    <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-1">
+                                        <span className="flex items-center gap-2">
+                                            <FileText className="h-4 w-4" />
+                                            <span className="truncate">{activeImport.filename}</span>
+                                        </span>
+                                        <span className="text-xs sm:text-sm">
+                                            {activeImport.estimated_feeds} feeds
+                                        </span>
                                     </CardDescription>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <div className="text-sm text-muted-foreground">
+                            <div className="text-left sm:text-right">
+                                <div className="text-xs sm:text-sm text-muted-foreground">
                                     Started: {new Date(activeImport.created_at).toLocaleString()}
                                 </div>
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="pt-0">
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
@@ -189,7 +195,7 @@ export default function ImportOPMLPageClient() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleCancelImport(activeImport.task_id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50 sm:w-auto"
                             >
                                 <X className="h-4 w-4 mr-2" />
                                 Cancel
@@ -233,14 +239,18 @@ export default function ImportOPMLPageClient() {
     }
 
     return (
-        <div className="container mx-auto p-6 pt-10 max-w-4xl">
-            <div className="mb-8">
-                <h1 className="text-3xl font-bold mb-2">OPML Import</h1>
-                <p className="text-muted-foreground">
-                    Import feeds from an OPML file exported from another RSS
-                    reader.
-                </p>
-            </div>
+        <div className="flex flex-col min-h-screen">
+            <Header
+                breadcrumbItems={[{ href: "/import-opml", label: "OPML Import" }]}
+            />
+            <main className="flex-1">
+                <div className="container mx-auto p-4 sm:p-6 pt-6 sm:pt-10 max-w-4xl">
+                    <div className="mb-8">
+                        <h1 className="text-2xl sm:text-3xl font-bold mb-3">OPML Import</h1>
+                        <p className="text-muted-foreground leading-relaxed max-w-2xl">
+                            Import feeds from an OPML file exported from another RSS reader.
+                        </p>
+                    </div>
 
             {/* Active Imports Section */}
             {(activeImports.length > 0 || isLoadingActiveImports) && (
@@ -261,7 +271,7 @@ export default function ImportOPMLPageClient() {
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                 >
-                    <CardContent className="p-12">
+                    <CardContent className="p-8 sm:p-12">
                         <input
                             type="file"
                             ref={fileInputRef}
@@ -269,7 +279,7 @@ export default function ImportOPMLPageClient() {
                             accept=".opml,.xml"
                             className="hidden"
                         />
-                        <div className="flex flex-col items-center justify-center gap-4 text-center">
+                        <div className="flex flex-col items-center justify-center gap-6 text-center">
                             <div className="p-4 bg-muted rounded-full">
                                 <Upload
                                     size={48}
@@ -277,15 +287,14 @@ export default function ImportOPMLPageClient() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <h3 className="text-lg font-medium">
+                            <div className="space-y-3 max-w-md">
+                                <h3 className="text-lg sm:text-xl font-medium">
                                     {isDragging
                                         ? "Drop your OPML file here"
                                         : "Upload OPML File"}
                                 </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Drag and drop or click to select a .opml or
-                                    .xml file
+                                <p className="text-sm text-muted-foreground leading-relaxed">
+                                    Drag and drop or click to select a .opml or .xml file from your RSS reader export
                                 </p>
                             </div>
 
@@ -293,7 +302,7 @@ export default function ImportOPMLPageClient() {
                                 onClick={handleButtonClick}
                                 disabled={isUploading}
                                 size="lg"
-                                className="mt-4"
+                                className="mt-2 w-full sm:w-auto"
                             >
                                 {isUploading ? (
                                     <>
@@ -315,16 +324,16 @@ export default function ImportOPMLPageClient() {
             {/* Message when upload is disabled due to active import */}
             {activeImports.length > 0 && (
                 <Card className="border-gray-200 bg-gray-50/50">
-                    <CardContent className="p-12 text-center">
-                        <div className="flex flex-col items-center justify-center gap-4">
+                    <CardContent className="p-8 sm:p-12 text-center">
+                        <div className="flex flex-col items-center justify-center gap-6">
                             <div className="p-4 bg-gray-200 rounded-full">
                                 <Upload size={48} className="text-gray-400" />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-3 max-w-md">
                                 <h3 className="text-lg font-medium text-gray-600">
                                     Upload Disabled
                                 </h3>
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-gray-500 leading-relaxed">
                                     Complete or cancel your current import before starting a new one
                                 </p>
                             </div>
@@ -332,6 +341,8 @@ export default function ImportOPMLPageClient() {
                     </CardContent>
                 </Card>
             )}
+                </div>
+            </main>
         </div>
     )
 }

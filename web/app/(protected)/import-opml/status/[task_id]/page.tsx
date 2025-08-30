@@ -119,6 +119,9 @@ export default function ImportStatusPage() {
                         queryClient.invalidateQueries({
                             queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
                         }),
+                        queryClient.invalidateQueries({
+                            queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+                        }),
                     ])
                 } else if (status.status === "failed") {
                     toast.error(
@@ -232,25 +235,27 @@ export default function ImportStatusPage() {
                 {/* Progress Card (for in-progress imports) */}
                 {status === "in_progress" && progress && (
                     <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Activity className="h-6 w-6 text-blue-600 animate-pulse" />
-                                    <div>
-                                        <CardTitle>Import in Progress</CardTitle>
-                                        <CardDescription className="flex items-center gap-2">
+                        <CardHeader className="pb-4">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <Activity className="h-6 w-6 text-blue-600 animate-pulse flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-lg mb-3">Import in Progress</CardTitle>
+                                        <div className="space-y-2">
                                             {metadata?.filename && (
-                                                <>
-                                                    <FileText className="h-4 w-4" />
-                                                    {metadata.filename} •
-                                                </>
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                                    <span className="text-sm text-muted-foreground truncate">{metadata.filename}</span>
+                                                </div>
                                             )}
-                                            Processing {progress.completed} of {progress.total} feeds
-                                        </CardDescription>
+                                            <div className="text-sm text-muted-foreground">
+                                                Processing {progress.completed} of {progress.total} feeds
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-xs text-muted-foreground pl-9">
                                         Started: {new Date(metadata.created_at).toLocaleString()}
                                     </div>
                                 )}
@@ -269,29 +274,35 @@ export default function ImportStatusPage() {
                                     className="h-2"
                                 />
                             </div>
-                            <div className="grid grid-cols-3 gap-4 text-center text-sm">
-                                <div className="p-3 bg-green-50 rounded">
-                                    <div className="font-medium text-green-600">
-                                        {progress.successful}
-                                    </div>
-                                    <div className="text-xs text-green-700">
-                                        Imported
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-blue-50 rounded">
-                                    <div className="font-medium text-blue-600">
-                                        {progress.already_existed}
-                                    </div>
-                                    <div className="text-xs text-blue-700">
-                                        Already had
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
+                                        <div className="text-2xl font-semibold text-green-600">
+                                            {progress.successful}
+                                        </div>
+                                        <div className="text-sm font-medium text-green-700">
+                                            Successfully Imported
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="p-3 bg-red-50 rounded">
-                                    <div className="font-medium text-red-600">
-                                        {progress.failed}
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
+                                        <div className="text-2xl font-semibold text-blue-600">
+                                            {progress.already_existed}
+                                        </div>
+                                        <div className="text-sm font-medium text-blue-700">
+                                            Already Existed
+                                        </div>
                                     </div>
-                                    <div className="text-xs text-red-700">
-                                        Failed
+                                </div>
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
+                                        <div className="text-2xl font-semibold text-red-600">
+                                            {progress.failed}
+                                        </div>
+                                        <div className="text-sm font-medium text-red-700">
+                                            Import Failed
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -313,53 +324,63 @@ export default function ImportStatusPage() {
                 {/* Results Card (for completed imports) */}
                 {status === "completed" && result && (
                     <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <CheckCircle className="h-6 w-6 text-green-600" />
-                                    <div>
-                                        <CardTitle>Import Complete</CardTitle>
-                                        <CardDescription className="flex items-center gap-2">
+                        <CardHeader className="pb-4">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-lg mb-3">Import Complete</CardTitle>
+                                        <div className="space-y-2">
                                             {metadata?.filename && (
-                                                <>
-                                                    <FileText className="h-4 w-4" />
-                                                    {metadata.filename} •
-                                                </>
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                                    <span className="text-sm text-muted-foreground truncate">{metadata.filename}</span>
+                                                </div>
                                             )}
-                                            Your OPML file has been successfully processed.
-                                        </CardDescription>
+                                            <div className="text-sm text-muted-foreground">
+                                                Your OPML file has been successfully processed.
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-xs text-muted-foreground pl-9">
                                         Started: {new Date(metadata.created_at).toLocaleString()}
                                     </div>
                                 )}
                             </div>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="grid grid-cols-3 gap-4">
-                                <div className="text-center p-4 bg-green-50 rounded-lg">
-                                    <div className="text-2xl font-semibold text-green-600">
-                                        {result.summary?.successful || 0}
-                                    </div>
-                                    <div className="text-sm text-green-700">
-                                        Imported
-                                    </div>
-                                </div>
-                                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                                    <div className="text-2xl font-semibold text-blue-600">
-                                        {result.summary?.already_existed || 0}
-                                    </div>
-                                    <div className="text-sm text-blue-700">
-                                        Already had
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
+                                        <div className="text-2xl font-semibold text-green-600">
+                                            {result.summary?.successful || 0}
+                                        </div>
+                                        <div className="text-sm font-medium text-green-700">
+                                            Successfully Imported
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-center p-4 bg-red-50 rounded-lg">
-                                    <div className="text-2xl font-semibold text-red-600">
-                                        {result.summary?.failed || 0}
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
+                                        <div className="text-2xl font-semibold text-blue-600">
+                                            {result.summary?.already_existed || 0}
+                                        </div>
+                                        <div className="text-sm font-medium text-blue-700">
+                                            Already Existed
+                                        </div>
                                     </div>
-                                    <div className="text-sm text-red-700">Failed</div>
+                                </div>
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 rounded-lg">
+                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
+                                        <div className="text-2xl font-semibold text-red-600">
+                                            {result.summary?.failed || 0}
+                                        </div>
+                                        <div className="text-sm font-medium text-red-700">
+                                            Import Failed
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -398,7 +419,7 @@ export default function ImportStatusPage() {
                                 </div>
                             )}
 
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex flex-col sm:flex-row gap-3 pt-4">
                                 <Button
                                     onClick={() => router.push("/articles")}
                                     className="flex-1"
@@ -440,7 +461,7 @@ export default function ImportStatusPage() {
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-xs sm:text-sm text-muted-foreground break-words">
                                         Started: {new Date(metadata.created_at).toLocaleString()}
                                     </div>
                                 )}
@@ -481,7 +502,7 @@ export default function ImportStatusPage() {
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-sm text-muted-foreground">
+                                    <div className="text-xs sm:text-sm text-muted-foreground break-words">
                                         Started: {new Date(metadata.created_at).toLocaleString()}
                                     </div>
                                 )}
@@ -504,7 +525,7 @@ export default function ImportStatusPage() {
     }
 
     return (
-        <div className="container mx-auto p-6 pt-10 max-w-4xl">
+        <div className="container mx-auto p-4 sm:p-6 pt-6 sm:pt-10 max-w-4xl">
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <Button
@@ -517,7 +538,7 @@ export default function ImportStatusPage() {
                         Back to Import
                     </Button>
                 </div>
-                <h1 className="text-3xl font-bold">OPML Import Status</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">OPML Import Status</h1>
                 <p className="text-muted-foreground">
                     Track the progress of your OPML import.
                 </p>

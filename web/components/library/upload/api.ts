@@ -127,7 +127,7 @@ export const useUploadBook = () => {
                     }
                 )
 
-                toast.success("Book uploaded successfully")
+                toast.success("Book added")
 
                 return { bookId: libraryResult.id, library: libraryResult }
             } catch (error) {

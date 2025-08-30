@@ -38,9 +38,7 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.book_metadata?.id) {
-            toast.error(
-                "Failed to delete book - Could not determine book metadata ID."
-            )
+            toast.error("Can't delete book")
             return
         }
 
@@ -48,14 +46,10 @@ export function BookActions({ book }: BookActionsProps) {
             // Delete the book metadata (this will cascade delete the library entries)
             await deleteBookMetadataMutation.mutateAsync(book.book_metadata.id)
 
-            toast.success(
-                "Successfully deleted book - The book has been removed from your library."
-            )
+            toast.success("Book removed")
         } catch (error) {
             console.error("Failed to delete book:", error)
-            toast.error(
-                "Failed to delete book - An error occurred while deleting the book."
-            )
+            toast.error("Delete failed")
         } finally {
             setIsOpen(false)
         }
@@ -65,9 +59,7 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.id) {
-            toast.error(
-                "Failed to reset progress - Could not determine book ID."
-            )
+            toast.error("Can't reset progress")
             return
         }
 
@@ -98,16 +90,14 @@ export function BookActions({ book }: BookActionsProps) {
                 bookId: book.id,
                 book: updates,
             })
-            toast.success(
-                "Successfully reset progress - The progress for this book has been reset."
-            )
+            toast.success("Progress reset")
         } catch (error) {
             console.log(error)
             const errorMessage =
                 error instanceof Error && (error as any).response?.data?.detail
                     ? (error as any).response.data.detail
                     : "An error occurred while resetting progress."
-            toast.error(`Failed to reset progress - ${errorMessage}`)
+            toast.error("Reset failed")
         }
 
         setIsOpen(false)
@@ -117,9 +107,7 @@ export function BookActions({ book }: BookActionsProps) {
         e.preventDefault()
 
         if (!book.id) {
-            toast.error(
-                "Failed to mark as complete - Could not determine book ID."
-            )
+            toast.error("Can't mark complete")
             return
         }
 
@@ -152,16 +140,14 @@ export function BookActions({ book }: BookActionsProps) {
                 bookId: book.id,
                 book: updates,
             })
-            toast.success(
-                "Successfully marked as complete - The book has been marked as complete."
-            )
+            toast.success("Marked complete")
         } catch (error) {
             console.log(error)
             const errorMessage =
                 error instanceof Error && (error as any).response?.data?.detail
                     ? (error as any).response.data.detail
                     : "An error occurred while marking the book as complete."
-            toast.error(`Failed to mark as complete - ${errorMessage}`)
+            toast.error("Mark complete failed")
         }
 
         setIsOpen(false)
