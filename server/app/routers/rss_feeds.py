@@ -12,6 +12,7 @@ from app.core.custom_exceptions import (
     FeedValidationError,
     NotFoundError,
 )
+from app.core.decorators import require_resource_limit
 from app.crud import crud_tag
 from app.db.session import get_db
 from app.schemas.auth import TokenData
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
 
 
 @router.post("/", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
+@require_resource_limit("max_subscriptions")
 async def add_new_feed(
     *,
     db: AsyncSession = Depends(get_db),

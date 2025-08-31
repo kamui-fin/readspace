@@ -13,7 +13,7 @@ export default function ReadingProgressBar({ id }: ReadingProgressBarProps) {
     return (
         <div
             id={id}
-            className="fixed top-0 left-0 right-0 z-11 will-change-transform"
+            className="fixed top-0 left-0 right-0 z-50 will-change-transform"
         >
             <Progress
                 value={progress}

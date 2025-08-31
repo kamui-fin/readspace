@@ -599,5 +599,61 @@ export class ApiClient {
                 feed_title: string
                 feed_image_url: string | null
             }>(`/api/rss/articles/${id}?article_type=${articleType}`, data),
+        getTodaysArticles: (params: {
+            userTimezone: string
+            page?: number
+            size?: number
+        }) => {
+            const queryParams = new URLSearchParams()
+            queryParams.append("user_timezone", params.userTimezone)
+            if (params.page) queryParams.append("page", params.page.toString())
+            if (params.size) queryParams.append("size", params.size.toString())
+
+            const queryString = queryParams.toString()
+            return this.get<{
+                items: Array<{
+                    id: string
+                    title: string
+                    link: string
+                    description: string
+                    content: string
+                    published_at: string
+                    author: string | null
+                    image_url: string | null
+                    estimated_read_time_minutes: number | null
+                    is_read: boolean
+                    is_read_later: boolean
+                    is_favorite: boolean
+                    feed_id: string | null
+                    guid: string | null
+                    folder_id: string | null
+                    article_type: string
+                    priority: string | null
+                    note: string | null
+                    created_at: string
+                    updated_at: string
+                    feed: {
+                        title: string
+                        link: string
+                        image_url: string | null
+                    } | null
+                }>
+                total: number
+                page: number
+                size: number
+                pages: number
+            }>(`/api/rss/articles/today?${queryString}`)
+        },
+    }
+
+    // User/Profile endpoints
+    static users = {
+        getProfile: (): Promise<{
+            id: string
+            email: string
+            role: string
+            created_at: string
+            updated_at: string
+        }> => this.get("/api/users/profile"),
     }
 }

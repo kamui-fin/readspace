@@ -11,7 +11,8 @@ interface ArticlesSuspenseWrapperProps {
     libraryId?: string
     publishedSince?: string
     publishedUntil?: string
-    mode?: "allArticles" | "recentlyRead" | "readLater"
+    mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
+    userTimezone?: string
 }
 
 export function ArticlesSuspenseWrapper(props: ArticlesSuspenseWrapperProps) {

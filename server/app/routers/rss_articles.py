@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Any
 from uuid import UUID
+import zoneinfo
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -147,6 +148,9 @@ async def list_articles(
     published_until: datetime | None = Query(
         None, description="Filter by articles published until this UTC datetime"
     ),
+    user_timezone: str | None = Query(
+        None, description="User's timezone for date calculations (e.g., 'America/New_York')"
+    ),
     search_query: str | None = Query(
         None, description="Search query for article title and description"
     ),
@@ -181,9 +185,52 @@ async def list_articles(
         feed_is_favorite=feed_is_favorite,
         published_since=published_since,
         published_until=published_until,
+        user_timezone=user_timezone,
         search_query=search_query,
         sort_by=sort_by,
         sort_order=sort_order,
+        page=page,
+        size=size,
+    )
+    return paginated_articles
+
+
+@router.get("/today", response_model=PaginatedResponse[ArticleResponse])
+async def get_todays_articles(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+    user_timezone: str = Query("UTC", description="User's timezone (e.g., 'America/New_York')"),
+    page: int = Query(1, ge=1, description="Page number for pagination"),
+    size: int = Query(25, ge=1, le=100, description="Number of items per page"),
+):
+    """Get today's articles based on user's timezone."""
+    try:
+        # Validate and parse the timezone
+        tz = zoneinfo.ZoneInfo(user_timezone)
+    except zoneinfo.ZoneInfoNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid timezone: {user_timezone}. Please provide a valid IANA timezone identifier.",
+        )
+    
+    # Get current time in user's timezone
+    now_in_tz = datetime.now(tz)
+    
+    # Calculate start and end of today in user's timezone
+    start_of_day_tz = now_in_tz.replace(hour=0, minute=0, second=0, microsecond=0)
+    end_of_day_tz = now_in_tz.replace(hour=23, minute=59, second=59, microsecond=999999)
+    
+    # Convert to UTC for database query
+    utc_tz = zoneinfo.ZoneInfo('UTC')
+    start_of_day_utc = start_of_day_tz.astimezone(utc_tz)
+    end_of_day_utc = end_of_day_tz.astimezone(utc_tz)
+    
+    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    paginated_articles = await rss_service.get_articles(
+        published_since=start_of_day_utc,
+        published_until=end_of_day_utc,
+        sort_by="published_at",
+        sort_order="desc",
         page=page,
         size=size,
     )

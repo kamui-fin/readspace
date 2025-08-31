@@ -8,39 +8,25 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 export const dynamic = 'force-dynamic'
 
 export default async function TodayPage() {
-    const now = new Date()
-    // Set to start of today in UTC
-    const startOfDay = new Date(now)
-    startOfDay.setUTCHours(0, 0, 0, 0)
-    
-    // Set to end of today in UTC (23:59:59.999)
-    const endOfDay = new Date(now)
-    endOfDay.setUTCHours(23, 59, 59, 999)
-
-    const publishedSince = startOfDay.toISOString()
-    const publishedUntil = endOfDay.toISOString()
+    // Get user's timezone - this will be executed on the server during SSR
+    // and will use the server's timezone as a fallback (which should be fine for most use cases)
+    // The real timezone detection happens client-side
+    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
     const queryClient = getQueryClient()
 
-    // Prefetch today's articles with date filtering
+    // Prefetch today's articles using the new timezone-aware endpoint
     await queryClient.prefetchQuery({
         queryKey: [RSS_QUERY_KEYS.ARTICLES, {
-            feedIds: undefined,
-            folderId: undefined,
-            publishedSince,
-            publishedUntil,
+            userTimezone,
             page: 1,
             size: 25,
             sortBy: "published_at",
             sortOrder: "desc",
-            viewType: 'all',
-            viewId: 'all',
+            viewType: 'today',
+            viewId: 'today',
         }],
-        queryFn: () => ServerApiClient.getArticlesData({
-            mode: "allArticles",
-            publishedSince,
-            publishedUntil
-        }),
+        queryFn: () => ServerApiClient.getTodaysArticles({ userTimezone }),
     })
 
     return (
@@ -49,8 +35,8 @@ export default async function TodayPage() {
                 title="Today"
                 showUnreadBadge={true}
                 initialSidebarTitle="Today"
-                publishedSince={publishedSince}
-                publishedUntil={publishedUntil}
+                mode="today"
+                userTimezone={userTimezone}
             />
         </HydrationBoundary>
     )

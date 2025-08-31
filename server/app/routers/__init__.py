@@ -12,6 +12,7 @@ from . import (
     rss_opml,
     rss_tags,
     upload,
+    users,
 )
 
 router = APIRouter()
@@ -20,6 +21,7 @@ router = APIRouter()
 router.include_router(books.router, tags=["Books"])
 router.include_router(highlights.router, tags=["Highlights"])
 router.include_router(upload.router, prefix="/upload", tags=["Upload"])
+router.include_router(users.router, tags=["Users"])
 
 # RSS Routers
 router.include_router(rss_folders.router, prefix="/rss")

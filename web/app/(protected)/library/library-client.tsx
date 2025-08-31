@@ -34,16 +34,19 @@ function LibraryLayout({ children }: LibraryLayoutProps) {
     const isMobile = useIsMobile()
     
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-full">
             <Header
+                classAttributes="rounded-t-xl"
                 breadcrumbItems={[{ href: "/library", label: "Book Library" }]}
             />
-            <main className="flex-1 px-4 py-6 md:px-6 overflow-x-hidden max-w-full">
+            <main className="flex-1 px-4 py-6 md:px-6 overflow-hidden">
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-3xl font-bold">Your Bookshelf</h1>
                     {!isMobile && <UploadBookDialog />}
                 </div>
-                {children}
+                <div className="overflow-y-auto h-full">
+                    {children}
+                </div>
             </main>
             <FloatingUploadButton />
         </div>

@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.decorators import require_resource_limit
 from app.db.session import get_db
 from app.models.book_models import (  # Added UserBookLibrary for type hint
     BookMetadata,
@@ -175,6 +176,7 @@ async def get_user_book(
 
 
 @router.post("/", response_model=UserBookLibraryResponse)
+@require_resource_limit("max_books")
 async def add_book_to_library(
     book: UserBookLibraryCreate,
     db: Annotated[AsyncSession, Depends(get_db)],

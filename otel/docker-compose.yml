@@ -1,0 +1,18 @@
+services:
+  loki:
+    image: grafana/loki
+    command: ['-config.file=/etc/loki/loki-config.yaml']
+    ports: ["3100:3100"]
+    volumes:
+      - loki-data:/loki                      # ← match config
+      - ./otel/loki-config.yaml:/etc/loki/loki-config.yaml
+    networks: [monitoring]
+
+  tempo:
+    image: grafana/tempo:latest
+    ports: ["3200:3200", "4317:4317", "4318:4318"]
+    volumes:
+      - tempo-data:/tmp/tempo                # ← persist traces + wal + index
+      - ./otel/tempo.yaml:/etc/tempo.yaml
+    command: ["-config.file=/etc/tempo.yaml"]
+    networks: [monitoring]

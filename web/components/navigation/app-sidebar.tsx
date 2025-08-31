@@ -13,7 +13,7 @@ import {
     SidebarMenuItem,
     useSidebarLeft,
 } from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
@@ -84,7 +84,9 @@ export function AppSidebar({
     const pathname = usePathname()
     const router = useRouter()
     const isMobile = useIsMobile()
+    const isTablet = useIsTablet()
     const [user, setUser] = useState<User | null>(null)
+    const [isLoadingUser, setIsLoadingUser] = useState(true)
     const supabase = createClient()
     const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
 
@@ -94,6 +96,7 @@ export function AppSidebar({
                 data: { user },
             } = await supabase.auth.getUser()
             setUser(user)
+            setIsLoadingUser(false)
         }
         getUser()
     }, [supabase])
@@ -115,7 +118,7 @@ export function AppSidebar({
                 variant="inset"
                 collapsible="offcanvas"
                 {...props}
-                className={cn(props.className, { hidden: !user })}
+                className={cn(props.className, { hidden: !isLoadingUser && !user })}
             >
                 <SidebarHeader>
                     <SidebarMenu>

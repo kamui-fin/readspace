@@ -48,6 +48,7 @@ class ArticleManagementService:
         feed_is_favorite: bool | None = None,
         published_since: datetime | None = None,
         published_until: datetime | None = None,
+        user_timezone: str | None = None,
         search_query: str | None = None,
         sort_by: str = "published_at",
         sort_order: str = "desc",

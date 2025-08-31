@@ -16,7 +16,7 @@ class PaginatedResponse[T](BaseModel):
 
 # ========= Folder Schemas =========
 class FolderBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255)
+    name: str = Field(..., min_length=1, max_length=100)
 
 
 class FolderCreate(FolderBase):
@@ -24,7 +24,7 @@ class FolderCreate(FolderBase):
 
 
 class FolderUpdate(FolderBase):
-    name: str | None = Field(None, min_length=1, max_length=255)
+    name: str | None = Field(None, min_length=1, max_length=100)
 
 
 class FolderResponse(FolderBase):
@@ -181,7 +181,7 @@ class FeedArticleResponse(FeedArticleBase):
 # ClippedArticle schemas (manually saved web articles)
 class ClippedArticleBase(BaseModel):
     priority: str = Field("medium", pattern="^(low|medium|high)$")
-    note: str | None = None
+    note: str | None = Field(None, max_length=2000)
     is_read: bool = False
     is_read_later: bool = True
     is_favorite: bool = False
@@ -194,7 +194,7 @@ class ClippedArticleCreate(ClippedArticleBase):
 
 class ClippedArticleUpdate(BaseModel):
     priority: str | None = Field(None, pattern="^(low|medium|high)$")
-    note: str | None = None
+    note: str | None = Field(None, max_length=2000)
     is_read: bool | None = None
     is_read_later: bool | None = None
     is_favorite: bool | None = None

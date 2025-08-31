@@ -4,8 +4,8 @@ import { NextResponse } from "next/server"
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
     const code = searchParams.get("code")
-    // read your “next” param; default to /dashboard
-    const next = searchParams.get("next") ?? "/"
+    // read your "next" param; default to /articles
+    const next = searchParams.get("next") ?? "/articles"
 
     if (code) {
         const supabase = await createClient()

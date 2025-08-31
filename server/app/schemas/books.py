@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class BookMetadataBase(BaseModel):
@@ -14,7 +14,7 @@ class BookMetadataBase(BaseModel):
     cover_url: str | None = None
     format: str  # "PDF" or "EPUB"
     file_url: str
-    file_size_bytes: int | None = None
+    file_size_bytes: int | None = Field(None, le=5*1024*1024)  # 5MB max
     num_pages: int | None = None
     pdf_toc: dict[str, Any] | list[dict[str, Any]] | None = (
         None  # Allow both dict and list

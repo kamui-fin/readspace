@@ -1,6 +1,6 @@
 {
   "name": "readspace-extension",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A powerful Chrome extension to save articles to Readspace for later reading",
   "type": "module",
   "scripts": {
@@ -69,7 +69,7 @@
   "manifest": {
     "manifest_version": 3,
     "name": "Readspace",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "Save articles to Readspace, your calm inbox for reading RSS, newsletters, threads, and books.",
     "icons": {
       "16": "icons/icon16.png",

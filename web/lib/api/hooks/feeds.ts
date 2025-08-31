@@ -1067,3 +1067,30 @@ export function useInfiniteReadLaterArticles(
         ...options,
     })
 }
+
+export function useInfiniteTodayArticles(
+    params: { userTimezone: string; size?: number },
+    options?: {
+        refetchOnMount?: boolean
+        refetchOnWindowFocus?: boolean
+        staleTime?: number
+        enabled?: boolean
+    }
+) {
+    return useInfiniteQuery({
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', 'today', params],
+        queryFn: ({ pageParam = 1 }) =>
+            ApiClient.rss.getTodaysArticles({
+                userTimezone: params.userTimezone,
+                page: pageParam,
+                size: params.size || 25
+            }),
+        getNextPageParam: (lastPage: any) => {
+            const currentPage = lastPage.page || 1
+            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            return currentPage < totalPages ? currentPage + 1 : undefined
+        },
+        initialPageParam: 1,
+        ...options,
+    })
+}

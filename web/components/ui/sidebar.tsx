@@ -21,7 +21,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile, useIsTablet, useIsDesktop } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
@@ -80,7 +80,7 @@ const SidebarProvider = React.forwardRef<
 >(
     (
         {
-            defaultOpen = true,
+            defaultOpen,
             open: openProp,
             onOpenChange: setOpenProp,
             className,
@@ -92,11 +92,25 @@ const SidebarProvider = React.forwardRef<
         ref
     ) => {
         const isMobile = useIsMobile()
+        const isTablet = useIsTablet()
+        const isDesktop = useIsDesktop()
+        
         const [openMobile, setOpenMobile] = React.useState(false)
+
+        // Determine default open state based on device type
+        const getInitialOpen = () => {
+            if (defaultOpen !== undefined) return defaultOpen
+            if (typeof window !== 'undefined') {
+                const width = window.innerWidth
+                if (width < 1024) return false // Closed by default on mobile and tablet
+                return true // Open by default on desktop
+            }
+            return false // SSR fallback
+        }
 
         // This is the internal state of the sidebar.
         // We use openProp and setOpenProp for control from outside the component.
-        const [_open, _setOpen] = React.useState(defaultOpen)
+        const [_open, _setOpen] = React.useState(getInitialOpen)
         const open = openProp ?? _open
         const setOpen = React.useCallback(
             (value: boolean | ((value: boolean) => boolean)) => {
@@ -119,6 +133,7 @@ const SidebarProvider = React.forwardRef<
             if (isMobile) {
                 setOpenMobile((o) => !o)
             } else {
+                // On tablet and desktop, toggle the main sidebar
                 setOpen((o) => !o)
             }
         }, [isMobile, setOpen, setOpenMobile])
@@ -165,6 +180,17 @@ const SidebarProvider = React.forwardRef<
                 toggleSidebar,
             ]
         )
+
+        // Sync sidebar state with device type changes
+        React.useEffect(() => {
+            if (defaultOpen === undefined && typeof window !== 'undefined') {
+                const width = window.innerWidth
+                const shouldBeOpen = width >= 1024 // Only open on desktop (>= 1024px)
+                if (_open !== shouldBeOpen) {
+                    _setOpen(shouldBeOpen)
+                }
+            }
+        }, [isMobile, isTablet, isDesktop, defaultOpen])
 
         return (
             <SidebarContext.Provider value={contextValue}>
@@ -465,7 +491,7 @@ const SidebarInset = React.forwardRef<
         <main
             className={cn(
                 "bg-background relative flex min-h-svh flex-1 flex-col",
-                "peer-data-[variant=inset]:min-h-[calc(100svh-(--spacing(4)))] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
+                "peer-data-[variant=inset]:min-h-[calc(100svh-1rem)] md:peer-data-[variant=inset]:m-2 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow-sm",
                 className
             )}
             ref={ref}

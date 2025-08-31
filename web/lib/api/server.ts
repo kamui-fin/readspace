@@ -271,4 +271,19 @@ export class ServerApiClient {
             }
         }
     }
+
+    static async getTodaysArticles(params: { userTimezone: string, page?: number, size?: number }) {
+        try {
+            return await ApiClient.rss.getTodaysArticles(params)
+        } catch (error) {
+            console.error("Failed to fetch today's articles:", error)
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                pages: 1,
+                size: 25,
+            }
+        }
+    }
 } 

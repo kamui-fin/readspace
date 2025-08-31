@@ -82,7 +82,7 @@
         --sidebar-border: var(--border);
         --sidebar-ring: var(--ring);
         
-        --nav-hover: 0 0% 22%;
+        --nav-hover: 0 0% 90%;
     }
 
     .dark {
@@ -121,7 +121,7 @@
         --sidebar-border: var(--border);
         --sidebar-ring: var(--ring);
         
-        --nav-hover: 0 0% 22%;
+        --nav-hover: 0 0% 18%;
     }
 }
 

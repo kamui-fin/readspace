@@ -138,7 +138,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
         <>
             <ReadingProgressBar />
             <Header
-                classAttributes={`rounded-t-xl sticky top-0 z-2 bg-background border-b shadow-sm transition-all duration-200 ${headerVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"}`}
+                classAttributes={`sticky top-0 z-2 bg-background border-b shadow-sm transition-all duration-200 ${headerVisible ? "translate-y-0 opacity-100" : "-translate-y-full opacity-0"}`}
                 breadcrumbItems={
                     isMobile
                         ? [

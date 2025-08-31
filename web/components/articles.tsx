@@ -28,6 +28,7 @@ import {
     useInfiniteArticles,
     useInfiniteReadLaterArticles,
     useInfiniteRecentlyReadArticles,
+    useInfiniteTodayArticles,
     useRefreshFeed,
     useRefreshStatus,
     useUnreadCounts,
@@ -53,7 +54,7 @@ import {
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
 import useInfiniteScroll from "react-infinite-scroll-hook"
 import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
@@ -66,6 +67,7 @@ export function ArticlesView({
     publishedSince,
     publishedUntil,
     mode = "allArticles",
+    userTimezone,
 }: {
     initialSidebarTitle?: string
     feedId?: string
@@ -73,7 +75,8 @@ export function ArticlesView({
     libraryId?: string
     publishedSince?: string
     publishedUntil?: string
-    mode?: "allArticles" | "recentlyRead" | "readLater"
+    mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
+    userTimezone?: string
 }) {
     const {
         initialSidebarTitle: viewInitialSidebarTitle,
@@ -98,6 +101,7 @@ export function ArticlesView({
     const [showContent, setShowContent] = useState(false)
     const [showUnreadOnly, setShowUnreadOnly] = useState(false)
     const isMobile = useIsMobile()
+    const isTablet = useIsTablet()
     const [refreshTaskId, setRefreshTaskId] = useState<string | null>(null)
     const [refreshType, setRefreshType] = useState<"folder" | "all" | null>(
         null
@@ -129,11 +133,14 @@ export function ArticlesView({
 
     const isRecentlyReadMode = viewMode === "recentlyRead"
     const isReadLaterMode = viewMode === "readLater"
+    const isTodayMode = viewMode === "today"
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
             ? "Read Later"
-            : viewInitialSidebarTitle || "All Articles"
+            : isTodayMode
+                ? "Today"
+                : viewInitialSidebarTitle || "All Articles"
 
     // Use infinite queries based on mode
     let infiniteQuery: any
@@ -146,6 +153,15 @@ export function ArticlesView({
         })
     } else if (isReadLaterMode) {
         infiniteQuery = useInfiniteReadLaterArticles({ size: 25 }, {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000,
+        })
+    } else if (isTodayMode && userTimezone) {
+        infiniteQuery = useInfiniteTodayArticles({ 
+            userTimezone,
+            size: 25 
+        }, {
             refetchOnMount: false,
             refetchOnWindowFocus: false,
             staleTime: 5 * 60 * 1000,
@@ -669,6 +685,9 @@ export function ArticlesView({
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">
+                                    {isTablet && (
+                                        <SidebarLeftTrigger className="-ml-1" />
+                                    )}
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
