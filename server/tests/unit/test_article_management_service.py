@@ -254,6 +254,7 @@ class TestArticleManagementService:
                 article_id=article_id,
                 article_in=article_update,
                 user_id=self.user_id,
+                article_type='feed',
             )
 
     @pytest.mark.asyncio

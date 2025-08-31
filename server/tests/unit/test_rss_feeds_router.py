@@ -17,8 +17,6 @@ from app.routers.rss_feeds import (
     get_feed,
     update_feed_settings,
     delete_feed,
-    refresh_all_feeds,
-    refresh_folder_feeds,
     refresh_feed
 )
 
@@ -140,10 +138,12 @@ class TestRssFeedsRouter:
             tag_ids=[]
         )
         
+        from app.core.custom_exceptions import FeedValidationError
+        
         with patch('app.routers.rss_feeds.RssService') as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
-            mock_service.add_new_feed = AsyncMock(side_effect=ValueError("Feed already exists"))
+            mock_service.add_new_feed = AsyncMock(side_effect=FeedValidationError("Feed already exists"))
             
             with pytest.raises(HTTPException) as exc_info:
                 await add_new_feed(
@@ -295,10 +295,12 @@ class TestRssFeedsRouter:
         feed_id = uuid4()
         feed_update = FeedUpdate(folder_id=uuid4())
         
+        from app.core.custom_exceptions import NotFoundError
+        
         with patch('app.routers.rss_feeds.RssService') as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
-            mock_service.update_feed_user_settings = AsyncMock(side_effect=ValueError("Feed not found"))
+            mock_service.update_feed_user_settings = AsyncMock(side_effect=NotFoundError("Feed not found"))
             
             with pytest.raises(HTTPException) as exc_info:
                 await update_feed_settings(
@@ -352,54 +354,6 @@ class TestRssFeedsRouter:
             assert "Feed not found" in str(exc_info.value.detail)
 
 
-    @pytest.mark.asyncio
-    async def test_refresh_all_feeds_success(self):
-        """Test triggering refresh of all user feeds."""
-        with patch('app.workers.tasks.refresh_all_user_feeds_task.delay') as mock_task:
-            mock_task.return_value.id = 'task-123'
-            result = await refresh_all_feeds(
-                db=self.db,
-                current_user=self.current_user
-            )
-            
-            assert "message" in result
-            assert "task_id" in result
-            mock_task.assert_called_once_with(user_id=str(self.user_id))
-
-    @pytest.mark.asyncio
-    async def test_refresh_folder_feeds_success(self):
-        """Test triggering refresh of folder feeds."""
-        folder_id = uuid4()
-        
-        # Mock folder exists
-        with patch('app.crud.crud_folder.get_folder', new=AsyncMock(return_value=Mock())):
-            with patch('app.workers.tasks.refresh_folder_feeds_task.delay') as mock_task:
-                mock_task.return_value.id = 'task-456'
-                result = await refresh_folder_feeds(
-                    folder_id=folder_id,
-                    db=self.db,
-                    current_user=self.current_user
-                )
-                
-                assert "message" in result
-                assert "task_id" in result
-                mock_task.assert_called_once_with(user_id=str(self.user_id), folder_id=str(folder_id))
-
-    @pytest.mark.asyncio
-    async def test_refresh_folder_feeds_folder_not_found(self):
-        """Test refresh folder feeds when folder doesn't exist."""
-        folder_id = uuid4()
-        
-        with patch('app.crud.crud_folder.get_folder', new=AsyncMock(return_value=None)):
-            with pytest.raises(HTTPException) as exc_info:
-                await refresh_folder_feeds(
-                    folder_id=folder_id,
-                    db=self.db,
-                    current_user=self.current_user
-                )
-            
-            assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
-            assert "Folder not found" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_success(self):

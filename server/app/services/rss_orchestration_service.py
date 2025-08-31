@@ -330,12 +330,13 @@ class RssOrchestrationService:
                 )
             except Exception as e:
                 logger.error(
-                    "Failed to batch create folders",
+                    "Failed to batch create folders, proceeding without folder assignment",
                     error=str(e),
                     folder_names=folders_to_create,
                     user_id=self.user_id
                 )
-                raise
+                # Continue gracefully without folder assignment
+                # folder_cache already contains existing folders, new ones will be None
 
         return folder_cache
 

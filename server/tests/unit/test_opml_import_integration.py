@@ -24,6 +24,10 @@ class TestRssOrchestrationServiceOpmlImport:
         self.service = RssOrchestrationService(db=self.mock_db, user_id=self.user_id)
         self.service.opml_processor = AsyncMock()
         self.service.folder_service = AsyncMock()
+        
+        # Configure async mocks to return proper values
+        self.service.folder_service.list_folders = AsyncMock(return_value=[])
+        self.service.folder_service.create_folders_batch = AsyncMock(return_value={})
 
     @pytest.mark.asyncio
     async def test_extract_feeds_from_opml_with_folders(self):
@@ -91,18 +95,12 @@ class TestRssOrchestrationServiceOpmlImport:
         world_folder.id = world_folder_id 
         world_folder.name = "World News"
         
+        # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        
-        # Mock create_folder to return the right folder based on the name
-        def create_folder_mock(folder_create):
-            if folder_create.name == "Tech News":
-                return tech_folder
-            elif folder_create.name == "World News":
-                return world_folder
-            else:
-                raise ValueError(f"Unexpected folder name: {folder_create.name}")
-        
-        self.service.folder_service.create_folder.side_effect = create_folder_mock
+        self.service.folder_service.create_folders_batch.return_value = {
+            "Tech News": tech_folder_id,
+            "World News": world_folder_id
+        }
 
         result = await self.service.extract_feeds_from_opml(opml_content, "Imported Feeds")
 
@@ -111,8 +109,11 @@ class TestRssOrchestrationServiceOpmlImport:
             opml_content, "Imported Feeds"
         )
 
-        # Verify folders were created
-        assert self.service.folder_service.create_folder.call_count == 2
+        # Verify folders were batch created
+        self.service.folder_service.create_folders_batch.assert_called_once()
+        call_args = self.service.folder_service.create_folders_batch.call_args[0][0]
+        assert "Tech News" in call_args
+        assert "World News" in call_args
 
         # Verify result format
         assert len(result) == 4
@@ -217,8 +218,9 @@ class TestRssOrchestrationServiceOpmlImport:
         prog_folder.id = uuid4()
         prog_folder.name = "Programming"
         
+        # Mock folder service methods properly  
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folder.return_value = prog_folder
+        self.service.folder_service.create_folders_batch.return_value = {"Programming": prog_folder.id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -262,7 +264,7 @@ class TestRssOrchestrationServiceOpmlImport:
         result = await self.service.extract_feeds_from_opml(opml_content, "My Default Folder")
 
         # No folders should be created since feeds have no folder
-        self.service.folder_service.create_folder.assert_not_called()
+        self.service.folder_service.create_folders_batch.assert_not_called()
         
         # Both feeds should have no folder_id (will use default in worker)
         assert len(result) == 2
@@ -278,7 +280,7 @@ class TestRssOrchestrationServiceOpmlImport:
         with pytest.raises(ValidationError, match="Invalid OPML format"):
             await self.service.extract_feeds_from_opml(opml_content)
 
-        self.service.folder_service.create_folder.assert_not_called()
+        self.service.folder_service.create_folders_batch.assert_not_called()
 
 
 @pytest.mark.unit

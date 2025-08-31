@@ -131,6 +131,10 @@ class TestFolderService:
         
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
+            existing_folder = MagicMock()
+            existing_folder.id = folder_id
+            existing_folder.user_id = self.user_id
+            mock_crud_folder.get_folder.return_value = existing_folder
             mock_crud_folder.update_folder.return_value = updated_folder
             m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
             
@@ -138,7 +142,7 @@ class TestFolderService:
             
             assert isinstance(result, FolderResponse)
             mock_crud_folder.update_folder.assert_called_once_with(
-                db=self.db, folder_id=folder_id, folder_in=folder_update, user_id=self.user_id
+                db=self.db, folder_db=existing_folder, folder_in=folder_update
             )
 
     @pytest.mark.asyncio
@@ -149,7 +153,7 @@ class TestFolderService:
         
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
-            mock_crud_folder.update_folder.return_value = None
+            mock_crud_folder.get_folder.return_value = None
             m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
             
             result = await self.service.update_folder(folder_id, folder_update)

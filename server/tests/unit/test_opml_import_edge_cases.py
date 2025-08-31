@@ -20,6 +20,10 @@ class TestOpmlImportEdgeCases:
         self.service = RssOrchestrationService(db=self.mock_db, user_id=self.user_id)
         self.service.opml_processor = AsyncMock()
         self.service.folder_service = AsyncMock()
+        
+        # Configure async mocks to return proper values
+        self.service.folder_service.list_folders = AsyncMock(return_value=[])
+        self.service.folder_service.create_folders_batch = AsyncMock(return_value={})
 
     @pytest.mark.asyncio
     async def test_feeds_not_added_multiple_times(self):
@@ -53,8 +57,13 @@ class TestOpmlImportEdgeCases:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         tech_folder = MagicMock()
-        tech_folder.id = uuid4()
-        self.service.folder_service.create_folder.return_value = tech_folder
+        tech_folder_id = uuid4()
+        tech_folder.id = tech_folder_id
+        tech_folder.name = "Tech"
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"Tech": tech_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -68,7 +77,7 @@ class TestOpmlImportEdgeCases:
         feed_a = next(f for f in result if f["url"] == "https://example.com/a.xml")
         feed_b = next(f for f in result if f["url"] == "https://example.com/b.xml")
         
-        assert feed_a["folder_id"] == tech_folder.id
+        assert feed_a["folder_id"] == tech_folder_id
         assert feed_b["folder_id"] is None
 
     @pytest.mark.asyncio
@@ -95,21 +104,23 @@ class TestOpmlImportEdgeCases:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         specific_folder = MagicMock()
-        specific_folder.id = uuid4()
+        specific_folder_id = uuid4()
+        specific_folder.id = specific_folder_id
         specific_folder.name = "Specific Folder"
-        self.service.folder_service.create_folder.return_value = specific_folder
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"Specific Folder": specific_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content, "Default Folder Name")
 
         # Feed should be in the specific folder, not default
         assert len(result) == 1
-        assert result[0]["folder_id"] == specific_folder.id
+        assert result[0]["folder_id"] == specific_folder_id
         assert result[0]["title"] == "Specific Feed"
 
-        # Verify folder creation was called with correct name
-        self.service.folder_service.create_folder.assert_called_once()
-        call_args = self.service.folder_service.create_folder.call_args[0][0]
-        assert call_args.name == "Specific Folder"
+        # Verify folder batch creation was called with correct name
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Specific Folder"])
 
     @pytest.mark.asyncio
     async def test_nested_folder_structure_flattened(self):
@@ -140,19 +151,21 @@ class TestOpmlImportEdgeCases:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         nested_folder = MagicMock()
-        nested_folder.id = uuid4()
+        nested_folder_id = uuid4()
+        nested_folder.id = nested_folder_id
         nested_folder.name = "Parent/Child/Grandchild"
-        self.service.folder_service.create_folder.return_value = nested_folder
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"Parent/Child/Grandchild": nested_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
         assert len(result) == 1
-        assert result[0]["folder_id"] == nested_folder.id
+        assert result[0]["folder_id"] == nested_folder_id
 
         # Verify the nested folder name was used
-        self.service.folder_service.create_folder.assert_called_once()
-        call_args = self.service.folder_service.create_folder.call_args[0][0]
-        assert call_args.name == "Parent/Child/Grandchild"
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Parent/Child/Grandchild"])
 
     @pytest.mark.asyncio
     async def test_folder_creation_error_recovery(self):
@@ -178,8 +191,8 @@ class TestOpmlImportEdgeCases:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Both folder creation and lookup fail
-        self.service.folder_service.create_folder.side_effect = Exception("Creation failed")
-        self.service.folder_service.list_folders.return_value = []  # Folder not found
+        self.service.folder_service.list_folders.return_value = []  # No existing folders
+        self.service.folder_service.create_folders_batch.side_effect = Exception("Creation failed")
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -221,6 +234,10 @@ class TestOpmlImportEdgeCases:
         
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
+        # Mock folder service methods - no folders should be created for empty names
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {}
+
         result = await self.service.extract_feeds_from_opml(opml_content, "Default")
 
         # Both feeds should have no folder due to invalid names
@@ -228,7 +245,7 @@ class TestOpmlImportEdgeCases:
         assert all(f["folder_id"] is None for f in result)
 
         # No folders should be created for empty/whitespace names
-        self.service.folder_service.create_folder.assert_not_called()
+        self.service.folder_service.create_folders_batch.assert_not_called()
 
     @pytest.mark.asyncio  
     async def test_duplicate_feed_urls_same_folder(self):
@@ -262,14 +279,19 @@ class TestOpmlImportEdgeCases:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         news_folder = MagicMock()
-        news_folder.id = uuid4()
-        self.service.folder_service.create_folder.return_value = news_folder
+        news_folder_id = uuid4()
+        news_folder.id = news_folder_id
+        news_folder.name = "News"
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"News": news_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
         # Both entries should be processed (worker will handle duplicates)
         assert len(result) == 2
-        assert all(f["folder_id"] == news_folder.id for f in result)
+        assert all(f["folder_id"] == news_folder_id for f in result)
         assert all(f["url"] == "https://example.com/same.xml" for f in result)
 
         # Different titles should be preserved
@@ -318,25 +340,18 @@ class TestOpmlImportEdgeCases:
         folder2.id = folder2_id
         folder2.name = "Folder with üñíçödé"
         
-        # Mock list_folders to return empty list initially
+        # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        
-        # Mock create_folder to return folders based on the folder name being created
-        def create_folder_side_effect(folder_create):
-            if folder_create.name == "Folder with & symbols <>":
-                return folder1
-            elif folder_create.name == "Folder with üñíçödé":
-                return folder2
-            else:
-                raise ValueError(f"Unexpected folder name: {folder_create.name}")
-        
-        self.service.folder_service.create_folder.side_effect = create_folder_side_effect
+        self.service.folder_service.create_folders_batch.return_value = {
+            "Folder with & symbols <>": folder1_id,
+            "Folder with üñíçödé": folder2_id
+        }
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
         assert len(result) == 2
         
-        # Verify folder assignments - the method returns string IDs
+        # Verify folder assignments
         feed1 = next(f for f in result if f["title"] == "Feed")
         feed2 = next(f for f in result if f["title"] == "Unicode Feed")
         
@@ -344,8 +359,8 @@ class TestOpmlImportEdgeCases:
         assert feed2["folder_id"] == folder2_id
 
         # Verify folder creation was called with correct names
-        assert self.service.folder_service.create_folder.call_count == 2
-        call_args = [call[0][0].name for call in self.service.folder_service.create_folder.call_args_list]
+        self.service.folder_service.create_folders_batch.assert_called_once()
+        call_args = self.service.folder_service.create_folders_batch.call_args[0][0]
         assert "Folder with & symbols <>" in call_args
         assert "Folder with üñíçödé" in call_args
 

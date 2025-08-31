@@ -21,6 +21,10 @@ class TestRssOrchestrationServiceOpmlImport:
         self.service.opml_processor = AsyncMock()
         self.service.folder_service = AsyncMock()
         self.service.feed_service = AsyncMock()
+        
+        # Configure async mocks to return proper values
+        self.service.folder_service.list_folders = AsyncMock(return_value=[])
+        self.service.folder_service.create_folders_batch = AsyncMock(return_value={})
 
     @pytest.mark.asyncio
     async def test_extract_feeds_from_opml_complete_workflow(self):
@@ -88,18 +92,12 @@ class TestRssOrchestrationServiceOpmlImport:
         world_folder.id = world_folder_id
         world_folder.name = "World News"
         
+        # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        
-        # Mock create_folder to return the right folder based on the name
-        def create_folder_mock(folder_create):
-            if folder_create.name == "Tech News":
-                return tech_folder
-            elif folder_create.name == "World News":
-                return world_folder
-            else:
-                raise ValueError(f"Unexpected folder name: {folder_create.name}")
-        
-        self.service.folder_service.create_folder.side_effect = create_folder_mock
+        self.service.folder_service.create_folders_batch.return_value = {
+            "Tech News": tech_folder_id,
+            "World News": world_folder_id
+        }
 
         result = await self.service.extract_feeds_from_opml(opml_content, "Imported Feeds")
 
@@ -277,8 +275,8 @@ class TestRssOrchestrationServiceOpmlImport:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder creation to fail, and folder lookup to return empty
-        self.service.folder_service.create_folder.side_effect = Exception("Creation failed")
         self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.side_effect = Exception("Creation failed")
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -319,8 +317,12 @@ class TestRssOrchestrationServiceOpmlImport:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         prog_folder = MagicMock()
-        prog_folder.id = uuid4()
-        self.service.folder_service.create_folder.return_value = prog_folder
+        prog_folder_id = uuid4()
+        prog_folder.id = prog_folder_id
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"Programming": prog_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -330,7 +332,7 @@ class TestRssOrchestrationServiceOpmlImport:
         assert urls == {"https://stackoverflow.blog/feed/", "https://dev.to/feed"}
         
         # Both should be in Programming folder
-        assert all(f["folder_id"] == prog_folder.id for f in result)
+        assert all(f["folder_id"] == prog_folder_id for f in result)
 
     @pytest.mark.asyncio
     async def test_feeds_assigned_to_correct_folders_not_default(self):
@@ -356,20 +358,22 @@ class TestRssOrchestrationServiceOpmlImport:
         self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         specific_folder = MagicMock()
-        specific_folder.id = uuid4()
-        self.service.folder_service.create_folder.return_value = specific_folder
+        specific_folder_id = uuid4()
+        specific_folder.id = specific_folder_id
+        
+        # Mock folder service methods properly
+        self.service.folder_service.list_folders.return_value = []
+        self.service.folder_service.create_folders_batch.return_value = {"Specific Folder": specific_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content, "Default Folder Name")
 
         # Feed should be in specific folder, not default
         assert len(result) == 1
-        assert result[0]["folder_id"] == specific_folder.id
+        assert result[0]["folder_id"] == specific_folder_id
         assert result[0]["title"] == "Specific Feed"
 
         # Verify correct folder was created
-        self.service.folder_service.create_folder.assert_called_once()
-        call_args = self.service.folder_service.create_folder.call_args[0][0]
-        assert call_args.name == "Specific Folder"
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Specific Folder"])
 
 
 class TestOpmlImportRealWorldScenarios:

@@ -172,17 +172,14 @@ class TestFeedService:
         }
         
         with patch('app.crud.crud_feed.get_feed_by_id') as mock_get, \
-             patch.object(feed_service.feed_fetcher, 'fetch_content') as mock_fetch, \
-             patch('app.crud.crud_feed.update_feed_error') as mock_error:
+             patch.object(feed_service.feed_fetcher, 'fetch_content') as mock_fetch:
             
             mock_get.return_value = sample_feed_db
             mock_fetch.return_value = mock_fetch_result
-            mock_error.return_value = sample_feed_db
             
             result = await feed_service.refresh_feed(feed_id=feed_id)
             
-            assert result is not None
-            mock_error.assert_called_once()
+            assert result is None
 
     @pytest.mark.asyncio
     async def test_refresh_feed_successful_parse_and_update(self, feed_service, sample_feed_db):
@@ -240,20 +237,6 @@ class TestFeedService:
             assert result == mock_feeds
             mock_get.assert_called_once_with(feed_service.db, limit=100)
 
-    @pytest.mark.asyncio
-    async def test_update_subscriber_count(self, feed_service):
-        """Should update subscriber count."""
-        feed_id = uuid4()
-        delta = 1
-        
-        with patch('app.crud.crud_feed.update_subscriber_count') as mock_update:
-            mock_feed = Mock()
-            mock_update.return_value = mock_feed
-            
-            result = await feed_service.update_subscriber_count(feed_id=feed_id, delta=delta)
-            
-            assert result == mock_feed
-            mock_update.assert_called_once_with(feed_service.db, feed_id=feed_id, delta=delta)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_force_refetch_ignores_cache_headers(

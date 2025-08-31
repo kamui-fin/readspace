@@ -111,12 +111,13 @@ class WebArticleService:
         )
         if existing_clipped:
             logger.info(
-                "Article already clipped by user",
+                "Article already clipped by user, returning existing",
                 article_id=existing_clipped.id,
                 user_id=self.user_id,
                 url=url,
             )
-            raise ValueError("This article has already been saved to your library.")
+            # Return the existing clipped article instead of raising an error
+            return ClippedArticleResponse.model_validate(existing_clipped)
 
         # Create clipped article with the extension-extracted content
         clipped_article_create = ClippedArticleCreate(
