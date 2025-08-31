@@ -590,17 +590,6 @@ export function ArticlesView({
         isReadLaterMode,
     ])
 
-    if (isArticlesLoading && allArticles.length === 0) {
-        return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
-                <div className="w-full flex flex-col gap-4 p-8">
-                    <ArticleItemSkeleton />
-                    <ArticleItemSkeleton />
-                    <ArticleItemSkeleton />
-                </div>
-            </div>
-        )
-    }
 
     if (!isArticlesLoading && filteredArticles.length === 0 && allArticles.length === 0) {
         return (
