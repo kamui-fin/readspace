@@ -24,7 +24,6 @@ def setup_logging() -> None:
             structlog.stdlib.add_log_level,
             structlog.processors.TimeStamper(fmt="iso"),
             structlog.processors.dict_tracebacks,
-            structlog.contextvars.merge_contextvars,
         ]
         # Configure structlog for standard library integration (unchanged)
         structlog.configure(

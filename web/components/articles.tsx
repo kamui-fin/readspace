@@ -699,7 +699,7 @@ export function ArticlesView({
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-8 w-8"
+                                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                             onClick={toggleShowUnreadOnly}
                                             title={
                                                 showUnreadOnly
@@ -708,9 +708,9 @@ export function ArticlesView({
                                             }
                                         >
                                             {showUnreadOnly ? (
-                                                <Eye className="h-4 w-4" />
+                                                <Eye className="h-4 w-4 transition-transform duration-200" />
                                             ) : (
-                                                <EyeOff className="h-4 w-4" />
+                                                <EyeOff className="h-4 w-4 transition-transform duration-200" />
                                             )}
                                         </Button>
                                         {/* Individual feed: split button with shallow + deep refresh */}
@@ -719,7 +719,7 @@ export function ArticlesView({
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="h-8 w-8 rounded-r-none border-r border-border/50"
+                                                    className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                     onClick={() =>
                                                         handleRefreshWithMessage(
                                                             "Quick refresh..."
@@ -728,7 +728,7 @@ export function ArticlesView({
                                                     title="Quick refresh"
                                                     disabled={isDeepRefreshing}
                                                 >
-                                                    <RefreshCw className="h-4 w-4" />
+                                                    <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                                 </Button>
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
@@ -737,13 +737,13 @@ export function ArticlesView({
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-4 rounded-l-none px-1"
+                                                            className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                             title="More refresh options"
                                                             disabled={
                                                                 isDeepRefreshing
                                                             }
                                                         >
-                                                            <MoreVertical className="h-3 w-3" />
+                                                            <MoreVertical className="h-3 w-3 transition-transform duration-200" />
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end">
@@ -778,7 +778,7 @@ export function ArticlesView({
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="h-8 w-8"
+                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                 onClick={() =>
                                                     handleRefreshWithMessage(
                                                         "Refreshing articles..."
@@ -786,7 +786,7 @@ export function ArticlesView({
                                                 }
                                                 title="Refresh"
                                             >
-                                                <RefreshCw className="h-4 w-4" />
+                                                <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                             </Button>
                                         )}
                                     </>
@@ -795,7 +795,7 @@ export function ArticlesView({
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8"
+                                        className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                         onClick={() => {
                                             if (isRecentlyReadMode) {
                                                 handleRefreshWithMessage(
@@ -813,7 +813,7 @@ export function ArticlesView({
                                         }}
                                         title="Refresh"
                                     >
-                                        <RefreshCw className="h-4 w-4" />
+                                        <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                     </Button>
                                 )}
                             </div>
@@ -848,23 +848,24 @@ export function ArticlesView({
                                                 isReadLaterMode={
                                                     isReadLaterMode
                                                 }
+                                                index={index}
                                             />
                                         )
                                     )
                                     : Object.entries(groupedArticles).map(
                                         ([groupId, group]) => (
                                             <div key={groupId}>
-                                                <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                                <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
                                                     <div className="flex items-center gap-2">
                                                         {group.label ===
                                                             "Today" ||
                                                             group.label ===
                                                             "Yesterday" ? (
-                                                            <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                            <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
                                                         ) : (
-                                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                            <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
                                                         )}
-                                                        <span className="text-xs font-medium text-muted-foreground">
+                                                        <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
                                                             {group.label}
                                                         </span>
                                                     </div>
@@ -892,6 +893,7 @@ export function ArticlesView({
                                                                     article.id
                                                                 )
                                                             }
+                                                            index={index}
                                                         />
                                                     )
                                                 )}
@@ -922,7 +924,7 @@ export function ArticlesView({
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
                             <div 
-                                className="p-6 md:p-10 h-full overflow-y-auto cursor-default"
+                                className="p-6 md:p-10 h-full overflow-y-auto"
                             >
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
@@ -1001,7 +1003,7 @@ export function ArticlesView({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8"
+                                    className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                     onClick={toggleShowUnreadOnly}
                                     title={
                                         showUnreadOnly
@@ -1010,22 +1012,22 @@ export function ArticlesView({
                                     }
                                 >
                                     {showUnreadOnly ? (
-                                        <Eye className="h-4 w-4" />
+                                        <Eye className="h-4 w-4 transition-transform duration-200" />
                                     ) : (
-                                        <EyeOff className="h-4 w-4" />
+                                        <EyeOff className="h-4 w-4 transition-transform duration-200" />
                                     )}
                                 </Button>
                             )}
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8"
+                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                 onClick={() =>
                                     handleRefreshWithMessage("Refreshing articles...")
                                 }
                                 title="Refresh"
                             >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                             </Button>
                         </div>
                     </div>
@@ -1050,21 +1052,22 @@ export function ArticlesView({
                                             }
                                             isRecentlyReadMode={isRecentlyReadMode}
                                             isReadLaterMode={isReadLaterMode}
+                                            index={index}
                                         />
                                     )
                                 )
                                 : Object.entries(groupedArticles).map(
                                     ([groupId, group]) => (
                                         <div key={groupId}>
-                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5">
+                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
                                                 <div className="flex items-center gap-2">
                                                     {group.label === "Today" ||
                                                         group.label === "Yesterday" ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
                                                     ) : (
-                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
                                                     )}
-                                                    <span className="text-xs font-medium text-muted-foreground">
+                                                    <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
                                                         {group.label}
                                                     </span>
                                                 </div>
@@ -1083,6 +1086,7 @@ export function ArticlesView({
                                                         onClick={() =>
                                                             handleArticleClick(article.id)
                                                         }
+                                                        index={index}
                                                     />
                                                 )
                                             )}
@@ -1109,11 +1113,11 @@ export function ArticlesView({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8"
+                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                             onClick={() => setShowContent(false)}
                             title="Back to articles"
                         >
-                            <ArrowLeft className="h-4 w-4" />
+                            <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                         </Button>
                     </div>
                     <div className="flex-1 overflow-auto">
@@ -1124,7 +1128,7 @@ export function ArticlesView({
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
                             <div 
-                                className="p-4 h-full overflow-y-auto overflow-x-hidden cursor-default max-w-full"
+                                className="p-4 h-full overflow-y-auto overflow-x-hidden max-w-full"
                             >
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
@@ -1421,7 +1425,7 @@ function ArticleContentView({
         <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
             <div className="mb-3 w-full min-w-0">
                 <h1 
-                    className="text-xl sm:text-2xl font-semibold cursor-default leading-tight break-words w-full hyphens-auto max-w-full"
+                    className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
                     style={{ 
                         wordBreak: "break-all", 
                         overflowWrap: "anywhere",
@@ -1505,21 +1509,21 @@ function ArticleContentView({
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:bg-muted"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-muted transition-all duration-200 hover:scale-110 hover:shadow-sm"
                             onClick={handleMarkAsRead}
                         >
-                            <Check className="h-4 w-4" />
+                            <Check className="h-4 w-4 transition-transform duration-200" />
                             <span className="sr-only">Mark as read</span>
                         </Button>
                     ) : (
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:bg-muted"
+                            className="h-6 w-6 p-0 rounded-full hover:bg-muted transition-all duration-200 hover:scale-110 hover:shadow-sm"
                             onClick={handleToggleReadLater}
                         >
                             <BookmarkIcon
-                                className={`h-4 w-4 ${optimisticReadLater ? "fill-primary text-primary" : ""}`}
+                                className={`h-4 w-4 transition-all duration-200 ${optimisticReadLater ? "fill-primary text-primary scale-110" : "hover:scale-110"}`}
                             />
                             <span className="sr-only">
                                 {optimisticReadLater
@@ -1551,7 +1555,7 @@ function ArticleContentView({
                           prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto prose-pre:max-w-full
                           prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
                           prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
-                          cursor-default break-words overflow-hidden"
+                          break-words overflow-hidden"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                         style={{
                             fontFamily: "var(--font-garamond-serif)",
@@ -1593,9 +1597,9 @@ function ArticleContentView({
                         variant="outline"
                         size="lg"
                         onClick={() => window.open(article.link, '_blank', 'noopener,noreferrer')}
-                        className="inline-flex items-center gap-2"
+                        className="inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-muted/20"
                     >
-                        <Globe className="h-4 w-4" />
+                        <Globe className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
                         Visit Website
                     </Button>
                 </div>
@@ -1617,6 +1621,7 @@ function ArticleItem({
     onClick,
     isRecentlyReadMode = false,
     isReadLaterMode = false,
+    index = 0,
 }: {
     article: Article
     isActive?: boolean
@@ -1624,6 +1629,7 @@ function ArticleItem({
     onClick: () => void
     isRecentlyReadMode?: boolean
     isReadLaterMode?: boolean
+    index?: number
 }) {
     const [feedImageError, setFeedImageError] = useState(false)
     const [articleImageError, setArticleImageError] = useState(false)
@@ -1664,11 +1670,11 @@ function ArticleItem({
 
     return (
         <div
-            className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? "border-b" : ""} 
-            ${!isActive ? "hover:bg-muted/80 hover:border-l-accent" : ""}
-            active:bg-secondary/5
+            className={`mx-0 py-2.5 px-3 ${!isLastInGroup ? "border-b border-border" : ""} 
+            ${!isActive ? "hover:bg-muted/60 hover:border-l-primary/20 hover:shadow-sm" : ""}
+            active:bg-secondary/10
             transition-all duration-200 ease-out cursor-pointer 
-            ${isActive ? "bg-secondary/5 border-l-2 border-l-secondary" : "border-l-2 border-l-transparent"}
+            ${isActive ? "bg-secondary/5 border-l-2 border-l-secondary shadow-sm" : "border-l-2 border-l-transparent"}
             ${article.is_read ? "opacity-70" : ""}`}
             onClick={onClick}
         >
@@ -1744,11 +1750,11 @@ function ArticleItem({
                     )}
                 </div>
                 {article.image_url && !articleImageError && (
-                    <div className="h-16 w-16 md:h-16 md:w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-colors flex items-center justify-center">
+                    <div className="h-16 w-16 md:h-16 md:w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-all duration-200 ease-out flex items-center justify-center hover:shadow-md hover:brightness-105">
                         <img
                             src={article.image_url}
                             alt={article.title || "Article image"}
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-cover transition-all duration-200 ease-out"
                             onError={() => setArticleImageError(true)}
                         />
                     </div>

@@ -23,6 +23,7 @@ import { useEffect, useState } from "react"
 import { NavMain } from "./nav-main"
 import { NavSecondary } from "./nav-secondary"
 import { NavUser } from "./nav-user"
+import Link from "next/link"
 
 const data = {
     navSecondary: [
@@ -123,12 +124,8 @@ export function AppSidebar({
                                 asChild
                                 className="data-[slot=sidebar-menu-button]:!p-1.5"
                             >
-                                <a
-                                    href="#"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        // Removed toggleSidebar() call
-                                    }}
+                                <Link
+                                    href="/"
                                 >
                                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                                         <Image
@@ -142,7 +139,7 @@ export function AppSidebar({
                                     <span className="truncate font-logo text-xl font-medium tracking-normal">
                                         Readspace
                                     </span>
-                                </a>
+                                </Link>
                             </SidebarLeftMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>

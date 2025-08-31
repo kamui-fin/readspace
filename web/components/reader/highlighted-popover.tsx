@@ -119,7 +119,7 @@ const HighlightedPopover = ({
                                 showAbove
                                     ? "bottom-[calc(100%+30px)]"
                                     : "top-[calc(100%+30px)]"
-                            } left-2 -translate-x-[20px] dark:bg-gray-800 p-4 rounded-md shadow-lg border bg-popover`}
+                            } left-2 -translate-x-[20px] p-4 rounded-md shadow-lg border bg-popover`}
                             style={{
                                 minWidth: "285px",
                             }}

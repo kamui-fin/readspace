@@ -17,15 +17,19 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
           .catch(error => sendResponse({ error: error.message }))
         return true // Keep message channel open for async response
       case 'discoverFeeds':
-        sendResponse(discoverRSSFeeds())
-        break
+        discoverRSSFeeds()
+          .then(sendResponse)
+          .catch(error => sendResponse({ error: error.message }))
+        return true // Keep message channel open for async response
     }
   })
 
   /**
    * Extract basic metadata from the current page
    */
-  function extractPageMetadata() {
+  async function extractPageMetadata() {
+    const feeds = await discoverRSSFeeds()
+    
     const metadata = {
       title: getTitle(),
       description: getDescription(),
@@ -34,7 +38,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       image_url: getImageUrl(),
       favicon: getFavicon(),
       canonical_url: getCanonicalUrl(),
-      feeds: discoverRSSFeeds(),
+      feeds: feeds,
     }
 
     return metadata
@@ -209,49 +213,172 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
   }
 
   /**
-   * Discover RSS feeds on the current page
+   * Validate if a URL is a valid RSS/Atom feed using HEAD request
    */
-  function discoverRSSFeeds() {
+  async function validateFeed(url: string): Promise<{ isValid: boolean; error?: string }> {
+    try {
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(5000),
+        headers: {
+          'User-Agent': 'Readspace Extension Feed Validator'
+        }
+      })
+
+      if (!response.ok) {
+        return { isValid: false, error: `HTTP ${response.status}` }
+      }
+
+      const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+      
+      // Check if content type indicates a feed
+      const isFeed = contentType.includes('xml') || 
+                    contentType.includes('rss') || 
+                    contentType.includes('atom') || 
+                    contentType.includes('json') ||
+                    contentType.includes('application/rss') ||
+                    contentType.includes('application/atom')
+
+      return { isValid: isFeed, error: isFeed ? undefined : 'Invalid content type' }
+
+    } catch (error) {
+      return { 
+        isValid: false, 
+        error: error instanceof Error ? error.message : 'Validation failed' 
+      }
+    }
+  }
+
+  /**
+   * Discover RSS feeds on the current page with validation
+   */
+  async function discoverRSSFeeds() {
     const feeds: Array<{ url: string; title?: string; type: string }> = []
+    const discoveredUrls = new Set<string>()
 
-    // Look for feed links in the head
-    const feedLinks = document.querySelectorAll(
-      'link[type="application/rss+xml"], link[type="application/atom+xml"], link[type="application/json"], link[rel="alternate"]',
-    )
+    console.log('=== Starting RSS Feed Discovery ===')
 
-    console.log('Feed discovery: found', feedLinks.length, 'feed links')
+    // Phase 1: Enhanced link tag detection
+    const feedLinks = document.querySelectorAll([
+      'link[type="application/rss+xml"]',
+      'link[type="application/atom+xml"]', 
+      'link[type="application/json"]',
+      'link[type="application/feed+json"]',
+      'link[rel="alternate"][type*="xml"]',
+      'link[rel="alternate"][type*="rss"]',
+      'link[rel="alternate"][type*="atom"]',
+      'link[href*="feed"]',
+      'link[href*="rss"]',
+      'link[href*="atom"]'
+    ].join(', '))
 
-    feedLinks.forEach(link => {
+    console.log('Feed discovery: found', feedLinks.length, 'potential feed links')
+
+    // Process link tags first
+    for (const link of feedLinks) {
       const href = link.getAttribute('href')
       const title = link.getAttribute('title')
       const type = link.getAttribute('type')
-      const rel = link.getAttribute('rel')
-
-      console.log('Checking feed link:', { href, title, type, rel })
-
-      // Include alternate links that might be feeds
-      if (href && (
-        type?.includes('rss') || 
-        type?.includes('atom') || 
-        type?.includes('json') ||
-        (rel === 'alternate' && type?.includes('xml'))
-      )) {
-        const feedType = type?.includes('atom') 
-          ? 'atom' 
-          : type?.includes('json') 
-            ? 'json' 
-            : 'rss'
+      
+      if (href) {
+        const absoluteUrl = makeAbsoluteUrl(href)
+        if (!discoveredUrls.has(absoluteUrl)) {
+          discoveredUrls.add(absoluteUrl)
+          
+          console.log('Validating link tag feed:', absoluteUrl)
+          const validation = await validateFeed(absoluteUrl)
+          
+          if (validation.isValid) {
+            const feedType = type?.includes('atom') ? 'atom' : 
+                           type?.includes('json') ? 'json' : 'rss'
             
-        feeds.push({
-          url: makeAbsoluteUrl(href),
-          title: title || undefined,
-          type: feedType,
-        })
-        console.log('Added feed:', makeAbsoluteUrl(href))
+            feeds.push({
+              url: absoluteUrl,
+              title: title || undefined,
+              type: feedType,
+            })
+            console.log('✓ Valid feed found via link tag:', absoluteUrl)
+          } else {
+            console.log('✗ Invalid feed from link tag:', absoluteUrl, validation.error)
+          }
+        }
       }
-    })
+    }
 
-    console.log('Feed discovery complete. Found', feeds.length, 'feeds:', feeds)
+    // Phase 2: Heuristic URL pattern discovery (only if we found few feeds)
+    if (feeds.length < 3) {
+      console.log('Running heuristic discovery for additional feeds...')
+      
+      const baseUrl = window.location.origin
+      const currentPath = window.location.pathname
+      
+      // Common feed patterns to try
+      const feedPatterns = ['/feed', '/feed/', '/rss', '/rss.xml', '/atom.xml']
+
+      // Add blog-specific patterns if we're on a blog
+      if (currentPath.includes('/blog/') || currentPath.includes('/post/')) {
+        const blogPath = currentPath.split('/').slice(0, 2).join('/')
+        feedPatterns.unshift(`${blogPath}/feed`, `${blogPath}/rss`)
+      }
+
+      for (const pattern of feedPatterns.slice(0, 5)) {
+        const testUrl = baseUrl + pattern
+        if (!discoveredUrls.has(testUrl)) {
+          discoveredUrls.add(testUrl)
+          
+          console.log('Testing heuristic pattern:', testUrl)
+          const validation = await validateFeed(testUrl)
+          
+          if (validation.isValid) {
+            feeds.push({
+              url: testUrl,
+              title: undefined,
+              type: 'rss',
+            })
+            console.log('✓ Valid feed found via heuristic:', testUrl)
+          }
+        }
+      }
+    }
+
+    // Phase 3: Content-based feed link discovery (limited)
+    if (feeds.length < 2) {
+      console.log('Scanning page content for feed links...')
+      
+      const contentFeedLinks = document.querySelectorAll([
+        'a[href*="/feed"]',
+        'a[href*="/rss"]', 
+        'a[href*="/atom"]',
+        '.rss-link',
+        '.feed-link'
+      ].join(', '))
+
+      for (const link of Array.from(contentFeedLinks).slice(0, 3)) {
+        const href = link.getAttribute('href')
+        if (href) {
+          const absoluteUrl = makeAbsoluteUrl(href)
+          if (!discoveredUrls.has(absoluteUrl)) {
+            discoveredUrls.add(absoluteUrl)
+            
+            console.log('Validating content feed link:', absoluteUrl)
+            const validation = await validateFeed(absoluteUrl)
+            
+            if (validation.isValid) {
+              feeds.push({
+                url: absoluteUrl,
+                title: link.textContent?.trim() || undefined,
+                type: 'rss',
+              })
+              console.log('✓ Valid feed found in content:', absoluteUrl)
+            }
+          }
+        }
+      }
+    }
+
+    console.log('=== Feed Discovery Complete ===')
+    console.log(`Found ${feeds.length} valid feeds out of ${discoveredUrls.size} tested URLs`)
+    
     return feeds
   }
 

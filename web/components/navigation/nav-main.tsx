@@ -230,10 +230,10 @@ function FeedContextMenu({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "h-6 w-6 p-0 transition-all duration-200",
+                        "h-6 w-6 p-0 transition-all duration-150",
                         "opacity-0 group-hover/item:opacity-100 data-[state=open]:opacity-100",
-                        "hover:bg-muted hover:text-primary",
-                        "active:scale-95",
+                        "hover:bg-[hsl(var(--nav-hover))]",
+                        "active:bg-[hsl(var(--nav-hover))/0.8]",
                         "rounded-full cursor-pointer"
                     )}
                     onClick={(e) => {
@@ -241,7 +241,7 @@ function FeedContextMenu({
                         e.stopPropagation()
                     }}
                 >
-                    <MoreHorizontal className="h-4 w-4" />
+                    <MoreHorizontal className="h-4 w-4 transition-colors duration-150" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-[200px]">
@@ -381,10 +381,10 @@ function FeedDropdownMenu({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "h-6 w-6 p-0 mr-0.5 transition-all duration-200",
+                        "h-6 w-6 p-0 mr-0.5 transition-all duration-150",
                         "opacity-0 group-hover/item:opacity-100",
-                        "hover:bg-muted hover:text-primary",
-                        "active:scale-95",
+                        "hover:bg-[hsl(var(--nav-hover))]",
+                        "active:bg-[hsl(var(--nav-hover))/0.8]",
                         "rounded-full cursor-pointer"
                     )}
                     onClick={(e) => {
@@ -394,7 +394,7 @@ function FeedDropdownMenu({
                     }}
                     title="Add new feed"
                 >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 transition-transform duration-150" />
                     <span className="sr-only">Add</span>
                 </Button>
             )}
@@ -955,7 +955,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                         <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 w-6 p-0"
+                            className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
                             title="Manage Feeds"
                             onClick={() => {
                                 if (isMobile) {
@@ -963,18 +963,18 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                                 }
                             }}
                         >
-                            <Settings2 className="h-4 w-4" />
+                            <Settings2 className="h-4 w-4 transition-colors duration-150" />
                             <span className="sr-only">Settings</span>
                         </Button>
                     </Link>
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-6 w-6 p-0"
+                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
                         onClick={handleAddFolder}
                         title="Add new folder"
                     >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="h-4 w-4 transition-colors duration-150" />
                         <span className="sr-only">Add</span>
                     </Button>
                 </div>

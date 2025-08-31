@@ -167,25 +167,25 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
             <HighlightPopover savedHighlights={savedHighlights} />
             {/* Chapter Navigation Buttons */}
             <div className="flex justify-center items-center max-w-7xl mx-auto py-8 px-4">
-                <div className="bg-gray-50 rounded-lg border border-gray-100 flex items-center p-1">
+                <div className="bg-muted rounded-lg border border-border flex items-center p-1">
                     <button
                         onClick={prevChapter}
-                        className="flex items-center justify-center px-5 py-2 rounded-md transition-all duration-200 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-200"
+                        className="flex items-center justify-center px-5 py-2 rounded-md transition-all duration-200 hover:bg-background active:bg-background/80 focus:outline-none focus:ring-1 focus:ring-ring"
                         aria-label="Previous chapter"
                     >
-                        <ChevronLeft className="h-4 w-4 mr-1.5 text-gray-600" />
-                        <span className="text-gray-700 font-medium">
+                        <ChevronLeft className="h-4 w-4 mr-1.5 text-muted-foreground" />
+                        <span className="text-foreground font-medium">
                             Previous
                         </span>
                     </button>
-                    <div className="mx-2 h-5 w-px bg-gray-200"></div>
+                    <div className="mx-2 h-5 w-px bg-border"></div>
                     <button
                         onClick={nextChapter}
-                        className="flex items-center justify-center px-5 py-2 rounded-md transition-all duration-200 hover:bg-gray-100 active:bg-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-200"
+                        className="flex items-center justify-center px-5 py-2 rounded-md transition-all duration-200 hover:bg-background active:bg-background/80 focus:outline-none focus:ring-1 focus:ring-ring"
                         aria-label="Next chapter"
                     >
-                        <span className="text-gray-700 font-medium">Next</span>
-                        <ChevronRight className="h-4 w-4 ml-1.5 text-gray-600" />
+                        <span className="text-foreground font-medium">Next</span>
+                        <ChevronRight className="h-4 w-4 ml-1.5 text-muted-foreground" />
                     </button>
                 </div>
             </div>

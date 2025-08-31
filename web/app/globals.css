@@ -81,10 +81,12 @@
         --sidebar-accent-foreground: var(--accent-foreground);
         --sidebar-border: var(--border);
         --sidebar-ring: var(--ring);
+        
+        --nav-hover: 0 0% 22%;
     }
 
     .dark {
-        --background: 240 2.01% 7.54%;
+        --background: 0 0 7%;
         --foreground: 120 100% 99.41%;
         --muted: 240 2.47% 13.51%;
         --muted-foreground: 132 33.33% 97.06%;
@@ -110,7 +112,7 @@
         --chart-5: 131.74 32.11% 30.98%;
         --radius: 0.5rem;
 
-        --sidebar: 240 2.47% 13.51%;
+        --sidebar: 0 0 12%;
         --sidebar-foreground: var(--foreground);
         --sidebar-primary: var(--primary);
         --sidebar-primary-foreground: var(--primary-foreground);
@@ -118,6 +120,8 @@
         --sidebar-accent-foreground: var(--accent-foreground);
         --sidebar-border: var(--border);
         --sidebar-ring: var(--ring);
+        
+        --nav-hover: 0 0% 22%;
     }
 }
 
@@ -134,6 +138,16 @@
 @layer utilities {
     button {
         cursor: pointer;
+    }
+    
+    /* Ensure cursor pointer for interactive elements in article content */
+    .article-content a,
+    .article-content button,
+    .article-content [role="button"],
+    .article-content .highlight-yellow,
+    .article-content .highlight-blue,
+    .article-content .highlight-green {
+        cursor: pointer !important;
     }
 
     #epub-container {
