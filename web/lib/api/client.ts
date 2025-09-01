@@ -553,7 +553,13 @@ export class ApiClient {
 
             const queryString = queryParams.toString()
             return this.get<{
-                [feedId: string]: number
+                total_unread?: number
+                today_count?: number
+                read_later_count?: number
+                unread_by_folder?: Array<{
+                    folder_id: string
+                    unread_count: number
+                }>
             }>(
                 `/api/rss/articles/unread_counts${queryString ? `?${queryString}` : ""}`
             )
@@ -599,15 +605,13 @@ export class ApiClient {
                 feed_title: string
                 feed_image_url: string | null
             }>(`/api/rss/articles/${id}?article_type=${articleType}`, data),
-        getTodaysArticles: (params: {
-            userTimezone: string
+        getTodaysArticles: (params?: {
             page?: number
             size?: number
         }) => {
             const queryParams = new URLSearchParams()
-            queryParams.append("user_timezone", params.userTimezone)
-            if (params.page) queryParams.append("page", params.page.toString())
-            if (params.size) queryParams.append("size", params.size.toString())
+            if (params?.page) queryParams.append("page", params.page.toString())
+            if (params?.size) queryParams.append("size", params.size.toString())
 
             const queryString = queryParams.toString()
             return this.get<{
@@ -642,7 +646,7 @@ export class ApiClient {
                 page: number
                 size: number
                 pages: number
-            }>(`/api/rss/articles/today?${queryString}`)
+            }>(`/api/rss/articles/today${queryString ? `?${queryString}` : ""}`)
         },
     }
 

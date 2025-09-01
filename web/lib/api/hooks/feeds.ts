@@ -1069,7 +1069,7 @@ export function useInfiniteReadLaterArticles(
 }
 
 export function useInfiniteTodayArticles(
-    params: { userTimezone: string; size?: number },
+    params?: { size?: number },
     options?: {
         refetchOnMount?: boolean
         refetchOnWindowFocus?: boolean
@@ -1081,9 +1081,8 @@ export function useInfiniteTodayArticles(
         queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', 'today', params],
         queryFn: ({ pageParam = 1 }) =>
             ApiClient.rss.getTodaysArticles({
-                userTimezone: params.userTimezone,
                 page: pageParam,
-                size: params.size || 25
+                size: params?.size || 25
             }),
         getNextPageParam: (lastPage: any) => {
             const currentPage = lastPage.page || 1

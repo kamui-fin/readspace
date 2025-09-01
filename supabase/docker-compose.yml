@@ -363,8 +363,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
-    ports:
-      - 5432:5432
     command:
       [
         "postgres",

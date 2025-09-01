@@ -68,13 +68,13 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 
     After a bit, your Readspace instance should be accessible in your web browser.
 
-    Visit `localhost:8042`. Optionally, you can configure your reverse proxy to point to it.
+    Visit `localhost:18042`. Optionally, you can configure your reverse proxy to point to it.
 
 5.  **Configure Browser Extension** (Optional)
 
     To connect the browser extension to your self-hosted instance, configure:
-    - **Server URL**: `http://your-ip-or-domain:8042`
-    - **Supabase URL**: `http://your-ip-or-domain:8000`
+    - **Server URL**: `http://your-ip-or-domain:18042`
+    - **Supabase URL**: `http://your-ip-or-domain:18000`
     - **Supabase Anon Key**: `grep NEXT_PUBLIC_SUPABASE_ANON_KEY web/.env`
 
 ## Contributing

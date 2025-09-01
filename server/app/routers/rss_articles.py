@@ -1,7 +1,6 @@
 from datetime import datetime
 from typing import Any
 from uuid import UUID
-import zoneinfo
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -199,36 +198,22 @@ async def list_articles(
 async def get_todays_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-    user_timezone: str = Query("UTC", description="User's timezone (e.g., 'America/New_York')"),
     page: int = Query(1, ge=1, description="Page number for pagination"),
     size: int = Query(25, ge=1, le=100, description="Number of items per page"),
 ):
-    """Get today's articles based on user's timezone."""
-    try:
-        # Validate and parse the timezone
-        tz = zoneinfo.ZoneInfo(user_timezone)
-    except zoneinfo.ZoneInfoNotFoundError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid timezone: {user_timezone}. Please provide a valid IANA timezone identifier.",
-        )
+    """Get articles from the last 24 hours in UTC."""
+    from datetime import timedelta
     
-    # Get current time in user's timezone
-    now_in_tz = datetime.now(tz)
+    # Get current time in UTC
+    now_utc = datetime.utcnow()
     
-    # Calculate start and end of today in user's timezone
-    start_of_day_tz = now_in_tz.replace(hour=0, minute=0, second=0, microsecond=0)
-    end_of_day_tz = now_in_tz.replace(hour=23, minute=59, second=59, microsecond=999999)
-    
-    # Convert to UTC for database query
-    utc_tz = zoneinfo.ZoneInfo('UTC')
-    start_of_day_utc = start_of_day_tz.astimezone(utc_tz)
-    end_of_day_utc = end_of_day_tz.astimezone(utc_tz)
+    # Get articles from the last 24 hours
+    twenty_four_hours_ago = now_utc - timedelta(hours=24)
     
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     paginated_articles = await rss_service.get_articles(
-        published_since=start_of_day_utc,
-        published_until=end_of_day_utc,
+        published_since=twenty_four_hours_ago,
+        published_until=now_utc,
         sort_by="published_at",
         sort_order="desc",
         page=page,

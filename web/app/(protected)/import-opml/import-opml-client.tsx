@@ -239,12 +239,13 @@ export default function ImportOPMLPageClient() {
     }
 
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-full">
             <Header
+                classAttributes="rounded-t-xl"
                 breadcrumbItems={[{ href: "/import-opml", label: "OPML Import" }]}
             />
-            <main className="flex-1">
-                <div className="container mx-auto p-4 sm:p-6 pt-6 sm:pt-10 max-w-4xl">
+            <main className="flex-1 px-4 py-6 md:px-6 overflow-hidden">
+                <div className="max-w-4xl mx-auto">
                     <div className="mb-8">
                         <h1 className="text-2xl sm:text-3xl font-bold mb-3">OPML Import</h1>
                         <p className="text-muted-foreground leading-relaxed max-w-2xl">

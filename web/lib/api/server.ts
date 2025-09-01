@@ -272,7 +272,7 @@ export class ServerApiClient {
         }
     }
 
-    static async getTodaysArticles(params: { userTimezone: string, page?: number, size?: number }) {
+    static async getTodaysArticles(params?: { page?: number, size?: number }) {
         try {
             return await ApiClient.rss.getTodaysArticles(params)
         } catch (error) {

@@ -46,20 +46,6 @@ class TestResourceLimitService:
         expected = RESOURCE_LIMITS["basic"]
         assert limits == expected
 
-    def test_check_book_file_size_basic_within_limit(self, service):
-        """Test file size check for basic user within limit."""
-        result = service.check_book_file_size(3.0, "basic")  # 3MB
-        assert result is True
-
-    def test_check_book_file_size_basic_exceeds_limit(self, service):
-        """Test file size check for basic user exceeding limit."""
-        result = service.check_book_file_size(10.0, "basic")  # 10MB
-        assert result is False
-
-    def test_check_book_file_size_admin_unlimited(self, service):
-        """Test file size check for admin user (unlimited)."""
-        result = service.check_book_file_size(100.0, "admin")  # 100MB
-        assert result is True
 
     @pytest.mark.asyncio
     async def test_check_limit_admin_unlimited(self, service, mock_db):

@@ -69,7 +69,8 @@ export function ArticlesView({
     publishedSince,
     publishedUntil,
     mode = "allArticles",
-    userTimezone,
+    onCreateFolder,
+    onAddFeed,
 }: {
     initialSidebarTitle?: string
     feedId?: string
@@ -78,7 +79,8 @@ export function ArticlesView({
     publishedSince?: string
     publishedUntil?: string
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
-    userTimezone?: string
+    onCreateFolder?: () => void
+    onAddFeed?: (folderId?: string) => void
 }) {
     const {
         initialSidebarTitle: viewInitialSidebarTitle,
@@ -127,6 +129,8 @@ export function ArticlesView({
     const typedUnreadCounts =
         (unreadCounts as {
             total_unread?: number
+            today_count?: number
+            read_later_count?: number
             unread_by_folder?: Array<{
                 folder_id: string
                 unread_count: number
@@ -159,9 +163,8 @@ export function ArticlesView({
             refetchOnWindowFocus: false,
             staleTime: 5 * 60 * 1000,
         })
-    } else if (isTodayMode && userTimezone) {
+    } else if (isTodayMode) {
         infiniteQuery = useInfiniteTodayArticles({ 
-            userTimezone,
             size: 25 
         }, {
             refetchOnMount: false,
@@ -332,7 +335,7 @@ export function ArticlesView({
             const timer = setTimeout(() => {
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly 
-                        ? allArticles.find(a => !a.is_read) || allArticles[0]
+                        ? allArticles.find((a: Article) => !a.is_read) || allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle.id)
                 }
@@ -566,6 +569,11 @@ export function ArticlesView({
         // Don't show unread count for special modes
         if (isRecentlyReadMode || isReadLaterMode) return 0
 
+        // Handle Today mode specifically
+        if (isTodayMode) {
+            return typedUnreadCounts?.today_count || 0
+        }
+
         if (viewFeedId) {
             // Individual feed: get unread count from the feed data
             const currentFeed = typedAllUserFeeds.find(
@@ -590,6 +598,7 @@ export function ArticlesView({
         typedUnreadCounts,
         isRecentlyReadMode,
         isReadLaterMode,
+        isTodayMode,
     ])
 
 

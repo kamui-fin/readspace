@@ -8,18 +8,16 @@ import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 export const dynamic = 'force-dynamic'
 
 export default async function TodayPage() {
-    // Get user's timezone - this will be executed on the server during SSR
-    // and will use the server's timezone as a fallback (which should be fine for most use cases)
-    // The real timezone detection happens client-side
-    const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-
     const queryClient = getQueryClient()
 
-    // Prefetch today's articles using the new timezone-aware endpoint
-    // Temporarily comment out to test loading state
+    // Note: Timezone detection is now handled client-side in ArticlesView component
+    // to ensure we get the user's actual timezone instead of the server's timezone
+
+    // Prefetch today's articles - disabled for now since timezone detection is client-side
+    // We could potentially prefetch with a default timezone and refetch with the actual timezone
     // await queryClient.prefetchQuery({
     //     queryKey: [RSS_QUERY_KEYS.ARTICLES, {
-    //         userTimezone,
+    //         userTimezone: 'UTC', // Default fallback
     //         page: 1,
     //         size: 25,
     //         sortBy: "published_at",
@@ -27,7 +25,7 @@ export default async function TodayPage() {
     //         viewType: 'today',
     //         viewId: 'today',
     //     }],
-    //     queryFn: () => ServerApiClient.getTodaysArticles({ userTimezone }),
+    //     queryFn: () => ServerApiClient.getTodaysArticles({ userTimezone: 'UTC' }),
     // })
 
     return (
@@ -37,7 +35,6 @@ export default async function TodayPage() {
                 showUnreadBadge={true}
                 initialSidebarTitle="Today"
                 mode="today"
-                userTimezone={userTimezone}
             />
         </HydrationBoundary>
     )

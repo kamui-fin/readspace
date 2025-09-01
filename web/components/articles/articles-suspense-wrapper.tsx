@@ -13,7 +13,6 @@ interface ArticlesSuspenseWrapperProps {
     publishedSince?: string
     publishedUntil?: string
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
-    userTimezone?: string
     onCreateFolder?: () => void
     onAddFeed?: (folderId?: string) => void
 }

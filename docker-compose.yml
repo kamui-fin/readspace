@@ -2,8 +2,6 @@ services:
   redis:
     image: redis:7.2-alpine
     container_name: readspace_redis
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-h", "localhost", "ping"]
       interval: 5s
@@ -16,11 +14,11 @@ services:
       dockerfile: Dockerfile
     container_name: readspace_web
     ports:
-      - "8042:8042"
+      - "18042:8042"
     environment:
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-      - NEXT_PUBLIC_SUPABASE_URL=http://0.0.0.0:8000
-      - NEXT_PUBLIC_API_BASE_URL=http://0.0.0.0:8008
+      - NEXT_PUBLIC_SUPABASE_URL=http://0.0.0.0:18000
+      - NEXT_PUBLIC_API_BASE_URL=http://0.0.0.0:18008
     depends_on:
       - api
 
@@ -33,7 +31,7 @@ services:
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8008"
     ports:
-      - "8008:8008"
+      - "18008:8008"
     depends_on:
       redis:
         condition: service_healthy
@@ -45,7 +43,7 @@ services:
       - CORS_ORIGIN=http://localhost:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_URL=http://kong:18000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
@@ -69,7 +67,7 @@ services:
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_URL=http://kong:18000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
@@ -93,7 +91,7 @@ services:
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:8000
+      - SUPABASE_URL=http://kong:18000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1

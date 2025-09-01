@@ -113,11 +113,10 @@ class ArticleSpecializedQueries:
 
     @staticmethod
     async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
-        """Count unread articles published today for a user."""
-        today_start = datetime.now(timezone.utc).replace(
-            hour=0, minute=0, second=0, microsecond=0
-        )
-        today_end = today_start + timedelta(days=1)
+        """Count unread articles published in the last 24 hours for a user."""
+        # Use same 24-hour UTC logic as the today articles route
+        now_utc = datetime.now(timezone.utc)
+        twenty_four_hours_ago = now_utc - timedelta(hours=24)
 
         result = await db.execute(
             select(func.count(FeedArticle.id))
@@ -138,8 +137,8 @@ class ArticleSpecializedQueries:
                         UserArticleState.is_read.is_(None),
                         UserArticleState.is_read == False,
                     ),
-                    ArticleContent.published_at >= today_start,
-                    ArticleContent.published_at < today_end,
+                    ArticleContent.published_at >= twenty_four_hours_ago,
+                    ArticleContent.published_at <= now_utc,
                 )
             )
         )
