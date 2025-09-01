@@ -87,7 +87,7 @@
 
     .dark {
         --background: 0 0 7%;
-        --foreground: 120 100% 99.41%;
+        --foreground: 0 0% 83%;
         --muted: 240 2.47% 13.51%;
         --muted-foreground: 132 33.33% 97.06%;
         --popover: 0 0% 10.59%;

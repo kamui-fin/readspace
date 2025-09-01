@@ -189,13 +189,13 @@ export default function ImportStatusPage() {
 
         if (error) {
             return (
-                <Card className="border-red-200 bg-red-50/50">
+                <Card className="border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-950/20">
                     <CardHeader>
                         <div className="flex items-center gap-3">
-                            <XCircle className="h-6 w-6 text-red-600" />
+                            <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                             <CardTitle>Task Not Found</CardTitle>
                         </div>
-                        <CardDescription className="text-red-700">
+                        <CardDescription className="text-red-700 dark:text-red-300">
                             {error}
                         </CardDescription>
                     </CardHeader>
@@ -275,32 +275,32 @@ export default function ImportStatusPage() {
                                 />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-green-600">
+                                        <div className="text-2xl font-semibold text-green-600 dark:text-green-400">
                                             {progress.successful}
                                         </div>
-                                        <div className="text-sm font-medium text-green-700">
+                                        <div className="text-sm font-medium text-green-700 dark:text-green-300">
                                             Successfully Imported
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-blue-600">
+                                        <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
                                             {progress.already_existed}
                                         </div>
-                                        <div className="text-sm font-medium text-blue-700">
+                                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                                             Already Existed
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-red-600">
+                                        <div className="text-2xl font-semibold text-red-600 dark:text-red-400">
                                             {progress.failed}
                                         </div>
-                                        <div className="text-sm font-medium text-red-700">
+                                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
                                             Import Failed
                                         </div>
                                     </div>
@@ -352,32 +352,32 @@ export default function ImportStatusPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-green-600">
+                                        <div className="text-2xl font-semibold text-green-600 dark:text-green-400">
                                             {result.summary?.successful || 0}
                                         </div>
-                                        <div className="text-sm font-medium text-green-700">
+                                        <div className="text-sm font-medium text-green-700 dark:text-green-300">
                                             Successfully Imported
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-blue-600">
+                                        <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
                                             {result.summary?.already_existed || 0}
                                         </div>
-                                        <div className="text-sm font-medium text-blue-700">
+                                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                                             Already Existed
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-red-600">
+                                        <div className="text-2xl font-semibold text-red-600 dark:text-red-400">
                                             {result.summary?.failed || 0}
                                         </div>
-                                        <div className="text-sm font-medium text-red-700">
+                                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
                                             Import Failed
                                         </div>
                                     </div>
@@ -401,15 +401,15 @@ export default function ImportStatusPage() {
                                             {result.errors.map((error, index) => (
                                                 <div
                                                     key={index}
-                                                    className="bg-red-50 border border-red-200 rounded p-3 text-sm"
+                                                    className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded p-3 text-sm"
                                                 >
-                                                    <div className="font-medium text-red-900">
+                                                    <div className="font-medium text-red-900 dark:text-red-300">
                                                         {error.title || "Unknown feed"}
                                                     </div>
-                                                    <div className="text-red-700 text-xs mt-1 truncate">
+                                                    <div className="text-red-700 dark:text-red-400 text-xs mt-1 truncate">
                                                         {error.url}
                                                     </div>
-                                                    <div className="text-red-600 text-xs mt-1">
+                                                    <div className="text-red-600 dark:text-red-400 text-xs mt-1">
                                                         {error.error}
                                                     </div>
                                                 </div>

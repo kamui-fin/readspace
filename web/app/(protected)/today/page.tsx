@@ -16,18 +16,19 @@ export default async function TodayPage() {
     const queryClient = getQueryClient()
 
     // Prefetch today's articles using the new timezone-aware endpoint
-    await queryClient.prefetchQuery({
-        queryKey: [RSS_QUERY_KEYS.ARTICLES, {
-            userTimezone,
-            page: 1,
-            size: 25,
-            sortBy: "published_at",
-            sortOrder: "desc",
-            viewType: 'today',
-            viewId: 'today',
-        }],
-        queryFn: () => ServerApiClient.getTodaysArticles({ userTimezone }),
-    })
+    // Temporarily comment out to test loading state
+    // await queryClient.prefetchQuery({
+    //     queryKey: [RSS_QUERY_KEYS.ARTICLES, {
+    //         userTimezone,
+    //         page: 1,
+    //         size: 25,
+    //         sortBy: "published_at",
+    //         sortOrder: "desc",
+    //         viewType: 'today',
+    //         viewId: 'today',
+    //     }],
+    //     queryFn: () => ServerApiClient.getTodaysArticles({ userTimezone }),
+    // })
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>

@@ -73,6 +73,7 @@ import {
     SidebarLibrarySkeleton,
 } from "./sidebar-skeleton"
 import { useNavigationState, useOptimisticNavigation } from "@/hooks/use-navigation-state"
+import { useModalStore } from "@/lib/stores/modal-store"
 
 // Types
 type MainNavItem = {
@@ -742,8 +743,8 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
     const createFolder = useCreateFolder()
     const createFeed = useCreateFeed()
 
-    // Local modal state management
-    const [isFolderModalOpen, setIsFolderModalOpen] = useState(false)
+    // Global modal state management
+    const { isFolderModalOpen, openFolderModal, closeFolderModal } = useModalStore()
     const [isFeedModalOpen, setIsFeedModalOpen] = useState(false)
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
         null
@@ -878,7 +879,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
     }, [typedFolders, typedFeeds, feedsByFolder, typedUnreadCounts, pathname])
 
     const handleAddFolder = () => {
-        setIsFolderModalOpen(true)
+        openFolderModal()
     }
 
     const handleAddFeed = (folderId: string) => {
@@ -894,7 +895,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                 { name: folderName.trim() },
                 {
                     onSuccess: () => {
-                        setIsFolderModalOpen(false)
+                        closeFolderModal()
                         setFolderName("")
                     },
                 }
@@ -1003,8 +1004,8 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
             <Dialog
                 open={isFolderModalOpen}
                 onOpenChange={(open) => {
-                    setIsFolderModalOpen(open)
                     if (!open) {
+                        closeFolderModal()
                         setFolderName("")
                     }
                 }}
@@ -1024,7 +1025,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => setIsFolderModalOpen(false)}
+                                onClick={closeFolderModal}
                             >
                                 Cancel
                             </Button>

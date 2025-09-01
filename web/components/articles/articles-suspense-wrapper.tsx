@@ -1,6 +1,7 @@
 import { Suspense } from "react"
 import { ArticlesView } from "@/components/articles"
 import { ArticlesViewSkeleton } from "./articles-view-skeleton"
+import { ArticlesEmptyState } from "./articles-empty-state"
 
 interface ArticlesSuspenseWrapperProps {
     title?: string
@@ -13,10 +14,12 @@ interface ArticlesSuspenseWrapperProps {
     publishedUntil?: string
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
     userTimezone?: string
+    onCreateFolder?: () => void
+    onAddFeed?: (folderId?: string) => void
 }
 
 export function ArticlesSuspenseWrapper(props: ArticlesSuspenseWrapperProps) {
-    const { title, showUnreadBadge, ...articlesViewProps } = props
+    const { title, showUnreadBadge, onCreateFolder, onAddFeed, ...articlesViewProps } = props
     
     return (
         <Suspense 
@@ -27,7 +30,11 @@ export function ArticlesSuspenseWrapper(props: ArticlesSuspenseWrapperProps) {
                 />
             }
         >
-            <ArticlesView {...articlesViewProps} />
+            <ArticlesView 
+                {...articlesViewProps} 
+                onCreateFolder={onCreateFolder}
+                onAddFeed={onAddFeed}
+            />
         </Suspense>
     )
 }

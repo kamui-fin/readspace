@@ -58,6 +58,8 @@ import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
 import useInfiniteScroll from "react-infinite-scroll-hook"
 import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
+import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
+import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
 
 export function ArticlesView({
     initialSidebarTitle,
@@ -591,57 +593,20 @@ export function ArticlesView({
     ])
 
 
+    // Show skeleton during initial loading, even if we'll end up empty
+    if (isArticlesLoading && allArticles.length === 0) {
+        return <ArticlesViewSkeleton title={sidebarTitle} showUnreadBadge={false} />
+    }
+
     if (!isArticlesLoading && filteredArticles.length === 0 && allArticles.length === 0) {
         return (
-            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl  shadow-sm">
-                <div className="w-full flex flex-col items-center justify-center gap-4">
-                    <p className="text-muted-foreground">
-                        {isRecentlyReadMode
-                            ? "No recently read articles"
-                            : isReadLaterMode
-                                ? "No articles in your Read Later list"
-                                : "No articles found"}
-                    </p>
-                    {/* Always show toggle if in a mode that supports it, or refresh otherwise */}
-                    {!isRecentlyReadMode &&
-                        !isReadLaterMode &&
-                        (viewMode === "allArticles" ||
-                            viewFeedId ||
-                            viewFolderId) ? (
-                        <div className="flex flex-col items-center gap-2">
-                            <Button
-                                variant="outline"
-                                onClick={() =>
-                                    handleRefreshWithMessage(
-                                        "Refreshing articles..."
-                                    )
-                                }
-                            >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Refresh
-                            </Button>
-                        </div>
-                    ) : isRecentlyReadMode || isReadLaterMode ? (
-                        <Button
-                            variant="outline"
-                            onClick={() => router.push("/articles")}
-                        >
-                            Browse Articles
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="outline"
-                            onClick={() =>
-                                handleRefreshWithMessage(
-                                    "Refreshing articles..."
-                                )
-                            }
-                        >
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Refresh
-                        </Button>
-                    )}
-                </div>
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
+                <ArticlesEmptyState
+                    mode={viewMode}
+                    feedId={viewFeedId}
+                    folderId={viewFolderId}
+                    onRefresh={() => handleRefreshWithMessage("Refreshing articles...")}
+                />
             </div>
         )
     }
@@ -970,14 +935,14 @@ export function ArticlesView({
                                     <div className="flex-1 p-8">
                                         <ArticleContentSkeleton />
                                     </div>
-                                ) : (
-                                    /* Show select message on mobile or when no articles */
+                                ) : allArticles.length > 0 ? (
+                                    /* Show select message when we have articles but on mobile */
                                     <div className="flex flex-1 items-center justify-center">
                                         <p className="text-muted-foreground">
-                                            {allArticles.length === 0 ? "Loading articles..." : "Select an article to read"}
+                                            Select an article to read
                                         </p>
                                     </div>
-                                )}
+                                ) : null}
                             </>
                         )}
                     </div>

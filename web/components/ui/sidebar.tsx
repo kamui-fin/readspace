@@ -98,14 +98,12 @@ const SidebarProvider = React.forwardRef<
         const [openMobile, setOpenMobile] = React.useState(false)
 
         // Determine default open state based on device type
+        // Use consistent default across SSR and client to prevent hydration mismatch
         const getInitialOpen = () => {
             if (defaultOpen !== undefined) return defaultOpen
-            if (typeof window !== 'undefined') {
-                const width = window.innerWidth
-                if (width < 1024) return false // Closed by default on mobile and tablet
-                return true // Open by default on desktop
-            }
-            return false // SSR fallback
+            // Always start closed to prevent hydration mismatch
+            // Device-specific state will be set in useEffect after hydration
+            return true
         }
 
         // This is the internal state of the sidebar.
@@ -181,7 +179,7 @@ const SidebarProvider = React.forwardRef<
             ]
         )
 
-        // Sync sidebar state with device type changes
+        // Sync sidebar state with device type changes after hydration
         React.useEffect(() => {
             if (defaultOpen === undefined && typeof window !== 'undefined') {
                 const width = window.innerWidth
@@ -190,7 +188,7 @@ const SidebarProvider = React.forwardRef<
                     _setOpen(shouldBeOpen)
                 }
             }
-        }, [isMobile, isTablet, isDesktop, defaultOpen])
+        }, [isMobile, isTablet, isDesktop, defaultOpen, _open])
 
         return (
             <SidebarContext.Provider value={contextValue}>
