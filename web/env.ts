@@ -24,6 +24,10 @@ export const env = createEnv({
             .string()
             .url()
             .default("http://localhost:8008"),
+        NEXT_PUBLIC_APP_URL: z
+            .string()
+            .url()
+            .default("http://localhost:8042"),
     },
 
     /**
@@ -41,5 +45,6 @@ export const env = createEnv({
         NEXT_PUBLIC_SUPABASE_ANON_KEY:
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
         NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
+        NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     },
 })

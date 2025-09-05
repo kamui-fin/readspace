@@ -196,6 +196,9 @@ cat <<EOF > web/.env
 # The base URL for your application's API endpoints
 NEXT_PUBLIC_API_BASE_URL=http://${API_HOST}:18008
 
+# The base URL for the web application
+NEXT_PUBLIC_APP_URL=http://${API_HOST}:18042
+
 # Public Supabase configuration
 NEXT_PUBLIC_SUPABASE_URL=http://${API_HOST}:18000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
