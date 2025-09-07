@@ -30,23 +30,35 @@ class SubscriptionService:
         self,
         *,
         url: str,
-        folder_id: UUID,
+        folder_id: UUID | str,
         # tag_ids removed - using ARRAY field on feeds
         custom_title: str | None = None,
         feed_data: dict | None = None,
     ) -> SubscriptionResponse:
         """Create a new feed subscription for the user."""
+
+        # Handle 'default' folder_id by getting the actual default folder
+        actual_folder_id = folder_id
+        if folder_id == 'default':
+            from app.services.folder_service import FolderService
+            folder_service = FolderService(self.db, self.user_id)
+            default_folder = await folder_service.get_default_folder()
+            if default_folder:
+                actual_folder_id = default_folder.id
+            else:
+                raise ValueError("Could not find or create default folder")
+
         logger.info(
             "Creating subscription",
             url=url,
-            folder_id=folder_id,
+            folder_id=actual_folder_id,
             user_id=self.user_id,
         )
 
         try:
             subscription_in = SubscriptionCreate(
                 url=url,
-                folder_id=folder_id,
+                folder_id=actual_folder_id,
                 # tag_ids removed - using ARRAY field on feeds
                 custom_title=custom_title,
             )

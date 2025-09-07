@@ -10,6 +10,7 @@ from app.schemas.rss_schemas import (
     DiscoverSearchResponse,
     FeedDiscoveryResult,
 )
+from app.schemas.subscription_schemas import ArticleWithStateResponse
 from app.services.rss_search_service import RssSearchService
 
 logger = structlog.get_logger(__name__)
@@ -62,7 +63,9 @@ async def search_feeds(
                 category=result["category"],
                 popularity_score=result["popularity_score"],
                 relevance=result["relevance"],
-                search_metadata=result.get("search_metadata")
+                search_metadata=result.get("search_metadata"),
+                is_preview=result.get("is_preview", False),
+                preview_url=result.get("preview_url")
             )
             feed_results.append(feed_result)
 
@@ -172,7 +175,9 @@ async def get_category_feeds(
                 category=result["category"],
                 popularity_score=result["popularity_score"],
                 relevance=result["relevance"],
-                search_metadata=result.get("search_metadata")
+                search_metadata=result.get("search_metadata"),
+                is_preview=result.get("is_preview", False),
+                preview_url=result.get("preview_url")
             )
             feed_results.append(feed_result)
 
@@ -206,4 +211,121 @@ async def get_category_feeds(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred while fetching feeds for category: {category_name}"
+        )
+
+
+@router.get("/preview/articles")
+async def get_preview_articles(
+    *,
+    db: AsyncSession = Depends(get_db),
+    url: str = Query(..., description="RSS feed URL to preview"),
+    limit: int = Query(25, ge=1, le=100, description="Maximum number of articles to return")
+):
+    """
+    Get articles from an RSS feed URL for preview purposes.
+    This endpoint fetches and parses an RSS feed directly without requiring database storage.
+    """
+    try:
+        search_service = RssSearchService(db)
+        
+        # First check if this is a valid RSS URL by trying to preview it
+        preview_result = await search_service._preview_url_as_feed(url)
+        if not preview_result:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid RSS feed URL or feed could not be fetched"
+            )
+        
+        # Import here to avoid circular imports
+        from app.services.feed_creation_service import FeedCreationService
+        from uuid import uuid4
+        
+        # Create a temporary service instance for fetching articles
+        temp_service = FeedCreationService(db, user_id=uuid4())
+        
+        # Fetch and parse the RSS feed
+        fetch_result = await temp_service._fetch_feed_content(url)
+        if fetch_result["status"] != 200 or not fetch_result["content"]:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not fetch RSS feed content"
+            )
+        
+        # Parse the feed
+        parsed_feed = temp_service._parse_feed_data(fetch_result["content"], url)
+        
+        # Extract articles from the parsed feed (limit to requested amount)
+        articles = []
+        feed_entries = getattr(parsed_feed, 'entries', [])[:limit]
+        
+        for i, entry in enumerate(feed_entries):
+            # Create a preview article object
+            article = {
+                "id": f"preview_article_{hash(url)}_{i}",
+                "feed_id": preview_result["id"], 
+                "content_id": f"preview_content_{hash(url)}_{i}",
+                "guid": getattr(entry, 'id', getattr(entry, 'link', str(i))),
+                "created_at": "2023-01-01T00:00:00Z",
+                "updated_at": "2023-01-01T00:00:00Z",
+                
+                # Content data
+                "title": getattr(entry, 'title', 'Untitled'),
+                "link": getattr(entry, 'link', None),
+                "description": getattr(entry, 'summary', getattr(entry, 'description', None)),
+                "content": getattr(entry, 'content', [{}])[0].get('value', None) if hasattr(entry, 'content') and entry.content else None,
+                "image_url": None,  # Could extract from content if needed
+                "author": getattr(entry, 'author', None),
+                "published_at": getattr(entry, 'published_parsed', None),
+                "estimated_read_time_minutes": None,
+                
+                # User state (all false for preview)
+                "is_read": False,
+                "read_at": None,
+                "is_read_later": False,
+                "is_favorite": False,
+                "user_note": None,
+                "user_tags": None,
+                
+                # Feed info
+                "feed_title": preview_result["title"],
+                "custom_feed_title": None,
+                "folder_id": None,
+                "folder_name": None,
+            }
+            
+            # Convert published_parsed to ISO string if available
+            if article["published_at"]:
+                try:
+                    from datetime import datetime
+                    import time
+                    article["published_at"] = datetime.fromtimestamp(time.mktime(article["published_at"])).isoformat() + "Z"
+                except:
+                    article["published_at"] = None
+            
+            articles.append(article)
+        
+        # Return in the same format as the regular articles endpoint
+        response = {
+            "items": articles,
+            "total": len(articles),
+            "page": 1,
+            "size": limit,
+            "pages": 1
+        }
+        
+        logger.info(
+            "Preview articles fetched successfully",
+            url=url,
+            articles_count=len(articles)
+        )
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Error fetching preview articles", url=url, error=str(e), exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while fetching preview articles"
         )

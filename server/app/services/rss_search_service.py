@@ -1,5 +1,6 @@
 """RSS Feed Search Service for discovery functionality."""
 
+import re
 from typing import Any
 
 import structlog
@@ -38,6 +39,24 @@ class RssSearchService:
         # Otherwise, assume it's a web URL missing the protocol and add it.
         return f"https://{url_str}"
 
+    def _is_valid_url(self, query: str) -> bool:
+        """Check if query looks like a valid URL."""
+        if not query or not isinstance(query, str):
+            return False
+
+        query = query.strip()
+
+        # Basic URL pattern check
+        url_pattern = re.compile(
+            r'^https?://'  # http:// or https://
+            r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+            r'localhost|'  # localhost...
+            r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+            r'(?::\d+)?'  # optional port
+            r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+        return bool(url_pattern.match(query))
+
     async def search_feeds(
         self,
         query: str | None = None,
@@ -60,6 +79,21 @@ class RssSearchService:
         # Ensure limit doesn't exceed 20
         limit = min(limit, 20)
 
+        # Check if query is a URL and try to preview it as a feed
+        if query and self._is_valid_url(query):
+            preview_result = await self._preview_url_as_feed(query)
+            if preview_result:
+                # Return preview result first, then regular search results if there's space
+                results = [preview_result]
+                remaining_limit = limit - 1
+
+                if remaining_limit > 0:
+                    # Get regular search results too (but not for the same URL)
+                    regular_results = await self._hybrid_search(query, language, remaining_limit, category)
+                    results.extend(regular_results)
+
+                return results
+
         if query:
             return await self._hybrid_search(query, language, limit, category)
         elif category:
@@ -67,6 +101,68 @@ class RssSearchService:
         else:
             # Return popular feeds across all categories
             return await self._popular_feeds(language, limit)
+
+    async def _preview_url_as_feed(self, url: str) -> dict[str, Any] | None:
+        """
+        Try to fetch and preview a URL as an RSS feed.
+        
+        Args:
+            url: URL to preview as feed
+            
+        Returns:
+            Feed preview data if successful, None if not a valid feed
+        """
+        try:
+            logger.debug("Attempting to preview URL as feed", url=url)
+
+            # Import here to avoid circular imports
+            from uuid import uuid4
+
+            from app.services.feed_creation_service import FeedCreationService
+
+            # Create a temporary service instance for preview with a dummy user_id
+            temp_service = FeedCreationService(self.db, user_id=uuid4())
+
+            # Try to fetch and parse the URL
+            fetch_result = await temp_service._fetch_feed_content(url)
+            if fetch_result["status"] != 200 or not fetch_result["content"]:
+                logger.debug("Failed to fetch URL or empty content", url=url, status=fetch_result.get("status"))
+                return None
+
+            # Parse the content
+            parsed_feed = temp_service._parse_feed_data(fetch_result["content"], url)
+
+            # Extract feed metadata
+            metadata = temp_service._extract_feed_metadata(parsed_feed, url)
+
+            # Create preview result
+            preview_data = {
+                "id": f"preview_{hash(url)}",  # Temporary ID for preview
+                "title": metadata.title,
+                "description": metadata.description,
+                "url": str(metadata.url),
+                "link": self._normalize_url(str(metadata.link) if metadata.link else None),
+                "image_url": self._normalize_url(str(metadata.image_url) if metadata.image_url else None),
+                "tags": [],  # No tags for preview
+                "language": metadata.language,
+                "category": None,  # No category for preview
+                "popularity_score": 0.0,  # No popularity score for preview
+                "relevance": 1.0,  # Max relevance for preview
+                "search_metadata": {
+                    "search_type": "url_preview",
+                    "fetched_at": fetch_result.get("headers", {}).get("date"),
+                    "content_type": fetch_result.get("headers", {}).get("content-type")
+                },
+                "is_preview": True,
+                "preview_url": url
+            }
+
+            logger.info("Successfully created feed preview", url=url, title=metadata.title)
+            return preview_data
+
+        except Exception as e:
+            logger.debug("Failed to preview URL as feed", url=url, error=str(e))
+            return None
 
     async def _hybrid_search(
         self,

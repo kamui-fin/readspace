@@ -333,6 +333,34 @@ export class ServerApiClient {
         }
     }
 
+    static async getPreviewArticles(feedUrl: string, limit: number = 25) {
+        try {
+            // Use direct fetch since this is a new endpoint not in ApiClient yet
+            const url = new URL('/api/rss/discover/preview/articles', process.env.API_BASE_URL || 'http://localhost:8008')
+            url.searchParams.set('url', feedUrl)
+            url.searchParams.set('limit', limit.toString())
+
+            const response = await fetch(url.toString(), {
+                headers: { 'Content-Type': 'application/json' },
+            })
+
+            if (!response.ok) {
+                throw new Error(`Failed to get preview articles: ${response.statusText}`)
+            }
+
+            return await response.json()
+        } catch (error) {
+            console.error("Failed to get preview articles:", error)
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                size: limit,
+                pages: 1
+            }
+        }
+    }
+
     static async getCategoryFeeds(categoryName: string, params?: {
         language?: string
         limit?: number

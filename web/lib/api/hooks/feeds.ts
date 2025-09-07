@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
-import { ApiClient } from "../client"
 import { RSS_QUERY_KEYS } from "../../query-keys"
+import { ApiClient } from "../client"
 
 // Types based on API responses
 type Folder = {
@@ -102,13 +102,13 @@ export type Article = {
     estimated_read_time_minutes: number | null // Added, made nullable
     custom_metadata: any | null // Added (JSONB maps to any)
     feed?:
-        | FeedBasicInfo
-        | {
-              id: string | null
-              title: string | null
-              url: string | null
-              image_url: string | null
-          } // More flexible feed object for both RSS and clipped articles
+    | FeedBasicInfo
+    | {
+        id: string | null
+        title: string | null
+        url: string | null
+        image_url: string | null
+    } // More flexible feed object for both RSS and clipped articles
     article_type: "feed" | "clipped"
     priority?: string | null // Added for clipped articles
     note?: string | null // Added for clipped articles
@@ -247,10 +247,10 @@ export function useUpdateFolder() {
                         ...old,
                         folders: old.folders
                             ? old.folders.map((folder: any) =>
-                                  folder.id === folderId
-                                      ? { ...folder, name }
-                                      : folder
-                              )
+                                folder.id === folderId
+                                    ? { ...folder, name }
+                                    : folder
+                            )
                             : [],
                     }
                 }
@@ -333,13 +333,13 @@ export function useDeleteFolder() {
                         ...old,
                         folders: old.folders
                             ? old.folders.filter(
-                                  (folder: any) => folder.id !== folderId
-                              )
+                                (folder: any) => folder.id !== folderId
+                            )
                             : [],
                         feeds: old.feeds
                             ? old.feeds.filter(
-                                  (feed: any) => feed.folder_id !== folderId
-                              )
+                                (feed: any) => feed.folder_id !== folderId
+                            )
                             : [],
                     }
                 }
@@ -661,7 +661,7 @@ export function useRefreshFeed() {
             if (!silent) {
                 toast.error(
                     error.response?.data?.detail ||
-                        `Failed to refresh feed '${feedId.substring(0, 8)}...'.`
+                    `Failed to refresh feed '${feedId.substring(0, 8)}...'.`
                 )
             }
         },
@@ -679,7 +679,7 @@ export function useRefreshFolderFeeds() {
         onError: (error: any) => {
             toast.error(
                 error.response?.data?.detail ||
-                    "Failed to start folder refresh."
+                "Failed to start folder refresh."
             )
         },
     })
@@ -697,7 +697,7 @@ export function useRefreshAllFeeds() {
         onError: (error: any) => {
             toast.error(
                 error.response?.data?.detail ||
-                    "Failed to start all feeds refresh."
+                "Failed to start all feeds refresh."
             )
         },
     })
@@ -749,21 +749,21 @@ export function useDeleteFeed() {
             })
 
             // Get the feed being deleted to remove its unread count
-            const feedBeingDeleted = Array.isArray(previousFeeds) 
+            const feedBeingDeleted = Array.isArray(previousFeeds)
                 ? previousFeeds.find((feed: any) => feed.id === feedId)
                 : null
 
             // Optimistically update unread counts
             queryClient.setQueryData([RSS_QUERY_KEYS.UNREAD_COUNTS], (old: any) => {
                 if (!old || !feedBeingDeleted) return old
-                
+
                 const updatedCounts = { ...old }
-                
+
                 // Reduce total unread count
                 if (updatedCounts.total_unread && feedBeingDeleted.unread_count) {
                     updatedCounts.total_unread = Math.max(0, updatedCounts.total_unread - feedBeingDeleted.unread_count)
                 }
-                
+
                 // Reduce folder unread count if the feed was in a folder
                 if (updatedCounts.unread_by_folder && feedBeingDeleted.folder_id && feedBeingDeleted.unread_count) {
                     updatedCounts.unread_by_folder = updatedCounts.unread_by_folder.map((folder: any) => {
@@ -776,7 +776,7 @@ export function useDeleteFeed() {
                         return folder
                     })
                 }
-                
+
                 return updatedCounts
             })
 
@@ -1123,3 +1123,4 @@ export function useInfiniteTodayArticles(
         ...options,
     })
 }
+

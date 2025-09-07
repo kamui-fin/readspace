@@ -319,6 +319,8 @@ class FeedDiscoveryResult(BaseModel):
     popularity_score: float
     relevance: float = Field(..., ge=0.0, le=1.0, description="Relevance score from 0 to 1")
     search_metadata: dict[str, Any] | None = Field(None, description="Additional search metadata")
+    is_preview: bool = Field(False, description="Indicates this is a live preview of a URL")
+    preview_url: str | None = Field(None, description="Original URL for following (when is_preview=True)")
 
 
 class DiscoverSearchResponse(BaseModel):

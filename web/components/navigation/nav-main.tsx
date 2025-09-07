@@ -1,9 +1,9 @@
 "use client"
 
 import { AnimatePresence, motion } from "framer-motion"
+import Link from "next/link"
 import * as React from "react"
 import { useState } from "react"
-import Link from "next/link"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -23,8 +23,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
@@ -39,6 +38,7 @@ import {
     SidebarMenuSubItem,
     useSidebarLeft,
 } from "@/components/ui/sidebar"
+import { useNavigationState, useOptimisticNavigation } from "@/hooks/use-navigation-state"
 import {
     useCreateFeed,
     useCreateFolder,
@@ -50,6 +50,7 @@ import {
     useUpdateFeed,
     useUpdateFolder,
 } from "@/lib/api/hooks/feeds"
+import { useModalStore } from "@/lib/stores/modal-store"
 import { cn } from "@/lib/utils"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -73,8 +74,6 @@ import {
     SidebarFeedsSkeleton,
     SidebarLibrarySkeleton,
 } from "./sidebar-skeleton"
-import { useNavigationState, useOptimisticNavigation } from "@/hooks/use-navigation-state"
-import { useModalStore } from "@/lib/stores/modal-store"
 
 // Types
 type MainNavItem = {
@@ -203,14 +202,14 @@ function FeedContextMenu({
     const handleDeleteConfirm = async () => {
         if (!itemId) return
         setIsProcessingDelete(true)
-        
+
         // Navigate immediately before deletion to prevent "not found" errors
         if (isFolder && pathname.includes(`/folders/${itemId}`)) {
             router.push("/articles")
         } else if (!isFolder && pathname.includes(itemId)) {
             router.push("/articles")
         }
-        
+
         try {
             if (isFolder) {
                 await deleteFolder.mutateAsync(itemId)
@@ -331,8 +330,8 @@ function FeedContextMenu({
                             {isProcessingDelete
                                 ? "Processing..."
                                 : isFolder
-                                  ? "Delete"
-                                  : "Unfollow"}
+                                    ? "Delete"
+                                    : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -378,28 +377,6 @@ function FeedDropdownMenu({
 
     return (
         <>
-            {isFolder && onAddFeed && folderId && (
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "h-6 w-6 p-0 mr-0.5 transition-all duration-150",
-                        "opacity-0 group-hover/item:opacity-100",
-                        "hover:bg-[hsl(var(--nav-hover))]",
-                        "active:bg-[hsl(var(--nav-hover))/0.8]",
-                        "rounded-full cursor-pointer"
-                    )}
-                    onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        onAddFeed(folderId)
-                    }}
-                    title="Add new feed"
-                >
-                    <Plus className="h-4 w-4 transition-transform duration-150" />
-                    <span className="sr-only">Add</span>
-                </Button>
-            )}
             <FeedContextMenu
                 isFolder={isFolder}
                 itemId={itemId}
@@ -420,7 +397,7 @@ function SubFeedItem({ item, index }: { item: SubFeedItem; index: number }) {
     const [imageError, setImageError] = useState(false)
     const { handleOptimisticClick } = useOptimisticNavigation()
     const { pendingPath } = useNavigationState()
-    
+
     const isOptimisticallyActive = pendingPath === item.url
     const isActiveState = item.isActive || isOptimisticallyActive
 
@@ -604,7 +581,7 @@ function RegularFeedItem({ feed }: { feed: FeedItem }) {
     const isAll = feed.id === "all"
     const { handleOptimisticClick } = useOptimisticNavigation()
     const { pendingPath } = useNavigationState()
-    
+
     const isOptimisticallyActive = pendingPath === feed.url
     const isActiveState = feed.isActive || isOptimisticallyActive
 
@@ -683,7 +660,7 @@ function MainNavigationItems({
                     const count = getCountForItem(item.title)
                     const isOptimisticallyActive = pendingPath === item.url
                     const isActiveState = pathname === item.url || isOptimisticallyActive
-                    
+
                     return (
                         <SidebarMenuItem key={item.title}>
                             <div className="flex items-center w-full group/item">
@@ -908,7 +885,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
     const handleFeedModalSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setFeedError(null) // Clear any previous errors
-        
+
         if (feedUrl.trim() && selectedFolderId) {
             createFeed.mutate(
                 { url: feedUrl.trim(), folder_id: selectedFolderId, silent: true },
@@ -923,7 +900,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                     onError: (error: any) => {
                         // Debug: log the error structure to understand what we're receiving
                         console.error("Feed creation error:", error)
-                        
+
                         // Extract error message from various possible structures
                         let errorMessage = "Failed to add feed."
                         if (error?.message) {
@@ -937,7 +914,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                         } else if (error?.response?.data?.message) {
                             errorMessage = error.response.data.message
                         }
-                        
+
                         setFeedError(errorMessage)
                     },
                     onSettled: () => {

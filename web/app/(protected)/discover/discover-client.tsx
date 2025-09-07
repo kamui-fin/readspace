@@ -7,6 +7,7 @@ import NextImage from "next/image"
 import { useState } from "react"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
+import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import Header from "@/components/navigation/header"
 import { Button } from "@/components/ui/button"
@@ -37,13 +38,31 @@ const CATEGORIES = [
     { name: "Miscellaneous", display_name: "Miscellaneous", feed_count: 0, avg_popularity: 0.0 },
 ]
 
-interface DiscoverPageClientProps { }
+interface DiscoverPageClientProps { 
+    initialQuery?: string
+    initialCategory?: string
+    initialLanguage?: string
+}
 
-export default function DiscoverPageClient() {
-    const [searchQuery, setSearchQuery] = useState("")
-    const [activeQuery, setActiveQuery] = useState("")
-    const [activeCategory, setActiveCategory] = useState("")
-    const [language, setLanguage] = useState("en")
+// Simple URL detection utility
+const isValidUrl = (text: string): boolean => {
+    try {
+        const url = new URL(text.trim())
+        return url.protocol === 'http:' || url.protocol === 'https:'
+    } catch {
+        return false
+    }
+}
+
+export default function DiscoverPageClient({ 
+    initialQuery,
+    initialCategory,
+    initialLanguage
+}: DiscoverPageClientProps) {
+    const [searchQuery, setSearchQuery] = useState(initialQuery || "")
+    const [activeQuery, setActiveQuery] = useState(initialQuery || "")
+    const [activeCategory, setActiveCategory] = useState(initialCategory || "")
+    const [language, setLanguage] = useState(initialLanguage || "en")
 
     const hasSearchParams = Boolean(activeQuery || activeCategory)
 
@@ -181,7 +200,7 @@ export default function DiscoverPageClient() {
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="en">EN</SelectItem>
+                                <SelectItem value="en">eng</SelectItem>
                                 <SelectItem value="zh">中文</SelectItem>
                             </SelectContent>
                         </Select>
@@ -264,7 +283,11 @@ export default function DiscoverPageClient() {
                                                 ease: "easeOut"
                                             }}
                                         >
-                                            <FeedCard feed={feed} />
+                                            {feed.is_preview ? (
+                                                <FeedPreviewCard feed={feed} />
+                                            ) : (
+                                                <FeedCard feed={feed} />
+                                            )}
                                         </motion.div>
                                     ))}
                                 </motion.div>

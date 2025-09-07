@@ -10,6 +10,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
     Select,
@@ -18,7 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useFolders, useRefreshFeed, useSubscribeToFeed } from "@/lib/api/hooks/feeds"
+import { useFolders, useRefreshFeed, useSubscribeToFeed, useCreateFolder } from "@/lib/api/hooks/feeds"
 import { AlertCircle, FolderPlus, Loader2, Rss } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
@@ -27,11 +28,11 @@ import { toast } from "react-hot-toast"
 interface FeedSubscriptionModalProps {
     feed: {
         id: string
-        title: string
+        title: string | null
         url: string
-        link?: string
-        description?: string
-        image_url?: string
+        link?: string | null
+        description?: string | null
+        image_url?: string | null
     }
     isOpen: boolean
     onClose: () => void
@@ -47,10 +48,13 @@ export function FeedSubscriptionModal({
     const [selectedFolderId, setSelectedFolderId] = useState<string>("")
     const [error, setError] = useState<string | null>(null)
     const [isRefreshing, setIsRefreshing] = useState(false)
+    const [isCreatingFolder, setIsCreatingFolder] = useState(false)
+    const [newFolderName, setNewFolderName] = useState("")
 
     const { data: folders, isLoading: foldersLoading } = useFolders()
     const subscribeToFeed = useSubscribeToFeed()
     const refreshFeed = useRefreshFeed()
+    const createFolder = useCreateFolder()
 
     const typedFolders = (folders as Array<{ id: string; name: string }>) || []
 
@@ -58,16 +62,31 @@ export function FeedSubscriptionModal({
         e.preventDefault()
         setError(null)
 
-        if (!selectedFolderId) {
+        if (!isCreatingFolder && !selectedFolderId) {
             setError("Please select a folder")
             return
         }
 
+        if (isCreatingFolder && !newFolderName.trim()) {
+            setError("Please enter a folder name")
+            return
+        }
+
         try {
-            // Create the subscription first
+            let folderId = selectedFolderId;
+            
+            // Create folder first if needed
+            if (isCreatingFolder) {
+                const newFolder = await createFolder.mutateAsync({
+                    name: newFolderName.trim()
+                });
+                folderId = newFolder.id;
+            }
+
+            // Create the subscription
             await subscribeToFeed.mutateAsync({
                 feedId: feed.id,
-                folderId: selectedFolderId,
+                folderId: folderId,
             })
 
             // Then refresh the feed to get latest articles
@@ -85,6 +104,8 @@ export function FeedSubscriptionModal({
             onSuccess?.()
             onClose()
             setSelectedFolderId("")
+            setIsCreatingFolder(false)
+            setNewFolderName("")
             setError(null)
 
         } catch (error: any) {
@@ -107,8 +128,10 @@ export function FeedSubscriptionModal({
     }
 
     const handleClose = () => {
-        if (!subscribeToFeed.isPending && !isRefreshing) {
+        if (!subscribeToFeed.isPending && !isRefreshing && !createFolder.isPending) {
             setSelectedFolderId("")
+            setIsCreatingFolder(false)
+            setNewFolderName("")
             setError(null)
             onClose()
         }
@@ -184,6 +207,20 @@ export function FeedSubscriptionModal({
                             <div className="flex items-center justify-center py-8">
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             </div>
+                        ) : isCreatingFolder ? (
+                            <div className="space-y-2">
+                                <Input
+                                    id="folder-name-input"
+                                    placeholder="Enter folder name..."
+                                    value={newFolderName}
+                                    onChange={(e) => setNewFolderName(e.target.value)}
+                                    required
+                                    autoFocus
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Creating a new folder: "{newFolderName || "..."}"
+                                </p>
+                            </div>
                         ) : typedFolders.length === 0 ? (
                             <Alert>
                                 <FolderPlus className="h-4 w-4" />
@@ -194,13 +231,27 @@ export function FeedSubscriptionModal({
                         ) : (
                             <Select
                                 value={selectedFolderId}
-                                onValueChange={setSelectedFolderId}
+                                onValueChange={(value) => {
+                                    if (value === "CREATE_NEW") {
+                                        setSelectedFolderId("")
+                                        setIsCreatingFolder(true)
+                                        setNewFolderName("")
+                                    } else {
+                                        setSelectedFolderId(value)
+                                    }
+                                }}
                                 required
                             >
                                 <SelectTrigger id="folder-select">
                                     <SelectValue placeholder="Select a folder" />
                                 </SelectTrigger>
                                 <SelectContent>
+                                    <SelectItem value="CREATE_NEW" className="cursor-pointer">
+                                        <div className="flex items-center gap-2">
+                                            <FolderPlus className="h-4 w-4 text-primary" />
+                                            <span className="font-medium">Create New Folder</span>
+                                        </div>
+                                    </SelectItem>
                                     {typedFolders.map((folder) => (
                                         <SelectItem
                                             key={folder.id}
@@ -229,17 +280,37 @@ export function FeedSubscriptionModal({
                         <Button
                             type="button"
                             variant="outline"
-                            onClick={handleClose}
-                            disabled={subscribeToFeed.isPending || isRefreshing}
+                            onClick={() => {
+                                if (isCreatingFolder) {
+                                    setIsCreatingFolder(false)
+                                    setNewFolderName("")
+                                    setError(null)
+                                } else {
+                                    handleClose()
+                                }
+                            }}
+                            disabled={subscribeToFeed.isPending || isRefreshing || createFolder.isPending}
                         >
-                            Cancel
+                            {isCreatingFolder ? "Back" : "Cancel"}
                         </Button>
                         <Button
                             type="submit"
-                            disabled={subscribeToFeed.isPending || isRefreshing || !selectedFolderId || typedFolders.length === 0}
+                            disabled={
+                                subscribeToFeed.isPending || 
+                                isRefreshing || 
+                                createFolder.isPending ||
+                                (!isCreatingFolder && !selectedFolderId) ||
+                                (isCreatingFolder && !newFolderName.trim()) ||
+                                (typedFolders.length === 0 && !isCreatingFolder)
+                            }
                             className="min-w-[100px]"
                         >
-                            {subscribeToFeed.isPending ? (
+                            {createFolder.isPending ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Creating...
+                                </>
+                            ) : subscribeToFeed.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Subscribing...

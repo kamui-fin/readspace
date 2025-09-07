@@ -20,7 +20,7 @@ class FeedResponse(BaseModel):
     description: str | None = None
     link: HttpUrl | None = None
     language: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     ttl: int | None = None
     skip_hours: list[int] | None = None
     skip_days: list[str] | None = None
@@ -49,14 +49,14 @@ class SubscriptionCreate(SubscriptionBase):
     """Schema for creating a new subscription."""
 
     url: HttpUrl  # URL of the feed to subscribe to
-    folder_id: UUID
+    folder_id: UUID | str  # Allow 'default' string for onboarding
     # tag_ids removed - using ARRAY field on feeds
 
 
 class SubscriptionCreateByFeedId(SubscriptionBase):
     """Schema for creating a subscription to an existing feed by ID."""
 
-    folder_id: UUID
+    folder_id: UUID | str  # Allow 'default' string for onboarding
 
 
 class SubscriptionUpdate(SubscriptionBase):
@@ -180,7 +180,7 @@ class ArticleWithStateResponse(BaseModel):
     link: HttpUrl | None = None
     description: str | None = None
     content: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     author: str | None = None
     published_at: datetime | None = None
     estimated_read_time_minutes: int | None = None
@@ -214,7 +214,7 @@ class LegacyFeedResponse(BaseModel):
     description: str | None = None
     link: HttpUrl | None = None
     language: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     is_favorite: bool = False
     ttl: int | None = None
     skip_hours: list[int] | None = None
