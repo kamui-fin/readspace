@@ -54,6 +54,7 @@ class ArticleManagementService:
         sort_order: str = "desc",
         page: int = 1,
         size: int = 50,
+        allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering and pagination."""
 
@@ -75,6 +76,7 @@ class ArticleManagementService:
             sort_order=sort_order,
             skip=skip,
             limit=size,
+            allow_preview=allow_preview,
         )
 
         articles = [
@@ -91,14 +93,15 @@ class ArticleManagementService:
             pages=pages,
         )
 
-    async def get_article(self, article_id: UUID) -> ArticleResponse | None:
+    async def get_article(self, article_id: UUID, allow_preview: bool = False) -> ArticleResponse | None:
         """Get a single article by its ID."""
-        logger.info("Getting article", article_id=article_id, user_id=self.user_id)
+        logger.info("Getting article", article_id=article_id, user_id=self.user_id, allow_preview=allow_preview)
 
         article = await get_article(
             db=self.db,
             article_id=article_id,
             user_id=self.user_id,
+            allow_preview=allow_preview,
         )
 
         if article:

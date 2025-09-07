@@ -50,20 +50,26 @@ class SubscriptionCreate(SubscriptionBase):
 
     url: HttpUrl  # URL of the feed to subscribe to
     folder_id: UUID
-    tag_ids: list[UUID] | None = None
+    # tag_ids removed - using ARRAY field on feeds
+
+
+class SubscriptionCreateByFeedId(SubscriptionBase):
+    """Schema for creating a subscription to an existing feed by ID."""
+
+    folder_id: UUID
 
 
 class SubscriptionUpdate(SubscriptionBase):
     """Schema for updating a subscription."""
 
     folder_id: UUID | None = None
-    tag_ids: list[UUID] | None = None
+    # tag_ids removed - using ARRAY field on feeds
     is_favorite: bool | None = None
     custom_title: str | None = Field(None, max_length=500)
     is_paused: bool | None = None
 
 
-class SubscriptionResponse(SubscriptionBase):
+class SubscriptionResponse(BaseModel):
     """Full subscription response with feed and folder info."""
 
     model_config = ConfigDict(from_attributes=True)
@@ -73,10 +79,11 @@ class SubscriptionResponse(SubscriptionBase):
     feed_id: UUID
     folder_id: UUID
 
-    # Subscription metadata
-    subscribed_at: datetime
-    last_viewed_at: datetime | None = None
+    # User-specific feed settings (matching actual database model)
+    is_favorite: bool
+    custom_title: str | None = None
 
+    # Subscription metadata - matching the actual database model
     created_at: datetime
     updated_at: datetime
 

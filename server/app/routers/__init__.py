@@ -7,10 +7,11 @@ from . import (
     books,
     highlights,
     rss_articles,
+    rss_discover,
     rss_feeds,
     rss_folders,
     rss_opml,
-    rss_tags,
+    rss_similar,
     upload,
     users,
 )
@@ -25,10 +26,11 @@ router.include_router(users.router, tags=["Users"])
 
 # RSS Routers
 router.include_router(rss_folders.router, prefix="/rss")
-router.include_router(rss_tags.router, prefix="/rss")
 router.include_router(rss_feeds.router, prefix="/rss")
 router.include_router(rss_articles.router, prefix="/rss")
 router.include_router(rss_opml.router, prefix="/rss")
+router.include_router(rss_discover.router, prefix="/rss")
+router.include_router(rss_similar.router, prefix="/rss")
 
 
 @router.get("/health")

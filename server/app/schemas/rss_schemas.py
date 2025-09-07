@@ -36,28 +36,6 @@ class FolderResponse(FolderBase):
     updated_at: datetime
 
 
-# ========= Tag Schemas =========
-class TagBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=100)
-
-
-class TagCreate(TagBase):
-    pass
-
-
-class TagUpdate(BaseModel):
-    name: str | None = Field(None, min_length=1, max_length=100)
-
-
-class TagResponse(TagBase):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    user_id: UUID
-    created_at: datetime
-    updated_at: datetime
-
-
 # ========= Feed Schemas =========
 class FeedBase(BaseModel):
     url: HttpUrl
@@ -65,8 +43,7 @@ class FeedBase(BaseModel):
     description: str | None = None
     link: HttpUrl | None = None
     language: str | None = Field(None, max_length=50)
-    image_url: HttpUrl | None = None
-    is_favorite: bool = False
+    image_url: str | None = None
     ttl: int | None = Field(None, gt=0)
     skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
     skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
@@ -74,7 +51,6 @@ class FeedBase(BaseModel):
 
 class FeedCreate(FeedBase):
     folder_id: UUID
-    tag_ids: list[UUID] | None = None
 
 
 # TODO: can't this be based on FeedBase
@@ -84,9 +60,8 @@ class FeedUpdate(BaseModel):
     description: str | None = None
     link: HttpUrl | None = None
     language: str | None = Field(None, max_length=50)
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     folder_id: UUID | None = None
-    is_favorite: bool | None = None
     ttl: int | None = Field(None, gt=0)
     skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
     skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
@@ -96,16 +71,18 @@ class FeedResponse(FeedBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    user_id: UUID
-    folder_id: UUID
     last_fetched_at: datetime | None = None
     last_modified_header: str | None = None
     etag_header: str | None = None
     last_article_published_at: datetime | None = None
-    unread_count: int = 0
-    # Note: Error tracking fields removed from model
     created_at: datetime
     updated_at: datetime
+
+    # Subscription-specific fields (only present when user is subscribed)
+    is_subscribed: bool = False
+    user_id: UUID | None = None
+    folder_id: UUID | None = None
+    unread_count: int | None = None
 
 
 # Minimal feed info for nesting in Article
@@ -115,7 +92,7 @@ class FeedBasicInfo(BaseModel):
     id: UUID
     title: str | None
     url: HttpUrl
-    image_url: HttpUrl | None
+    image_url: str | None
 
 
 # ========= Article Schemas =========
@@ -124,7 +101,7 @@ class ArticleContentBase(BaseModel):
     link: HttpUrl
     description: str | None = None
     content: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     author: str | None = Field(None, max_length=500)
     published_at: datetime | None = None
     estimated_read_time_minutes: int | None = Field(None, ge=0)
@@ -223,7 +200,7 @@ class ArticleBase(BaseModel):
     link: HttpUrl
     description: str | None = None
     content: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     author: str | None = Field(None, max_length=500)
     published_at: datetime | None = None
     estimated_read_time_minutes: int | None = Field(None, ge=0)
@@ -255,7 +232,7 @@ class ArticleCreate(BaseModel):
     description: str | None = None
     content: str | None = None
     author: str | None = None
-    image_url: HttpUrl | None = None
+    image_url: str | None = None
     published_at: datetime | None = None
     estimated_read_time_minutes: int | None = None
     custom_metadata: dict[str, Any] | None = None
@@ -315,3 +292,53 @@ OpmlOutline.model_rebuild()
 # Response for feed with its articles (example)
 class FeedWithArticlesResponse(FeedResponse):
     articles: list[ArticleResponse] = []
+
+
+# ========= Discover Schemas =========
+class DiscoverSearchRequest(BaseModel):
+    """Request schema for RSS feed discovery search"""
+    query: str | None = Field(None, max_length=500, description="Search query text")
+    category: str | None = Field(None, max_length=100, description="Feed category to filter by")
+    language: str = Field("en", max_length=10, description="Language code for filtering")
+    limit: int = Field(10, ge=1, le=20, description="Maximum number of results")
+
+
+class FeedDiscoveryResult(BaseModel):
+    """Feed result with relevance score for discovery"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    title: str | None
+    description: str | None
+    url: HttpUrl
+    link: HttpUrl | None
+    image_url: str | None
+    tags: list[str]
+    language: str | None
+    category: str | None
+    popularity_score: float
+    relevance: float = Field(..., ge=0.0, le=1.0, description="Relevance score from 0 to 1")
+    search_metadata: dict[str, Any] | None = Field(None, description="Additional search metadata")
+
+
+class DiscoverSearchResponse(BaseModel):
+    """Response schema for RSS feed discovery search"""
+    results: list[FeedDiscoveryResult]
+    total_count: int
+    query: str | None
+    category: str | None
+    language: str
+
+
+class CategoryInfo(BaseModel):
+    """Category information for the discovery grid"""
+    name: str
+    display_name: str
+    feed_count: int
+    avg_popularity: float
+
+
+class DiscoverCategoriesResponse(BaseModel):
+    """Response schema for discovery categories"""
+    categories: list[CategoryInfo]
+    language: str

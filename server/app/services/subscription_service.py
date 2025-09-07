@@ -31,7 +31,7 @@ class SubscriptionService:
         *,
         url: str,
         folder_id: UUID,
-        tag_ids: list[UUID] | None = None,
+        # tag_ids removed - using ARRAY field on feeds
         custom_title: str | None = None,
         feed_data: dict | None = None,
     ) -> SubscriptionResponse:
@@ -47,7 +47,7 @@ class SubscriptionService:
             subscription_in = SubscriptionCreate(
                 url=url,
                 folder_id=folder_id,
-                tag_ids=tag_ids,
+                # tag_ids removed - using ARRAY field on feeds
                 custom_title=custom_title,
             )
 

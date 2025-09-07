@@ -57,6 +57,7 @@ import {
     BookOpen,
     ChevronRight,
     Clock,
+    Compass,
     Diamond,
     Inbox,
     Loader2,
@@ -1137,7 +1138,7 @@ export function NavMain() {
 
     const mainNavItems: MainNavItem[] = [
         { title: "Today", icon: Diamond, url: "/today" },
-        // { title: "Discover", icon: Rss, url: "/discover" },
+        { title: "Discover", icon: Compass, url: "/discover" },
         { title: "Read Later", icon: BookmarkIcon, url: "/read-later" },
         { title: "Recently Read", icon: Clock, url: "/recently-read" },
     ]

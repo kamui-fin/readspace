@@ -21,31 +21,19 @@ export function AdvancedSaveOptions({
   metadata,
   onSave,
   onCancel,
-  isLoading = false
+  isLoading = false,
 }: AdvancedSaveOptionsProps) {
-  const { tags } = useExtensionStore()
-  
   const [titleOverride, setTitleOverride] = useState('')
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [note, setNote] = useState('')
   const [priority, setPriority] = useState<Priority>('medium')
-
-  const handleTagToggle = (tagId: string) => {
-    setSelectedTagIds(prev =>
-      prev.includes(tagId)
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    )
-  }
 
   const handleSave = async () => {
     const options: Partial<SaveOptions> = {
       title: titleOverride || undefined,
-      tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       note: note || undefined,
       priority,
     }
-    
+
     try {
       await onSave(options)
       toast.success('Article saved with custom options!')
@@ -72,7 +60,6 @@ export function AdvancedSaveOptions({
         </div>
       </div>
 
-      
       {/* Options */}
       <div className="space-y-4">
         {/* Title Override */}
@@ -92,8 +79,8 @@ export function AdvancedSaveOptions({
         {/* Priority */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Priority</Label>
-          <Select 
-            value={priority} 
+          <Select
+            value={priority}
             onChange={(e) => setPriority(e.target.value as Priority)}
             className="text-sm"
           >
@@ -103,32 +90,6 @@ export function AdvancedSaveOptions({
           </Select>
         </div>
 
-        {/* Tags */}
-        {tags.length > 0 && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Tags</Label>
-            <div className="flex flex-wrap gap-1">
-              {tags.map((tag) => (
-                <button
-                  key={tag.id}
-                  onClick={() => handleTagToggle(tag.id)}
-                  className="focus:outline-none"
-                >
-                  <Badge
-                    variant={selectedTagIds.includes(tag.id) ? "default" : "secondary"}
-                    className="text-xs cursor-pointer hover:bg-primary/80"
-                  >
-                    {tag.name}
-                    {selectedTagIds.includes(tag.id) && (
-                      <X className="w-3 h-3 ml-1" />
-                    )}
-                  </Badge>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Note */}
         <div className="space-y-2">
           <Label htmlFor="note" className="text-sm font-medium">
@@ -137,7 +98,9 @@ export function AdvancedSaveOptions({
           <Textarea
             id="note"
             value={note}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNote(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+              setNote(e.target.value)
+            }
             placeholder="Add a note about this article..."
             className="text-sm min-h-[60px] resize-none"
           />
@@ -146,11 +109,7 @@ export function AdvancedSaveOptions({
 
       {/* Actions */}
       <div className="flex gap-2 pt-4 border-t">
-        <Button
-          onClick={handleSave}
-          disabled={isLoading}
-          className="flex-1"
-        >
+        <Button onClick={handleSave} disabled={isLoading} className="flex-1">
           {isLoading ? (
             <>
               <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
@@ -163,14 +122,10 @@ export function AdvancedSaveOptions({
             </>
           )}
         </Button>
-        <Button
-          variant="outline"
-          onClick={onCancel}
-          disabled={isLoading}
-        >
+        <Button variant="outline" onClick={onCancel} disabled={isLoading}>
           Cancel
         </Button>
       </div>
     </div>
   )
-} 
+}

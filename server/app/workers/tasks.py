@@ -352,3 +352,75 @@ def schedule_all_feed_refreshes_task():
                 )
 
     return asyncio.run(_async_schedule_all_feeds())
+
+
+@celery.task(
+    name="app.workers.tasks.enrich_feed_task",
+    bind=True,
+    max_retries=2,
+    default_retry_delay=300,
+)
+def enrich_feed_task(self, feed_id: str):
+    """Celery task to enrich a feed with AI-powered metadata and additional information."""
+
+    async def _async_enrich_feed():
+        engine, TaskAsyncSessionLocal = await create_task_db_session()
+        try:
+            logger.info("Starting feed enrichment task", feed_id=feed_id)
+
+            async with TaskAsyncSessionLocal() as db:
+                from app.services.feed_enrichment_service import FeedEnrichmentService
+
+                enrichment_service = FeedEnrichmentService(db=db)
+                result = await enrichment_service.enrich_feed(feed_id)
+
+                if result.get("success"):
+                    logger.info(
+                        "Feed enrichment completed successfully",
+                        feed_id=feed_id,
+                        enrichment_data=result.get("enrichment_data", {})
+                    )
+                else:
+                    logger.error(
+                        "Feed enrichment failed",
+                        feed_id=feed_id,
+                        error=result.get("error")
+                    )
+
+                return result
+
+        except Exception as exc:
+            logger.error(
+                "Error in feed enrichment task",
+                feed_id=feed_id,
+                error=str(exc),
+                exc_info=True,
+            )
+            raise
+        finally:
+            if engine:
+                await engine.dispose()
+
+    try:
+        return asyncio.run(_async_enrich_feed())
+    except Exception as exc:
+        if self.request.retries < (self.max_retries or 2):
+            logger.info(
+                f"Retrying feed enrichment task, attempt {self.request.retries + 1}",
+                feed_id=feed_id,
+            )
+            raise self.retry(exc=exc, countdown=300 * (self.request.retries + 1))
+        else:
+            logger.error(
+                "Max retries reached for feed enrichment task",
+                feed_id=feed_id,
+                error=str(exc),
+                exc_info=True,
+            )
+            # Return failure result instead of raising
+            return {
+                "success": False,
+                "feed_id": feed_id,
+                "error": str(exc),
+                "status": "task_failed"
+            }

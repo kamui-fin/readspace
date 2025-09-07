@@ -1,15 +1,14 @@
 """Decorators for enforcing resource limits."""
 
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Any
 from uuid import UUID
 
-from fastapi import HTTPException, status, Depends
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.crud_profile import crud_profile
-from app.db.session import get_db
-from app.services.resource_limit_service import ResourceLimitService, ResourceLimitError
+from app.services.resource_limit_service import ResourceLimitError, ResourceLimitService
 
 
 def require_resource_limit(resource: str):
@@ -25,7 +24,7 @@ def require_resource_limit(resource: str):
             # This assumes the function has user_id as a parameter and db as a dependency
             user_id: UUID = None
             db: AsyncSession = None
-            
+
             # Look for user_id in kwargs or extract from current_user
             if 'user_id' in kwargs:
                 user_id = kwargs['user_id']
@@ -34,16 +33,16 @@ def require_resource_limit(resource: str):
             elif 'current_user' in kwargs:
                 current_user = kwargs['current_user']
                 user_id = UUID(current_user.sub)
-            
+
             # Look for db in kwargs
             if 'db' in kwargs:
                 db = kwargs['db']
-            
+
             if not user_id or not db:
                 # If we can't find the required parameters, proceed without checking
                 # This allows the function to handle missing parameters itself
                 return await func(*args, **kwargs)
-            
+
             try:
                 # Get user profile to determine role
                 profile = await crud_profile.get_by_id(db, user_id=user_id)
@@ -52,28 +51,28 @@ def require_resource_limit(resource: str):
                         status_code=status.HTTP_404_NOT_FOUND,
                         detail="User profile not found"
                     )
-                
+
                 # Check resource limit
                 resource_service = ResourceLimitService(db)
                 can_proceed = await resource_service.check_limit(user_id, resource, profile.role)
-                
+
                 if not can_proceed:
                     limits = resource_service.get_user_limits(profile.role)
                     current_usage = await resource_service.get_current_usage(user_id, resource)
-                    
+
                     raise HTTPException(
                         status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                         detail=f"Resource limit exceeded for {resource}. "
                                f"Current usage: {current_usage}/{limits.get(resource, 0)}"
                     )
-                
+
                 return await func(*args, **kwargs)
-                
+
             except ResourceLimitError as e:
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                     detail=str(e)
                 )
-                
+
         return wrapper
     return decorator

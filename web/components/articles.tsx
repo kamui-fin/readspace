@@ -1,5 +1,9 @@
 "use client"
 
+import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
+import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
+import { FeedPreviewBanner } from "@/components/feeds/feed-preview-banner"
+import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -21,9 +25,12 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
+import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
 import type { Article } from "@/lib/api/hooks/feeds"
 import {
     useArticle,
+    useFeed,
     useFeeds,
     useInfiniteArticles,
     useInfiniteReadLaterArticles,
@@ -46,20 +53,15 @@ import {
     EyeOff,
     Globe,
     Loader2,
-    Menu,
     MoreVertical,
     Paperclip,
-    RefreshCw,
+    RefreshCw
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { toast } from "react-hot-toast"
 import useInfiniteScroll from "react-infinite-scroll-hook"
-import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
-import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
-import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
 
 export function ArticlesView({
     initialSidebarTitle,
@@ -111,6 +113,7 @@ export function ArticlesView({
         null
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false)
     const router = useRouter()
     const { clearPending } = useClearPendingNavigation()
 
@@ -124,6 +127,16 @@ export function ArticlesView({
         refetchOnWindowFocus: false,
         staleTime: 5 * 60 * 1000,
     })
+
+    // Fetch feed data when viewing a specific feed to check subscription status
+    const { data: feedData } = useFeed(viewFeedId || "")
+
+    // Determine if we should show preview banner for feeds
+    const shouldShowPreviewBanner = !!(
+        viewFeedId &&
+        feedData &&
+        feedData.is_subscribed === false
+    )
 
     const typedAllUserFeeds = (allUserFeeds as any[]) || []
     const typedUnreadCounts =
@@ -164,8 +177,8 @@ export function ArticlesView({
             staleTime: 5 * 60 * 1000,
         })
     } else if (isTodayMode) {
-        infiniteQuery = useInfiniteTodayArticles({ 
-            size: 25 
+        infiniteQuery = useInfiniteTodayArticles({
+            size: 25
         }, {
             refetchOnMount: false,
             refetchOnWindowFocus: false,
@@ -257,7 +270,7 @@ export function ArticlesView({
         if (!selectedArticleId || allArticles.length === 0) return false
         const article = allArticles.find((a: Article) => a.id === selectedArticleId)
         if (!article) return false
-        
+
         // Apply same filtering logic without recreating array
         if (showUnreadOnly && article.is_read) return false
         return true
@@ -326,7 +339,7 @@ export function ArticlesView({
         rootMargin: '0px 0px 200px 0px',
     })
 
-    
+
 
     useEffect(() => {
         // Auto-select first article when we have articles but no current selection (desktop only)
@@ -334,13 +347,13 @@ export function ArticlesView({
             // Use a small timeout to ensure data has stabilized
             const timer = setTimeout(() => {
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
-                    const firstArticle = showUnreadOnly 
+                    const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) || allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle.id)
                 }
             }, 100)
-            
+
             return () => clearTimeout(timer)
         }
     }, [allArticles.length, selectedArticleId, isMobile, showContent, showUnreadOnly])
@@ -488,7 +501,8 @@ export function ArticlesView({
             setShowContent(true)
         }
         // Don't auto-mark as read on mobile click to prevent re-render loops
-        if (!isMobile) {
+        // Also don't mark as read in preview mode (when shouldShowPreviewBanner is true)
+        if (!isMobile && !shouldShowPreviewBanner) {
             const article = allArticles.find(
                 (a: Article) => a.id === articleId
             )
@@ -501,7 +515,7 @@ export function ArticlesView({
                 })
             }
         }
-    }, [allArticles, isRecentlyReadMode, updateArticle, isMobile])
+    }, [allArticles, isRecentlyReadMode, updateArticle, isMobile, shouldShowPreviewBanner])
 
     // Simplified refresh: always shallow refresh (just refetch from DB)
     const handleShallowRefresh = async () => {
@@ -644,7 +658,7 @@ export function ArticlesView({
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
                 <ResizablePanelGroup direction="horizontal">
-                    <ResizablePanel defaultSize={35} minSize={15} maxSize={40}>
+                    <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -663,302 +677,310 @@ export function ArticlesView({
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
-                                {!isRecentlyReadMode &&
-                                    !isReadLaterMode &&
-                                    unreadCount > 0 && (
-                                        <Badge
-                                            variant="outline"
-                                            className="min-w-3 px-1 flex-shrink-0"
-                                        >
-                                            {unreadCount}
-                                        </Badge>
-                                    )}
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {!isRecentlyReadMode && !isReadLaterMode ? (
-                                    // Full controls for default article views (All, Folder, Feed)
-                                    <>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                            onClick={toggleShowUnreadOnly}
-                                            title={
-                                                showUnreadOnly
-                                                    ? "Show all articles"
-                                                    : "Show unread only"
-                                            }
-                                        >
-                                            {showUnreadOnly ? (
-                                                <Eye className="h-4 w-4 transition-transform duration-200" />
-                                            ) : (
-                                                <EyeOff className="h-4 w-4 transition-transform duration-200" />
-                                            )}
-                                        </Button>
-                                        {/* Individual feed: split button with shallow + deep refresh */}
-                                        {viewFeedId ? (
-                                            <div className="flex">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                    onClick={() =>
-                                                        handleRefreshWithMessage(
-                                                            "Quick refresh..."
-                                                        )
-                                                    }
-                                                    title="Quick refresh"
-                                                    disabled={isDeepRefreshing}
-                                                >
-                                                    <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
-                                                </Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                            title="More refresh options"
-                                                            disabled={
-                                                                isDeepRefreshing
-                                                            }
-                                                        >
-                                                            <MoreVertical className="h-3 w-3 transition-transform duration-200" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleRefreshWithMessage(
-                                                                    "Quick refresh..."
-                                                                )
-                                                            }
-                                                        >
-                                                            <RefreshCw className="mr-2 h-4 w-4" />
-                                                            Quick Refresh
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={
-                                                                handleDeepRefresh
-                                                            }
-                                                            disabled={
-                                                                isDeepRefreshing
-                                                            }
-                                                        >
-                                                            <Globe className="mr-2 h-4 w-4" />
-                                                            {isDeepRefreshing
-                                                                ? "Checking..."
-                                                                : "Check for New Articles"}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        ) : (
-                                            /* Other views: simple refresh button (shallow only) */
+                                    {!isRecentlyReadMode &&
+                                        !isReadLaterMode &&
+                                        unreadCount > 0 && (
+                                            <Badge
+                                                variant="outline"
+                                                className="min-w-3 px-1 flex-shrink-0"
+                                            >
+                                                {unreadCount}
+                                            </Badge>
+                                        )}
+                                </div>
+                                <div className="flex items-center gap-1">
+                                    {!isRecentlyReadMode && !isReadLaterMode ? (
+                                        // Full controls for default article views (All, Folder, Feed)
+                                        <>
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
                                                 className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                onClick={() =>
+                                                onClick={toggleShowUnreadOnly}
+                                                title={
+                                                    showUnreadOnly
+                                                        ? "Show all articles"
+                                                        : "Show unread only"
+                                                }
+                                            >
+                                                {showUnreadOnly ? (
+                                                    <Eye className="h-4 w-4 transition-transform duration-200" />
+                                                ) : (
+                                                    <EyeOff className="h-4 w-4 transition-transform duration-200" />
+                                                )}
+                                            </Button>
+                                            {/* Individual feed: split button with shallow + deep refresh */}
+                                            {viewFeedId ? (
+                                                <div className="flex">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                        onClick={() =>
+                                                            handleRefreshWithMessage(
+                                                                "Quick refresh..."
+                                                            )
+                                                        }
+                                                        title="Quick refresh"
+                                                        disabled={isDeepRefreshing}
+                                                    >
+                                                        <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
+                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                                title="More refresh options"
+                                                                disabled={
+                                                                    isDeepRefreshing
+                                                                }
+                                                            >
+                                                                <MoreVertical className="h-3 w-3 transition-transform duration-200" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    handleRefreshWithMessage(
+                                                                        "Quick refresh..."
+                                                                    )
+                                                                }
+                                                            >
+                                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                                Quick Refresh
+                                                            </DropdownMenuItem>
+                                                            <DropdownMenuItem
+                                                                onClick={
+                                                                    handleDeepRefresh
+                                                                }
+                                                                disabled={
+                                                                    isDeepRefreshing
+                                                                }
+                                                            >
+                                                                <Globe className="mr-2 h-4 w-4" />
+                                                                {isDeepRefreshing
+                                                                    ? "Checking..."
+                                                                    : "Check for New Articles"}
+                                                            </DropdownMenuItem>
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </div>
+                                            ) : (
+                                                /* Other views: simple refresh button (shallow only) */
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                    onClick={() =>
+                                                        handleRefreshWithMessage(
+                                                            "Refreshing articles..."
+                                                        )
+                                                    }
+                                                    title="Refresh"
+                                                >
+                                                    <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
+                                                </Button>
+                                            )}
+                                        </>
+                                    ) : (
+                                        // Minimal controls (Refresh only) for special views like Recently Read, Read Later
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                            onClick={() => {
+                                                if (isRecentlyReadMode) {
+                                                    handleRefreshWithMessage(
+                                                        "Refreshing recently read..."
+                                                    )
+                                                } else if (isReadLaterMode) {
+                                                    handleRefreshWithMessage(
+                                                        "Refreshing read later..."
+                                                    )
+                                                } else {
                                                     handleRefreshWithMessage(
                                                         "Refreshing articles..."
                                                     )
                                                 }
-                                                title="Refresh"
-                                            >
-                                                <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
-                                            </Button>
+                                            }}
+                                            title="Refresh"
+                                        >
+                                            <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                            <div
+                                className="flex-1 overflow-auto min-h-0"
+                            >
+                                <div className="h-full overflow-visible">
+                                    {shouldShowPreviewBanner && (
+                                        <FeedPreviewBanner
+                                            feedTitle={feedData?.title}
+                                            feedDescription={feedData?.description}
+                                            onFollow={() => setIsSubscriptionModalOpen(true)}
+                                        />
+                                    )}
+                                    {isRecentlyReadMode || isReadLaterMode
+                                        ? filteredArticles.map(
+                                            (article: Article, index: number) => (
+                                                <ArticleItem
+                                                    key={article.id}
+                                                    article={article}
+                                                    isActive={
+                                                        article.id ===
+                                                        selectedArticleId
+                                                    }
+                                                    isLastInGroup={
+                                                        index ===
+                                                        filteredArticles.length -
+                                                        1
+                                                    }
+                                                    onClick={() =>
+                                                        handleArticleClick(
+                                                            article.id
+                                                        )
+                                                    }
+                                                    isRecentlyReadMode={
+                                                        isRecentlyReadMode
+                                                    }
+                                                    isReadLaterMode={
+                                                        isReadLaterMode
+                                                    }
+                                                    index={index}
+                                                />
+                                            )
+                                        )
+                                        : Object.entries(groupedArticles).map(
+                                            ([groupId, group]) => (
+                                                <div key={groupId}>
+                                                    <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
+                                                        <div className="flex items-center gap-2">
+                                                            {group.label ===
+                                                                "Today" ||
+                                                                group.label ===
+                                                                "Yesterday" ? (
+                                                                <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                            ) : (
+                                                                <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                            )}
+                                                            <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
+                                                                {group.label}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {group.articles.map(
+                                                        (
+                                                            article: Article,
+                                                            index: number
+                                                        ) => (
+                                                            <ArticleItem
+                                                                key={article.id}
+                                                                article={article}
+                                                                isActive={
+                                                                    article.id ===
+                                                                    selectedArticleId
+                                                                }
+                                                                isLastInGroup={
+                                                                    index ===
+                                                                    group.articles
+                                                                        .length -
+                                                                    1
+                                                                }
+                                                                onClick={() =>
+                                                                    handleArticleClick(
+                                                                        article.id
+                                                                    )
+                                                                }
+                                                                index={index}
+                                                            />
+                                                        )
+                                                    )}
+                                                </div>
+                                            )
                                         )}
-                                    </>
-                                ) : (
-                                    // Minimal controls (Refresh only) for special views like Recently Read, Read Later
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                        onClick={() => {
-                                            if (isRecentlyReadMode) {
-                                                handleRefreshWithMessage(
-                                                    "Refreshing recently read..."
-                                                )
-                                            } else if (isReadLaterMode) {
-                                                handleRefreshWithMessage(
-                                                    "Refreshing read later..."
-                                                )
-                                            } else {
-                                                handleRefreshWithMessage(
-                                                    "Refreshing articles..."
-                                                )
+                                    {hasNextPage && (
+                                        <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                                            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                                        </div>
+                                    )}
+                                    {!hasNextPage && filteredArticles.length > 0 && (
+                                        <div className="text-center py-6 text-muted-foreground text-sm">
+                                            <b>You've seen all articles!</b>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </ResizablePanel>
+                    <ResizableHandle />
+                    <ResizablePanel defaultSize={75} className="overflow-hidden">
+                        <div className="flex flex-col h-full">
+                            {isArticleLoading && (
+                                <div className="flex-1 p-8">
+                                    <ArticleContentSkeleton />
+                                </div>
+                            )}
+                            {!isArticleLoading && transformedSelectedArticle ? (
+                                <div
+                                    className="p-6 md:p-10 h-full overflow-y-auto"
+                                >
+                                    <ArticleContentView
+                                        article={transformedSelectedArticle}
+                                        isRecentlyReadMode={isRecentlyReadMode}
+                                        isReadLaterMode={isReadLaterMode}
+                                        onArticleRemoved={() =>
+                                            setSelectedArticleId(null)
+                                        }
+                                        onMarkAsRead={() => {
+                                            console.log('onMarkAsRead callback called:', {
+                                                isRecentlyReadMode,
+                                                isRead: transformedSelectedArticle.is_read,
+                                                articleId: transformedSelectedArticle.id,
+                                                shouldUpdate: !isRecentlyReadMode && !transformedSelectedArticle.is_read && !shouldShowPreviewBanner
+                                            })
+                                            if (
+                                                !isRecentlyReadMode &&
+                                                !transformedSelectedArticle.is_read &&
+                                                !shouldShowPreviewBanner
+                                            ) {
+                                                console.log('Calling updateArticle.mutate')
+                                                updateArticle.mutate({
+                                                    articleId: transformedSelectedArticle.id,
+                                                    data: { is_read: true },
+                                                    articleType: transformedSelectedArticle.article_type,
+                                                })
                                             }
                                         }}
-                                        title="Refresh"
-                                    >
-                                        <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
-                                    </Button>
-                                )}
-                            </div>
+                                    />
+                                </div>
+                            ) : null}
+                            {!isArticleLoading && !transformedSelectedArticle && (
+                                <>
+                                    {/* Show skeleton on desktop when we have articles (auto-select will happen soon) */}
+                                    {!isMobile && allArticles.length > 0 ? (
+                                        <div className="flex-1 p-8">
+                                            <ArticleContentSkeleton />
+                                        </div>
+                                    ) : allArticles.length > 0 ? (
+                                        /* Show select message when we have articles but on mobile */
+                                        <div className="flex flex-1 items-center justify-center">
+                                            <p className="text-muted-foreground">
+                                                Select an article to read
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                </>
+                            )}
                         </div>
-                        <div
-                            className="flex-1 overflow-auto min-h-0"
-                        >
-                            <div className="h-full overflow-visible">
-                                {isRecentlyReadMode || isReadLaterMode
-                                    ? filteredArticles.map(
-                                        (article: Article, index: number) => (
-                                            <ArticleItem
-                                                key={article.id}
-                                                article={article}
-                                                isActive={
-                                                    article.id ===
-                                                    selectedArticleId
-                                                }
-                                                isLastInGroup={
-                                                    index ===
-                                                    filteredArticles.length -
-                                                    1
-                                                }
-                                                onClick={() =>
-                                                    handleArticleClick(
-                                                        article.id
-                                                    )
-                                                }
-                                                isRecentlyReadMode={
-                                                    isRecentlyReadMode
-                                                }
-                                                isReadLaterMode={
-                                                    isReadLaterMode
-                                                }
-                                                index={index}
-                                            />
-                                        )
-                                    )
-                                    : Object.entries(groupedArticles).map(
-                                        ([groupId, group]) => (
-                                            <div key={groupId}>
-                                                <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
-                                                    <div className="flex items-center gap-2">
-                                                        {group.label ===
-                                                            "Today" ||
-                                                            group.label ===
-                                                            "Yesterday" ? (
-                                                            <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                        ) : (
-                                                            <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                        )}
-                                                        <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
-                                                            {group.label}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                {group.articles.map(
-                                                    (
-                                                        article: Article,
-                                                        index: number
-                                                    ) => (
-                                                        <ArticleItem
-                                                            key={article.id}
-                                                            article={article}
-                                                            isActive={
-                                                                article.id ===
-                                                                selectedArticleId
-                                                            }
-                                                            isLastInGroup={
-                                                                index ===
-                                                                group.articles
-                                                                    .length -
-                                                                1
-                                                            }
-                                                            onClick={() =>
-                                                                handleArticleClick(
-                                                                    article.id
-                                                                )
-                                                            }
-                                                            index={index}
-                                                        />
-                                                    )
-                                                )}
-                                            </div>
-                                        )
-                                    )}
-                                {hasNextPage && (
-                                    <div ref={sentinelRef} className="flex items-center justify-center py-8">
-                                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                    </div>
-                                )}
-                                {!hasNextPage && filteredArticles.length > 0 && (
-                                    <div className="text-center py-6 text-muted-foreground text-sm">
-                                        <b>You've seen all articles!</b>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </ResizablePanel>
-                <ResizableHandle />
-                <ResizablePanel defaultSize={75} className="overflow-hidden">
-                    <div className="flex flex-col h-full">
-                        {isArticleLoading && (
-                            <div className="flex-1 p-8">
-                                <ArticleContentSkeleton />
-                            </div>
-                        )}
-                        {!isArticleLoading && transformedSelectedArticle ? (
-                            <div 
-                                className="p-6 md:p-10 h-full overflow-y-auto"
-                            >
-                                <ArticleContentView
-                                    article={transformedSelectedArticle}
-                                    isRecentlyReadMode={isRecentlyReadMode}
-                                    isReadLaterMode={isReadLaterMode}
-                                    onArticleRemoved={() =>
-                                        setSelectedArticleId(null)
-                                    }
-                                    onMarkAsRead={() => {
-                                        console.log('onMarkAsRead callback called:', {
-                                            isRecentlyReadMode,
-                                            isRead: transformedSelectedArticle.is_read,
-                                            articleId: transformedSelectedArticle.id,
-                                            shouldUpdate: !isRecentlyReadMode && !transformedSelectedArticle.is_read
-                                        })
-                                        if (
-                                            !isRecentlyReadMode && 
-                                            !transformedSelectedArticle.is_read
-                                        ) {
-                                            console.log('Calling updateArticle.mutate')
-                                            updateArticle.mutate({
-                                                articleId: transformedSelectedArticle.id,
-                                                data: { is_read: true },
-                                                articleType: transformedSelectedArticle.article_type,
-                                            })
-                                        }
-                                    }}
-                                />
-                            </div>
-                        ) : null}
-                        {!isArticleLoading && !transformedSelectedArticle && (
-                            <>
-                                {/* Show skeleton on desktop when we have articles (auto-select will happen soon) */}
-                                {!isMobile && allArticles.length > 0 ? (
-                                    <div className="flex-1 p-8">
-                                        <ArticleContentSkeleton />
-                                    </div>
-                                ) : allArticles.length > 0 ? (
-                                    /* Show select message when we have articles but on mobile */
-                                    <div className="flex flex-1 items-center justify-center">
-                                        <p className="text-muted-foreground">
-                                            Select an article to read
-                                        </p>
-                                    </div>
-                                ) : null}
-                            </>
-                        )}
-                    </div>
-                </ResizablePanel>
-            </ResizablePanelGroup>
+                    </ResizablePanel>
+                </ResizablePanelGroup>
             </div>
-            
+
             {/* Mobile: Stacked layout */}
             <div className="flex md:hidden w-full h-full max-w-screen-sm mx-auto overflow-x-hidden">
                 {/* Article List View */}
@@ -1013,10 +1035,17 @@ export function ArticlesView({
                             </Button>
                         </div>
                     </div>
-                    <div 
+                    <div
                         className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden"
                     >
                         <div className="h-full">
+                            {shouldShowPreviewBanner && (
+                                <FeedPreviewBanner
+                                    feedTitle={feedData?.title}
+                                    feedDescription={feedData?.description}
+                                    onFollow={() => setIsSubscriptionModalOpen(true)}
+                                />
+                            )}
                             {isRecentlyReadMode || isReadLaterMode
                                 ? filteredArticles.map(
                                     (article: Article, index: number) => (
@@ -1109,7 +1138,7 @@ export function ArticlesView({
                             </div>
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
-                            <div 
+                            <div
                                 className="p-4 h-full overflow-y-auto overflow-x-hidden max-w-full"
                             >
                                 <ArticleContentView
@@ -1133,6 +1162,27 @@ export function ArticlesView({
                     </div>
                 </div>
             </div>
+
+            {/* Subscription Modal */}
+            {shouldShowPreviewBanner && feedData && (
+                <FeedSubscriptionModal
+                    feed={{
+                        id: feedData.id,
+                        title: feedData.title || "Untitled Feed",
+                        url: feedData.url,
+                        link: feedData.link,
+                        description: feedData.description,
+                        image_url: feedData.image_url,
+                    }}
+                    isOpen={isSubscriptionModalOpen}
+                    onClose={() => setIsSubscriptionModalOpen(false)}
+                    onSuccess={() => {
+                        setIsSubscriptionModalOpen(false)
+                        // Refresh the articles after subscription
+                        refetchArticles()
+                    }}
+                />
+            )}
         </div>
     )
 }
@@ -1406,10 +1456,10 @@ function ArticleContentView({
     return (
         <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
             <div className="mb-3 w-full min-w-0">
-                <h1 
+                <h1
                     className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
-                    style={{ 
-                        wordBreak: "break-all", 
+                    style={{
+                        wordBreak: "break-all",
                         overflowWrap: "anywhere",
                         wordWrap: "break-word",
                         hyphens: "auto",
@@ -1446,7 +1496,7 @@ function ArticleContentView({
                     <span className="truncate max-w-[min(150px,calc(50vw))] sm:max-w-[200px]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
                         {article.author ||
                             article.feed?.title ||
-                            (article.article_type === "clipped" && article.link 
+                            (article.article_type === "clipped" && article.link
                                 ? (() => {
                                     try {
                                         return new URL(article.link).hostname
@@ -1692,7 +1742,7 @@ function ArticleItem({
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
                             )}
                             <span className="text-[10px] text-muted-foreground truncate max-w-[min(120px,calc(100vw-12rem))]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
-                                {article.article_type === "clipped" && article.link 
+                                {article.article_type === "clipped" && article.link
                                     ? (() => {
                                         try {
                                             return new URL(article.link).hostname

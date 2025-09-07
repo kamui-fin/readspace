@@ -26,6 +26,8 @@ export type Feed = {
     fetch_error_count: number
     last_error_message: string | null
     last_article_published_at: string | null
+    // Preview mode support
+    is_subscribed?: boolean
 }
 
 // OPML Import types
@@ -463,7 +465,6 @@ export function useCreateFeed() {
         mutationFn: (feed: {
             url: string
             folder_id?: string
-            tag_ids?: string[]
             silent?: boolean
         }) => ApiClient.rss.createFeed(feed),
         onMutate: async (newFeed) => {
@@ -525,7 +526,6 @@ export function useUpdateFeed() {
             feedId: string
             data: {
                 folder_id?: string
-                tag_ids?: string[]
                 is_favorite?: boolean
                 title?: string
             }
@@ -933,6 +933,36 @@ export function useArticle(
         queryFn: () => ApiClient.rss.getArticle(articleId),
         enabled: !!articleId,
         ...options,
+    })
+}
+
+export function useSubscribeToFeed() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ feedId, folderId }: { feedId: string; folderId: string }) =>
+            ApiClient.rss.subscribeToFeed(feedId, { folder_id: folderId }),
+        onSuccess: (subscription) => {
+            // Invalidate and refetch feeds and unread counts
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA] })
+        },
+        onError: (error: any) => {
+            let errorMessage = "Failed to subscribe to feed"
+            if (error?.message) {
+                errorMessage = error.message
+            } else if (error?.detail) {
+                errorMessage = error.detail
+            } else if (typeof error === 'string') {
+                errorMessage = error
+            } else if (error?.response?.data?.detail) {
+                errorMessage = error.response.data.detail
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message
+            }
+            toast.error(errorMessage)
+        },
     })
 }
 

@@ -16,15 +16,11 @@ from app.schemas.rss_schemas import (
     FolderResponse,
     FolderUpdate,
     PaginatedResponse,
-    TagCreate,
-    TagResponse,
-    TagUpdate,
 )
 from app.services.article_management_service import ArticleManagementService
 from app.services.feed_management_service import FeedManagementService
 from app.services.folder_service import FolderService
 from app.services.opml_processor import OpmlProcessor
-from app.services.tag_service import TagService
 
 logger = structlog.get_logger(__name__)
 
@@ -39,7 +35,6 @@ class RssOrchestrationService:
         # Initialize specialized services
         self.feed_service = FeedManagementService(db, user_id)
         self.folder_service = FolderService(db, user_id)
-        self.tag_service = TagService(db, user_id)
         self.article_service = ArticleManagementService(db, user_id)
         self.opml_processor = OpmlProcessor()
 
@@ -93,10 +88,10 @@ class RssOrchestrationService:
         return await self.feed_service.delete_feed(feed_id)
 
     async def refresh_feed(
-        self, feed_id: UUID, force_refetch: bool = False
+        self, feed_id: UUID, force_refetch: bool = False, preview_mode: bool = False
     ) -> FeedResponse | None:
         """Refresh a feed."""
-        return await self.feed_service.refresh_feed(feed_id, force_refetch)
+        return await self.feed_service.refresh_feed(feed_id, force_refetch, preview_mode)
 
     # Folder operations
     async def create_folder(self, folder_in: FolderCreate) -> FolderResponse:
@@ -123,27 +118,6 @@ class RssOrchestrationService:
         """Delete a folder."""
         return await self.folder_service.delete_folder(folder_id)
 
-    # Tag operations
-    async def create_tag(self, tag_in: TagCreate) -> TagResponse:
-        """Create a new tag."""
-        return await self.tag_service.create_tag(tag_in)
-
-    async def get_tag(self, tag_id: UUID) -> TagResponse | None:
-        """Get a tag."""
-        return await self.tag_service.get_tag(tag_id)
-
-    async def list_tags(self, skip: int = 0, limit: int = 100) -> list[TagResponse]:
-        """List tags."""
-        return await self.tag_service.list_tags(skip=skip, limit=limit)
-
-    async def update_tag(self, tag_id: UUID, tag_in: TagUpdate) -> TagResponse | None:
-        """Update a tag."""
-        return await self.tag_service.update_tag(tag_id, tag_in)
-
-    async def delete_tag(self, tag_id: UUID) -> bool:
-        """Delete a tag."""
-        return await self.tag_service.delete_tag(tag_id)
-
     # Article operations
     async def get_articles(
         self,
@@ -161,6 +135,7 @@ class RssOrchestrationService:
         sort_order: str = "desc",
         page: int = 1,
         size: int = 50,
+        allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering."""
         return await self.article_service.get_articles(
@@ -178,11 +153,12 @@ class RssOrchestrationService:
             sort_order=sort_order,
             page=page,
             size=size,
+            allow_preview=allow_preview,
         )
 
-    async def get_article(self, article_id: UUID) -> ArticleResponse | None:
+    async def get_article(self, article_id: UUID, allow_preview: bool = False) -> ArticleResponse | None:
         """Get a single article by its ID."""
-        return await self.article_service.get_article(article_id)
+        return await self.article_service.get_article(article_id, allow_preview=allow_preview)
 
     async def get_unread_articles(
         self,

@@ -50,42 +50,22 @@ class FeedManagementService:
         )
 
     async def get_feed(self, feed_id: UUID) -> FeedResponse | None:
-        """Get a specific feed by ID."""
-        # Fetch the feed and the user's subscription to it
+        """Get a specific feed by ID. Returns feed data regardless of subscription status."""
+        # Fetch the feed
         feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
         if not feed_db:
             return None
 
+        # Check if user is subscribed to this feed
         subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
-        if not subscription_db:
-            # If there's no subscription for this user, they can't "get" the feed
-            # in a user-specific context, so return None.
-            return None
 
-        # Get unread count for this specific feed
-        from sqlalchemy import func, select
-
-        from app.models.rss_models import FeedArticle, UserArticleState
-
-        unread_counts_stmt = (
-            select(func.count(UserArticleState.id))
-            .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
-            .where(
-                UserArticleState.user_id == self.user_id,
-                UserArticleState.is_read == False,
-                FeedArticle.feed_id == feed_id,
-            )
-        )
-        unread_count_result = await self.db.execute(unread_counts_stmt)
-        unread_count = unread_count_result.scalar_one_or_none() or 0
-
-        # Construct FeedResponse from both feed and subscription data
+        # Base feed data (always present)
         feed_data = {
             "id": feed_db.id,
             "url": feed_db.url,
-            "title": subscription_db.custom_title or feed_db.title,
+            "title": feed_db.title,
             "description": feed_db.description,
             "link": feed_db.link,
             "language": feed_db.language,
@@ -99,12 +79,36 @@ class FeedManagementService:
             "last_article_published_at": feed_db.last_article_published_at,
             "created_at": feed_db.created_at,
             "updated_at": feed_db.updated_at,
-            "user_id": subscription_db.user_id,
-            "folder_id": subscription_db.folder_id,
-            "is_favorite": subscription_db.is_favorite,
-            "unread_count": unread_count,
-            "tags": [],
+            "is_subscribed": subscription_db is not None,
         }
+
+        # Add subscription-specific data if user is subscribed
+        if subscription_db:
+            # Get unread count for this specific feed
+            from sqlalchemy import func, select
+
+            from app.models.rss_models import FeedArticle, UserArticleState
+
+            unread_counts_stmt = (
+                select(func.count(UserArticleState.id))
+                .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
+                .where(
+                    UserArticleState.user_id == self.user_id,
+                    UserArticleState.is_read == False,
+                    FeedArticle.feed_id == feed_id,
+                )
+            )
+            unread_count_result = await self.db.execute(unread_counts_stmt)
+            unread_count = unread_count_result.scalar_one_or_none() or 0
+
+            # Override title with custom title if set, and add subscription data
+            feed_data.update({
+                "title": subscription_db.custom_title or feed_db.title,
+                "user_id": subscription_db.user_id,
+                "folder_id": subscription_db.folder_id,
+                "unread_count": unread_count,
+            })
+
         return FeedResponse(**feed_data)
 
     async def list_feeds(
@@ -185,7 +189,6 @@ class FeedManagementService:
                 "updated_at": feed.updated_at,
                 "user_id": subscription.user_id,
                 "folder_id": subscription.folder_id,
-                "is_favorite": subscription.is_favorite,
                 "unread_count": unread_count,
             }
             feed_responses.append(FeedResponse(**feed_data))
@@ -259,9 +262,9 @@ class FeedManagementService:
                 "last_article_published_at": feed_db.last_article_published_at,
                 "created_at": feed_db.created_at,
                 "updated_at": feed_db.updated_at,
+                "is_subscribed": True,
                 "user_id": updated_subscription.user_id,
                 "folder_id": updated_subscription.folder_id,
-                "is_favorite": updated_subscription.is_favorite,
                 "unread_count": unread_count,
             }
             return FeedResponse(**feed_data)
@@ -305,7 +308,7 @@ class FeedManagementService:
         return result
 
     async def refresh_feed(
-        self, feed_id: UUID, force_refetch: bool = False
+        self, feed_id: UUID, force_refetch: bool = False, preview_mode: bool = False
     ) -> FeedResponse | None:
         """Refresh a specific feed by fetching latest content."""
         logger.info(
@@ -313,24 +316,28 @@ class FeedManagementService:
             feed_id=feed_id,
             user_id=self.user_id,
             force_refetch=force_refetch,
+            preview_mode=preview_mode,
         )
 
-        # Get the feed and the user's subscription
+        # Get the feed
         feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
         if not feed_db:
             logger.warning("Feed not found for refresh", feed_id=feed_id)
             return None
 
-        subscription_db = await crud_subscription.get_subscription_by_feed_id(
-            db=self.db, feed_id=feed_id, user_id=self.user_id
-        )
-        if not subscription_db:
-            logger.warning(
-                "Subscription not found for refresh",
-                feed_id=feed_id,
-                user_id=self.user_id,
+        # For preview mode, we don't require a subscription
+        subscription_db = None
+        if not preview_mode:
+            subscription_db = await crud_subscription.get_subscription_by_feed_id(
+                db=self.db, feed_id=feed_id, user_id=self.user_id
             )
-            return None
+            if not subscription_db:
+                logger.warning(
+                    "Subscription not found for refresh",
+                    feed_id=feed_id,
+                    user_id=self.user_id,
+                )
+                return None
 
         try:
             # Fetch and parse the feed content
@@ -350,10 +357,13 @@ class FeedManagementService:
                 )
                 logger.info("Feed not modified, refresh skipped", feed_id=feed_id)
                 # Construct FeedResponse with current data
-                unread_count = await self._get_unread_count(feed_id)
-                return self._construct_feed_response(
-                    feed_db, subscription_db, unread_count
-                )
+                if preview_mode:
+                    return self._construct_feed_response_preview(feed_db)
+                else:
+                    unread_count = await self._get_unread_count(feed_id)
+                    return self._construct_feed_response(
+                        feed_db, subscription_db, unread_count
+                    )
 
             if fetch_result["status_code"] != 200 or not fetch_result["content"]:
                 logger.error(
@@ -362,10 +372,13 @@ class FeedManagementService:
                     status=fetch_result.get("status_code"),
                 )
                 # Return current state with correct user-specific data
-                unread_count = await self._get_unread_count(feed_id)
-                return self._construct_feed_response(
-                    feed_db, subscription_db, unread_count
-                )
+                if preview_mode:
+                    return self._construct_feed_response_preview(feed_db)
+                else:
+                    unread_count = await self._get_unread_count(feed_id)
+                    return self._construct_feed_response(
+                        feed_db, subscription_db, unread_count
+                    )
 
             # Parse the feed content
             parsed_feed = self.feed_parser.parse_feed_data(
@@ -380,10 +393,13 @@ class FeedManagementService:
 
             logger.info("Feed refreshed successfully", feed_id=feed_id)
             if refreshed_feed:
-                unread_count = await self._get_unread_count(feed_id)
-                return self._construct_feed_response(
-                    refreshed_feed, subscription_db, unread_count
-                )
+                if preview_mode:
+                    return self._construct_feed_response_preview(refreshed_feed)
+                else:
+                    unread_count = await self._get_unread_count(feed_id)
+                    return self._construct_feed_response(
+                        refreshed_feed, subscription_db, unread_count
+                    )
             return None
 
         except Exception as e:
@@ -438,11 +454,36 @@ class FeedManagementService:
             "last_article_published_at": feed_db.last_article_published_at,
             "created_at": feed_db.created_at,
             "updated_at": feed_db.updated_at,
+            "is_subscribed": True,
             "user_id": subscription_db.user_id,
             "folder_id": subscription_db.folder_id,
-            "is_favorite": subscription_db.is_favorite,
             "unread_count": unread_count,
-            "tags": [],
+        }
+        return FeedResponse(**feed_data)
+
+    def _construct_feed_response_preview(self, feed_db) -> FeedResponse:
+        """Construct a FeedResponse for preview mode (no subscription data)."""
+        feed_data = {
+            "id": feed_db.id,
+            "url": feed_db.url,
+            "title": feed_db.title,
+            "description": feed_db.description,
+            "link": feed_db.link,
+            "language": feed_db.language,
+            "image_url": feed_db.image_url,
+            "ttl": feed_db.ttl,
+            "skip_hours": feed_db.skip_hours,
+            "skip_days": feed_db.skip_days,
+            "last_fetched_at": feed_db.last_fetched_at,
+            "last_modified_header": feed_db.last_modified_header,
+            "etag_header": feed_db.etag_header,
+            "last_article_published_at": feed_db.last_article_published_at,
+            "created_at": feed_db.created_at,
+            "updated_at": feed_db.updated_at,
+            "is_subscribed": False,
+            "user_id": None,
+            "folder_id": None,
+            "unread_count": None,
         }
         return FeedResponse(**feed_data)
 

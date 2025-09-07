@@ -6,9 +6,8 @@ from uuid import UUID
 import structlog
 from sqlalchemy import case, func, literal_column, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
-from app.models.rss_models import Feed, FeedSubscription, Tag
+from app.models.rss_models import Feed, FeedCategory, FeedSubscription
 from app.schemas.rss_schemas import FeedBase
 
 # Constants for refresh logic (in minutes)
@@ -39,7 +38,6 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     existing_feed = await get_feed_by_url(db, url=str(feed_data.url))
     if existing_feed:
         # Update subscriber count and return existing feed
-        # Note: subscriber_count column removed from model
         db.add(existing_feed)
         await db.commit()
         await db.refresh(existing_feed)
@@ -52,7 +50,6 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
         if key in feed_dict and feed_dict[key] is not None:
             feed_dict[key] = str(feed_dict[key])
 
-    # Note: subscriber_count column removed from model
     db_feed = Feed(**feed_dict)
 
     db.add(db_feed)
@@ -128,7 +125,6 @@ async def update_feed_metadata(
         feed_db.last_article_published_at = last_article_published_at
 
     # Reset error state on successful fetch
-    # Note: Error tracking columns removed from model
     db.add(feed_db)
     await db.commit()
     await db.refresh(feed_db)
@@ -140,15 +136,16 @@ async def get_feeds_needing_refresh(
     db: AsyncSession, *, limit: int = 100
 ) -> list[Feed]:
     """Get global feeds that need refreshing, prioritized by subscriber count."""
-    logger.info("get_feeds_needing_refresh called (new version)", limit=limit)
+    logger.info("get_feeds_needing_refresh called (filtering feeds with 0 subscribers)", limit=limit)
     now = datetime.now(timezone.utc)
     current_utc_hour = now.hour
     current_utc_weekday = now.weekday()
 
-    # Never fetched feeds (top priority)
+    # Never fetched feeds (top priority) - only refresh feeds with subscribers
     never_fetched_stmt = (
         select(Feed)
         .filter(Feed.last_fetched_at.is_(None))
+        .filter(Feed.subscriber_count > 0)
         .filter(
             (Feed.skip_hours.is_(None))
             | (~Feed.skip_hours.contains([current_utc_hour]))
@@ -203,6 +200,7 @@ async def get_feeds_needing_refresh(
         due_feeds_stmt = (
             select(Feed)
             .filter(Feed.last_fetched_at.is_not(None))
+            .filter(Feed.subscriber_count > 0)
             .filter(Feed.last_fetched_at < min_interval_ago)
             .filter(
                 (Feed.skip_hours.is_(None))
@@ -228,7 +226,8 @@ async def get_feeds_needing_refresh(
             )
             .filter(literal_column("NOW()") >= next_fetch_time)
             .order_by(
-                # Note: columns removed from model - using creation time as fallback
+                # Prioritize feeds with more subscribers, then by last fetch time
+                Feed.subscriber_count.desc(),
                 Feed.last_fetched_at.asc()
             )
             .limit(remaining_limit)
@@ -240,8 +239,21 @@ async def get_feeds_needing_refresh(
         logger.info("Found due feeds", count=len(due_feeds))
         feeds_needing_refresh.extend(due_feeds)
 
+    # Add statistics about feeds filtered out
+    total_feeds_result = await db.execute(select(func.count(Feed.id)))
+    total_feeds = total_feeds_result.scalar()
+
+    zero_subscriber_feeds_result = await db.execute(
+        select(func.count(Feed.id)).filter(Feed.subscriber_count == 0)
+    )
+    zero_subscriber_feeds = zero_subscriber_feeds_result.scalar()
+
     logger.info(
-        "get_feeds_needing_refresh returning", total_count=len(feeds_needing_refresh)
+        "get_feeds_needing_refresh returning",
+        total_count=len(feeds_needing_refresh),
+        total_feeds_in_db=total_feeds,
+        feeds_with_zero_subscribers=zero_subscriber_feeds,
+        feeds_skipped_due_to_no_subscribers=zero_subscriber_feeds
     )
     return feeds_needing_refresh[:limit]
 
@@ -271,12 +283,8 @@ async def get_feeds_by_user(
     if is_favorite is not None:
         stmt = stmt.filter(FeedSubscription.is_favorite == is_favorite)
 
-    if tag_names:
-        for i, tag_name in enumerate(tag_names):
-            tag_alias = aliased(Tag, name=f"tag_{i}")
-            stmt = stmt.join(tag_alias, Feed.tags).filter(
-                tag_alias.name.ilike(f"%{tag_name}%")
-            )
+    # Tag filtering removed - feeds now use tags as ARRAY field
+    # tag filtering would need to be adapted for ARRAY contains operations
 
     if search_query:
         stmt = stmt.filter(Feed.title.ilike(f"%{search_query}%"))
@@ -285,3 +293,81 @@ async def get_feeds_by_user(
 
     result = await db.execute(stmt)
     return result.unique().all()
+
+
+async def update_feed_enrichment(
+    db: AsyncSession,
+    feed: Feed,
+    enrichment_data: dict[str, any]
+) -> Feed:
+    """Update feed with enrichment data from background processing."""
+    try:
+        # Update basic feed metadata
+        if 'title' in enrichment_data and enrichment_data['title']:
+            feed.title = enrichment_data['title']
+
+        if 'description' in enrichment_data and enrichment_data['description']:
+            feed.description = enrichment_data['description']
+
+        if 'link' in enrichment_data and enrichment_data['link']:
+            feed.link = enrichment_data['link']
+
+        if 'image_url' in enrichment_data and enrichment_data['image_url']:
+            feed.image_url = enrichment_data['image_url']
+
+        if 'language' in enrichment_data and enrichment_data['language']:
+            feed.language = enrichment_data['language']
+
+        # Update RSS dataset fields
+        if 'tags' in enrichment_data and isinstance(enrichment_data['tags'], list):
+            feed.tags = enrichment_data['tags']
+
+        if 'top_level_category' in enrichment_data:
+            category_str = enrichment_data['top_level_category']
+            try:
+                # Convert string to enum
+                feed.top_level_category = FeedCategory(category_str)
+            except ValueError:
+                logger.warning("Invalid category", category=category_str, feed_id=feed.id)
+                feed.top_level_category = FeedCategory.MISCELLANEOUS
+
+        if 'popularity_score' in enrichment_data:
+            feed.popularity_score = float(enrichment_data['popularity_score'])
+
+        # Update embedding if present
+        if 'embedding' in enrichment_data and enrichment_data['embedding']:
+            # Embedding is handled as a vector column by SQLAlchemy
+            # The pgvector extension handles the conversion
+            from sqlalchemy import text
+            embedding_list = enrichment_data['embedding']
+            if isinstance(embedding_list, list) and len(embedding_list) == 768:
+                # Update using raw SQL for vector type
+                await db.execute(
+                    text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
+                    {"embedding": str(embedding_list), "feed_id": feed.id}
+                )
+
+        # Update the feed timestamp
+        feed.updated_at = datetime.now(timezone.utc)
+
+        db.add(feed)
+        await db.commit()
+        await db.refresh(feed)
+
+        logger.info(
+            "Feed enrichment data updated successfully",
+            feed_id=feed.id,
+            updated_fields=list(enrichment_data.keys())
+        )
+
+        return feed
+
+    except Exception as e:
+        logger.error(
+            "Failed to update feed with enrichment data",
+            feed_id=feed.id,
+            error=str(e),
+            exc_info=True
+        )
+        await db.rollback()
+        raise

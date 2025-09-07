@@ -25,27 +25,42 @@ class ArticleCrudOperations:
 
     @staticmethod
     async def get_article_by_id(
-        db: AsyncSession, *, article_id: UUID, user_id: UUID
+        db: AsyncSession, *, article_id: UUID, user_id: UUID, allow_preview: bool = False
     ) -> tuple[FeedArticle, UserArticleState] | ClippedArticle | None:
         """Get a specific article by its ID, ensuring it belongs to the user."""
         # First try to get from feed_articles (RSS articles) with user state
-        # Need to join with FeedSubscription to ensure user has access to this feed
-        result = await db.execute(
-            select(FeedArticle, UserArticleState)
-            .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
-            .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
-            .outerjoin(
-                UserArticleState,
-                (UserArticleState.article_id == FeedArticle.id)
-                & (UserArticleState.user_id == user_id),
+        if allow_preview:
+            # In preview mode, don't require subscription - just get the article
+            result = await db.execute(
+                select(FeedArticle, UserArticleState)
+                .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
+                .outerjoin(
+                    UserArticleState,
+                    (UserArticleState.article_id == FeedArticle.id)
+                    & (UserArticleState.user_id == user_id),
+                )
+                .filter(FeedArticle.id == article_id)
             )
-            .filter(FeedArticle.id == article_id, FeedSubscription.user_id == user_id)
-        )
+        else:
+            # Normal mode - require subscription to access the feed
+            result = await db.execute(
+                select(FeedArticle, UserArticleState)
+                .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
+                .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
+                .outerjoin(
+                    UserArticleState,
+                    (UserArticleState.article_id == FeedArticle.id)
+                    & (UserArticleState.user_id == user_id),
+                )
+                .filter(FeedArticle.id == article_id, FeedSubscription.user_id == user_id)
+            )
+
         row = result.first()
         if row:
             return (row[0], row[1])  # (FeedArticle, UserArticleState)
 
         # If not found, try clipped_articles (manually saved articles)
+        # Clipped articles always require user ownership
         result = await db.execute(
             select(ClippedArticle)
             .options(selectinload(ClippedArticle.content))
@@ -81,9 +96,10 @@ class ArticleCrudOperations:
         sort_order: str = "desc",
         skip: int = 0,
         limit: int = 100,
+        allow_preview: bool = False,
     ) -> tuple[list[tuple[FeedArticle, UserArticleState]], int]:
         """Get articles for a user with comprehensive filtering and sorting."""
-        query_builder = ArticleQueryBuilder(user_id)
+        query_builder = ArticleQueryBuilder(user_id, allow_preview=allow_preview)
 
         stmt, count_stmt = query_builder.build_filtered_query(
             feed_ids=feed_ids,

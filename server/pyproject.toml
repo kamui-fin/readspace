@@ -63,6 +63,10 @@ gevent = "^25.5.1"
 bs4 = "^0.0.2"
 psycopg2-binary = "^2.9.10"
 beautifulsoup4 = "^4.13.4"
+openai = "^1.106.1"
+extract-favicon = "^0.5.3"
+lingua-language-detector = "^2.1.1"
+pgvector = "^0.4.1"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

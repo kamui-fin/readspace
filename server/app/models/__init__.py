@@ -10,7 +10,6 @@ from .rss_models import (
     FeedArticle,
     FeedSubscription,
     Folder,
-    Tag,
     UserArticleState,
 )
 

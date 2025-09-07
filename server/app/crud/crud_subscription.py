@@ -5,10 +5,10 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased, selectinload
+from sqlalchemy.orm import selectinload
 
-from app.crud import crud_feed, crud_folder, crud_tag
-from app.models.rss_models import Feed, FeedSubscription, Tag
+from app.crud import crud_feed, crud_folder
+from app.models.rss_models import Feed, FeedSubscription
 from app.schemas.subscription_schemas import SubscriptionCreate, SubscriptionUpdate
 
 
@@ -70,13 +70,8 @@ async def get_subscriptions_by_user(
     if is_favorite is not None:
         stmt = stmt.filter(FeedSubscription.is_favorite == is_favorite)
 
-    if tag_names:
-        # Join with tags through the feed's tag associations
-        for i, tag_name in enumerate(tag_names):
-            tag_alias = aliased(Tag, name=f"tag_{i}")
-            stmt = stmt.join(tag_alias, Feed.tags).filter(
-                tag_alias.name.ilike(tag_name)
-            )
+    # Tag filtering removed - feeds now use tags as ARRAY field
+    # tag filtering would need to be adapted for ARRAY contains operations
 
     if search_query:
         stmt = stmt.filter(
@@ -135,7 +130,7 @@ async def create_subscription(
 
         feed_base = FeedBase(**feed_data)
         feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
-    # Feed exists, no need to increment count as subscriber_count field was removed
+    # Feed exists, subscriber_count will be incremented automatically by database trigger
 
     # Create subscription
     subscription_data = {
@@ -148,20 +143,7 @@ async def create_subscription(
 
     db_subscription = FeedSubscription(**subscription_data)
 
-    # Handle tags if provided
-    if subscription_in.tag_ids:
-        # Tags are associated with the global feed, not the subscription
-        # We need to update the feed's tags if they don't exist
-        for tag_id in subscription_in.tag_ids:
-            tag = await crud_tag.get_tag(db, tag_id=tag_id, user_id=user_id)
-            if tag:
-                # Check if tag is already associated with the feed
-                if tag not in feed_db.tags:
-                    feed_db.tags.append(tag)
-            else:
-                raise ValueError(f"Tag with id {tag_id} not found for this user.")
-
-        db.add(feed_db)  # Add updated feed with new tags
+    # Tags are now handled as ARRAY field on feeds - no longer using tag_ids
 
     db.add(db_subscription)
     await db.commit()
@@ -196,18 +178,7 @@ async def update_subscription(
             raise ValueError(f"Folder with id {new_folder_id} not found for this user.")
         subscription_db.folder_id = new_folder.id
 
-    # Handle tag updates (these affect the global feed)
-    if "tag_ids" in update_data:
-        feed_db = subscription_db.feed
-        feed_db.tags.clear()
-        if update_data["tag_ids"]:
-            for tag_id in update_data["tag_ids"]:
-                tag = await crud_tag.get_tag(db, tag_id=tag_id, user_id=user_id)
-                if tag:
-                    feed_db.tags.append(tag)
-                else:
-                    raise ValueError(f"Tag with id {tag_id} not found for this user.")
-        db.add(feed_db)
+    # Tags are now handled as ARRAY field on feeds - no longer using tag_ids
 
     # Update subscription-specific fields
     for field in ["is_favorite", "custom_title", "is_paused"]:
@@ -247,7 +218,7 @@ async def get_subscription_by_feed_id(
     result = await db.execute(
         select(FeedSubscription)
         .options(
-            selectinload(FeedSubscription.feed).selectinload(Feed.tags),
+            selectinload(FeedSubscription.feed),
             selectinload(FeedSubscription.folder),
         )
         .filter(

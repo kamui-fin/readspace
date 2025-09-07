@@ -331,11 +331,11 @@ export class ApiClient {
                 fetch_error_count: number
                 last_error_message: string | null
                 last_article_published_at: string | null
+                is_subscribed?: boolean
             }>(`/api/rss/feeds/${id}`),
         createFeed: (data: {
             url: string
             folder_id?: string
-            tag_ids?: string[]
         }) =>
             this.post<{
                 id: string
@@ -357,7 +357,6 @@ export class ApiClient {
             id: string,
             data: {
                 folder_id?: string
-                tag_ids?: string[]
                 is_favorite?: boolean
                 title?: string
             }
@@ -378,12 +377,23 @@ export class ApiClient {
                 last_error_message: string | null
                 last_article_published_at: string | null
             }>(`/api/rss/feeds/${id}`, data),
-        refreshFeed: (id: string, forceRefetch: boolean = false) => {
+        refreshFeed: (id: string, forceRefetch: boolean = false, preview: boolean = false) => {
             const queryParams = new URLSearchParams()
             if (forceRefetch) queryParams.append("force_refetch", "true")
-            return this.post<{ task_id: string; status: string }>(
-                `/api/rss/feeds/${id}/refresh${queryParams.toString() ? `?${queryParams.toString()}` : ""}`
-            )
+            if (preview) queryParams.append("preview", "true")
+            const queryString = queryParams.toString()
+            
+            if (preview) {
+                // For preview mode, return the feed data directly
+                return this.post<any>(
+                    `/api/rss/feeds/${id}/refresh${queryString ? `?${queryString}` : ""}`
+                )
+            } else {
+                // For normal mode, return the task info
+                return this.post<{ task_id: string; status: string }>(
+                    `/api/rss/feeds/${id}/refresh${queryString ? `?${queryString}` : ""}`
+                )
+            }
         },
         refreshFolderFeeds: (folderId: string) =>
             this.post<{ task_id: string; status: string }>(
@@ -402,6 +412,78 @@ export class ApiClient {
                 total?: number
             }>(`/api/rss/feeds/refresh_status/${taskId}`),
         deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
+        subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
+            this.post<{
+                id: string
+                user_id: string
+                feed_id: string
+                folder_id: string
+                is_favorite: boolean
+                custom_title: string | null
+                is_paused: boolean
+                subscribed_at: string
+                last_viewed_at: string | null
+                created_at: string
+                updated_at: string
+                feed: {
+                    id: string
+                    url: string
+                    title: string | null
+                    description: string | null
+                    link: string | null
+                    language: string | null
+                    image_url: string | null
+                    ttl: number | null
+                    skip_hours: number[] | null
+                    skip_days: string[] | null
+                    last_fetched_at: string | null
+                    last_modified_header: string | null
+                    etag_header: string | null
+                    last_article_published_at: string | null
+                    created_at: string
+                    updated_at: string
+                }
+                folder: {
+                    id: string
+                    name: string
+                    user_id: string
+                    created_at: string
+                }
+            }>(`/api/rss/feeds/${feedId}/subscribe`, data),
+        getSimilarFeeds: (id: string, params?: {
+            limit?: number
+            min_similarity?: number
+        }) => {
+            const queryParams = new URLSearchParams()
+            if (params?.limit) queryParams.append("limit", params.limit.toString())
+            if (params?.min_similarity) queryParams.append("min_similarity", params.min_similarity.toString())
+
+            const queryString = queryParams.toString()
+            return this.get<{
+                source_feed: {
+                    id: string
+                    title: string | null
+                    description: string | null
+                    url: string
+                    link: string | null
+                    image_url: string | null
+                }
+                similar_feeds: Array<{
+                    id: string
+                    title: string | null
+                    description: string | null
+                    url: string
+                    link: string | null
+                    image_url: string | null
+                    tags: string[]
+                    language: string | null
+                    category: string | null
+                    popularity_score: number
+                    relevance: number
+                    search_metadata?: Record<string, any>
+                }>
+            }>(`/api/rss/similar/${id}${queryString ? `?${queryString}` : ""}`)
+        },
 
         // Articles
         getArticles: (params: {
@@ -647,6 +729,89 @@ export class ApiClient {
                 size: number
                 pages: number
             }>(`/api/rss/articles/today${queryString ? `?${queryString}` : ""}`)
+        },
+
+        // Discover endpoints
+        searchFeeds: (params?: {
+            q?: string
+            category?: string
+            language?: string
+            limit?: number
+        }) => {
+            const queryParams = new URLSearchParams()
+            if (params?.q) queryParams.append("q", params.q)
+            if (params?.category) queryParams.append("category", params.category)
+            if (params?.language) queryParams.append("language", params.language)
+            if (params?.limit) queryParams.append("limit", params.limit.toString())
+
+            const queryString = queryParams.toString()
+            return this.get<{
+                results: Array<{
+                    id: string
+                    title: string | null
+                    description: string | null
+                    url: string
+                    link: string | null
+                    image_url: string | null
+                    tags: string[]
+                    language: string | null
+                    category: string | null
+                    popularity_score: number
+                    relevance: number
+                    search_metadata?: Record<string, any>
+                }>
+                total_count: number
+                query: string | null
+                category: string | null
+                language: string
+            }>(`/api/rss/discover/search${queryString ? `?${queryString}` : ""}`)
+        },
+
+        getCategories: (params?: { language?: string }) => {
+            const queryParams = new URLSearchParams()
+            if (params?.language) queryParams.append("language", params.language)
+
+            const queryString = queryParams.toString()
+            return this.get<{
+                categories: Array<{
+                    name: string
+                    display_name: string
+                    feed_count: number
+                    avg_popularity: number
+                }>
+                language: string
+            }>(`/api/rss/discover/categories${queryString ? `?${queryString}` : ""}`)
+        },
+
+        getCategoryFeeds: (categoryName: string, params?: {
+            language?: string
+            limit?: number
+        }) => {
+            const queryParams = new URLSearchParams()
+            if (params?.language) queryParams.append("language", params.language)
+            if (params?.limit) queryParams.append("limit", params.limit.toString())
+
+            const queryString = queryParams.toString()
+            return this.get<{
+                results: Array<{
+                    id: string
+                    title: string | null
+                    description: string | null
+                    url: string
+                    link: string | null
+                    image_url: string | null
+                    tags: string[]
+                    language: string | null
+                    category: string | null
+                    popularity_score: number
+                    relevance: number
+                    search_metadata?: Record<string, any>
+                }>
+                total_count: number
+                query: string | null
+                category: string | null
+                language: string
+            }>(`/api/rss/discover/categories/${encodeURIComponent(categoryName)}${queryString ? `?${queryString}` : ""}`)
         },
     }
 
