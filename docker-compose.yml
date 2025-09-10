@@ -21,6 +21,7 @@ services:
     container_name: readspace_web
     extra_hosts:
       - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
     ports:
       - "18042:8042"
     environment:

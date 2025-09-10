@@ -228,10 +228,6 @@ NEXT_PUBLIC_API_BASE_URL=http://${API_HOST}:18008
 NEXT_PUBLIC_APP_URL=http://${API_HOST}:18042
 NEXT_PUBLIC_SUPABASE_URL=http://${API_HOST}:18000
 NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-
-# Server-side configuration (internal container URLs)
-API_BASE_URL=http://readspace_api:8008
-SUPABASE_URL=http://supabase-kong:8000
 EOF
 echo "✅ web/.env created."
 
