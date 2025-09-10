@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models.rss_models import Feed, FeedCategory
 from app.services.ai_service import get_ai_service
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
@@ -20,13 +21,17 @@ class RssSearchService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.settings = get_settings()
-        self.ai_service = get_ai_service()
+        self.ai_service = get_ai_service() if self.settings.ENABLE_AI else None
 
     def _normalize_url(self, url_str: str | None) -> str | None:
         """Normalize URL to ensure it's a valid HTTP/HTTPS URL for Pydantic."""
         if not url_str:
             return None
         url_str = str(url_str).strip()
+
+        # Transform RSShub URLs first
+        if url_str.startswith('rsshub://'):
+            url_str = transform_rsshub_url(url_str)
 
         # If it's already a valid web URL, return it
         if url_str.startswith(('http://', 'https://')):
@@ -95,7 +100,12 @@ class RssSearchService:
                 return results
 
         if query:
-            return await self._hybrid_search(query, language, limit, category)
+            # Use hybrid search if AI is enabled, otherwise use simple search
+            if self.settings.ENABLE_AI and self.ai_service:
+                return await self._hybrid_search(query, language, limit, category)
+            else:
+                logger.info("AI disabled, using FTS-only search", query=query)
+                return await self._simple_search(query, language, limit, category)
         elif category:
             return await self._category_search(category, language, limit)
         else:
@@ -178,10 +188,15 @@ class RssSearchService:
         try:
             logger.debug("Starting hybrid search", query=query, language=language, limit=limit, category=category)
 
-            # Generate embedding for the query using AI service
-            embedding = await self.ai_service.generate_embedding(query)
+            # Ensure AI is enabled for hybrid search
+            if not self.settings.ENABLE_AI or not self.ai_service:
+                logger.warning("AI disabled but hybrid search called, falling back to simple search")
+                return await self._simple_search(query, language, limit, category)
+
+            # Generate embedding for the query using Gemini
+            embedding = await self.ai_service.generate_embedding_with_gemini(query)
             if embedding is None:
-                logger.warning("Failed to generate embedding, falling back to text-only search")
+                logger.warning("Failed to generate embedding with Gemini, falling back to text-only search")
                 return await self._simple_search(query, language, limit, category)
 
             # Convert embedding to string format for PostgreSQL vector type
@@ -318,7 +333,7 @@ class RssSearchService:
                     "id": str(row.id),
                     "title": row.title,
                     "description": row.description,
-                    "url": str(row.url),
+                    "url": self._normalize_url(str(row.url)),  # Apply normalization to main URL too
                     "link": self._normalize_url(row.link),
                     "image_url": self._normalize_url(row.image_url),
                     "tags": row.tags or [],
@@ -387,7 +402,7 @@ class RssSearchService:
                     "id": str(feed.id),
                     "title": feed.title,
                     "description": feed.description,
-                    "url": str(feed.url),
+                    "url": self._normalize_url(str(feed.url)),
                     "link": self._normalize_url(feed.link),
                     "image_url": self._normalize_url(feed.image_url),
                     "tags": feed.tags or [],
@@ -443,7 +458,7 @@ class RssSearchService:
                     "id": str(feed.id),
                     "title": feed.title,
                     "description": feed.description,
-                    "url": str(feed.url),
+                    "url": self._normalize_url(str(feed.url)),
                     "link": self._normalize_url(feed.link),
                     "image_url": self._normalize_url(feed.image_url),
                     "tags": feed.tags or [],
@@ -484,7 +499,7 @@ class RssSearchService:
                     "id": str(feed.id),
                     "title": feed.title,
                     "description": feed.description,
-                    "url": str(feed.url),
+                    "url": self._normalize_url(str(feed.url)),
                     "link": self._normalize_url(feed.link),
                     "image_url": self._normalize_url(feed.image_url),
                     "tags": feed.tags or [],

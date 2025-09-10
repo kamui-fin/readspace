@@ -4,6 +4,7 @@ import { formatDistanceToNow, parseISO } from "date-fns"
 import {
     AlertTriangle,
     CheckCircle,
+    Download,
     Edit3,
     ExternalLink,
     MoreHorizontal,
@@ -285,6 +286,87 @@ export default function ManageFeedsPageClient() {
         }
     }
 
+    const generateOPMLContent = (feedsToExport: Feed[]): string => {
+        const now = new Date()
+        const dateString = now.toUTCString()
+        
+        // Group feeds by folder
+        const foldersMap = new Map<string, Feed[]>()
+        
+        feedsToExport.forEach(feed => {
+            const folderName = folders.find(f => f.id === feed.folder_id)?.name || "Uncategorized"
+            if (!foldersMap.has(folderName)) {
+                foldersMap.set(folderName, [])
+            }
+            foldersMap.get(folderName)!.push(feed)
+        })
+        
+        let opmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+    <head>
+        <title>Readspace Feeds Export</title>
+        <dateCreated>${dateString}</dateCreated>
+    </head>
+    <body>
+`
+        
+        // Add feeds grouped by folders
+        for (const [folderName, folderFeeds] of foldersMap) {
+            if (foldersMap.size > 1 || folderName !== "Uncategorized") {
+                opmlContent += `        <outline text="${folderName}" title="${folderName}">
+`
+                folderFeeds.forEach(feed => {
+                    const title = feed.title || feed.url
+                    const htmlUrl = feed.link || feed.url
+                    opmlContent += `            <outline text="${title}" title="${title}" type="rss" xmlUrl="${feed.url}" htmlUrl="${htmlUrl}"/>
+`
+                })
+                opmlContent += `        </outline>
+`
+            } else {
+                // Put feeds directly in body if only uncategorized
+                folderFeeds.forEach(feed => {
+                    const title = feed.title || feed.url
+                    const htmlUrl = feed.link || feed.url
+                    opmlContent += `        <outline text="${title}" title="${title}" type="rss" xmlUrl="${feed.url}" htmlUrl="${htmlUrl}"/>
+`
+                })
+            }
+        }
+        
+        opmlContent += `    </body>
+</opml>`
+        
+        return opmlContent
+    }
+
+    const handleExportOPML = () => {
+        if (filteredFeeds.length === 0) {
+            toast.error("No feeds to export")
+            return
+        }
+        
+        try {
+            const opmlContent = generateOPMLContent(filteredFeeds)
+            const blob = new Blob([opmlContent], { type: "application/xml" })
+            const url = URL.createObjectURL(blob)
+            const link = document.createElement("a")
+            
+            const timestamp = new Date().toISOString().split('T')[0]
+            link.href = url
+            link.download = `readspace-feeds-${timestamp}.opml`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
+            URL.revokeObjectURL(url)
+            
+            toast.success(`Exported ${filteredFeeds.length} feeds to OPML`)
+        } catch (error) {
+            toast.error("Failed to export OPML")
+            console.error("OPML export error:", error)
+        }
+    }
+
     // Show skeleton loading state
     if (isLoadingFeeds || isLoadingFolders) {
         return <ManageFeedsPageSkeleton />
@@ -326,7 +408,7 @@ export default function ManageFeedsPageClient() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <div className="md:col-span-1">
+                <div className="md:col-span-1 flex gap-2">
                     <Select
                         value={filterFolderId}
                         onValueChange={setFilterFolderId}
@@ -343,6 +425,15 @@ export default function ManageFeedsPageClient() {
                             ))}
                         </SelectContent>
                     </Select>
+                    <Button
+                        variant="outline"
+                        onClick={handleExportOPML}
+                        disabled={filteredFeeds.length === 0}
+                        className="whitespace-nowrap"
+                    >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export OPML
+                    </Button>
                 </div>
                 {/* TODO: Add Tag Filter */}
                 <div className="md:col-span-1 flex justify-end gap-2">

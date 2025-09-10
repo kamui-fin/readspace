@@ -11,6 +11,7 @@ from app.schemas.rss_schemas import FeedResponse, FeedUpdate
 from app.services.feed_creation_service import FeedCreationService
 from app.services.feed_fetcher import FeedFetcher
 from app.services.feed_parser import FeedParsingService
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
@@ -25,6 +26,27 @@ class FeedManagementService:
         self._cache = RedisCache()
         self.feed_fetcher = FeedFetcher(self._cache)
         self.feed_parser = FeedParsingService()
+
+    def _normalize_url(self, url_str: str | None) -> str | None:
+        """Normalize URL to ensure it's a valid HTTP/HTTPS URL for Pydantic."""
+        if not url_str:
+            return None
+        url_str = str(url_str).strip()
+
+        # Transform RSShub URLs first
+        if url_str.startswith('rsshub://'):
+            url_str = transform_rsshub_url(url_str)
+
+        # If it's already a valid web URL, return it
+        if url_str.startswith(('http://', 'https://')):
+            return url_str
+
+        # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
+        if ':' in url_str:
+            return None
+
+        # Otherwise, assume it's a web URL missing the protocol and add it.
+        return f"https://{url_str}"
 
     async def add_new_feed(
         self,
@@ -64,12 +86,12 @@ class FeedManagementService:
         # Base feed data (always present)
         feed_data = {
             "id": feed_db.id,
-            "url": str(feed_db.url) if feed_db.url else None,
+            "url": self._normalize_url(str(feed_db.url) if feed_db.url else None),
             "title": feed_db.title,
             "description": feed_db.description,
-            "link": str(feed_db.link) if feed_db.link else None,
+            "link": self._normalize_url(str(feed_db.link) if feed_db.link else None),
             "language": feed_db.language,
-            "image_url": str(feed_db.image_url) if feed_db.image_url else None,
+            "image_url": self._normalize_url(str(feed_db.image_url) if feed_db.image_url else None),
             "ttl": feed_db.ttl,
             "skip_hours": feed_db.skip_hours,
             "skip_days": feed_db.skip_days,
@@ -172,12 +194,12 @@ class FeedManagementService:
 
             feed_data = {
                 "id": feed.id,
-                "url": str(feed.url) if feed.url else None,
+                "url": self._normalize_url(str(feed.url) if feed.url else None),
                 "title": subscription.custom_title or feed.title,
                 "description": feed.description,
-                "link": str(feed.link) if feed.link else None,
+                "link": self._normalize_url(str(feed.link) if feed.link else None),
                 "language": feed.language,
-                "image_url": str(feed.image_url) if feed.image_url else None,
+                "image_url": self._normalize_url(str(feed.image_url) if feed.image_url else None),
                 "ttl": feed.ttl,
                 "skip_hours": feed.skip_hours,
                 "skip_days": feed.skip_days,
@@ -247,12 +269,12 @@ class FeedManagementService:
 
             feed_data = {
                 "id": feed_db.id,
-                "url": str(feed_db.url) if feed_db.url else None,
+                "url": self._normalize_url(str(feed_db.url) if feed_db.url else None),
                 "title": updated_subscription.custom_title or feed_db.title,
                 "description": feed_db.description,
-                "link": str(feed_db.link) if feed_db.link else None,
+                "link": self._normalize_url(str(feed_db.link) if feed_db.link else None),
                 "language": feed_db.language,
-                "image_url": str(feed_db.image_url) if feed_db.image_url else None,
+                "image_url": self._normalize_url(str(feed_db.image_url) if feed_db.image_url else None),
                 "ttl": feed_db.ttl,
                 "skip_hours": feed_db.skip_hours,
                 "skip_days": feed_db.skip_days,
@@ -439,12 +461,12 @@ class FeedManagementService:
     ) -> FeedResponse:
         feed_data = {
             "id": feed_db.id,
-            "url": str(feed_db.url) if feed_db.url else None,
+            "url": self._normalize_url(str(feed_db.url) if feed_db.url else None),
             "title": subscription_db.custom_title or feed_db.title,
             "description": feed_db.description,
-            "link": str(feed_db.link) if feed_db.link else None,
+            "link": self._normalize_url(str(feed_db.link) if feed_db.link else None),
             "language": feed_db.language,
-            "image_url": str(feed_db.image_url) if feed_db.image_url else None,
+            "image_url": self._normalize_url(str(feed_db.image_url) if feed_db.image_url else None),
             "ttl": feed_db.ttl,
             "skip_hours": feed_db.skip_hours,
             "skip_days": feed_db.skip_days,
@@ -465,12 +487,12 @@ class FeedManagementService:
         """Construct a FeedResponse for preview mode (no subscription data)."""
         feed_data = {
             "id": feed_db.id,
-            "url": str(feed_db.url) if feed_db.url else None,
+            "url": self._normalize_url(str(feed_db.url) if feed_db.url else None),
             "title": feed_db.title,
             "description": feed_db.description,
-            "link": str(feed_db.link) if feed_db.link else None,
+            "link": self._normalize_url(str(feed_db.link) if feed_db.link else None),
             "language": feed_db.language,
-            "image_url": str(feed_db.image_url) if feed_db.image_url else None,
+            "image_url": self._normalize_url(str(feed_db.image_url) if feed_db.image_url else None),
             "ttl": feed_db.ttl,
             "skip_hours": feed_db.skip_hours,
             "skip_days": feed_db.skip_days,
@@ -495,17 +517,8 @@ class FeedManagementService:
         from app.crud.crud_article import create_articles_batch
         from app.schemas.rss_schemas import ArticleCreate
 
-        # Update feed metadata
-        feed_headers = fetch_result.get("headers", {})
-        await crud_feed.update_feed_metadata(
-            self.db,
-            feed_db=feed_db,
-            etag=feed_headers.get("etag"),
-            last_modified=feed_headers.get("last-modified"),
-            last_fetched_at=datetime.now(timezone.utc),
-        )
-
-        # Extract and create new articles
+        # Extract and create new articles first to get latest published_at
+        latest_published_at = None
         if parsed_feed.entries:
             articles_data = []
             for entry in parsed_feed.entries:
@@ -530,6 +543,11 @@ class FeedManagementService:
                             ),
                         )
                         articles_data.append(article_data)
+
+                        # Track the latest published_at timestamp
+                        if article_data.published_at:
+                            if latest_published_at is None or article_data.published_at > latest_published_at:
+                                latest_published_at = article_data.published_at
                 except Exception as e:
                     logger.warning(
                         "Error parsing article", feed_id=feed_db.id, error=str(e)
@@ -541,3 +559,30 @@ class FeedManagementService:
                     db=self.db, articles_data=articles_data, user_id=self.user_id
                 )
                 logger.info(f"Created {created_count} new articles", feed_id=feed_db.id)
+
+        # Update feed metadata with latest published_at timestamp
+        feed_headers = fetch_result.get("headers", {})
+
+        # If we found a newer published_at, use it; otherwise keep the existing value
+        update_last_article_published_at = latest_published_at
+        if latest_published_at and feed_db.last_article_published_at:
+            # Only update if the new timestamp is more recent
+            if latest_published_at > feed_db.last_article_published_at:
+                update_last_article_published_at = latest_published_at
+            else:
+                update_last_article_published_at = None  # Don't update, keep existing
+        elif latest_published_at:
+            # First time we have a published_at timestamp
+            update_last_article_published_at = latest_published_at
+        else:
+            # No new articles or no published_at timestamps
+            update_last_article_published_at = None
+
+        await crud_feed.update_feed_metadata(
+            self.db,
+            feed_db=feed_db,
+            etag=feed_headers.get("etag"),
+            last_modified=feed_headers.get("last-modified"),
+            last_fetched_at=datetime.now(timezone.utc),
+            last_article_published_at=update_last_article_published_at,
+        )

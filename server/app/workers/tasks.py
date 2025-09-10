@@ -7,9 +7,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
 from app.core.celery_app import celery
-from app.core.config import (
-    get_settings,  # For DB URL if needed directly, or through AsyncSessionLocal
-)
+from app.core.config import get_settings
 
 # AsyncSessionLocal is no longer imported directly from app.db.session for use in tasks
 # from app.db.session import AsyncSessionLocal
@@ -133,7 +131,7 @@ def import_single_feed_task(
 @celery.task(
     name="app.workers.tasks.import_opml_task",
     bind=True,
-    max_retries=1,
+    max_retries=0,  # No retries for OPML imports - fail immediately
     default_retry_delay=300,
 )
 def import_opml_task(
@@ -196,20 +194,14 @@ def import_opml_task(
             )
             raise exc  # Let it fail, cleanup will be handled by the API endpoint
 
-        if self.request.retries < (self.max_retries or 1):
-            logger.info(
-                f"Retrying OPML import task, attempt {self.request.retries + 1}",
-                user_id=user_id,
-            )
-            raise self.retry(exc=exc, countdown=300)
-        else:
-            logger.error(
-                "Max retries reached for OPML import task",
-                user_id=user_id,
-                error=str(exc),
-                exc_info=True,
-            )
-            raise
+        # No retries for OPML import tasks - fail immediately
+        logger.error(
+            "OPML import task failed",
+            user_id=user_id,
+            error=str(exc),
+            exc_info=True,
+        )
+        raise exc
 
 
 @celery.task(

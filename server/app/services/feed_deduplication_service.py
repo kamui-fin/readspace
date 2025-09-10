@@ -21,11 +21,15 @@ class FeedDeduplicationService:
 
     async def check_for_duplicates(self, url: str, parsed_feed: feedparser.FeedParserDict | None = None) -> Feed | None:
         """
-        Check if a feed already exists using URL normalization and canonical link matching.
+        Check if a feed already exists using RSS URL normalization only.
+        
+        Note: We now allow multiple RSS feeds for the same website since different
+        feeds may serve different purposes (e.g., blog posts vs announcements).
+        Only RSS URL duplicates are checked since the database has a unique constraint.
         
         Args:
             url: The RSS feed URL to check
-            parsed_feed: Optional pre-parsed feed data
+            parsed_feed: Optional pre-parsed feed data (unused but kept for compatibility)
             
         Returns:
             Existing Feed if duplicate found, None otherwise
@@ -33,27 +37,17 @@ class FeedDeduplicationService:
         Raises:
             FeedSubscriptionError: If a duplicate is detected
         """
-        logger.info("Starting duplicate detection", url=url)
+        logger.info("Starting RSS URL duplicate detection", url=url)
 
-        # Strategy 1: Exact URL match (normalized)
+        # Only check RSS URL duplicates - database unique constraint handles this
         normalized_url = self._normalize_url(url)
         duplicate = await self._check_url_duplicate(normalized_url)
         if duplicate:
             raise FeedSubscriptionError(
-                f"Feed already exists with identical URL: {duplicate.url}"
+                f"RSS feed already exists with identical URL: {duplicate.url}"
             )
 
-        # Strategy 2: Canonical link resolution
-        if parsed_feed:
-            canonical_link = self._extract_canonical_link(parsed_feed)
-            if canonical_link:
-                duplicate = await self._check_canonical_duplicate(canonical_link)
-                if duplicate:
-                    raise FeedSubscriptionError(
-                        f"Feed already exists for website: {canonical_link} (existing feed: {duplicate.url})"
-                    )
-
-        logger.info("No duplicates detected", url=url)
+        logger.info("No RSS URL duplicates detected", url=url)
         return None
 
     def _normalize_url(self, url: str) -> str:
@@ -104,17 +98,6 @@ class FeedDeduplicationService:
             logger.warning("URL normalization failed", url=url, error=str(e))
             return url.lower().strip()
 
-    def _extract_canonical_link(self, parsed_feed: feedparser.FeedParserDict) -> str | None:
-        """Extract canonical website link from feed metadata."""
-        try:
-            if hasattr(parsed_feed, 'feed') and parsed_feed.feed:
-                link = parsed_feed.feed.get('link')
-                if link:
-                    return self._normalize_url(link)
-        except Exception as e:
-            logger.warning("Failed to extract canonical link", error=str(e))
-
-        return None
 
     async def _check_url_duplicate(self, normalized_url: str) -> Feed | None:
         """Check for exact URL duplicates."""
@@ -127,14 +110,3 @@ class FeedDeduplicationService:
             logger.warning("URL duplicate check failed", error=str(e))
             return None
 
-    async def _check_canonical_duplicate(self, canonical_link: str) -> Feed | None:
-        """Check for feeds with the same canonical website link."""
-        try:
-            normalized_link = self._normalize_url(canonical_link)
-            result = await self.db.execute(
-                select(Feed).where(Feed.link == normalized_link)
-            )
-            return result.scalar_one_or_none()
-        except Exception as e:
-            logger.warning("Canonical duplicate check failed", error=str(e))
-            return None

@@ -1,25 +1,26 @@
 """AI Service for OpenAI-compatible API interactions."""
 
+import json
 from typing import Any
 
 import structlog
-from openai import AsyncOpenAI
+from google import genai
 
 from app.core.config import get_settings
+from app.schemas.rss_schemas import FeedEnrichmentResponse
 
 logger = structlog.get_logger(__name__)
 
 
 class AIService:
-    """Service for interacting with OpenAI-compatible AI APIs (like Ollama)."""
+    """Service for interacting with Gemini AI."""
 
     def __init__(self):
         self.settings = get_settings()
-        self.client = AsyncOpenAI(
-            api_key=self.settings.OPENAI_API_KEY,
-            base_url=self.settings.OPENAI_BASE_URL,
-        )
-        self.model = self.settings.AI_MODEL
+        
+        # Initialize Gemini client
+        self.gemini_client = genai.Client(api_key=self.settings.GEMINI_API_KEY)
+        logger.info("Gemini client initialized successfully")
 
     async def generate_text(
         self,
@@ -27,53 +28,47 @@ class AIService:
         system_prompt: str | None = None,
         max_tokens: int = 1000,
         temperature: float = 0.7,
-        **kwargs: Any,
     ) -> str:
         """
-        Generate text using the configured AI model.
+        Generate text using Gemini.
         
         Args:
             prompt: The user prompt
-            system_prompt: Optional system prompt
+            system_prompt: Optional system prompt (combined with prompt)
             max_tokens: Maximum tokens to generate
             temperature: Generation temperature
-            **kwargs: Additional parameters for the API
             
         Returns:
             Generated text response
         """
         try:
-            messages = []
+            # Combine system prompt with user prompt if provided
+            full_prompt = prompt
             if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
+                full_prompt = f"{system_prompt}\n\n{prompt}"
 
             logger.debug(
-                "Generating text",
-                model=self.model,
-                prompt_length=len(prompt),
+                "Generating text with Gemini",
+                model=self.settings.GEMINI_MODEL,
+                prompt_length=len(full_prompt),
                 max_tokens=max_tokens,
             )
 
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=messages,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                **kwargs,
-            )
-
-            if response.choices and response.choices[0].message:
-                content = response.choices[0].message.content or ""
-                logger.debug(
-                    "Text generation completed",
-                    response_length=len(content),
-                    finish_reason=response.choices[0].finish_reason,
+            response = self.gemini_client.models.generate_content(
+                model=self.settings.GEMINI_MODEL,
+                contents=full_prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=temperature,
+                    max_output_tokens=max_tokens
                 )
-                return content
+            )
 
-            logger.warning("Empty response from AI model")
-            return ""
+            content = response.text or ""
+            logger.debug(
+                "Text generation completed",
+                response_length=len(content),
+            )
+            return content
 
         except Exception as e:
             logger.error("Error generating text", error=str(e), exc_info=True)
@@ -81,7 +76,7 @@ class AIService:
 
     async def generate_embedding(self, text: str) -> list[float] | None:
         """
-        Generate embeddings for the given text using the configured embedding model.
+        Generate embeddings using Gemini embedding model.
         
         Args:
             text: Text to generate embeddings for
@@ -89,34 +84,11 @@ class AIService:
         Returns:
             List of floats representing the embedding, or None if failed
         """
-        try:
-            logger.debug(
-                "Generating embedding",
-                model=self.settings.EMBEDDING_MODEL,
-                text_length=len(text),
-            )
-
-            response = await self.client.embeddings.create(
-                model=self.settings.EMBEDDING_MODEL, input=[text]
-            )
-
-            if response.data and len(response.data) > 0:
-                embedding = response.data[0].embedding
-                logger.debug(
-                    "Embedding generation completed", embedding_dimensions=len(embedding)
-                )
-                return embedding
-
-            logger.warning("Empty embedding response")
-            return None
-
-        except Exception as e:
-            logger.error("Error generating embedding", error=str(e), exc_info=True)
-            return None
+        return await self.generate_embedding_with_gemini(text)
 
     async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float] | None]:
         """
-        Generate embeddings for multiple texts in a single request.
+        Generate embeddings for multiple texts using Gemini batch API.
         
         Args:
             texts: List of texts to generate embeddings for
@@ -126,23 +98,24 @@ class AIService:
         """
         try:
             logger.debug(
-                "Generating batch embeddings",
-                model=self.settings.EMBEDDING_MODEL,
+                "Generating batch embeddings with Gemini",
+                model=self.settings.GEMINI_EMBEDDING_MODEL,
                 batch_size=len(texts),
             )
 
-            response = await self.client.embeddings.create(
-                model=self.settings.EMBEDDING_MODEL, input=texts
+            response = self.gemini_client.models.embed_content(
+                model=self.settings.GEMINI_EMBEDDING_MODEL,
+                contents=texts
             )
-
+            
             embeddings = []
-            for i, data in enumerate(response.data):
-                if data.embedding:
-                    embeddings.append(data.embedding)
+            for i, embedding_result in enumerate(response.embeddings):
+                if embedding_result and hasattr(embedding_result, 'values') and len(embedding_result.values) > 0:
+                    embeddings.append(embedding_result.values)
                 else:
                     logger.warning(f"Empty embedding for text {i}")
                     embeddings.append(None)
-
+            
             logger.debug(
                 "Batch embedding generation completed",
                 successful_embeddings=sum(1 for e in embeddings if e is not None),
@@ -152,6 +125,141 @@ class AIService:
         except Exception as e:
             logger.error("Error generating batch embeddings", error=str(e), exc_info=True)
             return [None] * len(texts)
+
+    async def enrich_feed_with_gemini(
+        self,
+        title: str,
+        description: str,
+        domain: str,
+        existing_tag: str,
+        sample_articles: list[str],
+        language: str = 'en'
+    ) -> FeedEnrichmentResponse | None:
+        """
+        Use Gemini AI to enrich feed metadata with structured output.
+        
+        Args:
+            title: Feed title
+            description: Feed description
+            domain: Feed domain
+            existing_tag: Existing tag for the feed
+            sample_articles: Sample article titles
+            language: Feed language
+            
+        Returns:
+            FeedEnrichmentResponse or None if enrichment fails
+        """
+
+        try:
+            # Language-specific instructions
+            lang_instruction = ""
+            if language == 'zh':
+                lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
+            elif language != 'en':
+                lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
+
+            articles_text = "\n".join(sample_articles[:5]) if sample_articles else "No articles available"
+
+            prompt = f"""Analyze this RSS feed and provide refined content.
+{lang_instruction}Return ONLY a valid JSON object with no markdown formatting.
+
+Feed Information:
+Title: {title}
+Description: {description}
+Domain: {domain}
+Existing Tag: {existing_tag}
+Sample Articles: {articles_text}
+
+IMPORTANT: 
+- Focus on what the FEED offers in general, not individual articles
+- REMOVE words "RSS", "Atom", and "Feed" from the title
+- AVOID generic words like "Insights", "Updates", "News", "Blog" in titles
+- Tags should be SPECIFIC keywords (e.g. "javascript", "machine learning")
+- Category should be ONE of the 12 predefined options exactly
+
+Rate the popularity and influence of this RSS feed on a scale of 1–100. Consider these factors:
+- How widely read or shared is this feed likely to be?
+- Does it have a large, active audience (e.g., global news site, major online community, widely followed blog)?
+- Is it frequently referenced, cited, or reposted across the web?
+- How influential is it within its niche or community?
+- Does it appear to be a personal/hobby blog, a niche resource, or a publication with significant reach?
+- When refining title and description, use your own knowledge of the website too.
+
+Scoring Guidelines:
+90–100: Extremely popular & influential, widely read across the internet (e.g., CNN Top Stories, Hacker News frontpage, TechCrunch main feed).
+80–89: Very popular, well-established with strong reach in its category (e.g., Ars Technica, Wired, The Verge).
+70–79: Popular within its niche, recognized by many enthusiasts/professionals (e.g., Smashing Magazine, popular subreddits, regional news).
+60–69: Moderately popular, steady readership but limited outside its niche (e.g., smaller but established blogs or company feeds with loyal audiences).
+50–59: Some recognition, has an audience but not widely known (e.g., mid-sized blogs, specialized communities).
+40–49: Limited reach, small following, niche content.
+30–39: Very small audience, niche/hobbyist blogs.
+20–29: Minimal recognition, unknown outside a tiny circle.
+10–19: Barely read, obscure or inactive.
+1–9: Effectively no audience or visibility.
+
+Return a JSON object with exactly these keys:
+{{"refined_title": "Clean title without RSS/Feed words, max 80 chars", "refined_description": "What the feed offers generally, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "Choose ONE: Technology & Programming, Artificial Intelligence, Design & Creativity, Business & Finance, News & Politics, Gaming & Entertainment, Science & Research, Lifestyle & Personal, Culture & Arts, Security & Privacy, Education & Learning, Miscellaneous", "popularity_estimate": numeric_score_1_to_100}}"""
+
+            # Use the new SDK API for content generation
+            response = self.gemini_client.models.generate_content(
+                model=self.settings.GEMINI_MODEL,
+                contents=prompt,
+                config=genai.types.GenerateContentConfig(
+                    temperature=0.2,
+                    max_output_tokens=400,
+                    response_mime_type="application/json",
+                    response_schema=FeedEnrichmentResponse.model_json_schema()
+                )
+            )
+
+            # Parse and validate the structured response
+            result = FeedEnrichmentResponse.model_validate_json(response.text)
+
+            logger.debug(
+                "Gemini feed enrichment completed",
+                title=result.refined_title,
+                category=result.category,
+                popularity=result.popularity_estimate
+            )
+
+            return result
+
+        except Exception as e:
+            logger.error("Error in Gemini feed enrichment", error=str(e), exc_info=True)
+            return None
+
+    async def generate_embedding_with_gemini(self, text: str) -> list[float] | None:
+        """
+        Generate embeddings using Gemini embedding model.
+        
+        Args:
+            text: Text to generate embeddings for
+            
+        Returns:
+            List of floats representing the embedding, or None if failed
+        """
+        try:
+            response = self.gemini_client.models.embed_content(
+                model=self.settings.GEMINI_EMBEDDING_MODEL,
+                contents=[text]  # Use list format for consistency
+            )
+
+            if response.embeddings and len(response.embeddings) > 0:
+                embedding_result = response.embeddings[0]
+                if embedding_result and hasattr(embedding_result, 'values') and len(embedding_result.values) > 0:
+                    embedding = embedding_result.values
+                    logger.debug(
+                        "Gemini embedding generation completed",
+                        embedding_dimensions=len(embedding)
+                    )
+                    return embedding
+
+            logger.warning("Empty embedding response from Gemini")
+            return None
+
+        except Exception as e:
+            logger.error("Error generating Gemini embedding", error=str(e), exc_info=True)
+            return None
 
     async def health_check(self) -> dict[str, Any]:
         """
@@ -172,13 +280,24 @@ class AIService:
             except Exception:
                 text_healthy = False
 
+            # Test Gemini
+            gemini_healthy = False
+            try:
+                test_gemini = await self.enrich_feed_with_gemini(
+                    "Test Feed", "Test description", "example.com", "test", []
+                )
+                gemini_healthy = test_gemini is not None
+            except Exception:
+                gemini_healthy = False
+
             return {
-                "healthy": embedding_healthy and text_healthy,
+                "healthy": embedding_healthy and text_healthy and gemini_healthy,
                 "embedding_service": embedding_healthy,
                 "text_generation": text_healthy,
-                "base_url": self.settings.OPENAI_BASE_URL,
-                "embedding_model": self.settings.EMBEDDING_MODEL,
-                "ai_model": self.model,
+                "gemini_service": gemini_healthy,
+                "gemini_available": True,
+                "gemini_model": self.settings.GEMINI_MODEL,
+                "gemini_embedding_model": self.settings.GEMINI_EMBEDDING_MODEL,
             }
 
         except Exception as e:
@@ -186,9 +305,9 @@ class AIService:
             return {
                 "healthy": False,
                 "error": str(e),
-                "base_url": self.settings.OPENAI_BASE_URL,
-                "embedding_model": self.settings.EMBEDDING_MODEL,
-                "ai_model": self.model,
+                "gemini_available": True,
+                "gemini_model": self.settings.GEMINI_MODEL,
+                "gemini_embedding_model": self.settings.GEMINI_EMBEDDING_MODEL,
             }
 
 

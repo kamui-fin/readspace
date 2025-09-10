@@ -67,6 +67,7 @@ openai = "^1.106.1"
 extract-favicon = "^0.5.3"
 lingua-language-detector = "^2.1.1"
 pgvector = "^0.4.1"
+google-genai = "^1.35.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

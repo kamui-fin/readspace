@@ -28,6 +28,7 @@ import {
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
+import { opml } from "@/lib/opml-parser"
 
 // OPML import response types
 interface OPMLImportResponse {
@@ -64,6 +65,72 @@ export default function ImportOPMLPageClient() {
         refetchInterval: 5000, // Poll every 5 seconds for updates
     })
 
+    const validateOpmlFile = async (file: File): Promise<{ isValid: boolean; feedCount: number; hasNestedCategories: boolean; error?: string }> => {
+        try {
+            const content = await file.text()
+            
+            // Check if this is an RSS/Atom feed instead of OPML
+            const contentLower = content.toLowerCase().trim()
+            if (contentLower.includes('<rss') || contentLower.includes('<feed') || 
+                (contentLower.includes('<channel>') && !contentLower.includes('<opml'))) {
+                return {
+                    isValid: false,
+                    feedCount: 0,
+                    hasNestedCategories: false,
+                    error: "This appears to be an RSS/Atom feed file, not an OPML file. OPML files contain lists of feeds, while RSS/Atom files contain actual feed content. Please export your feed list as OPML from your RSS reader."
+                }
+            }
+            
+            const parsedOpml = opml.parse(content)
+            
+            if (!parsedOpml || !parsedOpml.opml || !parsedOpml.opml.body) {
+                return {
+                    isValid: false,
+                    feedCount: 0,
+                    hasNestedCategories: false,
+                    error: "Invalid OPML format: This doesn't appear to be a valid OPML file. Please check that you've exported the correct file from your RSS reader."
+                }
+            }
+
+            let feedCount = 0
+            let hasNestedCategories = false
+            const existingUrls = new Set<string>()
+            
+            const countFeeds = (outlines: any[], level = 0) => {
+                if (level > 1) {
+                    hasNestedCategories = true
+                }
+                
+                for (const outline of outlines || []) {
+                    if (outline.xmlUrl) {
+                        if (!existingUrls.has(outline.xmlUrl)) {
+                            feedCount++
+                            existingUrls.add(outline.xmlUrl)
+                        }
+                    } else if (outline.subs) {
+                        countFeeds(outline.subs, level + 1)
+                    }
+                }
+            }
+            
+            countFeeds(parsedOpml.opml.body.subs)
+            
+            return {
+                isValid: feedCount > 0,
+                feedCount,
+                hasNestedCategories,
+                error: feedCount === 0 ? "No valid RSS feeds found in OPML file" : undefined
+            }
+        } catch (error) {
+            return {
+                isValid: false,
+                feedCount: 0,
+                hasNestedCategories: false,
+                error: `Failed to parse OPML file: ${error instanceof Error ? error.message : 'Unknown error'}`
+            }
+        }
+    }
+
     const handleFileUpload = async (file: File) => {
         // Check if there's already an active import
         if (activeImports.length > 0) {
@@ -76,6 +143,18 @@ export default function ImportOPMLPageClient() {
             (!file.name.endsWith(".opml") && !file.name.endsWith(".xml"))
         ) {
             toast.error("Please select a valid OPML or XML file")
+            return
+        }
+
+        // Validate OPML file
+        const validation = await validateOpmlFile(file)
+        if (!validation.isValid) {
+            toast.error(validation.error || "Invalid OPML file")
+            return
+        }
+
+        if (validation.hasNestedCategories) {
+            toast.error("OPML files with nested categories are not supported. Please flatten your categories before importing.")
             return
         }
 
@@ -93,9 +172,9 @@ export default function ImportOPMLPageClient() {
             // Redirect to the status page immediately
             router.push(`/import-opml/status/${data.task_id}`)
 
-            // Show success message
+            // Show success message with better context
             toast.success(
-                `Queued ${data.estimated_feeds} feeds for import processing.`
+                `Processing ${validation.feedCount} feeds. Import will run silently in background.`
             )
 
         } catch (error) {

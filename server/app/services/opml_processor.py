@@ -29,10 +29,16 @@ class OpmlProcessor:
         Raises:
             ValidationError: If OPML content is invalid
         """
+        # Validate OPML content first
+        self.validate_opml_content(content)
+
         try:
             root = ET.fromstring(content)
         except ET.ParseError as e:
-            raise ValidationError(f"Invalid OPML XML format: {str(e)}")
+            raise ValidationError(
+                f"Invalid XML format: {str(e)}. "
+                "Please check that you've uploaded a valid OPML file."
+            )
 
         # Find the body element
         body = root.find(".//body")
@@ -44,10 +50,32 @@ class OpmlProcessor:
         # Process only direct child outline elements (not recursive)
         for outline in body.findall("outline"):
             feed_data = self._process_outline_element(
-                outline, default_folder_name=default_folder_name
+                outline, default_folder_name=default_folder_name, current_depth=0
             )
             if feed_data:
                 feeds_data.extend(feed_data)
+
+        # Deduplicate feeds by XML URL
+        seen_urls = set()
+        deduplicated_feeds = []
+        duplicate_count = 0
+
+        for feed in feeds_data:
+            url = feed["xml_url"]
+            if url not in seen_urls:
+                seen_urls.add(url)
+                deduplicated_feeds.append(feed)
+            else:
+                duplicate_count += 1
+
+        if duplicate_count > 0:
+            logger.info(
+                "Removed duplicate feeds from OPML",
+                original_count=len(feeds_data),
+                deduplicated_count=len(deduplicated_feeds),
+                duplicates_removed=duplicate_count
+            )
+            feeds_data = deduplicated_feeds
 
         if not feeds_data:
             raise ValidationError("No valid feeds found in OPML file")
@@ -60,6 +88,8 @@ class OpmlProcessor:
         outline: ET.Element,
         parent_folder: str = None,
         default_folder_name: str = None,
+        max_depth: int = 2,
+        current_depth: int = 0,
     ) -> list[dict[str, Any]]:
         """Process a single outline element and its children.
 
@@ -67,6 +97,8 @@ class OpmlProcessor:
             outline: XML outline element
             parent_folder: Parent folder name if nested
             default_folder_name: Default folder name for feeds without a folder
+            max_depth: Maximum nesting depth allowed (default 2: root/category/feed)
+            current_depth: Current nesting depth
 
         Returns:
             List of feed dictionaries
@@ -99,12 +131,24 @@ class OpmlProcessor:
             # This is likely a folder, process children
             folder_name = title
             if parent_folder:
-                folder_name = f"{parent_folder}/{title}"
+                # Handle nested categories by flattening them
+                if current_depth >= max_depth:
+                    # Too deep, flatten by combining folder names
+                    folder_name = f"{parent_folder} - {title}"
+                    logger.warning(
+                        "Flattening nested category",
+                        original_parent=parent_folder,
+                        nested_name=title,
+                        flattened_name=folder_name,
+                        depth=current_depth
+                    )
+                else:
+                    folder_name = title
 
             # Process child outlines
             for child in outline.findall("outline"):
                 child_feeds = self._process_outline_element(
-                    child, folder_name, default_folder_name
+                    child, folder_name, default_folder_name, max_depth, current_depth + 1
                 )
                 feeds_data.extend(child_feeds)
 
@@ -216,22 +260,50 @@ class OpmlProcessor:
         if not content or not content.strip():
             raise ValidationError("OPML content is empty")
 
+        # Check if this is an RSS/Atom feed instead of OPML
+        content_lower = content.lower().strip()
+        if (content_lower.startswith('<rss') or content_lower.startswith('<feed') or
+            ('<channel>' in content_lower and '<opml' not in content_lower)):
+            raise ValidationError(
+                "This appears to be an RSS/Atom feed file, not an OPML file. "
+                "OPML files contain lists of feeds, while RSS/Atom files contain actual feed content. "
+                "Please export your feed list as OPML from your RSS reader."
+            )
+
         try:
             root = ET.fromstring(content)
         except ET.ParseError as e:
-            raise ValidationError(f"Invalid OPML XML format: {str(e)}")
+            raise ValidationError(
+                f"Invalid XML format: {str(e)}. "
+                "Please check that you've uploaded a valid OPML file exported from your RSS reader."
+            )
 
         # Check for required OPML structure
         if root.tag.lower() != "opml":
-            raise ValidationError("Invalid OPML format: Root element must be 'opml'")
+            # Check if it might be another type of XML file
+            if root.tag.lower() in ['rss', 'feed', 'atom']:
+                raise ValidationError(
+                    "This appears to be an RSS/Atom feed file, not an OPML file. "
+                    "Please export your feed list as OPML from your RSS reader instead of exporting individual feeds."
+                )
+            raise ValidationError(
+                f"Invalid OPML format: Root element must be 'opml' but found '{root.tag}'. "
+                "Please check that you've uploaded a valid OPML file."
+            )
 
         body = root.find(".//body")
         if body is None:
-            raise ValidationError("Invalid OPML format: No body element found")
+            raise ValidationError(
+                "Invalid OPML format: No body element found. "
+                "This doesn't appear to be a valid OPML file exported from an RSS reader."
+            )
 
         # Check for at least one outline element
         outlines = body.findall(".//outline")
         if not outlines:
-            raise ValidationError("Invalid OPML format: No outline elements found")
+            raise ValidationError(
+                "Invalid OPML format: No feed entries found. "
+                "The OPML file appears to be empty or doesn't contain any feed subscriptions."
+            )
 
         logger.info("OPML validation passed", outline_count=len(outlines))

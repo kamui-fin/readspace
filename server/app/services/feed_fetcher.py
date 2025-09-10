@@ -6,10 +6,11 @@ import httpx
 import structlog
 
 from app.core.redis_cache import RedisCache
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
-DEFAULT_RSS_TIMEOUT = 8
+DEFAULT_RSS_TIMEOUT = 180
 
 
 class FeedFetcher:
@@ -26,6 +27,9 @@ class FeedFetcher:
         timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         """Fetch feed content using httpx with ETag and Last-Modified headers, using cache."""
+        # Transform rsshub:// URLs to actual HTTP URLs
+        actual_url = transform_rsshub_url(url)
+
         cache_key = f"feed_content:{url}"
         cached_data = await self.redis_cache.get(cache_key)
 
@@ -36,16 +40,16 @@ class FeedFetcher:
 
         try:
             return await self._make_http_request(
-                url, request_headers, timeout, cache_key
+                actual_url, request_headers, timeout, cache_key
             )
         except httpx.ConnectTimeout:
             return await self._handle_timeout_error(url)
         except httpx.ReadTimeout:
             return await self._handle_timeout_error(url)
         except httpx.HTTPStatusError as exc:
-            return await self._handle_http_error(exc, url)
+            return await self._handle_http_error(exc, actual_url)
         except Exception as exc:
-            return await self._handle_unexpected_error(exc, url)
+            return await self._handle_unexpected_error(exc, actual_url)
 
     def _build_request_headers(
         self, etag: str | None, last_modified: str | None, cached_data: dict | None

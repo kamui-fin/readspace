@@ -1,6 +1,5 @@
 """Feed enrichment service for background processing."""
 
-import json
 import re
 import urllib.parse
 from typing import Any
@@ -12,10 +11,12 @@ from extract_favicon import check_availability, from_google, from_html
 from lingua import Language, LanguageDetectorBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.crud.crud_feed import update_feed_enrichment
-from app.models.rss_models import Feed, FeedCategory
+from app.models.rss_models import Feed
 from app.services.ai_service import get_ai_service
 from app.services.page_rank_service import get_page_rank_service
+from app.services.popularity_scorer import PopularityScorer
 
 logger = structlog.get_logger(__name__)
 
@@ -25,16 +26,19 @@ class FeedEnrichmentService:
 
     def __init__(self, db: AsyncSession):
         self.db = db
-        self.ai_service = get_ai_service()
+        self.settings = get_settings()
+        self.ai_service = get_ai_service() if self.settings.ENABLE_AI else None
         self.page_rank_service = get_page_rank_service()
+        self.popularity_scorer = PopularityScorer(self.page_rank_service)
 
-        # Initialize language detector
+        # Initialize language detector with enhanced language support
         self.language_detector = LanguageDetectorBuilder.from_languages(
             Language.ENGLISH, Language.CHINESE, Language.FRENCH, Language.GERMAN,
             Language.SPANISH, Language.RUSSIAN, Language.JAPANESE, Language.PORTUGUESE,
             Language.ITALIAN, Language.KOREAN, Language.ARABIC, Language.HINDI,
             Language.DUTCH, Language.SWEDISH, Language.DANISH, Language.BOKMAL,
-            Language.FINNISH, Language.POLISH, Language.TURKISH
+            Language.FINNISH, Language.POLISH, Language.TURKISH, Language.VIETNAMESE,
+            Language.THAI, Language.HEBREW, Language.INDONESIAN
         ).with_preloaded_language_models().build()
 
     async def enrich_feed(self, feed_id: str) -> dict[str, Any]:
@@ -66,22 +70,38 @@ class FeedEnrichmentService:
 
             enrichment_data = {}
 
-            # Step 1: Language detection
-            language = self._detect_language(feed)
-            enrichment_data['language'] = language
+            # Step 1: Language detection (only if not already set)
+            if not feed.language:
+                language = self._detect_language(feed)
+                enrichment_data['language'] = language
+                logger.info("Language detected", feed_id=feed_id, language=language)
+            else:
+                language = feed.language
+                logger.info("Using existing language", feed_id=feed_id, language=language)
 
-            # Step 2: LLM-powered enrichment
-            llm_enrichment = await self._enrich_with_llm(feed, language)
-            enrichment_data.update(llm_enrichment)
+            # Step 2: LLM-powered enrichment using Gemini (only if AI is enabled)
+            if self.settings.ENABLE_AI and self.ai_service:
+                llm_enrichment = await self._enrich_with_gemini(feed, language)
+                if llm_enrichment:
+                    enrichment_data.update(llm_enrichment)
+            else:
+                # Use basic fallback enrichment when AI is disabled
+                fallback_enrichment = self._fallback_enrichment_data(feed)
+                enrichment_data.update(fallback_enrichment)
+                logger.info("AI disabled, using fallback enrichment", feed_id=feed_id)
 
-            # Step 3: Popularity scoring
-            popularity_score = self._calculate_popularity_score(feed, enrichment_data)
-            enrichment_data['popularity_score'] = popularity_score
+            # Step 3: Hybrid popularity scoring
+            popularity_data = self._calculate_hybrid_popularity_score(feed, enrichment_data)
+            enrichment_data.update(popularity_data)
 
-            # Step 4: Generate embeddings
-            embedding = await self._generate_embedding(feed, enrichment_data)
-            if embedding:
-                enrichment_data['embedding'] = embedding
+            # Step 4: Generate embeddings (only if AI is enabled)
+            embedding = None
+            if self.settings.ENABLE_AI and self.ai_service:
+                embedding = await self._generate_embedding(feed, enrichment_data)
+                if embedding:
+                    enrichment_data['embedding'] = embedding
+            else:
+                logger.info("AI disabled, skipping embedding generation", feed_id=feed_id)
 
             # Step 5: Extract favicon/image
             image_data = await self._extract_image_url(feed)
@@ -94,8 +114,8 @@ class FeedEnrichmentService:
             logger.info(
                 "Feed enrichment completed",
                 feed_id=feed_id,
-                language=language,
-                popularity_score=popularity_score,
+                language=enrichment_data.get('language', language),
+                popularity_score=enrichment_data.get('popularity_score', 0.0),
                 has_embedding=bool(embedding)
             )
 
@@ -153,132 +173,45 @@ class FeedEnrichmentService:
             clean_text = re.sub(r'<[^>]+>', ' ', text)
             return ' '.join(clean_text.split())
 
-    async def _enrich_with_llm(self, feed: Feed, language: str) -> dict[str, Any]:
-        """Use LLM to refine feed metadata."""
-        try:
-            domain = self._extract_domain_from_url(feed.url)
-
-            # Language-specific instructions
-            lang_instruction = ""
-            if language == 'zh':
-                lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
-            elif language != 'en':
-                lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
-
-            prompt = f"""Analyze this RSS feed and provide refined content.
-{lang_instruction}Return ONLY a valid JSON object with no markdown formatting.
-
-Feed Information:
-Title: {feed.title or 'Unknown'}
-Description: {feed.description or ''}
-Domain: {domain}
-URL: {feed.url}
-
-IMPORTANT: 
-- Focus on what the FEED offers in general, not individual articles
-- REMOVE words "RSS", "Atom", and "Feed" from the title
-- AVOID generic words like "Insights", "Updates", "News", "Blog" in titles
-- Tags should be SPECIFIC keywords (e.g. "javascript", "machine learning")
-- Category should be ONE of the 12 predefined options exactly
-
-Return a JSON object with exactly these keys:
-{{"refined_title": "Clean title without RSS/Feed words, max 80 chars", "refined_description": "What the feed offers generally, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "Choose ONE: Technology & Programming, Artificial Intelligence, Design & Creativity, Business & Finance, News & Politics, Gaming & Entertainment, Science & Research, Lifestyle & Personal, Culture & Arts, Security & Privacy, Education & Learning, Miscellaneous"}}"""
-
-            response = await self.ai_service.generate_text(
-                prompt=prompt,
-                temperature=0.2,
-                max_tokens=400
-            )
-
-            # Parse JSON response
-            llm_data = self._extract_json_from_response(response)
-
-            # Validate and clean the response
-            return self._validate_llm_response(llm_data, feed)
-
-        except Exception as e:
-            logger.error("LLM enrichment failed", error=str(e))
+    async def _enrich_with_gemini(self, feed: Feed, language: str) -> dict[str, Any]:
+        """Use Gemini AI to refine feed metadata with structured output."""
+        if not self.settings.ENABLE_AI or not self.ai_service:
+            logger.warning("AI disabled but _enrich_with_gemini called")
             return self._fallback_enrichment_data(feed)
 
-    def _extract_json_from_response(self, response: str) -> dict[str, Any]:
-        """Extract JSON from potentially malformed LLM response."""
         try:
-            # Remove markdown formatting
-            text = response.strip()
-            if '```' in text:
-                lines = text.split('\n')
-                json_lines = []
-                in_json = False
-                for line in lines:
-                    if line.strip().startswith('```'):
-                        if in_json:
-                            break
-                        in_json = True
-                        continue
-                    if in_json:
-                        json_lines.append(line)
-                text = '\n'.join(json_lines).strip()
+            # Extract domain from feed URL
+            domain = self._extract_domain_from_url(feed.link or feed.url)
 
-            # Find JSON boundaries
-            if not text.startswith('{'):
-                start = text.find('{')
-                if start != -1:
-                    text = text[start:]
+            # Get sample articles if available (for now, use empty list)
+            sample_articles = []  # TODO: Fetch recent articles from feed for context
 
-            if not text.endswith('}'):
-                brace_count = 0
-                end_pos = -1
-                for i, char in enumerate(text):
-                    if char == '{':
-                        brace_count += 1
-                    elif char == '}':
-                        brace_count -= 1
-                        if brace_count == 0:
-                            end_pos = i
-                            break
+            # Use AI service's Gemini enrichment method
+            result = await self.ai_service.enrich_feed_with_gemini(
+                title=feed.title or "Unknown Feed",
+                description=feed.description or "",
+                domain=domain,
+                existing_tag="general",  # Default tag
+                sample_articles=sample_articles,
+                language=language
+            )
 
-                if end_pos != -1:
-                    text = text[:end_pos+1]
+            if result:
+                return {
+                    'title': result.refined_title,
+                    'description': result.refined_description,
+                    'tags': result.tags,
+                    'top_level_category': result.category,
+                    'popularity_estimate': result.popularity_estimate
+                }
+            else:
+                logger.warning("Gemini enrichment returned None, using fallback")
+                return self._fallback_enrichment_data(feed)
 
-            return json.loads(text)
+        except Exception as e:
+            logger.error("Gemini enrichment failed", error=str(e))
+            return self._fallback_enrichment_data(feed)
 
-        except json.JSONDecodeError:
-            logger.warning("Failed to parse JSON response", response=response[:200])
-            return {}
-
-    def _validate_llm_response(self, llm_data: dict[str, Any], feed: Feed) -> dict[str, Any]:
-        """Validate and clean LLM response data."""
-        result = {}
-
-        # Validate title
-        refined_title = llm_data.get('refined_title', feed.title or '')
-        if refined_title and 3 <= len(refined_title) <= 120:
-            result['title'] = refined_title.strip('"\'.')
-
-        # Validate description
-        refined_description = llm_data.get('refined_description', feed.description or '')
-        if refined_description and len(refined_description) <= 300:
-            result['description'] = refined_description.strip('"\'.')
-
-        # Validate tags
-        tags = llm_data.get('tags', [])
-        if isinstance(tags, list):
-            validated_tags = [
-                str(tag).strip().lower()
-                for tag in tags
-                if tag and 1 < len(str(tag)) < 30
-            ]
-            result['tags'] = validated_tags[:10]
-
-        # Validate category
-        category = llm_data.get('category', 'Miscellaneous')
-        valid_categories = [cat.value for cat in FeedCategory]
-        if category in valid_categories:
-            result['top_level_category'] = category
-        else:
-            result['top_level_category'] = 'Miscellaneous'
-
-        return result
 
     def _fallback_enrichment_data(self, feed: Feed) -> dict[str, Any]:
         """Provide fallback enrichment data if LLM fails."""
@@ -289,23 +222,45 @@ Return a JSON object with exactly these keys:
             'top_level_category': 'Miscellaneous'
         }
 
-    def _calculate_popularity_score(self, feed: Feed, enrichment_data: dict[str, Any]) -> float:
-        """Calculate popularity score based on domain authority."""
+    def _calculate_hybrid_popularity_score(self, feed: Feed, enrichment_data: dict[str, Any]) -> dict[str, Any]:
+        """Calculate popularity score using hybrid approach from pipeline."""
         try:
-            domain = self._extract_domain_from_url(feed.url)
-            domain_score = self.page_rank_service.get_domain_score(domain)
+            # Extract domain
+            domain = self._extract_domain_from_url(feed.link or feed.url)
 
-            # Simple scoring for now - just use domain authority
-            # Can be extended with feed activity, subscriber count, etc.
-            # Convert from 0-100 scale to 0-1 scale
-            return round(domain_score / 100.0, 3)
+            # Prepare feed data for popularity scorer
+            feed_data = {
+                'title': feed.title or "Unknown",
+                'description': feed.description or "",
+                'domain': domain,
+                'xmlUrl': feed.url,
+                'quality_score': getattr(feed, 'quality_score', 0.5),  # Default quality score
+                'popularity_estimate': enrichment_data.get('popularity_estimate', 50)
+            }
+
+            # Use the hybrid popularity scorer
+            popularity_data = self.popularity_scorer.calculate_popularity_score(feed_data)
+
+            # Convert to 0-1 scale for database storage
+            popularity_score = round(popularity_data['popularity_score'] / 100.0, 3)
+
+            return {
+                'popularity_score': popularity_score,
+                'llm_popularity_score': popularity_data.get('llm_popularity_score', 50),
+                'domain_authority_score': popularity_data.get('domain_authority_score', 0),
+                'quality_score': popularity_data.get('quality_score', 50)
+            }
 
         except Exception as e:
-            logger.warning("Popularity scoring failed", error=str(e))
-            return 0.0
+            logger.warning("Hybrid popularity scoring failed", error=str(e))
+            return {'popularity_score': 0.5}  # Default middle value
 
     async def _generate_embedding(self, feed: Feed, enrichment_data: dict[str, Any]) -> list[float] | None:
-        """Generate embedding for feed content."""
+        """Generate embedding for feed content using Gemini or fallback."""
+        if not self.settings.ENABLE_AI or not self.ai_service:
+            logger.warning("AI disabled but _generate_embedding called")
+            return None
+
         try:
             # Build composite text for embedding
             components = []
@@ -322,7 +277,7 @@ Return a JSON object with exactly these keys:
             if tags:
                 components.append(", ".join(tags))
 
-            domain = self._extract_domain_from_url(feed.url)
+            domain = self._extract_domain_from_url(feed.link or feed.url)
             if domain:
                 domain_clean = domain.replace('www.', '').replace('.com', '').replace('.org', '')
                 components.append(domain_clean)
@@ -333,8 +288,9 @@ Return a JSON object with exactly these keys:
             if len(composite_text) > 1000:
                 composite_text = composite_text[:1000] + "..."
 
-            # Generate embedding using AI service
-            embedding = await self.ai_service.generate_embedding(composite_text)
+            # Use Gemini for embeddings
+            embedding = await self.ai_service.generate_embedding_with_gemini(composite_text)
+
             return embedding
 
         except Exception as e:
@@ -395,7 +351,7 @@ Return a JSON object with exactly these keys:
             return result if result else None
 
         except Exception as e:
-            logger.warning("Image extraction failed", feed_url=feed.url, error=str(e))
+            logger.warning("Image extraction failed", feed_url=feed.link, error=str(e))
             return None
 
     async def _get_canonical_url_and_html(self, url: str) -> tuple[str | None, str | None]:
@@ -418,8 +374,11 @@ Return a JSON object with exactly these keys:
     def _extract_domain_from_url(self, url: str) -> str:
         """Extract clean domain from URL."""
         try:
+            if not url:
+                return ""
             parsed = urllib.parse.urlparse(url)
             domain = parsed.netloc.lower().replace('www.', '')
             return domain
         except Exception:
             return ""
+

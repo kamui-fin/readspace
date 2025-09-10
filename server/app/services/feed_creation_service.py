@@ -7,6 +7,7 @@ from uuid import UUID
 import feedparser
 import structlog
 
+from app.core.config import get_settings
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,
@@ -150,6 +151,10 @@ class FeedCreationService(BaseFeedService):
             feed_id=existing_feed.id,
             subscription_id=subscription.id,
         )
+
+        # Note: No enrichment trigger here since feed already exists
+        # Enrichment should only happen for newly created feeds
+
         return self._create_legacy_feed_response(subscription)
 
     def _create_legacy_feed_response(self, subscription) -> LegacyFeedResponse:
@@ -460,7 +465,12 @@ class FeedCreationService(BaseFeedService):
         return skip_days_value
 
     def _trigger_feed_enrichment(self, feed_id: UUID) -> None:
-        """Trigger background feed enrichment task."""
+        """Trigger background feed enrichment task if AI is enabled."""
+        settings = get_settings()
+        if not settings.ENABLE_AI:
+            logger.info("AI disabled, skipping feed enrichment", feed_id=feed_id)
+            return
+
         try:
             from app.workers.tasks import enrich_feed_task
 
