@@ -1,6 +1,5 @@
 """AI Service for OpenAI-compatible API interactions."""
 
-import json
 from typing import Any
 
 import structlog
@@ -17,7 +16,7 @@ class AIService:
 
     def __init__(self):
         self.settings = get_settings()
-        
+
         # Initialize Gemini client
         self.gemini_client = genai.Client(api_key=self.settings.GEMINI_API_KEY)
         logger.info("Gemini client initialized successfully")
@@ -107,7 +106,7 @@ class AIService:
                 model=self.settings.GEMINI_EMBEDDING_MODEL,
                 contents=texts
             )
-            
+
             embeddings = []
             for i, embedding_result in enumerate(response.embeddings):
                 if embedding_result and hasattr(embedding_result, 'values') and len(embedding_result.values) > 0:
@@ -115,7 +114,7 @@ class AIService:
                 else:
                     logger.warning(f"Empty embedding for text {i}")
                     embeddings.append(None)
-            
+
             logger.debug(
                 "Batch embedding generation completed",
                 successful_embeddings=sum(1 for e in embeddings if e is not None),

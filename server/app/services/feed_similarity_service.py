@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rss_models import Feed, FeedSubscription
 from app.schemas.rss_schemas import FeedDiscoveryResult
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
@@ -137,7 +138,7 @@ class FeedSimilarityService:
                     id=str(row.id),
                     title=row.title,
                     description=row.description,
-                    url=str(row.url),
+                    url=transform_rsshub_url(str(row.url)),
                     link=self._normalize_url(row.link),
                     image_url=self._normalize_url(row.image_url),
                     tags=row.tags or [],

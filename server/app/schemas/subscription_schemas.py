@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, AnyUrl
 
 from app.schemas.rss_schemas import FolderResponse
 
@@ -15,10 +15,10 @@ class FeedResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    url: HttpUrl
+    url: AnyUrl
     title: str | None = None
     description: str | None = None
-    link: HttpUrl | None = None
+    link: AnyUrl | None = None
     language: str | None = None
     image_url: str | None = None
     ttl: int | None = None
@@ -48,7 +48,7 @@ class SubscriptionBase(BaseModel):
 class SubscriptionCreate(SubscriptionBase):
     """Schema for creating a new subscription."""
 
-    url: HttpUrl  # URL of the feed to subscribe to
+    url: AnyUrl  # URL of the feed to subscribe to (allows any URL scheme including rsshub://)
     folder_id: UUID | str  # Allow 'default' string for onboarding
     # tag_ids removed - using ARRAY field on feeds
 
@@ -177,7 +177,7 @@ class ArticleWithStateResponse(BaseModel):
 
     # Content data (from article_contents)
     title: str | None = None
-    link: HttpUrl | None = None
+    link: AnyUrl | None = None
     description: str | None = None
     content: str | None = None
     image_url: str | None = None
@@ -209,10 +209,10 @@ class LegacyFeedResponse(BaseModel):
     id: UUID  # This will be subscription ID for compatibility
     user_id: UUID
     folder_id: UUID
-    url: HttpUrl
+    url: AnyUrl
     title: str | None = None
     description: str | None = None
-    link: HttpUrl | None = None
+    link: AnyUrl | None = None
     language: str | None = None
     image_url: str | None = None
     is_favorite: bool = False

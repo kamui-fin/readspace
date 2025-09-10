@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, AnyUrl
 
 
 # Generic Paginated Response
@@ -38,10 +38,10 @@ class FolderResponse(FolderBase):
 
 # ========= Feed Schemas =========
 class FeedBase(BaseModel):
-    url: HttpUrl
+    url: AnyUrl
     title: str | None = Field(None, max_length=500)
     description: str | None = None
-    link: HttpUrl | None = None
+    link: AnyUrl | None = None
     language: str | None = Field(None, max_length=50)
     image_url: str | None = None
     ttl: int | None = Field(None, gt=0)
@@ -55,10 +55,10 @@ class FeedCreate(FeedBase):
 
 # TODO: can't this be based on FeedBase
 class FeedUpdate(BaseModel):
-    url: HttpUrl | None = None
+    url: AnyUrl | None = None
     title: str | None = Field(None, max_length=500)
     description: str | None = None
-    link: HttpUrl | None = None
+    link: AnyUrl | None = None
     language: str | None = Field(None, max_length=50)
     image_url: str | None = None
     folder_id: UUID | None = None
@@ -91,14 +91,14 @@ class FeedBasicInfo(BaseModel):
 
     id: UUID
     title: str | None
-    url: HttpUrl
+    url: AnyUrl
     image_url: str | None
 
 
 # ========= Article Schemas =========
 class ArticleContentBase(BaseModel):
     title: str | None = None
-    link: HttpUrl
+    link: AnyUrl
     description: str | None = None
     content: str | None = None
     image_url: str | None = None
@@ -197,7 +197,7 @@ class ArticleBase(BaseModel):
 
     # Core content (from ArticleContent)
     title: str | None = None
-    link: HttpUrl
+    link: AnyUrl
     description: str | None = None
     content: str | None = None
     image_url: str | None = None
@@ -228,7 +228,7 @@ class ArticleCreate(BaseModel):
     user_id: UUID
     guid: str
     title: str | None = None
-    link: HttpUrl
+    link: AnyUrl
     description: str | None = None
     content: str | None = None
     author: str | None = None
@@ -275,8 +275,8 @@ class OpmlOutline(BaseModel):
     text: str | None = None
     title: str | None = None
     type: str | None = None
-    xmlUrl: HttpUrl | None = None
-    htmlUrl: HttpUrl | None = None
+    xmlUrl: AnyUrl | None = None
+    htmlUrl: AnyUrl | None = None
     # For nested outlines/folders
     children: list["OpmlOutline"] | None = None
 
@@ -310,8 +310,8 @@ class FeedDiscoveryResult(BaseModel):
     id: str
     title: str | None
     description: str | None
-    url: HttpUrl
-    link: HttpUrl | None
+    url: AnyUrl
+    link: AnyUrl | None
     image_url: str | None
     tags: list[str]
     language: str | None

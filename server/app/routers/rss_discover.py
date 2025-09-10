@@ -23,7 +23,7 @@ async def search_feeds(
     q: str | None = Query(None, description="Search query text", max_length=500),
     category: str | None = Query(None, description="Feed category to filter by", max_length=100),
     language: str = Query("en", description="Language code for filtering", max_length=10),
-    limit: int = Query(10, ge=1, le=20, description="Maximum number of results")
+    limit: int = Query(40, ge=1, le=100, description="Maximum number of results")
 ):
     """
     Search for RSS feeds using hybrid search or browse by category.

@@ -23,7 +23,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
@@ -38,7 +38,10 @@ import {
     SidebarMenuSubItem,
     useSidebarLeft,
 } from "@/components/ui/sidebar"
-import { useNavigationState, useOptimisticNavigation } from "@/hooks/use-navigation-state"
+import {
+    useNavigationState,
+    useOptimisticNavigation,
+} from "@/hooks/use-navigation-state"
 import {
     useCreateFeed,
     useCreateFolder,
@@ -60,6 +63,7 @@ import {
     Clock,
     Compass,
     Diamond,
+    FolderPlus,
     Inbox,
     Loader2,
     MoreHorizontal,
@@ -330,8 +334,8 @@ function FeedContextMenu({
                             {isProcessingDelete
                                 ? "Processing..."
                                 : isFolder
-                                    ? "Delete"
-                                    : "Unfollow"}
+                                  ? "Delete"
+                                  : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -482,7 +486,8 @@ function CollapsibleFeedItem({
     }
 
     const isActivePath = pathname === `/folders/${feed.id}/articles`
-    const isOptimisticallyActive = pendingPath === `/folders/${feed.id}/articles`
+    const isOptimisticallyActive =
+        pendingPath === `/folders/${feed.id}/articles`
     const isActiveState = isActivePath || isOptimisticallyActive
 
     return (
@@ -516,7 +521,9 @@ function CollapsibleFeedItem({
                         isActive={isActiveState}
                         aria-label={`Navigate to folder ${feed.title}`}
                         onClick={() => {
-                            handleOptimisticClick(`/folders/${feed.id}/articles`)
+                            handleOptimisticClick(
+                                `/folders/${feed.id}/articles`
+                            )
                             router.push(`/folders/${feed.id}/articles`)
                             if (isMobile) {
                                 toggleSidebar()
@@ -588,8 +595,15 @@ function RegularFeedItem({ feed }: { feed: FeedItem }) {
     return (
         <SidebarMenuItem key={feed.title}>
             <div className="flex items-center w-full group/item">
-                <SidebarLeftMenuButton asChild className="justify-start flex-1" isActive={isActiveState}>
-                    <Link href={feed.url} onClick={() => handleOptimisticClick(feed.url)}>
+                <SidebarLeftMenuButton
+                    asChild
+                    className="justify-start flex-1"
+                    isActive={isActiveState}
+                >
+                    <Link
+                        href={feed.url}
+                        onClick={() => handleOptimisticClick(feed.url)}
+                    >
                         <div className="flex flex-grow items-center overflow-hidden pl-2">
                             {feed.icon &&
                                 React.createElement(feed.icon, {
@@ -637,10 +651,11 @@ function MainNavigationItems({
         staleTime: 0, // Always consider stale so invalidation works immediately
     })
 
-    const typedUnreadCounts = unreadCounts as {
-        read_later_count?: number
-        today_count?: number
-    } || {}
+    const typedUnreadCounts =
+        (unreadCounts as {
+            read_later_count?: number
+            today_count?: number
+        }) || {}
 
     const getCountForItem = (title: string): number | null => {
         switch (title) {
@@ -659,7 +674,8 @@ function MainNavigationItems({
                 {items.map((item) => {
                     const count = getCountForItem(item.title)
                     const isOptimisticallyActive = pendingPath === item.url
-                    const isActiveState = pathname === item.url || isOptimisticallyActive
+                    const isActiveState =
+                        pathname === item.url || isOptimisticallyActive
 
                     return (
                         <SidebarMenuItem key={item.title}>
@@ -672,7 +688,12 @@ function MainNavigationItems({
                                     isActive={isActiveState}
                                     className="flex-1"
                                 >
-                                    <Link href={item.url} onClick={() => handleOptimisticClick(item.url)}>
+                                    <Link
+                                        href={item.url}
+                                        onClick={() =>
+                                            handleOptimisticClick(item.url)
+                                        }
+                                    >
                                         <item.icon className="h-4 w-4" />
                                         <span>{item.title}</span>
                                     </Link>
@@ -694,18 +715,27 @@ function MainNavigationItems({
 }
 
 // Feeds Navigation component
-export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean, toggleSidebar: () => void }) {
+export function FeedsNavigation({
+    isMobile,
+    toggleSidebar,
+}: {
+    isMobile: boolean
+    toggleSidebar: () => void
+}) {
     // Use the optimized combined sidebar data hook with proper cache configuration
     const { data: folders, isLoading: isFoldersLoading } = useFolders({
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
     })
-    const { data: feeds, isLoading: isFeedsLoading } = useFeeds({}, {
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
-    })
+    const { data: feeds, isLoading: isFeedsLoading } = useFeeds(
+        {},
+        {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes - matches server prefetch staleTime
+        }
+    )
     const { data: unreadCounts, isLoading: isUnreadCountsLoading } =
         useUnreadCounts(undefined, {
             refetchOnMount: false,
@@ -722,7 +752,8 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
     const createFeed = useCreateFeed()
 
     // Global modal state management
-    const { isFolderModalOpen, openFolderModal, closeFolderModal } = useModalStore()
+    const { isFolderModalOpen, openFolderModal, closeFolderModal } =
+        useModalStore()
     const [isFeedModalOpen, setIsFeedModalOpen] = useState(false)
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
         null
@@ -888,7 +919,11 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
 
         if (feedUrl.trim() && selectedFolderId) {
             createFeed.mutate(
-                { url: feedUrl.trim(), folder_id: selectedFolderId, silent: true },
+                {
+                    url: feedUrl.trim(),
+                    folder_id: selectedFolderId,
+                    silent: true,
+                },
                 {
                     onSuccess: () => {
                         setIsFeedModalOpen(false)
@@ -907,7 +942,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                             errorMessage = error.message
                         } else if (error?.detail) {
                             errorMessage = error.detail
-                        } else if (typeof error === 'string') {
+                        } else if (typeof error === "string") {
                             errorMessage = error
                         } else if (error?.response?.data?.detail) {
                             errorMessage = error.response.data.detail
@@ -953,7 +988,7 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                         onClick={handleAddFolder}
                         title="Add new folder"
                     >
-                        <Plus className="h-4 w-4 transition-colors duration-150" />
+                        <FolderPlus className="h-4 w-4 transition-colors duration-150" />
                         <span className="sr-only">Add</span>
                     </Button>
                 </div>
@@ -1023,14 +1058,17 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isFeedModalOpen} onOpenChange={(open) => {
-                setIsFeedModalOpen(open)
-                if (!open) {
-                    setFeedError(null) // Clear errors when closing
-                    setFeedUrl("")
-                    setSelectedFolderId(null)
-                }
-            }}>
+            <Dialog
+                open={isFeedModalOpen}
+                onOpenChange={(open) => {
+                    setIsFeedModalOpen(open)
+                    if (!open) {
+                        setFeedError(null) // Clear errors when closing
+                        setFeedUrl("")
+                        setSelectedFolderId(null)
+                    }
+                }}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Add New Feed</DialogTitle>
@@ -1044,7 +1082,9 @@ export function FeedsNavigation({ isMobile, toggleSidebar }: { isMobile: boolean
                         />
                         {feedError && (
                             <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                                <p className="text-sm text-red-600">{feedError}</p>
+                                <p className="text-sm text-red-600">
+                                    {feedError}
+                                </p>
                             </div>
                         )}
                         <DialogFooter className="mt-4 flex gap-2">
@@ -1115,9 +1155,8 @@ export function NavMain() {
 
     const mainNavItems: MainNavItem[] = [
         { title: "Today", icon: Diamond, url: "/today" },
-        { title: "Discover", icon: Compass, url: "/discover" },
+        { title: "Follow Sources", icon: Compass, url: "/discover" },
         { title: "Read Later", icon: BookmarkIcon, url: "/read-later" },
-        { title: "Recently Read", icon: Clock, url: "/recently-read" },
     ]
 
     return (
@@ -1127,7 +1166,10 @@ export function NavMain() {
                 isMobile={isMobile}
                 toggleSidebar={toggleSidebar}
             />
-            <FeedsNavigation isMobile={isMobile} toggleSidebar={toggleSidebar} />
+            <FeedsNavigation
+                isMobile={isMobile}
+                toggleSidebar={toggleSidebar}
+            />
             <LibraryNavigation />
         </>
     )

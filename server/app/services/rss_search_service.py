@@ -67,7 +67,7 @@ class RssSearchService:
         query: str | None = None,
         category: str | None = None,
         language: str = "en",
-        limit: int = 20
+        limit: int = 40
     ) -> list[dict[str, Any]]:
         """
         Search for RSS feeds using hybrid search or category browsing.
@@ -82,7 +82,7 @@ class RssSearchService:
             List of feed results with relevance scores
         """
         # Ensure limit doesn't exceed 20
-        limit = min(limit, 20)
+        limit = min(limit, 100)
 
         # Check if query is a URL and try to preview it as a feed
         if query and self._is_valid_url(query):
