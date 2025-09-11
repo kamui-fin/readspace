@@ -1,8 +1,7 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, Sparkles } from "lucide-react"
+import { Sparkles } from "lucide-react"
 
 import Header from "@/components/navigation/header"
 import { Button } from "@/components/ui/button"
@@ -33,7 +32,6 @@ interface SimilarFeed {
 export default function SimilarFeedsClient({
     feedId
 }: SimilarFeedsClientProps) {
-    const router = useRouter()
 
     // Query for similar feeds data (includes source feed)
     const { data: similarData, isLoading, error } = useQuery({
@@ -45,9 +43,6 @@ export default function SimilarFeedsClient({
     const sourceFeed = similarData?.source_feed
     const similarFeeds = similarData?.similar_feeds || []
 
-    const handleBack = () => {
-        router.back()
-    }
 
     if (error) {
         return (
@@ -58,17 +53,6 @@ export default function SimilarFeedsClient({
 
                 <div className="max-w-4xl mx-auto px-6 py-8">
                     <div className="mb-8">
-                        <div className="flex items-center gap-4 mb-6">
-                            <Button 
-                                onClick={handleBack} 
-                                variant="ghost" 
-                                size="sm"
-                                className="hover:bg-muted"
-                            >
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Back
-                            </Button>
-                        </div>
 
                         <div className="text-center space-y-4">
                             <div className="flex items-center justify-center gap-2 mb-4">
@@ -102,10 +86,6 @@ export default function SimilarFeedsClient({
                             <Sparkles className="h-16 w-16 mx-auto mb-4 opacity-30" />
                             <h3 className="text-xl font-medium mb-3">Error loading similar feeds</h3>
                             <p className="text-base">{error.message || "Please try again later."}</p>
-                            <Button onClick={handleBack} variant="outline" className="mt-4">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
-                                Go Back
-                            </Button>
                         </div>
                     </Card>
                 </div>
@@ -122,17 +102,6 @@ export default function SimilarFeedsClient({
             <div className="max-w-4xl mx-auto px-6 py-8">
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="flex items-center gap-4 mb-6">
-                        <Button 
-                            onClick={handleBack} 
-                            variant="ghost" 
-                            size="sm"
-                            className="hover:bg-muted"
-                        >
-                            <ArrowLeft className="h-4 w-4 mr-2" />
-                            Back
-                        </Button>
-                    </div>
 
                     <div className="text-center space-y-4">
                         <div className="flex items-center justify-center gap-2 mb-4">
@@ -189,10 +158,6 @@ export default function SimilarFeedsClient({
                                 <p className="text-base">
                                     This feed might be unique, or similar feeds may not have embeddings yet.
                                 </p>
-                                <Button onClick={handleBack} variant="outline" className="mt-4">
-                                    <ArrowLeft className="h-4 w-4 mr-2" />
-                                    Go Back
-                                </Button>
                             </div>
                         </Card>
                     )}

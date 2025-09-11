@@ -8,9 +8,8 @@ import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
-import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
-import Header from "@/components/navigation/header"
+import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { Button } from "@/components/ui/button"
 import { CategoryBadge } from "@/components/ui/category-badge"
 import { Input } from "@/components/ui/input"
@@ -21,6 +20,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
+import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { ApiClient } from "@/lib/api/client"
 
 function usePersistentState(key: string, initialValue: any) {
@@ -59,7 +60,7 @@ interface DiscoverLayoutProps {
 function DiscoverLayout({ children }: DiscoverLayoutProps) {
     return (
         <div className="flex flex-col min-h-screen">
-            <main className="flex-1 px-4 py-6 md:px-6">{children}</main>
+            <main className="flex-1 px-4 py-4 md:px-6 md:py-6">{children}</main>
         </div>
     )
 }
@@ -74,11 +75,36 @@ export default function DiscoverPageClient({
     const [activeCategory, setActiveCategory] = useState(initialCategory || "")
     const [language, setLanguage] = usePersistentState("discover-language", "en")
 
+    // Sidebar state for tablet mode
+    const isTablet = useIsTablet()
+    const isMobile = useIsMobile()
+    const { state: sidebarState } = useSidebarLeft()
+
+    // Shorter category names for mobile
+    const getMobileCategoryName = (category: string) => {
+        const mobileNames: Record<string, string> = {
+            "Technology & Programming": "Tech & Code",
+            "Artificial Intelligence": "AI",
+            "Design & Creativity": "Design",
+            "Business & Finance": "Business",
+            "News & Politics": "News",
+            "Gaming & Entertainment": "Gaming",
+            "Science & Research": "Science",
+            "Lifestyle & Personal": "Lifestyle",
+            "Culture & Arts": "Culture",
+            "Security & Privacy": "Security",
+            "Education & Learning": "Education",
+            "Miscellaneous": "Other",
+        }
+        return isMobile ? (mobileNames[category] || category) : category
+    }
+
+
     const hasSearchParams = Boolean(activeQuery || activeCategory)
 
     const getPageTitle = () => {
         if (activeCategory) {
-            return activeCategory
+            return getMobileCategoryName(activeCategory)
         }
         return "Discover Feeds"
     }
@@ -163,16 +189,17 @@ export default function DiscoverPageClient({
 
     return (
         <DiscoverLayout>
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-full md:max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col items-center mb-12">
-                    <div className="mb-4">
+                <div className="flex flex-col items-start md:items-center mb-8 md:mb-12">
+                    <div className="mb-4 hidden md:block">
                         <svg
                             width="128"
                             height="128"
                             viewBox="0 0 64 64"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
+                            className="[&_g]:dark:!filter-none dark:[&_circle[fill='#FCFFFC']]:fill-card dark:[&_circle[stroke='#F5FAF6']]:stroke-border"
                         >
                             <g filter="url(#filter0_d_18_362)">
                                 <circle cx="32" cy="25" r="23" fill="#FCFFFC" />
@@ -301,44 +328,22 @@ export default function DiscoverPageClient({
                             </defs>
                         </svg>
                     </div>
-                    <h1 className="text-5xl font-semibold text-black mb-10 min-h-[3.5rem] flex items-center justify-center max-w-2xl">
-                        {getPageTitle()}
-                    </h1>
+                    {/* Mobile: Sidebar Toggle, Title and Language Selector */}
+                    <div className="flex md:hidden items-center w-full max-w-2xl mb-6 gap-3">
+                        {sidebarState === "collapsed" && (
+                            <SidebarLeftTrigger />
+                        )}
 
-                    {/* Search Section */}
-                    <form
-                        onSubmit={handleSearch}
-                        className="flex items-center gap-3 w-full max-w-2xl"
-                    >
-                        <div className="relative flex-1">
-                            <Input
-                                type="text"
-                                placeholder={
-                                    searchQuery
-                                        ? ""
-                                        : "Search by keyword, topic, RSS url, website, subreddit.."
-                                }
-                                value={searchQuery}
-                                onChange={handleSearchInputChange}
-                                className={`pl-6 pr-12 border-0 h-14 text-lg ${
-                                    searchQuery
-                                        ? "bg-[#F3F9EF] placeholder:text-[#91998C]"
-                                        : "bg-[#F3F9EF] placeholder:text-[#D8E5D0]"
-                                }`}
-                                style={{
-                                    color: searchQuery ? "#91998C" : "#D8E5D0",
-                                }}
-                            />
-                            <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#91998C]" />
-                        </div>
+                        <h1 className="text-3xl font-semibold text-black dark:text-foreground min-h-[2.5rem] flex items-center truncate break-words flex-1">
+                            {getPageTitle()}
+                        </h1>
 
                         <Select
                             value={language}
                             onValueChange={handleLanguageChange}
                         >
                             <SelectTrigger
-                                className="bg-[#F3F9EF] border-0 h-14 w-24 text-lg"
-                                style={{ color: "#91998C" }}
+                                className="bg-[#F3F9EF] dark:bg-input border-0 h-8 w-16 text-sm text-[#91998C] dark:text-muted-foreground flex-shrink-0"
                             >
                                 <SelectValue />
                             </SelectTrigger>
@@ -347,6 +352,55 @@ export default function DiscoverPageClient({
                                 <SelectItem value="zh">中文</SelectItem>
                             </SelectContent>
                         </Select>
+                    </div>
+
+                    {/* Desktop: Title centered */}
+                    <h1 className="hidden md:flex text-5xl font-semibold text-black dark:text-foreground mb-10 min-h-[3.5rem] items-center justify-center max-w-2xl truncate break-words">
+                        {getPageTitle()}
+                    </h1>
+
+                    {/* Search Section */}
+                    <form
+                        onSubmit={handleSearch}
+                        className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 w-full max-w-2xl min-w-0"
+                    >
+                        <div className="relative flex-1 min-w-0">
+                            <Input
+                                type="text"
+                                placeholder={
+                                    searchQuery
+                                        ? ""
+                                        : "Search feeds..."
+                                }
+                                value={searchQuery}
+                                onChange={handleSearchInputChange}
+                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
+                                    ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
+                                    : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
+                                    }`}
+                                style={{
+                                    color: searchQuery ? "#91998C" : "#D8E5D0",
+                                }}
+                            />
+                            <Search className="absolute right-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-[#91998C] dark:text-muted-foreground" />
+                        </div>
+
+                        <div className="hidden md:block">
+                            <Select
+                                value={language}
+                                onValueChange={handleLanguageChange}
+                            >
+                                <SelectTrigger
+                                    className="bg-[#F3F9EF] dark:bg-input border-0 h-14 w-24 text-lg text-[#91998C] dark:text-muted-foreground flex-shrink-0"
+                                >
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="en">eng</SelectItem>
+                                    <SelectItem value="zh">中文</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </form>
                 </div>
 
@@ -369,14 +423,14 @@ export default function DiscoverPageClient({
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.1 }}
                                 >
-                                    <div className="text-[#91998C] text-sm font-medium">
+                                    <div className="text-[#91998C] dark:text-muted-foreground text-sm font-medium">
                                         {searchData.total_count} results
                                     </div>
                                     <Button
                                         variant="ghost"
                                         size="sm"
                                         onClick={clearSearch}
-                                        className="h-6 w-6 p-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF]"
+                                        className="h-6 w-6 p-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
                                     >
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -407,10 +461,10 @@ export default function DiscoverPageClient({
                                             className="w-32 h-auto"
                                         />
                                     </div>
-                                    <h3 className="text-xl font-medium mb-3 text-black">
+                                    <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
                                         {searchError ? "Search failed" : "No matching feeds found"}
                                     </h3>
-                                    <p className="text-gray-500 text-center max-w-md">
+                                    <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
                                         {searchError ? "Please try again later." : "Try rephrasing your query."}
                                     </p>
                                 </motion.div>
@@ -455,7 +509,7 @@ export default function DiscoverPageClient({
                             exit={{ opacity: 0, y: -20 }}
                             transition={{ duration: 0.3, ease: "easeOut" }}
                         >
-                            <div className="flex flex-wrap gap-3 justify-center mb-8">
+                            <div className="grid grid-cols-2 gap-2 justify-center mb-8 md:flex md:flex-wrap md:gap-3 md:justify-center">
                                 {[
                                     "Technology & Programming",
                                     "Artificial Intelligence",
@@ -481,10 +535,12 @@ export default function DiscoverPageClient({
                                         }}
                                     >
                                         <CategoryBadge
-                                            category={category}
+                                            category={getMobileCategoryName(category)}
+                                            iconKey={category}
                                             onClick={() =>
                                                 handleCategoryClick(category)
                                             }
+                                            className={isMobile ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1" : ""}
                                         />
                                     </motion.div>
                                 ))}

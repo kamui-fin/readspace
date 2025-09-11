@@ -1641,6 +1641,11 @@ function ArticleContentView({
 }
 
 const stripHTML = (html: string) => {
+    if (typeof window === "undefined") {
+        // Server-side: simple regex-based HTML stripping
+        return html.replace(/<[^>]*>/g, "").replace(/&[^;]+;/g, "")
+    }
+    // Client-side: use DOMParser
     const parser = new DOMParser()
     const doc = parser.parseFromString(html, "text/html")
     return doc.body.textContent || ""

@@ -83,14 +83,14 @@ export function FeedCard({
 
 
     return (
-        <div className="p-4">
-            <div className="flex gap-4">
-                <div className="relative">
+        <div className="p-2 md:p-4 w-full">
+            <div className="flex gap-3 md:gap-4 w-full min-w-0">
+                <div className="relative flex-shrink-0">
                     {feed.image_url && (
                         <NextImage
                             src={feed.image_url}
                             alt={feed.title || 'Feed icon'}
-                            className="w-9 h-9 rounded object-cover"
+                            className="w-8 h-8 md:w-9 md:h-9 rounded object-cover"
                             width={36}
                             height={36}
                             onError={(e) => {
@@ -102,7 +102,7 @@ export function FeedCard({
                         />
                     )}
                     <div
-                        className={`w-9 h-9 rounded flex items-center justify-center text-white font-bold text-sm ${feed.title?.toLowerCase().includes('techcrunch') ? 'bg-green-600' :
+                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${feed.title?.toLowerCase().includes('techcrunch') ? 'bg-green-600' :
                             feed.title?.toLowerCase().includes('hacker news') ? 'bg-orange-500' :
                                 'bg-gray-600'
                             }`}
@@ -114,23 +114,23 @@ export function FeedCard({
                     </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h3 className="font-semibold text-lg text-black leading-tight">
+                <div className="flex-1 min-w-0 max-w-full">
+                    <div className="flex flex-col md:flex-row md:items-start md:justify-between md:gap-4">
+                        <div className="flex-1 min-w-0 max-w-full">
+                            <h3 className="font-semibold text-lg text-black dark:text-foreground leading-tight break-words hyphens-auto" style={{ wordWrap: 'break-word', overflowWrap: 'anywhere' }}>
                                 {feed.title || "Untitled Feed"}
                             </h3>
-                            <a href={feed.link || feed.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#BDC6B7] mt-0.5">
+                            <a href={feed.link || feed.url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#BDC6B7] dark:text-secondary mt-0.5 block break-all" style={{ wordBreak: 'break-all' }}>
                                 {(feed.link || feed.url)?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'No URL'}
                             </a>
                             {feed.description && (
-                                <p className="text-xs text-[#91998C] mt-2 leading-relaxed">
-                                    {truncateText(feed.description, 120)}
+                                <p className="text-xs text-[#91998C] mt-2 leading-relaxed break-words" style={{ wordWrap: 'break-word', overflowWrap: 'anywhere', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                    {feed.description}
                                 </p>
                             )}
                         </div>
 
-                        <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="hidden md:flex items-center gap-4 flex-shrink-0">
                             {showSimilarButton && (
                                 <Button
                                     variant="ghost"
@@ -156,18 +156,45 @@ export function FeedCard({
                         </div>
                     </div>
 
-                    {showPreviewButton && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-primary hover:text-primary/80 text-xs px-0 py-1 h-auto font-normal mt-2"
-                            asChild
-                        >
-                            <Link href={isFollowed ? `/feeds/${feed.id}/articles` : `/feeds/${feed.id}/articles?preview=true`}>
-                                {isFollowed ? 'View' : 'Preview'}
-                            </Link>
-                        </Button>
-                    )}
+                    <div className="flex items-center justify-between mt-3 gap-2">
+                        {showPreviewButton && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-primary hover:text-primary/80 dark:text-secondary dark:hover:text-secondary/80 text-xs px-0 py-1 h-auto font-normal"
+                                asChild
+                            >
+                                <Link href={isFollowed ? `/feeds/${feed.id}/articles` : `/feeds/${feed.id}/articles?preview=true`}>
+                                    {isFollowed ? 'View' : 'Preview'}
+                                </Link>
+                            </Button>
+                        )}
+                        
+                        <div className="md:hidden flex items-center gap-2 flex-shrink-0">
+                            {showSimilarButton && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-[#91998C] hover:text-[#6A994E] text-xs px-2 py-1 h-auto font-normal"
+                                    asChild
+                                >
+                                    <Link href={`/feeds/${feed.id}/similar`}>
+                                        Similar Feeds
+                                    </Link>
+                                </Button>
+                            )}
+                            {showFollowButton && (
+                                <Button
+                                    variant={isFollowed ? "outline" : "secondary"}
+                                    onClick={handleFollowClick}
+                                    className={`h-8 text-xs ${isFollowed ? 'text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10' : ''}`}
+                                >
+                                    {isFollowed && <Trash2 className="mr-1 h-3 w-3" />}
+                                    {isFollowed ? 'Unfollow' : 'Follow'}
+                                </Button>
+                            )}
+                        </div>
+                    </div>
                 </div>
             </div>
 

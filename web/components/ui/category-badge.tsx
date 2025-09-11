@@ -22,8 +22,8 @@ const categoryBadgeVariants = cva(
     {
         variants: {
             variant: {
-                default: "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA]",
-                selected: "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7]",
+                default: "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent",
+                selected: "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7] dark:border-primary/30 dark:bg-card dark:text-primary dark:hover:bg-accent",
             },
         },
         defaultVariants: {
@@ -70,10 +70,11 @@ export interface CategoryBadgeProps
     extends React.HTMLAttributes<HTMLDivElement>,
     VariantProps<typeof categoryBadgeVariants> {
     category: string
+    iconKey?: string
     selected?: boolean
 }
 
-function CategoryBadge({ className, category, selected = false, ...props }: CategoryBadgeProps) {
+function CategoryBadge({ className, category, iconKey, selected = false, ...props }: CategoryBadgeProps) {
     return (
         <div
             className={cn(
@@ -84,7 +85,7 @@ function CategoryBadge({ className, category, selected = false, ...props }: Cate
             )}
             {...props}
         >
-            {getCategoryIcon(category)}
+            {getCategoryIcon(iconKey || category)}
             <span>{category}</span>
         </div>
     )

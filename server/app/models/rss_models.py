@@ -139,6 +139,10 @@ class Feed(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Error tracking
+    fetch_error_count: Column[int] = Column(Integer, nullable=False, default=0)
+    last_error_message: Column[str | None] = Column(Text, nullable=True)
+
     created_at: Column[datetime] = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

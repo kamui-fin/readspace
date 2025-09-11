@@ -125,6 +125,9 @@ async def update_feed_metadata(
         feed_db.last_article_published_at = last_article_published_at
 
     # Reset error state on successful fetch
+    feed_db.fetch_error_count = 0
+    feed_db.last_error_message = None
+    
     db.add(feed_db)
     await db.commit()
     await db.refresh(feed_db)
@@ -293,6 +296,31 @@ async def get_feeds_by_user(
 
     result = await db.execute(stmt)
     return result.unique().all()
+
+
+async def update_feed_error(
+    db: AsyncSession,
+    *,
+    feed_db: Feed,
+    error_message: str
+) -> Feed:
+    """Update feed error count and message after a failed fetch."""
+    feed_db.fetch_error_count += 1
+    feed_db.last_error_message = error_message
+    feed_db.updated_at = datetime.now(timezone.utc)
+    
+    db.add(feed_db)
+    await db.commit()
+    await db.refresh(feed_db)
+    
+    logger.warning(
+        "Feed error count updated",
+        feed_id=feed_db.id,
+        error_count=feed_db.fetch_error_count,
+        error_message=error_message
+    )
+    
+    return feed_db
 
 
 async def update_feed_enrichment(
