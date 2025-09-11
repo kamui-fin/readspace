@@ -28,14 +28,14 @@ class FeedManagementService:
         self.feed_parser = FeedParsingService()
 
     def _normalize_url(self, url_str: str | None) -> str | None:
-        """Normalize URL to ensure it's a valid HTTP/HTTPS URL for Pydantic."""
+        """Normalize URL for API responses, preserving original schemes like rsshub://"""
         if not url_str:
             return None
         url_str = str(url_str).strip()
 
-        # Transform RSShub URLs first
+        # Keep rsshub:// URLs as-is for display purposes
         if url_str.startswith('rsshub://'):
-            url_str = transform_rsshub_url(url_str)
+            return url_str
 
         # If it's already a valid web URL, return it
         if url_str.startswith(('http://', 'https://')):

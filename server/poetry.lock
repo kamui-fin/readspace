@@ -1693,6 +1693,18 @@ files = [
 ]
 
 [[package]]
+name = "iso639-lang"
+version = "2.6.3"
+description = "A fast, comprehensive, ISO 639 library."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "iso639_lang-2.6.3-py3-none-any.whl", hash = "sha256:a6c2fb9f739dca180dc7f48b098880f303bcce2cdf93a4ca3152ed8bbbb94fbb"},
+    {file = "iso639_lang-2.6.3.tar.gz", hash = "sha256:078ddb7cd0182dcc04367691acc8022ddf7158b6cb09f08f798af823fa864265"},
+]
+
+[[package]]
 name = "itsdangerous"
 version = "2.2.0"
 description = "Safely pass data to untrusted environments and back."
@@ -5178,4 +5190,4 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<=3.13.7"
-content-hash = "2e5ec2262350714232368a322053c931eb11fdcd11234720cedee6343c342752"
+content-hash = "9adaec222e317c3b3c44a2b221a29c3210fa81507699afd8bd030eb6c1e47788"

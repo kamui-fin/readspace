@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.rss_models import Feed, FeedSubscription
 from app.schemas.rss_schemas import FeedDiscoveryResult
-from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
@@ -21,10 +20,14 @@ class FeedSimilarityService:
         self.user_id = user_id
 
     def _normalize_url(self, url_str: str | None) -> str | None:
-        """Normalize URL to ensure it's a valid HTTP/HTTPS URL for Pydantic."""
+        """Normalize URL for API responses, preserving original schemes like rsshub://"""
         if not url_str:
             return None
         url_str = str(url_str).strip()
+
+        # Keep rsshub:// URLs as-is for display purposes
+        if url_str.startswith('rsshub://'):
+            return url_str
 
         # If it's already a valid web URL, return it
         if url_str.startswith(('http://', 'https://')):
@@ -138,7 +141,7 @@ class FeedSimilarityService:
                     id=str(row.id),
                     title=row.title,
                     description=row.description,
-                    url=transform_rsshub_url(str(row.url)),
+                    url=str(row.url),  # Keep original URL for display
                     link=self._normalize_url(row.link),
                     image_url=self._normalize_url(row.image_url),
                     tags=row.tags or [],

@@ -4,7 +4,8 @@ import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Search, X } from "lucide-react"
 import NextImage from "next/image"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { toast } from "react-hot-toast"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
@@ -22,10 +23,33 @@ import {
 } from "@/components/ui/select"
 import { ApiClient } from "@/lib/api/client"
 
+function usePersistentState(key: string, initialValue: any) {
+    const [state, setState] = useState(() => {
+        if (typeof window === "undefined") return initialValue
+        try {
+            const storedValue = localStorage.getItem(key)
+            return storedValue ? JSON.parse(storedValue) : initialValue
+        } catch (error) {
+            console.error("Error retrieving from localStorage:", error)
+            return initialValue
+        }
+    })
+
+    useEffect(() => {
+        if (typeof window === "undefined") return
+        try {
+            localStorage.setItem(key, JSON.stringify(state))
+        } catch (error) {
+            console.error("Error saving to localStorage:", error)
+        }
+    }, [key, state])
+
+    return [state, setState]
+}
+
 interface DiscoverPageClientProps {
     initialQuery?: string
     initialCategory?: string
-    initialLanguage?: string
 }
 
 interface DiscoverLayoutProps {
@@ -40,15 +64,15 @@ function DiscoverLayout({ children }: DiscoverLayoutProps) {
     )
 }
 
+
 export default function DiscoverPageClient({
     initialQuery,
     initialCategory,
-    initialLanguage,
 }: DiscoverPageClientProps) {
     const [searchQuery, setSearchQuery] = useState(initialQuery || "")
     const [activeQuery, setActiveQuery] = useState(initialQuery || "")
     const [activeCategory, setActiveCategory] = useState(initialCategory || "")
-    const [language, setLanguage] = useState(initialLanguage || "en")
+    const [language, setLanguage] = usePersistentState("discover-language", "en")
 
     const hasSearchParams = Boolean(activeQuery || activeCategory)
 
@@ -64,20 +88,31 @@ export default function DiscoverPageClient({
         data: searchData,
         isLoading,
         isFetching,
+        error: searchError,
     } = useQuery({
         queryKey: [
             "discover",
             "search",
             { q: activeQuery, category: activeCategory, language },
         ],
-        queryFn: () =>
-            ApiClient.rss.searchFeeds({
-                q: activeQuery,
-                category: activeCategory,
-                language,
-                limit: 50,
-            }),
+        queryFn: async () => {
+            try {
+                return await ApiClient.rss.searchFeeds({
+                    q: activeQuery,
+                    category: activeCategory,
+                    language,
+                    limit: 50,
+                })
+            } catch (error) {
+                toast.error("Failed to search feeds. Please try again.")
+                throw error
+            }
+        },
         enabled: hasSearchParams,
+        retry: (failureCount, error) => {
+            // Only retry on network errors, not API errors
+            return failureCount < 2 && !error?.message?.includes("400")
+        }
     })
 
     const handleSearch = (e: React.FormEvent) => {
@@ -117,6 +152,7 @@ export default function DiscoverPageClient({
     const handleLanguageChange = (newLanguage: string) => {
         setLanguage(newLanguage)
         // Language change will automatically trigger a new search due to the query key dependency
+        // Persistence is handled automatically by usePersistentState
     }
 
     const clearSearch = () => {
@@ -352,7 +388,7 @@ export default function DiscoverPageClient({
                                         <FeedCardSkeleton key={i} />
                                     ))}
                                 </div>
-                            ) : searchData?.results.length === 0 ? (
+                            ) : searchError || searchData?.results.length === 0 ? (
                                 <motion.div
                                     className="flex flex-col items-center justify-center py-16"
                                     initial={{ opacity: 0, scale: 0.95 }}
@@ -372,10 +408,10 @@ export default function DiscoverPageClient({
                                         />
                                     </div>
                                     <h3 className="text-xl font-medium mb-3 text-black">
-                                        No matching feeds found
+                                        {searchError ? "Search failed" : "No matching feeds found"}
                                     </h3>
                                     <p className="text-gray-500 text-center max-w-md">
-                                        Try rephrasing your query.
+                                        {searchError ? "Please try again later." : "Try rephrasing your query."}
                                     </p>
                                 </motion.div>
                             ) : (
