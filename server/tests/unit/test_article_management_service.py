@@ -92,6 +92,7 @@ class TestArticleManagementService:
                 sort_order="desc",
                 skip=0,
                 limit=10,
+                allow_preview=False,
             )
 
     @pytest.mark.asyncio
@@ -131,6 +132,7 @@ class TestArticleManagementService:
                 sort_order="desc",
                 skip=50,
                 limit=50,
+                allow_preview=False,
             )
 
     @pytest.mark.asyncio

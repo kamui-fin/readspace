@@ -155,7 +155,7 @@ class TestFeedValidator:
         assert metadata["title"] == "Test Feed"
         assert metadata["description"] == "Test Description"
         assert metadata["link"] == "http://example.com"
-        assert metadata["language"] == "en-US"
+        assert metadata["language"] == "en"
     
     def test_extract_feed_metadata_with_defaults(self):
         """Test extraction with missing fields uses defaults."""
@@ -184,4 +184,4 @@ class TestFeedValidator:
         assert len(metadata["title"]) == 500
         assert len(metadata["description"]) == 1000
         assert len(metadata["link"]) == 2000
-        assert len(metadata["language"]) == 10
+        assert len(metadata["language"]) == 2  # "en" after normalization

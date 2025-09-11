@@ -4,8 +4,10 @@ import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "framer-motion"
 import { Search, X } from "lucide-react"
 import NextImage from "next/image"
-import { useEffect, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
+import { useDebouncedCallback } from "use-debounce"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
@@ -51,6 +53,7 @@ function usePersistentState(key: string, initialValue: any) {
 interface DiscoverPageClientProps {
     initialQuery?: string
     initialCategory?: string
+    initialLanguage?: string
 }
 
 interface DiscoverLayoutProps {
@@ -69,16 +72,48 @@ function DiscoverLayout({ children }: DiscoverLayoutProps) {
 export default function DiscoverPageClient({
     initialQuery,
     initialCategory,
+    initialLanguage,
 }: DiscoverPageClientProps) {
-    const [searchQuery, setSearchQuery] = useState(initialQuery || "")
-    const [activeQuery, setActiveQuery] = useState(initialQuery || "")
-    const [activeCategory, setActiveCategory] = useState(initialCategory || "")
-    const [language, setLanguage] = usePersistentState("discover-language", "en")
+    const searchParams = useSearchParams()
+    const pathname = usePathname()
+    const { replace } = useRouter()
+    
+    // Get current state from URL
+    const activeQuery = searchParams.get('q') || ''
+    const activeCategory = searchParams.get('category') || ''
+    const urlLanguage = searchParams.get('language')
+    
+    // Use URL language if available, fallback to localStorage, then 'en'
+    const [persistedLanguage, setPersistedLanguage] = usePersistentState("discover-language", "en")
+    const language = urlLanguage || initialLanguage || persistedLanguage
+    
+    // Local search input state (for typing before submission)
+    const [searchQuery, setSearchQuery] = useState(activeQuery)
 
     // Sidebar state for tablet mode
     const isTablet = useIsTablet()
     const isMobile = useIsMobile()
     const { state: sidebarState } = useSidebarLeft()
+    
+    // Sync search input with URL when URL changes (browser navigation)
+    useEffect(() => {
+        setSearchQuery(activeQuery)
+    }, [activeQuery])
+    
+    // Helper function to update URL parameters
+    const updateSearchParams = useCallback((updates: Record<string, string | null>) => {
+        const params = new URLSearchParams(searchParams)
+        
+        Object.entries(updates).forEach(([key, value]) => {
+            if (value) {
+                params.set(key, value)
+            } else {
+                params.delete(key)
+            }
+        })
+        
+        replace(`${pathname}?${params.toString()}`)
+    }, [searchParams, pathname, replace])
 
     // Shorter category names for mobile
     const getMobileCategoryName = (category: string) => {
@@ -145,14 +180,12 @@ export default function DiscoverPageClient({
         e.preventDefault()
         if (!searchQuery.trim()) {
             // Clear search and go back to categories
-            setActiveQuery("")
-            setActiveCategory("")
+            updateSearchParams({ q: null, category: null })
             return
         }
 
         // Set active query to trigger search
-        setActiveQuery(searchQuery)
-        setActiveCategory("")
+        updateSearchParams({ q: searchQuery, category: null })
     }
 
     const handleSearchInputChange = (
@@ -163,28 +196,26 @@ export default function DiscoverPageClient({
 
         // If input becomes empty, automatically reset to categories
         if (!value.trim()) {
-            setActiveQuery("")
-            setActiveCategory("")
+            updateSearchParams({ q: null, category: null })
         }
     }
 
     const handleCategoryClick = (categoryName: string) => {
         // Set active category to trigger search
-        setActiveCategory(categoryName)
-        setActiveQuery("")
+        updateSearchParams({ category: categoryName, q: null })
         setSearchQuery("")
     }
 
     const handleLanguageChange = (newLanguage: string) => {
-        setLanguage(newLanguage)
-        // Language change will automatically trigger a new search due to the query key dependency
-        // Persistence is handled automatically by usePersistentState
+        // Update persisted language preference
+        setPersistedLanguage(newLanguage)
+        // Update URL with new language
+        updateSearchParams({ language: newLanguage })
     }
 
     const clearSearch = () => {
         setSearchQuery("")
-        setActiveQuery("")
-        setActiveCategory("")
+        updateSearchParams({ q: null, category: null })
     }
 
     return (
@@ -413,7 +444,7 @@ export default function DiscoverPageClient({
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
                         >
                             {/* Results Count and Clear Button */}
                             {searchData && (
@@ -421,7 +452,7 @@ export default function DiscoverPageClient({
                                     className="flex items-center justify-between mb-6"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.1 }}
+                                    transition={{ delay: 0.05 }}
                                 >
                                     <div className="text-[#91998C] dark:text-muted-foreground text-sm font-medium">
                                         {searchData.total_count} results
@@ -448,7 +479,7 @@ export default function DiscoverPageClient({
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     transition={{
-                                        duration: 0.4,
+                                        duration: 0.2,
                                         ease: "easeOut",
                                     }}
                                 >
@@ -473,7 +504,7 @@ export default function DiscoverPageClient({
                                     className="space-y-4"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.3 }}
+                                    transition={{ duration: 0.15 }}
                                 >
                                     {searchData?.results.map(
                                         (feed: any, index: number) => (
@@ -482,8 +513,8 @@ export default function DiscoverPageClient({
                                                 initial={{ opacity: 0, y: 30 }}
                                                 animate={{ opacity: 1, y: 0 }}
                                                 transition={{
-                                                    duration: 0.4,
-                                                    delay: index * 0.1,
+                                                    duration: 0.2,
+                                                    delay: index * 0.05,
                                                     ease: "easeOut",
                                                 }}
                                             >
@@ -507,7 +538,7 @@ export default function DiscoverPageClient({
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            transition={{ duration: 0.15, ease: "easeOut" }}
                         >
                             <div className="grid grid-cols-2 gap-2 justify-center mb-8 md:flex md:flex-wrap md:gap-3 md:justify-center">
                                 {[
@@ -529,8 +560,8 @@ export default function DiscoverPageClient({
                                         initial={{ opacity: 0, scale: 0.9 }}
                                         animate={{ opacity: 1, scale: 1 }}
                                         transition={{
-                                            duration: 0.3,
-                                            delay: index * 0.05,
+                                            duration: 0.15,
+                                            delay: index * 0.03,
                                             ease: "easeOut",
                                         }}
                                     >

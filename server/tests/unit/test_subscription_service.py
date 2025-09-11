@@ -58,9 +58,6 @@ def sample_subscription_response():
         folder_id=folder_id,
         is_favorite=False,
         custom_title=None,
-        is_paused=False,
-        subscribed_at="2023-01-01T00:00:00Z",
-        last_viewed_at=None,
         created_at="2023-01-01T00:00:00Z",
         updated_at="2023-01-01T00:00:00Z",
         feed=FeedResponse(
@@ -109,9 +106,6 @@ class TestSubscriptionService:
             mock_create.return_value.folder_id = sample_subscription_response.folder_id
             mock_create.return_value.is_favorite = False
             mock_create.return_value.custom_title = None
-            mock_create.return_value.is_paused = False
-            mock_create.return_value.subscribed_at = sample_subscription_response.subscribed_at
-            mock_create.return_value.last_viewed_at = None
             mock_create.return_value.created_at = sample_subscription_response.created_at
             mock_create.return_value.updated_at = sample_subscription_response.updated_at
             mock_create.return_value.feed = sample_subscription_response.feed
@@ -157,9 +151,6 @@ class TestSubscriptionService:
             mock_sub.folder_id = sample_subscription_response.folder_id
             mock_sub.is_favorite = sample_subscription_response.is_favorite
             mock_sub.custom_title = sample_subscription_response.custom_title
-            mock_sub.is_paused = sample_subscription_response.is_paused
-            mock_sub.subscribed_at = sample_subscription_response.subscribed_at
-            mock_sub.last_viewed_at = None
             mock_sub.created_at = sample_subscription_response.created_at
             mock_sub.updated_at = sample_subscription_response.updated_at
             mock_sub.feed = sample_subscription_response.feed

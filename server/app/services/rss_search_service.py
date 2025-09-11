@@ -34,10 +34,15 @@ class RssSearchService:
 
         # If it's already a valid web URL, validate it
         if url_str.startswith(('http://', 'https://')):
-            # Basic check for malformed URLs - if it contains comma, return None
-            if ',' in url_str:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url_str)
+                # Basic validation - must have a valid netloc (domain)
+                if not parsed.netloc or ' ' in parsed.netloc:
+                    return None
+                return url_str
+            except Exception:
                 return None
-            return url_str
 
         # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
         if ':' in url_str:

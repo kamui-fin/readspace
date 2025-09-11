@@ -24,16 +24,21 @@ export default async function DiscoverPage({
 
     // Prefetch data that the page needs
     if (query || category) {
-        // If there's a search query or category, prefetch search results
-        await queryClient.prefetchQuery({
-            queryKey: ['discover', 'search', { q: query, category, language }],
-            queryFn: () => ServerApiClient.searchFeeds({ 
-                q: query,
-                category,
-                language,
-                limit: 20 
-            }),
-        })
+        try {
+            // If there's a search query or category, prefetch search results
+            await queryClient.prefetchQuery({
+                queryKey: ['discover', 'search', { q: query, category, language }],
+                queryFn: () => ServerApiClient.searchFeeds({ 
+                    q: query,
+                    category,
+                    language,
+                    limit: 50 
+                }),
+            })
+        } catch (error) {
+            // If prefetch fails, continue without error to avoid breaking SSR
+            console.error('Failed to prefetch search results:', error)
+        }
     }
 
     return (
