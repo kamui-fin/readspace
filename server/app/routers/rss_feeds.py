@@ -13,15 +13,105 @@ from app.core.custom_exceptions import (
     NotFoundError,
 )
 from app.core.decorators import require_resource_limit
-from app.crud import crud_tag
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
+from app.schemas.subscription_schemas import (
+    SubscriptionCreateByFeedId,
+    SubscriptionResponse,
+)
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
+from app.services.subscription_service import SubscriptionService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
+
+
+@router.post("/{feed_id}/subscribe", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@require_resource_limit("max_subscriptions")
+async def subscribe_to_feed(
+    *,
+    feed_id: UUID,
+    subscription_data: SubscriptionCreateByFeedId = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+):
+    """Subscribe to an existing feed by its ID without URL parsing or deduplication."""
+    subscription_service = SubscriptionService(db=db, user_id=UUID(current_user.sub))
+
+    try:
+        # First, we need to get the feed's URL to create the subscription
+        # The subscription service expects a URL, but we want to bypass deduplication
+        rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+
+        # Check if the feed exists in the global feeds table
+        from app.crud import crud_feed
+        feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
+        if not feed:
+            logger.warning(
+                "Feed not found for subscription",
+                feed_id=feed_id,
+                user_id=current_user.sub,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
+            )
+
+        # Check if user is already subscribed to this feed
+        from app.crud import crud_subscription
+        existing_subscription = await crud_subscription.get_subscription_by_feed_id(
+            db, feed_id=feed_id, user_id=UUID(current_user.sub)
+        )
+        if existing_subscription:
+            logger.warning(
+                "User already subscribed to feed",
+                feed_id=feed_id,
+                user_id=current_user.sub,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Already subscribed to this feed"
+            )
+
+        # Create subscription directly using the feed's URL
+        subscription = await subscription_service.create_subscription(
+            url=str(feed.url),
+            folder_id=subscription_data.folder_id,
+        )
+
+        logger.info(
+            "Feed subscription created successfully",
+            subscription_id=subscription.id,
+            feed_id=feed_id,
+            user_id=current_user.sub,
+            folder_id=subscription_data.folder_id,
+        )
+        return subscription
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
+        logger.warning(
+            "Failed to create subscription due to validation error",
+            error=str(e),
+            user_id=current_user.sub,
+            feed_id=feed_id,
+        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(
+            "Unexpected error creating feed subscription",
+            error=str(e),
+            exc_info=True,
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        )
 
 
 @router.post("/", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
@@ -35,26 +125,11 @@ async def add_new_feed(
     """Add a new RSS feed by URL, associate with a folder and optional tags."""
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     try:
-        tag_names_to_pass: list[str] | None = None
-        if feed_in.tag_ids:
-            tag_names_list = []
-            for tag_id in feed_in.tag_ids:
-                tag_db = await crud_tag.get_tag(
-                    db, tag_id=tag_id, user_id=UUID(current_user.sub)
-                )
-                if tag_db:
-                    tag_names_list.append(tag_db.name)
-                else:
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Tag with ID {tag_id} not found.",
-                    )
-            tag_names_to_pass = tag_names_list
-
+        # Tags are now handled as ARRAY field on feeds - no tag_ids processing needed
         feed = await rss_service.add_new_feed(
             url=str(feed_in.url),
             folder_id=feed_in.folder_id,
-            tag_names=tag_names_to_pass,
+            tag_names=None,
         )
         logger.info(
             "Feed added successfully",
@@ -141,6 +216,7 @@ async def get_feed(
     return feed
 
 
+
 @router.put("/{feed_id}", response_model=FeedResponse)
 async def update_feed_settings(
     feed_id: UUID,
@@ -194,6 +270,10 @@ async def refresh_feed(
         False,
         description="Force refetch even if not modified based on ETag/Last-Modified",
     ),
+    preview: bool = Query(
+        False,
+        description="Preview mode - refresh feed without requiring subscription",
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ):
@@ -201,7 +281,7 @@ async def refresh_feed(
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     try:
         refreshed_feed = await rss_service.refresh_feed(
-            feed_id=feed_id, force_refetch=force_refetch
+            feed_id=feed_id, force_refetch=force_refetch, preview_mode=preview
         )
         if not refreshed_feed:
             logger.warning(

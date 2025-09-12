@@ -2,7 +2,6 @@ import {
   Article,
   SaveArticleRequest,
   Folder,
-  Tag,
   Feed,
   FeedDiscoveryRequest,
   DiscoveredFeed,
@@ -159,27 +158,17 @@ export class ReadspaceAPI {
     })
   }
 
-  // Tags
-  async getTags(): Promise<Tag[]> {
-    return this.request<Tag[]>('/api/rss/tags/')
-  }
-
-  async createTag(name: string): Promise<Tag> {
-    return this.request<Tag>('/api/rss/tags/', {
-      method: 'POST',
-      body: JSON.stringify({ name }),
-    })
-  }
-
   // RSS Feeds
-  async discoverFeeds(request: FeedDiscoveryRequest): Promise<DiscoveredFeed[]> {
+  async discoverFeeds(
+    request: FeedDiscoveryRequest
+  ): Promise<DiscoveredFeed[]> {
     return this.request<DiscoveredFeed[]>('/api/rss/feeds/discover', {
       method: 'POST',
       body: JSON.stringify(request),
     })
   }
 
-  async createFeed(data: { url: string; folder_id?: string; tag_ids?: string[] }): Promise<Feed> {
+  async createFeed(data: { url: string; folder_id?: string }): Promise<Feed> {
     return this.request<Feed>('/api/rss/feeds/', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -206,4 +195,4 @@ export class ReadspaceAPI {
       return false
     }
   }
-} 
+}

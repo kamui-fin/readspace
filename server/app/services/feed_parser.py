@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from app.core.custom_exceptions import FeedParsingError
 from app.schemas.rss_schemas import FeedBase
+from app.utils.language_normalizer import normalize_language_code
 
 logger = structlog.get_logger(__name__)
 
@@ -110,7 +111,7 @@ class FeedParsingService:
         title = feed_info.get("title", feed_url)  # Default to URL if no title
         description = feed_info.get("subtitle") or feed_info.get("description")
         link = feed_info.get("link")
-        language = feed_info.get("language")
+        language = normalize_language_code(feed_info.get("language"))
         image_url = feed_info.get("image", {}).get("href") or feed_info.get("logo")
 
         # If no image is found and we have a link, use favicon from the link domain

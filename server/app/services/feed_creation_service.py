@@ -7,6 +7,7 @@ from uuid import UUID
 import feedparser
 import structlog
 
+from app.core.config import get_settings
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,
@@ -16,10 +17,10 @@ from app.core.custom_exceptions import (
 )
 from app.crud import crud_feed, crud_folder, crud_subscription
 from app.crud.crud_article import create_articles_batch
-from app.models.rss_models import Tag
 from app.schemas.rss_schemas import ArticleCreate
 from app.schemas.subscription_schemas import LegacyFeedResponse, SubscriptionCreate
 from app.services.base_feed_service import BaseFeedService
+from app.services.feed_deduplication_service import FeedDeduplicationService
 
 logger = structlog.get_logger(__name__)
 
@@ -73,6 +74,10 @@ class FeedCreationService(BaseFeedService):
         # Fetch and parse feed using original URL (in case normalized URL doesn't work)
         parsed_feed = await self._fetch_and_parse_feed(url)
 
+        # Check for duplicates using parsed feed data
+        dedup_service = FeedDeduplicationService(self.db)
+        await dedup_service.check_for_duplicates(normalized_url, parsed_feed)
+
         # Create the feed with normalized URL for storage
         return await self._create_new_feed(normalized_url, folder_id, tag_names, parsed_feed)
 
@@ -123,14 +128,13 @@ class FeedCreationService(BaseFeedService):
         # Validate target folder
         await self._validate_folder(folder_id)
 
-        # Prepare tags
-        db_tags = await self._get_or_create_tags(tag_names) if tag_names else []
+        # Tags are now handled as ARRAY field on feeds
 
         # Create subscription
         subscription_data = SubscriptionCreate(
             url=existing_feed.url,
             folder_id=folder_id,
-            tag_ids=[t.id for t in db_tags] if db_tags else [],
+            # tag_ids removed - using ARRAY field
         )
 
         # Create subscription (this will reuse the existing global feed)
@@ -147,6 +151,10 @@ class FeedCreationService(BaseFeedService):
             feed_id=existing_feed.id,
             subscription_id=subscription.id,
         )
+
+        # Note: No enrichment trigger here since feed already exists
+        # Enrichment should only happen for newly created feeds
+
         return self._create_legacy_feed_response(subscription)
 
     def _create_legacy_feed_response(self, subscription) -> LegacyFeedResponse:
@@ -156,12 +164,12 @@ class FeedCreationService(BaseFeedService):
             id=subscription.id,  # Use subscription ID for compatibility
             user_id=subscription.user_id,
             folder_id=subscription.folder_id,
-            url=feed.url,
+            url=str(feed.url) if feed.url else None,
             title=feed.title,
             description=feed.description,
-            link=feed.link,
+            link=str(feed.link) if feed.link else None,
             language=feed.language,
-            image_url=feed.image_url,
+            image_url=str(feed.image_url) if feed.image_url else None,
             is_favorite=subscription.is_favorite,
             ttl=feed.ttl,
             skip_hours=feed.skip_hours,
@@ -224,8 +232,7 @@ class FeedCreationService(BaseFeedService):
         # Extract feed metadata
         initial_feed_data = self._extract_feed_metadata(parsed_feed, url)
 
-        # Prepare tags
-        db_tags = await self._get_or_create_tags(tag_names) if tag_names else []
+        # Tags are now handled as ARRAY field on feeds
 
         # Create global feed
         db_feed = await crud_feed.create_feed(
@@ -245,7 +252,7 @@ class FeedCreationService(BaseFeedService):
         subscription_data = SubscriptionCreate(
             url=url,
             folder_id=folder_id,
-            tag_ids=[t.id for t in db_tags] if db_tags else [],
+            # tag_ids removed - using ARRAY field
         )
 
         subscription = await crud_subscription.create_subscription(
@@ -254,15 +261,11 @@ class FeedCreationService(BaseFeedService):
             user_id=self.user_id,
         )
 
+        # Trigger background feed enrichment
+        self._trigger_feed_enrichment(db_feed.id)
+
         return self._create_legacy_feed_response(subscription)
 
-    async def _get_or_create_tags(self, tag_names: list[str]) -> list[Tag]:
-        """Get or create tags for the feed."""
-        from app.crud.crud_tag import get_or_create_tags_bulk
-
-        return await get_or_create_tags_bulk(
-            self.db, names=tag_names, user_id=self.user_id
-        )
 
     async def _create_initial_articles(
         self, db_feed: Any, parsed_feed: feedparser.FeedParserDict, url: str
@@ -460,6 +463,35 @@ class FeedCreationService(BaseFeedService):
                 logger.warning("Invalid skip day value", feed_id=feed_id, day_raw=day)
 
         return skip_days_value
+
+    def _trigger_feed_enrichment(self, feed_id: UUID) -> None:
+        """Trigger background feed enrichment task if AI is enabled."""
+        settings = get_settings()
+        if not settings.ENABLE_AI:
+            logger.info("AI disabled, skipping feed enrichment", feed_id=feed_id)
+            return
+
+        try:
+            from app.workers.tasks import enrich_feed_task
+
+            # Queue the enrichment task with a small delay to ensure feed is committed
+            enrich_feed_task.apply_async(
+                args=[str(feed_id)],
+                countdown=5  # 5 second delay
+            )
+
+            logger.info(
+                "Feed enrichment task queued",
+                feed_id=feed_id,
+            )
+
+        except Exception as e:
+            logger.error(
+                "Failed to queue feed enrichment task",
+                feed_id=feed_id,
+                error=str(e),
+            )
+            # Don't fail feed creation if enrichment task fails to queue
 
     async def _fetch_feed_content(
         self,

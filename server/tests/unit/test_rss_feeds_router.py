@@ -246,13 +246,14 @@ class TestRssFeedsRouter:
             result = await refresh_feed(
                 feed_id=feed_id,
                 force_refetch=False,
+                preview=False,
                 db=self.db,
                 current_user=self.current_user
             )
             
             assert result == expected_feed
             mock_service.refresh_feed.assert_called_once_with(
-                feed_id=feed_id, force_refetch=False
+                feed_id=feed_id, force_refetch=False, preview_mode=False
             )
 
     @pytest.mark.asyncio
@@ -270,13 +271,14 @@ class TestRssFeedsRouter:
             result = await refresh_feed(
                 feed_id=feed_id,
                 force_refetch=True,
+                preview=False,
                 db=self.db,
                 current_user=self.current_user
             )
             
             assert result == expected_feed
             mock_service.refresh_feed.assert_called_once_with(
-                feed_id=feed_id, force_refetch=True
+                feed_id=feed_id, force_refetch=True, preview_mode=False
             )
 
     @pytest.mark.asyncio
@@ -293,6 +295,7 @@ class TestRssFeedsRouter:
                 await refresh_feed(
                     feed_id=feed_id,
                     force_refetch=False,
+                    preview=False,
                     db=self.db,
                     current_user=self.current_user
                 )

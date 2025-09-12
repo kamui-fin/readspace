@@ -291,7 +291,6 @@ class TestFeedManagementService:
         mock_crud_subscription.update_subscription.assert_called_once()
         assert result is not None
         assert result.title == "Updated Feed Title"
-        assert result.is_favorite is True
 
     @patch('app.services.feed_management_service.crud_subscription')
     async def test_update_feed_user_settings_feed_not_found(self, mock_crud_subscription):

@@ -14,19 +14,19 @@ interface FeedSubscriptionModalProps {
   onSuccess?: () => void
 }
 
-export function FeedSubscriptionModal({ 
-  feed, 
-  isOpen, 
-  onClose, 
-  onSuccess 
+export function FeedSubscriptionModal({
+  feed,
+  isOpen,
+  onClose,
+  onSuccess,
 }: FeedSubscriptionModalProps) {
-  const { subscribeToFeed, folders, tags } = useExtensionStore()
-  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(undefined)
-  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
-
+  const { subscribeToFeed, folders } = useExtensionStore()
+  const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(
+    undefined
+  )
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!selectedFolderId) {
       toast.error('Please select a folder to continue')
       return
@@ -41,24 +41,16 @@ export function FeedSubscriptionModal({
     try {
       await subscribeToFeed(feed.url, {
         folder_id: selectedFolderId,
-        tag_ids: selectedTagIds.length > 0 ? selectedTagIds : undefined,
       })
     } catch (error) {
       console.error('Failed to subscribe to RSS feed:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error'
       // Show error toast, but modal is already closed
       toast.error(`Feed subscription failed: ${errorMessage}`, {
         duration: 5000, // Show longer since user might miss it
       })
     }
-  }
-
-  const toggleTag = (tagId: string) => {
-    setSelectedTagIds(prev => 
-      prev.includes(tagId) 
-        ? prev.filter(id => id !== tagId)
-        : [...prev, tagId]
-    )
   }
 
   if (!isOpen) return null
@@ -130,29 +122,6 @@ export function FeedSubscriptionModal({
               </div>
             </div>
 
-            {/* Tags Selection */}
-            {tags.length > 0 && (
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Tags (optional)</Label>
-                <div className="flex flex-wrap gap-2">
-                  {tags.map((tag) => (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => toggleTag(tag.id)}
-                      className={`px-2 py-1 text-xs rounded border transition-colors ${
-                        selectedTagIds.includes(tag.id)
-                          ? 'bg-blue-100 border-blue-300 text-blue-700'
-                          : 'bg-white border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      {tag.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Actions */}
             <div className="flex gap-2 pt-2">
               <Button
@@ -177,4 +146,4 @@ export function FeedSubscriptionModal({
       </div>
     </div>
   )
-} 
+}

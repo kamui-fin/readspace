@@ -18,8 +18,9 @@ from app.models.rss_models import (
 class ArticleQueryBuilder:
     """Builds SQLAlchemy queries for article filtering and sorting."""
 
-    def __init__(self, user_id: UUID):
+    def __init__(self, user_id: UUID, allow_preview: bool = False):
         self.user_id = user_id
+        self.allow_preview = allow_preview
 
     def build_base_query(self) -> tuple[Select, Select]:
         """Build the base query and count query."""
@@ -27,25 +28,27 @@ class ArticleQueryBuilder:
             select(FeedArticle, UserArticleState)
             .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
-            .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
             .outerjoin(
                 UserArticleState,
                 (UserArticleState.article_id == FeedArticle.id)
                 & (UserArticleState.user_id == self.user_id),
             )
-            .filter(FeedSubscription.user_id == self.user_id)
         )
         count_stmt = (
             select(func.count(FeedArticle.id))
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
-            .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
             .outerjoin(
                 UserArticleState,
                 (UserArticleState.article_id == FeedArticle.id)
                 & (UserArticleState.user_id == self.user_id),
             )
-            .filter(FeedSubscription.user_id == self.user_id)
         )
+
+        # Only join with FeedSubscription and filter by user_id if not allowing preview
+        if not self.allow_preview:
+            stmt = stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(FeedSubscription.user_id == self.user_id)
+            count_stmt = count_stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(FeedSubscription.user_id == self.user_id)
+
         return stmt, count_stmt
 
     def apply_feed_filter(

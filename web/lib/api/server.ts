@@ -163,6 +163,19 @@ export class ServerApiClient {
         }
     }
 
+    // Refresh specific feed data
+    static async refreshFeed(feedId: string, params?: {
+        forceRefetch?: boolean
+        preview?: boolean
+    }) {
+        try {
+            return await ApiClient.rss.refreshFeed(feedId, params?.forceRefetch, params?.preview)
+        } catch (error) {
+            console.error(`Failed to refresh feed ${feedId}:`, error)
+            throw error // Re-throw so the caller can handle it
+        }
+    }
+
     // Get specific folder data
     static async getFolder(folderId: string) {
         try {
@@ -283,6 +296,107 @@ export class ServerApiClient {
                 page: 1,
                 pages: 1,
                 size: 25,
+            }
+        }
+    }
+
+    // Discover methods
+    static async searchFeeds(params?: {
+        q?: string
+        category?: string
+        language?: string
+        limit?: number
+    }) {
+        try {
+            return await ApiClient.rss.searchFeeds(params)
+        } catch (error) {
+            console.error("Failed to search feeds:", error)
+            return {
+                results: [],
+                total_count: 0,
+                query: params?.q || null,
+                category: params?.category || null,
+                language: params?.language || "en",
+            }
+        }
+    }
+
+    static async getCategories(params?: { language?: string }) {
+        try {
+            return await ApiClient.rss.getCategories(params)
+        } catch (error) {
+            console.error("Failed to get categories:", error)
+            return {
+                categories: [],
+                language: params?.language || "en",
+            }
+        }
+    }
+
+    static async getPreviewArticles(feedUrl: string, limit: number = 25) {
+        try {
+            // Use direct fetch since this is a new endpoint not in ApiClient yet
+            const url = new URL('/api/rss/discover/preview/articles', process.env.API_BASE_URL || 'http://localhost:8008')
+            url.searchParams.set('url', feedUrl)
+            url.searchParams.set('limit', limit.toString())
+
+            const response = await fetch(url.toString(), {
+                headers: { 'Content-Type': 'application/json' },
+            })
+
+            if (!response.ok) {
+                throw new Error(`Failed to get preview articles: ${response.statusText}`)
+            }
+
+            return await response.json()
+        } catch (error) {
+            console.error("Failed to get preview articles:", error)
+            return {
+                items: [],
+                total: 0,
+                page: 1,
+                size: limit,
+                pages: 1
+            }
+        }
+    }
+
+    static async getCategoryFeeds(categoryName: string, params?: {
+        language?: string
+        limit?: number
+    }) {
+        try {
+            return await ApiClient.rss.getCategoryFeeds(categoryName, params)
+        } catch (error) {
+            console.error("Failed to get category feeds:", error)
+            return {
+                results: [],
+                total_count: 0,
+                query: null,
+                category: categoryName,
+                language: params?.language || "en",
+            }
+        }
+    }
+
+    static async getSimilarFeeds(feedId: string, params?: {
+        limit?: number
+        min_similarity?: number
+    }) {
+        try {
+            return await ApiClient.rss.getSimilarFeeds(feedId, params)
+        } catch (error) {
+            console.error("Failed to get similar feeds:", error)
+            return {
+                source_feed: {
+                    id: feedId,
+                    title: null,
+                    description: null,
+                    url: "",
+                    link: null,
+                    image_url: null
+                },
+                similar_feeds: []
             }
         }
     }

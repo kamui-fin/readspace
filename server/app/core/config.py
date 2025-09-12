@@ -26,6 +26,17 @@ class Settings(BaseSettings):
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
 
+    # AI Configuration
+    ENABLE_AI: bool = True  # Master switch for all AI functionality
+
+    # Gemini Configuration (Primary AI service)
+    GEMINI_API_KEY: str = ""
+    GEMINI_MODEL: str = "gemini-2.5-flash-lite"  # For text generation
+    GEMINI_EMBEDDING_MODEL: str = "text-embedding-004"  # For embeddings
+
+    # RSShub Configuration
+    RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL
+
     model_config = SettingsConfigDict(env_file=".env")
 
 

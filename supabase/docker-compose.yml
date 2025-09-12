@@ -6,7 +6,6 @@
 #   Reset everything:  ./reset.sh
 
 services:
-
   studio:
     container_name: supabase-studio
     image: supabase/studio:2025.05.19-sha-3487831
@@ -17,7 +16,7 @@ services:
           "CMD",
           "node",
           "-e",
-          "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})"
+          "fetch('http://studio:3000/api/platform/profile').then((r) => {if (r.status !== 200) throw new Error(r.status)})",
         ]
       timeout: 10s
       interval: 5s
@@ -87,7 +86,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://localhost:9999/health"
+          "http://localhost:9999/health",
         ]
       timeout: 5s
       interval: 5s
@@ -176,10 +175,7 @@ services:
       PGRST_DB_USE_LEGACY_GUCS: "false"
       PGRST_APP_SETTINGS_JWT_SECRET: ${JWT_SECRET}
       PGRST_APP_SETTINGS_JWT_EXP: ${JWT_EXPIRY}
-    command:
-      [
-        "postgrest"
-      ]
+    command: ["postgrest"]
 
   # To use S3 backed storage: docker compose -f docker-compose.yml -f docker-compose.s3.yml up
   storage:
@@ -196,7 +192,7 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://storage:5000/status"
+          "http://storage:5000/status",
         ]
       timeout: 5s
       interval: 5s
@@ -232,12 +228,7 @@ services:
     volumes:
       - ./volumes/storage:/var/lib/storage:z
     healthcheck:
-      test:
-        [
-          "CMD",
-          "imgproxy",
-          "health"
-        ]
+      test: ["CMD", "imgproxy", "health"]
       timeout: 5s
       interval: 5s
       retries: 3
@@ -278,12 +269,7 @@ services:
     #     target: /opt/app/rel/logflare/bin/gcloud.json
     #     read_only: true
     healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "http://localhost:4000/health"
-        ]
+      test: ["CMD", "curl", "http://localhost:4000/health"]
       timeout: 5s
       interval: 5s
       retries: 10
@@ -337,16 +323,10 @@ services:
       - ./volumes/db/storage_buckets.sql:/docker-entrypoint-initdb.d/migrations/98-storage-buckets.sql:Z
       # Use named volume to persist pgsodium decryption key between restarts
       - db-config:/etc/postgresql-custom
+    ports:
+      - 5432:5432
     healthcheck:
-      test:
-        [
-        "CMD",
-        "pg_isready",
-        "-U",
-        "postgres",
-        "-h",
-        "localhost"
-        ]
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -363,13 +343,12 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXP: ${JWT_EXPIRY}
-    command:
-      [
+    command: [
         "postgres",
         "-c",
         "config_file=/etc/postgresql/postgresql.conf",
         "-c",
-        "log_min_messages=fatal" # prevents Realtime polling queries from appearing in logs
+        "log_min_messages=fatal", # prevents Realtime polling queries from appearing in logs
       ]
 
   vector:
@@ -387,18 +366,14 @@ services:
           "--no-verbose",
           "--tries=1",
           "--spider",
-          "http://vector:9001/health"
+          "http://vector:9001/health",
         ]
       timeout: 5s
       interval: 5s
       retries: 3
     environment:
       LOGFLARE_API_KEY: ${LOGFLARE_API_KEY}
-    command:
-      [
-        "--config",
-        "/etc/vector/vector.yml"
-      ]
+    command: ["--config", "/etc/vector/vector.yml"]
     security_opt:
       - "label=disable"
 
@@ -421,7 +396,7 @@ services:
           "--head",
           "-o",
           "/dev/null",
-          "http://127.0.0.1:4000/api/health"
+          "http://127.0.0.1:4000/api/health",
         ]
       interval: 10s
       timeout: 5s
@@ -452,7 +427,7 @@ services:
       [
         "/bin/sh",
         "-c",
-        "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
+        '/app/bin/migrate && /app/bin/supavisor eval "$$(cat /etc/pooler/pooler.exs)" && /app/bin/server',
       ]
 
 volumes:

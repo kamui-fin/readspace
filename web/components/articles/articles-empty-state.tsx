@@ -2,11 +2,10 @@
 
 import { Button } from "@/components/ui/button"
 import { useFeeds, useFolders } from "@/lib/api/hooks/feeds"
-import { FolderPlus, Plus, BookOpen, RefreshCw, Rss } from "lucide-react"
+import { useModalStore } from "@/lib/stores/modal-store"
+import { BookOpen, FolderPlus, RefreshCw, Rss } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
-import Image from "next/image"
-import { useModalStore } from "@/lib/stores/modal-store"
 
 interface ArticlesEmptyStateProps {
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
@@ -181,15 +180,15 @@ export function ArticlesEmptyState({
 
                     <div
                         className="w-full sm:w-48 border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-                        onClick={() => router.push("/import-opml")}
+                        onClick={() => router.push("/discover")}
                     >
                         <Rss className="mx-auto h-8 w-8 text-muted-foreground" />
                         <div className="space-y-1">
                             <h4 className="text-sm font-medium text-foreground">
-                                Import OPML
+                                Follow some feeds
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                                From existing RSS reader
+                                Discover feeds you'll love
                             </p>
                         </div>
                     </div>
@@ -201,15 +200,20 @@ export function ArticlesEmptyState({
     if (!hasNoFolders && hasNoFeeds) {
         return (
             <div className="flex h-full w-full items-center justify-center">
-                <div className="w-full max-w-md mx-auto px-4 text-center space-y-4">
-                    <Rss className="mx-auto h-12 w-12 text-muted-foreground" />
-                    <div className="space-y-2">
-                        <h3 className="text-lg font-medium text-foreground">
-                            Add your first feed
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                            Hover over a folder in the sidebar and click <kbd className="px-1.5 py-0.5 text-xs bg-muted border rounded font-mono">+</kbd> to add a feed
-                        </p>
+                <div className="w-full max-w-md mx-auto px-4">
+                    <div
+                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center space-y-4 hover:border-muted-foreground/50 transition-colors cursor-pointer"
+                        onClick={() => router.push("/discover")}
+                    >
+                        <Rss className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-medium text-foreground">
+                                Add your first feed
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Discover feeds to get started with fresh content
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,15 +231,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                              ? "No articles in this folder"
-                              : "No articles found"}
+                                ? "No articles in this folder"
+                                : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
                             ? "This feed hasn't published any articles yet, or they may not have loaded"
                             : folderId
-                              ? "No feeds in this folder have published articles yet"
-                              : "Try refreshing or check back later for new content"}
+                                ? "No feeds in this folder have published articles yet"
+                                : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && (

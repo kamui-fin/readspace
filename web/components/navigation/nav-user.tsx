@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronsUpDown, LogOut } from "lucide-react"
+import { ChevronsUpDown, Clock, LogOut } from "lucide-react"
 import { useState } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useCurrentUser } from "@/hooks/use-current-user"
+import Link from "next/link"
 import ThemeSwitcher from "./theme-switcher"
 
 interface NavUserProps {
@@ -87,46 +88,19 @@ export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
                             align="end"
                             sideOffset={4}
                         >
-                            <DropdownMenuLabel className="p-0 font-normal">
-                                <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                                    {loadingUser ? (
-                                        <>
-                                            <Skeleton className="h-8 w-8 rounded-lg" />
-                                            <div className="grid flex-1 gap-1 text-left">
-                                                <Skeleton className="h-4 w-24" />
-                                                <Skeleton className="h-3 w-32" />
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Avatar className="h-8 w-8 rounded-lg">
-                                                <AvatarImage
-                                                    src={avatar}
-                                                    alt={name}
-                                                />
-                                                <AvatarFallback className="rounded-lg">
-                                                    {name
-                                                        ?.slice(0, 2)
-                                                        .toUpperCase() ?? ""}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="grid flex-1 text-left text-sm leading-tight">
-                                                <span className="truncate font-semibold">
-                                                    {name}
-                                                </span>
-                                                <span className="truncate text-xs">
-                                                    {email}
-                                                </span>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
                             <DropdownMenuGroup>
                                 <div className="px-2 py-1.5">
                                     <ThemeSwitcher />
                                 </div>
+                            </DropdownMenuGroup>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/recently-read" className="cursor-pointer">
+                                        <Clock className="mr-2 h-4 w-4" />
+                                        Recently Read
+                                    </Link>
+                                </DropdownMenuItem>
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>

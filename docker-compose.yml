@@ -1,24 +1,33 @@
 services:
   redis:
-    image: redis:7.2-alpine
+    image: redis:alpine
     container_name: readspace_redis
+    restart: always
+    ports:
+      - 6379:6379
+    volumes:
+        - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-h", "localhost", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
+        test: ["CMD", "redis-cli", "ping"]
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 5s
 
   web:
     build:
       context: ./web
       dockerfile: Dockerfile
     container_name: readspace_web
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+      - "localhost:host-gateway"
     ports:
       - "18042:8042"
     environment:
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=${ANON_KEY}
-      - NEXT_PUBLIC_SUPABASE_URL=http://0.0.0.0:18000
-      - NEXT_PUBLIC_API_BASE_URL=http://0.0.0.0:18008
+      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:18000
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:18008
     depends_on:
       - api
 
@@ -37,13 +46,15 @@ services:
         condition: service_healthy
     volumes:
       - ./server:/app
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
       - REDIS_URL=redis://redis:6379/0
       - CORS_ORIGIN=http://localhost:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:18000
+      - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
@@ -59,6 +70,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -67,7 +80,7 @@ services:
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:18000
+      - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
@@ -83,6 +96,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
       - CELERY_BROKER_URL=redis://redis:6379/0
@@ -95,6 +110,9 @@ services:
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+
+volumes:
+    redis-data:
 
 networks:
   default:

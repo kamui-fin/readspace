@@ -174,7 +174,6 @@ class TestRssOrchestrationServiceOpmlImport:
         result = await self.service.import_single_feed(
             feed_url="https://example.com/feed.xml",
             folder_id=str(uuid4()),
-            tag_names=["test"],
             feed_title="Original Title",
             update_existing=True
         )

@@ -444,26 +444,6 @@ class TestWebArticleServiceReadingTime:
 
 
 @pytest.mark.unit
-class TestWebArticleServiceTagAssociation:
-    def setup_method(self):
-        self.db = AsyncMock()
-        self.user_id = uuid4()
-        self.service = WebArticleService(self.db, self.user_id)
-
-    @pytest.mark.asyncio
-    async def test_associate_article_tags_placeholder(self):
-        # This tests the placeholder implementation
-        article_id = uuid4()
-        tag_ids = [uuid4(), uuid4()]
-        
-        # Should not raise an error, but currently does nothing
-        await self.service._associate_article_tags(article_id, tag_ids)
-        
-        # Since it's a placeholder, there's not much to assert
-        # This test documents the current behavior
-
-
-@pytest.mark.unit
 class TestWebArticleServicePriorityHandling:
     def setup_method(self):
         self.db = AsyncMock()

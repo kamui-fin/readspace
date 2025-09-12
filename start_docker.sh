@@ -23,7 +23,6 @@ fi
 print_success "✓ Core Supabase stack is starting in the background."
 
 # Start any other services (like your custom web/server containers)
-# This assumes you have a docker-compose.yml in the root directory for your apps.
 if [ -f "docker-compose.yml" ]; then
     print_info "› Starting readspace application services..."
     if ! docker compose --env-file supabase/.env up -d; then
@@ -35,6 +34,17 @@ else
     print_info "› No root docker-compose.yml found, skipping custom service startup."
 fi
 
+# Start RSShub services if available
+if [ -f "docker-compose.rsshub.yml" ]; then
+    print_info "› Starting RSShub services..."
+    if ! docker compose -f docker-compose.rsshub.yml --env-file supabase/.env up -d; then
+        print_error "Failed to start RSShub services."
+        exit 1
+    fi
+    print_success "✓ RSShub services are starting in the background."
+else
+    print_info "› No RSShub docker-compose found, skipping RSShub startup."
+fi
 
 # --- Final Output ---
 print_info "🎉 --- Readspace Setup Complete! --- 🎉"
@@ -43,8 +53,9 @@ echo "You can access the services at the following URLs:"
 echo ""
 print_success "Readspace Web App: http://localhost:18042"
 echo ""
-echo "For developers, you can access Supabase at:"
+echo "For developers, you can access:"
 print_success "Supabase Dashboard: http://localhost:18000"
+print_success "RSShub API: http://localhost:1200"
 echo ""
 echo "It may take a few minutes for all services to become fully available."
 echo "Use 'docker compose logs -f' to monitor the startup process."

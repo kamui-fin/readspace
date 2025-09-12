@@ -25,11 +25,11 @@ from app.schemas.rss_schemas import (
 
 # Main article operations - delegate to the operations class
 async def get_article(
-    db: AsyncSession, *, article_id: UUID, user_id: UUID
+    db: AsyncSession, *, article_id: UUID, user_id: UUID, allow_preview: bool = False
 ) -> Article | None:
     """Get a specific article by its ID, ensuring it belongs to the user."""
     return await ArticleCrudOperations.get_article_by_id(
-        db, article_id=article_id, user_id=user_id
+        db, article_id=article_id, user_id=user_id, allow_preview=allow_preview
     )
 
 
@@ -59,6 +59,7 @@ async def get_articles_by_user(
     sort_order: str = "desc",
     skip: int = 0,
     limit: int = 100,
+    allow_preview: bool = False,
 ) -> tuple[list[Article], int]:
     """Get articles for a user with comprehensive filtering and sorting."""
     return await ArticleCrudOperations.get_articles_filtered(
@@ -77,6 +78,7 @@ async def get_articles_by_user(
         sort_order=sort_order,
         skip=skip,
         limit=limit,
+        allow_preview=allow_preview,
     )
 
 

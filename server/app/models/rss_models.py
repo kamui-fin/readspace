@@ -2,16 +2,35 @@
 
 import uuid
 from datetime import datetime, timezone
+from enum import Enum
 from uuid import UUID
 
+
+class FeedCategory(Enum):
+    """Feed categories from RSS dataset."""
+    TECHNOLOGY_PROGRAMMING = "Technology & Programming"
+    CULTURE_ARTS = "Culture & Arts"
+    LIFESTYLE_PERSONAL = "Lifestyle & Personal"
+    MISCELLANEOUS = "Miscellaneous"
+    DESIGN_CREATIVITY = "Design & Creativity"
+    SCIENCE_RESEARCH = "Science & Research"
+    NEWS_POLITICS = "News & Politics"
+    GAMING_ENTERTAINMENT = "Gaming & Entertainment"
+    BUSINESS_FINANCE = "Business & Finance"
+    ARTIFICIAL_INTELLIGENCE = "Artificial Intelligence"
+    SECURITY_PRIVACY = "Security & Privacy"
+    EDUCATION_LEARNING = "Education & Learning"
+
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
+    Enum,
+    Float,
     ForeignKey,
     Integer,
     String,
-    Table,
     Text,
     UniqueConstraint,
 )
@@ -22,23 +41,23 @@ from sqlalchemy.sql import func
 
 from app.db.base_class import Base
 
-# Association table for Many-to-Many relationship between Feed and Tag
-feed_tag_association = Table(
-    "feed_tag_association",
-    Base.metadata,
-    Column(
-        "feed_id",
-        UUIDType(as_uuid=True),
-        ForeignKey("feeds.id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-    Column(
-        "tag_id",
-        UUIDType(as_uuid=True),
-        ForeignKey("tags.id", ondelete="CASCADE"),
-        primary_key=True,
-    ),
-)
+# Note: Using ARRAY for tags instead of many-to-many relationship
+# feed_tag_association = Table(
+#     "feed_tag_association",
+#     Base.metadata,
+#     Column(
+#         "feed_id",
+#         UUIDType(as_uuid=True),
+#         ForeignKey("feeds.id", ondelete="CASCADE"),
+#         primary_key=True,
+#     ),
+#     Column(
+#         "tag_id",
+#         UUIDType(as_uuid=True),
+#         ForeignKey("tags.id", ondelete="CASCADE"),
+#         primary_key=True,
+#     ),
+# )
 
 
 class ArticleContent(Base):
@@ -93,6 +112,18 @@ class Feed(Base):
     language: Column[str | None] = Column(String(50), nullable=True)
     image_url: Column[str | None] = Column(String(2048), nullable=True)
 
+    # RSS dataset fields
+    tags: Column[list[str] | None] = Column(ARRAY(String), nullable=True)
+    top_level_category: Column[str | None] = Column(
+        Enum(FeedCategory), nullable=True
+    )
+    popularity_score: Column[float | None] = Column(Float, nullable=True, default=0.0)
+    subscriber_count: Column[int] = Column(Integer, nullable=False, default=0)
+
+    # Vector embedding for similarity search (768 dimensions)
+    # Added via migration with pgvector extension
+    embedding: Column[list[float] | None] = Column(Vector(768), nullable=True)
+
     # RSS-specific metadata
     ttl: Column[int | None] = Column(Integer, nullable=True)
     skip_hours: Column[list[int] | None] = Column(ARRAY(Integer), nullable=True)
@@ -108,6 +139,10 @@ class Feed(Base):
         DateTime(timezone=True), nullable=True
     )
 
+    # Error tracking
+    fetch_error_count: Column[int] = Column(Integer, nullable=False, default=0)
+    last_error_message: Column[str | None] = Column(Text, nullable=True)
+
     created_at: Column[datetime] = Column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -122,41 +157,9 @@ class Feed(Base):
     articles = relationship(
         "FeedArticle", back_populates="feed", cascade="all, delete-orphan"
     )
-    tags = relationship("Tag", secondary=feed_tag_association, back_populates="feeds")
 
 
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id: Column[UUID] = Column(
-        UUIDType(as_uuid=True), primary_key=True, default=uuid.uuid4
-    )
-    name: Column[str] = Column(String(100), nullable=False, index=True)
-    user_id: Column[UUID] = Column(
-        UUIDType(as_uuid=True),
-        ForeignKey("profiles.id", ondelete="CASCADE"),
-        nullable=False,
-        index=True,
-    )
-
-    created_at: Column[datetime] = Column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
-    )
-    updated_at: Column[datetime] = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
-
-    # Relationships
-    feeds = relationship(
-        "Feed",
-        secondary=feed_tag_association,
-        back_populates="tags",
-        cascade="all, delete",
-    )
-
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_tag_user_name"),)
+# Tag class removed - using ARRAY field in Feed instead
 
 
 class FeedSubscription(Base):

@@ -35,19 +35,10 @@ export interface SaveArticleRequest {
     favicon?: string
   }
   priority?: 'high' | 'medium' | 'low'
-  tag_ids?: string[]
   note?: string
 }
 
 export interface Folder {
-  id: string
-  name: string
-  user_id: string
-  created_at: string
-  updated_at: string
-}
-
-export interface Tag {
   id: string
   name: string
   user_id: string
@@ -84,7 +75,6 @@ export interface BulkFeedSubscribeRequest {
   feeds: Array<{
     url: string
     folder_id?: string
-    tag_ids?: string[]
   }>
 }
 
@@ -94,7 +84,6 @@ export interface ExtensionSettings {
   supabase_anon_key: string
   access_token?: string
   default_folder_id?: string
-  default_tags?: string[]
   auto_save: boolean
   show_reading_time: boolean
   theme: 'light' | 'dark' | 'system'
@@ -126,7 +115,6 @@ export type Priority = 'high' | 'medium' | 'low'
 export interface SaveOptions {
   priority: Priority
   folder_id?: string
-  tag_ids: string[]
   note?: string
   title?: string
-} 
+}

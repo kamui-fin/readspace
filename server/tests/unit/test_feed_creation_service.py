@@ -6,7 +6,8 @@ from uuid import uuid4
 from datetime import datetime, timezone
 
 from app.services.feed_creation_service import FeedCreationService
-from app.schemas.rss_schemas import FeedResponse, ArticleCreate, FeedBase
+from app.schemas.rss_schemas import ArticleCreate, FeedBase
+from app.schemas.subscription_schemas import LegacyFeedResponse
 from app.core.custom_exceptions import ValidationError, FeedSubscriptionError, FeedValidationError, NotFoundError, FeedConnectionError
 
 
@@ -32,9 +33,9 @@ class TestFeedCreationService:
         folder_id = uuid4()
         
         # Mock no existing feed
-        with patch('app.crud.crud_feed.get_feed_by_url', return_value=None):
+        with patch('app.crud.crud_feed.get_feed_by_url', new_callable=AsyncMock, return_value=None):
             # Mock folder validation
-            with patch('app.crud.crud_folder.get_folder', return_value=Mock()):
+            with patch('app.crud.crud_folder.get_folder', new_callable=AsyncMock, return_value=Mock()):
                 # Mock feed fetching and parsing
                 self.service._fetch_and_parse_feed = AsyncMock()
                 mock_parsed_feed = Mock()
@@ -42,11 +43,17 @@ class TestFeedCreationService:
                 self.service._fetch_and_parse_feed.return_value = mock_parsed_feed
                 
                 # Mock feed creation
-                self.service._create_new_feed = AsyncMock()
-                expected_response = Mock(spec=FeedResponse)
-                self.service._create_new_feed.return_value = expected_response
+                expected_response = Mock(spec=LegacyFeedResponse)
+                expected_response.url = url
+                self.service._create_new_feed = AsyncMock(return_value=expected_response)
                 
-                result = await self.service.add_new_feed(url, folder_id)
+                # Mock the deduplication service to prevent any issues
+                with patch('app.services.feed_creation_service.FeedDeduplicationService') as mock_dedup_class:
+                    mock_dedup = Mock()
+                    mock_dedup.check_for_duplicates = AsyncMock()
+                    mock_dedup_class.return_value = mock_dedup
+                    
+                    result = await self.service.add_new_feed(url, folder_id)
                 
                 assert result == expected_response
                 self.service._fetch_and_parse_feed.assert_called_once_with(url)
@@ -159,16 +166,6 @@ class TestFeedCreationService:
         with pytest.raises(FeedConnectionError, match="Could not fetch feed content"):
             await self.service._fetch_and_parse_feed(url)
 
-    @pytest.mark.asyncio
-    async def test_get_or_create_tags(self):
-        """Test tag creation/retrieval."""
-        tag_names = ["tag1", "tag2"]
-        mock_tags = [Mock(), Mock()]
-        
-        with patch('app.crud.crud_tag.get_or_create_tags_bulk', return_value=mock_tags):
-            result = await self.service._get_or_create_tags(tag_names)
-            
-            assert result == mock_tags
 
     @pytest.mark.asyncio
     async def test_validate_articles_success(self):

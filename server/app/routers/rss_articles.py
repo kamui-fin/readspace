@@ -31,7 +31,7 @@ class SaveArticleRequest(BaseModel):
     content: str | None = Field(None, max_length=5_000_000)  # 5MB content limit to prevent abuse
     metadata: dict[str, Any] | None = Field(None, max_length=50)  # Limit metadata keys to prevent abuse
     priority: str | None = Field(None, max_length=20)  # Reasonable priority string limit
-    tag_ids: list[UUID] | None = Field(None, max_length=50)  # Limit number of tags
+    # tag_ids removed - using ARRAY field on feeds
     note: str | None = Field(None, max_length=10_000)  # 10k character note limit
 
     @field_validator('metadata')
@@ -80,7 +80,7 @@ async def save_web_article(
             title=request.title,
             content=request.content,  # Pass extracted content from extension
             metadata=request.metadata or {},
-            tag_ids=request.tag_ids or [],
+            # tag_ids removed - using ARRAY field on feeds
             note=request.note,
             priority=request.priority,
         )
@@ -175,6 +175,14 @@ async def list_articles(
             detail="Invalid sort_order parameter. Allowed values: asc, desc",
         )
 
+    # Check if user is requesting preview mode by checking if they have access to the feed
+    allow_preview = False
+    if feed_ids and len(feed_ids) == 1:
+        # If requesting articles for a single feed, check if user is subscribed
+        feed_data = await rss_service.get_feed(feed_ids[0])
+        if feed_data and not feed_data.is_subscribed:
+            allow_preview = True
+
     paginated_articles = await rss_service.get_articles(
         feed_ids=feed_ids,
         folder_id=folder_id,
@@ -190,6 +198,7 @@ async def list_articles(
         sort_order=sort_order,
         page=page,
         size=size,
+        allow_preview=allow_preview,
     )
     return paginated_articles
 
@@ -203,13 +212,13 @@ async def get_todays_articles(
 ):
     """Get articles from the last 24 hours in UTC."""
     from datetime import timedelta
-    
+
     # Get current time in UTC
     now_utc = datetime.utcnow()
-    
+
     # Get articles from the last 24 hours
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
-    
+
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
     paginated_articles = await rss_service.get_articles(
         published_since=twenty_four_hours_ago,
@@ -269,7 +278,16 @@ async def get_article(
 ):
     """Get a specific article by its ID."""
     rss_service = RssService(db=db, user_id=UUID(current_user.sub))
-    article = await rss_service.get_article(article_id=article_id)
+
+    # First try to get the article with preview mode disabled (normal case)
+    article = await rss_service.get_article(article_id=article_id, allow_preview=False)
+
+    # If not found and user might be in preview mode, try with preview enabled
+    if not article:
+        # Try again with preview mode enabled - this allows access to articles
+        # from feeds the user hasn't subscribed to (useful for feed preview)
+        article = await rss_service.get_article(article_id=article_id, allow_preview=True)
+
     if not article:
         logger.warning(
             "Article not found or access denied",

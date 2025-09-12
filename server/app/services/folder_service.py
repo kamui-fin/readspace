@@ -98,3 +98,19 @@ class FolderService:
         )
 
         return folder_name_to_id
+
+    async def get_default_folder(self) -> FolderResponse | None:
+        """Get the default 'My Feeds' folder for the user."""
+        logger.debug("Getting default folder", user_id=self.user_id)
+        folders = await crud_folder.get_folders_by_user(db=self.db, user_id=self.user_id)
+
+        # Find the folder named 'My Feeds' (created by the trigger)
+        for folder in folders:
+            if folder.name == "My Feeds":
+                return FolderResponse.model_validate(folder)
+
+        # If no default folder exists, create one
+        # This is a fallback for existing users who didn't have the trigger
+        logger.info("Creating default folder for user", user_id=self.user_id)
+        folder_create = FolderCreate(name="My Feeds")
+        return await self.create_folder(folder_create)

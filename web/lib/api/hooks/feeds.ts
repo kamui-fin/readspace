@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from "@tanstack/react-query"
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
-import { ApiClient } from "../client"
 import { RSS_QUERY_KEYS } from "../../query-keys"
+import { ApiClient } from "../client"
 
 // Types based on API responses
 type Folder = {
@@ -26,6 +26,8 @@ export type Feed = {
     fetch_error_count: number
     last_error_message: string | null
     last_article_published_at: string | null
+    // Preview mode support
+    is_subscribed?: boolean
 }
 
 // OPML Import types
@@ -100,13 +102,13 @@ export type Article = {
     estimated_read_time_minutes: number | null // Added, made nullable
     custom_metadata: any | null // Added (JSONB maps to any)
     feed?:
-        | FeedBasicInfo
-        | {
-              id: string | null
-              title: string | null
-              url: string | null
-              image_url: string | null
-          } // More flexible feed object for both RSS and clipped articles
+    | FeedBasicInfo
+    | {
+        id: string | null
+        title: string | null
+        url: string | null
+        image_url: string | null
+    } // More flexible feed object for both RSS and clipped articles
     article_type: "feed" | "clipped"
     priority?: string | null // Added for clipped articles
     note?: string | null // Added for clipped articles
@@ -245,10 +247,10 @@ export function useUpdateFolder() {
                         ...old,
                         folders: old.folders
                             ? old.folders.map((folder: any) =>
-                                  folder.id === folderId
-                                      ? { ...folder, name }
-                                      : folder
-                              )
+                                folder.id === folderId
+                                    ? { ...folder, name }
+                                    : folder
+                            )
                             : [],
                     }
                 }
@@ -331,13 +333,13 @@ export function useDeleteFolder() {
                         ...old,
                         folders: old.folders
                             ? old.folders.filter(
-                                  (folder: any) => folder.id !== folderId
-                              )
+                                (folder: any) => folder.id !== folderId
+                            )
                             : [],
                         feeds: old.feeds
                             ? old.feeds.filter(
-                                  (feed: any) => feed.folder_id !== folderId
-                              )
+                                (feed: any) => feed.folder_id !== folderId
+                            )
                             : [],
                     }
                 }
@@ -463,7 +465,6 @@ export function useCreateFeed() {
         mutationFn: (feed: {
             url: string
             folder_id?: string
-            tag_ids?: string[]
             silent?: boolean
         }) => ApiClient.rss.createFeed(feed),
         onMutate: async (newFeed) => {
@@ -525,7 +526,6 @@ export function useUpdateFeed() {
             feedId: string
             data: {
                 folder_id?: string
-                tag_ids?: string[]
                 is_favorite?: boolean
                 title?: string
             }
@@ -661,7 +661,7 @@ export function useRefreshFeed() {
             if (!silent) {
                 toast.error(
                     error.response?.data?.detail ||
-                        `Failed to refresh feed '${feedId.substring(0, 8)}...'.`
+                    `Failed to refresh feed '${feedId.substring(0, 8)}...'.`
                 )
             }
         },
@@ -679,7 +679,7 @@ export function useRefreshFolderFeeds() {
         onError: (error: any) => {
             toast.error(
                 error.response?.data?.detail ||
-                    "Failed to start folder refresh."
+                "Failed to start folder refresh."
             )
         },
     })
@@ -697,7 +697,7 @@ export function useRefreshAllFeeds() {
         onError: (error: any) => {
             toast.error(
                 error.response?.data?.detail ||
-                    "Failed to start all feeds refresh."
+                "Failed to start all feeds refresh."
             )
         },
     })
@@ -749,21 +749,21 @@ export function useDeleteFeed() {
             })
 
             // Get the feed being deleted to remove its unread count
-            const feedBeingDeleted = Array.isArray(previousFeeds) 
+            const feedBeingDeleted = Array.isArray(previousFeeds)
                 ? previousFeeds.find((feed: any) => feed.id === feedId)
                 : null
 
             // Optimistically update unread counts
             queryClient.setQueryData([RSS_QUERY_KEYS.UNREAD_COUNTS], (old: any) => {
                 if (!old || !feedBeingDeleted) return old
-                
+
                 const updatedCounts = { ...old }
-                
+
                 // Reduce total unread count
                 if (updatedCounts.total_unread && feedBeingDeleted.unread_count) {
                     updatedCounts.total_unread = Math.max(0, updatedCounts.total_unread - feedBeingDeleted.unread_count)
                 }
-                
+
                 // Reduce folder unread count if the feed was in a folder
                 if (updatedCounts.unread_by_folder && feedBeingDeleted.folder_id && feedBeingDeleted.unread_count) {
                     updatedCounts.unread_by_folder = updatedCounts.unread_by_folder.map((folder: any) => {
@@ -776,7 +776,7 @@ export function useDeleteFeed() {
                         return folder
                     })
                 }
-                
+
                 return updatedCounts
             })
 
@@ -933,6 +933,36 @@ export function useArticle(
         queryFn: () => ApiClient.rss.getArticle(articleId),
         enabled: !!articleId,
         ...options,
+    })
+}
+
+export function useSubscribeToFeed() {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: ({ feedId, folderId }: { feedId: string; folderId: string }) =>
+            ApiClient.rss.subscribeToFeed(feedId, { folder_id: folderId }),
+        onSuccess: (subscription) => {
+            // Invalidate and refetch feeds and unread counts
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] })
+            queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA] })
+        },
+        onError: (error: any) => {
+            let errorMessage = "Failed to subscribe to feed"
+            if (error?.message) {
+                errorMessage = error.message
+            } else if (error?.detail) {
+                errorMessage = error.detail
+            } else if (typeof error === 'string') {
+                errorMessage = error
+            } else if (error?.response?.data?.detail) {
+                errorMessage = error.response.data.detail
+            } else if (error?.response?.data?.message) {
+                errorMessage = error.response.data.message
+            }
+            toast.error(errorMessage)
+        },
     })
 }
 
@@ -1093,3 +1123,4 @@ export function useInfiniteTodayArticles(
         ...options,
     })
 }
+

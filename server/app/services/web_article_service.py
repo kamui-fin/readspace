@@ -27,7 +27,7 @@ class WebArticleService:
         title: str | None = None,
         content: str | None = None,  # Extracted content from extension
         metadata: dict[str, Any] | None = None,
-        tag_ids: list[UUID] | None = None,
+        # tag_ids removed - using ARRAY field on feeds
         note: str | None = None,
         priority: str | None = None,
     ) -> ClippedArticleResponse:
@@ -139,9 +139,7 @@ class WebArticleService:
             self.db, article_id=clipped_article.id
         )
 
-        # Associate with tags if provided (TODO: implement tag association)
-        if tag_ids:
-            await self._associate_article_tags(clipped_article.id, tag_ids)
+        # Tags are now handled as ARRAY field on feeds - no association needed
 
         logger.info(
             "Web article clipped successfully",
@@ -242,11 +240,3 @@ class WebArticleService:
         reading_time = max(1, round(word_count / 230))
         return reading_time
 
-    async def _associate_article_tags(self, article_id: UUID, tag_ids: list[UUID]):
-        """Associate article with tags (TODO: implement based on your tag system)."""
-        logger.info(
-            "Tag association requested but not implemented",
-            article_id=article_id,
-            tag_ids=tag_ids,
-        )
-        pass

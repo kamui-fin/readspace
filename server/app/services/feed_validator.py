@@ -5,6 +5,7 @@ from typing import Any
 import structlog
 
 from app.core.custom_exceptions import FeedValidationError
+from app.utils.language_normalizer import normalize_language_code
 
 logger = structlog.get_logger(__name__)
 
@@ -145,7 +146,10 @@ class FeedValidator:
         title = feed_info.get("title", "Untitled Feed").strip()[:500]  # Limit length
         description = feed_info.get("description", "").strip()[:1000]  # Limit length
         link = feed_info.get("link", "").strip()[:2000]  # Limit length
-        language = feed_info.get("language", "en").strip()[:10]  # Limit length
+        
+        # Extract and normalize language
+        raw_language = feed_info.get("language", "en").strip()
+        language = normalize_language_code(raw_language) or "en"
 
         return {
             "title": title,

@@ -63,12 +63,10 @@ function ArticleContentSkeleton() {
 }
 
 interface ArticlesViewSkeletonProps {
-    title?: string
     showUnreadBadge?: boolean
 }
 
 export function ArticlesViewSkeleton({ 
-    title = "Loading...", 
     showUnreadBadge = false 
 }: ArticlesViewSkeletonProps) {
     return (
@@ -80,18 +78,7 @@ export function ArticlesViewSkeleton({
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <h2 className="font-semibold truncate">
-                                                    {title}
-                                                </h2>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                <p>{title}</p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                                    <div className="h-6 w-40 bg-muted animate-pulse rounded" />
                                     {showUnreadBadge && (
                                         <Badge
                                             variant="outline"
@@ -156,9 +143,7 @@ export function ArticlesViewSkeleton({
                     <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
                         <div className="flex items-center space-x-2 min-w-0 flex-1 max-w-[calc(100vw-6rem)]">
                             <SidebarLeftTrigger className="-ml-1" />
-                            <h2 className="font-semibold truncate text-lg max-w-[calc(100vw-10rem)]">
-                                {title}
-                            </h2>
+                            <div className="h-7 w-48 bg-muted animate-pulse rounded" />
                             {showUnreadBadge && (
                                 <Badge
                                     variant="outline"

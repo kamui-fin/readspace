@@ -9,16 +9,33 @@ export const dynamic = 'force-dynamic'
 
 interface PageProps {
     params: Promise<{ id: string }>
+    searchParams: Promise<{ preview?: string }>
 }
 
-export default async function FeedArticlesPage({ params }: PageProps) {
+export default async function FeedArticlesPage({ params, searchParams }: PageProps) {
     const resolvedParams = await params
     const feedId = resolvedParams.id
+    const resolvedSearchParams = await searchParams
+    const isPreview = resolvedSearchParams.preview === 'true'
 
     const queryClient = getQueryClient()
     
-    // Fetch feed data first to get the title
-    const feed = await ServerApiClient.getFeed(feedId)
+    let feed
+    if (isPreview) {
+        // For preview mode, refresh the feed first to get latest articles
+        try {
+            feed = await ServerApiClient.refreshFeed(feedId, { 
+                forceRefetch: true, 
+                preview: true 
+            })
+        } catch (error) {
+            // If preview refresh fails, try to get basic feed info
+            feed = await ServerApiClient.getFeed(feedId)
+        }
+    } else {
+        // Normal mode - just get the feed data
+        feed = await ServerApiClient.getFeed(feedId)
+    }
     
     if (!feed) {
         return (
@@ -26,8 +43,10 @@ export default async function FeedArticlesPage({ params }: PageProps) {
                 <div className="text-center">
                     <p className="text-lg font-medium">Feed not found</p>
                     <p className="text-muted-foreground">
-                        The feed you're looking for doesn't exist or has been
-                        removed.
+                        {isPreview 
+                            ? "The feed you're trying to preview doesn't exist or couldn't be refreshed."
+                            : "The feed you're looking for doesn't exist or has been removed."
+                        }
                     </p>
                 </div>
             </div>
@@ -79,8 +98,8 @@ export default async function FeedArticlesPage({ params }: PageProps) {
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
             <ArticlesSuspenseWrapper
-                title={feed.title || "Feed"}
-                showUnreadBadge={true}
+                title={isPreview ? `Preview: ${feed.title || "Feed"}` : feed.title || "Feed"}
+                showUnreadBadge={!isPreview}
                 feedId={feedId}
                 initialSidebarTitle={feed.title || "Unknown Feed"}
             />

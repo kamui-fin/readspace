@@ -128,7 +128,32 @@ async def import_opml_file(
                 detail=f"File too large. Maximum size is {MAX_FILE_SIZE_MB}MB.",
             )
 
-        content_str = content_bytes.decode("utf-8")
+        try:
+            content_str = content_bytes.decode("utf-8")
+        except UnicodeDecodeError:
+            # Try other common encodings
+            for encoding in ['latin-1', 'cp1252', 'iso-8859-1']:
+                try:
+                    content_str = content_bytes.decode(encoding)
+                    logger.info(
+                        "OPML file decoded with alternate encoding",
+                        encoding=encoding,
+                        filename=opml_file.filename,
+                        user_id=current_user.sub,
+                    )
+                    break
+                except UnicodeDecodeError:
+                    continue
+            else:
+                logger.warning(
+                    "Failed to decode OPML file with any encoding",
+                    filename=opml_file.filename,
+                    user_id=current_user.sub,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, or try exporting it again from your RSS reader.",
+                )
 
         # Queue orchestration task
         logger.info(
@@ -162,28 +187,52 @@ async def import_opml_file(
             "status_page_url": f"/import-opml/status/{orchestration_task.id}",
         }
 
-    except UnicodeDecodeError:
+    except ValueError as e:
         logger.warning(
-            "Failed to decode OPML file as UTF-8",
+            "Failed to import OPML due to validation error",
+            error=str(e),
             filename=opml_file.filename,
             user_id=current_user.sub,
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File encoding error. Please ensure the file is UTF-8 encoded.",
-        )
-    except ValueError as e:
-        logger.warning(
-            "Failed to import OPML due to value error",
-            error=str(e),
-            user_id=current_user.sub,
-        )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        # Provide more user-friendly error messages
+        error_message = str(e)
+        if "RSS/Atom feed file" in error_message:
+            # Already has a user-friendly message
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
+        elif "Invalid OPML format" in error_message:
+            # Already has a user-friendly message
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
+        else:
+            # Generic validation error
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid OPML file: {error_message}. Please check that you've exported a valid OPML file from your RSS reader."
+            )
     except Exception as e:
         logger.error(
-            "Error starting OPML import task", error=str(e), user_id=current_user.sub
+            "Error starting OPML import task",
+            error=str(e),
+            filename=opml_file.filename,
+            user_id=current_user.sub,
+            exc_info=True
         )
-        raise HTTPException(status_code=500, detail="Failed to start OPML import task.")
+        # Check for specific error types to provide better messages
+        error_str = str(e).lower()
+        if "timeout" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_408_REQUEST_TIMEOUT,
+                detail="The import process timed out. Please try again with a smaller OPML file or try again later."
+            )
+        elif "memory" in error_str or "size" in error_str:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="The OPML file is too large to process. Please try splitting it into smaller files."
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred while processing your OPML file. Please try again, and if the problem persists, check that your OPML file is valid."
+            )
     finally:
         await opml_file.close()
 
@@ -364,7 +413,7 @@ async def get_import_status(
                             "failed": failed_imports,
                             "already_existed": already_existed,
                         },
-                        "message": f"Import completed: {successful_imports} imported, {already_existed} already existed, {failed_imports} failed",
+                        "message": f"{successful_imports} feeds added. {already_existed} were already in your library." + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
                     },
                     "metadata": task_metadata,
                 }
