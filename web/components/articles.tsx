@@ -1125,17 +1125,6 @@ export function ArticlesView({
 
                 {/* Article Content View */}
                 <div className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? 'flex' : 'hidden'}`}>
-                    <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                            onClick={() => setShowContent(false)}
-                            title="Back to articles"
-                        >
-                            <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
-                        </Button>
-                    </div>
                     <div className="flex-1 overflow-auto">
                         {isArticleLoading && (
                             <div className="flex-1 p-4">
@@ -1575,6 +1564,7 @@ function ArticleContentView({
                     isExtracting={extractFullTextQuery.isFetching}
                     isSummarizing={summarizeQuery.isFetching}
                     isTranslating={isTranslating}
+                    onBack={() => setShowContent(false)}
                 />
             )}
             

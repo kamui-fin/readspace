@@ -14,6 +14,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+    ArrowLeft,
     BookmarkIcon,
     Copy,
     ExternalLink,
@@ -25,6 +26,7 @@ import {
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 import type { Article } from "@/lib/api/hooks/feeds"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { LanguageSelector } from "./language-selector"
 
 interface ArticleToolbarProps {
@@ -37,6 +39,7 @@ interface ArticleToolbarProps {
     isExtracting?: boolean
     isSummarizing?: boolean
     isTranslating?: boolean
+    onBack?: () => void
 }
 
 export function ArticleToolbar({
@@ -49,8 +52,10 @@ export function ArticleToolbar({
     isExtracting = false,
     isSummarizing = false,
     isTranslating = false,
+    onBack,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
+    const isMobile = useIsMobile()
 
     const handleCopyUrl = async () => {
         if (!article.link) {
@@ -80,7 +85,30 @@ export function ArticleToolbar({
     }
 
     return (
-        <div className="flex items-center justify-end gap-1 p-4 border-b bg-background/95 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-1 p-4 border-b bg-background/95 backdrop-blur-sm">
+            <div className="flex items-center">
+                {isMobile && onBack && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                    onClick={onBack}
+                                    title="Back to articles"
+                                >
+                                    <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Back to articles
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
+            <div className="flex items-center gap-1">
             <TooltipProvider>
                 {/* Bookmark/Save for Later */}
                 <Tooltip>
@@ -213,6 +241,7 @@ export function ArticleToolbar({
                     </DropdownMenuContent>
                 </DropdownMenu>
             </TooltipProvider>
+            </div>
         </div>
     )
 }
