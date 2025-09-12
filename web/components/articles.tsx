@@ -42,9 +42,15 @@ import {
     useRefreshFeed,
     useRefreshStatus,
     useUnreadCounts,
-    useUpdateArticle
+    useUpdateArticle,
 } from "@/lib/api/hooks/feeds"
-import { useExtractFullText, useSummarizeArticle, ARTICLE_ENHANCEMENT_QUERY_KEYS, createTranslationQueryKey, fetchTranslation } from "@/lib/api/hooks/article-enhancements"
+import {
+    useExtractFullText,
+    useSummarizeArticle,
+    ARTICLE_ENHANCEMENT_QUERY_KEYS,
+    createTranslationQueryKey,
+    fetchTranslation,
+} from "@/lib/api/hooks/article-enhancements"
 import { ApiClient } from "@/lib/api/client"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import { useQueryClient } from "@tanstack/react-query"
@@ -61,7 +67,7 @@ import {
     Loader2,
     MoreVertical,
     Paperclip,
-    RefreshCw
+    RefreshCw,
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
@@ -119,15 +125,19 @@ export function ArticlesView({
         null
     )
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
-    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false)
+    const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] =
+        useState(false)
     const router = useRouter()
     const { clearPending } = useClearPendingNavigation()
 
-    const { data: allUserFeeds } = useFeeds({}, {
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000,
-    })
+    const { data: allUserFeeds } = useFeeds(
+        {},
+        {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000,
+        }
+    )
     const { data: unreadCounts } = useUnreadCounts(undefined, {
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -162,34 +172,43 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-            ? "Read Later"
-            : isTodayMode
-                ? "Today"
-                : viewInitialSidebarTitle || "All Articles"
+          ? "Read Later"
+          : isTodayMode
+            ? "Today"
+            : viewInitialSidebarTitle || "All Articles"
 
     // Use infinite queries based on mode
     let infiniteQuery: any
 
     if (isRecentlyReadMode) {
-        infiniteQuery = useInfiniteRecentlyReadArticles({ size: 25 }, {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,
-        })
+        infiniteQuery = useInfiniteRecentlyReadArticles(
+            { size: 25 },
+            {
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
+                staleTime: 5 * 60 * 1000,
+            }
+        )
     } else if (isReadLaterMode) {
-        infiniteQuery = useInfiniteReadLaterArticles({ size: 25 }, {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,
-        })
+        infiniteQuery = useInfiniteReadLaterArticles(
+            { size: 25 },
+            {
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
+                staleTime: 5 * 60 * 1000,
+            }
+        )
     } else if (isTodayMode) {
-        infiniteQuery = useInfiniteTodayArticles({
-            size: 25
-        }, {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,
-        })
+        infiniteQuery = useInfiniteTodayArticles(
+            {
+                size: 25,
+            },
+            {
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
+                staleTime: 5 * 60 * 1000,
+            }
+        )
     } else {
         const params = {
             feedIds: viewFeedId ? [viewFeedId] : undefined,
@@ -199,8 +218,8 @@ export function ArticlesView({
             sortBy: "published_at",
             sortOrder: "desc",
             size: 25,
-            viewType: viewFolderId ? 'folder' : viewFeedId ? 'feed' : 'all',
-            viewId: viewFolderId || viewFeedId || 'all',
+            viewType: viewFolderId ? "folder" : viewFeedId ? "feed" : "all",
+            viewId: viewFolderId || viewFeedId || "all",
         }
 
         infiniteQuery = useInfiniteArticles(params, {
@@ -223,35 +242,46 @@ export function ArticlesView({
     const allArticles = useMemo(() => {
         if (!data?.pages) return []
 
-        const articles = data.pages.flatMap((page: any) => {
-            // Handle different API response formats
-            if (page.items) {
-                return page.items
-            } else if (page.articles) {
-                return page.articles.map((article: any) => ({
-                    ...article,
-                    link: article.url || article.link,
-                    description: article.description || null,
-                    image_url: article.image_url || null,
-                    created_at: article.created_at || new Date().toISOString(),
-                    updated_at: article.updated_at || new Date().toISOString(),
-                    user_id: article.user_id || "",
-                    guid: article.guid || article.id,
-                    estimated_read_time_minutes: article.estimated_read_time_minutes || null,
-                    custom_metadata: article.custom_metadata || null,
-                    feed: article.feed || {
-                        id: article.feed_id || null,
-                        title: article.feed_title || null,
-                        url: null,
-                        image_url: article.feed_image_url || null,
-                    },
-                    article_type: article.article_type || "feed",
-                    priority: article.priority || null,
-                    note: article.note || null,
-                } as Article))
-            }
-            return []
-        }).filter((article: any) => article && article.id) // Filter out articles without an ID to prevent key errors
+        const articles = data.pages
+            .flatMap((page: any) => {
+                // Handle different API response formats
+                if (page.items) {
+                    return page.items
+                } else if (page.articles) {
+                    return page.articles.map(
+                        (article: any) =>
+                            ({
+                                ...article,
+                                link: article.url || article.link,
+                                description: article.description || null,
+                                image_url: article.image_url || null,
+                                created_at:
+                                    article.created_at ||
+                                    new Date().toISOString(),
+                                updated_at:
+                                    article.updated_at ||
+                                    new Date().toISOString(),
+                                user_id: article.user_id || "",
+                                guid: article.guid || article.id,
+                                estimated_read_time_minutes:
+                                    article.estimated_read_time_minutes || null,
+                                custom_metadata:
+                                    article.custom_metadata || null,
+                                feed: article.feed || {
+                                    id: article.feed_id || null,
+                                    title: article.feed_title || null,
+                                    url: null,
+                                    image_url: article.feed_image_url || null,
+                                },
+                                article_type: article.article_type || "feed",
+                                priority: article.priority || null,
+                                note: article.note || null,
+                            }) as Article
+                    )
+                }
+                return []
+            })
+            .filter((article: any) => article && article.id) // Filter out articles without an ID to prevent key errors
 
         return articles
     }, [data])
@@ -274,7 +304,9 @@ export function ArticlesView({
     // Check if the selected article is in the current filtered list
     const isSelectedArticleInFilteredList = useMemo(() => {
         if (!selectedArticleId || allArticles.length === 0) return false
-        const article = allArticles.find((a: Article) => a.id === selectedArticleId)
+        const article = allArticles.find(
+            (a: Article) => a.id === selectedArticleId
+        )
         if (!article) return false
 
         // Apply same filtering logic without recreating array
@@ -334,7 +366,7 @@ export function ArticlesView({
         hasNextPage: !!hasNextPage,
         onLoadMore: fetchMoreArticles,
         disabled: false,
-        rootMargin: '0px 0px 200px 0px',
+        rootMargin: "0px 0px 200px 0px",
     })
 
     const [mobileSentinelRef] = useInfiniteScroll({
@@ -342,19 +374,23 @@ export function ArticlesView({
         hasNextPage: !!hasNextPage,
         onLoadMore: fetchMoreArticles,
         disabled: false,
-        rootMargin: '0px 0px 200px 0px',
+        rootMargin: "0px 0px 200px 0px",
     })
-
-
 
     useEffect(() => {
         // Auto-select first article when we have articles but no current selection (desktop only)
-        if (allArticles.length > 0 && !selectedArticleId && !isMobile && !showContent) {
+        if (
+            allArticles.length > 0 &&
+            !selectedArticleId &&
+            !isMobile &&
+            !showContent
+        ) {
             // Use a small timeout to ensure data has stabilized
             const timer = setTimeout(() => {
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
-                        ? allArticles.find((a: Article) => !a.is_read) || allArticles[0]
+                        ? allArticles.find((a: Article) => !a.is_read) ||
+                          allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle.id)
                 }
@@ -362,7 +398,13 @@ export function ArticlesView({
 
             return () => clearTimeout(timer)
         }
-    }, [allArticles.length, selectedArticleId, isMobile, showContent, showUnreadOnly])
+    }, [
+        allArticles.length,
+        selectedArticleId,
+        isMobile,
+        showContent,
+        showUnreadOnly,
+    ])
 
     // Clear selected article if it's no longer in the articles list (e.g., removed from read later)
     useEffect(() => {
@@ -500,28 +542,37 @@ export function ArticlesView({
         return groups
     }, [filteredArticles, isRecentlyReadMode])
 
-    const handleArticleClick = useCallback((articleId: string) => {
-        setSelectedArticleId(articleId)
-        // Only auto-show content on mobile if user actually clicked
-        if (isMobile) {
-            setShowContent(true)
-        }
-        // Don't auto-mark as read on mobile click to prevent re-render loops
-        // Also don't mark as read in preview mode (when shouldShowPreviewBanner is true)
-        if (!isMobile && !shouldShowPreviewBanner) {
-            const article = allArticles.find(
-                (a: Article) => a.id === articleId
-            )
-            if (!isRecentlyReadMode && article && !article.is_read) {
-                // Perform the actual update - React Query will handle optimistic updates
-                updateArticle.mutate({
-                    articleId,
-                    data: { is_read: true },
-                    articleType: article.article_type,
-                })
+    const handleArticleClick = useCallback(
+        (articleId: string) => {
+            setSelectedArticleId(articleId)
+            // Only auto-show content on mobile if user actually clicked
+            if (isMobile) {
+                setShowContent(true)
             }
-        }
-    }, [allArticles, isRecentlyReadMode, updateArticle, isMobile, shouldShowPreviewBanner])
+            // Don't auto-mark as read on mobile click to prevent re-render loops
+            // Also don't mark as read in preview mode (when shouldShowPreviewBanner is true)
+            if (!isMobile && !shouldShowPreviewBanner) {
+                const article = allArticles.find(
+                    (a: Article) => a.id === articleId
+                )
+                if (!isRecentlyReadMode && article && !article.is_read) {
+                    // Perform the actual update - React Query will handle optimistic updates
+                    updateArticle.mutate({
+                        articleId,
+                        data: { is_read: true },
+                        articleType: article.article_type,
+                    })
+                }
+            }
+        },
+        [
+            allArticles,
+            isRecentlyReadMode,
+            updateArticle,
+            isMobile,
+            shouldShowPreviewBanner,
+        ]
+    )
 
     // Simplified refresh: always shallow refresh (just refetch from DB)
     const handleShallowRefresh = async () => {
@@ -621,20 +672,30 @@ export function ArticlesView({
         isTodayMode,
     ])
 
-
     // Show skeleton during initial loading, even if we'll end up empty
     if (isArticlesLoading && allArticles.length === 0) {
-        return <ArticlesViewSkeleton title={sidebarTitle} showUnreadBadge={false} />
+        return (
+            <ArticlesViewSkeleton
+                title={sidebarTitle}
+                showUnreadBadge={false}
+            />
+        )
     }
 
-    if (!isArticlesLoading && filteredArticles.length === 0 && allArticles.length === 0) {
+    if (
+        !isArticlesLoading &&
+        filteredArticles.length === 0 &&
+        allArticles.length === 0
+    ) {
         return (
             <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
                 <ArticlesEmptyState
                     mode={viewMode}
                     feedId={viewFeedId}
                     folderId={viewFolderId}
-                    onRefresh={() => handleRefreshWithMessage("Refreshing articles...")}
+                    onRefresh={() =>
+                        handleRefreshWithMessage("Refreshing articles...")
+                    }
                 />
             </div>
         )
@@ -648,10 +709,7 @@ export function ArticlesView({
                     <p className="text-muted-foreground">
                         No unread articles found matching your filters.
                     </p>
-                    <Button
-                        variant="outline"
-                        onClick={toggleShowUnreadOnly}
-                    >
+                    <Button variant="outline" onClick={toggleShowUnreadOnly}>
                         Show All Articles
                     </Button>
                 </div>
@@ -728,7 +786,9 @@ export function ArticlesView({
                                                             )
                                                         }
                                                         title="Quick refresh"
-                                                        disabled={isDeepRefreshing}
+                                                        disabled={
+                                                            isDeepRefreshing
+                                                        }
                                                     >
                                                         <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                                     </Button>
@@ -820,111 +880,128 @@ export function ArticlesView({
                                     )}
                                 </div>
                             </div>
-                            <div
-                                className="flex-1 overflow-auto min-h-0"
-                            >
+                            <div className="flex-1 overflow-auto min-h-0">
                                 <div className="h-full overflow-visible">
                                     {shouldShowPreviewBanner && (
                                         <FeedPreviewBanner
                                             feedTitle={feedData?.title}
-                                            feedDescription={feedData?.description}
-                                            onFollow={() => setIsSubscriptionModalOpen(true)}
+                                            feedDescription={
+                                                feedData?.description
+                                            }
+                                            onFollow={() =>
+                                                setIsSubscriptionModalOpen(true)
+                                            }
                                         />
                                     )}
                                     {isRecentlyReadMode || isReadLaterMode
                                         ? filteredArticles.map(
-                                            (article: Article, index: number) => (
-                                                <ArticleItem
-                                                    key={article.id}
-                                                    article={article}
-                                                    isActive={
-                                                        article.id ===
-                                                        selectedArticleId
-                                                    }
-                                                    isLastInGroup={
-                                                        index ===
-                                                        filteredArticles.length -
-                                                        1
-                                                    }
-                                                    onClick={() =>
-                                                        handleArticleClick(
-                                                            article.id
-                                                        )
-                                                    }
-                                                    isRecentlyReadMode={
-                                                        isRecentlyReadMode
-                                                    }
-                                                    isReadLaterMode={
-                                                        isReadLaterMode
-                                                    }
-                                                    index={index}
-                                                />
-                                            )
-                                        )
+                                              (
+                                                  article: Article,
+                                                  index: number
+                                              ) => (
+                                                  <ArticleItem
+                                                      key={article.id}
+                                                      article={article}
+                                                      isActive={
+                                                          article.id ===
+                                                          selectedArticleId
+                                                      }
+                                                      isLastInGroup={
+                                                          index ===
+                                                          filteredArticles.length -
+                                                              1
+                                                      }
+                                                      onClick={() =>
+                                                          handleArticleClick(
+                                                              article.id
+                                                          )
+                                                      }
+                                                      isRecentlyReadMode={
+                                                          isRecentlyReadMode
+                                                      }
+                                                      isReadLaterMode={
+                                                          isReadLaterMode
+                                                      }
+                                                      index={index}
+                                                  />
+                                              )
+                                          )
                                         : Object.entries(groupedArticles).map(
-                                            ([groupId, group]) => (
-                                                <div key={groupId}>
-                                                    <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
-                                                        <div className="flex items-center gap-2">
-                                                            {group.label ===
-                                                                "Today" ||
-                                                                group.label ===
-                                                                "Yesterday" ? (
-                                                                <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                            ) : (
-                                                                <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                            )}
-                                                            <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
-                                                                {group.label}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    {group.articles.map(
-                                                        (
-                                                            article: Article,
-                                                            index: number
-                                                        ) => (
-                                                            <ArticleItem
-                                                                key={article.id}
-                                                                article={article}
-                                                                isActive={
-                                                                    article.id ===
-                                                                    selectedArticleId
-                                                                }
-                                                                isLastInGroup={
-                                                                    index ===
-                                                                    group.articles
-                                                                        .length -
-                                                                    1
-                                                                }
-                                                                onClick={() =>
-                                                                    handleArticleClick(
-                                                                        article.id
-                                                                    )
-                                                                }
-                                                                index={index}
-                                                            />
-                                                        )
-                                                    )}
-                                                </div>
-                                            )
-                                        )}
+                                              ([groupId, group]) => (
+                                                  <div key={groupId}>
+                                                      <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
+                                                          <div className="flex items-center gap-2">
+                                                              {group.label ===
+                                                                  "Today" ||
+                                                              group.label ===
+                                                                  "Yesterday" ? (
+                                                                  <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                              ) : (
+                                                                  <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                              )}
+                                                              <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
+                                                                  {group.label}
+                                                              </span>
+                                                          </div>
+                                                      </div>
+                                                      {group.articles.map(
+                                                          (
+                                                              article: Article,
+                                                              index: number
+                                                          ) => (
+                                                              <ArticleItem
+                                                                  key={
+                                                                      article.id
+                                                                  }
+                                                                  article={
+                                                                      article
+                                                                  }
+                                                                  isActive={
+                                                                      article.id ===
+                                                                      selectedArticleId
+                                                                  }
+                                                                  isLastInGroup={
+                                                                      index ===
+                                                                      group
+                                                                          .articles
+                                                                          .length -
+                                                                          1
+                                                                  }
+                                                                  onClick={() =>
+                                                                      handleArticleClick(
+                                                                          article.id
+                                                                      )
+                                                                  }
+                                                                  index={index}
+                                                              />
+                                                          )
+                                                      )}
+                                                  </div>
+                                              )
+                                          )}
                                     {hasNextPage && (
-                                        <div ref={sentinelRef} className="flex items-center justify-center py-8">
+                                        <div
+                                            ref={sentinelRef}
+                                            className="flex items-center justify-center py-8"
+                                        >
                                             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                         </div>
                                     )}
-                                    {!hasNextPage && filteredArticles.length > 0 && (
-                                        <div className="text-center py-6 text-muted-foreground text-sm">
-                                            <b>You've seen all articles!</b>
-                                        </div>
-                                    )}
+                                    {!hasNextPage &&
+                                        filteredArticles.length > 0 && (
+                                            <div className="text-center py-6 text-muted-foreground text-sm">
+                                                <b>You've seen all articles!</b>
+                                            </div>
+                                        )}
                                 </div>
                             </div>
                         </div>
                     </ResizablePanel>
                     <ResizableHandle />
-                    <ResizablePanel defaultSize={75} className="overflow-hidden">
+                    <ResizablePanel
+                        defaultSize={75}
+                        className="overflow-hidden"
+                    >
                         <div className="flex flex-col h-full">
                             {isArticleLoading && (
                                 <div className="flex-1 p-8">
@@ -937,50 +1014,64 @@ export function ArticlesView({
                                         article={transformedSelectedArticle}
                                         isRecentlyReadMode={isRecentlyReadMode}
                                         isReadLaterMode={isReadLaterMode}
-                                        shouldShowPreviewBanner={shouldShowPreviewBanner}
+                                        shouldShowPreviewBanner={
+                                            shouldShowPreviewBanner
+                                        }
                                         onArticleRemoved={() =>
                                             setSelectedArticleId(null)
                                         }
                                         onMarkAsRead={() => {
-                                            console.log('onMarkAsRead callback called:', {
-                                                isRecentlyReadMode,
-                                                isRead: transformedSelectedArticle.is_read,
-                                                articleId: transformedSelectedArticle.id,
-                                                shouldUpdate: !isRecentlyReadMode && !transformedSelectedArticle.is_read && !shouldShowPreviewBanner
-                                            })
+                                            console.log(
+                                                "onMarkAsRead callback called:",
+                                                {
+                                                    isRecentlyReadMode,
+                                                    isRead: transformedSelectedArticle.is_read,
+                                                    articleId:
+                                                        transformedSelectedArticle.id,
+                                                    shouldUpdate:
+                                                        !isRecentlyReadMode &&
+                                                        !transformedSelectedArticle.is_read &&
+                                                        !shouldShowPreviewBanner,
+                                                }
+                                            )
                                             if (
                                                 !isRecentlyReadMode &&
                                                 !transformedSelectedArticle.is_read &&
                                                 !shouldShowPreviewBanner
                                             ) {
-                                                console.log('Calling updateArticle.mutate')
+                                                console.log(
+                                                    "Calling updateArticle.mutate"
+                                                )
                                                 updateArticle.mutate({
-                                                    articleId: transformedSelectedArticle.id,
+                                                    articleId:
+                                                        transformedSelectedArticle.id,
                                                     data: { is_read: true },
-                                                    articleType: transformedSelectedArticle.article_type,
+                                                    articleType:
+                                                        transformedSelectedArticle.article_type,
                                                 })
                                             }
                                         }}
                                     />
                                 </div>
                             ) : null}
-                            {!isArticleLoading && !transformedSelectedArticle && (
-                                <>
-                                    {/* Show skeleton on desktop when we have articles (auto-select will happen soon) */}
-                                    {!isMobile && allArticles.length > 0 ? (
-                                        <div className="flex-1 p-8">
-                                            <ArticleContentSkeleton />
-                                        </div>
-                                    ) : allArticles.length > 0 ? (
-                                        /* Show select message when we have articles but on mobile */
-                                        <div className="flex flex-1 items-center justify-center">
-                                            <p className="text-muted-foreground">
-                                                Select an article to read
-                                            </p>
-                                        </div>
-                                    ) : null}
-                                </>
-                            )}
+                            {!isArticleLoading &&
+                                !transformedSelectedArticle && (
+                                    <>
+                                        {/* Show skeleton on desktop when we have articles (auto-select will happen soon) */}
+                                        {!isMobile && allArticles.length > 0 ? (
+                                            <div className="flex-1 p-8">
+                                                <ArticleContentSkeleton />
+                                            </div>
+                                        ) : allArticles.length > 0 ? (
+                                            /* Show select message when we have articles but on mobile */
+                                            <div className="flex flex-1 items-center justify-center">
+                                                <p className="text-muted-foreground">
+                                                    Select an article to read
+                                                </p>
+                                            </div>
+                                        ) : null}
+                                    </>
+                                )}
                         </div>
                     </ResizablePanel>
                 </ResizablePanelGroup>
@@ -989,7 +1080,9 @@ export function ArticlesView({
             {/* Mobile: Stacked layout */}
             <div className="flex md:hidden w-full h-full max-w-screen-sm mx-auto overflow-x-hidden">
                 {/* Article List View */}
-                <div className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? 'hidden' : 'flex'}`}>
+                <div
+                    className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? "hidden" : "flex"}`}
+                >
                     <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
                         <div className="flex items-center space-x-2 min-w-0 flex-1 max-w-[calc(100vw-6rem)]">
                             <SidebarLeftTrigger className="-ml-1" />
@@ -1032,7 +1125,9 @@ export function ArticlesView({
                                 size="icon"
                                 className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                 onClick={() =>
-                                    handleRefreshWithMessage("Refreshing articles...")
+                                    handleRefreshWithMessage(
+                                        "Refreshing articles..."
+                                    )
                                 }
                                 title="Refresh"
                             >
@@ -1040,77 +1135,95 @@ export function ArticlesView({
                             </Button>
                         </div>
                     </div>
-                    <div
-                        className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden"
-                    >
+                    <div className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden">
                         <div className="h-full">
                             {shouldShowPreviewBanner && (
                                 <FeedPreviewBanner
                                     feedTitle={feedData?.title}
                                     feedDescription={feedData?.description}
-                                    onFollow={() => setIsSubscriptionModalOpen(true)}
+                                    onFollow={() =>
+                                        setIsSubscriptionModalOpen(true)
+                                    }
                                 />
                             )}
                             {isRecentlyReadMode || isReadLaterMode
                                 ? filteredArticles.map(
-                                    (article: Article, index: number) => (
-                                        <ArticleItem
-                                            key={article.id}
-                                            article={article}
-                                            isActive={
-                                                article.id === selectedArticleId
-                                            }
-                                            isLastInGroup={
-                                                index === filteredArticles.length - 1
-                                            }
-                                            onClick={() =>
-                                                handleArticleClick(article.id)
-                                            }
-                                            isRecentlyReadMode={isRecentlyReadMode}
-                                            isReadLaterMode={isReadLaterMode}
-                                            index={index}
-                                        />
-                                    )
-                                )
+                                      (article: Article, index: number) => (
+                                          <ArticleItem
+                                              key={article.id}
+                                              article={article}
+                                              isActive={
+                                                  article.id ===
+                                                  selectedArticleId
+                                              }
+                                              isLastInGroup={
+                                                  index ===
+                                                  filteredArticles.length - 1
+                                              }
+                                              onClick={() =>
+                                                  handleArticleClick(article.id)
+                                              }
+                                              isRecentlyReadMode={
+                                                  isRecentlyReadMode
+                                              }
+                                              isReadLaterMode={isReadLaterMode}
+                                              index={index}
+                                          />
+                                      )
+                                  )
                                 : Object.entries(groupedArticles).map(
-                                    ([groupId, group]) => (
-                                        <div key={groupId}>
-                                            <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
-                                                <div className="flex items-center gap-2">
-                                                    {group.label === "Today" ||
-                                                        group.label === "Yesterday" ? (
-                                                        <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                    ) : (
-                                                        <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                    )}
-                                                    <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
-                                                        {group.label}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            {group.articles.map(
-                                                (article: Article, index: number) => (
-                                                    <ArticleItem
-                                                        key={article.id}
-                                                        article={article}
-                                                        isActive={
-                                                            article.id === selectedArticleId
-                                                        }
-                                                        isLastInGroup={
-                                                            index === group.articles.length - 1
-                                                        }
-                                                        onClick={() =>
-                                                            handleArticleClick(article.id)
-                                                        }
-                                                        index={index}
-                                                    />
-                                                )
-                                            )}
-                                        </div>
-                                    )
-                                )}
+                                      ([groupId, group]) => (
+                                          <div key={groupId}>
+                                              <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
+                                                  <div className="flex items-center gap-2">
+                                                      {group.label ===
+                                                          "Today" ||
+                                                      group.label ===
+                                                          "Yesterday" ? (
+                                                          <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                      ) : (
+                                                          <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                      )}
+                                                      <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
+                                                          {group.label}
+                                                      </span>
+                                                  </div>
+                                              </div>
+                                              {group.articles.map(
+                                                  (
+                                                      article: Article,
+                                                      index: number
+                                                  ) => (
+                                                      <ArticleItem
+                                                          key={article.id}
+                                                          article={article}
+                                                          isActive={
+                                                              article.id ===
+                                                              selectedArticleId
+                                                          }
+                                                          isLastInGroup={
+                                                              index ===
+                                                              group.articles
+                                                                  .length -
+                                                                  1
+                                                          }
+                                                          onClick={() =>
+                                                              handleArticleClick(
+                                                                  article.id
+                                                              )
+                                                          }
+                                                          index={index}
+                                                      />
+                                                  )
+                                              )}
+                                          </div>
+                                      )
+                                  )}
                             {hasNextPage && (
-                                <div ref={mobileSentinelRef} className="flex items-center justify-center py-8">
+                                <div
+                                    ref={mobileSentinelRef}
+                                    className="flex items-center justify-center py-8"
+                                >
                                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                                 </div>
                             )}
@@ -1124,7 +1237,9 @@ export function ArticlesView({
                 </div>
 
                 {/* Article Content View */}
-                <div className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? 'flex' : 'hidden'}`}>
+                <div
+                    className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? "flex" : "hidden"}`}
+                >
                     <div className="flex-1 overflow-auto">
                         {isArticleLoading && (
                             <div className="flex-1 p-4">
@@ -1137,7 +1252,9 @@ export function ArticlesView({
                                     article={transformedSelectedArticle}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
-                                    shouldShowPreviewBanner={shouldShowPreviewBanner}
+                                    shouldShowPreviewBanner={
+                                        shouldShowPreviewBanner
+                                    }
                                     onArticleRemoved={() => {
                                         setSelectedArticleId(null)
                                         setShowContent(false)
@@ -1240,23 +1357,31 @@ function ArticleContentView({
     const updateArticle = useUpdateArticle()
     const { resolvedTheme } = useTheme()
     const queryClient = useQueryClient()
-    
+
     const [optimisticReadLater, setOptimisticReadLater] = useState(
         article.is_read_later
     )
     const contentRef = useRef<HTMLDivElement>(null)
     const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read)
     const [imageError, setImageError] = useState(false)
-    
+
     // Enhancement states
     const [currentContent, setCurrentContent] = useState(article.content || "")
-    const [currentContentKey, setCurrentContentKey] = useState(`original-${article.id}`)
+    const [currentContentKey, setCurrentContentKey] = useState(
+        `original-${article.id}`
+    )
     const [aiSummary, setAiSummary] = useState<string | null>(null)
     const [isShowingSummary, setIsShowingSummary] = useState(false)
-    
+    const [currentReadTime, setCurrentReadTime] = useState<number | null>(
+        article.estimated_read_time_minutes
+    )
+
     // Enhancement queries - these are disabled by default and triggered manually
     const extractFullTextQuery = useExtractFullText(article.id)
-    const summarizeQuery = useSummarizeArticle(article.id, currentContent !== (article.content || "") ? currentContent : undefined)
+    const summarizeQuery = useSummarizeArticle(
+        article.id,
+        currentContent !== (article.content || "") ? currentContent : undefined
+    )
     const [isTranslating, setIsTranslating] = useState(false)
 
     // Reset hasMarkedRead when article changes
@@ -1275,17 +1400,20 @@ function ArticleContentView({
                 : "Article removed from Read Later"
         )
 
-        updateArticle.mutate({
-            articleId: article.id,
-            data: { is_read_later: newReadLaterState },
-            articleType: article.article_type,
-        }, {
-            onError: () => {
-                // Revert optimistic update on error and show error
-                setOptimisticReadLater(!newReadLaterState)
-                toast.error("Failed to update article. Please try again.")
+        updateArticle.mutate(
+            {
+                articleId: article.id,
+                data: { is_read_later: newReadLaterState },
+                articleType: article.article_type,
+            },
+            {
+                onError: () => {
+                    // Revert optimistic update on error and show error
+                    setOptimisticReadLater(!newReadLaterState)
+                    toast.error("Failed to update article. Please try again.")
+                },
             }
-        })
+        )
     }
 
     const handleMarkAsRead = () => {
@@ -1307,8 +1435,10 @@ function ArticleContentView({
                     }
                 },
                 onError: () => {
-                    toast.error("Failed to mark article as read. Please try again.")
-                }
+                    toast.error(
+                        "Failed to mark article as read. Please try again."
+                    )
+                },
             }
         )
     }
@@ -1317,23 +1447,38 @@ function ArticleContentView({
     const handleExtractFullText = async () => {
         try {
             // Check if we already have cached data
-            if (extractFullTextQuery.data && extractFullTextQuery.data.success && extractFullTextQuery.data.content) {
+            if (
+                extractFullTextQuery.data &&
+                extractFullTextQuery.data.success &&
+                extractFullTextQuery.data.content
+            ) {
                 setCurrentContent(extractFullTextQuery.data.content)
                 setCurrentContentKey(`extracted-${article.id}-${Date.now()}`)
+                if (
+                    extractFullTextQuery.data.estimated_read_time_minutes !==
+                    null
+                ) {
+                    setCurrentReadTime(
+                        extractFullTextQuery.data.estimated_read_time_minutes
+                    )
+                }
                 return
             }
-            
+
             // Refetch to get fresh data
             const { data } = await extractFullTextQuery.refetch()
             if (data && data.success && data.content) {
                 setCurrentContent(data.content)
                 setCurrentContentKey(`extracted-${article.id}-${Date.now()}`)
+                if (data.estimated_read_time_minutes !== null) {
+                    setCurrentReadTime(data.estimated_read_time_minutes)
+                }
                 toast.success("Full text extracted successfully")
             } else if (data) {
                 toast.error(data.error || "Failed to extract full text")
             }
         } catch (error) {
-            console.error('Extract full text failed:', error)
+            console.error("Extract full text failed:", error)
             toast.error("Failed to extract full text")
         }
     }
@@ -1341,12 +1486,16 @@ function ArticleContentView({
     const handleSummarize = async () => {
         try {
             // Check if we already have cached data
-            if (summarizeQuery.data && summarizeQuery.data.success && summarizeQuery.data.summary) {
+            if (
+                summarizeQuery.data &&
+                summarizeQuery.data.success &&
+                summarizeQuery.data.summary
+            ) {
                 setAiSummary(summarizeQuery.data.summary)
                 setIsShowingSummary(true)
                 return
             }
-            
+
             // Refetch to get fresh data
             const { data } = await summarizeQuery.refetch()
             if (data && data.success && data.summary) {
@@ -1357,7 +1506,7 @@ function ArticleContentView({
                 toast.error(data.error || "Failed to generate summary")
             }
         } catch (error) {
-            console.error('Summarize article failed:', error)
+            console.error("Summarize article failed:", error)
             toast.error("Failed to generate summary")
         }
     }
@@ -1365,29 +1514,49 @@ function ArticleContentView({
     const handleTranslate = async (targetLanguage: string) => {
         try {
             setIsTranslating(true)
-            const contentToUse = currentContent !== (article.content || "") ? currentContent : undefined
-            
+            const contentToUse =
+                currentContent !== (article.content || "")
+                    ? currentContent
+                    : undefined
+
             // Check cache first
-            const queryKey = createTranslationQueryKey(article.id, targetLanguage, contentToUse)
+            const queryKey = createTranslationQueryKey(
+                article.id,
+                targetLanguage,
+                contentToUse
+            )
             const cachedData = queryClient.getQueryData(queryKey)
-            if (cachedData && (cachedData as any).success && (cachedData as any).translated_content) {
+            if (
+                cachedData &&
+                (cachedData as any).success &&
+                (cachedData as any).translated_content
+            ) {
                 setCurrentContent((cachedData as any).translated_content)
-                setCurrentContentKey(`translated-${targetLanguage}-${article.id}-${Date.now()}`)
+                setCurrentContentKey(
+                    `translated-${targetLanguage}-${article.id}-${Date.now()}`
+                )
                 return
             }
-            
+
             // Fetch new translation with caching
-            const data = await fetchTranslation(queryClient, article.id, targetLanguage, contentToUse)
-            
+            const data = await fetchTranslation(
+                queryClient,
+                article.id,
+                targetLanguage,
+                contentToUse
+            )
+
             if (data && data.success && data.translated_content) {
                 setCurrentContent(data.translated_content)
-                setCurrentContentKey(`translated-${targetLanguage}-${article.id}-${Date.now()}`)
+                setCurrentContentKey(
+                    `translated-${targetLanguage}-${article.id}-${Date.now()}`
+                )
                 toast.success(`Article translated to ${targetLanguage}`)
             } else if (data) {
                 toast.error(data.error || "Failed to translate article")
             }
         } catch (error) {
-            console.error('Translate article failed:', error)
+            console.error("Translate article failed:", error)
             toast.error("Failed to translate article")
         } finally {
             setIsTranslating(false)
@@ -1400,6 +1569,7 @@ function ArticleContentView({
         setCurrentContentKey(`original-${article.id}`)
         setAiSummary(null)
         setIsShowingSummary(false)
+        setCurrentReadTime(article.estimated_read_time_minutes)
     }, [article.id, article.content])
 
     useEffect(() => {
@@ -1414,14 +1584,14 @@ function ArticleContentView({
             isReadLaterMode ||
             !contentRef.current ||
             hasMarkedRead ||
-            typeof window !== 'undefined' && window.innerWidth < 768 // Disable on mobile
+            (typeof window !== "undefined" && window.innerWidth < 768) // Disable on mobile
         )
             return
         const el = contentRef.current
         const handleScroll = () => {
             // Mark as read on ANY scroll, not just bottom
             if (el.scrollTop > 0 && !hasMarkedRead && !article.is_read) {
-                console.log('Scroll detected - attempting to mark as read')
+                console.log("Scroll detected - attempting to mark as read")
                 setHasMarkedRead(true)
 
                 if (onMarkAsRead) {
@@ -1473,7 +1643,8 @@ function ArticleContentView({
                                                     is_read: true,
                                                     is_read_later: false,
                                                 },
-                                                articleType: article.article_type,
+                                                articleType:
+                                                    article.article_type,
                                             })
                                             toast.dismiss(t.id)
                                             onArticleRemoved?.()
@@ -1485,11 +1656,14 @@ function ArticleContentView({
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
-                                            toast.success("Article removed from Read Later")
+                                            toast.success(
+                                                "Article removed from Read Later"
+                                            )
                                             updateArticle.mutate({
                                                 articleId: article.id,
                                                 data: { is_read_later: false },
-                                                articleType: article.article_type,
+                                                articleType:
+                                                    article.article_type,
                                             })
                                             toast.dismiss(t.id)
                                             onArticleRemoved?.()
@@ -1523,8 +1697,8 @@ function ArticleContentView({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -1567,105 +1741,120 @@ function ArticleContentView({
                     onBack={() => setShowContent(false)}
                 />
             )}
-            
+
             {/* Article Content */}
             <div className="flex-1 overflow-auto p-6 md:p-10">
                 <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
-            <div className="mb-3 w-full min-w-0">
-                <h1
-                    className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
-                    style={{
-                        wordBreak: "break-all",
-                        overflowWrap: "anywhere",
-                        wordWrap: "break-word",
-                        hyphens: "auto",
-                        width: "100%",
-                        maxWidth: "100%"
-                    }}
-                >
-                    {article.title}
-                </h1>
-            </div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 text-[10px] gap-2 sm:gap-0">
-                <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                        <AvatarImage
-                            src={
-                                article.feed?.image_url ||
-                                (article.article_type === "clipped" && article.link
-                                    ? (() => {
-                                        try {
-                                            const domain = new URL(article.link).hostname
-                                            return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-                                        } catch {
-                                            return article.image_url || "/placeholders/avatar.png"
-                                        }
-                                    })()
-                                    : article.image_url) ||
-                                "/placeholders/avatar.png"
-                            }
-                        />
-                        <AvatarFallback>
-                            {article.feed?.title?.substring(0, 2) || "N/A"}
-                        </AvatarFallback>
-                    </Avatar>
-                    <span className="truncate max-w-[min(150px,calc(50vw))] sm:max-w-[200px]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
-                        {article.author ||
-                            article.feed?.title ||
-                            (article.article_type === "clipped" && article.link
-                                ? (() => {
-                                    try {
-                                        return new URL(article.link).hostname
-                                    } catch {
-                                        return "Unknown Source"
-                                    }
-                                })()
-                                : "Unknown Source")}
-                    </span>
-                    {article.article_type === "clipped" && (
-                        <div
-                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority || "default")}`}
+                    <div className="mb-3 w-full min-w-0">
+                        <h1
+                            className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
+                            style={{
+                                wordBreak: "break-all",
+                                overflowWrap: "anywhere",
+                                wordWrap: "break-word",
+                                hyphens: "auto",
+                                width: "100%",
+                                maxWidth: "100%",
+                            }}
                         >
-                            <Paperclip className="h-2.5 w-2.5" />
-                            <span className="capitalize">
-                                {priority || "clipped"}
-                            </span>
-                        </div>
-                    )}
-                    <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
-                        {publishedAtDisplay}
-                    </span>
-                    {article.estimated_read_time_minutes != null && (
-                        <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
-                            {article.estimated_read_time_minutes} min read
-                        </span>
-                    )}
-                </div>
-            </div>
-            {/* AI Summary */}
-            {isShowingSummary && aiSummary && (
-                <AiSummaryCard 
-                    summary={aiSummary} 
-                    onDismiss={() => setIsShowingSummary(false)} 
-                />
-            )}
-            
-            <div className="space-y-6">
-                {article.image_url && !imageError && (
-                    <div className="aspect-video w-full sm:w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
-                        <img
-                            src={article.image_url}
-                            alt={article.title || "Article image"}
-                            className="w-full h-full object-cover"
-                            onError={() => setImageError(true)}
-                        />
+                            {article.title}
+                        </h1>
                     </div>
-                )}
-                {currentContent ? (
-                    <AnimatedContent contentKey={currentContentKey}>
-                        <div
-                            ref={contentRef}
-                            className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 text-[10px] gap-2 sm:gap-0">
+                        <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                                <AvatarImage
+                                    src={
+                                        article.feed?.image_url ||
+                                        (article.article_type === "clipped" &&
+                                        article.link
+                                            ? (() => {
+                                                  try {
+                                                      const domain = new URL(
+                                                          article.link
+                                                      ).hostname
+                                                      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+                                                  } catch {
+                                                      return (
+                                                          article.image_url ||
+                                                          "/placeholders/avatar.png"
+                                                      )
+                                                  }
+                                              })()
+                                            : article.image_url) ||
+                                        "/placeholders/avatar.png"
+                                    }
+                                />
+                                <AvatarFallback>
+                                    {article.feed?.title?.substring(0, 2) ||
+                                        "N/A"}
+                                </AvatarFallback>
+                            </Avatar>
+                            <span
+                                className="truncate max-w-[min(150px,calc(50vw))] sm:max-w-[200px]"
+                                style={{
+                                    wordBreak: "break-all",
+                                    overflowWrap: "anywhere",
+                                }}
+                            >
+                                {article.author ||
+                                    article.feed?.title ||
+                                    (article.article_type === "clipped" &&
+                                    article.link
+                                        ? (() => {
+                                              try {
+                                                  return new URL(article.link)
+                                                      .hostname
+                                              } catch {
+                                                  return "Unknown Source"
+                                              }
+                                          })()
+                                        : "Unknown Source")}
+                            </span>
+                            {article.article_type === "clipped" && (
+                                <div
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority || "default")}`}
+                                >
+                                    <Paperclip className="h-2.5 w-2.5" />
+                                    <span className="capitalize">
+                                        {priority || "clipped"}
+                                    </span>
+                                </div>
+                            )}
+                            <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                                {publishedAtDisplay}
+                            </span>
+                            {currentReadTime != null && (
+                                <span className="text-muted-foreground before:content-['•'] before:ml-1 before:mr-2">
+                                    {currentReadTime} min read
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    {/* AI Summary */}
+                    {isShowingSummary && aiSummary && (
+                        <AiSummaryCard
+                            summary={aiSummary}
+                            onDismiss={() => setIsShowingSummary(false)}
+                        />
+                    )}
+
+                    <div className="space-y-6">
+                        {article.image_url && !imageError && (
+                            <div className="aspect-video w-full sm:w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
+                                <img
+                                    src={article.image_url}
+                                    alt={article.title || "Article image"}
+                                    className="w-full h-full object-cover"
+                                    onError={() => setImageError(true)}
+                                />
+                            </div>
+                        )}
+                        {currentContent ? (
+                            <AnimatedContent contentKey={currentContentKey}>
+                                <div
+                                    ref={contentRef}
+                                    className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
                               prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
                               prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
                               prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-img:w-auto
@@ -1673,40 +1862,49 @@ function ArticleContentView({
                               prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
                               prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
                               break-words overflow-hidden"
-                            dangerouslySetInnerHTML={{ __html: currentContent }}
-                            style={{
-                                fontFamily: "var(--font-garamond-serif)",
-                                overflowWrap: "break-word",
-                                wordWrap: "break-word",
-                                fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
-                                lineHeight: "1.6",
-                                width: "100%",
-                                maxWidth: "100%",
-                            }}
-                        />
-                    </AnimatedContent>
-                ) : (
-                    <div>
-                        {((article.note && !article.description) || (!article.note && article.description)) ? (
-                            <div
-                                className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
-                                dangerouslySetInnerHTML={{ __html: `<blockquote>${(article.note && !article.description) ? article.note : article.description}</blockquote>` }}
-                                style={{
-                                    fontFamily: 'var(--font-garamond-serif)'
-                                }}
-                            />
+                                    dangerouslySetInnerHTML={{
+                                        __html: currentContent,
+                                    }}
+                                    style={{
+                                        fontFamily:
+                                            "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+                                        overflowWrap: "break-word",
+                                        wordWrap: "break-word",
+                                        fontSize:
+                                            "clamp(0.9rem, 2.5vw, 1.125rem)",
+                                        lineHeight: "1.6",
+                                        width: "100%",
+                                        maxWidth: "100%",
+                                    }}
+                                />
+                            </AnimatedContent>
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-16 text-center">
-                                <div className="mx-auto max-w-md">
-                                    <p className="text-muted-foreground">
-                                        This article doesn't have any content available.
-                                    </p>
-                                </div>
+                            <div>
+                                {(article.note && !article.description) ||
+                                (!article.note && article.description) ? (
+                                    <div
+                                        className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
+                                        dangerouslySetInnerHTML={{
+                                            __html: `<blockquote>${article.note && !article.description ? article.note : article.description}</blockquote>`,
+                                        }}
+                                        style={{
+                                            fontFamily:
+                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center py-16 text-center">
+                                        <div className="mx-auto max-w-md">
+                                            <p className="text-muted-foreground">
+                                                This article doesn't have any
+                                                content available.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
-                )}
-            </div>
 
                     {/* Visit Website button at the bottom */}
                     {article.link && (
@@ -1714,7 +1912,13 @@ function ArticleContentView({
                             <Button
                                 variant="outline"
                                 size="lg"
-                                onClick={() => window.open(article.link, '_blank', 'noopener,noreferrer')}
+                                onClick={() =>
+                                    window.open(
+                                        article.link,
+                                        "_blank",
+                                        "noopener,noreferrer"
+                                    )
+                                }
                                 className="inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-muted/20"
                             >
                                 <Globe className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
@@ -1766,8 +1970,8 @@ function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     // Get priority color for clipped articles
@@ -1803,8 +2007,12 @@ function ArticleItem({
             ${article.is_read ? "opacity-70" : ""}`}
             onClick={onClick}
         >
-            <div className={`flex gap-3 w-full min-w-0 max-w-full overflow-hidden ${!article.image_url || articleImageError ? 'pr-0' : ''}`}>
-                <div className={`flex-1 space-y-1.5 min-w-0 overflow-hidden ${!article.image_url || articleImageError ? 'max-w-full' : 'max-w-[calc(100vw-5rem)]'}`}>
+            <div
+                className={`flex gap-3 w-full min-w-0 max-w-full overflow-hidden ${!article.image_url || articleImageError ? "pr-0" : ""}`}
+            >
+                <div
+                    className={`flex-1 space-y-1.5 min-w-0 overflow-hidden ${!article.image_url || articleImageError ? "max-w-full" : "max-w-[calc(100vw-5rem)]"}`}
+                >
                     <div className="flex items-center gap-2">
                         <div className="flex items-center gap-1">
                             {article.article_type === "clipped" && (
@@ -1817,16 +2025,24 @@ function ArticleItem({
                                     </span>
                                 </div>
                             )}
-                            {(article.feed?.image_url || (article.article_type === "clipped" && article.link)) && !feedImageError ? (
+                            {(article.feed?.image_url ||
+                                (article.article_type === "clipped" &&
+                                    article.link)) &&
+                            !feedImageError ? (
                                 <img
-                                    src={article.feed?.image_url || (() => {
-                                        try {
-                                            const domain = new URL(article.link).hostname
-                                            return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
-                                        } catch {
-                                            return "/placeholders/avatar.png"
-                                        }
-                                    })()}
+                                    src={
+                                        article.feed?.image_url ||
+                                        (() => {
+                                            try {
+                                                const domain = new URL(
+                                                    article.link
+                                                ).hostname
+                                                return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
+                                            } catch {
+                                                return "/placeholders/avatar.png"
+                                            }
+                                        })()
+                                    }
                                     alt=""
                                     className="h-3 w-3 shrink-0 rounded"
                                     onError={() => setFeedImageError(true)}
@@ -1834,15 +2050,23 @@ function ArticleItem({
                             ) : (
                                 <div className="h-3 w-3 shrink-0 rounded bg-primary/8" />
                             )}
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[min(120px,calc(100vw-12rem))]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
-                                {article.article_type === "clipped" && article.link
+                            <span
+                                className="text-[10px] text-muted-foreground truncate max-w-[min(120px,calc(100vw-12rem))]"
+                                style={{
+                                    wordBreak: "break-all",
+                                    overflowWrap: "anywhere",
+                                }}
+                            >
+                                {article.article_type === "clipped" &&
+                                article.link
                                     ? (() => {
-                                        try {
-                                            return new URL(article.link).hostname
-                                        } catch {
-                                            return "Unknown Source"
-                                        }
-                                    })()
+                                          try {
+                                              return new URL(article.link)
+                                                  .hostname
+                                          } catch {
+                                              return "Unknown Source"
+                                          }
+                                      })()
                                     : article.feed?.title || "Unknown Source"}
                             </span>
                         </div>
@@ -1858,19 +2082,34 @@ function ArticleItem({
                             overflowWrap: "anywhere",
                             hyphens: "auto",
                             width: "100%",
-                            maxWidth: "100%"
+                            maxWidth: "100%",
                         }}
                     >
                         {article.title}
                     </h3>
                     {article.author && (
-                        <div className="text-[10px] text-muted-foreground truncate max-w-[calc(100vw-7rem)]" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
+                        <div
+                            className="text-[10px] text-muted-foreground truncate max-w-[calc(100vw-7rem)]"
+                            style={{
+                                wordBreak: "break-all",
+                                overflowWrap: "anywhere",
+                            }}
+                        >
                             {article.author}
                         </div>
                     )}
-                    {((article.note && !article.description) || (!article.note && article.description)) && (
-                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden w-full" style={{ wordBreak: "break-all", overflowWrap: "anywhere" }}>
-                            {(article.note && !article.description) ? article.note : stripHTML(article.description || "")}
+                    {((article.note && !article.description) ||
+                        (!article.note && article.description)) && (
+                        <p
+                            className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden w-full"
+                            style={{
+                                wordBreak: "break-all",
+                                overflowWrap: "anywhere",
+                            }}
+                        >
+                            {article.note && !article.description
+                                ? article.note
+                                : stripHTML(article.description || "")}
                         </p>
                     )}
                 </div>

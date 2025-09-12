@@ -10,6 +10,7 @@ export { ARTICLE_ENHANCEMENT_QUERY_KEYS }
 export type ExtractFullTextResponse = {
     success: boolean
     content: string | null
+    estimated_read_time_minutes: number | null
     error: string | null
 }
 

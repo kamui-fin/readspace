@@ -381,6 +381,7 @@ export default function DiscoverPageClient({
                             <SelectContent>
                                 <SelectItem value="en">eng</SelectItem>
                                 <SelectItem value="zh">中文</SelectItem>
+                                <SelectItem value="ja">日本語</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -429,6 +430,7 @@ export default function DiscoverPageClient({
                                 <SelectContent>
                                     <SelectItem value="en">eng</SelectItem>
                                     <SelectItem value="zh">中文</SelectItem>
+                                    <SelectItem value="ja">日本語</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

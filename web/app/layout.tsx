@@ -1,5 +1,5 @@
 import { Metadata, Viewport } from "next"
-import { EB_Garamond, Figtree, Geist, Geist_Mono } from "next/font/google"
+import { EB_Garamond, Figtree, Geist, Geist_Mono, Noto_Serif_SC, Noto_Serif_JP, Noto_Serif_TC } from "next/font/google"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { PostHogProvider } from "./providers"
 import "./globals.css"
@@ -21,6 +21,21 @@ const eb_garamond = EB_Garamond({
 
 const logo = Figtree({
     variable: "--font-logo",
+    subsets: ["latin"],
+})
+
+const notoSerifSC = Noto_Serif_SC({
+    variable: "--font-noto-serif-sc",
+    subsets: ["latin"],
+})
+
+const notoSerifJP = Noto_Serif_JP({
+    variable: "--font-noto-serif-jp",
+    subsets: ["latin"],
+})
+
+const notoSerifTC = Noto_Serif_TC({
+    variable: "--font-noto-serif-tc",
     subsets: ["latin"],
 })
 
@@ -112,7 +127,7 @@ export default async function RootLayout({
                 {/* <script src="https://unpkg.com/react-scan/dist/auto.global.js" /> */}
             </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${eb_garamond.variable} ${logo.variable} font-sans antialiased mt-0`}
+                className={`${geistSans.variable} ${geistMono.variable} ${eb_garamond.variable} ${logo.variable} ${notoSerifSC.variable} ${notoSerifJP.variable} ${notoSerifTC.variable} font-sans antialiased mt-0`}
             >
                 <PostHogProvider>
                     <QueryProvider>

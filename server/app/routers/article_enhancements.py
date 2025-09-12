@@ -18,10 +18,23 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])
 
 
+def _calculate_read_time(content: str) -> int:
+    """Calculate estimated reading time in minutes."""
+    if not content:
+        return 1
+
+    # Average reading speed: 200 words per minute
+    word_count = len(content.split())
+    read_time = max(1, round(word_count / 200))
+
+    return min(read_time, 60)  # Cap at 60 minutes
+
+
 class ExtractFullTextResponse(BaseModel):
     """Response for full text extraction."""
     success: bool
     content: str | None = None
+    estimated_read_time_minutes: int | None = None
     error: str | None = None
 
 
@@ -102,11 +115,15 @@ async def extract_full_text(
                 error="Could not extract readable content from the page"
             )
         
-        logger.info("Successfully extracted full text", article_id=str(article_id), content_length=len(extracted))
+        # Calculate read time for the extracted content
+        read_time = _calculate_read_time(extracted)
+        
+        logger.info("Successfully extracted full text", article_id=str(article_id), content_length=len(extracted), read_time=read_time)
         
         return ExtractFullTextResponse(
             success=True,
-            content=extracted
+            content=extracted,
+            estimated_read_time_minutes=read_time
         )
     
     except HTTPException:
