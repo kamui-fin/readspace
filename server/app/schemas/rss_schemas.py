@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, AnyUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, AnyUrl, field_validator
 
 
 # Generic Paginated Response
@@ -83,6 +83,12 @@ class FeedResponse(FeedBase):
     user_id: UUID | None = None
     folder_id: UUID | None = None
     unread_count: int | None = None
+
+    @field_validator('link', mode='before')
+    @classmethod
+    def convert_empty_string_to_none(cls, v):
+        """Convert empty strings to None for URL fields."""
+        return None if v == '' else v
 
 
 # Minimal feed info for nesting in Article

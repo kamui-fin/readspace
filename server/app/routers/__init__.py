@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends
 from app.services.auth import TokenData, get_current_user
 
 from . import (
+    article_enhancements,
     books,
     highlights,
     rss_articles,
@@ -19,6 +20,7 @@ from . import (
 router = APIRouter()
 
 # Include all route modules
+router.include_router(article_enhancements.router, tags=["Article Enhancements"])
 router.include_router(books.router, tags=["Books"])
 router.include_router(highlights.router, tags=["Highlights"])
 router.include_router(upload.router, prefix="/upload", tags=["Upload"])

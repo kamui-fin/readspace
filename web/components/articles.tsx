@@ -2,6 +2,9 @@
 
 import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
 import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
+import { AiSummaryCard } from "@/components/articles/ai-summary-card"
+import { AnimatedContent } from "@/components/articles/animated-content"
+import { ArticleToolbar } from "@/components/articles/article-toolbar"
 import { FeedPreviewBanner } from "@/components/feeds/feed-preview-banner"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -41,7 +44,10 @@ import {
     useUnreadCounts,
     useUpdateArticle
 } from "@/lib/api/hooks/feeds"
+import { useExtractFullText, useSummarizeArticle, ARTICLE_ENHANCEMENT_QUERY_KEYS, createTranslationQueryKey, fetchTranslation } from "@/lib/api/hooks/article-enhancements"
+import { ApiClient } from "@/lib/api/client"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
+import { useQueryClient } from "@tanstack/react-query"
 import {
     ArrowLeft,
     BookmarkIcon,
@@ -926,13 +932,12 @@ export function ArticlesView({
                                 </div>
                             )}
                             {!isArticleLoading && transformedSelectedArticle ? (
-                                <div
-                                    className="p-6 md:p-10 h-full overflow-y-auto"
-                                >
+                                <div className="h-full overflow-y-auto">
                                     <ArticleContentView
                                         article={transformedSelectedArticle}
                                         isRecentlyReadMode={isRecentlyReadMode}
                                         isReadLaterMode={isReadLaterMode}
+                                        shouldShowPreviewBanner={shouldShowPreviewBanner}
                                         onArticleRemoved={() =>
                                             setSelectedArticleId(null)
                                         }
@@ -1138,13 +1143,12 @@ export function ArticlesView({
                             </div>
                         )}
                         {!isArticleLoading && transformedSelectedArticle ? (
-                            <div
-                                className="p-4 h-full overflow-y-auto overflow-x-hidden max-w-full"
-                            >
+                            <div className="h-full overflow-y-auto overflow-x-hidden max-w-full">
                                 <ArticleContentView
                                     article={transformedSelectedArticle}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
+                                    shouldShowPreviewBanner={shouldShowPreviewBanner}
                                     onArticleRemoved={() => {
                                         setSelectedArticleId(null)
                                         setShowContent(false)
@@ -1235,21 +1239,36 @@ function ArticleContentView({
     isReadLaterMode,
     onArticleRemoved,
     onMarkAsRead,
+    shouldShowPreviewBanner,
 }: {
     article: Article
     isRecentlyReadMode?: boolean
     isReadLaterMode?: boolean
     onArticleRemoved?: () => void
     onMarkAsRead?: () => void
+    shouldShowPreviewBanner?: boolean
 }) {
     const updateArticle = useUpdateArticle()
     const { resolvedTheme } = useTheme()
+    const queryClient = useQueryClient()
+    
     const [optimisticReadLater, setOptimisticReadLater] = useState(
         article.is_read_later
     )
     const contentRef = useRef<HTMLDivElement>(null)
     const [hasMarkedRead, setHasMarkedRead] = useState(article.is_read)
     const [imageError, setImageError] = useState(false)
+    
+    // Enhancement states
+    const [currentContent, setCurrentContent] = useState(article.content || "")
+    const [currentContentKey, setCurrentContentKey] = useState(`original-${article.id}`)
+    const [aiSummary, setAiSummary] = useState<string | null>(null)
+    const [isShowingSummary, setIsShowingSummary] = useState(false)
+    
+    // Enhancement queries - these are disabled by default and triggered manually
+    const extractFullTextQuery = useExtractFullText(article.id)
+    const summarizeQuery = useSummarizeArticle(article.id, currentContent !== (article.content || "") ? currentContent : undefined)
+    const [isTranslating, setIsTranslating] = useState(false)
 
     // Reset hasMarkedRead when article changes
     useEffect(() => {
@@ -1304,6 +1323,95 @@ function ArticleContentView({
             }
         )
     }
+
+    // Enhancement handlers
+    const handleExtractFullText = async () => {
+        try {
+            // Check if we already have cached data
+            if (extractFullTextQuery.data && extractFullTextQuery.data.success && extractFullTextQuery.data.content) {
+                setCurrentContent(extractFullTextQuery.data.content)
+                setCurrentContentKey(`extracted-${article.id}-${Date.now()}`)
+                return
+            }
+            
+            // Refetch to get fresh data
+            const { data } = await extractFullTextQuery.refetch()
+            if (data && data.success && data.content) {
+                setCurrentContent(data.content)
+                setCurrentContentKey(`extracted-${article.id}-${Date.now()}`)
+                toast.success("Full text extracted successfully")
+            } else if (data) {
+                toast.error(data.error || "Failed to extract full text")
+            }
+        } catch (error) {
+            console.error('Extract full text failed:', error)
+            toast.error("Failed to extract full text")
+        }
+    }
+
+    const handleSummarize = async () => {
+        try {
+            // Check if we already have cached data
+            if (summarizeQuery.data && summarizeQuery.data.success && summarizeQuery.data.summary) {
+                setAiSummary(summarizeQuery.data.summary)
+                setIsShowingSummary(true)
+                return
+            }
+            
+            // Refetch to get fresh data
+            const { data } = await summarizeQuery.refetch()
+            if (data && data.success && data.summary) {
+                setAiSummary(data.summary)
+                setIsShowingSummary(true)
+                toast.success("AI summary generated")
+            } else if (data) {
+                toast.error(data.error || "Failed to generate summary")
+            }
+        } catch (error) {
+            console.error('Summarize article failed:', error)
+            toast.error("Failed to generate summary")
+        }
+    }
+
+    const handleTranslate = async (targetLanguage: string) => {
+        try {
+            setIsTranslating(true)
+            const contentToUse = currentContent !== (article.content || "") ? currentContent : undefined
+            
+            // Check cache first
+            const queryKey = createTranslationQueryKey(article.id, targetLanguage, contentToUse)
+            const cachedData = queryClient.getQueryData(queryKey)
+            if (cachedData && (cachedData as any).success && (cachedData as any).translated_content) {
+                setCurrentContent((cachedData as any).translated_content)
+                setCurrentContentKey(`translated-${targetLanguage}-${article.id}-${Date.now()}`)
+                return
+            }
+            
+            // Fetch new translation with caching
+            const data = await fetchTranslation(queryClient, article.id, targetLanguage, contentToUse)
+            
+            if (data && data.success && data.translated_content) {
+                setCurrentContent(data.translated_content)
+                setCurrentContentKey(`translated-${targetLanguage}-${article.id}-${Date.now()}`)
+                toast.success(`Article translated to ${targetLanguage}`)
+            } else if (data) {
+                toast.error(data.error || "Failed to translate article")
+            }
+        } catch (error) {
+            console.error('Translate article failed:', error)
+            toast.error("Failed to translate article")
+        } finally {
+            setIsTranslating(false)
+        }
+    }
+
+    // Reset content when article changes
+    useEffect(() => {
+        setCurrentContent(article.content || "")
+        setCurrentContentKey(`original-${article.id}`)
+        setAiSummary(null)
+        setIsShowingSummary(false)
+    }, [article.id, article.content])
 
     useEffect(() => {
         // Update optimistic state when article changes
@@ -1454,7 +1562,25 @@ function ArticleContentView({
     }
 
     return (
-        <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
+        <div className="h-full flex flex-col">
+            {/* Article Toolbar - Hide in preview mode */}
+            {!shouldShowPreviewBanner && (
+                <ArticleToolbar
+                    article={article}
+                    isReadLater={optimisticReadLater}
+                    onToggleReadLater={handleToggleReadLater}
+                    onExtractFullText={handleExtractFullText}
+                    onSummarize={handleSummarize}
+                    onTranslate={handleTranslate}
+                    isExtracting={extractFullTextQuery.isFetching}
+                    isSummarizing={summarizeQuery.isFetching}
+                    isTranslating={isTranslating}
+                />
+            )}
+            
+            {/* Article Content */}
+            <div className="flex-1 overflow-auto p-6 md:p-10">
+                <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
             <div className="mb-3 w-full min-w-0">
                 <h1
                     className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
@@ -1525,47 +1651,15 @@ function ArticleContentView({
                         </span>
                     )}
                 </div>
-                <div className="flex items-center gap-2 sm:gap-3 flex-wrap sm:flex-nowrap">
-                    {article.link && (
-                        <a
-                            href={article.link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline focus:underline cursor-pointer"
-                            tabIndex={0}
-                        >
-                            Open original article
-                        </a>
-                    )}
-                    {isReadLaterMode ? (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:bg-muted transition-all duration-200 hover:scale-110 hover:shadow-sm"
-                            onClick={handleMarkAsRead}
-                        >
-                            <Check className="h-4 w-4 transition-transform duration-200" />
-                            <span className="sr-only">Mark as read</span>
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 w-6 p-0 rounded-full hover:bg-muted transition-all duration-200 hover:scale-110 hover:shadow-sm"
-                            onClick={handleToggleReadLater}
-                        >
-                            <BookmarkIcon
-                                className={`h-4 w-4 transition-all duration-200 ${optimisticReadLater ? "fill-primary text-primary scale-110" : "hover:scale-110"}`}
-                            />
-                            <span className="sr-only">
-                                {optimisticReadLater
-                                    ? "Remove from read later"
-                                    : "Save for later"}
-                            </span>
-                        </Button>
-                    )}
-                </div>
             </div>
+            {/* AI Summary */}
+            {isShowingSummary && aiSummary && (
+                <AiSummaryCard 
+                    summary={aiSummary} 
+                    onDismiss={() => setIsShowingSummary(false)} 
+                />
+            )}
+            
             <div className="space-y-6">
                 {article.image_url && !imageError && (
                     <div className="aspect-video w-full sm:w-3/4 mx-auto overflow-hidden rounded-lg bg-primary/5 mb-6">
@@ -1577,28 +1671,30 @@ function ArticleContentView({
                         />
                     </div>
                 )}
-                {article.content ? (
-                    <div
-                        ref={contentRef}
-                        className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
-                          prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
-                          prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
-                          prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-img:w-auto
-                          prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto prose-pre:max-w-full
-                          prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-                          prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
-                          break-words overflow-hidden"
-                        dangerouslySetInnerHTML={{ __html: article.content }}
-                        style={{
-                            fontFamily: "var(--font-garamond-serif)",
-                            overflowWrap: "break-word",
-                            wordWrap: "break-word",
-                            fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
-                            lineHeight: "1.6",
-                            width: "100%",
-                            maxWidth: "100%",
-                        }}
-                    />
+                {currentContent ? (
+                    <AnimatedContent contentKey={currentContentKey}>
+                        <div
+                            ref={contentRef}
+                            className="article-content prose prose-sm sm:prose-lg dark:prose-invert max-w-none w-full min-w-0
+                              prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
+                              prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
+                              prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-img:w-auto
+                              prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto prose-pre:max-w-full
+                              prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
+                              prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
+                              break-words overflow-hidden"
+                            dangerouslySetInnerHTML={{ __html: currentContent }}
+                            style={{
+                                fontFamily: "var(--font-garamond-serif)",
+                                overflowWrap: "break-word",
+                                wordWrap: "break-word",
+                                fontSize: "clamp(0.9rem, 2.5vw, 1.125rem)",
+                                lineHeight: "1.6",
+                                width: "100%",
+                                maxWidth: "100%",
+                            }}
+                        />
+                    </AnimatedContent>
                 ) : (
                     <div>
                         {((article.note && !article.description) || (!article.note && article.description)) ? (
@@ -1622,21 +1718,23 @@ function ArticleContentView({
                 )}
             </div>
 
-            {/* Visit Website button at the bottom */}
-            {article.link && (
-                <div className="flex justify-center mt-8 pt-6 border-t">
-                    <Button
-                        variant="outline"
-                        size="lg"
-                        onClick={() => window.open(article.link, '_blank', 'noopener,noreferrer')}
-                        className="inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-muted/20"
-                    >
-                        <Globe className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
-                        Visit Website
-                    </Button>
-                </div>
-            )}
-        </article>
+                    {/* Visit Website button at the bottom */}
+                    {article.link && (
+                        <div className="flex justify-center mt-8 pt-6 border-t">
+                            <Button
+                                variant="outline"
+                                size="lg"
+                                onClick={() => window.open(article.link, '_blank', 'noopener,noreferrer')}
+                                className="inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-muted/20"
+                            >
+                                <Globe className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
+                                Visit Website
+                            </Button>
+                        </div>
+                    )}
+                </article>
+            </div>
+        </div>
     )
 }
 

@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, AnyUrl
+from pydantic import BaseModel, ConfigDict, Field, AnyUrl, field_validator
 
 from app.schemas.rss_schemas import FolderResponse
 
@@ -34,6 +34,12 @@ class FeedResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    @field_validator('link', mode='before')
+    @classmethod
+    def convert_empty_string_to_none(cls, v):
+        """Convert empty strings to None for URL fields."""
+        return None if v == '' else v
 
 
 # ========= Subscription Schemas =========

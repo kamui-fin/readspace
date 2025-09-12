@@ -260,6 +260,155 @@ Return a JSON object with exactly these keys:
             logger.error("Error generating Gemini embedding", error=str(e), exc_info=True)
             return None
 
+    async def summarize_article(
+        self,
+        title: str,
+        content: str,
+    ) -> str | None:
+        """
+        Generate a high-quality summary of an article in the same language as the content.
+        
+        Args:
+            title: Article title
+            content: Article content (can be HTML or plain text)
+            
+        Returns:
+            Summary text or None if failed
+        """
+        try:
+            # Clean content by removing HTML tags if present
+            import re
+            clean_content = re.sub(r'<[^>]+>', ' ', content)
+            clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+            
+            # Truncate very long content to stay within token limits
+            max_content_chars = 15000  # Roughly 4000 tokens
+            if len(clean_content) > max_content_chars:
+                clean_content = clean_content[:max_content_chars] + "..."
+            
+            system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts. Your summaries should:
+
+1. Capture the most important points and key takeaways
+2. Be written in clear, engaging language  
+3. Highlight any notable statistics, quotes, or findings
+4. Maintain the original tone and context
+5. Be comprehensive yet concise (aim for 2-4 paragraphs)
+6. Focus on actionable insights or important implications
+7. IMPORTANT: Write the summary in the SAME LANGUAGE as the original content
+
+CRITICAL: Detect the language of the original content and write your summary in that exact same language. If the content is in Spanish, summarize in Spanish. If in French, summarize in French, etc."""
+
+            prompt = f"""Title: {title}
+
+Content: {clean_content}
+
+Please provide a high-quality summary of this article that captures its main points, key insights, and important details. Write the summary in the same language as the original content."""
+
+            summary = await self.generate_text(
+                prompt=prompt,
+                system_prompt=system_prompt,
+                max_tokens=800,
+                temperature=0.3
+            )
+            
+            logger.debug(
+                "Article summary generated",
+                title=title[:50],
+                summary_length=len(summary) if summary else 0
+            )
+            
+            return summary.strip() if summary else None
+            
+        except Exception as e:
+            logger.error("Error generating article summary", error=str(e), exc_info=True)
+            return None
+
+    async def translate_article(
+        self,
+        content: str,
+        target_language: str,
+    ) -> str | None:
+        """
+        Translate article content to a target language.
+        
+        Args:
+            content: Content to translate (can be HTML or plain text)
+            target_language: Target language code (e.g., 'es', 'fr', 'zh')
+            
+        Returns:
+            Translated content or None if failed
+        """
+        try:
+            # Map common language codes to full language names for better results
+            language_names = {
+                'es': 'Spanish',
+                'fr': 'French', 
+                'de': 'German',
+                'it': 'Italian',
+                'pt': 'Portuguese',
+                'ru': 'Russian',
+                'ja': 'Japanese',
+                'ko': 'Korean',
+                'zh': 'Chinese',
+                'ar': 'Arabic',
+                'hi': 'Hindi',
+                'nl': 'Dutch',
+                'sv': 'Swedish',
+                'no': 'Norwegian',
+                'da': 'Danish',
+                'fi': 'Finnish',
+                'pl': 'Polish',
+                'tr': 'Turkish',
+                'th': 'Thai',
+                'vi': 'Vietnamese',
+            }
+            
+            target_lang_name = language_names.get(target_language.lower(), target_language)
+            
+            # Truncate very long content to stay within token limits
+            max_content_chars = 12000  # Leave room for translation expansion
+            if len(content) > max_content_chars:
+                content = content[:max_content_chars] + "..."
+            
+            system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}. Your translations should:
+
+1. Maintain the original meaning and tone
+2. Preserve formatting (including HTML tags if present)
+3. Use natural, fluent language that reads well to native speakers
+4. Keep technical terms and proper nouns appropriately localized
+5. Maintain the article's structure and flow
+6. Ensure cultural context is appropriately adapted
+7. IMPORTANT: Return ONLY the translated content without any markdown code blocks (no ```html ``` or ``` wrapping)
+
+Translate the following content to {target_lang_name}. Return ONLY the translated content without any markdown formatting or code block wrapping:"""
+
+            translation = await self.generate_text(
+                prompt=content,
+                system_prompt=system_prompt,
+                max_tokens=2000,
+                temperature=0.1
+            )
+            
+            if translation:
+                # Remove any markdown code blocks that might have been added
+                import re
+                # Remove ```html...``` or ```...``` blocks
+                translation = re.sub(r'```(?:html)?\s*\n?(.*?)\n?```', r'\1', translation, flags=re.DOTALL)
+                translation = translation.strip()
+            
+            logger.debug(
+                "Article translation completed",
+                target_language=target_language,
+                original_length=len(content),
+                translation_length=len(translation) if translation else 0
+            )
+            
+            return translation if translation else None
+            
+        except Exception as e:
+            logger.error("Error translating article", error=str(e), target_language=target_language, exc_info=True)
+            return None
+
     async def health_check(self) -> dict[str, Any]:
         """
         Check if the AI service is healthy and responsive.
