@@ -146,7 +146,7 @@ class FeedValidator:
         title = feed_info.get("title", "Untitled Feed").strip()[:500]  # Limit length
         description = feed_info.get("description", "").strip()[:1000]  # Limit length
         link = feed_info.get("link", "").strip()[:2000]  # Limit length
-        
+
         # Extract and normalize language
         raw_language = feed_info.get("language", "en").strip()
         language = normalize_language_code(raw_language) or "en"

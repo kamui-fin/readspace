@@ -62,7 +62,7 @@ function SelectContent({
                 className={cn(
                     "border-input bg-popover text-popover-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 relative z-9999 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-32 overflow-hidden rounded-md border shadow-lg [&_[role=group]]:py-1",
                     position === "popper" &&
-                        "w-full min-w-[var(--radix-select-trigger-width)] data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+                    "w-full min-w-[var(--radix-select-trigger-width)] data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
                     className
                 )}
                 position={position}
@@ -73,7 +73,7 @@ function SelectContent({
                     className={cn(
                         "p-1",
                         position === "popper" &&
-                            "h-[var(--radix-select-trigger-height)]"
+                        "h-[var(--radix-select-trigger-height)]"
                     )}
                 >
                     {children}
@@ -109,7 +109,7 @@ function SelectItem({
         <SelectPrimitive.Item
             data-slot="select-item"
             className={cn(
-                "focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center rounded py-1.5 ps-8 pe-2 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50",
+                "focus:bg-accent focus:text-accent-foreground relative flex w-full items-center rounded py-1.5 ps-8 pe-2 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 cursor-pointer",
                 className
             )}
             {...props}
@@ -183,5 +183,6 @@ export {
     SelectScrollUpButton,
     SelectSeparator,
     SelectTrigger,
-    SelectValue,
+    SelectValue
 }
+

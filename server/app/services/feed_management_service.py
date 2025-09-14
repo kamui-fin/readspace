@@ -11,7 +11,6 @@ from app.schemas.rss_schemas import FeedResponse, FeedUpdate
 from app.services.feed_creation_service import FeedCreationService
 from app.services.feed_fetcher import FeedFetcher
 from app.services.feed_parser import FeedParsingService
-from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 

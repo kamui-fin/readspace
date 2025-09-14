@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, AnyUrl, field_validator
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
 
 
 # Generic Paginated Response

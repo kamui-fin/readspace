@@ -1,17 +1,16 @@
 "use client"
 
-import { ChevronsUpDown, Clock, LogOut } from "lucide-react"
+import { ChevronsUpDown, Clock, LogOut, Upload } from "lucide-react"
 import { useState } from "react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarImage } from "@/components/ui/avatar"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuGroup,
     DropdownMenuItem,
-    DropdownMenuLabel,
     DropdownMenuSeparator,
-    DropdownMenuTrigger,
+    DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu"
 import {
     SidebarLeftMenuButton,
@@ -95,6 +94,12 @@ export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
                             </DropdownMenuGroup>
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
+                                <DropdownMenuItem asChild>
+                                    <Link href="/import-opml" className="cursor-pointer">
+                                        <Upload className="mr-2 h-4 w-4" />
+                                        Import OPML
+                                    </Link>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href="/recently-read" className="cursor-pointer">
                                         <Clock className="mr-2 h-4 w-4" />

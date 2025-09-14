@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import get_settings
 from app.models.rss_models import Feed, FeedCategory
 from app.services.ai_service import get_ai_service
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 
@@ -87,6 +88,12 @@ class RssSearchService:
 
         return bool(website_pattern.match(query))
 
+    def _is_rsshub_url(self, query: str) -> bool:
+        """Check if query is an rsshub:// URL."""
+        if not query or not isinstance(query, str):
+            return False
+        return query.strip().lower().startswith('rsshub://')
+
     def _detect_subreddit(self, query: str) -> str | None:
         """Detect if query is a subreddit pattern and return the RSS URL."""
         if not query or not isinstance(query, str):
@@ -105,9 +112,9 @@ class RssSearchService:
             if match:
                 subreddit_name = match.group(1)
                 reddit_rss_url = f"https://www.reddit.com/r/{subreddit_name}/.rss"
-                logger.debug("Subreddit detected", 
-                           query=query, 
-                           subreddit=subreddit_name, 
+                logger.debug("Subreddit detected",
+                           query=query,
+                           subreddit=subreddit_name,
                            rss_url=reddit_rss_url)
                 return reddit_rss_url
 
@@ -117,26 +124,26 @@ class RssSearchService:
         """Generate URL variations for comprehensive matching."""
         if not url or not isinstance(url, str):
             return []
-        
+
         url = url.strip()
         variations = [url]  # Always include original
-        
+
         # Handle rsshub:// URLs - keep as-is
         if url.startswith('rsshub://'):
             return variations
-        
+
         # For HTTP(S) URLs, generate variations
         if url.startswith(('http://', 'https://')):
             # Add version without protocol
             no_protocol = url.replace('https://', '').replace('http://', '')
             variations.append(no_protocol)
-            
+
             # Add with/without trailing slash
             if url.endswith('/'):
                 variations.append(url.rstrip('/'))
             else:
                 variations.append(url + '/')
-                
+
             # Add www variations if not present
             if '://www.' not in url:
                 if url.startswith('https://'):
@@ -151,7 +158,7 @@ class RssSearchService:
                 f'https://www.{url}',
                 f'http://www.{url}'
             ])
-            
+
             # Add with/without trailing slash
             if url.endswith('/'):
                 no_slash = url.rstrip('/')
@@ -171,7 +178,7 @@ class RssSearchService:
                     f'https://www.{with_slash}',
                     f'http://www.{with_slash}'
                 ])
-        
+
         # Remove duplicates while preserving order
         unique_variations = []
         seen = set()
@@ -179,7 +186,7 @@ class RssSearchService:
             if variation not in seen:
                 unique_variations.append(variation)
                 seen.add(variation)
-        
+
         return unique_variations
 
     async def _search_exact_url_matches(
@@ -192,18 +199,18 @@ class RssSearchService:
         """Search for feeds with exact URL matches in both url and link fields."""
         try:
             logger.debug("Starting exact URL search", url=query_url, language=language, limit=limit)
-            
+
             # Generate URL variations for comprehensive matching
             url_variations = self._generate_url_variations(query_url)
-            
+
             if not url_variations:
                 return []
-            
+
             # Build base query
             stmt = select(Feed).where(
                 (Feed.language == language) | (Feed.language.is_(None))
             )
-            
+
             # Add category filter if specified
             if category:
                 try:
@@ -211,7 +218,7 @@ class RssSearchService:
                     stmt = stmt.where(Feed.top_level_category == category_enum)
                 except ValueError:
                     pass  # Ignore invalid category
-            
+
             # Search for exact matches in both url and link fields
             url_conditions = []
             for variation in url_variations:
@@ -219,17 +226,17 @@ class RssSearchService:
                     Feed.url == variation,
                     Feed.link == variation
                 ])
-            
+
             if url_conditions:
                 from sqlalchemy import or_
                 stmt = stmt.where(or_(*url_conditions))
-            
+
             # Order by popularity and limit
             stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last()).limit(limit)
-            
+
             result = await self.db.execute(stmt)
             feeds_db = result.scalars().all()
-            
+
             # Convert to response format with maximum relevance
             feeds = []
             for i, feed in enumerate(feeds_db):
@@ -255,13 +262,13 @@ class RssSearchService:
                     }
                 }
                 feeds.append(feed_data)
-            
-            logger.info("Exact URL search completed", 
-                       url=query_url, 
+
+            logger.info("Exact URL search completed",
+                       url=query_url,
                        variations_count=len(url_variations),
                        results_count=len(feeds))
             return feeds
-            
+
         except Exception as e:
             logger.error("Error in exact URL search", url=query_url, error=str(e))
             return []
@@ -277,7 +284,7 @@ class RssSearchService:
         try:
             # Normalize the URL for searching
             search_url = url if url.startswith(('http://', 'https://')) else f"https://{url}"
-            
+
             # Build base query to search both URL and link fields
             stmt = select(Feed).where(
                 (Feed.language == language) | (Feed.language.is_(None))
@@ -298,13 +305,13 @@ class RssSearchService:
                 domain = parsed_url.netloc.lower()
                 if domain.startswith('www.'):
                     domain = domain[4:]
-                
+
                 # Search for feeds where the URL or link field contains this domain
                 stmt = stmt.where(
                     (func.lower(Feed.url).contains(domain)) |
                     (func.lower(Feed.link).contains(domain))
                 )
-                
+
             except Exception:
                 # Fallback to simple URL matching if parsing fails
                 stmt = stmt.where(
@@ -343,8 +350,8 @@ class RssSearchService:
                 }
                 feeds.append(feed_data)
 
-            logger.info("Website URL search completed", 
-                       url=search_url, 
+            logger.info("Website URL search completed",
+                       url=search_url,
                        results_count=len(feeds))
             return feeds
 
@@ -383,37 +390,47 @@ class RssSearchService:
                     # Return subreddit RSS preview
                     return [preview_result]
 
+            # Check for rsshub:// URLs and preview them directly
+            if self._is_rsshub_url(query):
+                preview_result = await self._preview_url_as_feed(query)
+                if preview_result:
+                    logger.info("Successfully previewed rsshub URL", url=query)
+                    return [preview_result]
+                else:
+                    logger.warning("Failed to preview rsshub URL", url=query)
+                    return []
+
         # Enhanced URL handling: Check for exact matches first, then preview if needed
         if query and (self._is_valid_url(query) or self._is_website_url(query)):
             results = []
-            
+
             # Step 1: Try exact URL matches first (fast database query)
             exact_matches = await self._search_exact_url_matches(query, language, limit, category)
             if exact_matches:
                 logger.info("Found exact URL matches", count=len(exact_matches))
                 results.extend(exact_matches)
-                
+
                 # If we have exact matches, fill remaining slots with regular search
                 remaining_limit = limit - len(exact_matches)
                 if remaining_limit > 0:
                     # Get IDs of exact matches to exclude from regular search
                     exact_match_ids = {result["id"] for result in exact_matches}
-                    
+
                     # Get additional results using regular search methods
                     if self.settings.ENABLE_AI and self.ai_service:
                         additional_results = await self._hybrid_search(query, language, remaining_limit, category)
                     else:
                         additional_results = await self._simple_search(query, language, remaining_limit, category)
-                    
+
                     # Filter out duplicates and add to results
                     for result in additional_results:
                         if result["id"] not in exact_match_ids:
                             results.append(result)
                             if len(results) >= limit:
                                 break
-                
+
                 return results[:limit]
-            
+
             # Step 2: No exact matches found, try preview (original behavior)
             if self._is_valid_url(query):
                 preview_result = await self._preview_url_as_feed(query)
@@ -455,15 +472,20 @@ class RssSearchService:
     async def _preview_url_as_feed(self, url: str) -> dict[str, Any] | None:
         """
         Try to fetch and preview a URL as an RSS feed.
-        
+
         Args:
-            url: URL to preview as feed
-            
+            url: URL to preview as feed (can be rsshub:// URL)
+
         Returns:
             Feed preview data if successful, None if not a valid feed
         """
         try:
             logger.debug("Attempting to preview URL as feed", url=url)
+
+            # Transform rsshub:// URLs to actual HTTP URLs for fetching
+            fetch_url = transform_rsshub_url(url)
+            if fetch_url != url:
+                logger.debug("Transformed rsshub URL", original=url, transformed=fetch_url)
 
             # Import here to avoid circular imports
             from uuid import uuid4
@@ -473,31 +495,32 @@ class RssSearchService:
             # Create a temporary service instance for preview with a dummy user_id
             temp_service = FeedCreationService(self.db, user_id=uuid4())
 
-            # Try to fetch and parse the URL
-            fetch_result = await temp_service._fetch_feed_content(url)
+            # Try to fetch and parse the URL using the transformed URL
+            fetch_result = await temp_service._fetch_feed_content(fetch_url)
             if fetch_result["status"] != 200 or not fetch_result["content"]:
-                logger.debug("Failed to fetch URL or empty content", url=url, status=fetch_result.get("status"))
+                logger.debug("Failed to fetch URL or empty content", url=fetch_url, status=fetch_result.get("status"))
                 return None
 
-            # Parse the content
-            parsed_feed = temp_service._parse_feed_data(fetch_result["content"], url)
+            # Parse the content using the transformed URL
+            parsed_feed = temp_service._parse_feed_data(fetch_result["content"], fetch_url)
 
-            # Extract feed metadata
-            metadata = temp_service._extract_feed_metadata(parsed_feed, url)
+            # Extract feed metadata using the transformed URL
+            metadata = temp_service._extract_feed_metadata(parsed_feed, fetch_url)
 
             # Determine image URL - use Reddit favicon for Reddit RSS feeds
             image_url = metadata.image_url
-            if "reddit.com" in url:
+            if "reddit.com" in fetch_url:
                 image_url = "https://www.redditstatic.com/shreddit/assets/favicon/76x76.png"
-            
-            # Create preview result - use RSS URL as fallback if link is malformed
+
+            # Create preview result - use original URL for display purposes
+            # but show the transformed URL internally for verification
             normalized_link = self._normalize_url(str(metadata.link) if metadata.link else None)
             preview_data = {
-                "id": f"preview_{hash(url)}",  # Temporary ID for preview
+                "id": f"preview_{hash(url)}",  # Temporary ID for preview using original URL
                 "title": metadata.title,
                 "description": metadata.description,
-                "url": str(metadata.url),
-                "link": normalized_link if normalized_link else str(metadata.url),
+                "url": url,  # Keep original rsshub:// URL for display
+                "link": normalized_link if normalized_link else url,  # Use original for link too
                 "image_url": self._normalize_url(str(image_url) if image_url else None),
                 "tags": [],  # No tags for preview
                 "language": metadata.language,
@@ -505,12 +528,13 @@ class RssSearchService:
                 "popularity_score": 0.0,  # No popularity score for preview
                 "relevance": 1.0,  # Max relevance for preview
                 "search_metadata": {
-                    "search_type": "url_preview",
+                    "search_type": "rsshub_preview" if url != fetch_url else "url_preview",
                     "fetched_at": fetch_result.get("headers", {}).get("date"),
-                    "content_type": fetch_result.get("headers", {}).get("content-type")
+                    "content_type": fetch_result.get("headers", {}).get("content-type"),
+                    "transformed_url": fetch_url if url != fetch_url else None
                 },
                 "is_preview": True,
-                "preview_url": url
+                "preview_url": url  # Original URL for preview
             }
 
             logger.info("Successfully created feed preview", url=url, title=metadata.title)

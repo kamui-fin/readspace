@@ -280,12 +280,12 @@ Return a JSON object with exactly these keys:
             import re
             clean_content = re.sub(r'<[^>]+>', ' ', content)
             clean_content = re.sub(r'\s+', ' ', clean_content).strip()
-            
+
             # Truncate very long content to stay within token limits
             max_content_chars = 15000  # Roughly 4000 tokens
             if len(clean_content) > max_content_chars:
                 clean_content = clean_content[:max_content_chars] + "..."
-            
+
             system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts. Your summaries should:
 
 1. Capture the most important points and key takeaways
@@ -310,15 +310,15 @@ Please provide a high-quality summary of this article that captures its main poi
                 max_tokens=800,
                 temperature=0.3
             )
-            
+
             logger.debug(
                 "Article summary generated",
                 title=title[:50],
                 summary_length=len(summary) if summary else 0
             )
-            
+
             return summary.strip() if summary else None
-            
+
         except Exception as e:
             logger.error("Error generating article summary", error=str(e), exc_info=True)
             return None
@@ -342,7 +342,7 @@ Please provide a high-quality summary of this article that captures its main poi
             # Map common language codes to full language names for better results
             language_names = {
                 'es': 'Spanish',
-                'fr': 'French', 
+                'fr': 'French',
                 'de': 'German',
                 'it': 'Italian',
                 'pt': 'Portuguese',
@@ -362,14 +362,14 @@ Please provide a high-quality summary of this article that captures its main poi
                 'th': 'Thai',
                 'vi': 'Vietnamese',
             }
-            
+
             target_lang_name = language_names.get(target_language.lower(), target_language)
-            
+
             # Truncate very long content to stay within token limits
             max_content_chars = 12000  # Leave room for translation expansion
             if len(content) > max_content_chars:
                 content = content[:max_content_chars] + "..."
-            
+
             system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}. Your translations should:
 
 1. Maintain the original meaning and tone
@@ -388,23 +388,23 @@ Translate the following content to {target_lang_name}. Return ONLY the translate
                 max_tokens=2000,
                 temperature=0.1
             )
-            
+
             if translation:
                 # Remove any markdown code blocks that might have been added
                 import re
                 # Remove ```html...``` or ```...``` blocks
                 translation = re.sub(r'```(?:html)?\s*\n?(.*?)\n?```', r'\1', translation, flags=re.DOTALL)
                 translation = translation.strip()
-            
+
             logger.debug(
                 "Article translation completed",
                 target_language=target_language,
                 original_length=len(content),
                 translation_length=len(translation) if translation else 0
             )
-            
+
             return translation if translation else None
-            
+
         except Exception as e:
             logger.error("Error translating article", error=str(e), target_language=target_language, exc_info=True)
             return None

@@ -24,9 +24,9 @@ import { useRouter } from "next/navigation"
 
 const createSignUpSchema = (isCloudProd: boolean) => {
     const baseSchema = z.object({
-        email: z.string().email(),
-        username: z.string().min(3),
-        password: z.string().min(6),
+        email: z.string().email("Please enter a valid email address"),
+        username: z.string().min(3, "Username must be at least 3 characters"),
+        password: z.string().min(6, "Password must be at least 6 characters"),
         confirmPassword: z.string(),
     })
 
@@ -90,6 +90,7 @@ export function SignupForm({
                 const result = await signUp(values, isCloudProd)
 
                 if (result?.error) {
+                    // Show specific error message from server
                     toast.error(result.error)
                     return
                 }
@@ -101,8 +102,12 @@ export function SignupForm({
                     router.push("/login")
                 }
             } catch (error) {
-                toast.error("Something went wrong. Please try again.")
-                console.error(error)
+                const errorMessage = error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred. Please try again."
+
+                toast.error(errorMessage)
+                console.error("Signup error:", error)
             }
         },
     })

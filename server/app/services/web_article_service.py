@@ -12,6 +12,7 @@ from app.schemas.rss_schemas import (
     ClippedArticleCreate,
     ClippedArticleResponse,
 )
+from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
@@ -227,16 +228,9 @@ class WebArticleService:
         return None
 
     def _calculate_reading_time(self, content: str | None) -> int | None:
-        """Calculate estimated reading time in minutes."""
+        """Calculate estimated reading time in minutes with CJK support."""
         if not content:
             return None
 
-        # Clean content and count words (strip HTML tags for word count)
-        clean_text = re.sub(r"<[^>]*>", " ", content)  # Remove HTML tags
-        clean_text = re.sub(r"[^\w\s]", " ", clean_text)  # Remove punctuation
-        word_count = len(clean_text.split())
-
-        # Average reading speed is 200-250 WPM, use 230
-        reading_time = max(1, round(word_count / 230))
-        return reading_time
+        return calculate_reading_time(content, default_wpm=230)
 

@@ -18,59 +18,54 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@/lib/utils"
 import { User } from "@supabase/supabase-js"
 import Image from "next/image"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { NavMain } from "./nav-main"
 import { NavSecondary } from "./nav-secondary"
 import { NavUser } from "./nav-user"
-import Link from "next/link"
 
 const data = {
     navSecondary: [
         {
-            title: "Import OPML",
-            url: "/import-opml",
-            icon: function Upload(props: React.SVGProps<SVGSVGElement>) {
+            title: "Github",
+            url: "https://github.com/kamui-fin/readspace",
+            icon: function Github(props: React.SVGProps<SVGSVGElement>) {
                 return (
-                    <svg
-                        {...props}
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
+                    <>
+                        <Image
+                            src="/github-light.svg"
+                            width={24}
+                            height={24}
+                            alt="Github"
+                            className="w-4 h-4 dark:hidden"
+                            {...props}
+                        />
+                        <Image
+                            src="/github-dark.svg"
+                            width={24}
+                            height={24}
+                            alt="Github"
+                            className="w-4 h-4 hidden dark:block"
+                            {...props}
+                        />
+                    </>
                 )
             },
         },
         {
-            title: "Feedback",
-            url: "https://github.com/kamui-fin/readspace",
-            icon: function Send(props: React.SVGProps<SVGSVGElement>) {
+            title: "Join the Discord",
+            url: "https://discord.gg/vmfafzqdX5",
+            icon: function Discord(props: React.SVGProps<SVGSVGElement>) {
                 return (
-                    <svg
+                    <Image
+                        src="/discord.svg"
+                        width={24}
+                        height={24}
+                        alt="Discord"
+                        className="w-4 h-4"
                         {...props}
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <path d="m22 2-7 20-4-9-9-4Z" />
-                        <path d="M22 2 11 13" />
-                    </svg>
+                    />
                 )
             },
         },
@@ -125,7 +120,7 @@ export function AppSidebar({
                         <SidebarMenuItem>
                             <SidebarLeftMenuButton
                                 asChild
-                                className="data-[slot=sidebar-menu-button]:!p-1.5"
+                                className="data-[slot=sidebar-menu-button]:!p-1.5 pl-2 py-2"
                             >
                                 <Link
                                     href="/"
@@ -140,7 +135,7 @@ export function AppSidebar({
                                         />
                                     </div>
                                     <span className="truncate font-logo text-xl font-medium tracking-normal">
-                                        Readspace
+                                        readspace
                                     </span>
                                 </Link>
                             </SidebarLeftMenuButton>

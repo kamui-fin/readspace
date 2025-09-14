@@ -10,6 +10,7 @@ import structlog
 from bs4 import BeautifulSoup
 
 from app.schemas.rss_schemas import ArticleCreate
+from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
@@ -245,12 +246,9 @@ class ArticleExtractor:
         return None
 
     def _calculate_read_time(self, content: str) -> int:
-        """Calculate estimated reading time in minutes."""
+        """Calculate estimated reading time in minutes with CJK support."""
         if not content:
             return 1
 
-        # Average reading speed: 200 words per minute
-        word_count = len(content.split())
-        read_time = max(1, round(word_count / 200))
-
+        read_time = calculate_reading_time(content, default_wpm=200)
         return min(read_time, 60)  # Cap at 60 minutes

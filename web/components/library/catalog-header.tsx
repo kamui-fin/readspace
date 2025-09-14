@@ -34,12 +34,12 @@ export function CatalogHeader({
 }: CatalogHeaderProps) {
     return (
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between flex-wrap">
-            <div className="relative flex-1 md:max-w-md min-w-[200px]">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="relative flex-1 md:max-w-md min-w-[200px] m-2">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
                 <Input
                     type="search"
                     placeholder="Search by title or author..."
-                    className="pl-8"
+                    className="pl-8 outline-none focus:outline-none"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                 />

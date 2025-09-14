@@ -60,7 +60,6 @@ import {
     BookmarkIcon,
     BookOpen,
     ChevronRight,
-    Clock,
     Compass,
     Diamond,
     FolderPlus,
@@ -68,9 +67,8 @@ import {
     Loader2,
     MoreHorizontal,
     Pencil,
-    Plus,
     Settings2,
-    Trash2,
+    Trash2
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { toast } from "react-hot-toast"
@@ -334,8 +332,8 @@ function FeedContextMenu({
                             {isProcessingDelete
                                 ? "Processing..."
                                 : isFolder
-                                  ? "Delete"
-                                  : "Unfollow"}
+                                    ? "Delete"
+                                    : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
@@ -686,7 +684,7 @@ function MainNavigationItems({
                                     isMobile={isMobile}
                                     toggleSidebar={toggleSidebar}
                                     isActive={isActiveState}
-                                    className="flex-1"
+                                    className="flex-1 pl-2"
                                 >
                                     <Link
                                         href={item.url}

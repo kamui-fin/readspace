@@ -13,20 +13,18 @@ from app.schemas.auth import TokenData
 from app.services.ai_service import get_ai_service
 from app.services.auth import get_current_user
 from app.services.rss_service import RssService
+from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])
 
 
 def _calculate_read_time(content: str) -> int:
-    """Calculate estimated reading time in minutes."""
+    """Calculate estimated reading time in minutes with CJK support."""
     if not content:
         return 1
 
-    # Average reading speed: 200 words per minute
-    word_count = len(content.split())
-    read_time = max(1, round(word_count / 200))
-
+    read_time = calculate_reading_time(content, default_wpm=200)
     return min(read_time, 60)  # Cap at 60 minutes
 
 
@@ -78,9 +76,9 @@ async def extract_full_text(
     """
     try:
         logger.info("Extracting full text for article", article_id=str(article_id), user_id=user.sub)
-        
+
         rss_service = RssService(db, UUID(user.sub))
-        
+
         # Get the article to verify ownership and get URL
         article = await rss_service.get_article(article_id, user.sub)
         if not article:
@@ -88,16 +86,16 @@ async def extract_full_text(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Article not found"
             )
-        
+
         if not article.link:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Article has no source URL available"
             )
-        
+
         url = str(article.link)
         logger.debug("Fetching content from URL", url=url)
-        
+
         # Fetch and extract content using trafilatura
         downloaded = trafilatura.fetch_url(url)
         if not downloaded:
@@ -106,7 +104,7 @@ async def extract_full_text(
                 success=False,
                 error="Failed to fetch content from URL"
             )
-        
+
         extracted = trafilatura.extract(downloaded, output_format="html")
         if not extracted:
             logger.warning("Could not extract content from URL", url=url)
@@ -114,18 +112,18 @@ async def extract_full_text(
                 success=False,
                 error="Could not extract readable content from the page"
             )
-        
+
         # Calculate read time for the extracted content
         read_time = _calculate_read_time(extracted)
-        
+
         logger.info("Successfully extracted full text", article_id=str(article_id), content_length=len(extracted), read_time=read_time)
-        
+
         return ExtractFullTextResponse(
             success=True,
             content=extracted,
             estimated_read_time_minutes=read_time
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -151,10 +149,10 @@ async def summarize_article(
     """
     try:
         logger.info("Generating summary for article", article_id=str(article_id), user_id=user.sub)
-        
+
         rss_service = RssService(db, UUID(user.sub))
         ai_service = get_ai_service()
-        
+
         # Get the article to verify ownership and get content
         article = await rss_service.get_article(article_id, user.sub)
         if not article:
@@ -162,7 +160,7 @@ async def summarize_article(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Article not found"
             )
-        
+
         # Use provided content if available, otherwise fall back to article content/description
         content_to_summarize = request.content or article.content or article.description
         if not content_to_summarize:
@@ -170,26 +168,26 @@ async def summarize_article(
                 success=False,
                 error="No content available to summarize"
             )
-        
+
         # Generate summary using AI service
         summary = await ai_service.summarize_article(
             title=article.title or "",
             content=content_to_summarize
         )
-        
+
         if not summary:
             return SummarizeResponse(
                 success=False,
                 error="Failed to generate summary"
             )
-        
+
         logger.info("Successfully generated summary", article_id=str(article_id), summary_length=len(summary))
-        
+
         return SummarizeResponse(
             success=True,
             summary=summary
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -215,10 +213,10 @@ async def translate_article(
     """
     try:
         logger.info("Translating article", article_id=str(article_id), target_language=request.target_language, user_id=user.sub)
-        
+
         rss_service = RssService(db, UUID(user.sub))
         ai_service = get_ai_service()
-        
+
         # Get the article to verify ownership and get content
         article = await rss_service.get_article(article_id, user.sub)
         if not article:
@@ -226,7 +224,7 @@ async def translate_article(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Article not found"
             )
-        
+
         # Use provided content if available, otherwise fall back to article content/description
         content_to_translate = request.content or article.content or article.description
         if not content_to_translate:
@@ -234,27 +232,27 @@ async def translate_article(
                 success=False,
                 error="No content available to translate"
             )
-        
+
         # Generate translation using AI service
         translated_content = await ai_service.translate_article(
             content=content_to_translate,
             target_language=request.target_language
         )
-        
+
         if not translated_content:
             return TranslateResponse(
                 success=False,
                 error="Failed to generate translation"
             )
-        
+
         logger.info("Successfully translated article", article_id=str(article_id), target_language=request.target_language)
-        
+
         return TranslateResponse(
             success=True,
             translated_content=translated_content,
             target_language=request.target_language
         )
-    
+
     except HTTPException:
         raise
     except Exception as e:

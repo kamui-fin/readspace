@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 from app.core.custom_exceptions import FeedParsingError
 from app.schemas.rss_schemas import FeedBase
 from app.utils.language_normalizer import normalize_language_code
+from app.utils.reading_time import calculate_reading_time_from_html
 
 logger = structlog.get_logger(__name__)
 
@@ -357,28 +358,11 @@ class FeedParsingService:
         return None
 
     def calculate_estimated_read_time(self, text_content: str | None) -> int | None:
-        """Calculate estimated read time in minutes"""
+        """Calculate estimated read time in minutes with CJK support"""
         if not text_content:
             return None
 
-        try:
-            soup = BeautifulSoup(text_content, "html.parser")
-            text_only = soup.get_text(separator=" ", strip=True)
-        except Exception as e:
-            logger.warning(
-                "BeautifulSoup failed to parse content for read time calculation, falling back to regex strip.",
-                error=str(e),
-            )
-            text_only = re.sub(r"<[^>]+>", " ", text_content)
-            text_only = " ".join(text_only.split())
-
-        if not text_only.strip():
-            return None
-
-        words = len(text_only.split())
-        if words == 0:
-            return None
-        return max(1, round(words / self.default_wpm))
+        return calculate_reading_time_from_html(text_content, default_wpm=self.default_wpm)
 
     def extract_feed_scheduling_data(
         self, parsed_feed: feedparser.FeedParserDict

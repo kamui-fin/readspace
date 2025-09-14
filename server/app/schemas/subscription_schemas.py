@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, AnyUrl, field_validator
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
 
 from app.schemas.rss_schemas import FolderResponse
 

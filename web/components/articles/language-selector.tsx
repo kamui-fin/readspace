@@ -9,6 +9,7 @@ interface LanguageSelectorProps {
 }
 
 const LANGUAGES = [
+    { code: 'en', name: 'English', flag: '🇺🇸' },
     { code: 'es', name: 'Spanish', flag: '🇪🇸' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
     { code: 'de', name: 'German', flag: '🇩🇪' },

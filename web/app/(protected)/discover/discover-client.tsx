@@ -7,7 +7,6 @@ import NextImage from "next/image"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { useDebouncedCallback } from "use-debounce"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
@@ -68,7 +67,6 @@ function DiscoverLayout({ children }: DiscoverLayoutProps) {
     )
 }
 
-
 export default function DiscoverPageClient({
     initialQuery,
     initialCategory,
@@ -77,16 +75,16 @@ export default function DiscoverPageClient({
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const { replace } = useRouter()
-    
+
     // Get current state from URL
     const activeQuery = searchParams.get('q') || ''
     const activeCategory = searchParams.get('category') || ''
     const urlLanguage = searchParams.get('language')
-    
+
     // Use URL language if available, fallback to localStorage, then 'en'
     const [persistedLanguage, setPersistedLanguage] = usePersistentState("discover-language", "en")
     const language = urlLanguage || initialLanguage || persistedLanguage
-    
+
     // Local search input state (for typing before submission)
     const [searchQuery, setSearchQuery] = useState(activeQuery)
 
@@ -94,16 +92,16 @@ export default function DiscoverPageClient({
     const isTablet = useIsTablet()
     const isMobile = useIsMobile()
     const { state: sidebarState } = useSidebarLeft()
-    
+
     // Sync search input with URL when URL changes (browser navigation)
     useEffect(() => {
         setSearchQuery(activeQuery)
     }, [activeQuery])
-    
+
     // Helper function to update URL parameters
     const updateSearchParams = useCallback((updates: Record<string, string | null>) => {
         const params = new URLSearchParams(searchParams)
-        
+
         Object.entries(updates).forEach(([key, value]) => {
             if (value) {
                 params.set(key, value)
@@ -111,11 +109,16 @@ export default function DiscoverPageClient({
                 params.delete(key)
             }
         })
-        
+
         replace(`${pathname}?${params.toString()}`)
     }, [searchParams, pathname, replace])
 
     // Shorter category names for mobile
+    // Helper function to detect rsshub:// URLs
+    const isRSSHubUrl = (query: string) => {
+        return query.trim().toLowerCase().startsWith('rsshub://')
+    }
+
     const getMobileCategoryName = (category: string) => {
         const mobileNames: Record<string, string> = {
             "Technology & Programming": "Tech & Code",
@@ -133,7 +136,6 @@ export default function DiscoverPageClient({
         }
         return isMobile ? (mobileNames[category] || category) : category
     }
-
 
     const hasSearchParams = Boolean(activeQuery || activeCategory)
 
@@ -402,7 +404,7 @@ export default function DiscoverPageClient({
                                 placeholder={
                                     searchQuery
                                         ? ""
-                                        : "Search feeds..."
+                                        : "Search by keyword, topic, RSS url, website, subreddit.."
                                 }
                                 value={searchQuery}
                                 onChange={handleSearchInputChange}
@@ -469,7 +471,7 @@ export default function DiscoverPageClient({
                                     </Button>
                                 </motion.div>
                             )}
-                            {isFetching ? (
+                            {(isFetching || (hasSearchParams && !searchData)) ? (
                                 <div className="space-y-4">
                                     {Array.from({ length: 3 }).map((_, i) => (
                                         <FeedCardSkeleton key={i} />

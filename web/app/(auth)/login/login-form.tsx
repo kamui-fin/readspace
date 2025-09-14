@@ -21,8 +21,8 @@ import { toFormikValidationSchema } from "zod-formik-adapter"
 import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
 
 const signInSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
+    email: z.string().email("Please enter a valid email address"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
 })
 
 type LoginFormBody = z.infer<typeof signInSchema>
@@ -41,7 +41,32 @@ export function LoginForm({
             password: values.password,
         })
 
-        if (error) throw error
+        if (error) {
+            // Provide user-friendly error messages based on error codes
+            let userFriendlyMessage: string
+            switch (error.message) {
+                case 'Invalid login credentials':
+                    userFriendlyMessage = 'Invalid email or password. Please check your credentials and try again.'
+                    break
+                case 'Email not confirmed':
+                    userFriendlyMessage = 'Please check your email and click the verification link before signing in.'
+                    break
+                case 'Too many requests':
+                    userFriendlyMessage = 'Too many login attempts. Please wait a few minutes before trying again.'
+                    break
+                case 'User not found':
+                    userFriendlyMessage = 'No account found with this email address. Please sign up first.'
+                    break
+                default:
+                    userFriendlyMessage = error.message || 'Login failed. Please try again.'
+            }
+
+            toast.error(userFriendlyMessage)
+            console.error("Login error:", error)
+            return
+        }
+
+        toast.success("Successfully logged in!")
         router.push("/")
     }
 
@@ -56,12 +81,17 @@ export function LoginForm({
 
             if (error) throw error
         } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to login with Google. Please try again."
-            )
-            console.error(error)
+            const errorMessage = error instanceof Error ? error.message : "Failed to login with Google. Please try again."
+
+            // Provide specific error messages for Google OAuth
+            if (errorMessage.includes('popup_closed_by_user')) {
+                toast.error("Login cancelled. Please try again if you want to sign in with Google.")
+            } else if (errorMessage.includes('access_denied')) {
+                toast.error("Access denied. Please grant permission to continue with Google login.")
+            } else {
+                toast.error(errorMessage)
+            }
+            console.error("Google sign-in error:", error)
         }
     }
 
@@ -74,14 +104,14 @@ export function LoginForm({
         onSubmit: async (values) => {
             try {
                 await signInAction(values)
-                toast.success("Successfully logged in!")
             } catch (error: unknown) {
-                toast.error(
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to login. Please try again."
-                )
-                console.error(error)
+                // Handle any unexpected errors not caught by signInAction
+                const errorMessage = error instanceof Error
+                    ? error.message
+                    : "An unexpected error occurred. Please try again."
+
+                toast.error(errorMessage)
+                console.error("Unexpected login error:", error)
             }
         },
     })

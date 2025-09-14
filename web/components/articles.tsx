@@ -1,10 +1,10 @@
 "use client"
 
-import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
-import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
 import { AiSummaryCard } from "@/components/articles/ai-summary-card"
 import { AnimatedContent } from "@/components/articles/animated-content"
 import { ArticleToolbar } from "@/components/articles/article-toolbar"
+import { ArticlesEmptyState } from "@/components/articles/articles-empty-state"
+import { ArticlesViewSkeleton } from "@/components/articles/articles-view-skeleton"
 import { FeedPreviewBanner } from "@/components/feeds/feed-preview-banner"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -30,6 +30,12 @@ import {
 } from "@/components/ui/tooltip"
 import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
+import {
+    createTranslationQueryKey,
+    fetchTranslation,
+    useExtractFullText,
+    useSummarizeArticle
+} from "@/lib/api/hooks/article-enhancements"
 import type { Article } from "@/lib/api/hooks/feeds"
 import {
     useArticle,
@@ -44,30 +50,22 @@ import {
     useUnreadCounts,
     useUpdateArticle,
 } from "@/lib/api/hooks/feeds"
-import {
-    useExtractFullText,
-    useSummarizeArticle,
-    ARTICLE_ENHANCEMENT_QUERY_KEYS,
-    createTranslationQueryKey,
-    fetchTranslation,
-} from "@/lib/api/hooks/article-enhancements"
-import { ApiClient } from "@/lib/api/client"
-import { format, formatDistanceToNow, parseISO } from "date-fns"
+import { processCodeBlocks } from "@/lib/syntax-highlight"
 import { useQueryClient } from "@tanstack/react-query"
+import { format, formatDistanceToNow, parseISO } from "date-fns"
 import {
-    ArrowLeft,
-    BookmarkIcon,
     CalendarIcon,
-    Check,
     CheckCircle2,
     Clock,
     Eye,
     EyeOff,
+    FileText,
     Globe,
+    Lightbulb,
     Loader2,
     MoreVertical,
     Paperclip,
-    RefreshCw,
+    RefreshCw
 } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useRouter } from "next/navigation"
@@ -172,10 +170,10 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : viewInitialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : viewInitialSidebarTitle || "All Articles"
 
     // Use infinite queries based on mode
     let infiniteQuery: any
@@ -390,7 +388,7 @@ export function ArticlesView({
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) ||
-                          allArticles[0]
+                        allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle.id)
                 }
@@ -895,90 +893,90 @@ export function ArticlesView({
                                     )}
                                     {isRecentlyReadMode || isReadLaterMode
                                         ? filteredArticles.map(
-                                              (
-                                                  article: Article,
-                                                  index: number
-                                              ) => (
-                                                  <ArticleItem
-                                                      key={article.id}
-                                                      article={article}
-                                                      isActive={
-                                                          article.id ===
-                                                          selectedArticleId
-                                                      }
-                                                      isLastInGroup={
-                                                          index ===
-                                                          filteredArticles.length -
-                                                              1
-                                                      }
-                                                      onClick={() =>
-                                                          handleArticleClick(
-                                                              article.id
-                                                          )
-                                                      }
-                                                      isRecentlyReadMode={
-                                                          isRecentlyReadMode
-                                                      }
-                                                      isReadLaterMode={
-                                                          isReadLaterMode
-                                                      }
-                                                      index={index}
-                                                  />
-                                              )
-                                          )
+                                            (
+                                                article: Article,
+                                                index: number
+                                            ) => (
+                                                <ArticleItem
+                                                    key={article.id}
+                                                    article={article}
+                                                    isActive={
+                                                        article.id ===
+                                                        selectedArticleId
+                                                    }
+                                                    isLastInGroup={
+                                                        index ===
+                                                        filteredArticles.length -
+                                                        1
+                                                    }
+                                                    onClick={() =>
+                                                        handleArticleClick(
+                                                            article.id
+                                                        )
+                                                    }
+                                                    isRecentlyReadMode={
+                                                        isRecentlyReadMode
+                                                    }
+                                                    isReadLaterMode={
+                                                        isReadLaterMode
+                                                    }
+                                                    index={index}
+                                                />
+                                            )
+                                        )
                                         : Object.entries(groupedArticles).map(
-                                              ([groupId, group]) => (
-                                                  <div key={groupId}>
-                                                      <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
-                                                          <div className="flex items-center gap-2">
-                                                              {group.label ===
-                                                                  "Today" ||
-                                                              group.label ===
-                                                                  "Yesterday" ? (
-                                                                  <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                              ) : (
-                                                                  <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                              )}
-                                                              <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
-                                                                  {group.label}
-                                                              </span>
-                                                          </div>
-                                                      </div>
-                                                      {group.articles.map(
-                                                          (
-                                                              article: Article,
-                                                              index: number
-                                                          ) => (
-                                                              <ArticleItem
-                                                                  key={
-                                                                      article.id
-                                                                  }
-                                                                  article={
-                                                                      article
-                                                                  }
-                                                                  isActive={
-                                                                      article.id ===
-                                                                      selectedArticleId
-                                                                  }
-                                                                  isLastInGroup={
-                                                                      index ===
-                                                                      group
-                                                                          .articles
-                                                                          .length -
-                                                                          1
-                                                                  }
-                                                                  onClick={() =>
-                                                                      handleArticleClick(
-                                                                          article.id
-                                                                      )
-                                                                  }
-                                                                  index={index}
-                                                              />
-                                                          )
-                                                      )}
-                                                  </div>
-                                              )
-                                          )}
+                                            ([groupId, group]) => (
+                                                <div key={groupId}>
+                                                    <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
+                                                        <div className="flex items-center gap-2">
+                                                            {group.label ===
+                                                                "Today" ||
+                                                                group.label ===
+                                                                "Yesterday" ? (
+                                                                <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                            ) : (
+                                                                <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                            )}
+                                                            <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
+                                                                {group.label}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    {group.articles.map(
+                                                        (
+                                                            article: Article,
+                                                            index: number
+                                                        ) => (
+                                                            <ArticleItem
+                                                                key={
+                                                                    article.id
+                                                                }
+                                                                article={
+                                                                    article
+                                                                }
+                                                                isActive={
+                                                                    article.id ===
+                                                                    selectedArticleId
+                                                                }
+                                                                isLastInGroup={
+                                                                    index ===
+                                                                    group
+                                                                        .articles
+                                                                        .length -
+                                                                    1
+                                                                }
+                                                                onClick={() =>
+                                                                    handleArticleClick(
+                                                                        article.id
+                                                                    )
+                                                                }
+                                                                index={index}
+                                                            />
+                                                        )
+                                                    )}
+                                                </div>
+                                            )
+                                        )}
                                     {hasNextPage && (
                                         <div
                                             ref={sentinelRef}
@@ -1078,12 +1076,12 @@ export function ArticlesView({
             </div>
 
             {/* Mobile: Stacked layout */}
-            <div className="flex md:hidden w-full h-full max-w-screen-sm mx-auto overflow-x-hidden">
+            <div className="flex md:hidden w-full h-full max-w-screen-sm mx-auto" style={{ touchAction: 'pan-y' }}>
                 {/* Article List View */}
                 <div
-                    className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? "hidden" : "flex"}`}
+                    className={`w-full h-full flex-col ${showContent ? "hidden" : "flex"}`}
                 >
-                    <div className="flex h-14 items-center justify-between border-b px-4 min-w-0">
+                    <div className="flex h-14 items-center justify-between border-b px-4 min-w-0 flex-shrink-0">
                         <div className="flex items-center space-x-2 min-w-0 flex-1 max-w-[calc(100vw-6rem)]">
                             <SidebarLeftTrigger className="-ml-1" />
                             <h2 className="font-semibold truncate text-lg max-w-[calc(100vw-10rem)]">
@@ -1135,141 +1133,136 @@ export function ArticlesView({
                             </Button>
                         </div>
                     </div>
-                    <div className="flex-1 overflow-auto min-h-0 max-w-full overflow-x-hidden">
-                        <div className="h-full">
-                            {shouldShowPreviewBanner && (
-                                <FeedPreviewBanner
-                                    feedTitle={feedData?.title}
-                                    feedDescription={feedData?.description}
-                                    onFollow={() =>
-                                        setIsSubscriptionModalOpen(true)
-                                    }
-                                />
+                    <div className="flex-1 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
+                        {shouldShowPreviewBanner && (
+                            <FeedPreviewBanner
+                                feedTitle={feedData?.title}
+                                feedDescription={feedData?.description}
+                                onFollow={() =>
+                                    setIsSubscriptionModalOpen(true)
+                                }
+                            />
+                        )}
+                        {isRecentlyReadMode || isReadLaterMode
+                            ? filteredArticles.map(
+                                (article: Article, index: number) => (
+                                    <ArticleItem
+                                        key={article.id}
+                                        article={article}
+                                        isActive={
+                                            article.id ===
+                                            selectedArticleId
+                                        }
+                                        isLastInGroup={
+                                            index ===
+                                            filteredArticles.length - 1
+                                        }
+                                        onClick={() =>
+                                            handleArticleClick(article.id)
+                                        }
+                                        isRecentlyReadMode={
+                                            isRecentlyReadMode
+                                        }
+                                        isReadLaterMode={isReadLaterMode}
+                                        index={index}
+                                    />
+                                )
+                            )
+                            : Object.entries(groupedArticles).map(
+                                ([groupId, group]) => (
+                                    <div key={groupId}>
+                                        <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
+                                            <div className="flex items-center gap-2">
+                                                {group.label ===
+                                                    "Today" ||
+                                                    group.label ===
+                                                    "Yesterday" ? (
+                                                    <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                ) : (
+                                                    <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
+                                                )}
+                                                <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
+                                                    {group.label}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        {group.articles.map(
+                                            (
+                                                article: Article,
+                                                index: number
+                                            ) => (
+                                                <ArticleItem
+                                                    key={article.id}
+                                                    article={article}
+                                                    isActive={
+                                                        article.id ===
+                                                        selectedArticleId
+                                                    }
+                                                    isLastInGroup={
+                                                        index ===
+                                                        group.articles
+                                                            .length -
+                                                        1
+                                                    }
+                                                    onClick={() =>
+                                                        handleArticleClick(
+                                                            article.id
+                                                        )
+                                                    }
+                                                    index={index}
+                                                />
+                                            )
+                                        )}
+                                    </div>
+                                )
                             )}
-                            {isRecentlyReadMode || isReadLaterMode
-                                ? filteredArticles.map(
-                                      (article: Article, index: number) => (
-                                          <ArticleItem
-                                              key={article.id}
-                                              article={article}
-                                              isActive={
-                                                  article.id ===
-                                                  selectedArticleId
-                                              }
-                                              isLastInGroup={
-                                                  index ===
-                                                  filteredArticles.length - 1
-                                              }
-                                              onClick={() =>
-                                                  handleArticleClick(article.id)
-                                              }
-                                              isRecentlyReadMode={
-                                                  isRecentlyReadMode
-                                              }
-                                              isReadLaterMode={isReadLaterMode}
-                                              index={index}
-                                          />
-                                      )
-                                  )
-                                : Object.entries(groupedArticles).map(
-                                      ([groupId, group]) => (
-                                          <div key={groupId}>
-                                              <div className="px-3 py-2.5 sticky top-0 bg-background/95 backdrop-blur-sm z-10 mt-3 first:mt-1.5 transition-colors duration-200">
-                                                  <div className="flex items-center gap-2">
-                                                      {group.label ===
-                                                          "Today" ||
-                                                      group.label ===
-                                                          "Yesterday" ? (
-                                                          <CheckCircle2 className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                      ) : (
-                                                          <CalendarIcon className="h-4 w-4 text-muted-foreground transition-colors duration-200" />
-                                                      )}
-                                                      <span className="text-xs font-medium text-muted-foreground transition-colors duration-200">
-                                                          {group.label}
-                                                      </span>
-                                                  </div>
-                                              </div>
-                                              {group.articles.map(
-                                                  (
-                                                      article: Article,
-                                                      index: number
-                                                  ) => (
-                                                      <ArticleItem
-                                                          key={article.id}
-                                                          article={article}
-                                                          isActive={
-                                                              article.id ===
-                                                              selectedArticleId
-                                                          }
-                                                          isLastInGroup={
-                                                              index ===
-                                                              group.articles
-                                                                  .length -
-                                                                  1
-                                                          }
-                                                          onClick={() =>
-                                                              handleArticleClick(
-                                                                  article.id
-                                                              )
-                                                          }
-                                                          index={index}
-                                                      />
-                                                  )
-                                              )}
-                                          </div>
-                                      )
-                                  )}
-                            {hasNextPage && (
-                                <div
-                                    ref={mobileSentinelRef}
-                                    className="flex items-center justify-center py-8"
-                                >
-                                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                                </div>
-                            )}
-                            {!hasNextPage && filteredArticles.length > 0 && (
-                                <div className="text-center py-6 text-muted-foreground text-sm">
-                                    <b>You've seen all articles!</b>
-                                </div>
-                            )}
-                        </div>
+                        {hasNextPage && (
+                            <div
+                                ref={mobileSentinelRef}
+                                className="flex items-center justify-center py-8"
+                            >
+                                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                            </div>
+                        )}
+                        {!hasNextPage && filteredArticles.length > 0 && (
+                            <div className="text-center py-6 text-muted-foreground text-sm">
+                                <b>You've seen all articles!</b>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Article Content View */}
                 <div
-                    className={`w-full h-full flex-col max-w-full overflow-x-hidden ${showContent ? "flex" : "hidden"}`}
+                    className={`w-full h-full flex-col ${showContent ? "flex" : "hidden"}`}
                 >
-                    <div className="flex-1 overflow-auto">
-                        {isArticleLoading && (
-                            <div className="flex-1 p-4">
-                                <ArticleContentSkeleton />
-                            </div>
-                        )}
-                        {!isArticleLoading && transformedSelectedArticle ? (
-                            <div className="h-full overflow-y-auto overflow-x-hidden max-w-full">
-                                <ArticleContentView
-                                    article={transformedSelectedArticle}
-                                    isRecentlyReadMode={isRecentlyReadMode}
-                                    isReadLaterMode={isReadLaterMode}
-                                    shouldShowPreviewBanner={
-                                        shouldShowPreviewBanner
-                                    }
-                                    onArticleRemoved={() => {
-                                        setSelectedArticleId(null)
-                                        setShowContent(false)
-                                    }}
-                                    onMarkAsRead={undefined}
-                                />
-                            </div>
-                        ) : !selectedArticleId ? (
-                            <div className="flex flex-1 items-center justify-center">
-                                <p className="text-muted-foreground">
-                                    Select an article to read
-                                </p>
-                            </div>
-                        ) : null}
-                    </div>
+                    {isArticleLoading && (
+                        <div className="flex-1 p-4">
+                            <ArticleContentSkeleton />
+                        </div>
+                    )}
+                    {!isArticleLoading && transformedSelectedArticle ? (
+                        <ArticleContentView
+                            article={transformedSelectedArticle}
+                            isRecentlyReadMode={isRecentlyReadMode}
+                            isReadLaterMode={isReadLaterMode}
+                            shouldShowPreviewBanner={
+                                shouldShowPreviewBanner
+                            }
+                            onArticleRemoved={() => {
+                                setSelectedArticleId(null)
+                                setShowContent(false)
+                            }}
+                            onMarkAsRead={undefined}
+                            onBack={() => setShowContent(false)}
+                        />
+                    ) : !selectedArticleId ? (
+                        <div className="flex flex-1 items-center justify-center">
+                            <p className="text-muted-foreground">
+                                Select an article to read
+                            </p>
+                        </div>
+                    ) : null}
                 </div>
             </div>
 
@@ -1346,6 +1339,7 @@ function ArticleContentView({
     onArticleRemoved,
     onMarkAsRead,
     shouldShowPreviewBanner,
+    onBack,
 }: {
     article: Article
     isRecentlyReadMode?: boolean
@@ -1353,6 +1347,7 @@ function ArticleContentView({
     onArticleRemoved?: () => void
     onMarkAsRead?: () => void
     shouldShowPreviewBanner?: boolean
+    onBack?: () => void
 }) {
     const updateArticle = useUpdateArticle()
     const { resolvedTheme } = useTheme()
@@ -1697,8 +1692,8 @@ function ArticleContentView({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -1726,25 +1721,27 @@ function ArticleContentView({
 
     return (
         <div className="h-full flex flex-col">
-            {/* Article Toolbar - Hide in preview mode */}
+            {/* Mobile Toolbar - Show on mobile only */}
             {!shouldShowPreviewBanner && (
-                <ArticleToolbar
-                    article={article}
-                    isReadLater={optimisticReadLater}
-                    onToggleReadLater={handleToggleReadLater}
-                    onExtractFullText={handleExtractFullText}
-                    onSummarize={handleSummarize}
-                    onTranslate={handleTranslate}
-                    isExtracting={extractFullTextQuery.isFetching}
-                    isSummarizing={summarizeQuery.isFetching}
-                    isTranslating={isTranslating}
-                    onBack={() => setShowContent(false)}
-                />
+                <div className="md:hidden">
+                    <ArticleToolbar
+                        article={article}
+                        isReadLater={optimisticReadLater}
+                        onToggleReadLater={handleToggleReadLater}
+                        onExtractFullText={handleExtractFullText}
+                        onSummarize={handleSummarize}
+                        onTranslate={handleTranslate}
+                        isExtracting={extractFullTextQuery.isFetching}
+                        isSummarizing={summarizeQuery.isFetching}
+                        isTranslating={isTranslating}
+                        onBack={onBack}
+                    />
+                </div>
             )}
 
             {/* Article Content */}
-            <div className="flex-1 overflow-auto p-6 md:p-10">
-                <article className="max-w-4xl mx-auto w-full min-w-0 overflow-x-hidden">
+            <div className="flex-1 overflow-y-auto p-6 md:p-10" style={{ WebkitOverflowScrolling: 'touch' }}>
+                <article className="max-w-4xl mx-auto w-full min-w-0">
                     <div className="mb-3 w-full min-w-0">
                         <h1
                             className="text-xl sm:text-2xl font-semibold leading-tight break-words w-full hyphens-auto max-w-full"
@@ -1767,20 +1764,20 @@ function ArticleContentView({
                                     src={
                                         article.feed?.image_url ||
                                         (article.article_type === "clipped" &&
-                                        article.link
+                                            article.link
                                             ? (() => {
-                                                  try {
-                                                      const domain = new URL(
-                                                          article.link
-                                                      ).hostname
-                                                      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
-                                                  } catch {
-                                                      return (
-                                                          article.image_url ||
-                                                          "/placeholders/avatar.png"
-                                                      )
-                                                  }
-                                              })()
+                                                try {
+                                                    const domain = new URL(
+                                                        article.link
+                                                    ).hostname
+                                                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`
+                                                } catch {
+                                                    return (
+                                                        article.image_url ||
+                                                        "/placeholders/avatar.png"
+                                                    )
+                                                }
+                                            })()
                                             : article.image_url) ||
                                         "/placeholders/avatar.png"
                                     }
@@ -1800,15 +1797,15 @@ function ArticleContentView({
                                 {article.author ||
                                     article.feed?.title ||
                                     (article.article_type === "clipped" &&
-                                    article.link
+                                        article.link
                                         ? (() => {
-                                              try {
-                                                  return new URL(article.link)
-                                                      .hostname
-                                              } catch {
-                                                  return "Unknown Source"
-                                              }
-                                          })()
+                                            try {
+                                                return new URL(article.link)
+                                                    .hostname
+                                            } catch {
+                                                return "Unknown Source"
+                                            }
+                                        })()
                                         : "Unknown Source")}
                             </span>
                             {article.article_type === "clipped" && (
@@ -1830,6 +1827,23 @@ function ArticleContentView({
                                 </span>
                             )}
                         </div>
+                        {/* Desktop Toolbar - Show on desktop only, aligned to the right */}
+                        {!shouldShowPreviewBanner && (
+                            <div className="hidden md:block">
+                                <ArticleToolbar
+                                    article={article}
+                                    isReadLater={optimisticReadLater}
+                                    onToggleReadLater={handleToggleReadLater}
+                                    onExtractFullText={handleExtractFullText}
+                                    onSummarize={handleSummarize}
+                                    onTranslate={handleTranslate}
+                                    isExtracting={extractFullTextQuery.isFetching}
+                                    isSummarizing={summarizeQuery.isFetching}
+                                    isTranslating={isTranslating}
+                                    hideBackground={true}
+                                />
+                            </div>
+                        )}
                     </div>
                     {/* AI Summary */}
                     {isShowingSummary && aiSummary && (
@@ -1858,13 +1872,8 @@ function ArticleContentView({
                               prose-headings:font-semibold prose-h1:text-lg sm:prose-h1:text-xl prose-h2:text-base sm:prose-h2:text-lg
                               prose-p:leading-relaxed prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-a:break-words
                               prose-img:rounded-md prose-img:mx-auto prose-img:max-w-full prose-img:h-auto prose-img:w-auto
-                              prose-pre:bg-muted prose-pre:p-2 sm:prose-pre:p-4 prose-pre:rounded-md prose-pre:text-xs sm:prose-pre:text-sm prose-pre:overflow-x-auto prose-pre:max-w-full
-                              prose-code:text-xs sm:prose-code:text-sm prose-code:break-words prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
                               prose-table:text-sm prose-table:block prose-table:overflow-x-auto prose-table:whitespace-nowrap
                               break-words overflow-hidden"
-                                    dangerouslySetInnerHTML={{
-                                        __html: currentContent,
-                                    }}
                                     style={{
                                         fontFamily:
                                             "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
@@ -1876,12 +1885,14 @@ function ArticleContentView({
                                         width: "100%",
                                         maxWidth: "100%",
                                     }}
-                                />
+                                >
+                                    {processCodeBlocks(currentContent, resolvedTheme === "dark")}
+                                </div>
                             </AnimatedContent>
                         ) : (
                             <div>
                                 {(article.note && !article.description) ||
-                                (!article.note && article.description) ? (
+                                    (!article.note && article.description) ? (
                                     <div
                                         className="dark:prose-invert max-w-none prose-blockquote:border-l-4 prose-blockquote:border-primary/20 prose-blockquote:pl-4 prose-blockquote:py-1 prose-blockquote:my-2 prose-blockquote:bg-muted/30 prose-blockquote:rounded-r-md"
                                         dangerouslySetInnerHTML={{
@@ -1906,9 +1917,32 @@ function ArticleContentView({
                         )}
                     </div>
 
+                    {/* Content extraction suggestion - show when content is too short */}
+                    {article.link &&
+                        !shouldShowPreviewBanner &&
+                        (currentContent.length <= 500 || (!currentContent && (article.note || article.description))) && (
+                            <div className="mt-8 p-5 bg-gradient-to-br from-primary/5 via-primary/3 to-transparent border border-primary/20 rounded-xl">
+                                <div className="flex items-start gap-4">
+                                    <div className="flex-shrink-0">
+                                        <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                                            <Lightbulb className="w-5 h-5 text-primary" />
+                                        </div>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-sm font-semibold text-foreground mb-1">
+                                            Want to read the full article?
+                                        </h3>
+                                        <p className="text-sm text-muted-foreground leading-relaxed">
+                                            This RSS feed only provides a preview. Click the <FileText className="inline w-4 h-4 mx-1" /> icon in the toolbar above to extract the complete content.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                     {/* Visit Website button at the bottom */}
                     {article.link && (
-                        <div className="flex justify-center mt-8 pt-6 border-t">
+                        <div className="flex justify-center mt-8 pt-6 pb-4 border-t">
                             <Button
                                 variant="outline"
                                 size="lg"
@@ -1919,7 +1953,7 @@ function ArticleContentView({
                                         "noopener,noreferrer"
                                     )
                                 }
-                                className="inline-flex items-center gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md hover:bg-muted/20"
+                                className="inline-flex items-center gap-2 transition-all duration-200 hover:shadow-md hover:bg-muted/20"
                             >
                                 <Globe className="h-4 w-4 transition-transform duration-200 hover:rotate-12" />
                                 Visit Website
@@ -1970,8 +2004,8 @@ function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Get priority color for clipped articles
@@ -2028,7 +2062,7 @@ function ArticleItem({
                             {(article.feed?.image_url ||
                                 (article.article_type === "clipped" &&
                                     article.link)) &&
-                            !feedImageError ? (
+                                !feedImageError ? (
                                 <img
                                     src={
                                         article.feed?.image_url ||
@@ -2058,15 +2092,15 @@ function ArticleItem({
                                 }}
                             >
                                 {article.article_type === "clipped" &&
-                                article.link
+                                    article.link
                                     ? (() => {
-                                          try {
-                                              return new URL(article.link)
-                                                  .hostname
-                                          } catch {
-                                              return "Unknown Source"
-                                          }
-                                      })()
+                                        try {
+                                            return new URL(article.link)
+                                                .hostname
+                                        } catch {
+                                            return "Unknown Source"
+                                        }
+                                    })()
                                     : article.feed?.title || "Unknown Source"}
                             </span>
                         </div>
@@ -2100,18 +2134,18 @@ function ArticleItem({
                     )}
                     {((article.note && !article.description) ||
                         (!article.note && article.description)) && (
-                        <p
-                            className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden w-full"
-                            style={{
-                                wordBreak: "break-all",
-                                overflowWrap: "anywhere",
-                            }}
-                        >
-                            {article.note && !article.description
-                                ? article.note
-                                : stripHTML(article.description || "")}
-                        </p>
-                    )}
+                            <p
+                                className="text-[11px] text-muted-foreground line-clamp-2 leading-snug break-words overflow-hidden w-full"
+                                style={{
+                                    wordBreak: "break-all",
+                                    overflowWrap: "anywhere",
+                                }}
+                            >
+                                {article.note && !article.description
+                                    ? article.note
+                                    : stripHTML(article.description || "")}
+                            </p>
+                        )}
                 </div>
                 {article.image_url && !articleImageError && (
                     <div className="h-16 w-16 md:h-16 md:w-16 flex-shrink-0 overflow-hidden rounded-md bg-secondary/5 transition-all duration-200 ease-out flex items-center justify-center hover:shadow-md hover:brightness-105">

@@ -228,6 +228,7 @@ async def get_preview_articles(
         search_service = RssSearchService(db)
 
         # First check if this is a valid RSS URL by trying to preview it
+        # This will handle rsshub:// URLs automatically via the transformer
         preview_result = await search_service._preview_url_as_feed(url)
         if not preview_result:
             raise HTTPException(
@@ -239,20 +240,24 @@ async def get_preview_articles(
         from uuid import uuid4
 
         from app.services.feed_creation_service import FeedCreationService
+        from app.utils.rsshub_url_transformer import transform_rsshub_url
 
         # Create a temporary service instance for fetching articles
         temp_service = FeedCreationService(db, user_id=uuid4())
 
-        # Fetch and parse the RSS feed
-        fetch_result = await temp_service._fetch_feed_content(url)
+        # Transform rsshub:// URLs to actual HTTP URLs for fetching
+        fetch_url = transform_rsshub_url(url)
+
+        # Fetch and parse the RSS feed using the transformed URL
+        fetch_result = await temp_service._fetch_feed_content(fetch_url)
         if fetch_result["status"] != 200 or not fetch_result["content"]:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Could not fetch RSS feed content"
             )
 
-        # Parse the feed
-        parsed_feed = temp_service._parse_feed_data(fetch_result["content"], url)
+        # Parse the feed using the transformed URL
+        parsed_feed = temp_service._parse_feed_data(fetch_result["content"], fetch_url)
 
         # Extract articles from the parsed feed (limit to requested amount)
         articles = []

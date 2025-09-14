@@ -19,7 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useFolders, useRefreshFeed, useSubscribeToFeed, useCreateFolder } from "@/lib/api/hooks/feeds"
+import { useCreateFolder, useFolders, useRefreshFeed, useSubscribeToFeed } from "@/lib/api/hooks/feeds"
 import { AlertCircle, FolderPlus, Loader2, Rss } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
@@ -74,7 +74,7 @@ export function FeedSubscriptionModal({
 
         try {
             let folderId = selectedFolderId;
-            
+
             // Create folder first if needed
             if (isCreatingFolder) {
                 const newFolder = await createFolder.mutateAsync({
@@ -91,7 +91,7 @@ export function FeedSubscriptionModal({
 
             // Then refresh the feed to get latest articles
             setIsRefreshing(true)
-            
+
             await refreshFeed.mutateAsync({
                 feedId: feed.id,
                 forceRefetch: true,
@@ -221,13 +221,6 @@ export function FeedSubscriptionModal({
                                     Creating a new folder: "{newFolderName || "..."}"
                                 </p>
                             </div>
-                        ) : typedFolders.length === 0 ? (
-                            <Alert>
-                                <FolderPlus className="h-4 w-4" />
-                                <AlertDescription>
-                                    No folders available. Create a folder first to organize your feeds.
-                                </AlertDescription>
-                            </Alert>
                         ) : (
                             <Select
                                 value={selectedFolderId}
@@ -296,8 +289,8 @@ export function FeedSubscriptionModal({
                         <Button
                             type="submit"
                             disabled={
-                                subscribeToFeed.isPending || 
-                                isRefreshing || 
+                                subscribeToFeed.isPending ||
+                                isRefreshing ||
                                 createFolder.isPending ||
                                 (!isCreatingFolder && !selectedFolderId) ||
                                 (isCreatingFolder && !newFolderName.trim()) ||

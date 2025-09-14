@@ -317,13 +317,6 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         Creating a new folder: "{newFolderName || "..."}"
                                     </p>
                                 </div>
-                            ) : typedFolders.length === 0 ? (
-                                <Alert>
-                                    <FolderPlus className="h-4 w-4" />
-                                    <AlertDescription>
-                                        No folders available. Create a folder first to organize your feeds.
-                                    </AlertDescription>
-                                </Alert>
                             ) : (
                                 <Select
                                     value={selectedFolderId}

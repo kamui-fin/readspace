@@ -127,7 +127,7 @@ async def update_feed_metadata(
     # Reset error state on successful fetch
     feed_db.fetch_error_count = 0
     feed_db.last_error_message = None
-    
+
     db.add(feed_db)
     await db.commit()
     await db.refresh(feed_db)
@@ -308,18 +308,18 @@ async def update_feed_error(
     feed_db.fetch_error_count += 1
     feed_db.last_error_message = error_message
     feed_db.updated_at = datetime.now(timezone.utc)
-    
+
     db.add(feed_db)
     await db.commit()
     await db.refresh(feed_db)
-    
+
     logger.warning(
         "Feed error count updated",
         feed_id=feed_db.id,
         error_count=feed_db.fetch_error_count,
         error_message=error_message
     )
-    
+
     return feed_db
 
 
