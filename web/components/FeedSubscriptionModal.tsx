@@ -139,28 +139,28 @@ export function FeedSubscriptionModal({
 
     return (
         <Dialog open={isOpen} onOpenChange={handleClose}>
-            <DialogContent className="sm:max-w-[425px]">
+            <DialogContent className="max-w-[95vw] sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Rss className="h-5 w-5 text-orange-500" />
                         Subscribe to Feed
                     </DialogTitle>
-                    <DialogDescription>
+                    <DialogDescription className="text-left">
                         Add this RSS feed to your collection
                     </DialogDescription>
                 </DialogHeader>
 
                 {/* Feed Preview Card */}
-                <div className="rounded-lg border bg-muted/50 p-4 space-y-3">
-                    <div className="flex items-start gap-3">
-                        <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md">
+                <div className="rounded-lg border bg-muted/50 p-3 sm:p-4 space-y-2 sm:space-y-3">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="relative h-8 w-8 sm:h-10 sm:w-10 shrink-0 overflow-hidden rounded-md">
                             {feed.image_url ? (
                                 <NextImage
                                     src={feed.image_url}
                                     alt={feed.title || "Feed icon"}
                                     fill
                                     className="object-cover"
-                                    sizes="40px"
+                                    sizes="(max-width: 640px) 32px, 40px"
                                     onError={(e) => {
                                         const target = e.target as HTMLImageElement
                                         target.style.display = 'none'
@@ -170,21 +170,35 @@ export function FeedSubscriptionModal({
                                 />
                             ) : null}
                             <div
-                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm ${feed.image_url ? 'hidden' : 'flex'
+                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm ${feed.image_url ? 'hidden' : 'flex'
                                     }`}
                             >
                                 {feed.title ? feed.title.charAt(0).toUpperCase() : 'F'}
                             </div>
                         </div>
-                        <div>
+                        <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-medium text-sm leading-tight truncate">
+                                <h3 className="font-medium text-sm leading-tight break-words hyphens-auto" style={{
+                                    wordBreak: 'break-word',
+                                    overflowWrap: 'break-word',
+                                    hyphens: 'auto'
+                                }}>
                                     {feed.title || "Untitled Feed"}
                                 </h3>
                             </div>
                             {feed.link && (
-                                <a href={feed.link} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap truncate w-full">
-                                    {feed.link.replace(/^https?:\/\//, '').replace(/\/$/, '').slice(0, 30) + (feed.link.length > 30 ? '...' : '')}
+                                <a
+                                    href={feed.link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-muted-foreground hover:text-foreground transition-colors block break-all leading-tight"
+                                    style={{
+                                        wordBreak: 'break-all',
+                                        overflowWrap: 'break-word',
+                                        lineBreak: 'anywhere'
+                                    }}
+                                >
+                                    {feed.link.replace(/^https?:\/\//, '').replace(/\/$/, '')}
                                 </a>
                             )}
                         </div>
@@ -269,7 +283,7 @@ export function FeedSubscriptionModal({
                         </Alert>
                     )}
 
-                    <DialogFooter>
+                    <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
                         <Button
                             type="button"
                             variant="outline"
@@ -283,6 +297,7 @@ export function FeedSubscriptionModal({
                                 }
                             }}
                             disabled={subscribeToFeed.isPending || isRefreshing || createFolder.isPending}
+                            className="w-full sm:w-auto"
                         >
                             {isCreatingFolder ? "Back" : "Cancel"}
                         </Button>
@@ -296,22 +311,25 @@ export function FeedSubscriptionModal({
                                 (isCreatingFolder && !newFolderName.trim()) ||
                                 (typedFolders.length === 0 && !isCreatingFolder)
                             }
-                            className="min-w-[100px]"
+                            className="min-w-[100px] w-full sm:w-auto"
                         >
                             {createFolder.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Creating...
+                                    <span className="hidden xs:inline">Creating...</span>
+                                    <span className="xs:hidden">Creating</span>
                                 </>
                             ) : subscribeToFeed.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Subscribing...
+                                    <span className="hidden xs:inline">Subscribing...</span>
+                                    <span className="xs:hidden">Subscribing</span>
                                 </>
                             ) : isRefreshing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Fetching...
+                                    <span className="hidden xs:inline">Fetching...</span>
+                                    <span className="xs:hidden">Fetching</span>
                                 </>
                             ) : (
                                 "Subscribe"
