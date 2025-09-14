@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
-import { useSubscribeToFeed, useRefreshFeed } from "@/lib/api/hooks/feeds"
-import { CheckCircle, Plus } from "lucide-react"
+import { useRefreshFeed, useSubscribeToFeed } from "@/lib/api/hooks/feeds"
+import { Check, Plus } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
 
@@ -20,7 +20,6 @@ interface OnboardingFeedCardProps {
 
 export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardProps) {
     const [isSubscribed, setIsSubscribed] = useState(false)
-    const [isRefreshing, setIsRefreshing] = useState(false)
     const subscribeToFeed = useSubscribeToFeed()
     const refreshFeed = useRefreshFeed()
 
@@ -32,68 +31,62 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
     const handleSubscribe = async () => {
         if (isSubscribed) return
 
+        // Immediately update UI for instant feedback
+        setIsSubscribed(true)
+        onSubscribed?.(feed.id)
+
         try {
             // Subscribe to feed with default folder (backend will handle creating default folder)
-            await subscribeToFeed.mutateAsync({ 
-                feedId: feed.id, 
+            await subscribeToFeed.mutateAsync({
+                feedId: feed.id,
                 folderId: 'default' // Backend will handle this
             })
-            setIsSubscribed(true)
-            onSubscribed?.(feed.id)
 
-            // Trigger manual refresh to get latest articles, similar to FeedSubscriptionModal
-            setIsRefreshing(true)
-            try {
-                await refreshFeed.mutateAsync({
-                    feedId: feed.id,
-                    forceRefetch: true,
-                    silent: true,
-                })
-            } catch (refreshError) {
-                console.error('Failed to refresh feed after subscription:', refreshError)
-                // Don't show error to user for refresh failures during onboarding
-            } finally {
-                setIsRefreshing(false)
-            }
+            // Trigger background refresh - user doesn't need to wait
+            refreshFeed.mutate({
+                feedId: feed.id,
+                forceRefetch: true,
+                silent: true,
+            })
         } catch (error) {
-            // Error handling is done by the mutation hook
+            // Revert UI state on error
+            setIsSubscribed(false)
+            const currentSubscribedFeeds = onSubscribed ? [] : []
             console.error('Failed to subscribe:', error)
         }
     }
 
     const getFeedIcon = () => {
         if (feed.title?.toLowerCase().includes('techcrunch')) {
-            return (
-                <div className="w-8 h-8 bg-green-600 rounded flex items-center justify-center text-white font-bold text-xs">
-                    TC
-                </div>
-            )
+            return 'bg-green-600 text-white'
         }
         if (feed.title?.toLowerCase().includes('hacker news')) {
-            return (
-                <div className="w-8 h-8 bg-orange-500 rounded flex items-center justify-center text-white font-bold text-xs">
-                    Y
-                </div>
-            )
+            return 'bg-orange-500 text-white'
         }
-        return (
-            <div className="w-8 h-8 bg-gray-600 rounded flex items-center justify-center text-white font-bold text-xs">
-                {feed.title ? feed.title.charAt(0).toUpperCase() : 'F'}
-            </div>
-        )
+        return 'bg-gradient-to-br from-gray-600 to-gray-700 text-white'
+    }
+
+    const getFeedInitials = () => {
+        if (feed.title?.toLowerCase().includes('techcrunch')) {
+            return 'TC'
+        }
+        if (feed.title?.toLowerCase().includes('hacker news')) {
+            return 'Y'
+        }
+        return feed.title ? feed.title.charAt(0).toUpperCase() : 'F'
     }
 
     return (
-        <div className="p-3 border border-gray-100 rounded-lg hover:border-gray-200 transition-all">
-            <div className="flex gap-3">
+        <div className="group relative rounded-xl p-4 transition-all duration-200">
+            <div className="flex items-start gap-4">
                 <div className="relative flex-shrink-0">
                     {feed.image_url ? (
                         <NextImage
                             src={feed.image_url}
                             alt={feed.title || 'Feed icon'}
-                            className="w-8 h-8 rounded object-cover"
-                            width={32}
-                            height={32}
+                            className="w-12 h-12 rounded-xl object-cover"
+                            width={48}
+                            height={48}
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.style.display = 'none'
@@ -103,66 +96,51 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
                         />
                     ) : null}
                     <div
-                        className={`w-8 h-8 rounded flex items-center justify-center text-white font-bold text-xs ${
-                            feed.title?.toLowerCase().includes('techcrunch') ? 'bg-green-600' :
-                            feed.title?.toLowerCase().includes('hacker news') ? 'bg-orange-500' :
-                            'bg-gray-600'
-                        }`}
+                        className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-sm ${getFeedIcon()}`}
                         style={{ display: feed.image_url ? 'none' : 'flex' }}
                     >
-                        {feed.title?.toLowerCase().includes('techcrunch') ? 'TC' :
-                         feed.title?.toLowerCase().includes('hacker news') ? 'Y' :
-                         (feed.title ? feed.title.charAt(0).toUpperCase() : 'F')}
+                        {getFeedInitials()}
                     </div>
                 </div>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-sm text-black leading-tight mb-1">
-                                {feed.title || "Untitled Feed"}
-                            </h3>
-                            <a 
-                                href={feed.link || feed.url} 
-                                target="_blank" 
-                                rel="noopener noreferrer" 
-                                className="text-xs text-[#BDC6B7] hover:text-[#91998C] transition-colors"
-                            >
-                                {(feed.link || feed.url)?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'No URL'}
-                            </a>
-                            {feed.description && (
-                                <p className="text-xs text-[#91998C] mt-1 leading-relaxed line-clamp-2">
-                                    {truncateText(feed.description, 80)}
-                                </p>
-                            )}
-                        </div>
+                        <h3 className="font-semibold text-card-foreground leading-snug">
+                            {feed.title || "Untitled Publication"}
+                        </h3>
 
                         <Button
-                            variant={isSubscribed ? "outline" : "secondary"}
-                            size="sm"
                             onClick={handleSubscribe}
-                            disabled={subscribeToFeed.isPending || isSubscribed || isRefreshing}
-                            className={`h-7 text-xs px-3 flex items-center gap-1 flex-shrink-0 ${
-                                isSubscribed 
-                                    ? 'text-primary border-primary/20 bg-primary/5 cursor-default' 
-                                    : ''
-                            }`}
+                            disabled={isSubscribed}
+                            className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors ${isSubscribed
+                                ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default'
+                                : 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                                }`}
+                            variant={isSubscribed ? "outline" : "default"}
                         >
-                            {subscribeToFeed.isPending || isRefreshing ? (
-                                <div className="w-3 h-3 border border-muted-foreground/30 border-t-transparent rounded-full animate-spin" />
-                            ) : isSubscribed ? (
+                            {isSubscribed ? (
                                 <>
-                                    <CheckCircle className="w-3 h-3" />
-                                    Following
+                                    <Check className="w-3 h-3" />
+                                    Added
                                 </>
                             ) : (
                                 <>
                                     <Plus className="w-3 h-3" />
-                                    Follow
+                                    Add
                                 </>
                             )}
                         </Button>
                     </div>
+
+                    <div className="text-xs text-muted-foreground mb-1">
+                        {(feed.link || feed.url)?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'Unknown source'}
+                    </div>
+
+                    {feed.description && (
+                        <p className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-2">
+                            {truncateText(feed.description, 120)}
+                        </p>
+                    )}
                 </div>
             </div>
         </div>

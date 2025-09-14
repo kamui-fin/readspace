@@ -1,7 +1,6 @@
 "use client"
 
 import { useCurrentUser } from "@/hooks/use-current-user"
-import { createClient } from "@/lib/supabase/client"
 import { useOnboardingStore } from "@/stores/onboarding"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
@@ -31,38 +30,47 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-muted px-4 py-12 animate-fade-in font-geist">
-            <div className="w-full max-w-lg">
-                <div className="flex justify-center mb-6">
-                    <Image
-                        src={ReadspaceLogo}
-                        alt="Readspace Logo"
-                        className="rounded"
-                        width={60}
-                        height={60}
-                    />
+        <div className="min-h-screen flex flex-col items-center justify-center bg-muted px-4 py-8 animate-fade-in">
+            <div className="w-full max-w-5xl">
+                <div className="flex justify-center mb-8">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-2xl blur-lg opacity-20"></div>
+                        <div className="relative bg-card p-4 rounded-2xl shadow-sm border border-border">
+                            <Image
+                                src={ReadspaceLogo}
+                                alt="Readspace Logo"
+                                className="rounded-lg"
+                                width={48}
+                                height={48}
+                            />
+                        </div>
+                    </div>
                 </div>
+
                 <OnboardingProgress />
-                <div className="text-center mb-8 px-8">
-                    <h1 className="text-2xl font-bold text-gray-800 max-w-sm mx-auto md:max-w-lg">
+
+                <div className="text-center mb-8 px-4">
+                    <h1 className="text-3xl font-bold text-foreground mb-3 leading-tight">
                         {title}
                     </h1>
                     {subtitle && (
-                        <p className="text-gray-600 mt-2 max-w-sm mx-auto md:max-w-lg">
+                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                             {subtitle}
                         </p>
                     )}
                 </div>
-                <div className="bg-white rounded-xl shadow-xs border border-gray-100 p-6">
+
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                     {children}
                 </div>
+
                 {currentStep !== totalSteps && (
-                    <div className="text-center mt-6">
+                    <div className="text-center mt-8">
                         <button
                             onClick={skipOnboarding}
-                            className="text-gray-500 text-sm hover:text-primary transition-colors"
+                            className="text-gray-500 text-sm hover:text-gray-700 transition-colors px-4 py-2 rounded-lg hover:bg-gray-100/50"
                         >
-                            Skip onboarding for now
+                            Skip for now
                         </button>
                     </div>
                 )}

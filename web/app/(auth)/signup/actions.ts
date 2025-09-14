@@ -36,7 +36,7 @@ export async function signUp(formData: any, isCloudProd: boolean = false) {
                     display_name: validatedData.username,
                 },
                 ...(isCloudProd && {
-                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/`,
+                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/onboarding`,
                 }),
             },
         })

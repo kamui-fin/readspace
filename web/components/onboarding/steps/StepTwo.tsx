@@ -73,20 +73,23 @@ const StepTwo: React.FC = () => {
     if (isLoading) {
         return (
             <OnboardingLayout
-                title="Finding feeds for you..."
-                subtitle="Based on your interests, we're finding the best feeds"
+                title="Curating your newsfeed..."
+                subtitle="Finding quality sources that match your interests"
             >
                 <div className="space-y-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="p-3 border border-border rounded-lg animate-pulse">
-                            <div className="flex gap-3">
-                                <div className="w-8 h-8 bg-muted rounded"></div>
+                    {Array.from({ length: 3 }).map((_, i) => (
+                        <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse">
+                            <div className="flex items-start gap-4">
+                                <div className="w-12 h-12 bg-muted rounded-xl"></div>
                                 <div className="flex-1">
-                                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                                    <div className="h-3 bg-muted/70 rounded w-1/2 mb-1"></div>
-                                    <div className="h-3 bg-muted/50 rounded w-full"></div>
+                                    <div className="flex items-start justify-between gap-3 mb-2">
+                                        <div className="h-5 bg-muted rounded w-3/4"></div>
+                                        <div className="w-16 h-8 bg-muted rounded"></div>
+                                    </div>
+                                    <div className="h-3 bg-muted/70 rounded w-1/2 mb-2"></div>
+                                    <div className="h-4 bg-muted/70 rounded w-full"></div>
+                                    <div className="h-4 bg-muted/70 rounded w-2/3 mt-1"></div>
                                 </div>
-                                <div className="w-16 h-7 bg-muted rounded"></div>
                             </div>
                         </div>
                     ))}
@@ -98,12 +101,12 @@ const StepTwo: React.FC = () => {
     if (error || !feedsData?.length) {
         return (
             <OnboardingLayout
-                title="Something went wrong"
-                subtitle="We couldn't find feeds for your interests. Let's try again."
+                title="Having trouble finding sources"
+                subtitle="We couldn't load publications for your selected topics. Let's try again."
             >
                 <div className="text-center py-8">
                     <p className="text-gray-600 mb-4">
-                        We couldn't load feeds for your selected categories.
+                        We couldn't load publications for your selected topics.
                     </p>
                     <div className="flex gap-3">
                         <Button onClick={handleBack} variant="outline" className="flex-1">
@@ -123,10 +126,10 @@ const StepTwo: React.FC = () => {
 
     return (
         <OnboardingLayout
-            title="Follow your first feeds"
-            subtitle="Pick at least 3 feeds to get started with fresh content"
+            title="Add sources to your newsfeed"
+            subtitle="Choose at least 3 publications to start building your reading list"
         >
-            <div className="space-y-3 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
                 {feedsData.map((feed: any, index: number) => (
                     <motion.div
                         key={feed.id}
@@ -152,7 +155,7 @@ const StepTwo: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center text-sm text-gray-600 mt-4"
                 >
-                    {followedFeeds.length} feed{followedFeeds.length === 1 ? '' : 's'} followed
+                    {followedFeeds.length} source{followedFeeds.length === 1 ? '' : 's'} added
                     {followedFeeds.length < 3 && ` • ${3 - followedFeeds.length} more to go`}
                 </motion.div>
             )}
@@ -170,7 +173,7 @@ const StepTwo: React.FC = () => {
                     disabled={!canComplete}
                     className="w-2/3 bg-primary hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {canComplete ? "Let's Read!" : `Follow ${3 - followedFeeds.length} More`}
+                    {canComplete ? "Start Reading!" : `Add ${3 - followedFeeds.length} More`}
                 </Button>
             </div>
         </OnboardingLayout>
