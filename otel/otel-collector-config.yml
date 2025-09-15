@@ -1,0 +1,48 @@
+# Receivers configuration - defines how the collector receives telemetry data
+receivers:
+  # OpenTelemetry Protocol (OTLP) receiver configuration
+  otlp:
+    protocols:
+      # gRPC endpoint for receiving OTLP data
+      grpc:
+        endpoint: "0.0.0.0:4317"
+      # HTTP endpoint for receiving OTLP data  
+      http:
+        endpoint: "0.0.0.0:4318"
+
+# Processors configuration - defines how telemetry data is processed
+processors:
+  # Batch processor aggregates data before exporting
+  batch:
+    timeout: 1s # Maximum time to wait before sending a batch
+    send_batch_size: 1024 # Maximum number of spans to include in a batch
+
+# Exporters configuration - defines where telemetry data is sent
+exporters:
+  # Add OTLP exporter for Tempo
+  otlp:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
+  # Debug exporter for troubleshooting
+  debug:
+    verbosity: detailed # Maximum verbosity level for debugging
+
+# Extensions configuration - additional collector functionality
+extensions:
+  health_check: # Enables health checking endpoint
+  pprof: # Enables profiling endpoint
+    endpoint: :1888
+  zpages: # Enables diagnostic pages
+    endpoint: :55679
+
+# Service configuration - ties together all the components
+service:
+  extensions: [pprof, zpages, health_check] # Enable all configured extensions
+  pipelines:
+    # Traces pipeline configuration
+    traces:
+      receivers: [otlp] # Use OTLP receiver
+      processors: [batch] # Process with batch processor
+      exporters: [otlp, debug] # Export to Tempo and debug

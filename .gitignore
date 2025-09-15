@@ -7,3 +7,8 @@ supabase/volumes/db/data
 CLAUDE.md
 GEMINI.md
 supabase/volumes/storage/stub
+otel/loki-data/*
+otel/loki-wal/*
+otel/prometheus-data/*
+otel/tempo-data/*
+

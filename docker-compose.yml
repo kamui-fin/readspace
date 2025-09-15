@@ -58,6 +58,9 @@ services:
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-api
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=readspace-api,service.version=1.0.0
 
   worker:
     build:
@@ -83,7 +86,12 @@ services:
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
+      - SERVICE_NAME=readspace-worker
+      - LOKI_URL=http://loki:3100
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-worker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=readspace-worker,service.version=1.0.0
 
   beat:
     build:
@@ -110,6 +118,9 @@ services:
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+      - OTEL_SERVICE_NAME=readspace-beat
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_RESOURCE_ATTRIBUTES=service.name=readspace-beat,service.version=1.0.0
 
 volumes:
     redis-data:

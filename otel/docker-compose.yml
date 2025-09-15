@@ -1,18 +1,102 @@
 services:
   loki:
     image: grafana/loki
-    command: ['-config.file=/etc/loki/loki-config.yaml']
-    ports: ["3100:3100"]
+    user: root
+    command:
+      - "-config.file=/etc/loki/loki-config.yaml"
+    ports:
+      - "3100:3100"
     volumes:
-      - loki-data:/loki                      # ← match config
-      - ./otel/loki-config.yaml:/etc/loki/loki-config.yaml
-    networks: [monitoring]
+      - "./loki-data:/data"
+      - "./loki-wal:/wal"
+      - "./loki-config.yaml:/etc/loki/loki-config.yaml"
+
+  prometheus:
+    image: prom/prometheus:latest
+    user: root
+    ports:
+      - "9090:9090"
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./prometheus-data:/prometheus/data"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus/data"
 
   tempo:
     image: grafana/tempo:latest
-    ports: ["3200:3200", "4317:4317", "4318:4318"]
+    user: root
+    ports:
+      - "3200:3200" # Tempo HTTP UI/API
     volumes:
-      - tempo-data:/tmp/tempo                # ← persist traces + wal + index
-      - ./otel/tempo.yaml:/etc/tempo.yaml
+      - "./tempo.yaml:/etc/tempo.yaml"
+      - "./tempo-data:/tmp/tempo"
     command: ["-config.file=/etc/tempo.yaml"]
-    networks: [monitoring]
+
+  otel-collector:
+    container_name: otel-collector
+    image: otel/opentelemetry-collector:latest
+    restart: always
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317" # OTLP gRPC receiver
+      - "4318:4318" # OTLP HTTP receiver
+      - "8888:8888" # Prometheus metrics exposed by collector
+      - "8889:8889" # Prometheus exporter metrics
+      - "13133:13133" # Health check extension
+      - "55679:55679" # zPages extension
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
+  celery-exporter:
+    image: danihodovic/celery-exporter:latest
+    container_name: otel_celery_exporter
+    command: ["--broker-url=redis://redis:6379/0"]
+    ports:
+      - "9540:9808"
+    environment:
+      - CE_BROKER_URL=redis://redis:6379/0
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: otel_node_exporter
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    restart: unless-stopped
+
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: otel_redis_exporter
+    command: ["--redis.addr=redis://redis:6379"]
+    ports:
+      - "9121:9121"
+    restart: unless-stopped
+
+networks:
+  default:
+    name: readspace_shared_net
+    external: true

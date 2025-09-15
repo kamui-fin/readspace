@@ -9,6 +9,15 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = "development"
     LOG_LEVEL: str = "INFO"
 
+    # Observability Configuration
+    LOKI_URL: str = "http://loki:3100"
+    SERVICE_NAME: str = "readspace-server"  # Can be overridden via env var
+
+    # OpenTelemetry Configuration
+    OTEL_SERVICE_NAME: str = "readspace-server"
+    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
+    OTEL_RESOURCE_ATTRIBUTES: str = ""
+
     # Supabase Configuration
     SUPABASE_URL: str
     SUPABASE_JWT_SECRET: SecretStr
