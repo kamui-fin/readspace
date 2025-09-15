@@ -57,7 +57,7 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
-      - "./grafana/provisioning:/etc/grafana/provisioning"
+      - "./datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml"
     depends_on:
       - prometheus
       - loki

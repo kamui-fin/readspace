@@ -32,7 +32,7 @@ logger = structlog.get_logger(__name__)
 def setup_tracing():
     """Configure OpenTelemetry tracing"""
     settings = get_settings()
-    service_name = settings.OTEL_SERVICE_NAME
+    service_name = settings.SERVICE_NAME
     otel_endpoint = settings.OTEL_EXPORTER_OTLP_ENDPOINT
 
     if not otel_endpoint:
@@ -42,7 +42,6 @@ def setup_tracing():
     # Configure resource with service information
     resource = Resource.create({
         SERVICE_NAME: service_name,
-        SERVICE_VERSION: "1.0.0",
         "service.instance.id": f"{service_name}-{os.getpid()}",
     })
 

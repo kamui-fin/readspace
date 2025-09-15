@@ -10,7 +10,7 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
+from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -33,7 +33,6 @@ def setup_celery_tracing():
     # Configure resource with service information
     resource = Resource.create({
         SERVICE_NAME: service_name,
-        SERVICE_VERSION: "1.0.0",
         "service.instance.id": f"{service_name}-{os.getpid()}",
     })
 
