@@ -5,8 +5,7 @@ export * from './api/index'
 export * from './types/index'
 
 // Export business logic utilities
-export * from './business/index'
-
+export * from './utils/index'
 
 // Export UI utilities (styling, CSS classes)
 export * from './ui/index'

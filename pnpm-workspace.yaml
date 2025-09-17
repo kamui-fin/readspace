@@ -1,4 +1,4 @@
 packages:
   - packages/**/*
-  - "web"
-  - "extension"
+  - web
+  - extension

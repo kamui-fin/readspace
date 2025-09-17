@@ -72,7 +72,7 @@ done
 echo "🔍 Checking port availability..."
 
 # Define the ports exposed to host
-REQUIRED_PORTS=(18000 18008 18042)
+REQUIRED_PORTS=(18000 18008 18042 1200 6379)
 OCCUPIED_PORTS=()
 
 # Function to check if a port is in use

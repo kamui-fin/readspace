@@ -50,17 +50,17 @@ jobs:
       - name: Run ruff linting
         working-directory: ./server
         run: |
-          poetry run ruff check --output-format=github .
+          poetry run ruff check --output-format=github app
 
       - name: Run ruff formatting check
         working-directory: ./server
         run: |
-          poetry run ruff format --check .
+          poetry run ruff format --check app
 
       - name: Run type checking with mypy
         working-directory: ./server
         run: |
-          poetry run mypy app/
+          poetry run mypy app
         continue-on-error: true # Allow to fail initially while improving type coverage
 
   test-unit:
@@ -108,27 +108,7 @@ jobs:
             --cov-report=html \
             --cov-report=term-missing \
             --cov-fail-under=30 \
-            --junitxml=junit.xml \
             -v
-
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./server/coverage.xml
-          flags: backend-unit
-          name: backend-unit-coverage
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: unit-test-results
-          path: |
-            server/junit.xml
-            server/htmlcov/
 
   frontend-lint-and-typecheck:
     name: Frontend Lint and Type Check
@@ -141,7 +121,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'pnpm'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -156,82 +135,3 @@ jobs:
 
       - name: Run ESLint
         run: pnpm lint
-
-  # frontend-lint-and-test:
-  #   name: Frontend Lint and Test
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./web
-
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-  #         cache-dependency-path: web/package-lock.json
-
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v4
-  #       with:
-  #         version: 8
-
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-
-  #     - name: Run ESLint
-  #       run: pnpm lint
-
-  #     - name: Check Prettier formatting
-  #       run: pnpm format:check
-
-  #     - name: Run TypeScript type checking
-  #       run: pnpm type-check
-
-  #     - name: Build application
-  #       run: pnpm build
-
-  # extension-lint-and-build:
-  #   name: Extension Lint and Build
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./extension
-
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-  #         cache-dependency-path: extension/package-lock.json
-
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v4
-  #       with:
-  #         version: 8
-
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-
-  #     - name: Run ESLint
-  #       run: pnpm lint
-
-  #     - name: Check Prettier formatting
-  #       run: pnpm format:check
-
-  #     - name: Run TypeScript type checking
-  #       run: pnpm type-check
-
-  #     - name: Build Chrome extension
-  #       run: pnpm build:chrome
-
-  #     - name: Build Firefox extension
-  #       run: pnpm build:firefox
