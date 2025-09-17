@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 export interface LoaderProps {
     variant?:
@@ -414,7 +414,6 @@ export function TextShimmerLoader({
     return (
         <div
             className={cn(
-                // TODO: Replace these hex values with CSS variables for better theming support
                 "bg-[linear-gradient(to_right,#71717a_40%,#18181b_60%,#71717a_80%)]",
                 "bg-[200%_auto] bg-clip-text font-medium text-transparent",
                 "animate-[shimmer_4s_infinite_linear]",

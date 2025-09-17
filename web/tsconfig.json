@@ -19,7 +19,9 @@
             }
         ],
         "paths": {
-            "@/*": ["./*"]
+            "@/*": ["./*"],
+            "@readspace/shared": ["../packages/shared/src"],
+            "@readspace/shared/*": ["../packages/shared/src/*"]
         }
     },
     "include": [

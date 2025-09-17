@@ -9,7 +9,7 @@ import { Settings } from './components/Settings'
 import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
 import { Settings as SettingsIcon, ExternalLink, AlertTriangle } from 'lucide-react'
-import { SaveOptions, PageMetadata } from './types'
+import type { SaveOptions, PageMetadata } from '@readspace/shared'
 import { browser } from '@/lib/browser'
 
 function Popup() {

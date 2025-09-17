@@ -10,11 +10,9 @@ const GeneralPopover = () => {
     const bookType = useReaderStore((state) => state.bookType)
     const [showHighlightButton, setShowHighlightButton] = useState(true)
 
-    let getCurrentSelection = undefined
-
-    if (bookType === "PDF") {
-        getCurrentSelection = usePdfHighlighterContext().getCurrentSelection
-    }
+    const pdfContext = usePdfHighlighterContext()
+    const getCurrentSelection =
+        bookType === "PDF" ? pdfContext.getCurrentSelection : undefined
 
     useEffect(() => {
         if (getCurrentSelection) {

@@ -1,6 +1,12 @@
 import { Json } from "@/database.types"
-import { ApiClient } from "@/lib/api/client"
-import { useCreateHighlight, useDeleteHighlightByText } from "@/lib/api/hooks/highlights"
+import { ApiClient } from "@readspace/shared"
+import {
+    useCreateHighlight,
+    useDeleteHighlightByText,
+    SerializedRange,
+    serializeRangeToJson,
+    HighlightCreateRequest,
+} from "@readspace/shared"
 import {
     deserializeRange,
     serializeRange,
@@ -117,7 +123,10 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
         )
 
         // Ensure color is properly formatted for the highlight object
-        const normalizedColor = color.toUpperCase() as "YELLOW" | "GREEN" | "BLUE"
+        const normalizedColor = color.toUpperCase() as
+            | "YELLOW"
+            | "GREEN"
+            | "BLUE"
 
         const newHighlightForClientState = {
             id: crypto.randomUUID(), // Generate a temporary ID for client state
@@ -137,7 +146,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             chapter_href: section.href,
             chapter_idx: chapterIdx,
             chapter_title: chapterTitle?.label.trim(),
-            html_range: serialized as unknown as Json,
+            html_range: serializeRangeToJson(serialized),
             pdf_rect_position: null,
         } as unknown as EpubHighlight
         const highlightForStore = {
@@ -159,7 +168,7 @@ export default function useHighlight(savedHighlights: EpubHighlight[]) {
             original_text: selectionText,
             color: normalizedColor, // Use normalized color
             note: null,
-            html_range: serialized as unknown as Json,
+            html_range: serializeRangeToJson(serialized),
             chapter_idx: chapterIdx,
             chapter_href: section.href,
             chapter_title: chapterTitle?.label.trim() || null, // Convert undefined to null

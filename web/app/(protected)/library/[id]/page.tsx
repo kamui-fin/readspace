@@ -1,25 +1,22 @@
 import { PDFViewer } from "@/components/reader/pdf-reader"
 import EPUBReader from "@/components/reader/reader"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ServerApiClient } from "@/lib/api/server"
-import { BOOK_QUERY_KEYS } from "@/lib/query-keys"
+import { ApiClient } from "@readspace/shared"
+import { BOOK_QUERY_KEYS } from "@readspace/shared"
 import { createClient } from "@/lib/supabase/server"
-import { UserBookLibrary } from "@/types/api"
 import {
     BookViewProps,
-    EpubHighlight,
-    EpubLocation,
-    PdfHighlight,
-} from "@/types/library"
+    isEpubProgress,
+    SerializedRange,
+    isSerializedRange,
+} from "@readspace/shared"
+import { EpubHighlight, EpubLocation, PdfHighlight } from "@/types/library"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { Tables } from "@/database.types"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
-export const dynamic = 'force-dynamic'
-
-type Highlight = Tables<"highlights">
+export const dynamic = "force-dynamic"
 
 interface PageProps {
     params: Promise<{
@@ -49,7 +46,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const resolvedParams = await params
     try {
-        const libraryBook = await ServerApiClient.getBook(resolvedParams.id)
+        const libraryBook = await ApiClient.books.getBook(resolvedParams.id)
         const bookMetaData = libraryBook?.book_metadata
 
         if (!bookMetaData) {
@@ -65,7 +62,7 @@ export async function generateMetadata({
                 bookMetaData.description ||
                 `Reading ${bookMetaData.title} by ${bookMetaData.author || "Unknown Author"}`,
         }
-    } catch (error) {
+    } catch {
         return {
             title: "Book Not Found | Readspace",
             description: "The requested book could not be found",
@@ -90,11 +87,12 @@ export default async function BookReaderPage({ params }: PageProps) {
     const [libraryBook, fetchedHighlights] = await Promise.all([
         queryClient.fetchQuery({
             queryKey: [BOOK_QUERY_KEYS.BOOK, resolvedParams.id],
-            queryFn: () => ServerApiClient.getBook(resolvedParams.id),
+            queryFn: () => ApiClient.books.getBook(resolvedParams.id),
         }),
         queryClient.fetchQuery({
             queryKey: [BOOK_QUERY_KEYS.HIGHLIGHTS, resolvedParams.id],
-            queryFn: () => ServerApiClient.getBookHighlights(resolvedParams.id),
+            queryFn: () =>
+                ApiClient.highlights.getBookHighlights(resolvedParams.id),
         }),
     ])
 
@@ -102,18 +100,36 @@ export default async function BookReaderPage({ params }: PageProps) {
         return <BookNotFound />
     }
 
+    // Convert epub_progress from JSON to typed format
+    const epubProgress =
+        libraryBook.epub_progress && isEpubProgress(libraryBook.epub_progress)
+            ? libraryBook.epub_progress
+            : null
+
+    // Convert EpubProgress to EpubLocation for the reader component
+    const epubLocation: EpubLocation | null = epubProgress
+        ? {
+              globalProgress: epubProgress.globalProgress,
+              loc: epubProgress.loc,
+          }
+        : null
+
     const bookViewProps: BookViewProps = {
         ...libraryBook.book_metadata,
         library_id: libraryBook.id,
         pdf_current_page: libraryBook.pdf_current_page,
-        epub_progress: libraryBook.epub_progress
-            ? (libraryBook.epub_progress as unknown as EpubLocation)
-            : null,
+        epub_progress: epubProgress,
     }
+
+    // Create props for reader components that expect EpubLocation and local BookViewProps type
+    const readerBookProps = {
+        ...bookViewProps,
+        epub_progress: epubLocation,
+    } as import("@/types/library").BookViewProps
 
     const isPdf = bookViewProps.format === "PDF"
 
-    let highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map(
+    const highlights: (EpubHighlight | PdfHighlight)[] = fetchedHighlights.map(
         (h): EpubHighlight | PdfHighlight => {
             if (isPdf) {
                 return {
@@ -135,7 +151,15 @@ export default async function BookReaderPage({ params }: PageProps) {
                     original_text: h.original_text,
                     color: h.color || undefined,
                     note: h.note || undefined,
-                    range: h.html_range as unknown as EpubHighlight["range"],
+                    range:
+                        h.html_range && isSerializedRange(h.html_range)
+                            ? (h.html_range as SerializedRange)
+                            : {
+                                  startContainerPath: [],
+                                  startOffset: 0,
+                                  endContainerPath: [],
+                                  endOffset: 0,
+                              },
                     chapter: {
                         idx: h.chapter_idx || 0,
                         href: h.chapter_href || "",
@@ -153,12 +177,12 @@ export default async function BookReaderPage({ params }: PageProps) {
         <HydrationBoundary state={dehydrate(queryClient)}>
             {isPdf ? (
                 <PDFViewer
-                    bookMeta={bookViewProps}
+                    bookMeta={readerBookProps}
                     savedHighlights={highlights as PdfHighlight[]}
                 />
             ) : (
                 <EPUBReader
-                    bookMeta={bookViewProps}
+                    bookMeta={readerBookProps}
                     savedHighlights={highlights as EpubHighlight[]}
                 />
             )}

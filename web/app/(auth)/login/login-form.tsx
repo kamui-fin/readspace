@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import toast from "react-hot-toast"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { useFormik } from "formik"
 import { useRouter } from "next/navigation"
 import * as React from "react"
@@ -45,20 +45,25 @@ export function LoginForm({
             // Provide user-friendly error messages based on error codes
             let userFriendlyMessage: string
             switch (error.message) {
-                case 'Invalid login credentials':
-                    userFriendlyMessage = 'Invalid email or password. Please check your credentials and try again.'
+                case "Invalid login credentials":
+                    userFriendlyMessage =
+                        "Invalid email or password. Please check your credentials and try again."
                     break
-                case 'Email not confirmed':
-                    userFriendlyMessage = 'Please check your email and click the verification link before signing in.'
+                case "Email not confirmed":
+                    userFriendlyMessage =
+                        "Please check your email and click the verification link before signing in."
                     break
-                case 'Too many requests':
-                    userFriendlyMessage = 'Too many login attempts. Please wait a few minutes before trying again.'
+                case "Too many requests":
+                    userFriendlyMessage =
+                        "Too many login attempts. Please wait a few minutes before trying again."
                     break
-                case 'User not found':
-                    userFriendlyMessage = 'No account found with this email address. Please sign up first.'
+                case "User not found":
+                    userFriendlyMessage =
+                        "No account found with this email address. Please sign up first."
                     break
                 default:
-                    userFriendlyMessage = error.message || 'Login failed. Please try again.'
+                    userFriendlyMessage =
+                        error.message || "Login failed. Please try again."
             }
 
             toast.error(userFriendlyMessage)
@@ -72,7 +77,7 @@ export function LoginForm({
 
     const handleGoogleSignIn = async () => {
         try {
-            const { error, data } = await supabase.auth.signInWithOAuth({
+            const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
                 options: {
                     redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/articles`,
@@ -81,13 +86,20 @@ export function LoginForm({
 
             if (error) throw error
         } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : "Failed to login with Google. Please try again."
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to login with Google. Please try again."
 
             // Provide specific error messages for Google OAuth
-            if (errorMessage.includes('popup_closed_by_user')) {
-                toast.error("Login cancelled. Please try again if you want to sign in with Google.")
-            } else if (errorMessage.includes('access_denied')) {
-                toast.error("Access denied. Please grant permission to continue with Google login.")
+            if (errorMessage.includes("popup_closed_by_user")) {
+                toast.error(
+                    "Login cancelled. Please try again if you want to sign in with Google."
+                )
+            } else if (errorMessage.includes("access_denied")) {
+                toast.error(
+                    "Access denied. Please grant permission to continue with Google login."
+                )
             } else {
                 toast.error(errorMessage)
             }
@@ -106,9 +118,10 @@ export function LoginForm({
                 await signInAction(values)
             } catch (error: unknown) {
                 // Handle any unexpected errors not caught by signInAction
-                const errorMessage = error instanceof Error
-                    ? error.message
-                    : "An unexpected error occurred. Please try again."
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : "An unexpected error occurred. Please try again."
 
                 toast.error(errorMessage)
                 console.error("Unexpected login error:", error)
@@ -169,16 +182,18 @@ export function LoginForm({
                                         value={formik.values.email}
                                         required
                                         className={cn(
-                                            formik.touched.email && formik.errors.email
+                                            formik.touched.email &&
+                                                formik.errors.email
                                                 ? "border-red-500 focus-visible:ring-red-500"
                                                 : ""
                                         )}
                                     />
-                                    {formik.touched.email && formik.errors.email && (
-                                        <p className="text-sm text-red-500">
-                                            {formik.errors.email}
-                                        </p>
-                                    )}
+                                    {formik.touched.email &&
+                                        formik.errors.email && (
+                                            <p className="text-sm text-red-500">
+                                                {formik.errors.email}
+                                            </p>
+                                        )}
                                 </div>
                                 <div className="grid gap-2">
                                     <div className="flex items-center">

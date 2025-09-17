@@ -2,15 +2,21 @@
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
+import {
+    feedDiscoveryResultToFeed,
+    type FeedDiscoveryResult,
+} from "@readspace/shared"
 
 interface DiscoverResultsClientProps {
     searchData: {
-        results: any[]
+        results: FeedDiscoveryResult[]
         total_count: number
     }
 }
 
-export function DiscoverResultsClient({ searchData }: DiscoverResultsClientProps) {
+export function DiscoverResultsClient({
+    searchData,
+}: DiscoverResultsClientProps) {
     return (
         <div>
             {/* Results Count */}
@@ -21,15 +27,24 @@ export function DiscoverResultsClient({ searchData }: DiscoverResultsClientProps
             </div>
 
             <div className="space-y-4">
-                {searchData.results.map((feed: any) => (
-                    <div key={feed.id}>
-                        {feed.is_preview ? (
-                            <FeedPreviewCard feed={feed} />
-                        ) : (
-                            <FeedCard feed={feed} />
-                        )}
-                    </div>
-                ))}
+                {searchData.results.map((discoveryResult) => {
+                    const feed = feedDiscoveryResultToFeed(discoveryResult)
+                    return (
+                        <div key={feed.id}>
+                            {feed.is_preview && feed.preview_url ? (
+                                <FeedPreviewCard
+                                    feed={{
+                                        ...feed,
+                                        is_preview: true,
+                                        preview_url: feed.preview_url,
+                                    }}
+                                />
+                            ) : (
+                                <FeedCard feed={feed} />
+                            )}
+                        </div>
+                    )
+                })}
             </div>
         </div>
     )

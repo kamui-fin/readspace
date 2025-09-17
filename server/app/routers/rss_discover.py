@@ -1,5 +1,7 @@
 """RSS Feed Discovery Router for search and browsing functionality."""
 
+from typing import Any
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,16 +25,16 @@ async def search_feeds(
     q: str | None = Query(None, description="Search query text", max_length=500),
     category: str | None = Query(None, description="Feed category to filter by", max_length=100),
     language: str = Query("en", description="Language code for filtering", max_length=10),
-    limit: int = Query(40, ge=1, le=100, description="Maximum number of results")
-):
+    limit: int = Query(40, ge=1, le=100, description="Maximum number of results"),
+) -> DiscoverSearchResponse:
     """
     Search for RSS feeds using hybrid search or browse by category.
-    
+
     - **q**: Search query text (optional)
-    - **category**: Category to filter by (optional) 
+    - **category**: Category to filter by (optional)
     - **language**: Language code for filtering (defaults to 'en')
     - **limit**: Maximum results to return (1-20)
-    
+
     If no query is provided but category is specified, returns top feeds for that category.
     If neither query nor category is provided, returns popular feeds across all categories.
     """
@@ -40,12 +42,7 @@ async def search_feeds(
         search_service = RssSearchService(db)
 
         # Perform search
-        results = await search_service.search_feeds(
-            query=q,
-            category=category,
-            language=language,
-            limit=limit
-        )
+        results = await search_service.search_feeds(query=q, category=category, language=language, limit=limit)
 
         # Convert to response schema
         feed_results = []
@@ -64,7 +61,7 @@ async def search_feeds(
                 relevance=result["relevance"],
                 search_metadata=result.get("search_metadata"),
                 is_preview=result.get("is_preview", False),
-                preview_url=result.get("preview_url")
+                preview_url=result.get("preview_url"),
             )
             feed_results.append(feed_result)
 
@@ -73,7 +70,7 @@ async def search_feeds(
             total_count=len(feed_results),
             query=q,
             category=category,
-            language=language
+            language=language,
         )
 
         logger.info(
@@ -81,7 +78,7 @@ async def search_feeds(
             query=q,
             category=category,
             language=language,
-            results_count=len(feed_results)
+            results_count=len(feed_results),
         )
 
         return response
@@ -90,21 +87,21 @@ async def search_feeds(
         logger.error("Error in feed discovery search", query=q, category=category, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while searching for feeds"
-        )
+            detail="An error occurred while searching for feeds",
+        ) from e
 
 
 @router.get("/categories", response_model=DiscoverCategoriesResponse)
 async def get_categories(
     *,
     db: AsyncSession = Depends(get_db),
-    language: str = Query("en", description="Language code for filtering", max_length=10)
-):
+    language: str = Query("en", description="Language code for filtering", max_length=10),
+) -> DiscoverCategoriesResponse:
     """
     Get all available RSS feed categories with counts for the discovery grid.
-    
+
     - **language**: Language code for filtering (defaults to 'en')
-    
+
     Returns categories sorted by feed count descending.
     """
     try:
@@ -112,15 +109,12 @@ async def get_categories(
 
         categories = await search_service.get_categories_with_counts(language=language)
 
-        response = DiscoverCategoriesResponse(
-            categories=categories,
-            language=language
-        )
+        response = DiscoverCategoriesResponse(categories=categories, language=language)
 
         logger.info(
             "Categories retrieved for discovery",
             language=language,
-            categories_count=len(categories)
+            categories_count=len(categories),
         )
 
         return response
@@ -129,8 +123,8 @@ async def get_categories(
         logger.error("Error getting discovery categories", language=language, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while fetching categories"
-        )
+            detail="An error occurred while fetching categories",
+        ) from e
 
 
 @router.get("/categories/{category_name}", response_model=DiscoverSearchResponse)
@@ -139,25 +133,20 @@ async def get_category_feeds(
     db: AsyncSession = Depends(get_db),
     category_name: str,
     language: str = Query("en", description="Language code for filtering", max_length=10),
-    limit: int = Query(20, ge=1, le=20, description="Maximum number of results")
-):
+    limit: int = Query(20, ge=1, le=20, description="Maximum number of results"),
+) -> DiscoverSearchResponse:
     """
     Get top feeds for a specific category.
-    
+
     - **category_name**: The category name to browse
-    - **language**: Language code for filtering (defaults to 'en')  
+    - **language**: Language code for filtering (defaults to 'en')
     - **limit**: Maximum results to return (1-20)
     """
     try:
         search_service = RssSearchService(db)
 
         # Use the category search functionality
-        results = await search_service.search_feeds(
-            query=None,
-            category=category_name,
-            language=language,
-            limit=limit
-        )
+        results = await search_service.search_feeds(query=None, category=category_name, language=language, limit=limit)
 
         # Convert to response schema
         feed_results = []
@@ -176,7 +165,7 @@ async def get_category_feeds(
                 relevance=result["relevance"],
                 search_metadata=result.get("search_metadata"),
                 is_preview=result.get("is_preview", False),
-                preview_url=result.get("preview_url")
+                preview_url=result.get("preview_url"),
             )
             feed_results.append(feed_result)
 
@@ -188,14 +177,14 @@ async def get_category_feeds(
             total_count=len(feed_results),
             query=None,
             category=category_name,
-            language=language
+            language=language,
         )
 
         logger.info(
             "Category feeds retrieved",
             category=category_name,
             language=language,
-            results_count=len(feed_results)
+            results_count=len(feed_results),
         )
 
         return response
@@ -205,12 +194,12 @@ async def get_category_feeds(
             "Error getting category feeds",
             category=category_name,
             language=language,
-            error=str(e)
+            error=str(e),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred while fetching feeds for category: {category_name}"
-        )
+            detail=f"An error occurred while fetching feeds for category: {category_name}",
+        ) from e
 
 
 @router.get("/preview/articles")
@@ -218,8 +207,8 @@ async def get_preview_articles(
     *,
     db: AsyncSession = Depends(get_db),
     url: str = Query(..., description="RSS feed URL to preview"),
-    limit: int = Query(25, ge=1, le=100, description="Maximum number of articles to return")
-):
+    limit: int = Query(25, ge=1, le=100, description="Maximum number of articles to return"),
+) -> dict[str, Any]:
     """
     Get articles from an RSS feed URL for preview purposes.
     This endpoint fetches and parses an RSS feed directly without requiring database storage.
@@ -233,7 +222,7 @@ async def get_preview_articles(
         if not preview_result:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid RSS feed URL or feed could not be fetched"
+                detail="Invalid RSS feed URL or feed could not be fetched",
             )
 
         # Import here to avoid circular imports
@@ -253,7 +242,7 @@ async def get_preview_articles(
         if fetch_result["status"] != 200 or not fetch_result["content"]:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Could not fetch RSS feed content"
+                detail="Could not fetch RSS feed content",
             )
 
         # Parse the feed using the transformed URL
@@ -261,7 +250,7 @@ async def get_preview_articles(
 
         # Extract articles from the parsed feed (limit to requested amount)
         articles = []
-        feed_entries = getattr(parsed_feed, 'entries', [])[:limit]
+        feed_entries = getattr(parsed_feed, "entries", [])[:limit]
 
         for i, entry in enumerate(feed_entries):
             # Create a preview article object
@@ -269,20 +258,20 @@ async def get_preview_articles(
                 "id": f"preview_article_{hash(url)}_{i}",
                 "feed_id": preview_result["id"],
                 "content_id": f"preview_content_{hash(url)}_{i}",
-                "guid": getattr(entry, 'id', getattr(entry, 'link', str(i))),
+                "guid": getattr(entry, "id", getattr(entry, "link", str(i))),
                 "created_at": "2023-01-01T00:00:00Z",
                 "updated_at": "2023-01-01T00:00:00Z",
-
                 # Content data
-                "title": getattr(entry, 'title', 'Untitled'),
-                "link": getattr(entry, 'link', None),
-                "description": getattr(entry, 'summary', getattr(entry, 'description', None)),
-                "content": getattr(entry, 'content', [{}])[0].get('value', None) if hasattr(entry, 'content') and entry.content else None,
+                "title": getattr(entry, "title", "Untitled"),
+                "link": getattr(entry, "link", None),
+                "description": getattr(entry, "summary", getattr(entry, "description", None)),
+                "content": getattr(entry, "content", [{}])[0].get("value", None)
+                if hasattr(entry, "content") and entry.content
+                else None,
                 "image_url": None,  # Could extract from content if needed
-                "author": getattr(entry, 'author', None),
-                "published_at": getattr(entry, 'published_parsed', None),
+                "author": getattr(entry, "author", None),
+                "published_at": getattr(entry, "published_parsed", None),
                 "estimated_read_time_minutes": None,
-
                 # User state (all false for preview)
                 "is_read": False,
                 "read_at": None,
@@ -290,7 +279,6 @@ async def get_preview_articles(
                 "is_favorite": False,
                 "user_note": None,
                 "user_tags": None,
-
                 # Feed info
                 "feed_title": preview_result["title"],
                 "custom_feed_title": None,
@@ -303,8 +291,11 @@ async def get_preview_articles(
                 try:
                     import time
                     from datetime import datetime
-                    article["published_at"] = datetime.fromtimestamp(time.mktime(article["published_at"])).isoformat() + "Z"
-                except:
+
+                    article["published_at"] = (
+                        datetime.fromtimestamp(time.mktime(article["published_at"])).isoformat() + "Z"
+                    )
+                except Exception:  # noqa: E722
                     article["published_at"] = None
 
             articles.append(article)
@@ -315,13 +306,13 @@ async def get_preview_articles(
             "total": len(articles),
             "page": 1,
             "size": limit,
-            "pages": 1
+            "pages": 1,
         }
 
         logger.info(
             "Preview articles fetched successfully",
             url=url,
-            articles_count=len(articles)
+            articles_count=len(articles),
         )
 
         return response
@@ -332,5 +323,5 @@ async def get_preview_articles(
         logger.error("Error fetching preview articles", url=url, error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while fetching preview articles"
-        )
+            detail="An error occurred while fetching preview articles",
+        ) from e

@@ -15,7 +15,7 @@ logger = structlog.get_logger(__name__)
 class ArticleBusinessLogic:
     """Isolated article business logic that doesn't depend on database"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         pass
 
     def detect_duplicate_articles(
@@ -114,14 +114,10 @@ class ArticleBusinessLogic:
                 validated_data.get("description"),
             ]
         ):
-            raise ValidationError(
-                "Article must have at least title, content, or description"
-            )
+            raise ValidationError("Article must have at least title, content, or description")
 
         # Ensure published_at is timezone-aware if provided
-        if validated_data.get("published_at") and isinstance(
-            validated_data["published_at"], datetime
-        ):
+        if validated_data.get("published_at") and isinstance(validated_data["published_at"], datetime):
             pub_date = validated_data["published_at"]
             if pub_date.tzinfo is None:
                 validated_data["published_at"] = pub_date.replace(tzinfo=timezone.utc)
@@ -197,7 +193,7 @@ class ArticleBusinessLogic:
 
     def group_articles_by_feed(self, articles: list[dict]) -> dict[UUID, list[dict]]:
         """Group articles by feed_id"""
-        grouped = {}
+        grouped: dict[UUID, list[dict]] = {}
         for article in articles:
             feed_id = article.get("feed_id")
             if feed_id:
@@ -254,9 +250,7 @@ class ArticleBusinessLogic:
 
         return filtered
 
-    def sort_articles_by_priority(
-        self, articles: list[dict], reverse: bool = True
-    ) -> list[dict]:
+    def sort_articles_by_priority(self, articles: list[dict], reverse: bool = True) -> list[dict]:
         """Sort articles by their calculated priority score"""
         return sorted(
             articles,
@@ -264,9 +258,7 @@ class ArticleBusinessLogic:
             reverse=reverse,
         )
 
-    def extract_article_keywords(
-        self, article_data: dict, max_keywords: int = 10
-    ) -> list[str]:
+    def extract_article_keywords(self, article_data: dict, max_keywords: int = 10) -> list[str]:
         """Extract potential keywords from article title and description"""
         import re
 
@@ -332,11 +324,7 @@ class ArticleBusinessLogic:
         for word in words:
             # Clean word (remove punctuation)
             clean_word = re.sub(r"[^\w]", "", word)
-            if (
-                len(clean_word) >= 3
-                and clean_word not in stop_words
-                and clean_word not in keywords
-            ):
+            if len(clean_word) >= 3 and clean_word not in stop_words and clean_word not in keywords:
                 keywords.append(clean_word)
 
             if len(keywords) >= max_keywords:

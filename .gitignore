@@ -1,10 +1,11 @@
 .cursor/
+node_modules
 .vscode/
 .env
 .env.local
 .env.prod
 supabase/volumes/db/data
-CLAUDE.md
-GEMINI.md
 supabase/volumes/storage/stub
-otel
+.playwright-mcp/
+dist
+.enk

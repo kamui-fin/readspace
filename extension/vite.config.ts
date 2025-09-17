@@ -36,6 +36,13 @@ export default defineConfig(({ mode }) => {
         input: {
           popup: resolve(__dirname, 'index.html'),
         },
+        external: [
+          '@tailwindcss/typography',
+          'tailwindcss-animate',
+          'tailwindcss',
+          '@tailwindcss/forms',
+          'tailwindcss/plugin'
+        ],
         output: {
           manualChunks: undefined, // Disable code splitting for service worker
         }

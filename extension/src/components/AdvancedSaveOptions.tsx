@@ -4,10 +4,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
-import { PageMetadata, SaveOptions, Priority } from '@/types'
-import { useExtensionStore } from '@/store'
-import { ArrowLeft, Save, X } from 'lucide-react'
+import { PageMetadata, SaveOptions, Priority } from '@readspace/shared'
+import { ArrowLeft, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface AdvancedSaveOptionsProps {

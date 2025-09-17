@@ -1,11 +1,12 @@
 """Unit tests for resource limits functionality."""
 
-import pytest
-from uuid import uuid4
 from unittest.mock import AsyncMock, MagicMock
+from uuid import uuid4
+
+import pytest
 
 from app.core.resource_limits import RESOURCE_LIMITS
-from app.services.resource_limit_service import ResourceLimitService, ResourceLimitError
+from app.services.resource_limit_service import ResourceLimitError, ResourceLimitService
 
 
 @pytest.fixture
@@ -46,15 +47,14 @@ class TestResourceLimitService:
         expected = RESOURCE_LIMITS["basic"]
         assert limits == expected
 
-
     @pytest.mark.asyncio
     async def test_check_limit_admin_unlimited(self, service, mock_db):
         """Test limit check for admin user (should always pass)."""
         user_id = uuid4()
-        
+
         result = await service.check_limit(user_id, "max_subscriptions", "admin")
         assert result is True
-        
+
         # Database should not be queried for admin users
         mock_db.execute.assert_not_called()
 
@@ -62,12 +62,12 @@ class TestResourceLimitService:
     async def test_check_limit_basic_within_limit(self, service, mock_db):
         """Test limit check for basic user within limits."""
         user_id = uuid4()
-        
+
         # Mock database to return current usage count of 5
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = 5
         mock_db.execute.return_value = mock_result
-        
+
         result = await service.check_limit(user_id, "max_books", "basic")
         assert result is True  # 5 < 10 (limit)
 
@@ -75,12 +75,12 @@ class TestResourceLimitService:
     async def test_check_limit_basic_at_limit(self, service, mock_db):
         """Test limit check for basic user at limit."""
         user_id = uuid4()
-        
+
         # Mock database to return current usage count of 10
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = 10
         mock_db.execute.return_value = mock_result
-        
+
         result = await service.check_limit(user_id, "max_books", "basic")
         assert result is False  # 10 >= 10 (limit)
 
@@ -88,12 +88,12 @@ class TestResourceLimitService:
     async def test_get_current_usage_subscriptions(self, service, mock_db):
         """Test getting current usage count for subscriptions."""
         user_id = uuid4()
-        
+
         # Mock database to return usage count of 25
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = 25
         mock_db.execute.return_value = mock_result
-        
+
         usage = await service.get_current_usage(user_id, "max_subscriptions")
         assert usage == 25
 
@@ -101,12 +101,12 @@ class TestResourceLimitService:
     async def test_get_current_usage_books(self, service, mock_db):
         """Test getting current usage count for books."""
         user_id = uuid4()
-        
+
         # Mock database to return usage count of 3
         mock_result = MagicMock()
         mock_result.scalar_one.return_value = 3
         mock_db.execute.return_value = mock_result
-        
+
         usage = await service.get_current_usage(user_id, "max_books")
         assert usage == 3
 
@@ -114,7 +114,7 @@ class TestResourceLimitService:
     async def test_get_current_usage_unknown_resource(self, service, mock_db):
         """Test getting current usage count for unknown resource returns 0."""
         user_id = uuid4()
-        
+
         usage = await service.get_current_usage(user_id, "unknown_resource")
         assert usage == 0
         mock_db.execute.assert_not_called()

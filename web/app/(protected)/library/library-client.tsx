@@ -4,8 +4,8 @@ import { LibraryCatalog } from "@/components/library/library-catalog"
 import FloatingUploadButton from "@/components/library/floating-upload-button"
 import UploadBookDialog from "@/components/library/upload-book"
 import Header from "@/components/navigation/header"
-import { useBooks } from "@/lib/api/hooks/books"
-import { UserBookLibrary } from "@/types/api"
+import { useBooks } from "@readspace/shared"
+import { UserBookLibrary } from "@readspace/shared"
 import {
     BookCardSkeleton,
     BookCardListSkeleton,
@@ -32,7 +32,7 @@ interface LibraryLayoutProps {
 
 function LibraryLayout({ children }: LibraryLayoutProps) {
     const isMobile = useIsMobile()
-    
+
     return (
         <div className="flex flex-col h-full">
             <Header
@@ -44,9 +44,7 @@ function LibraryLayout({ children }: LibraryLayoutProps) {
                     <h1 className="text-3xl font-bold">Your Bookshelf</h1>
                     {!isMobile && <UploadBookDialog />}
                 </div>
-                <div className="overflow-y-auto h-full">
-                    {children}
-                </div>
+                <div className="overflow-y-auto h-full">{children}</div>
             </main>
             <FloatingUploadButton />
         </div>

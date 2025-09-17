@@ -9,18 +9,16 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { ApiClient } from "@/lib/api/client"
-import { RSS_QUERY_KEYS } from "@/lib/query-keys"
+import { ApiClient } from "@readspace/shared"
+import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     CheckCircle,
-    AlertCircle,
     Clock,
     FileText,
     Activity,
     XCircle,
     ChevronLeft,
-    Download,
     X,
 } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
@@ -82,13 +80,15 @@ export default function ImportStatusPage() {
         try {
             await ApiClient.rss.cancelImportTask(taskId)
             toast.success("Import cancelled successfully")
-            
+
             // Force refresh the task status
             const status = await ApiClient.rss.getImportTaskStatus(taskId)
             setTaskStatus(status as ImportTaskStatus)
         } catch (error) {
             console.error("Error cancelling import task:", error)
-            toast.error("Failed to cancel import. It may have already completed.")
+            toast.error(
+                "Failed to cancel import. It may have already completed."
+            )
         }
     }
 
@@ -100,7 +100,9 @@ export default function ImportStatusPage() {
 
         const pollStatus = async () => {
             try {
-                const status = await ApiClient.rss.getImportTaskStatus(taskId) as ImportTaskStatus
+                const status = (await ApiClient.rss.getImportTaskStatus(
+                    taskId
+                )) as ImportTaskStatus
                 setTaskStatus(status)
                 setError(null)
 
@@ -128,17 +130,27 @@ export default function ImportStatusPage() {
                         `Import failed: ${status.error || "Unknown error"}`
                     )
                 }
-            } catch (error: any) {
+            } catch (error: unknown) {
                 console.error("Error polling task status:", error)
-                
-                if (error?.message?.includes("404")) {
-                    setError("Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart.")
-                } else if (error?.message?.includes("403")) {
-                    setError("You don't have permission to view this import task.")
+
+                if (error instanceof Error) {
+                    if (error.message.includes("404")) {
+                        setError(
+                            "Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart."
+                        )
+                    } else if (error.message.includes("403")) {
+                        setError(
+                            "You don't have permission to view this import task."
+                        )
+                    } else {
+                        setError(
+                            "Error checking import status. Please try refreshing the page."
+                        )
+                    }
                 } else {
-                    setError("Error checking import status. Please try refreshing the page.")
+                    setError("An unknown error occurred.")
                 }
-                
+
                 // Stop polling on error
                 if (pollInterval) {
                     clearInterval(pollInterval)
@@ -155,9 +167,16 @@ export default function ImportStatusPage() {
         // Start polling interval
         pollInterval = setInterval(() => {
             // Only continue polling if we don't have an error and task is still active
-            if (!error && taskStatus?.status && !["completed", "failed"].includes(taskStatus.status)) {
+            if (
+                !error &&
+                taskStatus?.status &&
+                !["completed", "failed"].includes(taskStatus.status)
+            ) {
                 pollStatus()
-            } else if (taskStatus?.status && ["completed", "failed"].includes(taskStatus.status)) {
+            } else if (
+                taskStatus?.status &&
+                ["completed", "failed"].includes(taskStatus.status)
+            ) {
                 // Stop polling when task is done
                 if (pollInterval) {
                     clearInterval(pollInterval)
@@ -203,17 +222,24 @@ export default function ImportStatusPage() {
                         <div className="text-sm text-muted-foreground">
                             <p>This can happen if:</p>
                             <ul className="list-disc list-inside mt-2 space-y-1">
-                                <li>The import was completed or failed long ago</li>
-                                <li>The task data expired from temporary storage</li>
+                                <li>
+                                    The import was completed or failed long ago
+                                </li>
+                                <li>
+                                    The task data expired from temporary storage
+                                </li>
                                 <li>There was a system restart</li>
                             </ul>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <Button onClick={() => router.push("/import-opml")} className="flex-1">
+                            <Button
+                                onClick={() => router.push("/import-opml")}
+                                className="flex-1"
+                            >
                                 Start New Import
                             </Button>
-                            <Button 
-                                variant="outline" 
+                            <Button
+                                variant="outline"
                                 onClick={() => router.push("/feeds")}
                             >
                                 View Feeds
@@ -228,10 +254,8 @@ export default function ImportStatusPage() {
 
         const { status, progress, result, metadata } = taskStatus
 
-
         return (
             <div className="space-y-6">
-
                 {/* Progress Card (for in-progress imports) */}
                 {status === "in_progress" && progress && (
                     <Card>
@@ -240,23 +264,31 @@ export default function ImportStatusPage() {
                                 <div className="flex items-start gap-3">
                                     <Activity className="h-6 w-6 text-blue-600 animate-pulse flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">Import in Progress</CardTitle>
+                                        <CardTitle className="text-lg mb-3">
+                                            Import in Progress
+                                        </CardTitle>
                                         <div className="space-y-2">
                                             {metadata?.filename && (
                                                 <div className="flex items-center gap-2">
                                                     <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">{metadata.filename}</span>
+                                                    <span className="text-sm text-muted-foreground truncate">
+                                                        {metadata.filename}
+                                                    </span>
                                                 </div>
                                             )}
                                             <div className="text-sm text-muted-foreground">
-                                                Processing {progress.completed} of {progress.total} feeds
+                                                Processing {progress.completed}{" "}
+                                                of {progress.total} feeds
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
                                     <div className="text-xs text-muted-foreground pl-9">
-                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                        Started:{" "}
+                                        {new Date(
+                                            metadata.created_at
+                                        ).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -266,11 +298,19 @@ export default function ImportStatusPage() {
                                 <div className="flex justify-between text-sm text-muted-foreground">
                                     <span>Progress</span>
                                     <span>
-                                        {Math.round((progress.completed / progress.total) * 100)}%
+                                        {Math.round(
+                                            (progress.completed /
+                                                progress.total) *
+                                                100
+                                        )}
+                                        %
                                     </span>
                                 </div>
                                 <Progress
-                                    value={(progress.completed / progress.total) * 100}
+                                    value={
+                                        (progress.completed / progress.total) *
+                                        100
+                                    }
                                     className="h-2"
                                 />
                             </div>
@@ -329,23 +369,31 @@ export default function ImportStatusPage() {
                                 <div className="flex items-start gap-3">
                                     <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
                                     <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">Import Complete</CardTitle>
+                                        <CardTitle className="text-lg mb-3">
+                                            Import Complete
+                                        </CardTitle>
                                         <div className="space-y-2">
                                             {metadata?.filename && (
                                                 <div className="flex items-center gap-2">
                                                     <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">{metadata.filename}</span>
+                                                    <span className="text-sm text-muted-foreground truncate">
+                                                        {metadata.filename}
+                                                    </span>
                                                 </div>
                                             )}
                                             <div className="text-sm text-muted-foreground">
-                                                Your OPML file has been successfully processed.
+                                                Your OPML file has been
+                                                successfully processed.
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
                                     <div className="text-xs text-muted-foreground pl-9">
-                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                        Started:{" "}
+                                        {new Date(
+                                            metadata.created_at
+                                        ).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -365,7 +413,8 @@ export default function ImportStatusPage() {
                                 <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
                                         <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
-                                            {result.summary?.already_existed || 0}
+                                            {result.summary?.already_existed ||
+                                                0}
                                         </div>
                                         <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
                                             Already Existed
@@ -389,31 +438,38 @@ export default function ImportStatusPage() {
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => setShowErrorDetails(!showErrorDetails)}
+                                        onClick={() =>
+                                            setShowErrorDetails(
+                                                !showErrorDetails
+                                            )
+                                        }
                                         className="text-muted-foreground hover:text-foreground"
                                     >
-                                        {showErrorDetails ? "Hide" : "Show"} failed feeds (
-                                        {result.errors.length})
+                                        {showErrorDetails ? "Hide" : "Show"}{" "}
+                                        failed feeds ({result.errors.length})
                                     </Button>
 
                                     {showErrorDetails && (
                                         <div className="mt-3 max-h-48 overflow-y-auto space-y-2">
-                                            {result.errors.map((error, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded p-3 text-sm"
-                                                >
-                                                    <div className="font-medium text-red-900 dark:text-red-300">
-                                                        {error.title || "Unknown feed"}
+                                            {result.errors.map(
+                                                (error, index) => (
+                                                    <div
+                                                        key={index}
+                                                        className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded p-3 text-sm"
+                                                    >
+                                                        <div className="font-medium text-red-900 dark:text-red-300">
+                                                            {error.title ||
+                                                                "Unknown feed"}
+                                                        </div>
+                                                        <div className="text-red-700 dark:text-red-400 text-xs mt-1 truncate">
+                                                            {error.url}
+                                                        </div>
+                                                        <div className="text-red-600 dark:text-red-400 text-xs mt-1">
+                                                            {error.error}
+                                                        </div>
                                                     </div>
-                                                    <div className="text-red-700 dark:text-red-400 text-xs mt-1 truncate">
-                                                        {error.url}
-                                                    </div>
-                                                    <div className="text-red-600 dark:text-red-400 text-xs mt-1">
-                                                        {error.error}
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                )
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -453,16 +509,27 @@ export default function ImportStatusPage() {
                                                     {metadata.filename} •
                                                 </>
                                             )}
-                                            Your OPML import is queued and will start processing shortly.
+                                            Your OPML import is queued and will
+                                            start processing shortly.
                                             {metadata?.estimated_feeds && (
-                                                <span> Estimated {metadata.estimated_feeds} feeds to process.</span>
+                                                <span>
+                                                    {" "}
+                                                    Estimated{" "}
+                                                    {
+                                                        metadata.estimated_feeds
+                                                    }{" "}
+                                                    feeds to process.
+                                                </span>
                                             )}
                                         </CardDescription>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
                                     <div className="text-xs sm:text-sm text-muted-foreground break-words">
-                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                        Started:{" "}
+                                        {new Date(
+                                            metadata.created_at
+                                        ).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -497,13 +564,17 @@ export default function ImportStatusPage() {
                                                     {metadata.filename} •
                                                 </>
                                             )}
-                                            {taskStatus.error || "The import process encountered an error."}
+                                            {taskStatus.error ||
+                                                "The import process encountered an error."}
                                         </CardDescription>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
                                     <div className="text-xs sm:text-sm text-muted-foreground break-words">
-                                        Started: {new Date(metadata.created_at).toLocaleString()}
+                                        Started:{" "}
+                                        {new Date(
+                                            metadata.created_at
+                                        ).toLocaleString()}
                                     </div>
                                 )}
                             </div>
@@ -538,7 +609,9 @@ export default function ImportStatusPage() {
                         Back to Import
                     </Button>
                 </div>
-                <h1 className="text-2xl sm:text-3xl font-bold">OPML Import Status</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">
+                    OPML Import Status
+                </h1>
                 <p className="text-muted-foreground">
                     Track the progress of your OPML import.
                 </p>
@@ -547,4 +620,4 @@ export default function ImportStatusPage() {
             {renderStatus()}
         </div>
     )
-} 
+}

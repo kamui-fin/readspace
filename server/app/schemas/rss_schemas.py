@@ -1,12 +1,14 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, Generic, TypeVar
 from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
 
+T = TypeVar("T")
+
 
 # Generic Paginated Response
-class PaginatedResponse[T](BaseModel):
+class PaginatedResponse(BaseModel, Generic[T]):
     items: list[T]
     total: int
     page: int
@@ -23,7 +25,7 @@ class FolderCreate(FolderBase):
     pass
 
 
-class FolderUpdate(FolderBase):
+class FolderUpdate(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=100)
 
 
@@ -84,11 +86,11 @@ class FeedResponse(FeedBase):
     folder_id: UUID | None = None
     unread_count: int | None = None
 
-    @field_validator('link', mode='before')
+    @field_validator("link", mode="before")
     @classmethod
-    def convert_empty_string_to_none(cls, v):
+    def convert_empty_string_to_none(cls, v: str | None) -> str | None:
         """Convert empty strings to None for URL fields."""
-        return None if v == '' else v
+        return None if v == "" else v
 
 
 # Minimal feed info for nesting in Article
@@ -234,7 +236,7 @@ class ArticleCreate(BaseModel):
     user_id: UUID
     guid: str
     title: str | None = None
-    link: AnyUrl
+    link: str
     description: str | None = None
     content: str | None = None
     author: str | None = None
@@ -263,9 +265,7 @@ class ArticleResponse(ArticleBase):
 
     # Additional metadata for API consumers
     article_type: str  # "feed" or "clipped"
-    feed: dict[str, Any] | None = (
-        None  # Nested feed info for both RSS and clipped articles
-    )
+    feed: dict[str, Any] | None = None  # Nested feed info for both RSS and clipped articles
 
 
 # Legacy schemas (kept for backward compatibility)
@@ -281,8 +281,8 @@ class OpmlOutline(BaseModel):
     text: str | None = None
     title: str | None = None
     type: str | None = None
-    xmlUrl: AnyUrl | None = None
-    htmlUrl: AnyUrl | None = None
+    xmlUrl: AnyUrl | None = None  # noqa: N815
+    htmlUrl: AnyUrl | None = None  # noqa: N815
     # For nested outlines/folders
     children: list["OpmlOutline"] | None = None
 
@@ -303,6 +303,7 @@ class FeedWithArticlesResponse(FeedResponse):
 # ========= Discover Schemas =========
 class DiscoverSearchRequest(BaseModel):
     """Request schema for RSS feed discovery search"""
+
     query: str | None = Field(None, max_length=500, description="Search query text")
     category: str | None = Field(None, max_length=100, description="Feed category to filter by")
     language: str = Field("en", max_length=10, description="Language code for filtering")
@@ -311,6 +312,7 @@ class DiscoverSearchRequest(BaseModel):
 
 class FeedDiscoveryResult(BaseModel):
     """Feed result with relevance score for discovery"""
+
     model_config = ConfigDict(from_attributes=True)
 
     id: str
@@ -331,6 +333,7 @@ class FeedDiscoveryResult(BaseModel):
 
 class DiscoverSearchResponse(BaseModel):
     """Response schema for RSS feed discovery search"""
+
     results: list[FeedDiscoveryResult]
     total_count: int
     query: str | None
@@ -340,6 +343,7 @@ class DiscoverSearchResponse(BaseModel):
 
 class CategoryInfo(BaseModel):
     """Category information for the discovery grid"""
+
     name: str
     display_name: str
     feed_count: int
@@ -348,6 +352,7 @@ class CategoryInfo(BaseModel):
 
 class DiscoverCategoriesResponse(BaseModel):
     """Response schema for discovery categories"""
+
     categories: list[CategoryInfo]
     language: str
 
@@ -355,8 +360,14 @@ class DiscoverCategoriesResponse(BaseModel):
 # ========= Feed Enrichment Schemas =========
 class FeedEnrichmentResponse(BaseModel):
     """Schema for structured AI response during feed enrichment"""
-    refined_title: str = Field(..., min_length=3, max_length=120, description="Clean title without RSS/Feed words")
+
+    refined_title: str = Field(
+        ...,
+        min_length=3,
+        max_length=120,
+        description="Clean title without RSS/Feed words",
+    )
     refined_description: str = Field(..., max_length=300, description="What the feed offers generally")
-    tags: list[str] = Field(..., min_items=1, max_items=10, description="Specific keywords and topics")
+    tags: list[str] = Field(..., min_length=1, max_length=10, description="Specific keywords and topics")
     category: str = Field(..., description="One of the 12 predefined categories")
     popularity_estimate: int = Field(..., ge=1, le=100, description="Popularity estimate on scale 1-100")

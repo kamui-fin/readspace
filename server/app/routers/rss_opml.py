@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 import structlog
-from celery.result import AsyncResult
+from celery.result import AsyncResult  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +12,7 @@ from app.core.redis_cache import RedisCache
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.services.auth import get_current_user
-from app.services.rss_service import RssService
+from app.services.rss_service import RssOrchestrationService
 from app.workers.tasks import import_opml_task  # Import the background task
 
 logger = structlog.get_logger(__name__)
@@ -25,9 +25,7 @@ MAX_FILE_SIZE_MB = 50  # Maximum file size allowed
 IMPORT_TASK_TTL_SECONDS = 24 * 60 * 60
 
 
-async def store_import_task_metadata(
-    user_id: str, task_id: str, estimated_feeds: int, filename: str
-):
+async def store_import_task_metadata(user_id: str, task_id: str, estimated_feeds: int, filename: str) -> None:
     """Store import task metadata in Redis for user ownership tracking."""
     redis_cache = RedisCache()
     task_metadata = {
@@ -51,9 +49,7 @@ async def store_import_task_metadata(
             active_tasks.append(task)
 
     active_tasks.append(task_metadata)
-    await redis_cache.set(
-        user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS
-    )
+    await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS)
 
     # 2. Task -> metadata mapping (for auth and quick lookup)
     task_key = f"opml_import_task:{task_id}"
@@ -67,7 +63,7 @@ async def get_import_task_metadata(task_id: str) -> dict[str, Any] | None:
     return await redis_cache.get(task_key)
 
 
-async def cleanup_completed_task(user_id: str, task_id: str):
+async def cleanup_completed_task(user_id: str, task_id: str) -> None:
     """Remove completed task from Redis."""
     redis_cache = RedisCache()
 
@@ -77,9 +73,7 @@ async def cleanup_completed_task(user_id: str, task_id: str):
     active_tasks = [task for task in existing_tasks if task.get("task_id") != task_id]
 
     if active_tasks:
-        await redis_cache.set(
-            user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS
-        )
+        await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS)
     else:
         await redis_cache.delete(user_tasks_key)
 
@@ -95,11 +89,13 @@ async def import_opml_file(
     opml_file: UploadFile = File(..., description="OPML file to import (.opml, .xml)"),
     default_folder_name: str | None = Form(
         "Imported Feeds",
-        description="Name for the default folder if OPML items are at the root or if specified folders can't be created.",
+        description=(
+            "Name for the default folder if OPML items are at the root or if specified folders can't be created."
+        ),
     ),
-):
+) -> dict[str, Any]:
     """Import feeds from an OPML file. The import is orchestrated via Celery tasks."""
-    if not opml_file.filename.endswith((".opml", ".xml")):
+    if not opml_file.filename or not opml_file.filename.endswith((".opml", ".xml")):
         logger.warning(
             "Invalid OPML file type uploaded",
             filename=opml_file.filename,
@@ -132,7 +128,7 @@ async def import_opml_file(
             content_str = content_bytes.decode("utf-8")
         except UnicodeDecodeError:
             # Try other common encodings
-            for encoding in ['latin-1', 'cp1252', 'iso-8859-1']:
+            for encoding in ["latin-1", "cp1252", "iso-8859-1"]:
                 try:
                     content_str = content_bytes.decode(encoding)
                     logger.info(
@@ -152,7 +148,10 @@ async def import_opml_file(
                 )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, or try exporting it again from your RSS reader.",
+                    detail=(
+                        "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, "
+                        "or try exporting it again from your RSS reader."
+                    ),
                 )
 
         # Queue orchestration task
@@ -181,7 +180,10 @@ async def import_opml_file(
         return {
             "processing_mode": "background",
             "task_id": orchestration_task.id,
-            "message": f"OPML file ({file_size_mb:.1f}MB) queued for processing. New feeds will be imported and existing feeds will be updated/reorganized as needed.",
+            "message": (
+                f"OPML file ({file_size_mb:.1f}MB) queued for processing. "
+                "New feeds will be imported and existing feeds will be updated/reorganized as needed."
+            ),
             "estimated_feeds": estimated_feeds,
             "check_status_url": f"/api/rss/opml/import/status/{orchestration_task.id}",
             "status_page_url": f"/import-opml/status/{orchestration_task.id}",
@@ -198,49 +200,53 @@ async def import_opml_file(
         error_message = str(e)
         if "RSS/Atom feed file" in error_message:
             # Already has a user-friendly message
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message) from e
         elif "Invalid OPML format" in error_message:
             # Already has a user-friendly message
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message)
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_message) from e
         else:
             # Generic validation error
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid OPML file: {error_message}. Please check that you've exported a valid OPML file from your RSS reader."
-            )
+                detail=(
+                    f"Invalid OPML file: {error_message}. Please check that you've "
+                    "exported a valid OPML file from your RSS reader."
+                ),
+            ) from e
     except Exception as e:
         logger.error(
             "Error starting OPML import task",
             error=str(e),
             filename=opml_file.filename,
             user_id=current_user.sub,
-            exc_info=True
+            exc_info=True,
         )
         # Check for specific error types to provide better messages
         error_str = str(e).lower()
         if "timeout" in error_str:
             raise HTTPException(
                 status_code=status.HTTP_408_REQUEST_TIMEOUT,
-                detail="The import process timed out. Please try again with a smaller OPML file or try again later."
-            )
+                detail="The import process timed out. Please try again with a smaller OPML file or try again later.",
+            ) from e
         elif "memory" in error_str or "size" in error_str:
             raise HTTPException(
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-                detail="The OPML file is too large to process. Please try splitting it into smaller files."
-            )
+                detail="The OPML file is too large to process. Please try splitting it into smaller files.",
+            ) from e
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="An unexpected error occurred while processing your OPML file. Please try again, and if the problem persists, check that your OPML file is valid."
-            )
+                detail=(
+                    "An unexpected error occurred while processing your OPML file. "
+                    "Please try again, and if the problem persists, check that your OPML file is valid."
+                ),
+            ) from e
     finally:
         await opml_file.close()
 
 
 @router.get("/import/status/{task_id}", response_model=dict[str, Any])
-async def get_import_status(
-    task_id: str, current_user: TokenData = Depends(get_current_user)
-):
+async def get_import_status(task_id: str, current_user: TokenData = Depends(get_current_user)) -> dict[str, Any]:
     """Get the status of a background OPML import orchestration task."""
     # Try to get task metadata from Redis
     task_metadata = await get_import_task_metadata(task_id)
@@ -375,9 +381,7 @@ async def get_import_status(
                     error_info = {
                         "url": "Unknown",
                         "title": "Unknown",
-                        "error": str(feed_task_result.info)
-                        if feed_task_result.info
-                        else "Task failed",
+                        "error": str(feed_task_result.info) if feed_task_result.info else "Task failed",
                         "status": "task_failed",
                     }
                     errors.append(error_info)
@@ -400,7 +404,7 @@ async def get_import_status(
                 if task_metadata:
                     await cleanup_completed_task(current_user.sub, task_id)
 
-                result = {
+                result: dict[str, Any] = {
                     "task_id": task_id,
                     "status": "completed",
                     "result": {
@@ -413,7 +417,8 @@ async def get_import_status(
                             "failed": failed_imports,
                             "already_existed": already_existed,
                         },
-                        "message": f"{successful_imports} feeds added. {already_existed} were already in your library." + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
+                        "message": f"{successful_imports} feeds added. {already_existed} were already in your library."
+                        + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
                     },
                     "metadata": task_metadata,
                 }
@@ -463,11 +468,11 @@ async def get_import_status(
             task_id=task_id,
             error=str(e),
         )
-        raise HTTPException(status_code=500, detail="Could not retrieve task status.")
+        raise HTTPException(status_code=500, detail="Could not retrieve task status.") from e
 
 
 @router.get("/import/tasks", response_model=list[dict[str, Any]])
-async def list_user_import_tasks(current_user: TokenData = Depends(get_current_user)):
+async def list_user_import_tasks(current_user: TokenData = Depends(get_current_user)) -> list[dict[str, Any]]:
     """List all active OPML import tasks for the current user."""
     redis_cache = RedisCache()
     user_tasks_key = f"opml_import_tasks:user:{current_user.sub}"
@@ -537,8 +542,8 @@ async def list_user_import_tasks(current_user: TokenData = Depends(get_current_u
     return active_tasks
 
 
-@router.get("/import/active", response_model=Optional[dict[str, Any]])
-async def get_active_import_task(current_user: TokenData = Depends(get_current_user)):
+@router.get("/import/active", response_model=dict[str, Any] | None)
+async def get_active_import_task(current_user: TokenData = Depends(get_current_user)) -> dict[str, Any] | None:
     """Get the most recent active OPML import task for the current user."""
     tasks = await list_user_import_tasks(current_user)
 
@@ -550,9 +555,7 @@ async def get_active_import_task(current_user: TokenData = Depends(get_current_u
 
 
 @router.delete("/import/cancel/{task_id}", response_model=dict[str, Any])
-async def cancel_import_task(
-    task_id: str, current_user: TokenData = Depends(get_current_user)
-):
+async def cancel_import_task(task_id: str, current_user: TokenData = Depends(get_current_user)) -> dict[str, Any]:
     """Cancel a running OPML import task."""
     # Get task metadata from Redis to verify ownership
     task_metadata = await get_import_task_metadata(task_id)
@@ -650,9 +653,7 @@ async def cancel_import_task(
             "task_id": task_id,
             "message": "Import task cancelled successfully.",
             "cancelled": True,
-            "cancelled_subtasks": cancelled_tasks
-            if "cancelled_tasks" in locals()
-            else 0,
+            "cancelled_subtasks": cancelled_tasks if "cancelled_tasks" in locals() else 0,
         }
 
     except Exception as e:
@@ -666,25 +667,29 @@ async def cancel_import_task(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to cancel import task.",
-        )
+        ) from e
 
 
 @router.get("/export/", response_class=PlainTextResponse)
 async def export_opml_file(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> PlainTextResponse:
     """Export all user feeds to an OPML file."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
-        opml_string = await rss_service.export_opml()
+        # Get all user feeds and export to OPML
+        user_feeds = await rss_service.list_feeds()
+        # Import OPML processor to handle export
+        from app.services.opml_processor import OpmlProcessor
+
+        opml_processor = OpmlProcessor()
+        opml_string = await opml_processor.export_feeds_to_opml(user_feeds)
         logger.info("OPML export successful", user_id=current_user.sub)
         return PlainTextResponse(
             content=opml_string,
             media_type="application/xml",
-            headers={
-                "Content-Disposition": "attachment; filename=readspace_feeds_export.opml"
-            },
+            headers={"Content-Disposition": "attachment; filename=readspace_feeds_export.opml"},
         )
     except Exception as e:
         logger.error(
@@ -696,4 +701,4 @@ async def export_opml_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during OPML export.",
-        )
+        ) from e

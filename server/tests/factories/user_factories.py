@@ -1,10 +1,11 @@
 """
 Factory classes for user-related models
 """
+
 import uuid
 from datetime import datetime, timezone
+
 import factory
-from factory import LazyAttribute, SubFactory
 from factory.alchemy import SQLAlchemyModelFactory
 
 from app.models.user_models import AuthUser, Profile
@@ -12,38 +13,39 @@ from app.models.user_models import AuthUser, Profile
 
 class AuthUserFactory(SQLAlchemyModelFactory):
     """Factory for AuthUser model"""
-    
+
     class Meta:
         model = AuthUser
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
 
 
 class ProfileFactory(SQLAlchemyModelFactory):
     """Factory for Profile model"""
-    
+
     class Meta:
         model = Profile
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     email = factory.Sequence(lambda n: f"user{n}@example.com")
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
     updated_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
-    
+
     @factory.post_generation
     def create_auth_user(obj, create, extracted, **kwargs):
         """Create corresponding auth.users entry"""
         if not create:
             return
-        
+
         from sqlalchemy import text
+
         # Use a raw SQL insert to create the auth user entry
         # This should be called after the profile is created
         try:
             # Get the session from the factory
-            if hasattr(obj, '_sa_session') and obj._sa_session:
+            if hasattr(obj, "_sa_session") and obj._sa_session:
                 session = obj._sa_session
                 session.execute(
                     text("""
@@ -66,7 +68,7 @@ class ProfileFactory(SQLAlchemyModelFactory):
                             NOW(), '', 0, NULL, '', NOW(), FALSE, NULL, FALSE
                         ) ON CONFLICT (id) DO NOTHING
                     """),
-                    {"user_id": str(obj.id), "email": obj.email}
+                    {"user_id": str(obj.id), "email": obj.email},
                 )
         except Exception:
             # Ignore auth user creation failures in tests

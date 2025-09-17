@@ -1,7 +1,12 @@
 "use client"
 
-import { Metadata } from "next"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { WifiOff, RefreshCw, ArrowLeft } from "lucide-react"
 
@@ -13,25 +18,28 @@ export default function OfflinePage() {
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                         <WifiOff className="h-6 w-6 text-muted-foreground" />
                     </div>
-                    <CardTitle>You're offline</CardTitle>
+                    <CardTitle>You&apos;re offline</CardTitle>
                     <CardDescription>
-                        It looks like you've lost your internet connection. Some features may not be available until you're back online.
+                        It looks like you&apos;ve lost your internet connection.
+                        Some features may not be available until you&apos;re
+                        back online.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Your previously loaded articles and books are still available to read.
+                        Your previously loaded articles and books are still
+                        available to read.
                     </p>
-                    <Button 
-                        onClick={() => window.location.reload()} 
+                    <Button
+                        onClick={() => window.location.reload()}
                         className="w-full"
                         variant="outline"
                     >
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Try again
                     </Button>
-                    <Button 
-                        onClick={() => window.history.back()} 
+                    <Button
+                        onClick={() => window.history.back()}
                         className="w-full"
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" />

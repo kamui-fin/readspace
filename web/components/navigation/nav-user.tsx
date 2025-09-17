@@ -10,7 +10,7 @@ import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuSeparator,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
     SidebarLeftMenuButton,
@@ -19,7 +19,6 @@ import {
     useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useCurrentUser } from "@/hooks/use-current-user"
 import Link from "next/link"
 import ThemeSwitcher from "./theme-switcher"
 
@@ -31,10 +30,8 @@ interface NavUserProps {
 }
 
 export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
-    const { isMobile, toggleSidebar } = useSidebarLeft()
+    const { isMobile } = useSidebarLeft()
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-
-    const { user } = useCurrentUser()
 
     const loadingUser = !name || !email
 
@@ -95,13 +92,19 @@ export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
                             <DropdownMenuSeparator />
                             <DropdownMenuGroup>
                                 <DropdownMenuItem asChild>
-                                    <Link href="/import-opml" className="cursor-pointer">
+                                    <Link
+                                        href="/import-opml"
+                                        className="cursor-pointer"
+                                    >
                                         <Upload className="mr-2 h-4 w-4" />
                                         Import OPML
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
-                                    <Link href="/recently-read" className="cursor-pointer">
+                                    <Link
+                                        href="/recently-read"
+                                        className="cursor-pointer"
+                                    >
                                         <Clock className="mr-2 h-4 w-4" />
                                         Recently Read
                                     </Link>

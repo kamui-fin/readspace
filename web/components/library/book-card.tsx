@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { useSignedImageUrl } from "@/hooks/use-signed-image-url"
-import { formatDate } from "@/lib/utils"
-import { UserBookLibrary } from "@/types/api"
+import { formatRelativeDate } from "@readspace/shared"
+import { UserBookLibrary, isEpubProgress } from "@readspace/shared"
 import humanizeDuration from "humanize-duration"
 import { BookOpenCheck } from "lucide-react"
 import Image from "next/image"
@@ -48,48 +48,24 @@ export function estimateReadingTime(
     return humanizeDuration(totalMinutes * 60 * 1000)
 }
 
-/**
- * Rounds a number to one decimal place.
- * @param num - The number to round.
- * @returns The number rounded to one decimal place.
- */
-function roundToOneDecimal(num: number): number {
-    return Math.round((num + Number.EPSILON) * 10) / 10
-}
-
-// Type guard to check if epub_progress has the expected structure
-function isEpubProgressObject(
-    progress: any
-): progress is { globalProgress: { current: number; total: number } } {
-    return (
-        progress &&
-        typeof progress === "object" &&
-        progress.globalProgress &&
-        typeof progress.globalProgress === "object" &&
-        typeof progress.globalProgress.current === "number" &&
-        typeof progress.globalProgress.total === "number"
-    )
-}
-
 export function BookCard({ book }: BookCardProps) {
-    let coverUrl
-    if (book.book_metadata.cover_url) {
-        const { url } = useSignedImageUrl(book.book_metadata.cover_url, 3600)
-        coverUrl = url
-    }
+    const { url: signedUrl } = useSignedImageUrl(
+        book.book_metadata.cover_url || "",
+        3600
+    )
 
-    if (!coverUrl) {
-        coverUrl =
-            book.book_metadata.format === "PDF"
-                ? "/default_pdf_cover.png"
-                : "/placeholder.svg"
-    }
+    const coverUrl =
+        book.book_metadata.cover_url && signedUrl
+            ? signedUrl
+            : book.book_metadata.format === "PDF"
+              ? "/default_pdf_cover.png"
+              : "/placeholder.svg"
 
     // Calculate progress based on book type
     const progress =
         book.book_metadata.format === "PDF"
             ? (book.pdf_current_page || 0) / (book.book_metadata.num_pages || 1)
-            : isEpubProgressObject(book.epub_progress)
+            : isEpubProgress(book.epub_progress)
               ? book.epub_progress.globalProgress.current /
                 book.epub_progress.globalProgress.total
               : 0
@@ -97,10 +73,10 @@ export function BookCard({ book }: BookCardProps) {
     const remainingNumChars =
         book.book_metadata.format === "PDF"
             ? 0 // PDF doesn't use character count
-            : (isEpubProgressObject(book.epub_progress)
+            : (isEpubProgress(book.epub_progress)
                   ? book.epub_progress.globalProgress.total
                   : 0) -
-              (isEpubProgressObject(book.epub_progress)
+              (isEpubProgress(book.epub_progress)
                   ? book.epub_progress.globalProgress.current
                   : 0)
 
@@ -152,7 +128,9 @@ export function BookCard({ book }: BookCardProps) {
                 </div>
 
                 <div className="mt-3 flex justify-between items-center text-xs text-muted-foreground">
-                    <span>Added {formatDate(book.date_added)}</span>
+                    <span>
+                        Added {formatRelativeDate(new Date(book.date_added))}
+                    </span>
                     <span>
                         {progress < 1 ? (
                             <>

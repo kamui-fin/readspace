@@ -1,17 +1,17 @@
+import { getSupabaseClient, resetSupabaseClient } from '@/lib/supabase'
+import {
+  ApiClient,
+  Article,
+  DiscoveredFeed,
+  ExtensionSettings,
+  Folder,
+  PageMetadata,
+  SaveOptions,
+  User,
+} from '@readspace/shared'
+import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import toast from 'react-hot-toast'
-import {
-  ExtensionSettings,
-  User,
-  Article,
-  Folder,
-  SaveOptions,
-  PageMetadata,
-  DiscoveredFeed,
-} from '@/types'
-import { ReadspaceAPI } from '@/lib/api'
-import { getSupabaseClient, resetSupabaseClient } from '@/lib/supabase'
 
 interface ExtensionState {
   // Settings
@@ -21,7 +21,6 @@ interface ExtensionState {
   // Authentication
   user: User | null
   isAuthenticated: boolean
-  api: ReadspaceAPI | null
   login: (accessToken: string) => Promise<void>
   logout: () => void
   updateToken: (accessToken: string) => void
@@ -67,6 +66,16 @@ const defaultSettings: ExtensionSettings = {
   theme: 'system',
 }
 
+// Configure API client with current settings and token
+const configureApiClient = (settings: ExtensionSettings) => {
+  ApiClient.configure({
+    baseUrl: settings.readspace_url,
+    getAuthToken: async () => {
+      return settings.access_token || null
+    }
+  })
+}
+
 export const useExtensionStore = create<ExtensionState>()(
   persist(
     (set, get) => ({
@@ -74,7 +83,6 @@ export const useExtensionStore = create<ExtensionState>()(
       settings: defaultSettings,
       user: null,
       isAuthenticated: false,
-      api: null,
       folders: [],
       isLoading: false,
       isConnecting: false,
@@ -86,18 +94,9 @@ export const useExtensionStore = create<ExtensionState>()(
         const settings = { ...get().settings, ...newSettings }
         set({ settings })
 
-        // Update API instance if URL changed
-        const { api } = get()
-        if (
-          api &&
-          newSettings.readspace_url &&
-          newSettings.readspace_url !== api['baseUrl']
-        ) {
-          const newApi = new ReadspaceAPI(
-            settings.readspace_url,
-            settings.access_token
-          )
-          set({ api: newApi })
+        // Reconfigure API client if URL or token changed
+        if (newSettings.readspace_url || newSettings.access_token) {
+          configureApiClient(settings)
         }
 
         // Reset Supabase client if settings changed to force recreation with new settings
@@ -153,16 +152,18 @@ export const useExtensionStore = create<ExtensionState>()(
         set({ isConnecting: true })
         try {
           const { settings } = get()
+          const updatedSettings = { ...settings, access_token: accessToken }
 
-          // Create authenticated API instance and test it
-          const api = new ReadspaceAPI(settings.readspace_url, accessToken)
-          const user = await api.getCurrentUser()
+          // Configure API client with new token
+          configureApiClient(updatedSettings)
+
+          // Test authentication by getting user profile
+          const user = await ApiClient.users.getProfile() as User
 
           set({
             user,
             isAuthenticated: true,
-            api,
-            settings: { ...settings, access_token: accessToken },
+            settings: updatedSettings,
             isConnecting: false,
           })
 
@@ -191,26 +192,28 @@ export const useExtensionStore = create<ExtensionState>()(
           })
         }
 
+        const updatedSettings = { ...get().settings, access_token: undefined }
+
         set({
           user: null,
           isAuthenticated: false,
-          api: null,
           folders: [],
-          settings: { ...get().settings, access_token: undefined },
+          settings: updatedSettings,
         })
+
+        // Reconfigure API client without token
+        configureApiClient(updatedSettings)
       },
 
       updateToken: (accessToken: string) => {
-        const { settings, api } = get()
+        const { settings } = get()
         const updatedSettings = { ...settings, access_token: accessToken }
 
         // Update settings
         set({ settings: updatedSettings })
 
-        // Update API instance with new token
-        if (api) {
-          api.setAccessToken(accessToken)
-        }
+        // Reconfigure API client with new token
+        configureApiClient(updatedSettings)
       },
 
       // Loading states
@@ -222,12 +225,12 @@ export const useExtensionStore = create<ExtensionState>()(
 
       // Data loading
       loadUserData: async () => {
-        const { api } = get()
-        if (!api) return
+        const { isAuthenticated } = get()
+        if (!isAuthenticated) return
 
         set({ isLoading: true })
         try {
-          const [folders] = await Promise.all([api.getFolders()])
+          const folders = await ApiClient.rss.getFolders() as Folder[]
 
           set({ folders })
         } catch (error) {
@@ -239,8 +242,8 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       saveArticle: async (url: string, options = {}) => {
-        const { api, settings, currentPageMetadata } = get()
-        if (!api) throw new Error('Not authenticated')
+        const { isAuthenticated, currentPageMetadata } = get()
+        if (!isAuthenticated) throw new Error('Not authenticated')
 
         set({ isSaving: true })
         try {
@@ -265,6 +268,20 @@ export const useExtensionStore = create<ExtensionState>()(
             console.error('Failed to extract content from page:', error)
           }
 
+          // Build metadata object with only defined string values
+          const metadata: Record<string, string> = {}
+          const description = extractedContent?.description || currentPageMetadata?.description
+          const author = extractedContent?.author || currentPageMetadata?.author
+          const published_at = extractedContent?.published_at || currentPageMetadata?.published_at
+          const image_url = extractedContent?.image_url || currentPageMetadata?.image_url
+          const favicon = currentPageMetadata?.favicon
+
+          if (description) metadata.description = description
+          if (author) metadata.author = author
+          if (published_at) metadata.published_at = published_at
+          if (image_url) metadata.image_url = image_url
+          if (favicon) metadata.favicon = favicon
+
           const saveRequest = {
             url,
             title:
@@ -272,20 +289,7 @@ export const useExtensionStore = create<ExtensionState>()(
               extractedContent?.title ||
               currentPageMetadata?.title,
             content: extractedContent?.content, // Include the extracted HTML content
-            metadata: {
-              description:
-                extractedContent?.description ||
-                currentPageMetadata?.description,
-              author: extractedContent?.author || currentPageMetadata?.author,
-              published_at:
-                extractedContent?.published_at ||
-                currentPageMetadata?.published_at,
-              image_url:
-                extractedContent?.image_url || currentPageMetadata?.image_url,
-              favicon: currentPageMetadata?.favicon,
-            },
-            priority: options.priority,
-            note: options.note,
+            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
           }
 
           console.log('Saving article with request:', {
@@ -295,7 +299,7 @@ export const useExtensionStore = create<ExtensionState>()(
               : 'no content',
           })
 
-          const article = await api.saveArticle(saveRequest)
+          const article = await ApiClient.rss.saveArticle(saveRequest) as Article
           return article
         } finally {
           set({ isSaving: false })
@@ -303,14 +307,14 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       subscribeToFeed: async (feedUrl: string, options = {}) => {
-        const { api, settings } = get()
-        if (!api) {
+        const { isAuthenticated, settings } = get()
+        if (!isAuthenticated) {
           toast.error('Please sign in to subscribe to feeds')
           throw new Error('Not authenticated')
         }
 
         try {
-          await api.createFeed({
+          await ApiClient.rss.createFeed({
             url: feedUrl,
             folder_id: options.folder_id || settings.default_folder_id,
           })
@@ -325,21 +329,22 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       subscribeToFeeds: async (feeds: DiscoveredFeed[], options = {}) => {
-        const { api, settings } = get()
-        if (!api) {
+        const { isAuthenticated, settings } = get()
+        if (!isAuthenticated) {
           toast.error('Please sign in to subscribe to feeds')
           throw new Error('Not authenticated')
         }
 
         try {
-          const subscribeRequest = {
-            feeds: feeds.map((feed) => ({
-              url: feed.url,
-              folder_id: options.folder_id || settings.default_folder_id,
-            })),
-          }
-
-          await api.subscribeToFeeds(subscribeRequest)
+          // Subscribe to feeds one by one since there's no bulk endpoint in the current API
+          await Promise.all(
+            feeds.map((feed) =>
+              ApiClient.rss.createFeed({
+                url: feed.url,
+                folder_id: options.folder_id || settings.default_folder_id,
+              })
+            )
+          )
         } catch (error) {
           console.error('Failed to subscribe to feeds:', error)
           const errorMessage =
@@ -364,14 +369,10 @@ export const useExtensionStore = create<ExtensionState>()(
           state?.settings?.access_token &&
           state?.settings?.readspace_url
         ) {
-          // Recreate API instance on rehydration
-          const api = new ReadspaceAPI(
-            state.settings.readspace_url,
-            state.settings.access_token
-          )
-          state.api = api
+          // Configure API client on rehydration
+          configureApiClient(state.settings)
           console.log(
-            'API instance recreated on rehydration with token',
+            'API client configured on rehydration with token',
             state.settings.access_token
           )
         }

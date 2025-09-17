@@ -52,7 +52,7 @@ def validate_url(url: str, required: bool = True) -> str | None:
 
         return url
     except Exception as e:
-        raise ValidationError(f"Invalid URL: {str(e)}")
+        raise ValidationError(f"Invalid URL: {str(e)}") from e
 
 
 def validate_email(email: str) -> str:
@@ -98,8 +98,8 @@ def validate_uuid(uuid_str: str, field_name: str = "ID") -> UUID:
 
     try:
         return UUID(uuid_str)
-    except (ValueError, TypeError):
-        raise ValidationError(f"Invalid {field_name} format")
+    except (ValueError, TypeError) as e:
+        raise ValidationError(f"Invalid {field_name} format") from e
 
 
 def validate_string_length(
@@ -146,27 +146,29 @@ def validate_title(title: str, required: bool = True) -> str | None:
 
 def validate_description(description: str, required: bool = False) -> str | None:
     """Validate description field"""
-    return validate_string_length(
-        description, "Description", MAX_DESCRIPTION_LENGTH, 0, required
-    )
+    return validate_string_length(description, "Description", MAX_DESCRIPTION_LENGTH, 0, required)
 
 
 def validate_tag_name(name: str) -> str:
     """Validate tag name"""
     validated = validate_string_length(name, "Tag name", MAX_TAG_NAME_LENGTH, 1, True)
 
+    if validated is None:
+        raise ValidationError("Tag name cannot be empty")
+
     # Tag names should be lowercase and alphanumeric with hyphens/underscores
     if not re.match(r"^[a-z0-9_-]+$", validated.lower()):
-        raise ValidationError(
-            "Tag name can only contain lowercase letters, numbers, hyphens, and underscores"
-        )
+        raise ValidationError("Tag name can only contain lowercase letters, numbers, hyphens, and underscores")
 
     return validated.lower()
 
 
 def validate_folder_name(name: str) -> str:
     """Validate folder name"""
-    return validate_string_length(name, "Folder name", MAX_FOLDER_NAME_LENGTH, 1, True)
+    validated = validate_string_length(name, "Folder name", MAX_FOLDER_NAME_LENGTH, 1, True)
+    if validated is None:
+        raise ValidationError("Folder name cannot be empty")
+    return validated
 
 
 def validate_book_format(format_str: str) -> str:
@@ -187,9 +189,7 @@ def validate_book_format(format_str: str) -> str:
 
     format_upper = format_str.upper()
     if format_upper not in ALLOWED_BOOK_FORMATS:
-        raise ValidationError(
-            f"Unsupported book format. Allowed: {', '.join(ALLOWED_BOOK_FORMATS)}"
-        )
+        raise ValidationError(f"Unsupported book format. Allowed: {', '.join(ALLOWED_BOOK_FORMATS)}")
 
     return format_upper
 
@@ -212,9 +212,7 @@ def validate_highlight_color(color: str) -> str:
 
     color_lower = color.lower()
     if color_lower not in HIGHLIGHT_COLORS:
-        raise ValidationError(
-            f"Invalid highlight color. Allowed: {', '.join(HIGHLIGHT_COLORS)}"
-        )
+        raise ValidationError(f"Invalid highlight color. Allowed: {', '.join(HIGHLIGHT_COLORS)}")
 
     return color_lower
 
@@ -237,9 +235,7 @@ def validate_article_priority(priority: str) -> str:
 
     priority_lower = priority.lower()
     if priority_lower not in ARTICLE_PRIORITIES:
-        raise ValidationError(
-            f"Invalid priority. Allowed: {', '.join(ARTICLE_PRIORITIES)}"
-        )
+        raise ValidationError(f"Invalid priority. Allowed: {', '.join(ARTICLE_PRIORITIES)}")
 
     return priority_lower
 
@@ -271,7 +267,7 @@ def validate_datetime(dt_str: str, field_name: str = "datetime") -> datetime:
 
         return dt
     except (ValueError, TypeError) as e:
-        raise ValidationError(f"Invalid {field_name} format: {str(e)}")
+        raise ValidationError(f"Invalid {field_name} format: {str(e)}") from e
 
 
 def validate_pagination(skip: int = 0, limit: int = 100) -> tuple[int, int]:

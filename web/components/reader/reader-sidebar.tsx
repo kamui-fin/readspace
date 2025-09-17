@@ -15,9 +15,13 @@ import {
     SidebarRight,
     SidebarRightMenuButton,
 } from "@/components/ui/sidebar"
-import { useBookHighlights } from "@/lib/api/hooks/highlights"
+import {
+    useBookHighlights,
+    SerializedRange,
+    isSerializedRange,
+} from "@readspace/shared"
 import { deserializeRange, scrollToRange } from "@/lib/reader/range-serialize"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { useReaderStore } from "@/stores/reader"
 import { EpubHighlight, PdfHighlight } from "@/types/library"
 import { NavItem } from "epubjs"
@@ -25,9 +29,7 @@ import { usePathname } from "next/navigation"
 import { ScrollArea } from "../ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs"
 
-interface ReaderSidebarProps extends React.ComponentProps<typeof SidebarRight> {
-    // Remove goToPage from props
-}
+type ReaderSidebarProps = React.ComponentProps<typeof SidebarRight>
 
 // Flatten the TOC tree to make it easier to find next items
 const flattenTocItems = (items: NavItem[]): NavItem[] => {
@@ -322,7 +324,9 @@ export function HighlightsTab() {
 
     // Use React Query to get fresh highlights, fallback to store
     // Use library_id (not metadata id) since highlights are stored with user_book_lib_id
-    const { data: queryHighlights } = useBookHighlights(bookMeta?.library_id || "")
+    const { data: queryHighlights } = useBookHighlights(
+        bookMeta?.library_id || ""
+    )
 
     // Use fresh highlights from query if available, otherwise use store
     const highlights =
@@ -350,7 +354,16 @@ export function HighlightsTab() {
                               original_text: h.original_text,
                               color: h.color,
                               note: h.note || undefined,
-                              range: h.html_range as unknown as EpubHighlight["range"],
+                              range:
+                                  h.html_range &&
+                                  isSerializedRange(h.html_range)
+                                      ? (h.html_range as SerializedRange)
+                                      : {
+                                            startContainerPath: [],
+                                            startOffset: 0,
+                                            endContainerPath: [],
+                                            endOffset: 0,
+                                        },
                               chapter: {
                                   idx: h.chapter_idx || 0,
                                   href: h.chapter_href || "",
@@ -399,7 +412,7 @@ interface HighlightProps {
 export function HighlightCard({ highlight }: HighlightProps) {
     const colorMap = {
         GREEN: "bg-emerald-500",
-        BLUE: "bg-blue-500", 
+        BLUE: "bg-blue-500",
         YELLOW: "bg-amber-500",
         // Also support lowercase for backwards compatibility
         green: "bg-emerald-500",

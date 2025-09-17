@@ -42,7 +42,7 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     UserArticleState.user_id == user_id,
-                    UserArticleState.is_read == True,
+                    UserArticleState.is_read.is_(True),
                     UserArticleState.read_at >= since_date,
                 )
             )
@@ -57,7 +57,7 @@ class ArticleSpecializedQueries:
         )
 
         articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        articles = list(articles_result.scalars().all())
 
         # Count query
         count_stmt = (
@@ -68,7 +68,7 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     UserArticleState.user_id == user_id,
-                    UserArticleState.is_read == True,
+                    UserArticleState.is_read.is_(True),
                     UserArticleState.read_at >= since_date,
                 )
             )
@@ -91,7 +91,7 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     UserArticleState.user_id == user_id,
-                    UserArticleState.is_read_later == True,
+                    UserArticleState.is_read_later.is_(True),
                 )
             )
         )
@@ -99,11 +99,10 @@ class ArticleSpecializedQueries:
 
         # Count clipped articles marked as read later
         clipped_result = await db.execute(
-            select(func.count(ClippedArticle.id))
-            .filter(
+            select(func.count(ClippedArticle.id)).filter(
                 and_(
                     ClippedArticle.user_id == user_id,
-                    ClippedArticle.is_read_later == True,
+                    ClippedArticle.is_read_later.is_(True),
                 )
             )
         )
@@ -135,7 +134,7 @@ class ArticleSpecializedQueries:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        UserArticleState.is_read.is_(False),
                     ),
                     ArticleContent.published_at >= twenty_four_hours_ago,
                     ArticleContent.published_at <= now_utc,
@@ -163,7 +162,7 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     UserArticleState.user_id == user_id,
-                    UserArticleState.is_read_later == True,
+                    UserArticleState.is_read_later.is_(True),
                 )
             )
             .order_by(desc(ArticleContent.published_at))
@@ -177,7 +176,7 @@ class ArticleSpecializedQueries:
         )
 
         articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        articles = list(articles_result.scalars().all())
 
         # Count query
         count_stmt = (
@@ -188,7 +187,7 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     UserArticleState.user_id == user_id,
-                    UserArticleState.is_read_later == True,
+                    UserArticleState.is_read_later.is_(True),
                 )
             )
         )
@@ -217,7 +216,7 @@ class ArticleSpecializedQueries:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        UserArticleState.is_read.is_(False),
                     ),
                 )
             )
@@ -225,9 +224,7 @@ class ArticleSpecializedQueries:
         return result.scalar_one_or_none() or 0
 
     @staticmethod
-    async def get_unread_counts_by_folder(
-        db: AsyncSession, *, user_id: UUID
-    ) -> dict[UUID, int]:
+    async def get_unread_counts_by_folder(db: AsyncSession, *, user_id: UUID) -> dict[UUID, int]:
         """Get unread article counts grouped by folder ID."""
         result = await db.execute(
             select(
@@ -248,7 +245,7 @@ class ArticleSpecializedQueries:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        UserArticleState.is_read.is_(False),
                     ),
                 )
             )
@@ -259,9 +256,7 @@ class ArticleSpecializedQueries:
         return {row.folder_id: row.unread_count for row in rows}
 
     @staticmethod
-    async def count_unread_articles_by_folder(
-        db: AsyncSession, *, user_id: UUID, folder_id: UUID
-    ) -> int:
+    async def count_unread_articles_by_folder(db: AsyncSession, *, user_id: UUID, folder_id: UUID) -> int:
         """Count unread articles in a specific folder for a user."""
         result = await db.execute(
             select(func.count(FeedArticle.id))
@@ -280,7 +275,7 @@ class ArticleSpecializedQueries:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        UserArticleState.is_read.is_(False),
                     ),
                 )
             )
@@ -329,7 +324,7 @@ class ArticleSpecializedQueries:
         )
 
         articles_result = await db.execute(stmt)
-        articles = articles_result.scalars().all()
+        articles = list(articles_result.scalars().all())
 
         # Count query
         count_stmt = (

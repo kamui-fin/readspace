@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import React from "react"
 import Header from "../navigation/header"
 import { ReaderNavActions } from "../reader/reader-nav-actions"

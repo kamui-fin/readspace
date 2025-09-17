@@ -1,7 +1,7 @@
 // Centralized query keys for consistency between server and client
 export const RSS_QUERY_KEYS = {
     FOLDERS: "rss-folders",
-    FEEDS: "rss-feeds", 
+    FEEDS: "rss-feeds",
     ARTICLES: "rss-articles",
     ARTICLE: "rss-article",
     UNREAD_COUNTS: "rss-unread-counts",
@@ -13,7 +13,7 @@ export const RSS_QUERY_KEYS = {
 
 export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {
     EXTRACTED_CONTENT: "article-extracted-content",
-    SUMMARY: "article-summary", 
+    SUMMARY: "article-summary",
     TRANSLATION: "article-translation",
 } as const
 
@@ -27,4 +27,8 @@ export const USER_QUERY_KEYS = {
     PROFILE: "user-profile",
 } as const
 
-export type QueryKey = (typeof RSS_QUERY_KEYS)[keyof typeof RSS_QUERY_KEYS] | (typeof ARTICLE_ENHANCEMENT_QUERY_KEYS)[keyof typeof ARTICLE_ENHANCEMENT_QUERY_KEYS] | (typeof BOOK_QUERY_KEYS)[keyof typeof BOOK_QUERY_KEYS] | (typeof USER_QUERY_KEYS)[keyof typeof USER_QUERY_KEYS] 
+export type QueryKey =
+    | (typeof RSS_QUERY_KEYS)[keyof typeof RSS_QUERY_KEYS]
+    | (typeof ARTICLE_ENHANCEMENT_QUERY_KEYS)[keyof typeof ARTICLE_ENHANCEMENT_QUERY_KEYS]
+    | (typeof BOOK_QUERY_KEYS)[keyof typeof BOOK_QUERY_KEYS]
+    | (typeof USER_QUERY_KEYS)[keyof typeof USER_QUERY_KEYS]

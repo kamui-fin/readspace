@@ -10,14 +10,10 @@ from app.models.rss_models import ArticleContent
 from app.schemas.rss_schemas import ArticleContentCreate
 
 
-class CRUDArticleContent(
-    CRUDBase[ArticleContent, ArticleContentCreate, ArticleContentCreate]
-):
+class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleContentCreate]):
     """CRUD operations for ArticleContent."""
 
-    async def create(
-        self, db: AsyncSession, *, obj_in: ArticleContentCreate
-    ) -> ArticleContent:
+    async def create(self, db: AsyncSession, *, obj_in: ArticleContentCreate) -> ArticleContent:
         obj_in_data = obj_in.model_dump()
         # Manually convert HttpUrl to string for link and image_url
         if obj_in_data.get("link"):
@@ -31,16 +27,12 @@ class CRUDArticleContent(
         await db.refresh(db_obj)
         return db_obj
 
-    async def get_by_link(
-        self, db: AsyncSession, *, link: str
-    ) -> ArticleContent | None:
+    async def get_by_link(self, db: AsyncSession, *, link: str) -> ArticleContent | None:
         """Get an article content by its original URL."""
         result = await db.execute(select(self.model).filter(self.model.link == link))
         return result.scalars().first()
 
-    async def get_by_link_extracted_by_extension(
-        self, db: AsyncSession, *, link: str
-    ) -> ArticleContent | None:
+    async def get_by_link_extracted_by_extension(self, db: AsyncSession, *, link: str) -> ArticleContent | None:
         """Get article content by URL that was extracted by chrome extension."""
         # First get all content records with this URL
         result = await db.execute(select(self.model).filter(self.model.link == link))

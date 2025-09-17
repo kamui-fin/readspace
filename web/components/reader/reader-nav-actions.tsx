@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import {
     AlignCenter,
     AlignLeft,
@@ -70,48 +70,6 @@ const FONT_OPTIONS = [
     { value: "sans", label: "Sans-serif" },
     { value: "mono", label: "Monospace" },
     { value: "custom", label: "Enter Custom..." },
-]
-
-// Language options from reader-nav-actions.tsx
-const LANGUAGE_OPTIONS: Array<{ value: string; label: string }> = [
-    { value: "Arabic (ar)", label: "Arabic (ar)" },
-    { value: "Bengali (bn)", label: "Bengali (bn)" },
-    { value: "Bulgarian (bg)", label: "Bulgarian (bg)" },
-    { value: "Chinese (zh)", label: "Chinese (zh)" },
-    { value: "Croatian (hr)", label: "Croatian (hr)" },
-    { value: "Czech (cs)", label: "Czech (cs)" },
-    { value: "Danish (da)", label: "Danish (da)" },
-    { value: "Dutch (nl)", label: "Dutch (nl)" },
-    { value: "English (en)", label: "English (en)" },
-    { value: "Estonian (et)", label: "Estonian (et)" },
-    { value: "Finnish (fi)", label: "Finnish (fi)" },
-    { value: "French (fr)", label: "French (fr)" },
-    { value: "German (de)", label: "German (de)" },
-    { value: "Greek (el)", label: "Greek (el)" },
-    { value: "Hebrew (iw)", label: "Hebrew (iw)" },
-    { value: "Hindi (hi)", label: "Hindi (hi)" },
-    { value: "Hungarian (hu)", label: "Hungarian (hu)" },
-    { value: "Indonesian (id)", label: "Indonesian (id)" },
-    { value: "Italian (it)", label: "Italian (it)" },
-    { value: "Japanese (ja)", label: "Japanese (ja)" },
-    { value: "Korean (ko)", label: "Korean (ko)" },
-    { value: "Latvian (lv)", label: "Latvian (lv)" },
-    { value: "Lithuanian (lt)", label: "Lithuanian (lt)" },
-    { value: "Norwegian (no)", label: "Norwegian (no)" },
-    { value: "Polish (pl)", label: "Polish (pl)" },
-    { value: "Portuguese (pt)", label: "Portuguese (pt)" },
-    { value: "Romanian (ro)", label: "Romanian (ro)" },
-    { value: "Russian (ru)", label: "Russian (ru)" },
-    { value: "Serbian (sr)", label: "Serbian (sr)" },
-    { value: "Slovak (sk)", label: "Slovak (sk)" },
-    { value: "Slovenian (sl)", label: "Slovenian (sl)" },
-    { value: "Spanish (es)", label: "Spanish (es)" },
-    { value: "Swahili (sw)", label: "Swahili (sw)" },
-    { value: "Swedish (sv)", label: "Swedish (sv)" },
-    { value: "Thai (th)", label: "Thai (th)" },
-    { value: "Turkish (tr)", label: "Turkish (tr)" },
-    { value: "Ukrainian (uk)", label: "Ukrainian (uk)" },
-    { value: "Vietnamese (vi)", label: "Vietnamese (vi)" },
 ]
 
 const CustomFontInput: React.FC<{

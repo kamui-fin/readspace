@@ -27,7 +27,9 @@ class Profile(Base):
     email = Column(Text, nullable=False)
     role = Column(String(10), nullable=False, default=UserRole.BASIC.value)
     created_at = Column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc)
+        DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
     )
     updated_at = Column(
         DateTime(timezone=True),

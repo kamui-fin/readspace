@@ -44,36 +44,76 @@ function detectLanguage(code: string, className: string = ""): string {
     const trimmedCode = code.trim().toLowerCase()
 
     // JavaScript/TypeScript patterns
-    if (trimmedCode.includes('function') && trimmedCode.includes('{')) return 'javascript'
-    if (trimmedCode.includes('const ') || trimmedCode.includes('let ') || trimmedCode.includes('var ')) return 'javascript'
-    if (trimmedCode.includes('interface ') || trimmedCode.includes(': string') || trimmedCode.includes(': number')) return 'typescript'
+    if (trimmedCode.includes("function") && trimmedCode.includes("{"))
+        return "javascript"
+    if (
+        trimmedCode.includes("const ") ||
+        trimmedCode.includes("let ") ||
+        trimmedCode.includes("var ")
+    )
+        return "javascript"
+    if (
+        trimmedCode.includes("interface ") ||
+        trimmedCode.includes(": string") ||
+        trimmedCode.includes(": number")
+    )
+        return "typescript"
 
     // Python patterns
-    if (trimmedCode.includes('def ') || trimmedCode.includes('import ') || trimmedCode.includes('from ')) return 'python'
-    if (trimmedCode.includes('print(') || trimmedCode.match(/^\s*#.*python/)) return 'python'
+    if (
+        trimmedCode.includes("def ") ||
+        trimmedCode.includes("import ") ||
+        trimmedCode.includes("from ")
+    )
+        return "python"
+    if (trimmedCode.includes("print(") || trimmedCode.match(/^\s*#.*python/))
+        return "python"
 
     // HTML patterns
-    if (trimmedCode.includes('<html') || trimmedCode.includes('<!doctype')) return 'html'
-    if (trimmedCode.match(/<[a-z]+[^>]*>/)) return 'html'
+    if (trimmedCode.includes("<html") || trimmedCode.includes("<!doctype"))
+        return "html"
+    if (trimmedCode.match(/<[a-z]+[^>]*>/)) return "html"
 
     // CSS patterns
-    if (trimmedCode.includes('{') && trimmedCode.includes(':') && trimmedCode.includes(';')) return 'css'
+    if (
+        trimmedCode.includes("{") &&
+        trimmedCode.includes(":") &&
+        trimmedCode.includes(";")
+    )
+        return "css"
 
     // JSON patterns
-    if ((trimmedCode.startsWith('{') && trimmedCode.endsWith('}')) ||
-        (trimmedCode.startsWith('[') && trimmedCode.endsWith(']'))) {
+    if (
+        (trimmedCode.startsWith("{") && trimmedCode.endsWith("}")) ||
+        (trimmedCode.startsWith("[") && trimmedCode.endsWith("]"))
+    ) {
         try {
             JSON.parse(code)
-            return 'json'
+            return "json"
         } catch {}
     }
 
     // Shell/Bash patterns
-    if (trimmedCode.startsWith('$') || trimmedCode.includes('#!/bin/bash') || trimmedCode.includes('#!/bin/sh')) return 'bash'
-    if (trimmedCode.includes('sudo ') || trimmedCode.includes('chmod ') || trimmedCode.includes('mkdir ')) return 'bash'
+    if (
+        trimmedCode.startsWith("$") ||
+        trimmedCode.includes("#!/bin/bash") ||
+        trimmedCode.includes("#!/bin/sh")
+    )
+        return "bash"
+    if (
+        trimmedCode.includes("sudo ") ||
+        trimmedCode.includes("chmod ") ||
+        trimmedCode.includes("mkdir ")
+    )
+        return "bash"
 
     // SQL patterns
-    if (trimmedCode.match(/\b(select|insert|update|delete|create|alter|drop)\b/i)) return 'sql'
+    if (
+        trimmedCode.match(
+            /\b(select|insert|update|delete|create|alter|drop)\b/i
+        )
+    )
+        return "sql"
 
     return "text"
 }
@@ -134,7 +174,7 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
                                 lineHeight: "1.5",
                             }}
                             wrapLongLines={true}
-                            showLineNumbers={code.split('\n').length > 3}
+                            showLineNumbers={code.split("\n").length > 3}
                         >
                             {code}
                         </SyntaxHighlighter>
@@ -160,7 +200,7 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
                                 lineHeight: "1.5",
                             }}
                             wrapLongLines={true}
-                            showLineNumbers={code.split('\n').length > 3}
+                            showLineNumbers={code.split("\n").length > 3}
                         >
                             {code}
                         </SyntaxHighlighter>
@@ -169,7 +209,10 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
             }
 
             // Handle inline code
-            if (element.tagName === "CODE" && element.parentElement?.tagName !== "PRE") {
+            if (
+                element.tagName === "CODE" &&
+                element.parentElement?.tagName !== "PRE"
+            ) {
                 return (
                     <code
                         key={`inline-code-${index}`}
@@ -181,23 +224,28 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
             }
 
             // Process other elements recursively
-            const children = Array.from(element.childNodes).map((child, childIndex) =>
-                processNode(child, childIndex)
-            ).filter(child => child !== null)
+            const children = Array.from(element.childNodes)
+                .map((child, childIndex) => processNode(child, childIndex))
+                .filter((child) => child !== null)
 
             if (children.length === 0 && !element.textContent?.trim()) {
                 return null
             }
 
-            const props: any = { key: `element-${index}` }
+            const props: Record<string, unknown> = { key: `element-${index}` }
 
             // Copy important attributes
             for (let i = 0; i < element.attributes.length; i++) {
                 const attr = element.attributes[i]
                 if (attr.name === "class") {
                     props.className = attr.value
-                } else if (attr.name.startsWith("data-") || attr.name === "id" || attr.name === "style") {
-                    props[attr.name === "class" ? "className" : attr.name] = attr.value
+                } else if (
+                    attr.name.startsWith("data-") ||
+                    attr.name === "id" ||
+                    attr.name === "style"
+                ) {
+                    props[attr.name === "class" ? "className" : attr.name] =
+                        attr.value
                 }
             }
 
@@ -213,7 +261,7 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
 
     const processedChildren = Array.from(doc.body.childNodes)
         .map((child, index) => processNode(child, index))
-        .filter(child => child !== null)
+        .filter((child) => child !== null)
 
     return <>{processedChildren}</>
 }

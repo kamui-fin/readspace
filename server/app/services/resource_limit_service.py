@@ -19,12 +19,12 @@ class ResourceLimitService:
 
     async def check_limit(self, user_id: UUID, resource: str, user_role: str) -> bool:
         """Check if user can perform action within limits.
-        
+
         Args:
             user_id: User UUID
             resource: Resource type (e.g., 'max_subscriptions', 'max_books')
             user_role: User's role (basic, pro, admin)
-            
+
         Returns:
             True if action is allowed, False if limit exceeded
         """
@@ -35,48 +35,44 @@ class ResourceLimitService:
             return True
 
         current_usage = await self.get_current_usage(user_id, resource)
-        limit = limits.get(resource, 0)
+        limit: int = limits.get(resource, 0)
 
         return current_usage < limit
 
     async def get_current_usage(self, user_id: UUID, resource: str) -> int:
         """Get current usage count for resource.
-        
+
         Args:
             user_id: User UUID
             resource: Resource type
-            
+
         Returns:
             Current usage count
         """
         if resource == "max_subscriptions":
             result = await self.db.execute(
-                select(func.count()).select_from(FeedSubscription)
-                .where(FeedSubscription.user_id == user_id)
+                select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
             )
             return result.scalar_one()
 
         elif resource == "max_books":
             result = await self.db.execute(
-                select(func.count()).select_from(UserBookLibrary)
-                .where(UserBookLibrary.user_id == user_id)
+                select(func.count()).select_from(UserBookLibrary).where(UserBookLibrary.user_id == user_id)
             )
             return result.scalar_one()
-
 
         return 0
 
     def get_user_limits(self, user_role: str) -> dict[str, Any]:
         """Get all limits for user role.
-        
+
         Args:
             user_role: User's role
-            
+
         Returns:
             Dictionary of resource limits
         """
         return RESOURCE_LIMITS.get(user_role, RESOURCE_LIMITS["basic"])
-
 
 
 class ResourceLimitError(Exception):

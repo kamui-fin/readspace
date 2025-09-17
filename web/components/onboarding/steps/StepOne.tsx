@@ -13,7 +13,7 @@ import {
     Paintbrush,
     Palette,
     Shield,
-    TrendingUp
+    TrendingUp,
 } from "lucide-react"
 import React, { useState } from "react"
 import OnboardingLayout from "../layout"
@@ -31,7 +31,7 @@ const CATEGORIES = [
     { name: "Culture & Arts", icon: Paintbrush },
     { name: "Security & Privacy", icon: Shield },
     { name: "Education & Learning", icon: GraduationCap },
-    { name: "Miscellaneous", icon: MoreHorizontal }
+    { name: "Miscellaneous", icon: MoreHorizontal },
 ]
 
 const getCategoryDescription = (categoryName: string) => {
@@ -43,11 +43,12 @@ const getCategoryDescription = (categoryName: string) => {
         "News & Politics": "Current events, political analysis, journalism",
         "Gaming & Entertainment": "Video games, movies, pop culture",
         "Science & Research": "Research papers, discoveries, analysis",
-        "Lifestyle & Personal": "Health, wellness, productivity, personal growth",
+        "Lifestyle & Personal":
+            "Health, wellness, productivity, personal growth",
         "Culture & Arts": "Literature, music, cultural commentary",
         "Security & Privacy": "Cybersecurity, privacy rights, digital safety",
         "Education & Learning": "Online courses, tutorials, knowledge sharing",
-        "Miscellaneous": "Everything else that doesn't fit above"
+        Miscellaneous: "Everything else that doesn't fit above",
     }
     return descriptions[categoryName] || ""
 }
@@ -65,13 +66,14 @@ const getShortCategoryName = (categoryName: string) => {
         "Culture & Arts": "Culture",
         "Security & Privacy": "Security",
         "Education & Learning": "Education",
-        "Miscellaneous": "Other",
+        Miscellaneous: "Other",
     }
     return shortNames[categoryName] || categoryName
 }
 
 const StepOne: React.FC = () => {
-    const { onboardingData, updateOnboardingData, nextStep } = useOnboardingStore()
+    const { onboardingData, updateOnboardingData, nextStep } =
+        useOnboardingStore()
     const [selectedCategories, setSelectedCategories] = useState<string[]>(
         onboardingData.selectedCategories || []
     )
@@ -79,7 +81,7 @@ const StepOne: React.FC = () => {
     const handleCategoryToggle = (categoryName: string) => {
         const isSelected = selectedCategories.includes(categoryName)
         const newCategories = isSelected
-            ? selectedCategories.filter(c => c !== categoryName)
+            ? selectedCategories.filter((c) => c !== categoryName)
             : [...selectedCategories, categoryName]
 
         setSelectedCategories(newCategories)
@@ -100,7 +102,9 @@ const StepOne: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8 max-w-5xl mx-auto">
                 {CATEGORIES.map((category, index) => {
                     const IconComponent = category.icon
-                    const isSelected = selectedCategories.includes(category.name)
+                    const isSelected = selectedCategories.includes(
+                        category.name
+                    )
 
                     return (
                         <motion.div
@@ -110,44 +114,60 @@ const StepOne: React.FC = () => {
                             transition={{
                                 duration: 0.4,
                                 delay: index * 0.08,
-                                ease: "easeOut"
+                                ease: "easeOut",
                             }}
                             className="w-full"
                         >
                             <button
-                                onClick={() => handleCategoryToggle(category.name)}
-                                className={`w-full p-5 h-[110px] rounded-xl border transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-sm ${isSelected
-                                    ? 'border-primary bg-primary/5 text-primary'
-                                    : 'border-border bg-background hover:border-border/60 hover:shadow-md text-foreground'
-                                    }`}
+                                onClick={() =>
+                                    handleCategoryToggle(category.name)
+                                }
+                                className={`w-full p-5 h-[110px] rounded-xl border transition-all duration-200 text-left group hover:scale-[1.02] hover:shadow-sm ${
+                                    isSelected
+                                        ? "border-primary bg-primary/5 text-primary"
+                                        : "border-border bg-background hover:border-border/60 hover:shadow-md text-foreground"
+                                }`}
                             >
                                 <div className="flex items-start gap-4 h-full">
-                                    <div className={`p-2 rounded-lg transition-colors flex-shrink-0`}>
+                                    <div
+                                        className={`p-2 rounded-lg transition-colors flex-shrink-0`}
+                                    >
                                         <IconComponent
                                             size={20}
-                                            className={`${isSelected
-                                                ? 'text-primary'
-                                                : 'text-muted-foreground group-hover:text-foreground'
-                                                }`}
+                                            className={`${
+                                                isSelected
+                                                    ? "text-primary"
+                                                    : "text-muted-foreground group-hover:text-foreground"
+                                            }`}
                                         />
                                     </div>
                                     <div className="flex-1 min-w-0 flex flex-col justify-between h-full py-1">
                                         <div>
                                             <div className="font-semibold text-base leading-tight mb-2">
-                                                {getShortCategoryName(category.name)}
+                                                {getShortCategoryName(
+                                                    category.name
+                                                )}
                                             </div>
-                                            <div className={`text-sm leading-snug transition-colors line-clamp-2 ${isSelected
-                                                ? 'text-primary/70'
-                                                : 'text-muted-foreground group-hover:text-foreground/80'
-                                                }`}>
-                                                {getCategoryDescription(category.name)}
+                                            <div
+                                                className={`text-sm leading-snug transition-colors line-clamp-2 ${
+                                                    isSelected
+                                                        ? "text-primary/70"
+                                                        : "text-muted-foreground group-hover:text-foreground/80"
+                                                }`}
+                                            >
+                                                {getCategoryDescription(
+                                                    category.name
+                                                )}
                                             </div>
                                         </div>
                                     </div>
-                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${isSelected
-                                        ? 'border-primary bg-primary'
-                                        : 'border-muted-foreground/30 group-hover:border-muted-foreground/50'
-                                        }`}>
+                                    <div
+                                        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+                                            isSelected
+                                                ? "border-primary bg-primary"
+                                                : "border-muted-foreground/30 group-hover:border-muted-foreground/50"
+                                        }`}
+                                    >
                                         {isSelected && (
                                             <svg
                                                 className="w-3 h-3 text-primary-foreground"
@@ -177,7 +197,8 @@ const StepOne: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center text-sm text-gray-600 mb-4"
                 >
-                    {selectedCategories.length} topic{selectedCategories.length === 1 ? '' : 's'} selected
+                    {selectedCategories.length} topic
+                    {selectedCategories.length === 1 ? "" : "s"} selected
                 </motion.div>
             )}
 

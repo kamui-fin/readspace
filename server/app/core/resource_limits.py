@@ -13,5 +13,5 @@ RESOURCE_LIMITS = {
         # All -1 means unlimited
         "max_subscriptions": -1,
         "max_books": -1,
-    }
+    },
 }

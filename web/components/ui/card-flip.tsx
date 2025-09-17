@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { ArrowDown } from "lucide-react"
 
 interface CardFlipProps {

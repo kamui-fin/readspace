@@ -24,10 +24,7 @@ export const env = createEnv({
             .string()
             .url()
             .default("http://localhost:8008"),
-        NEXT_PUBLIC_APP_URL: z
-            .string()
-            .url()
-            .default("http://localhost:8042"),
+        NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:8042"),
     },
 
     /**

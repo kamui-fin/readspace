@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { marked } from "marked"
 import { memo, useId, useMemo } from "react"
 import ReactMarkdown, { Components } from "react-markdown"

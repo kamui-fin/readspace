@@ -16,9 +16,7 @@ import { BookViewProps, EpubHighlight } from "../../types/library"
 import HighlightPopover from "./highlight-popover"
 
 // Custom hook for scroll direction detection
-const useScrollDirection = (
-    containerRef: React.RefObject<HTMLElement | null>
-) => {
+const useScrollDirection = () => {
     const [isScrollingUp, setIsScrollingUp] = useState(true)
     const lastScrollY = useRef(0)
 
@@ -77,7 +75,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 restorePoint(bookMeta.epub_progress)
             }
         })
-    }, [bookMeta])
+    }, [bookMeta, fetch, restorePoint])
 
     useEffect(() => {
         const loadChapter = async () => {
@@ -109,7 +107,13 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
         }
 
         loadChapter()
-    }, [currentLocation])
+    }, [
+        currentLocation,
+        bookMeta.epub_chapter_char_counts,
+        epubBook,
+        getCurrentChapterIdx,
+        setChapterHTML,
+    ])
 
     // Auto-hide the app sidebar for better reading experience
     // const { setOpen } = useSidebarLeft()
@@ -118,7 +122,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
     // }, [])
 
     const readerRef = useRef<HTMLDivElement>(null)
-    const isScrollingUp = useScrollDirection(readerRef)
+    const isScrollingUp = useScrollDirection()
     const isMobile = useIsMobile()
 
     // Mouse proximity logic
@@ -184,7 +188,9 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                         className="flex items-center justify-center px-5 py-2 rounded-md transition-all duration-200 hover:bg-background active:bg-background/80 focus:outline-none focus:ring-1 focus:ring-ring"
                         aria-label="Next chapter"
                     >
-                        <span className="text-foreground font-medium">Next</span>
+                        <span className="text-foreground font-medium">
+                            Next
+                        </span>
                         <ChevronRight className="h-4 w-4 ml-1.5 text-muted-foreground" />
                     </button>
                 </div>

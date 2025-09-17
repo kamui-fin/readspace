@@ -11,35 +11,31 @@ interface DiscoverSuspenseWrapperProps {
 
 export function DiscoverSuspenseWrapper(props: DiscoverSuspenseWrapperProps) {
     const { initialQuery, initialCategory, initialLanguage } = props
-    
+
     const hasSearchParams = Boolean(initialQuery || initialCategory)
-    
+
     const getSkeletonTitle = () => {
         if (initialCategory) {
             return initialCategory
         }
         return "Discover Feeds"
     }
-    
+
     return (
         <div className="flex flex-col min-h-screen">
             <main className="flex-1 px-4 py-4 md:px-6 md:py-6">
-                <DiscoverSearch 
-                    initialQuery={initialQuery}
-                    initialCategory={initialCategory}
-                    initialLanguage={initialLanguage}
-                />
-                
+                <DiscoverSearch initialLanguage={initialLanguage} />
+
                 {hasSearchParams && (
-                    <Suspense 
+                    <Suspense
                         fallback={
-                            <DiscoverSkeleton 
+                            <DiscoverSkeleton
                                 title={getSkeletonTitle()}
                                 showCategories={false}
                             />
                         }
                     >
-                        <DiscoverResultsClient 
+                        <DiscoverResultsClient
                             query={initialQuery}
                             category={initialCategory}
                             language={initialLanguage}
@@ -55,14 +51,14 @@ export function DiscoverSuspenseWrapper(props: DiscoverSuspenseWrapperProps) {
 function DiscoverResultsClient({
     query,
     category,
-    language = "en"
+    language = "en",
 }: {
     query?: string
     category?: string
     language?: string
 }) {
     return (
-        <DiscoverResults 
+        <DiscoverResults
             query={query}
             category={category}
             language={language}

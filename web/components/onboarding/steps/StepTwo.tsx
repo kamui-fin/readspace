@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/hooks/use-current-user"
-import { ApiClient } from "@/lib/api/client"
+import { ApiClient } from "@readspace/shared"
 import { useOnboardingStore } from "@/stores/onboarding"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
@@ -9,8 +9,31 @@ import React, { useState } from "react"
 import OnboardingLayout from "../layout"
 import { OnboardingFeedCard } from "../OnboardingFeedCard"
 
+// API response type for search feeds
+type DiscoverSearchResponse = {
+    results: FeedDiscoveryResult[]
+    total_count: number
+    query: string | null
+    category: string | null
+    language: string
+}
+
+type FeedDiscoveryResult = {
+    id: string
+    title: string | null
+    description: string | null
+    url: string
+    link: string | null
+    image_url: string | null
+    category?: string | null
+    popularity_score?: number
+}
+
+type OnboardingFeed = FeedDiscoveryResult
+
 const StepTwo: React.FC = () => {
-    const { onboardingData, updateOnboardingData, prevStep } = useOnboardingStore()
+    const { onboardingData, updateOnboardingData, prevStep } =
+        useOnboardingStore()
     const [followedFeeds, setFollowedFeeds] = useState<string[]>(
         onboardingData.followedFeeds || []
     )
@@ -18,27 +41,37 @@ const StepTwo: React.FC = () => {
     const router = useRouter()
 
     // Fetch feeds for selected categories
-    const { data: feedsData, isLoading, error } = useQuery({
-        queryKey: ['onboarding-feeds', onboardingData.selectedCategories],
+    const {
+        data: feedsData,
+        isLoading,
+        error,
+    } = useQuery({
+        queryKey: ["onboarding-feeds", onboardingData.selectedCategories],
         queryFn: async () => {
-            const promises = onboardingData.selectedCategories.map(category =>
+            const promises = onboardingData.selectedCategories.map((category) =>
                 ApiClient.rss.searchFeeds({
                     category,
-                    limit: 8 // Get top 8 per category
+                    limit: 8, // Get top 8 per category
                 })
             )
 
             const results = await Promise.all(promises)
 
             // Combine and deduplicate feeds from all categories
-            const allFeeds = results.flatMap(result => result.results)
-            const uniqueFeeds = allFeeds.filter((feed, index, self) =>
-                index === self.findIndex(f => f.id === feed.id)
+            const allFeeds = results.flatMap(
+                (result: DiscoverSearchResponse) => result.results
+            )
+            const uniqueFeeds = allFeeds.filter(
+                (feed, index, self) =>
+                    index === self.findIndex((f) => f.id === feed.id)
             )
 
             // Sort by popularity and take top 20
             return uniqueFeeds
-                .sort((a, b) => (b.popularity_score || 0) - (a.popularity_score || 0))
+                .sort(
+                    (a, b) =>
+                        (b.popularity_score || 0) - (a.popularity_score || 0)
+                )
                 .slice(0, 20)
         },
         enabled: onboardingData.selectedCategories.length > 0,
@@ -59,12 +92,10 @@ const StepTwo: React.FC = () => {
         if (!user) return
 
         try {
-            // TODO: Mark onboarding as completed in user preferences/metadata
-
             // Redirect to main app
             router.push("/articles")
         } catch (error) {
-            console.error('Failed to complete onboarding:', error)
+            console.error("Failed to complete onboarding:", error)
         }
     }
 
@@ -78,7 +109,10 @@ const StepTwo: React.FC = () => {
             >
                 <div className="space-y-4">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="bg-card border border-border rounded-xl p-4 animate-pulse">
+                        <div
+                            key={i}
+                            className="bg-card border border-border rounded-xl p-4 animate-pulse"
+                        >
                             <div className="flex items-start gap-4">
                                 <div className="w-12 h-12 bg-muted rounded-xl"></div>
                                 <div className="flex-1">
@@ -106,10 +140,15 @@ const StepTwo: React.FC = () => {
             >
                 <div className="text-center py-8">
                     <p className="text-gray-600 mb-4">
-                        We couldn't load publications for your selected topics.
+                        We couldn&apos;t load publications for your selected
+                        topics.
                     </p>
                     <div className="flex gap-3">
-                        <Button onClick={handleBack} variant="outline" className="flex-1">
+                        <Button
+                            onClick={handleBack}
+                            variant="outline"
+                            className="flex-1"
+                        >
                             Go Back
                         </Button>
                         <Button
@@ -130,7 +169,7 @@ const StepTwo: React.FC = () => {
             subtitle="Choose at least 3 publications to start building your reading list"
         >
             <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {feedsData.map((feed: any, index: number) => (
+                {feedsData.map((feed: OnboardingFeed, index: number) => (
                     <motion.div
                         key={feed.id}
                         initial={{ opacity: 0, y: 20 }}
@@ -138,7 +177,7 @@ const StepTwo: React.FC = () => {
                         transition={{
                             duration: 0.3,
                             delay: index * 0.1,
-                            ease: "easeOut"
+                            ease: "easeOut",
                         }}
                     >
                         <OnboardingFeedCard
@@ -155,8 +194,10 @@ const StepTwo: React.FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-center text-sm text-gray-600 mt-4"
                 >
-                    {followedFeeds.length} source{followedFeeds.length === 1 ? '' : 's'} added
-                    {followedFeeds.length < 3 && ` • ${3 - followedFeeds.length} more to go`}
+                    {followedFeeds.length} source
+                    {followedFeeds.length === 1 ? "" : "s"} added
+                    {followedFeeds.length < 3 &&
+                        ` • ${3 - followedFeeds.length} more to go`}
                 </motion.div>
             )}
 
@@ -173,7 +214,9 @@ const StepTwo: React.FC = () => {
                     disabled={!canComplete}
                     className="w-2/3 bg-primary hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                    {canComplete ? "Start Reading!" : `Add ${3 - followedFeeds.length} More`}
+                    {canComplete
+                        ? "Start Reading!"
+                        : `Add ${3 - followedFeeds.length} More`}
                 </Button>
             </div>
         </OnboardingLayout>

@@ -1,3 +1,5 @@
+from typing import Any
+
 import structlog
 from fastapi import APIRouter, Depends
 
@@ -36,7 +38,7 @@ router.include_router(rss_similar.router, prefix="/rss")
 
 
 @router.get("/health")
-async def health_check():
+async def health_check() -> dict[str, str]:
     """
     Health check endpoint that doesn't require authentication
     """
@@ -46,7 +48,7 @@ async def health_check():
 
 
 @router.get("/user-info")
-async def user_info(user: TokenData = Depends(get_current_user)):
+async def user_info(user: TokenData = Depends(get_current_user)) -> dict[str, Any]:
     """
     Protected endpoint that returns user information
     """

@@ -1,4 +1,4 @@
-import { SerializedRange } from "@/types/library"
+import { SerializedRange } from "@readspace/shared"
 
 export function serializeRange(range: Range, container: Node): SerializedRange {
     const output = {

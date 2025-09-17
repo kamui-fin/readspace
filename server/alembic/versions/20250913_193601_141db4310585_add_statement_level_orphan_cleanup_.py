@@ -5,22 +5,21 @@ Revises: b4978300fc68
 Create Date: 2025-09-13 19:36:01.099534+00:00
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 from alembic import op
-import sqlalchemy as sa
-
 
 # revision identifiers, used by Alembic.
-revision: str = '141db4310585'
-down_revision: Union[str, None] = 'b4978300fc68'
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+revision: str = "141db4310585"
+down_revision: str | None = "b4978300fc68"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
     """Upgrade schema."""
-    
+
     # Create statement-level trigger function for efficient bulk orphan cleanup
     op.execute("""
         CREATE OR REPLACE FUNCTION cleanup_orphaned_article_contents_stmt()
@@ -40,7 +39,7 @@ def upgrade() -> None:
         END;
         $$ LANGUAGE plpgsql;
     """)
-    
+
     # Create statement-level trigger on feed_articles
     op.execute("""
         CREATE TRIGGER trg_cleanup_article_contents_after_feed_delete
@@ -48,7 +47,7 @@ def upgrade() -> None:
         FOR EACH STATEMENT
         EXECUTE FUNCTION cleanup_orphaned_article_contents_stmt();
     """)
-    
+
     # Create statement-level trigger on clipped_articles
     op.execute("""
         CREATE TRIGGER trg_cleanup_article_contents_after_clipped_delete
@@ -56,7 +55,7 @@ def upgrade() -> None:
         FOR EACH STATEMENT
         EXECUTE FUNCTION cleanup_orphaned_article_contents_stmt();
     """)
-    
+
     # Clean up any existing orphaned records
     op.execute("""
         DELETE FROM article_contents ac
@@ -71,10 +70,14 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    
+
     # Drop triggers
-    op.execute("DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_feed_delete ON feed_articles;")
-    op.execute("DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_clipped_delete ON clipped_articles;")
-    
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_feed_delete ON feed_articles;"
+    )
+    op.execute(
+        "DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_clipped_delete ON clipped_articles;"
+    )
+
     # Drop trigger function
     op.execute("DROP FUNCTION IF EXISTS cleanup_orphaned_article_contents_stmt();")

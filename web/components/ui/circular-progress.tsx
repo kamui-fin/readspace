@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { motion } from "framer-motion"
 
 interface CircularProgressProps {

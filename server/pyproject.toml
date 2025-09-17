@@ -30,7 +30,7 @@ test = "pytest tests/"
 test-unit = "pytest tests/unit/ -m unit"
 test-integration = "pytest tests/integration/ -m integration"
 test-coverage = "pytest tests/ --cov=app --cov-report=html --cov-report=term-missing"
-lint = "ruff check app --fix"
+lint = "mypy app/ && ruff check app --fix"
 format = "ruff format app"
 migrate = "alembic upgrade head"
 
@@ -95,10 +95,11 @@ types-requests = "^2.32.0.20250306"
 safety = "^3.3.1"
 poethepoet = "^0.33.1"
 ruff = "^0.11.5"
+types-python-jose = "^3.5.0.20250531"
 
 [tool.ruff]
 target-version = "py310"
-line-length = 88
+line-length = 120
 
 [tool.ruff.lint]
 select = [
@@ -127,9 +128,11 @@ ignore = [
 python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
+warn_unused_ignores = true
 disallow_untyped_defs = false  # Enable gradually
-ignore_missing_imports = true
+disallow_any_unimported = true
 no_implicit_reexport = true
+no_implicit_optional = true
 show_error_codes = true
 
 [tool.coverage.run]

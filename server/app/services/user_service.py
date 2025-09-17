@@ -35,16 +35,13 @@ class UserService:
             email=email,
         )
 
-        profile = await crud_profile.create_if_not_exists(
-            self.db, user_id=user_id, email=email
-        )
+        profile = await crud_profile.create_if_not_exists(self.db, user_id=user_id, email=email)
 
         logger.info(
             "User profile ensured",
             user_id=profile.id,
             email=profile.email,
-            created_new=profile.created_at.replace(microsecond=0)
-            == profile.updated_at.replace(microsecond=0),
+            created_new=profile.created_at.replace(microsecond=0) == profile.updated_at.replace(microsecond=0),
         )
 
         return profile

@@ -1,5 +1,13 @@
 import { Metadata, Viewport } from "next"
-import { EB_Garamond, Figtree, Geist, Geist_Mono, Noto_Serif_SC, Noto_Serif_JP, Noto_Serif_TC } from "next/font/google"
+import {
+    EB_Garamond,
+    Figtree,
+    Geist,
+    Geist_Mono,
+    Noto_Serif_SC,
+    Noto_Serif_JP,
+    Noto_Serif_TC,
+} from "next/font/google"
 import { QueryProvider } from "@/components/providers/query-provider"
 import { PostHogProvider } from "./providers"
 import "./globals.css"

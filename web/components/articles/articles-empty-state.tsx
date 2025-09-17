@@ -3,8 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useFeeds, useFolders, useRefreshFeed } from "@/lib/api/hooks/feeds"
-import { useModalStore } from "@/lib/stores/modal-store"
+import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
 import { BookOpen, RefreshCw, Rss } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
@@ -15,8 +14,6 @@ interface ArticlesEmptyStateProps {
     feedId?: string
     folderId?: string
     onRefresh?: () => void
-    onCreateFolder?: () => void
-    onAddFeed?: (folderId?: string) => void
 }
 
 export function ArticlesEmptyState({
@@ -24,12 +21,9 @@ export function ArticlesEmptyState({
     feedId,
     folderId,
     onRefresh,
-    onCreateFolder,
-    onAddFeed,
 }: ArticlesEmptyStateProps) {
     const router = useRouter()
     const [isRefreshing, setIsRefreshing] = useState(false)
-    const { openFolderModal } = useModalStore()
     const isMobile = useIsMobile()
     const refreshFeed = useRefreshFeed()
 
@@ -66,7 +60,6 @@ export function ArticlesEmptyState({
             await refreshFeed.mutateAsync({
                 feedId: feedId,
                 forceRefetch: true,
-                silent: true, // We'll handle our own toasts
             })
             // After deep refresh completes, refetch articles
             if (onRefresh) {
@@ -91,7 +84,8 @@ export function ArticlesEmptyState({
             case "recentlyRead":
                 return {
                     title: "No recently read articles",
-                    subtitle: "Articles you read will appear here for easy reference",
+                    subtitle:
+                        "Articles you read will appear here for easy reference",
                     icon: BookOpen,
                     action: (
                         <Button
@@ -107,7 +101,8 @@ export function ArticlesEmptyState({
             case "readLater":
                 return {
                     title: "No articles saved for later",
-                    subtitle: "Save interesting articles to read when you have more time",
+                    subtitle:
+                        "Save interesting articles to read when you have more time",
                     icon: BookOpen,
                     action: (
                         <Button
@@ -123,7 +118,8 @@ export function ArticlesEmptyState({
             case "today":
                 return {
                     title: "No articles published today",
-                    subtitle: "Check back later as new content arrives throughout the day",
+                    subtitle:
+                        "Check back later as new content arrives throughout the day",
                     icon: RefreshCw,
                     action: undefined,
                 }
@@ -135,7 +131,11 @@ export function ArticlesEmptyState({
     const modeContent = getModeSpecificContent()
     // Show mode-specific content for readLater and recentlyRead even if no feeds/folders
     // Show mode-specific content for other modes only if user has feeds (not just folders)
-    if (modeContent && !isLoading && (mode === "readLater" || mode === "recentlyRead" || !hasNoFeeds)) {
+    if (
+        modeContent &&
+        !isLoading &&
+        (mode === "readLater" || mode === "recentlyRead" || !hasNoFeeds)
+    ) {
         return (
             <div className="flex h-full w-full items-center justify-center p-6">
                 {isMobile && (
@@ -196,7 +196,7 @@ export function ArticlesEmptyState({
                                 Follow some feeds
                             </h4>
                             <p className="text-xs text-muted-foreground">
-                                Discover feeds you'll love
+                                Discover feeds you&apos;ll love
                             </p>
                         </div>
                     </div>
@@ -249,15 +249,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                                ? "No articles in this folder"
-                                : "No articles found"}
+                              ? "No articles in this folder"
+                              : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
-                            ? "This feed hasn't published any articles yet, or they may not have loaded"
+                            ? "This feed hasn&apos;t published any articles yet, or they may not have loaded"
                             : folderId
-                                ? "No feeds in this folder have published articles yet"
-                                : "Try refreshing or check back later for new content"}
+                              ? "No feeds in this folder have published articles yet"
+                              : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && feedId && (

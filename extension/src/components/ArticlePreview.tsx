@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatDate, extractDomain } from '@/lib/utils'
-import { PageMetadata, DiscoveredFeed } from '@/types'
+import { formatRelativeDate, extractDomain } from '@readspace/shared'
+import type { PageMetadata, DiscoveredFeed } from '@readspace/shared'
 import { BookOpen, Clock, Calendar, Globe, Rss, Settings, BellPlus, Copy } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
@@ -100,7 +100,7 @@ export function ArticlePreview({
             {publishedDate && (
               <div className="flex items-center gap-1">
                 <Calendar className="w-3 h-3" />
-                <span>{formatDate(publishedDate)}</span>
+                <span>{formatRelativeDate(publishedDate)}</span>
               </div>
             )}
           </div>

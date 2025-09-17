@@ -1,10 +1,8 @@
 import { Suspense } from "react"
 import { ArticlesView } from "@/components/articles"
 import { ArticlesViewSkeleton } from "./articles-view-skeleton"
-import { ArticlesEmptyState } from "./articles-empty-state"
 
 interface ArticlesSuspenseWrapperProps {
-    title?: string
     showUnreadBadge?: boolean
     initialSidebarTitle?: string
     feedId?: string
@@ -18,19 +16,17 @@ interface ArticlesSuspenseWrapperProps {
 }
 
 export function ArticlesSuspenseWrapper(props: ArticlesSuspenseWrapperProps) {
-    const { title, showUnreadBadge, onCreateFolder, onAddFeed, ...articlesViewProps } = props
-    
+    const { showUnreadBadge, onCreateFolder, onAddFeed, ...articlesViewProps } =
+        props
+
     return (
-        <Suspense 
+        <Suspense
             fallback={
-                <ArticlesViewSkeleton 
-                    title={title || articlesViewProps.initialSidebarTitle || "Loading..."}
-                    showUnreadBadge={showUnreadBadge}
-                />
+                <ArticlesViewSkeleton showUnreadBadge={showUnreadBadge} />
             }
         >
-            <ArticlesView 
-                {...articlesViewProps} 
+            <ArticlesView
+                {...articlesViewProps}
                 onCreateFolder={onCreateFolder}
                 onAddFeed={onAddFeed}
             />

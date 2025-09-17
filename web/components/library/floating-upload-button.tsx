@@ -17,7 +17,7 @@ import { LoaderCircle, Plus } from "lucide-react"
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { useQueryClient } from "@tanstack/react-query"
-import { BOOK_QUERY_KEYS } from "@/lib/query-keys"
+import { BOOK_QUERY_KEYS } from "@readspace/shared"
 import { pdfjs } from "react-pdf"
 import { DragDropBook } from "./upload-book"
 import { useUploadBook } from "./upload/api"
@@ -33,7 +33,6 @@ export default function FloatingUploadButton() {
     const [isOpen, setIsOpen] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [uploadedBookId, setUploadedBookId] = useState<string>("")
 
     const { user } = useCurrentUser()
     const isMobile = useIsMobile()
@@ -55,14 +54,13 @@ export default function FloatingUploadButton() {
             )
 
             // Upload the book
-            const { bookId } = await uploadBook.mutateAsync({
+            await uploadBook.mutateAsync({
                 file: selectedFile,
                 user,
                 metadata,
                 charCounts,
             })
 
-            setUploadedBookId(bookId)
             setIsOpen(false)
             // Invalidate books query to refresh the catalog
             queryClient.invalidateQueries({ queryKey: [BOOK_QUERY_KEYS.BOOKS] })

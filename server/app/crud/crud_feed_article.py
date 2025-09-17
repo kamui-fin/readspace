@@ -16,9 +16,7 @@ from app.schemas.rss_schemas import FeedArticleCreate, FeedArticleUpdate
 class CRUDFeedArticle(CRUDBase[FeedArticle, FeedArticleCreate, FeedArticleUpdate]):
     """CRUD operations for RSS feed articles"""
 
-    async def get_by_feed_and_guid(
-        self, db: AsyncSession, *, feed_id: UUID, guid: str
-    ) -> FeedArticle | None:
+    async def get_by_feed_and_guid(self, db: AsyncSession, *, feed_id: UUID, guid: str) -> FeedArticle | None:
         """Get feed article by feed ID and GUID"""
         result = await db.execute(
             select(FeedArticle)
@@ -27,9 +25,7 @@ class CRUDFeedArticle(CRUDBase[FeedArticle, FeedArticleCreate, FeedArticleUpdate
         )
         return result.scalar_one_or_none()
 
-    async def get_with_content(
-        self, db: AsyncSession, *, article_id: UUID
-    ) -> FeedArticle | None:
+    async def get_with_content(self, db: AsyncSession, *, article_id: UUID) -> FeedArticle | None:
         """Get feed article with content and feed"""
         result = await db.execute(
             select(FeedArticle)

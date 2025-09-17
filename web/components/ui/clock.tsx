@@ -4,7 +4,7 @@ import type { Transition, Variants } from "motion/react"
 import { motion, useAnimation } from "motion/react"
 import type { HTMLAttributes } from "react"
 import { forwardRef, useCallback, useImperativeHandle, useRef } from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 export interface ClockIconHandle {
     startAnimation: () => void

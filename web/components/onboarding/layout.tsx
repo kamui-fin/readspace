@@ -25,7 +25,6 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
     const skipOnboarding = async () => {
         if (!user) return
-        // TODO: mark onboarding as completed in user preferences/metadata
         router.push("/library")
     }
 

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { Eye, Plus } from "lucide-react"
 
 interface FeedPreviewBannerProps {
@@ -11,15 +11,16 @@ interface FeedPreviewBannerProps {
 
 export function FeedPreviewBanner({
     feedTitle,
-    feedDescription,
     className,
-    onFollow
+    onFollow,
 }: FeedPreviewBannerProps) {
     return (
-        <div className={cn(
-            "z-20 w-full bg-orange-50/95 dark:bg-orange-950/95 backdrop-blur-sm border-b border-orange-200/60 dark:border-orange-800/60",
-            className
-        )}>
+        <div
+            className={cn(
+                "z-20 w-full bg-orange-50/95 dark:bg-orange-950/95 backdrop-blur-sm border-b border-orange-200/60 dark:border-orange-800/60",
+                className
+            )}
+        >
             <div className="flex items-center justify-between gap-2 sm:gap-4 px-3 sm:px-4 py-2">
                 <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 overflow-hidden">
                     <div className="flex-shrink-0">
@@ -32,7 +33,9 @@ export function FeedPreviewBanner({
                             </span>
                             {feedTitle && (
                                 <>
-                                    <span className="hidden sm:inline text-orange-500 dark:text-orange-400">•</span>
+                                    <span className="hidden sm:inline text-orange-500 dark:text-orange-400">
+                                        •
+                                    </span>
                                     <span className="text-xs sm:text-sm text-orange-700 dark:text-orange-300 truncate leading-tight">
                                         You are not yet subscribed to this feed
                                     </span>

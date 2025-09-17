@@ -11,7 +11,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { ZoomValue } from "@/types/library"
 
 // Global storage key for zoom preference
@@ -152,7 +152,7 @@ export function PdfZoom({
     }
 
     // Helper to update input display based on zoom value
-    const updateInputDisplay = () => {
+    const updateInputDisplay = React.useCallback(() => {
         if (inputRef.current) {
             if (typeof zoom === "number") {
                 inputRef.current.value = `${Math.round(zoom * 100)}%`
@@ -161,12 +161,12 @@ export function PdfZoom({
                 inputRef.current.value = zoom
             }
         }
-    }
+    }, [zoom])
 
     // Update input value when zoom changes
     React.useEffect(() => {
         updateInputDisplay()
-    }, [zoom])
+    }, [zoom, updateInputDisplay])
 
     // Format display for dropdown menu
     const formatZoomDisplay = (level: ZoomValue) => {

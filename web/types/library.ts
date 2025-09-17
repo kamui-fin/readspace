@@ -1,6 +1,6 @@
 import { Database } from "@/database.types"
 import { GhostHighlight, ScaledPosition } from "react-pdf-highlighter-extended"
-import { BookMetadata, Highlight } from "./api"
+import { BookMetadata, Highlight, SerializedRange } from "@readspace/shared"
 
 export type ZoomValue =
     | number
@@ -17,13 +17,6 @@ export type Measurable = {
 export type RangeRefElement = {
     className?: string
     getBoundingClientRect: () => DOMRect
-}
-
-export interface SerializedRange {
-    startContainerPath: number[]
-    startOffset: number
-    endContainerPath: number[]
-    endOffset: number
 }
 
 export interface EpubHighlight extends Highlight {

@@ -17,26 +17,22 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useCreateFeed, useCreateFolder, useDeleteFeed, useFeeds, useFolders } from "@/lib/api/hooks/feeds"
+import {
+    useCreateFeed,
+    useCreateFolder,
+    useDeleteFeed,
+    useFeeds,
+    useFolders,
+    type Feed,
+} from "@readspace/shared"
 import { AlertCircle, FolderPlus, Loader2, Rss, Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 
 interface FeedPreviewCardProps {
-    feed: {
-        id: string
-        title: string | null
-        description: string | null
-        url: string
-        link: string | null
-        image_url: string | null
-        tags?: string[]
-        category?: string | null
-        popularity_score?: number
-        relevance?: number
-        search_metadata?: Record<string, any>
-        is_preview: boolean
+    feed: Feed & {
+        is_preview: true
         preview_url: string
     }
 }
@@ -48,27 +44,32 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
     const [isCreatingFolder, setIsCreatingFolder] = useState(false)
     const [newFolderName, setNewFolderName] = useState("")
     const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false)
-    const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] = useState(false)
+    const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] =
+        useState(false)
 
     // Get the user's subscribed feeds to check if this feed is subscribed
-    const { data: feedsData } = useFeeds({}, {
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-    })
+    const { data: feedsData } = useFeeds(
+        {},
+        {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            staleTime: 5 * 60 * 1000, // 5 minutes
+        }
+    )
 
     console.log("feedsData", feedsData?.[0]?.url, feed.url)
 
     // Normalize URL function to handle www/non-www variations
     const normalizeUrl = (url: string) => {
-        return url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')
+        return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")
     }
 
     // Check if this feed is in the user's subscription list
     // Compare by normalized RSS URL to handle www/non-www variations
-    const isFollowed = feedsData?.some(f =>
-        normalizeUrl(f.url) === normalizeUrl(feed.url)
-    ) ?? false
+    const isFollowed =
+        feedsData?.some(
+            (f) => normalizeUrl(f.url) === normalizeUrl(feed.url)
+        ) ?? false
     console.log("isFollowed", isFollowed)
 
     const { data: folders, isLoading: foldersLoading } = useFolders()
@@ -106,14 +107,14 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
         }
 
         try {
-            let folderId = selectedFolderId;
+            let folderId = selectedFolderId
 
             // Create folder first if needed
             if (isCreatingFolder) {
                 const newFolder = await createFolder.mutateAsync({
-                    name: newFolderName.trim()
-                });
-                folderId = newFolder.id;
+                    name: newFolderName.trim(),
+                })
+                folderId = newFolder.id
             }
 
             // Create the feed subscription using the preview URL
@@ -124,19 +125,27 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
 
             toast.success("Successfully subscribed to feed")
             handleClose()
-
-        } catch (error: any) {
+        } catch (error: unknown) {
             let errorMessage = "Failed to subscribe to feed"
-            if (error?.message) {
-                errorMessage = error.message
-            } else if (error?.detail) {
-                errorMessage = error.detail
-            } else if (typeof error === 'string') {
+            if (typeof error === "string") {
                 errorMessage = error
-            } else if (error?.response?.data?.detail) {
-                errorMessage = error.response.data.detail
-            } else if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message
+            } else if (error && typeof error === "object") {
+                const err = error as Record<string, unknown>
+                if (typeof err.message === "string") {
+                    errorMessage = err.message
+                } else if (typeof err.detail === "string") {
+                    errorMessage = err.detail
+                } else if (err.response && typeof err.response === "object") {
+                    const response = err.response as Record<string, unknown>
+                    if (response.data && typeof response.data === "object") {
+                        const data = response.data as Record<string, unknown>
+                        if (typeof data.detail === "string") {
+                            errorMessage = data.detail
+                        } else if (typeof data.message === "string") {
+                            errorMessage = data.message
+                        }
+                    }
+                }
             }
             setError(errorMessage)
         }
@@ -147,14 +156,14 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
 
         try {
             // Find the subscribed feed by normalized RSS URL to get its ID
-            const subscribedFeed = feedsData?.find(f =>
-                normalizeUrl(f.url) === normalizeUrl(feed.url)
+            const subscribedFeed = feedsData?.find(
+                (f) => normalizeUrl(f.url) === normalizeUrl(feed.url)
             )
             if (subscribedFeed) {
                 await deleteFeed.mutateAsync({ feedId: subscribedFeed.id })
                 setIsUnsubscribeModalOpen(false)
             }
-        } catch (error) {
+        } catch {
             // Error toast is handled by the mutation
         } finally {
             setIsProcessingUnsubscribe(false)
@@ -171,7 +180,6 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
         }
     }
 
-
     return (
         <div className="p-4 border-2 border-dashed border-[#6A994E] bg-[#F3F9EF] rounded-lg">
             <div className="flex gap-4">
@@ -179,28 +187,38 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                     {feed.image_url && (
                         <NextImage
                             src={feed.image_url}
-                            alt={feed.title || 'Feed icon'}
+                            alt={feed.title || "Feed icon"}
                             className="w-9 h-9 rounded object-cover"
                             width={36}
                             height={36}
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                const fallback = target.nextElementSibling as HTMLElement
-                                if (fallback) fallback.style.display = 'flex'
+                                target.style.display = "none"
+                                const fallback =
+                                    target.nextElementSibling as HTMLElement
+                                if (fallback) fallback.style.display = "flex"
                             }}
                         />
                     )}
                     <div
-                        className={`w-9 h-9 rounded flex items-center justify-center text-white font-bold text-sm ${feed.title?.toLowerCase().includes('techcrunch') ? 'bg-green-600' :
-                            feed.title?.toLowerCase().includes('hacker news') ? 'bg-orange-500' :
-                                'bg-gray-600'
-                            }`}
-                        style={{ display: feed.image_url ? 'none' : 'flex' }}
+                        className={`w-9 h-9 rounded flex items-center justify-center text-white font-bold text-sm ${
+                            feed.title?.toLowerCase().includes("techcrunch")
+                                ? "bg-green-600"
+                                : feed.title
+                                        ?.toLowerCase()
+                                        .includes("hacker news")
+                                  ? "bg-orange-500"
+                                  : "bg-gray-600"
+                        }`}
+                        style={{ display: feed.image_url ? "none" : "flex" }}
                     >
-                        {feed.title?.toLowerCase().includes('techcrunch') ? 'TC' :
-                            feed.title?.toLowerCase().includes('hacker news') ? 'Y' :
-                                (feed.title ? feed.title.charAt(0).toUpperCase() : 'F')}
+                        {feed.title?.toLowerCase().includes("techcrunch")
+                            ? "TC"
+                            : feed.title?.toLowerCase().includes("hacker news")
+                              ? "Y"
+                              : feed.title
+                                ? feed.title.charAt(0).toUpperCase()
+                                : "F"}
                     </div>
                 </div>
 
@@ -210,8 +228,15 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                             <h3 className="font-semibold text-lg text-black leading-tight">
                                 {feed.title || "Untitled Feed"}
                             </h3>
-                            <a href={feed.link} target="_blank" rel="noopener noreferrer" className="text-xs text-[#BDC6B7] mt-0.5">
-                                {feed.link?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'No URL'}
+                            <a
+                                href={feed.link || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-[#BDC6B7] mt-0.5"
+                            >
+                                {feed.link
+                                    ?.replace(/^https?:\/\//, "")
+                                    .replace(/\/$/, "") || "No URL"}
                             </a>
                             {feed.description && (
                                 <p className="text-xs text-[#91998C] mt-2 leading-relaxed">
@@ -224,13 +249,16 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                             <Button
                                 variant={isFollowed ? "outline" : "default"}
                                 onClick={handleFollowClick}
-                                className={`h-8 text-xs ${isFollowed
-                                    ? 'text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10'
-                                    : 'bg-[#6A994E] hover:bg-[#6A994E]/90 text-white'
-                                    }`}
+                                className={`h-8 text-xs ${
+                                    isFollowed
+                                        ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
+                                        : "bg-[#6A994E] hover:bg-[#6A994E]/90 text-white"
+                                }`}
                             >
-                                {isFollowed && <Trash2 className="mr-1 h-3 w-3" />}
-                                {isFollowed ? 'Unfollow' : 'Follow'}
+                                {isFollowed && (
+                                    <Trash2 className="mr-1 h-3 w-3" />
+                                )}
+                                {isFollowed ? "Unfollow" : "Follow"}
                             </Button>
                         </div>
                     </div>
@@ -261,17 +289,22 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         className="object-cover"
                                         sizes="40px"
                                         onError={(e) => {
-                                            const target = e.target as HTMLImageElement
-                                            target.style.display = 'none'
-                                            const fallback = target.nextElementSibling as HTMLElement
-                                            if (fallback) fallback.style.display = 'flex'
+                                            const target =
+                                                e.target as HTMLImageElement
+                                            target.style.display = "none"
+                                            const fallback =
+                                                target.nextElementSibling as HTMLElement
+                                            if (fallback)
+                                                fallback.style.display = "flex"
                                         }}
                                     />
                                 ) : null}
                                 <div
-                                    className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm ${feed.image_url ? 'hidden' : 'flex'}`}
+                                    className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-sm ${feed.image_url ? "hidden" : "flex"}`}
                                 >
-                                    {feed.title ? feed.title.charAt(0).toUpperCase() : 'F'}
+                                    {feed.title
+                                        ? feed.title.charAt(0).toUpperCase()
+                                        : "F"}
                                 </div>
                             </div>
                             <div>
@@ -280,8 +313,19 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         {feed.title || "Untitled Feed"}
                                     </h3>
                                 </div>
-                                <a href={feed.preview_url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap truncate w-full">
-                                    {feed.preview_url.replace(/^https?:\/\//, '').replace(/\/$/, '').slice(0, 30) + (feed.preview_url.length > 30 ? '...' : '')}
+                                <a
+                                    href={feed.preview_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap truncate w-full"
+                                >
+                                    {feed.preview_url
+                                        .replace(/^https?:\/\//, "")
+                                        .replace(/\/$/, "")
+                                        .slice(0, 30) +
+                                        (feed.preview_url.length > 30
+                                            ? "..."
+                                            : "")}
                                 </a>
                             </div>
                         </div>
@@ -294,7 +338,10 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div className="space-y-2">
-                            <Label htmlFor="folder-select" className="text-sm font-medium">
+                            <Label
+                                htmlFor="folder-select"
+                                className="text-sm font-medium"
+                            >
                                 Choose Folder
                                 <span className="text-destructive ml-1">*</span>
                             </Label>
@@ -309,12 +356,15 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         id="folder-name-input"
                                         placeholder="Enter folder name..."
                                         value={newFolderName}
-                                        onChange={(e) => setNewFolderName(e.target.value)}
+                                        onChange={(e) =>
+                                            setNewFolderName(e.target.value)
+                                        }
                                         required
                                         autoFocus
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Creating a new folder: "{newFolderName || "..."}"
+                                        Creating a new folder: &quot;
+                                        {newFolderName || "..."}&quot;
                                     </p>
                                 </div>
                             ) : (
@@ -335,10 +385,15 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         <SelectValue placeholder="Select a folder" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="CREATE_NEW" className="cursor-pointer">
+                                        <SelectItem
+                                            value="CREATE_NEW"
+                                            className="cursor-pointer"
+                                        >
                                             <div className="flex items-center gap-2">
                                                 <FolderPlus className="h-4 w-4 text-primary" />
-                                                <span className="font-medium">Create New Folder</span>
+                                                <span className="font-medium">
+                                                    Create New Folder
+                                                </span>
                                             </div>
                                         </SelectItem>
                                         {typedFolders.map((folder) => (
@@ -378,7 +433,10 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                         handleClose()
                                     }
                                 }}
-                                disabled={createFeed.isPending || createFolder.isPending}
+                                disabled={
+                                    createFeed.isPending ||
+                                    createFolder.isPending
+                                }
                             >
                                 {isCreatingFolder ? "Back" : "Cancel"}
                             </Button>
@@ -388,8 +446,10 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                     createFeed.isPending ||
                                     createFolder.isPending ||
                                     (!isCreatingFolder && !selectedFolderId) ||
-                                    (isCreatingFolder && !newFolderName.trim()) ||
-                                    (typedFolders.length === 0 && !isCreatingFolder)
+                                    (isCreatingFolder &&
+                                        !newFolderName.trim()) ||
+                                    (typedFolders.length === 0 &&
+                                        !isCreatingFolder)
                                 }
                                 className="min-w-[100px]"
                             >
@@ -424,8 +484,9 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                             Unfollow Feed
                         </DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to unfollow "{feed.title || 'this feed'}"?
-                            You will no longer receive new articles from this feed.
+                            Are you sure you want to unfollow &quot;
+                            {feed.title || "this feed"}&quot;? You will no
+                            longer receive new articles from this feed.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

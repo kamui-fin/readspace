@@ -1,5 +1,7 @@
 """User and profile endpoints."""
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,12 +17,9 @@ router = APIRouter(prefix="/users", tags=["Users"])
 async def get_current_user_profile(
     current_user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-):
+) -> ProfileResponse:
     """Get current user's profile including role."""
-    profile = await crud_profile.get_by_id(db, user_id=current_user.sub)
+    profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User profile not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
     return profile

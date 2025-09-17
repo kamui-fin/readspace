@@ -27,14 +27,14 @@ const nextConfig = {
                 protocol: "http",
                 hostname: "*",
                 pathname: "/**",
-            }
+            },
         ],
     },
     eslint: {
-        ignoreDuringBuilds: true,
+        ignoreDuringBuilds: false,
     },
     typescript: {
-        ignoreBuildErrors: true,
+        ignoreBuildErrors: false,
     },
     serverExternalPackages: ["import-in-the-middle", "require-in-the-middle"],
 

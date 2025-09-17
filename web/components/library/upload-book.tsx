@@ -9,7 +9,6 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
     import.meta.url
 ).toString()
 
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
     FileList,
@@ -25,10 +24,8 @@ import {
     FileListName,
     FileListSize,
 } from "@/components/ui/file-list"
-import { cn } from "@/lib/utils"
-import { User } from "@supabase/supabase-js"
+import { cn } from "@readspace/shared"
 import { BookOpen, LoaderCircle, X } from "lucide-react"
-import { type PDFDocumentProxy } from "pdfjs-dist"
 import { useCallback } from "react"
 import { useDropzone } from "react-dropzone"
 
@@ -45,169 +42,8 @@ if (typeof Promise.withResolvers === "undefined") {
         }
 }
 
-import { NavItem } from "epubjs/types/navigation"
-
-function cleanShallow(obj: { [s: string]: unknown } | ArrayLike<unknown>) {
-    return Object.fromEntries(
-        Object.entries(obj).filter(([, v]) => v !== null && v !== "")
-    )
-}
-
-interface PdfMetadata {
-    info: {
-        Title?: string
-        Author?: string
-    }
-}
-
-interface BookProgress {
-    globalProgress: {
-        current: number
-        total: number
-    }
-}
-
-const renderFirstPageAsImage = async (
-    pdfDocument: PDFDocumentProxy
-): Promise<string> => {
-    try {
-        // Get the first page (pages are 1-indexed)
-        const page = await pdfDocument.getPage(1)
-
-        // Set the scale and viewport
-        const scale = 1.5
-        const viewport = page.getViewport({ scale })
-
-        // Create canvas with integer dimensions
-        const canvas = document.createElement("canvas")
-        const context = canvas.getContext("2d", { alpha: false })
-
-        // Ensure dimensions are integers to prevent anti-aliasing
-        canvas.height = Math.ceil(viewport.height)
-        canvas.width = Math.ceil(viewport.width)
-
-        if (!context) return ""
-
-        // Render the page
-        const renderContext = {
-            canvasContext: context,
-            viewport,
-        }
-
-        await page.render(renderContext).promise
-
-        return canvas.toDataURL("image/png")
-    } catch (error) {
-        console.error("Error rendering page:", error)
-        return ""
-    }
-}
-
-// A simple utility function to generate unique IDs for each nav item.
-function generateUniqueId(): string {
-    return Math.random().toString(36).substr(2, 9)
-}
-
-/**
- * Given a PDF as a Uint8Array, this function extracts the PDF outline (table of contents)
- * and maps it into an array of NavItem objects.
- *
- * @param pdfData - The PDF data as a Uint8Array.
- * @returns A Promise that resolves to an array of NavItem objects.
- */
-export async function getTableOfContents(
-    pdf: PDFDocumentProxy
-): Promise<NavItem[]> {
-    // Retrieve the outline which contains the table of contents.
-    const outline = await pdf.getOutline()
-    if (!outline) {
-        // If no outline is available in the PDF, return an empty array.
-        return []
-    }
-
-    // A helper function to process an individual outline item (and its subitems if any) recursively.
-    const processOutlineItem = async (item: any): Promise<NavItem | null> => {
-        let pageNumber = "1"
-        let ref: any
-        try {
-            // Check if item.dest[0] is already a page reference object
-            if (
-                item.dest[0] &&
-                typeof item.dest[0] === "object" &&
-                "num" in item.dest[0]
-            ) {
-                ref = item.dest[0]
-            } else {
-                // If not, get the destination and page index
-                const dest = await pdf.getDestination(item.dest)
-                if (!dest) {
-                    return null
-                }
-                ref = dest[0]
-            }
-
-            const page = await pdf.getPageIndex(ref)
-            pageNumber = (page + 1).toString()
-        } catch (error) {
-            console.log(item)
-            return null
-        }
-
-        const navItem: NavItem = {
-            id: generateUniqueId(),
-            label: item.title || "Untitled",
-            href: pageNumber,
-        }
-
-        // If the item has subitems, process them recursively.
-        if (item.items && item.items.length > 0) {
-            navItem.subitems = await Promise.all(
-                item.items
-                    .map(processOutlineItem)
-                    .filter(
-                        (elm: NavItem | null): elm is NavItem => elm !== null
-                    )
-            )
-        }
-
-        return navItem
-    }
-    // Process all the top-level outline items.
-    const navItems = (
-        await Promise.all(outline.map(processOutlineItem))
-    ).filter((elm): elm is NavItem => elm !== null)
-    console.log(navItems)
-    return navItems
-}
-
-const extractPdfMetadata = async (file: File) => {
-    const fileBuffer = await file.arrayBuffer()
-    const pdfDocument = await pdfjs.getDocument(fileBuffer).promise
-    const metadata = (await pdfDocument.getMetadata()) as {
-        info: PdfMetadata["info"]
-    }
-    const toc = await getTableOfContents(pdfDocument)
-
-    // Get metadata
-    const imageUrl = await renderFirstPageAsImage(pdfDocument)
-
-    return {
-        title: metadata.info.Title || file.name.replace(/\.[^/.]+$/, ""),
-        author: metadata.info.Author || "Unknown",
-        progress: 0,
-        total_pages: pdfDocument.numPages,
-        coverUrl: imageUrl,
-        toc,
-    }
-}
-
-const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-}
+import { formatFileSize } from "./upload/utils"
+import { DragDropBookProps } from "./upload/types"
 
 export const DragDropBook = ({
     isUploading,
@@ -215,13 +51,7 @@ export const DragDropBook = ({
     selectedFile,
     onRemoveFile,
     user,
-}: {
-    isUploading: boolean
-    onFileSelect: (file: File | null) => void
-    selectedFile: File | null
-    onRemoveFile: () => void
-    user: User | null
-}) => {
+}: DragDropBookProps) => {
     const onDrop = useCallback(
         async (acceptedFiles: File[]) => {
             const file = acceptedFiles[0]

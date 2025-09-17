@@ -1,4 +1,4 @@
-import { CSSProperties, useEffect, useRef, useState } from "react"
+import { CSSProperties, useCallback, useEffect, useRef, useState } from "react"
 
 import { asElement, getPageFromElement, isHTMLElement } from "./lib/pdfjs-dom"
 import "./style/MouseSelection.css"
@@ -135,12 +135,12 @@ export const MouseSelection = ({
     // Needed in order to grab the page info of a mouse selection
     const startTargetRef = useRef<HTMLElement | null>(null)
 
-    const reset = () => {
+    const reset = useCallback(() => {
         if (onReset) onReset()
         setStart(null)
         setEnd(null)
         setLocked(false)
-    }
+    }, [onReset])
 
     // Check for changes in enableAreaSelection function result
     useEffect(() => {
@@ -277,7 +277,17 @@ export const MouseSelection = ({
             container.removeEventListener("mousedown", handleMouseDown)
             document.removeEventListener("mouseup", handleMouseUp)
         }
-    }, [start, end, enableAreaSelection])
+    }, [
+        start,
+        end,
+        enableAreaSelection,
+        locked,
+        onChange,
+        onDragStart,
+        onSelection,
+        reset,
+        viewer,
+    ])
 
     return (
         <div className="MouseSelection-container" ref={rootRef}>

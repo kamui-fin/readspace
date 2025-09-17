@@ -1,8 +1,9 @@
 import os
+from typing import Any
 
-from celery import Celery
-from celery.schedules import crontab
-from celery.signals import worker_process_init
+from celery import Celery  # type: ignore[import-untyped]
+from celery.schedules import crontab  # type: ignore[import-untyped]
+from celery.signals import worker_process_init  # type: ignore[import-untyped]
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
@@ -10,7 +11,7 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
@@ -20,7 +21,7 @@ from app.utils.logging_config import setup_logging
 settings = get_settings()
 
 
-def setup_celery_tracing():
+def setup_celery_tracing() -> None:
     """Configure OpenTelemetry tracing for Celery"""
     settings = get_settings()
     service_name = settings.OTEL_SERVICE_NAME
@@ -31,10 +32,12 @@ def setup_celery_tracing():
         return
 
     # Configure resource with service information
-    resource = Resource.create({
-        SERVICE_NAME: service_name,
-        "service.instance.id": f"{service_name}-{os.getpid()}",
-    })
+    resource = Resource.create(
+        {
+            SERVICE_NAME: service_name,
+            "service.instance.id": f"{service_name}-{os.getpid()}",
+        }
+    )
 
     # Set up tracer provider
     tracer_provider = TracerProvider(resource=resource)
@@ -56,10 +59,11 @@ def setup_celery_tracing():
 
 
 @worker_process_init.connect
-def init_worker_logging(**_kwargs):
+def init_worker_logging(**_kwargs: Any) -> None:
     """Initialize logging and tracing for Celery worker processes with service-specific tags."""
     setup_logging()
     setup_celery_tracing()
+
 
 # Ensure that the DJANGO_SETTINGS_MODULE environment variable is set correctly
 # For FastAPI, this might not be needed unless you are using Django components.
@@ -108,9 +112,7 @@ celery.conf.beat_schedule = {
     "schedule-hourly-feed-refreshes": {
         "task": "app.workers.tasks.schedule_all_feed_refreshes_task",
         # 'schedule': crontab(minute=0),  # Every hour at minute 0
-        "schedule": crontab(
-            minute="*/30"
-        ),  # Every 30 minutes for more frequent updates during dev/testing
+        "schedule": crontab(minute="*/30"),  # Every 30 minutes for more frequent updates during dev/testing
         # 'args': (16, 16), # Example arguments for the task, if any
     },
     # You can add more periodic tasks here

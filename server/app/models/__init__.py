@@ -1,23 +1,18 @@
 # This file ensures that all models are registered with SQLAlchemy's Base metadata
 
 # Import the Base from the central location
-from app.db.base_class import Base
+from app.db.base_class import Base  # noqa: F401
 
 from .rss_models import (
-    ArticleContent,
-    ClippedArticle,
-    Feed,
-    FeedArticle,
-    FeedSubscription,
-    Folder,
-    UserArticleState,
+    ArticleContent,  # noqa: F401
+    ClippedArticle,  # noqa: F401
+    Feed,  # noqa: F401
+    FeedArticle,  # noqa: F401
+    FeedSubscription,  # noqa: F401
+    Folder,  # noqa: F401
+    UserArticleState,  # noqa: F401
 )
-
-# Backward compatibility alias
-Article = FeedArticle
-
-# Import all your model classes here to ensure they are registered with Base.metadata
-from .user_models import AuthUser, Profile
+from .user_models import AuthUser, Profile  # noqa: F401
 
 # If you have other model files, import their models here as well
 # Example: from .another_model_file import AnotherModel

@@ -22,7 +22,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useIsMobile, useIsTablet, useIsDesktop } from "@/hooks/use-mobile"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
@@ -94,7 +94,7 @@ const SidebarProvider = React.forwardRef<
         const isMobile = useIsMobile()
         const isTablet = useIsTablet()
         const isDesktop = useIsDesktop()
-        
+
         const [openMobile, setOpenMobile] = React.useState(false)
 
         // Determine default open state based on device type
@@ -181,7 +181,7 @@ const SidebarProvider = React.forwardRef<
 
         // Sync sidebar state with device type changes after hydration
         React.useEffect(() => {
-            if (defaultOpen === undefined && typeof window !== 'undefined') {
+            if (defaultOpen === undefined && typeof window !== "undefined") {
                 const width = window.innerWidth
                 const shouldBeOpen = width >= 1024 // Only open on desktop (>= 1024px)
                 if (_open !== shouldBeOpen) {

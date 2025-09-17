@@ -3,7 +3,6 @@ import React from "react"
 
 const OnboardingProgress: React.FC = () => {
     const { currentStep, totalSteps } = useOnboardingStore()
-    const progress = (currentStep / totalSteps) * 100
 
     return (
         <div className="w-full max-w-lg mb-8 mx-auto">
@@ -16,26 +15,29 @@ const OnboardingProgress: React.FC = () => {
                     return (
                         <div key={stepNumber} className="flex items-center">
                             <div
-                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${isCompleted
-                                    ? 'bg-primary text-primary-foreground'
-                                    : isActive
-                                        ? 'bg-accent text-accent-foreground'
-                                        : 'bg-gray-100 text-muted-foreground'
-                                    }`}
+                                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300 ${
+                                    isCompleted
+                                        ? "bg-primary text-primary-foreground"
+                                        : isActive
+                                          ? "bg-accent text-accent-foreground"
+                                          : "bg-gray-100 text-muted-foreground"
+                                }`}
                             >
-                                {isCompleted ? '✓' : stepNumber}
+                                {isCompleted ? "✓" : stepNumber}
                             </div>
                             {stepNumber < totalSteps && (
                                 <div
-                                    className={`w-12 h-0.5 mx-2 transition-all duration-300 ${isCompleted ? 'bg-primary' : 'bg-gray-200'
-                                        }`}
+                                    className={`w-12 h-0.5 mx-2 transition-all duration-300 ${
+                                        isCompleted
+                                            ? "bg-primary"
+                                            : "bg-gray-200"
+                                    }`}
                                 />
                             )}
                         </div>
                     )
                 })}
             </div>
-
         </div>
     )
 }

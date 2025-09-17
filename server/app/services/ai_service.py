@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 class AIService:
     """Service for interacting with Gemini AI."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
 
         # Initialize Gemini client
@@ -30,13 +30,13 @@ class AIService:
     ) -> str:
         """
         Generate text using Gemini.
-        
+
         Args:
             prompt: The user prompt
             system_prompt: Optional system prompt (combined with prompt)
             max_tokens: Maximum tokens to generate
             temperature: Generation temperature
-            
+
         Returns:
             Generated text response
         """
@@ -56,10 +56,7 @@ class AIService:
             response = self.gemini_client.models.generate_content(
                 model=self.settings.GEMINI_MODEL,
                 contents=full_prompt,
-                config=genai.types.GenerateContentConfig(
-                    temperature=temperature,
-                    max_output_tokens=max_tokens
-                )
+                config=genai.types.GenerateContentConfig(temperature=temperature, max_output_tokens=max_tokens),
             )
 
             content = response.text or ""
@@ -76,10 +73,10 @@ class AIService:
     async def generate_embedding(self, text: str) -> list[float] | None:
         """
         Generate embeddings using Gemini embedding model.
-        
+
         Args:
             text: Text to generate embeddings for
-            
+
         Returns:
             List of floats representing the embedding, or None if failed
         """
@@ -88,10 +85,10 @@ class AIService:
     async def generate_embeddings_batch(self, texts: list[str]) -> list[list[float] | None]:
         """
         Generate embeddings for multiple texts using Gemini batch API.
-        
+
         Args:
             texts: List of texts to generate embeddings for
-            
+
         Returns:
             List of embeddings (or None for failed ones)
         """
@@ -104,16 +101,26 @@ class AIService:
 
             response = self.gemini_client.models.embed_content(
                 model=self.settings.GEMINI_EMBEDDING_MODEL,
-                contents=texts
+                contents=texts,  # type: ignore[arg-type]
             )
 
-            embeddings = []
-            for i, embedding_result in enumerate(response.embeddings):
-                if embedding_result and hasattr(embedding_result, 'values') and len(embedding_result.values) > 0:
-                    embeddings.append(embedding_result.values)
-                else:
-                    logger.warning(f"Empty embedding for text {i}")
-                    embeddings.append(None)
+            embeddings: list[list[float] | None] = []
+            # Handle potential None response.embeddings
+            if response.embeddings:
+                for i, embedding_result in enumerate(response.embeddings):
+                    if (
+                        embedding_result
+                        and hasattr(embedding_result, "values")
+                        and embedding_result.values  # Check not None/empty
+                        and len(embedding_result.values) > 0
+                    ):
+                        embeddings.append(list(embedding_result.values))
+                    else:
+                        logger.warning(f"Empty embedding for text {i}")
+                        embeddings.append(None)
+            else:
+                # If no embeddings returned, fill with None
+                embeddings = [None] * len(texts)
 
             logger.debug(
                 "Batch embedding generation completed",
@@ -132,11 +139,11 @@ class AIService:
         domain: str,
         existing_tag: str,
         sample_articles: list[str],
-        language: str = 'en'
+        language: str = "en",
     ) -> FeedEnrichmentResponse | None:
         """
         Use Gemini AI to enrich feed metadata with structured output.
-        
+
         Args:
             title: Feed title
             description: Feed description
@@ -144,7 +151,7 @@ class AIService:
             existing_tag: Existing tag for the feed
             sample_articles: Sample article titles
             language: Feed language
-            
+
         Returns:
             FeedEnrichmentResponse or None if enrichment fails
         """
@@ -152,9 +159,9 @@ class AIService:
         try:
             # Language-specific instructions
             lang_instruction = ""
-            if language == 'zh':
+            if language == "zh":
                 lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
-            elif language != 'en':
+            elif language != "en":
                 lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
 
             articles_text = "\n".join(sample_articles[:5]) if sample_articles else "No articles available"
@@ -169,7 +176,7 @@ Domain: {domain}
 Existing Tag: {existing_tag}
 Sample Articles: {articles_text}
 
-IMPORTANT: 
+IMPORTANT:
 - Focus on what the FEED offers in general, not individual articles
 - REMOVE words "RSS", "Atom", and "Feed" from the title
 - AVOID generic words like "Insights", "Updates", "News", "Blog" in titles
@@ -185,10 +192,12 @@ Rate the popularity and influence of this RSS feed on a scale of 1–100. Consid
 - When refining title and description, use your own knowledge of the website too.
 
 Scoring Guidelines:
-90–100: Extremely popular & influential, widely read across the internet (e.g., CNN Top Stories, Hacker News frontpage, TechCrunch main feed).
+90–100: Extremely popular & influential, widely read across the internet
+        (e.g., CNN Top Stories, Hacker News frontpage, TechCrunch main feed).
 80–89: Very popular, well-established with strong reach in its category (e.g., Ars Technica, Wired, The Verge).
-70–79: Popular within its niche, recognized by many enthusiasts/professionals (e.g., Smashing Magazine, popular subreddits, regional news).
-60–69: Moderately popular, steady readership but limited outside its niche (e.g., smaller but established blogs or company feeds with loyal audiences).
+70–79: Popular within its niche, recognized by many enthusiasts/professionals
+        (e.g., Smashing Magazine, popular subreddits, regional news).
+60–69: Moderately popular, steady readership but limited outside its niche (e.g., smaller but established blogs or company feeds with loyal audiences).  # noqa: E501
 50–59: Some recognition, has an audience but not widely known (e.g., mid-sized blogs, specialized communities).
 40–49: Limited reach, small following, niche content.
 30–39: Very small audience, niche/hobbyist blogs.
@@ -197,7 +206,7 @@ Scoring Guidelines:
 1–9: Effectively no audience or visibility.
 
 Return a JSON object with exactly these keys:
-{{"refined_title": "Clean title without RSS/Feed words, max 80 chars", "refined_description": "What the feed offers generally, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "Choose ONE: Technology & Programming, Artificial Intelligence, Design & Creativity, Business & Finance, News & Politics, Gaming & Entertainment, Science & Research, Lifestyle & Personal, Culture & Arts, Security & Privacy, Education & Learning, Miscellaneous", "popularity_estimate": numeric_score_1_to_100}}"""
+{{"refined_title": "Clean title without RSS/Feed words, max 80 chars", "refined_description": "What the feed offers generally, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "Choose ONE: Technology & Programming, Artificial Intelligence, Design & Creativity, Business & Finance, News & Politics, Gaming & Entertainment, Science & Research, Lifestyle & Personal, Culture & Arts, Security & Privacy, Education & Learning, Miscellaneous", "popularity_estimate": numeric_score_1_to_100}}"""  # noqa: E501
 
             # Use the new SDK API for content generation
             response = self.gemini_client.models.generate_content(
@@ -207,18 +216,21 @@ Return a JSON object with exactly these keys:
                     temperature=0.2,
                     max_output_tokens=400,
                     response_mime_type="application/json",
-                    response_schema=FeedEnrichmentResponse.model_json_schema()
-                )
+                    response_schema=FeedEnrichmentResponse.model_json_schema(),
+                ),
             )
 
             # Parse and validate the structured response
+            if not response.text:
+                logger.warning("Empty response from Gemini feed enrichment")
+                return None
             result = FeedEnrichmentResponse.model_validate_json(response.text)
 
             logger.debug(
                 "Gemini feed enrichment completed",
                 title=result.refined_title,
                 category=result.category,
-                popularity=result.popularity_estimate
+                popularity=result.popularity_estimate,
             )
 
             return result
@@ -230,26 +242,32 @@ Return a JSON object with exactly these keys:
     async def generate_embedding_with_gemini(self, text: str) -> list[float] | None:
         """
         Generate embeddings using Gemini embedding model.
-        
+
         Args:
             text: Text to generate embeddings for
-            
+
         Returns:
             List of floats representing the embedding, or None if failed
         """
         try:
+            # Type ignore for complex Gemini API typing
             response = self.gemini_client.models.embed_content(
                 model=self.settings.GEMINI_EMBEDDING_MODEL,
-                contents=[text]  # Use list format for consistency
+                contents=[text],  # type: ignore[arg-type]
             )
 
             if response.embeddings and len(response.embeddings) > 0:
                 embedding_result = response.embeddings[0]
-                if embedding_result and hasattr(embedding_result, 'values') and len(embedding_result.values) > 0:
-                    embedding = embedding_result.values
+                if (
+                    embedding_result
+                    and hasattr(embedding_result, "values")
+                    and embedding_result.values  # Check not None/empty
+                    and len(embedding_result.values) > 0
+                ):
+                    embedding: list[float] = list(embedding_result.values)
                     logger.debug(
                         "Gemini embedding generation completed",
-                        embedding_dimensions=len(embedding)
+                        embedding_dimensions=len(embedding),
                     )
                     return embedding
 
@@ -267,54 +285,55 @@ Return a JSON object with exactly these keys:
     ) -> str | None:
         """
         Generate a high-quality summary of an article in the same language as the content.
-        
+
         Args:
             title: Article title
             content: Article content (can be HTML or plain text)
-            
+
         Returns:
             Summary text or None if failed
         """
         try:
             # Clean content by removing HTML tags if present
             import re
-            clean_content = re.sub(r'<[^>]+>', ' ', content)
-            clean_content = re.sub(r'\s+', ' ', clean_content).strip()
+
+            clean_content = re.sub(r"<[^>]+>", " ", content)
+            clean_content = re.sub(r"\s+", " ", clean_content).strip()
 
             # Truncate very long content to stay within token limits
             max_content_chars = 15000  # Roughly 4000 tokens
             if len(clean_content) > max_content_chars:
                 clean_content = clean_content[:max_content_chars] + "..."
 
-            system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts. Your summaries should:
+            system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts. Your summaries should:  # noqa: E501
 
 1. Capture the most important points and key takeaways
-2. Be written in clear, engaging language  
+2. Be written in clear, engaging language
 3. Highlight any notable statistics, quotes, or findings
 4. Maintain the original tone and context
 5. Be comprehensive yet concise (aim for 2-4 paragraphs)
 6. Focus on actionable insights or important implications
 7. IMPORTANT: Write the summary in the SAME LANGUAGE as the original content
 
-CRITICAL: Detect the language of the original content and write your summary in that exact same language. If the content is in Spanish, summarize in Spanish. If in French, summarize in French, etc."""
+CRITICAL: Detect the language of the original content and write your summary in that exact same language. If the content is in Spanish, summarize in Spanish. If in French, summarize in French, etc."""  # noqa: E501
 
             prompt = f"""Title: {title}
 
 Content: {clean_content}
 
-Please provide a high-quality summary of this article that captures its main points, key insights, and important details. Write the summary in the same language as the original content."""
+Please provide a high-quality summary of this article that captures its main points, key insights, and important details. Write the summary in the same language as the original content."""  # noqa: E501
 
             summary = await self.generate_text(
                 prompt=prompt,
                 system_prompt=system_prompt,
                 max_tokens=800,
-                temperature=0.3
+                temperature=0.3,
             )
 
             logger.debug(
                 "Article summary generated",
                 title=title[:50],
-                summary_length=len(summary) if summary else 0
+                summary_length=len(summary) if summary else 0,
             )
 
             return summary.strip() if summary else None
@@ -330,37 +349,37 @@ Please provide a high-quality summary of this article that captures its main poi
     ) -> str | None:
         """
         Translate article content to a target language.
-        
+
         Args:
             content: Content to translate (can be HTML or plain text)
             target_language: Target language code (e.g., 'es', 'fr', 'zh')
-            
+
         Returns:
             Translated content or None if failed
         """
         try:
             # Map common language codes to full language names for better results
             language_names = {
-                'es': 'Spanish',
-                'fr': 'French',
-                'de': 'German',
-                'it': 'Italian',
-                'pt': 'Portuguese',
-                'ru': 'Russian',
-                'ja': 'Japanese',
-                'ko': 'Korean',
-                'zh': 'Chinese',
-                'ar': 'Arabic',
-                'hi': 'Hindi',
-                'nl': 'Dutch',
-                'sv': 'Swedish',
-                'no': 'Norwegian',
-                'da': 'Danish',
-                'fi': 'Finnish',
-                'pl': 'Polish',
-                'tr': 'Turkish',
-                'th': 'Thai',
-                'vi': 'Vietnamese',
+                "es": "Spanish",
+                "fr": "French",
+                "de": "German",
+                "it": "Italian",
+                "pt": "Portuguese",
+                "ru": "Russian",
+                "ja": "Japanese",
+                "ko": "Korean",
+                "zh": "Chinese",
+                "ar": "Arabic",
+                "hi": "Hindi",
+                "nl": "Dutch",
+                "sv": "Swedish",
+                "no": "Norwegian",
+                "da": "Danish",
+                "fi": "Finnish",
+                "pl": "Polish",
+                "tr": "Turkish",
+                "th": "Thai",
+                "vi": "Vietnamese",
             }
 
             target_lang_name = language_names.get(target_language.lower(), target_language)
@@ -370,7 +389,7 @@ Please provide a high-quality summary of this article that captures its main poi
             if len(content) > max_content_chars:
                 content = content[:max_content_chars] + "..."
 
-            system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}. Your translations should:
+            system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}. Your translations should:  # noqa: E501
 
 1. Maintain the original meaning and tone
 2. Preserve formatting (including HTML tags if present)
@@ -380,39 +399,50 @@ Please provide a high-quality summary of this article that captures its main poi
 6. Ensure cultural context is appropriately adapted
 7. IMPORTANT: Return ONLY the translated content without any markdown code blocks (no ```html ``` or ``` wrapping)
 
-Translate the following content to {target_lang_name}. Return ONLY the translated content without any markdown formatting or code block wrapping:"""
+Translate the following content to {target_lang_name}. Return ONLY the translated content without any markdown formatting or code block wrapping:"""  # noqa: E501
 
             translation = await self.generate_text(
                 prompt=content,
                 system_prompt=system_prompt,
                 max_tokens=2000,
-                temperature=0.1
+                temperature=0.1,
             )
 
             if translation:
                 # Remove any markdown code blocks that might have been added
                 import re
+
                 # Remove ```html...``` or ```...``` blocks
-                translation = re.sub(r'```(?:html)?\s*\n?(.*?)\n?```', r'\1', translation, flags=re.DOTALL)
+                translation = re.sub(
+                    r"```(?:html)?\s*\n?(.*?)\n?```",
+                    r"\1",
+                    translation,
+                    flags=re.DOTALL,
+                )
                 translation = translation.strip()
 
             logger.debug(
                 "Article translation completed",
                 target_language=target_language,
                 original_length=len(content),
-                translation_length=len(translation) if translation else 0
+                translation_length=len(translation) if translation else 0,
             )
 
             return translation if translation else None
 
         except Exception as e:
-            logger.error("Error translating article", error=str(e), target_language=target_language, exc_info=True)
+            logger.error(
+                "Error translating article",
+                error=str(e),
+                target_language=target_language,
+                exc_info=True,
+            )
             return None
 
     async def health_check(self) -> dict[str, Any]:
         """
         Check if the AI service is healthy and responsive.
-        
+
         Returns:
             Health status dictionary
         """

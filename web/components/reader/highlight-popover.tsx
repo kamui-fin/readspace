@@ -13,10 +13,9 @@ import useHighlight from "../../hooks/reader/use-highlight"
 import { EpubHighlight } from "../../types/library"
 import { useIsMobile } from "@/hooks/use-mobile"
 
-import { ApiClient } from "@/lib/api/client"
+import { ApiClient } from "@readspace/shared"
 import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
-import GeneralPopover from "./general-popover"
 import HighlightColorOptions from "./highlight-options"
 import HighlightedPopover, { AddNoteForm } from "./highlighted-popover"
 
@@ -53,11 +52,9 @@ export default function HighlightPopover({
 
     const { state: sidebarState } = useSidebarLeft()
 
-    const { getPageProgress, highlights, currentPage } = useReaderStore(
+    const { highlights } = useReaderStore(
         useShallow((state) => ({
-            getPageProgress: state.getPageProgress,
             highlights: state.highlights,
-            currentPage: state.currentPage,
         }))
     )
 
@@ -139,9 +136,7 @@ export default function HighlightPopover({
 
     const range = rangeRef.current as unknown as Range
     const rect = range.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
     const spaceAbove = rect.top
-    const spaceBelow = viewportHeight - rect.bottom
     const popoverHeight = 40 // Approximate height of the popover
 
     // Calculate left offset based on sidebar state

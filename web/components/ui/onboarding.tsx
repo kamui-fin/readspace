@@ -1,6 +1,7 @@
 "use client"
 
 import { ArrowRightIcon } from "lucide-react"
+import Image from "next/image"
 import React, { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 export interface OnboardingStep {
     title: string
@@ -87,7 +88,7 @@ export function Onboarding({
             >
                 {currentStep.image && (
                     <div className="p-2">
-                        <img
+                        <Image
                             className="rounded-md max-h-[400px] object-cover"
                             src={currentStep.image.src}
                             width={currentStep.image.width}

@@ -17,14 +17,17 @@ export default function AuthError() {
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-100">
                         <AlertCircle className="h-6 w-6 text-red-600" />
                     </div>
-                    <CardTitle className="text-xl">Authentication Error</CardTitle>
+                    <CardTitle className="text-xl">
+                        Authentication Error
+                    </CardTitle>
                     <CardDescription>
                         Something went wrong during the authentication process.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="text-center text-sm text-muted-foreground">
-                        This could be due to an expired link, invalid credentials, or a technical issue.
+                        This could be due to an expired link, invalid
+                        credentials, or a technical issue.
                     </div>
                     <div className="flex flex-col gap-2">
                         <Button asChild>

@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { Slot } from "@radix-ui/react-slot"
 import { CheckIcon, LoaderCircleIcon } from "lucide-react"
 import * as React from "react"

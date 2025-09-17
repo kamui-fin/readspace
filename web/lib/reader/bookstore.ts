@@ -1,6 +1,5 @@
 "use client"
 
-import { EpubLocation } from "@/types/library"
 import ePub, { Book } from "epubjs"
 import { SpineItem } from "epubjs/types/section"
 import localforage from "localforage"

@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 
 from app.crud.transformers.article_transformer import ArticleTransformer
-from app.models.rss_models import ClippedArticle, Feed, FeedArticle, ArticleContent
+from app.models.rss_models import ArticleContent, ClippedArticle, Feed, FeedArticle
 from app.schemas.rss_schemas import ArticleResponse
 
 
@@ -56,11 +56,13 @@ class TestArticleTransformer:
         try:
             result = self.transformer.feed_to_unified(feed_article)
             # Just verify some basic attributes that should be present
-            assert hasattr(result, 'id')
-            assert hasattr(result, 'article_type')
+            assert hasattr(result, "id")
+            assert hasattr(result, "article_type")
         except Exception as e:
             # For now, just test that the logic doesn't crash on attribute access
-            assert "id" in str(e) or "link" in str(e) or "created_at" in str(e)  # Expected validation errors
+            assert (
+                "id" in str(e) or "link" in str(e) or "created_at" in str(e)
+            )  # Expected validation errors
 
     def test_feed_to_unified_no_content(self):
         """Test converting FeedArticle with no content."""
@@ -210,7 +212,7 @@ class TestArticleTransformer:
     def test_raw_row_to_unified_with_defaults(self):
         """Test converting row with missing data uses defaults."""
         row_data = {
-            "id": self.test_id, 
+            "id": self.test_id,
             "title": "Minimal Article",
             "link": "https://example.com/minimal",
             "created_at": self.test_time,
@@ -228,16 +230,34 @@ class TestArticleTransformer:
 
     def test_extract_source_domain_valid_url(self):
         """Test extracting domain from valid URLs."""
-        assert self.transformer._extract_source_domain("https://example.com/path") == "example.com"
-        assert self.transformer._extract_source_domain("http://news.site.org/article/123") == "news.site.org"
-        assert self.transformer._extract_source_domain("https://www.blog.com") == "www.blog.com"
+        assert (
+            self.transformer._extract_source_domain("https://example.com/path")
+            == "example.com"
+        )
+        assert (
+            self.transformer._extract_source_domain("http://news.site.org/article/123")
+            == "news.site.org"
+        )
+        assert (
+            self.transformer._extract_source_domain("https://www.blog.com")
+            == "www.blog.com"
+        )
 
     def test_extract_source_domain_invalid_input(self):
         """Test extracting domain from invalid input."""
         assert self.transformer._extract_source_domain(None) is None
-        assert self.transformer._extract_source_domain("") is None or self.transformer._extract_source_domain("") == ""
-        assert self.transformer._extract_source_domain("not-a-url") is None or self.transformer._extract_source_domain("not-a-url") == ""
-        assert self.transformer._extract_source_domain("invalid://") is None or self.transformer._extract_source_domain("invalid://") == ""
+        assert (
+            self.transformer._extract_source_domain("") is None
+            or self.transformer._extract_source_domain("") == ""
+        )
+        assert (
+            self.transformer._extract_source_domain("not-a-url") is None
+            or self.transformer._extract_source_domain("not-a-url") == ""
+        )
+        assert (
+            self.transformer._extract_source_domain("invalid://") is None
+            or self.transformer._extract_source_domain("invalid://") == ""
+        )
 
     def test_extract_feed_info_with_feed(self):
         """Test extracting feed info from feed object."""

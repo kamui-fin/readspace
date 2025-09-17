@@ -1,6 +1,6 @@
 import time
 import uuid
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
@@ -31,7 +31,7 @@ def create_error_response(
     return response
 
 
-def setup_middleware(app: FastAPI, public_paths: list[str] | None = None):
+def setup_middleware(app: FastAPI, public_paths: list[str] | None = None) -> None:
     """
     Setup all middleware for FastAPI application.
 
@@ -44,7 +44,7 @@ def setup_middleware(app: FastAPI, public_paths: list[str] | None = None):
 
     @app.middleware("http")
     async def request_logging_middleware(
-        request: Request, call_next: Callable
+        request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """Log all incoming requests and their processing time."""
         request_id = str(uuid.uuid4())
@@ -80,7 +80,7 @@ def setup_middleware(app: FastAPI, public_paths: list[str] | None = None):
             raise
 
     @app.middleware("http")
-    async def auth_middleware(request: Request, call_next: Callable) -> Response:
+    async def auth_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         """Handle authentication for protected routes."""
         # Allow preflight requests to pass through
         if request.method == "OPTIONS":

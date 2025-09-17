@@ -19,7 +19,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useCreateFolder, useFolders, useRefreshFeed, useSubscribeToFeed } from "@/lib/api/hooks/feeds"
+import {
+    useCreateFolder,
+    useFolders,
+    useRefreshFeed,
+    useSubscribeToFeed,
+} from "@readspace/shared"
 import { AlertCircle, FolderPlus, Loader2, Rss } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
@@ -73,14 +78,14 @@ export function FeedSubscriptionModal({
         }
 
         try {
-            let folderId = selectedFolderId;
+            let folderId = selectedFolderId
 
             // Create folder first if needed
             if (isCreatingFolder) {
                 const newFolder = await createFolder.mutateAsync({
-                    name: newFolderName.trim()
-                });
-                folderId = newFolder.id;
+                    name: newFolderName.trim(),
+                })
+                folderId = newFolder.id
             }
 
             // Create the subscription
@@ -95,7 +100,6 @@ export function FeedSubscriptionModal({
             await refreshFeed.mutateAsync({
                 feedId: feed.id,
                 forceRefetch: true,
-                silent: true,
             })
 
             setIsRefreshing(false)
@@ -107,28 +111,37 @@ export function FeedSubscriptionModal({
             setIsCreatingFolder(false)
             setNewFolderName("")
             setError(null)
-
-        } catch (error: any) {
+        } catch (error: unknown) {
             setIsRefreshing(false)
 
             let errorMessage = "Failed to subscribe to feed"
-            if (error?.message) {
-                errorMessage = error.message
-            } else if (error?.detail) {
-                errorMessage = error.detail
-            } else if (typeof error === 'string') {
+            if (typeof error === "string") {
                 errorMessage = error
-            } else if (error?.response?.data?.detail) {
-                errorMessage = error.response.data.detail
-            } else if (error?.response?.data?.message) {
-                errorMessage = error.response.data.message
+            } else if (error instanceof Error) {
+                errorMessage = error.message
+            } else if (error && typeof error === "object") {
+                if (
+                    "message" in error &&
+                    typeof (error as { message: unknown }).message === "string"
+                ) {
+                    errorMessage = (error as { message: string }).message
+                } else if (
+                    "detail" in error &&
+                    typeof (error as { detail: unknown }).detail === "string"
+                ) {
+                    errorMessage = (error as { detail: string }).detail
+                }
             }
             setError(errorMessage)
         }
     }
 
     const handleClose = () => {
-        if (!subscribeToFeed.isPending && !isRefreshing && !createFolder.isPending) {
+        if (
+            !subscribeToFeed.isPending &&
+            !isRefreshing &&
+            !createFolder.isPending
+        ) {
             setSelectedFolderId("")
             setIsCreatingFolder(false)
             setNewFolderName("")
@@ -162,27 +175,36 @@ export function FeedSubscriptionModal({
                                     className="object-cover"
                                     sizes="(max-width: 640px) 32px, 40px"
                                     onError={(e) => {
-                                        const target = e.target as HTMLImageElement
-                                        target.style.display = 'none'
-                                        const fallback = target.nextElementSibling as HTMLElement
-                                        if (fallback) fallback.style.display = 'flex'
+                                        const target =
+                                            e.target as HTMLImageElement
+                                        target.style.display = "none"
+                                        const fallback =
+                                            target.nextElementSibling as HTMLElement
+                                        if (fallback)
+                                            fallback.style.display = "flex"
                                     }}
                                 />
                             ) : null}
                             <div
-                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm ${feed.image_url ? 'hidden' : 'flex'
-                                    }`}
+                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm ${
+                                    feed.image_url ? "hidden" : "flex"
+                                }`}
                             >
-                                {feed.title ? feed.title.charAt(0).toUpperCase() : 'F'}
+                                {feed.title
+                                    ? feed.title.charAt(0).toUpperCase()
+                                    : "F"}
                             </div>
                         </div>
                         <div className="min-w-0 flex-1 overflow-hidden">
                             <div className="flex items-center gap-2">
-                                <h3 className="font-medium text-sm leading-tight break-words hyphens-auto" style={{
-                                    wordBreak: 'break-word',
-                                    overflowWrap: 'break-word',
-                                    hyphens: 'auto'
-                                }}>
+                                <h3
+                                    className="font-medium text-sm leading-tight break-words hyphens-auto"
+                                    style={{
+                                        wordBreak: "break-word",
+                                        overflowWrap: "break-word",
+                                        hyphens: "auto",
+                                    }}
+                                >
                                     {feed.title || "Untitled Feed"}
                                 </h3>
                             </div>
@@ -193,12 +215,14 @@ export function FeedSubscriptionModal({
                                     rel="noopener noreferrer"
                                     className="text-xs text-muted-foreground hover:text-foreground transition-colors block break-all leading-tight"
                                     style={{
-                                        wordBreak: 'break-all',
-                                        overflowWrap: 'break-word',
-                                        lineBreak: 'anywhere'
+                                        wordBreak: "break-all",
+                                        overflowWrap: "break-word",
+                                        lineBreak: "anywhere",
                                     }}
                                 >
-                                    {feed.link.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                                    {feed.link
+                                        .replace(/^https?:\/\//, "")
+                                        .replace(/\/$/, "")}
                                 </a>
                             )}
                         </div>
@@ -212,7 +236,10 @@ export function FeedSubscriptionModal({
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-2">
-                        <Label htmlFor="folder-select" className="text-sm font-medium">
+                        <Label
+                            htmlFor="folder-select"
+                            className="text-sm font-medium"
+                        >
                             Choose Folder
                             <span className="text-destructive ml-1">*</span>
                         </Label>
@@ -227,12 +254,15 @@ export function FeedSubscriptionModal({
                                     id="folder-name-input"
                                     placeholder="Enter folder name..."
                                     value={newFolderName}
-                                    onChange={(e) => setNewFolderName(e.target.value)}
+                                    onChange={(e) =>
+                                        setNewFolderName(e.target.value)
+                                    }
                                     required
                                     autoFocus
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Creating a new folder: "{newFolderName || "..."}"
+                                    Creating a new folder: &quot;
+                                    {newFolderName || "..."}&quot;
                                 </p>
                             </div>
                         ) : (
@@ -253,10 +283,15 @@ export function FeedSubscriptionModal({
                                     <SelectValue placeholder="Select a folder" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="CREATE_NEW" className="cursor-pointer">
+                                    <SelectItem
+                                        value="CREATE_NEW"
+                                        className="cursor-pointer"
+                                    >
                                         <div className="flex items-center gap-2">
                                             <FolderPlus className="h-4 w-4 text-primary" />
-                                            <span className="font-medium">Create New Folder</span>
+                                            <span className="font-medium">
+                                                Create New Folder
+                                            </span>
                                         </div>
                                     </SelectItem>
                                     {typedFolders.map((folder) => (
@@ -296,7 +331,11 @@ export function FeedSubscriptionModal({
                                     handleClose()
                                 }
                             }}
-                            disabled={subscribeToFeed.isPending || isRefreshing || createFolder.isPending}
+                            disabled={
+                                subscribeToFeed.isPending ||
+                                isRefreshing ||
+                                createFolder.isPending
+                            }
                             className="w-full sm:w-auto"
                         >
                             {isCreatingFolder ? "Back" : "Cancel"}
@@ -316,19 +355,27 @@ export function FeedSubscriptionModal({
                             {createFolder.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    <span className="hidden xs:inline">Creating...</span>
+                                    <span className="hidden xs:inline">
+                                        Creating...
+                                    </span>
                                     <span className="xs:hidden">Creating</span>
                                 </>
                             ) : subscribeToFeed.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    <span className="hidden xs:inline">Subscribing...</span>
-                                    <span className="xs:hidden">Subscribing</span>
+                                    <span className="hidden xs:inline">
+                                        Subscribing...
+                                    </span>
+                                    <span className="xs:hidden">
+                                        Subscribing
+                                    </span>
                                 </>
                             ) : isRefreshing ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    <span className="hidden xs:inline">Fetching...</span>
+                                    <span className="hidden xs:inline">
+                                        Fetching...
+                                    </span>
                                     <span className="xs:hidden">Fetching</span>
                                 </>
                             ) : (

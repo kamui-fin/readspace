@@ -104,7 +104,6 @@ const HighlightPopup = ({
                         >
                             <AddNoteForm
                                 onSubmit={(note) => {
-                                    note
                                     handleNoteSubmit(note)
                                     setShowNoteForm(false)
                                     setIsVisible(false)

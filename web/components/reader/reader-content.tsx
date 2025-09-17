@@ -5,7 +5,7 @@ import useReaderSettingsStore from "@/stores/reader-settings"
 import clsx from "clsx"
 import { LoaderCircle } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useEffect, useMemo } from "react"
+import { useCallback, useEffect, useMemo } from "react"
 
 export const Loading = () => (
     <div className="w-full mt-auto h-[60vh] flex items-center justify-center">
@@ -15,16 +15,22 @@ export const Loading = () => (
 
 export default function ReaderContent() {
     const { theme } = useTheme()
-    const fonts = {
-        serif: "var(--font-garamond-serif)",
-        sans: "var(--font-sans)",
-        mono: "var(--font-mono)",
-    }
+    const fonts = useMemo(
+        () => ({
+            serif: "var(--font-garamond-serif)",
+            sans: "var(--font-sans)",
+            mono: "var(--font-mono)",
+        }),
+        []
+    )
 
     // Type guard to check if a string is a key of fonts object
-    const isStandardFont = (font: string): font is keyof typeof fonts => {
-        return font === "serif" || font === "sans" || font === "mono"
-    }
+    const isStandardFont = useCallback(
+        (font: string): font is keyof typeof fonts => {
+            return font === "serif" || font === "sans" || font === "mono"
+        },
+        []
+    )
 
     const setLocation = useReaderStore((state) => state.setLocation)
     const chapterHTML = useReaderStore((state) => state.chapterHTML)
@@ -34,14 +40,17 @@ export default function ReaderContent() {
 
     const readerSettings = useReaderSettingsStore()
 
-    const addLinkHandler = (e: Event) => {
-        e.preventDefault()
-        const anchor = e.currentTarget as HTMLAnchorElement
-        const href = anchor.pathname.replace(/^\//, "")
-        if (href) {
-            setLocation(href)
-        }
-    }
+    const addLinkHandler = useCallback(
+        (e: Event) => {
+            e.preventDefault()
+            const anchor = e.currentTarget as HTMLAnchorElement
+            const href = anchor.pathname.replace(/^\//, "")
+            if (href) {
+                setLocation(href)
+            }
+        },
+        [setLocation]
+    )
 
     const memoizedHtml = useMemo(() => {
         return chapterHTML ? (
@@ -72,7 +81,14 @@ export default function ReaderContent() {
         ) : (
             <Loading />
         )
-    }, [chapterHTML, readerSettings, theme])
+    }, [
+        chapterHTML,
+        readerSettings,
+        theme,
+        fonts,
+        isStandardFont,
+        setEpubDocRef,
+    ])
 
     useEffect(() => {
         if (!ref) return
@@ -85,7 +101,7 @@ export default function ReaderContent() {
                 a.removeEventListener("click", addLinkHandler)
             })
         }
-    }, [chapterHTML, addLinkHandler])
+    }, [chapterHTML, addLinkHandler, ref])
 
     return memoizedHtml
 }

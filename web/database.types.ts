@@ -7,30 +7,10 @@ export type Json =
     | Json[]
 
 export type Database = {
-    graphql_public: {
-        Tables: {
-            [_ in never]: never
-        }
-        Views: {
-            [_ in never]: never
-        }
-        Functions: {
-            graphql: {
-                Args: {
-                    operationName?: string
-                    query?: string
-                    variables?: Json
-                    extensions?: Json
-                }
-                Returns: Json
-            }
-        }
-        Enums: {
-            [_ in never]: never
-        }
-        CompositeTypes: {
-            [_ in never]: never
-        }
+    // Allows to automatically instantiate createClient with right options
+    // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+    __InternalSupabase: {
+        PostgrestVersion: "12.2.3 (519615d)"
     }
     public: {
         Tables: {
@@ -46,83 +26,50 @@ export type Database = {
                 }
                 Relationships: []
             }
-            articles: {
+            article_contents: {
                 Row: {
+                    author: string | null
                     content: string | null
                     created_at: string | null
                     custom_metadata: Json | null
                     description: string | null
                     estimated_read_time_minutes: number | null
-                    feed_id: string
-                    guid: string
                     id: string
                     image_url: string | null
-                    is_favorite: boolean
-                    is_read: boolean
-                    is_read_later: boolean
                     link: string
                     published_at: string | null
-                    read_at: string | null
                     title: string | null
                     updated_at: string | null
-                    user_id: string
                 }
                 Insert: {
+                    author?: string | null
                     content?: string | null
                     created_at?: string | null
                     custom_metadata?: Json | null
                     description?: string | null
                     estimated_read_time_minutes?: number | null
-                    feed_id: string
-                    guid: string
-                    id: string
-                    image_url?: string | null
-                    is_favorite: boolean
-                    is_read: boolean
-                    is_read_later: boolean
-                    link: string
-                    published_at?: string | null
-                    read_at?: string | null
-                    title?: string | null
-                    updated_at?: string | null
-                    user_id: string
-                }
-                Update: {
-                    content?: string | null
-                    created_at?: string | null
-                    custom_metadata?: Json | null
-                    description?: string | null
-                    estimated_read_time_minutes?: number | null
-                    feed_id?: string
-                    guid?: string
                     id?: string
                     image_url?: string | null
-                    is_favorite?: boolean
-                    is_read?: boolean
-                    is_read_later?: boolean
-                    link?: string
+                    link: string
                     published_at?: string | null
-                    read_at?: string | null
                     title?: string | null
                     updated_at?: string | null
-                    user_id?: string
                 }
-                Relationships: [
-                    {
-                        foreignKeyName: "articles_feed_id_fkey"
-                        columns: ["feed_id"]
-                        isOneToOne: false
-                        referencedRelation: "feeds"
-                        referencedColumns: ["id"]
-                    },
-                    {
-                        foreignKeyName: "articles_user_id_fkey"
-                        columns: ["user_id"]
-                        isOneToOne: false
-                        referencedRelation: "profiles"
-                        referencedColumns: ["id"]
-                    },
-                ]
+                Update: {
+                    author?: string | null
+                    content?: string | null
+                    created_at?: string | null
+                    custom_metadata?: Json | null
+                    description?: string | null
+                    estimated_read_time_minutes?: number | null
+                    id?: string
+                    image_url?: string | null
+                    link?: string
+                    published_at?: string | null
+                    title?: string | null
+                    updated_at?: string | null
+                }
+                Relationships: []
             }
             book_metadata: {
                 Row: {
@@ -150,7 +97,7 @@ export type Database = {
                     file_size_bytes?: number | null
                     file_url: string
                     format: Database["public"]["Enums"]["bookformat"]
-                    id: string
+                    id?: string
                     num_pages?: number | null
                     pdf_toc?: Json | null
                     title: string
@@ -172,122 +119,246 @@ export type Database = {
                 }
                 Relationships: []
             }
-            feed_tag_association: {
+            clipped_articles: {
                 Row: {
-                    feed_id: string
-                    tag_id: string
-                }
-                Insert: {
-                    feed_id: string
-                    tag_id: string
-                }
-                Update: {
-                    feed_id?: string
-                    tag_id?: string
-                }
-                Relationships: [
-                    {
-                        foreignKeyName: "feed_tag_association_feed_id_fkey"
-                        columns: ["feed_id"]
-                        isOneToOne: false
-                        referencedRelation: "feeds"
-                        referencedColumns: ["id"]
-                    },
-                    {
-                        foreignKeyName: "feed_tag_association_tag_id_fkey"
-                        columns: ["tag_id"]
-                        isOneToOne: false
-                        referencedRelation: "tags"
-                        referencedColumns: ["id"]
-                    },
-                ]
-            }
-            feeds: {
-                Row: {
+                    content_id: string
                     created_at: string | null
-                    description: string | null
-                    etag_header: string | null
-                    fetch_error_count: number | null
-                    folder_id: string
                     id: string
-                    image_url: string | null
                     is_favorite: boolean
-                    language: string | null
-                    last_article_published_at: string | null
-                    last_error_message: string | null
-                    last_fetched_at: string | null
-                    last_modified_header: string | null
-                    link: string | null
-                    skip_days: string[] | null
-                    skip_hours: number[] | null
-                    title: string | null
-                    ttl: number | null
-                    updated_at: string | null
-                    url: string
+                    is_read: boolean
+                    is_read_later: boolean
+                    note: string | null
+                    priority: string
+                    read_at: string | null
                     user_id: string
                 }
                 Insert: {
+                    content_id: string
                     created_at?: string | null
-                    description?: string | null
-                    etag_header?: string | null
-                    fetch_error_count?: number | null
-                    folder_id: string
-                    id: string
-                    image_url?: string | null
+                    id?: string
                     is_favorite: boolean
-                    language?: string | null
-                    last_article_published_at?: string | null
-                    last_error_message?: string | null
-                    last_fetched_at?: string | null
-                    last_modified_header?: string | null
-                    link?: string | null
-                    skip_days?: string[] | null
-                    skip_hours?: number[] | null
-                    title?: string | null
-                    ttl?: number | null
-                    updated_at?: string | null
-                    url: string
+                    is_read: boolean
+                    is_read_later: boolean
+                    note?: string | null
+                    priority: string
+                    read_at?: string | null
                     user_id: string
                 }
                 Update: {
+                    content_id?: string
                     created_at?: string | null
-                    description?: string | null
-                    etag_header?: string | null
-                    fetch_error_count?: number | null
-                    folder_id?: string
                     id?: string
-                    image_url?: string | null
                     is_favorite?: boolean
-                    language?: string | null
-                    last_article_published_at?: string | null
-                    last_error_message?: string | null
-                    last_fetched_at?: string | null
-                    last_modified_header?: string | null
-                    link?: string | null
-                    skip_days?: string[] | null
-                    skip_hours?: number[] | null
-                    title?: string | null
-                    ttl?: number | null
-                    updated_at?: string | null
-                    url?: string
+                    is_read?: boolean
+                    is_read_later?: boolean
+                    note?: string | null
+                    priority?: string
+                    read_at?: string | null
                     user_id?: string
                 }
                 Relationships: [
                     {
-                        foreignKeyName: "feeds_folder_id_fkey"
-                        columns: ["folder_id"]
+                        foreignKeyName: "clipped_articles_content_id_fkey"
+                        columns: ["content_id"]
                         isOneToOne: false
-                        referencedRelation: "folders"
+                        referencedRelation: "article_contents"
                         referencedColumns: ["id"]
                     },
                     {
-                        foreignKeyName: "feeds_user_id_fkey"
+                        foreignKeyName: "clipped_articles_user_id_fkey"
                         columns: ["user_id"]
                         isOneToOne: false
                         referencedRelation: "profiles"
                         referencedColumns: ["id"]
                     },
                 ]
+            }
+            feed_articles: {
+                Row: {
+                    content_id: string
+                    created_at: string
+                    feed_id: string
+                    guid: string
+                    id: string
+                    updated_at: string
+                }
+                Insert: {
+                    content_id: string
+                    created_at?: string
+                    feed_id: string
+                    guid: string
+                    id?: string
+                    updated_at?: string
+                }
+                Update: {
+                    content_id?: string
+                    created_at?: string
+                    feed_id?: string
+                    guid?: string
+                    id?: string
+                    updated_at?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "feed_articles_content_id_fkey"
+                        columns: ["content_id"]
+                        isOneToOne: false
+                        referencedRelation: "article_contents"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "feed_articles_feed_id_fkey"
+                        columns: ["feed_id"]
+                        isOneToOne: false
+                        referencedRelation: "feeds"
+                        referencedColumns: ["id"]
+                    },
+                ]
+            }
+            feed_subscriptions: {
+                Row: {
+                    created_at: string
+                    custom_title: string | null
+                    feed_id: string
+                    folder_id: string
+                    id: string
+                    is_favorite: boolean
+                    updated_at: string
+                    user_id: string
+                }
+                Insert: {
+                    created_at?: string
+                    custom_title?: string | null
+                    feed_id: string
+                    folder_id: string
+                    id?: string
+                    is_favorite: boolean
+                    updated_at?: string
+                    user_id: string
+                }
+                Update: {
+                    created_at?: string
+                    custom_title?: string | null
+                    feed_id?: string
+                    folder_id?: string
+                    id?: string
+                    is_favorite?: boolean
+                    updated_at?: string
+                    user_id?: string
+                }
+                Relationships: [
+                    {
+                        foreignKeyName: "feed_subscriptions_feed_id_fkey"
+                        columns: ["feed_id"]
+                        isOneToOne: false
+                        referencedRelation: "feeds"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "feed_subscriptions_folder_id_fkey"
+                        columns: ["folder_id"]
+                        isOneToOne: false
+                        referencedRelation: "folders"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "feed_subscriptions_user_id_fkey"
+                        columns: ["user_id"]
+                        isOneToOne: false
+                        referencedRelation: "profiles"
+                        referencedColumns: ["id"]
+                    },
+                ]
+            }
+            feeds: {
+                Row: {
+                    created_at: string
+                    description: string | null
+                    embedding: string | null
+                    etag_header: string | null
+                    fetch_error_count: number
+                    id: string
+                    image_url: string | null
+                    language: string | null
+                    last_article_published_at: string | null
+                    last_error_message: string | null
+                    last_fetched_at: string | null
+                    last_modified_header: string | null
+                    link: string | null
+                    popularity_score: number | null
+                    skip_days: string[] | null
+                    skip_hours: number[] | null
+                    subscriber_count: number
+                    tags: string[] | null
+                    title: string | null
+                    top_level_category:
+                        | Database["public"]["Enums"]["feedcategory"]
+                        | null
+                    tsv_desc_tags: unknown | null
+                    tsv_title_link: unknown | null
+                    ttl: number | null
+                    updated_at: string
+                    url: string
+                }
+                Insert: {
+                    created_at?: string
+                    description?: string | null
+                    embedding?: string | null
+                    etag_header?: string | null
+                    fetch_error_count?: number
+                    id?: string
+                    image_url?: string | null
+                    language?: string | null
+                    last_article_published_at?: string | null
+                    last_error_message?: string | null
+                    last_fetched_at?: string | null
+                    last_modified_header?: string | null
+                    link?: string | null
+                    popularity_score?: number | null
+                    skip_days?: string[] | null
+                    skip_hours?: number[] | null
+                    subscriber_count?: number
+                    tags?: string[] | null
+                    title?: string | null
+                    top_level_category?:
+                        | Database["public"]["Enums"]["feedcategory"]
+                        | null
+                    tsv_desc_tags?: unknown | null
+                    tsv_title_link?: unknown | null
+                    ttl?: number | null
+                    updated_at?: string
+                    url: string
+                }
+                Update: {
+                    created_at?: string
+                    description?: string | null
+                    embedding?: string | null
+                    etag_header?: string | null
+                    fetch_error_count?: number
+                    id?: string
+                    image_url?: string | null
+                    language?: string | null
+                    last_article_published_at?: string | null
+                    last_error_message?: string | null
+                    last_fetched_at?: string | null
+                    last_modified_header?: string | null
+                    link?: string | null
+                    popularity_score?: number | null
+                    skip_days?: string[] | null
+                    skip_hours?: number[] | null
+                    subscriber_count?: number
+                    tags?: string[] | null
+                    title?: string | null
+                    top_level_category?:
+                        | Database["public"]["Enums"]["feedcategory"]
+                        | null
+                    tsv_desc_tags?: unknown | null
+                    tsv_title_link?: unknown | null
+                    ttl?: number | null
+                    updated_at?: string
+                    url?: string
+                }
+                Relationships: []
             }
             folders: {
                 Row: {
@@ -299,7 +370,7 @@ export type Database = {
                 }
                 Insert: {
                     created_at?: string | null
-                    id: string
+                    id?: string
                     name: string
                     updated_at?: string | null
                     user_id: string
@@ -341,7 +412,7 @@ export type Database = {
                     chapter_title?: string | null
                     color: Database["public"]["Enums"]["highlightcolor"]
                     html_range?: Json | null
-                    id: string
+                    id?: string
                     note?: string | null
                     original_text: string
                     page?: number | null
@@ -376,47 +447,75 @@ export type Database = {
                     created_at: string
                     email: string
                     id: string
+                    role: string
                     updated_at: string
                 }
                 Insert: {
                     created_at: string
                     email: string
                     id: string
+                    role?: string
                     updated_at: string
                 }
                 Update: {
                     created_at?: string
                     email?: string
                     id?: string
+                    role?: string
                     updated_at?: string
                 }
                 Relationships: []
             }
-            tags: {
+            user_article_states: {
                 Row: {
-                    created_at: string | null
+                    article_id: string
+                    created_at: string
                     id: string
-                    name: string
-                    updated_at: string | null
+                    is_favorite: boolean
+                    is_read: boolean
+                    is_read_later: boolean
+                    read_at: string | null
+                    updated_at: string
                     user_id: string
+                    user_note: string | null
+                    user_tags: string[] | null
                 }
                 Insert: {
-                    created_at?: string | null
-                    id: string
-                    name: string
-                    updated_at?: string | null
+                    article_id: string
+                    created_at?: string
+                    id?: string
+                    is_favorite: boolean
+                    is_read: boolean
+                    is_read_later: boolean
+                    read_at?: string | null
+                    updated_at?: string
                     user_id: string
+                    user_note?: string | null
+                    user_tags?: string[] | null
                 }
                 Update: {
-                    created_at?: string | null
+                    article_id?: string
+                    created_at?: string
                     id?: string
-                    name?: string
-                    updated_at?: string | null
+                    is_favorite?: boolean
+                    is_read?: boolean
+                    is_read_later?: boolean
+                    read_at?: string | null
+                    updated_at?: string
                     user_id?: string
+                    user_note?: string | null
+                    user_tags?: string[] | null
                 }
                 Relationships: [
                     {
-                        foreignKeyName: "tags_user_id_fkey"
+                        foreignKeyName: "user_article_states_article_id_fkey"
+                        columns: ["article_id"]
+                        isOneToOne: false
+                        referencedRelation: "feed_articles"
+                        referencedColumns: ["id"]
+                    },
+                    {
+                        foreignKeyName: "user_article_states_user_id_fkey"
                         columns: ["user_id"]
                         isOneToOne: false
                         referencedRelation: "profiles"
@@ -437,7 +536,7 @@ export type Database = {
                     book_metadata_id: string
                     date_added: string
                     epub_progress?: Json | null
-                    id: string
+                    id?: string
                     pdf_current_page?: number | null
                     user_id: string
                 }
@@ -471,10 +570,114 @@ export type Database = {
             [_ in never]: never
         }
         Functions: {
-            [_ in never]: never
+            binary_quantize: {
+                Args: { "": string } | { "": unknown }
+                Returns: unknown
+            }
+            halfvec_avg: {
+                Args: { "": number[] }
+                Returns: unknown
+            }
+            halfvec_out: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            halfvec_send: {
+                Args: { "": unknown }
+                Returns: string
+            }
+            halfvec_typmod_in: {
+                Args: { "": unknown[] }
+                Returns: number
+            }
+            hnsw_bit_support: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            hnsw_halfvec_support: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            hnsw_sparsevec_support: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            hnswhandler: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            ivfflat_bit_support: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            ivfflat_halfvec_support: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            ivfflathandler: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            l2_norm: {
+                Args: { "": unknown } | { "": unknown }
+                Returns: number
+            }
+            l2_normalize: {
+                Args: { "": string } | { "": unknown } | { "": unknown }
+                Returns: string
+            }
+            sparsevec_out: {
+                Args: { "": unknown }
+                Returns: unknown
+            }
+            sparsevec_send: {
+                Args: { "": unknown }
+                Returns: string
+            }
+            sparsevec_typmod_in: {
+                Args: { "": unknown[] }
+                Returns: number
+            }
+            vector_avg: {
+                Args: { "": number[] }
+                Returns: string
+            }
+            vector_dims: {
+                Args: { "": string } | { "": unknown }
+                Returns: number
+            }
+            vector_norm: {
+                Args: { "": string }
+                Returns: number
+            }
+            vector_out: {
+                Args: { "": string }
+                Returns: unknown
+            }
+            vector_send: {
+                Args: { "": string }
+                Returns: string
+            }
+            vector_typmod_in: {
+                Args: { "": unknown[] }
+                Returns: number
+            }
         }
         Enums: {
             bookformat: "EPUB" | "PDF"
+            feedcategory:
+                | "TECHNOLOGY_PROGRAMMING"
+                | "CULTURE_ARTS"
+                | "LIFESTYLE_PERSONAL"
+                | "MISCELLANEOUS"
+                | "DESIGN_CREATIVITY"
+                | "SCIENCE_RESEARCH"
+                | "NEWS_POLITICS"
+                | "GAMING_ENTERTAINMENT"
+                | "BUSINESS_FINANCE"
+                | "ARTIFICIAL_INTELLIGENCE"
+                | "SECURITY_PRIVACY"
+                | "EDUCATION_LEARNING"
             highlightcolor: "YELLOW" | "GREEN" | "BLUE"
         }
         CompositeTypes: {
@@ -483,21 +686,25 @@ export type Database = {
     }
 }
 
-type DefaultSchema = Database[Extract<keyof Database, "public">]
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
     DefaultSchemaTableNameOrOptions extends
         | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-        | { schema: keyof Database },
+        | { schema: keyof DatabaseWithoutInternals },
     TableName extends DefaultSchemaTableNameOrOptions extends {
-        schema: keyof Database
+        schema: keyof DatabaseWithoutInternals
     }
-        ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-              Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+        ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+              DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
         : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-    ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-          Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+}
+    ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+          DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
           Row: infer R
       }
         ? R
@@ -515,14 +722,16 @@ export type Tables<
 export type TablesInsert<
     DefaultSchemaTableNameOrOptions extends
         | keyof DefaultSchema["Tables"]
-        | { schema: keyof Database },
+        | { schema: keyof DatabaseWithoutInternals },
     TableName extends DefaultSchemaTableNameOrOptions extends {
-        schema: keyof Database
+        schema: keyof DatabaseWithoutInternals
     }
-        ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+        ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
         : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-    ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+}
+    ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
           Insert: infer I
       }
         ? I
@@ -538,14 +747,16 @@ export type TablesInsert<
 export type TablesUpdate<
     DefaultSchemaTableNameOrOptions extends
         | keyof DefaultSchema["Tables"]
-        | { schema: keyof Database },
+        | { schema: keyof DatabaseWithoutInternals },
     TableName extends DefaultSchemaTableNameOrOptions extends {
-        schema: keyof Database
+        schema: keyof DatabaseWithoutInternals
     }
-        ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+        ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
         : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-    ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+> = DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+}
+    ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
           Update: infer U
       }
         ? U
@@ -561,14 +772,16 @@ export type TablesUpdate<
 export type Enums<
     DefaultSchemaEnumNameOrOptions extends
         | keyof DefaultSchema["Enums"]
-        | { schema: keyof Database },
+        | { schema: keyof DatabaseWithoutInternals },
     EnumName extends DefaultSchemaEnumNameOrOptions extends {
-        schema: keyof Database
+        schema: keyof DatabaseWithoutInternals
     }
-        ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+        ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
         : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-    ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+> = DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+}
+    ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
     : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
       ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
       : never
@@ -576,25 +789,38 @@ export type Enums<
 export type CompositeTypes<
     PublicCompositeTypeNameOrOptions extends
         | keyof DefaultSchema["CompositeTypes"]
-        | { schema: keyof Database },
+        | { schema: keyof DatabaseWithoutInternals },
     CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-        schema: keyof Database
+        schema: keyof DatabaseWithoutInternals
     }
-        ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+        ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
         : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-    ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+> = PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+}
+    ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
     : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
       ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
       : never
 
 export const Constants = {
-    graphql_public: {
-        Enums: {},
-    },
     public: {
         Enums: {
             bookformat: ["EPUB", "PDF"],
+            feedcategory: [
+                "TECHNOLOGY_PROGRAMMING",
+                "CULTURE_ARTS",
+                "LIFESTYLE_PERSONAL",
+                "MISCELLANEOUS",
+                "DESIGN_CREATIVITY",
+                "SCIENCE_RESEARCH",
+                "NEWS_POLITICS",
+                "GAMING_ENTERTAINMENT",
+                "BUSINESS_FINANCE",
+                "ARTIFICIAL_INTELLIGENCE",
+                "SECURITY_PRIVACY",
+                "EDUCATION_LEARNING",
+            ],
             highlightcolor: ["YELLOW", "GREEN", "BLUE"],
         },
     },

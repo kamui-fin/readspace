@@ -76,7 +76,7 @@ export async function uploadImageToSupabase(
 export async function getFileFromSupabase(path: string): Promise<{
     data: Blob | null
     success: boolean
-    error: any
+    error: unknown
     message: string
 }> {
     const supabase = createClient()
@@ -94,7 +94,7 @@ export async function getFileFromSupabase(path: string): Promise<{
         data,
         success: !error,
         error,
-        message: error?.message || "",
+        message: (error as Error)?.message || "",
     }
 }
 

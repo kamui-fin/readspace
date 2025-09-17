@@ -1,9 +1,17 @@
 <div align="center">
-  <img src="./web/public/readspace.svg" alt="Readspace Logo" width="100" />
+  <img src="./web/public/wordmark.png" alt="Readspace Logo" width="300" />
 </div>
 
 
 # Readspace
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kamui-fin/readspace/ci.yml)
+![Discord](https://img.shields.io/discord/1349476822290530357?style=flat&logo=discord&label=discord&link=https%3A%2F%2Fdiscord.com%2Finvite%2F2Q5PtYwUQZ)
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/readspace_ai)
+![GitHub License](https://img.shields.io/github/license/kamui-fin/readspace)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/kamui-fin/readspace)
+![GitHub Repo stars](https://img.shields.io/github/stars/kamui-fin/readspace)
+
 
 **Tired of digital noise? Readspace brings all your content into one clean, distraction-free inbox.**
 

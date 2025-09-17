@@ -22,10 +22,15 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
-import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
-import { ApiClient } from "@/lib/api/client"
+import { useIsMobile } from "@/hooks/use-mobile"
+import {
+    ApiClient,
+    feedDiscoveryResultToFeed,
+    type DiscoverSearchResponse,
+    type FeedDiscoveryResult,
+} from "@readspace/shared"
 
-function usePersistentState(key: string, initialValue: any) {
+function usePersistentState(key: string, initialValue: string) {
     const [state, setState] = useState(() => {
         if (typeof window === "undefined") return initialValue
         try {
@@ -68,8 +73,6 @@ function DiscoverLayout({ children }: DiscoverLayoutProps) {
 }
 
 export default function DiscoverPageClient({
-    initialQuery,
-    initialCategory,
     initialLanguage,
 }: DiscoverPageClientProps) {
     const searchParams = useSearchParams()
@@ -77,19 +80,20 @@ export default function DiscoverPageClient({
     const { replace } = useRouter()
 
     // Get current state from URL
-    const activeQuery = searchParams.get('q') || ''
-    const activeCategory = searchParams.get('category') || ''
-    const urlLanguage = searchParams.get('language')
+    const activeQuery = searchParams.get("q") || ""
+    const activeCategory = searchParams.get("category") || ""
+    const urlLanguage = searchParams.get("language")
 
     // Use URL language if available, fallback to localStorage, then 'en'
-    const [persistedLanguage, setPersistedLanguage] = usePersistentState("discover-language", "en")
+    const [persistedLanguage, setPersistedLanguage] = usePersistentState(
+        "discover-language",
+        "en"
+    )
     const language = urlLanguage || initialLanguage || persistedLanguage
 
     // Local search input state (for typing before submission)
     const [searchQuery, setSearchQuery] = useState(activeQuery)
 
-    // Sidebar state for tablet mode
-    const isTablet = useIsTablet()
     const isMobile = useIsMobile()
     const { state: sidebarState } = useSidebarLeft()
 
@@ -99,25 +103,25 @@ export default function DiscoverPageClient({
     }, [activeQuery])
 
     // Helper function to update URL parameters
-    const updateSearchParams = useCallback((updates: Record<string, string | null>) => {
-        const params = new URLSearchParams(searchParams)
+    const updateSearchParams = useCallback(
+        (updates: Record<string, string | null>) => {
+            const params = new URLSearchParams(searchParams)
 
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value) {
-                params.set(key, value)
-            } else {
-                params.delete(key)
-            }
-        })
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value) {
+                    params.set(key, value)
+                } else {
+                    params.delete(key)
+                }
+            })
 
-        replace(`${pathname}?${params.toString()}`)
-    }, [searchParams, pathname, replace])
+            replace(`${pathname}?${params.toString()}`)
+        },
+        [searchParams, pathname, replace]
+    )
 
     // Shorter category names for mobile
     // Helper function to detect rsshub:// URLs
-    const isRSSHubUrl = (query: string) => {
-        return query.trim().toLowerCase().startsWith('rsshub://')
-    }
 
     const getMobileCategoryName = (category: string) => {
         const mobileNames: Record<string, string> = {
@@ -132,9 +136,9 @@ export default function DiscoverPageClient({
             "Culture & Arts": "Culture",
             "Security & Privacy": "Security",
             "Education & Learning": "Education",
-            "Miscellaneous": "Other",
+            Miscellaneous: "Other",
         }
-        return isMobile ? (mobileNames[category] || category) : category
+        return isMobile ? mobileNames[category] || category : category
     }
 
     const hasSearchParams = Boolean(activeQuery || activeCategory)
@@ -149,10 +153,9 @@ export default function DiscoverPageClient({
     // Get search results - only when we have active search
     const {
         data: searchData,
-        isLoading,
         isFetching,
         error: searchError,
-    } = useQuery({
+    } = useQuery<DiscoverSearchResponse>({
         queryKey: [
             "discover",
             "search",
@@ -175,7 +178,7 @@ export default function DiscoverPageClient({
         retry: (failureCount, error) => {
             // Only retry on network errors, not API errors
             return failureCount < 2 && !error?.message?.includes("400")
-        }
+        },
     })
 
     const handleSearch = (e: React.FormEvent) => {
@@ -363,9 +366,7 @@ export default function DiscoverPageClient({
                     </div>
                     {/* Mobile: Sidebar Toggle, Title and Language Selector */}
                     <div className="flex md:hidden items-center w-full max-w-2xl mb-6 gap-3">
-                        {sidebarState === "collapsed" && (
-                            <SidebarLeftTrigger />
-                        )}
+                        {sidebarState === "collapsed" && <SidebarLeftTrigger />}
 
                         <h1 className="text-3xl font-semibold text-black dark:text-foreground min-h-[2.5rem] flex items-center truncate break-words flex-1">
                             {getPageTitle()}
@@ -375,9 +376,7 @@ export default function DiscoverPageClient({
                             value={language}
                             onValueChange={handleLanguageChange}
                         >
-                            <SelectTrigger
-                                className="bg-[#F3F9EF] dark:bg-input border-0 h-8 w-16 text-sm text-[#91998C] dark:text-muted-foreground flex-shrink-0"
-                            >
+                            <SelectTrigger className="bg-[#F3F9EF] dark:bg-input border-0 h-8 w-16 text-sm text-[#91998C] dark:text-muted-foreground flex-shrink-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -408,10 +407,11 @@ export default function DiscoverPageClient({
                                 }
                                 value={searchQuery}
                                 onChange={handleSearchInputChange}
-                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
-                                    ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
-                                    : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
-                                    }`}
+                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${
+                                    searchQuery
+                                        ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
+                                        : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
+                                }`}
                                 style={{
                                     color: searchQuery ? "#91998C" : "#D8E5D0",
                                 }}
@@ -424,9 +424,7 @@ export default function DiscoverPageClient({
                                 value={language}
                                 onValueChange={handleLanguageChange}
                             >
-                                <SelectTrigger
-                                    className="bg-[#F3F9EF] dark:bg-input border-0 h-14 w-24 text-lg text-[#91998C] dark:text-muted-foreground flex-shrink-0"
-                                >
+                                <SelectTrigger className="bg-[#F3F9EF] dark:bg-input border-0 h-14 w-24 text-lg text-[#91998C] dark:text-muted-foreground flex-shrink-0">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -471,13 +469,14 @@ export default function DiscoverPageClient({
                                     </Button>
                                 </motion.div>
                             )}
-                            {(isFetching || (hasSearchParams && !searchData)) ? (
+                            {isFetching || (hasSearchParams && !searchData) ? (
                                 <div className="space-y-4">
                                     {Array.from({ length: 3 }).map((_, i) => (
                                         <FeedCardSkeleton key={i} />
                                     ))}
                                 </div>
-                            ) : searchError || searchData?.results.length === 0 ? (
+                            ) : searchError ||
+                              searchData?.results.length === 0 ? (
                                 <motion.div
                                     className="flex flex-col items-center justify-center py-16"
                                     initial={{ opacity: 0, scale: 0.95 }}
@@ -497,10 +496,14 @@ export default function DiscoverPageClient({
                                         />
                                     </div>
                                     <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
-                                        {searchError ? "Search failed" : "No matching feeds found"}
+                                        {searchError
+                                            ? "Search failed"
+                                            : "No matching feeds found"}
                                     </h3>
                                     <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                                        {searchError ? "Please try again later." : "Try rephrasing your query."}
+                                        {searchError
+                                            ? "Please try again later."
+                                            : "Try rephrasing your query."}
                                     </p>
                                 </motion.div>
                             ) : (
@@ -511,26 +514,51 @@ export default function DiscoverPageClient({
                                     transition={{ duration: 0.15 }}
                                 >
                                     {searchData?.results.map(
-                                        (feed: any, index: number) => (
-                                            <motion.div
-                                                key={feed.id}
-                                                initial={{ opacity: 0, y: 30 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{
-                                                    duration: 0.2,
-                                                    delay: index * 0.05,
-                                                    ease: "easeOut",
-                                                }}
-                                            >
-                                                {feed.is_preview ? (
-                                                    <FeedPreviewCard
-                                                        feed={feed}
-                                                    />
-                                                ) : (
-                                                    <FeedCard feed={feed} />
-                                                )}
-                                            </motion.div>
-                                        )
+                                        (
+                                            discoveryResult: FeedDiscoveryResult,
+                                            index: number
+                                        ) => {
+                                            const feed =
+                                                feedDiscoveryResultToFeed(
+                                                    discoveryResult
+                                                )
+                                            return (
+                                                <motion.div
+                                                    key={feed.id}
+                                                    initial={{
+                                                        opacity: 0,
+                                                        y: 30,
+                                                    }}
+                                                    animate={{
+                                                        opacity: 1,
+                                                        y: 0,
+                                                    }}
+                                                    transition={{
+                                                        duration: 0.2,
+                                                        delay: index * 0.05,
+                                                        ease: "easeOut",
+                                                    }}
+                                                >
+                                                    {feed.is_preview &&
+                                                    feed.preview_url ? (
+                                                        <FeedPreviewCard
+                                                            feed={{
+                                                                ...feed,
+                                                                is_preview: true,
+                                                                preview_url:
+                                                                    feed.preview_url,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <FeedCard
+                                                            feed={
+                                                                discoveryResult
+                                                            }
+                                                        />
+                                                    )}
+                                                </motion.div>
+                                            )
+                                        }
                                     )}
                                 </motion.div>
                             )}
@@ -570,12 +598,18 @@ export default function DiscoverPageClient({
                                         }}
                                     >
                                         <CategoryBadge
-                                            category={getMobileCategoryName(category)}
+                                            category={getMobileCategoryName(
+                                                category
+                                            )}
                                             iconKey={category}
                                             onClick={() =>
                                                 handleCategoryClick(category)
                                             }
-                                            className={isMobile ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1" : ""}
+                                            className={
+                                                isMobile
+                                                    ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1"
+                                                    : ""
+                                            }
                                         />
                                     </motion.div>
                                 ))}

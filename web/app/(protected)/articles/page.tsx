@@ -1,11 +1,11 @@
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesSuspenseWrapper } from "@/components/articles/articles-suspense-wrapper"
-import { ServerApiClient } from "@/lib/api/server"
-import { RSS_QUERY_KEYS } from "@/lib/query-keys"
+import { ApiClient, ArticlesPaginatedResponse } from "@readspace/shared"
+import { RSS_QUERY_KEYS } from "@readspace/shared"
 
 // Force dynamic rendering since we're fetching user-specific data
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export default async function ArticlesPage() {
     const queryClient = getQueryClient()
@@ -19,27 +19,28 @@ export default async function ArticlesPage() {
         sortBy: "published_at",
         sortOrder: "desc",
         size: 25,
-        viewType: 'all',
-        viewId: 'all',
+        viewType: "all",
+        viewId: "all",
     }
-    
+
     // Prefetch infinite articles data with the exact query key the component will use
     await queryClient.prefetchInfiniteQuery({
-        queryKey: [RSS_QUERY_KEYS.ARTICLES, 'infinite', infiniteQueryParams],
-        queryFn: ({ pageParam = 1 }) => ServerApiClient.getArticles({
-            feed_ids: infiniteQueryParams.feedIds,
-            folder_id: infiniteQueryParams.folderId,
-            published_since: infiniteQueryParams.publishedSince,
-            published_until: infiniteQueryParams.publishedUntil,
-            sort_by: infiniteQueryParams.sortBy,
-            sort_order: infiniteQueryParams.sortOrder,
-            page: pageParam,
-            size: infiniteQueryParams.size,
-        }),
+        queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", infiniteQueryParams],
+        queryFn: ({ pageParam = 1 }) =>
+            ApiClient.rss.getArticles({
+                feed_ids: infiniteQueryParams.feedIds,
+                folder_id: infiniteQueryParams.folderId,
+                published_since: infiniteQueryParams.publishedSince,
+                published_until: infiniteQueryParams.publishedUntil,
+                sort_by: infiniteQueryParams.sortBy,
+                sort_order: infiniteQueryParams.sortOrder,
+                page: pageParam,
+                size: infiniteQueryParams.size,
+            }),
         initialPageParam: 1,
-        getNextPageParam: (lastPage: any) => {
+        getNextPageParam: (lastPage: ArticlesPaginatedResponse) => {
             const currentPage = lastPage.page || 1
-            const totalPages = lastPage.pages || lastPage.total_pages || 1
+            const totalPages = lastPage.pages || 1
             return currentPage < totalPages ? currentPage + 1 : undefined
         },
         staleTime: 5 * 60 * 1000, // 5 minutes to match client
@@ -47,8 +48,7 @@ export default async function ArticlesPage() {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ArticlesSuspenseWrapper 
-                title="All Articles"
+            <ArticlesSuspenseWrapper
                 showUnreadBadge={true}
                 initialSidebarTitle="All Articles"
             />

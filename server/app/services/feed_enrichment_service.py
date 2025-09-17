@@ -7,7 +7,7 @@ from typing import Any
 import requests
 import structlog
 from bs4 import BeautifulSoup
-from extract_favicon import check_availability, from_google, from_html
+from extract_favicon import check_availability, from_google, from_html  # type: ignore
 from lingua import Language, LanguageDetectorBuilder
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,22 +32,43 @@ class FeedEnrichmentService:
         self.popularity_scorer = PopularityScorer(self.page_rank_service)
 
         # Initialize language detector with enhanced language support
-        self.language_detector = LanguageDetectorBuilder.from_languages(
-            Language.ENGLISH, Language.CHINESE, Language.FRENCH, Language.GERMAN,
-            Language.SPANISH, Language.RUSSIAN, Language.JAPANESE, Language.PORTUGUESE,
-            Language.ITALIAN, Language.KOREAN, Language.ARABIC, Language.HINDI,
-            Language.DUTCH, Language.SWEDISH, Language.DANISH, Language.BOKMAL,
-            Language.FINNISH, Language.POLISH, Language.TURKISH, Language.VIETNAMESE,
-            Language.THAI, Language.HEBREW, Language.INDONESIAN
-        ).with_preloaded_language_models().build()
+        self.language_detector = (
+            LanguageDetectorBuilder.from_languages(
+                Language.ENGLISH,
+                Language.CHINESE,
+                Language.FRENCH,
+                Language.GERMAN,
+                Language.SPANISH,
+                Language.RUSSIAN,
+                Language.JAPANESE,
+                Language.PORTUGUESE,
+                Language.ITALIAN,
+                Language.KOREAN,
+                Language.ARABIC,
+                Language.HINDI,
+                Language.DUTCH,
+                Language.SWEDISH,
+                Language.DANISH,
+                Language.BOKMAL,
+                Language.FINNISH,
+                Language.POLISH,
+                Language.TURKISH,
+                Language.VIETNAMESE,
+                Language.THAI,
+                Language.HEBREW,
+                Language.INDONESIAN,
+            )
+            .with_preloaded_language_models()
+            .build()
+        )
 
     async def enrich_feed(self, feed_id: str) -> dict[str, Any]:
         """
         Enrich a feed with enhanced metadata, popularity scoring, and embeddings.
-        
+
         Args:
             feed_id: UUID of the feed to enrich
-            
+
         Returns:
             Dictionary with enrichment results
         """
@@ -59,9 +80,7 @@ class FeedEnrichmentService:
 
             from sqlalchemy import select
 
-            result = await self.db.execute(
-                select(Feed).where(Feed.id == UUID(feed_id))
-            )
+            result = await self.db.execute(select(Feed).where(Feed.id == UUID(feed_id)))
             feed = result.scalar_one_or_none()
 
             if not feed:
@@ -73,7 +92,7 @@ class FeedEnrichmentService:
             # Step 1: Language detection (only if not already set)
             if not feed.language:
                 language = self._detect_language(feed)
-                enrichment_data['language'] = language
+                enrichment_data["language"] = language
                 logger.info("Language detected", feed_id=feed_id, language=language)
             else:
                 language = feed.language
@@ -99,7 +118,8 @@ class FeedEnrichmentService:
             if self.settings.ENABLE_AI and self.ai_service:
                 embedding = await self._generate_embedding(feed, enrichment_data)
                 if embedding:
-                    enrichment_data['embedding'] = embedding
+                    # Cast embedding to str since we're storing as string in database
+                    enrichment_data["embedding"] = str(embedding)
             else:
                 logger.info("AI disabled, skipping embedding generation", feed_id=feed_id)
 
@@ -114,24 +134,19 @@ class FeedEnrichmentService:
             logger.info(
                 "Feed enrichment completed",
                 feed_id=feed_id,
-                language=enrichment_data.get('language', language),
-                popularity_score=enrichment_data.get('popularity_score', 0.0),
-                has_embedding=bool(embedding)
+                language=enrichment_data.get("language", language),
+                popularity_score=enrichment_data.get("popularity_score", 0.0),
+                has_embedding=bool(embedding),
             )
 
             return {
                 "success": True,
                 "feed_id": feed_id,
-                "enrichment_data": enrichment_data
+                "enrichment_data": enrichment_data,
             }
 
         except Exception as e:
-            logger.error(
-                "Feed enrichment failed",
-                feed_id=feed_id,
-                error=str(e),
-                exc_info=True
-            )
+            logger.error("Feed enrichment failed", feed_id=feed_id, error=str(e), exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _detect_language(self, feed: Feed) -> str:
@@ -150,7 +165,7 @@ class FeedEnrichmentService:
             full_text = " ".join(filter(None, text_parts)).strip()
 
             if not full_text:
-                return 'en'
+                return "en"
 
             detected_language = self.language_detector.detect_language_of(full_text[:2000])
             if detected_language:
@@ -159,19 +174,19 @@ class FeedEnrichmentService:
         except Exception as e:
             logger.warning("Language detection failed", error=str(e))
 
-        return 'en'
+        return "en"
 
     def _clean_html_text(self, text: str) -> str:
         """Clean HTML tags and get pure text."""
         if not text:
             return ""
         try:
-            soup = BeautifulSoup(text, 'html.parser')
-            clean_text = soup.get_text(separator=' ', strip=True)
-            return ' '.join(clean_text.split())
+            soup = BeautifulSoup(text, "html.parser")
+            clean_text = soup.get_text(separator=" ", strip=True)
+            return " ".join(clean_text.split())
         except Exception:
-            clean_text = re.sub(r'<[^>]+>', ' ', text)
-            return ' '.join(clean_text.split())
+            clean_text = re.sub(r"<[^>]+>", " ", text)
+            return " ".join(clean_text.split())
 
     async def _enrich_with_gemini(self, feed: Feed, language: str) -> dict[str, Any]:
         """Use Gemini AI to refine feed metadata with structured output."""
@@ -184,7 +199,7 @@ class FeedEnrichmentService:
             domain = self._extract_domain_from_url(feed.link or feed.url)
 
             # Get sample articles if available (for now, use empty list)
-            sample_articles = []  # TODO: Fetch recent articles from feed for context
+            sample_articles: list[str] = []  # TODO: Fetch recent articles from feed for context
 
             # Use AI service's Gemini enrichment method
             result = await self.ai_service.enrich_feed_with_gemini(
@@ -193,16 +208,16 @@ class FeedEnrichmentService:
                 domain=domain,
                 existing_tag="general",  # Default tag
                 sample_articles=sample_articles,
-                language=language
+                language=language,
             )
 
             if result:
                 return {
-                    'title': result.refined_title,
-                    'description': result.refined_description,
-                    'tags': result.tags,
-                    'top_level_category': result.category,
-                    'popularity_estimate': result.popularity_estimate
+                    "title": result.refined_title,
+                    "description": result.refined_description,
+                    "tags": result.tags,
+                    "top_level_category": result.category,
+                    "popularity_estimate": result.popularity_estimate,
                 }
             else:
                 logger.warning("Gemini enrichment returned None, using fallback")
@@ -212,14 +227,13 @@ class FeedEnrichmentService:
             logger.error("Gemini enrichment failed", error=str(e))
             return self._fallback_enrichment_data(feed)
 
-
     def _fallback_enrichment_data(self, feed: Feed) -> dict[str, Any]:
         """Provide fallback enrichment data if LLM fails."""
         return {
-            'title': feed.title,
-            'description': feed.description,
-            'tags': ['general'],
-            'top_level_category': 'Miscellaneous'
+            "title": feed.title,
+            "description": feed.description,
+            "tags": ["general"],
+            "top_level_category": "Miscellaneous",
         }
 
     def _calculate_hybrid_popularity_score(self, feed: Feed, enrichment_data: dict[str, Any]) -> dict[str, Any]:
@@ -230,30 +244,30 @@ class FeedEnrichmentService:
 
             # Prepare feed data for popularity scorer
             feed_data = {
-                'title': feed.title or "Unknown",
-                'description': feed.description or "",
-                'domain': domain,
-                'xmlUrl': feed.url,
-                'quality_score': getattr(feed, 'quality_score', 0.5),  # Default quality score
-                'popularity_estimate': enrichment_data.get('popularity_estimate', 50)
+                "title": feed.title or "Unknown",
+                "description": feed.description or "",
+                "domain": domain,
+                "xmlUrl": feed.url,
+                "quality_score": getattr(feed, "quality_score", 0.5),  # Default quality score
+                "popularity_estimate": enrichment_data.get("popularity_estimate", 50),
             }
 
             # Use the hybrid popularity scorer
             popularity_data = self.popularity_scorer.calculate_popularity_score(feed_data)
 
             # Convert to 0-1 scale for database storage
-            popularity_score = round(popularity_data['popularity_score'] / 100.0, 3)
+            popularity_score = round(popularity_data["popularity_score"] / 100.0, 3)
 
             return {
-                'popularity_score': popularity_score,
-                'llm_popularity_score': popularity_data.get('llm_popularity_score', 50),
-                'domain_authority_score': popularity_data.get('domain_authority_score', 0),
-                'quality_score': popularity_data.get('quality_score', 50)
+                "popularity_score": popularity_score,
+                "llm_popularity_score": popularity_data.get("llm_popularity_score", 50),
+                "domain_authority_score": popularity_data.get("domain_authority_score", 0),
+                "quality_score": popularity_data.get("quality_score", 50),
             }
 
         except Exception as e:
             logger.warning("Hybrid popularity scoring failed", error=str(e))
-            return {'popularity_score': 0.5}  # Default middle value
+            return {"popularity_score": 0.5}  # Default middle value
 
     async def _generate_embedding(self, feed: Feed, enrichment_data: dict[str, Any]) -> list[float] | None:
         """Generate embedding for feed content using Gemini or fallback."""
@@ -265,21 +279,21 @@ class FeedEnrichmentService:
             # Build composite text for embedding
             components = []
 
-            title = enrichment_data.get('title') or feed.title
+            title = enrichment_data.get("title") or feed.title
             if title:
                 components.append(title)
 
-            description = enrichment_data.get('description') or feed.description
+            description = enrichment_data.get("description") or feed.description
             if description:
                 components.append(description)
 
-            tags = enrichment_data.get('tags', [])
+            tags = enrichment_data.get("tags", [])
             if tags:
                 components.append(", ".join(tags))
 
             domain = self._extract_domain_from_url(feed.link or feed.url)
             if domain:
-                domain_clean = domain.replace('www.', '').replace('.com', '').replace('.org', '')
+                domain_clean = domain.replace("www.", "").replace(".com", "").replace(".org", "")
                 components.append(domain_clean)
 
             composite_text = " | ".join(components)
@@ -318,8 +332,8 @@ class FeedEnrichmentService:
                     # Filter for high-quality icons
                     good_favicons = []
                     for fav in favicons:
-                        is_svg = fav.format in ['svg', 'svg+xml'] or 'svg' in fav.url.lower()
-                        is_data_uri = fav.url.startswith('data:')
+                        is_svg = fav.format in ["svg", "svg+xml"] or "svg" in fav.url.lower()
+                        is_data_uri = fav.url.startswith("data:")
                         is_large = (fav.width and fav.width > 64) or (fav.height and fav.height > 64)
 
                         if is_svg or is_data_uri or is_large:
@@ -329,7 +343,7 @@ class FeedEnrichmentService:
                         # Check availability for first few candidates
                         checked_favicons = check_availability(good_favicons[:3])
                         for fav in checked_favicons:
-                            if fav.url and (fav.reachable is True or fav.url.startswith('data:')):
+                            if fav.url and (fav.reachable is True or fav.url.startswith("data:")):
                                 image_url = fav.url
                                 break
 
@@ -339,14 +353,14 @@ class FeedEnrichmentService:
                     google_favicon = from_google(canonical_url, size=256)
                     if google_favicon and google_favicon.url:
                         image_url = google_favicon.url
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # Favicon fetching is non-critical, fail silently
 
             result = {}
             if image_url:
-                result['image_url'] = image_url
+                result["image_url"] = image_url
             if canonical_url != feed.link:
-                result['link'] = canonical_url
+                result["link"] = canonical_url
 
             return result if result else None
 
@@ -358,9 +372,7 @@ class FeedEnrichmentService:
         """Get canonical URL and HTML content."""
         try:
             session = requests.Session()
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
+            session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"})
 
             response = session.get(url, timeout=10, allow_redirects=True, verify=False)
             response.raise_for_status()
@@ -377,8 +389,7 @@ class FeedEnrichmentService:
             if not url:
                 return ""
             parsed = urllib.parse.urlparse(url)
-            domain = parsed.netloc.lower().replace('www.', '')
+            domain = parsed.netloc.lower().replace("www.", "")
             return domain
         except Exception:
             return ""
-

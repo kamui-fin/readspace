@@ -1,6 +1,6 @@
 import React from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 export const DescriptionList = React.forwardRef<
     React.ElementRef<"dl">,

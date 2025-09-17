@@ -83,31 +83,85 @@ export async function getTableOfContents(
         return []
     }
 
+    // Helper interface for PDF outline items that matches PDF.js structure
+    interface PDFOutlineItem {
+        title: string
+        bold: boolean
+        italic: boolean
+        color: Uint8ClampedArray<ArrayBufferLike>
+        dest: string | unknown[] | null
+        url: string | null
+        unsafeUrl?: string
+        newWindow?: boolean
+        count?: number
+        items: PDFOutlineItem[]
+    }
+
+    // Interface for PDF reference objects
+    interface PDFRef {
+        num: number
+        gen: number
+    }
+
+    // Type guard to check if an object is a PDFRef
+    const isPDFRef = (obj: unknown): obj is PDFRef => {
+        return (
+            obj !== null &&
+            typeof obj === "object" &&
+            "num" in obj &&
+            "gen" in obj &&
+            typeof (obj as Record<string, unknown>).num === "number" &&
+            typeof (obj as Record<string, unknown>).gen === "number"
+        )
+    }
+
     // A helper function to process an individual outline item (and its subitems if any) recursively.
-    const processOutlineItem = async (item: any): Promise<NavItem | null> => {
+    const processOutlineItem = async (
+        item: PDFOutlineItem
+    ): Promise<NavItem | null> => {
         let pageNumber = "1"
-        let ref: any
+        let ref: PDFRef | null = null
         try {
-            // Check if item.dest[0] is already a page reference object
-            if (
-                item.dest[0] &&
-                typeof item.dest[0] === "object" &&
-                "num" in item.dest[0]
-            ) {
-                ref = item.dest[0]
-            } else {
-                // If not, get the destination and page index
+            // Only process if dest is an array (page reference)
+            if (Array.isArray(item.dest) && item.dest.length > 0) {
+                // Check if item.dest[0] is already a page reference object
+                if (isPDFRef(item.dest[0])) {
+                    ref = item.dest[0]
+                } else {
+                    // If not, try to get the destination if it's a string array or just use first element
+                    if (typeof item.dest[0] === "string") {
+                        const dest = await pdf.getDestination(item.dest[0])
+                        if (
+                            !dest ||
+                            !Array.isArray(dest) ||
+                            dest.length === 0
+                        ) {
+                            return null
+                        }
+                        if (isPDFRef(dest[0])) {
+                            ref = dest[0]
+                        }
+                    }
+                }
+            } else if (typeof item.dest === "string") {
+                // Handle string destinations (named destinations)
                 const dest = await pdf.getDestination(item.dest)
-                if (!dest) {
+                if (!dest || !Array.isArray(dest) || dest.length === 0) {
                     return null
                 }
-                ref = dest[0]
+                if (isPDFRef(dest[0])) {
+                    ref = dest[0]
+                }
+            } else {
+                // No valid destination, skip page calculation
+                ref = null
             }
 
-            const page = await pdf.getPageIndex(ref)
-            pageNumber = (page + 1).toString()
-        } catch (error) {
-            console.log(item)
+            if (ref) {
+                const page = await pdf.getPageIndex(ref)
+                pageNumber = (page + 1).toString()
+            }
+        } catch {
             return null
         }
 
@@ -119,12 +173,11 @@ export async function getTableOfContents(
 
         // If the item has subitems, process them recursively.
         if (item.items && item.items.length > 0) {
-            navItem.subitems = await Promise.all(
-                item.items
-                    .map(processOutlineItem)
-                    .filter(
-                        (elm: NavItem | null): elm is NavItem => elm !== null
-                    )
+            const processedSubitems = await Promise.all(
+                item.items.map(processOutlineItem)
+            )
+            navItem.subitems = processedSubitems.filter(
+                (elm): elm is NavItem => elm !== null
             )
         }
 
@@ -186,7 +239,7 @@ export const sanitizeText = (text: string | undefined | null): string => {
  * Recursively sanitizes all string values in an object or array
  * to remove null bytes and other problematic characters
  */
-export const sanitizeJsonRecursively = (data: any): any => {
+export const sanitizeJsonRecursively = (data: unknown): unknown => {
     if (data === null || data === undefined) {
         return data
     }
@@ -200,9 +253,11 @@ export const sanitizeJsonRecursively = (data: any): any => {
     }
 
     if (typeof data === "object") {
-        const result: Record<string, any> = {}
-        for (const key in data) {
-            result[key] = sanitizeJsonRecursively(data[key])
+        const result: Record<string, unknown> = {}
+        for (const key in data as Record<string, unknown>) {
+            result[key] = sanitizeJsonRecursively(
+                (data as Record<string, unknown>)[key]
+            )
         }
         return result
     }
@@ -225,7 +280,7 @@ export const processFileMetadata = async (
                 description: sanitizeText(""),
                 coverUrl: metadata.coverUrl,
                 total_pages: metadata.total_pages,
-                toc: sanitizeJsonRecursively(metadata.toc),
+                toc: metadata.toc || [],
             },
             charCounts: [],
         }

@@ -23,7 +23,10 @@ const createSignUpSchema = (isCloudProd: boolean) => {
     })
 }
 
-export async function signUp(formData: any, isCloudProd: boolean = false) {
+export async function signUp(
+    formData: Record<string, unknown>,
+    isCloudProd: boolean = false
+) {
     try {
         const signUpSchema = createSignUpSchema(isCloudProd)
         const validatedData = signUpSchema.parse(formData)
@@ -45,18 +48,30 @@ export async function signUp(formData: any, isCloudProd: boolean = false) {
         if (error) {
             // Provide user-friendly error messages based on error codes
             switch (error.message) {
-                case 'User already registered':
-                    return { error: 'An account with this email already exists. Please try logging in instead.' }
-                case 'Password should be at least 6 characters':
-                    return { error: 'Password must be at least 6 characters long.' }
-                case 'Invalid email':
-                    return { error: 'Please enter a valid email address.' }
-                case 'Signup is disabled':
-                    return { error: 'Account registration is currently disabled. Please contact support.' }
-                case 'Email rate limit exceeded':
-                    return { error: 'Too many signup attempts. Please wait a few minutes before trying again.' }
+                case "User already registered":
+                    return {
+                        error: "An account with this email already exists. Please try logging in instead.",
+                    }
+                case "Password should be at least 6 characters":
+                    return {
+                        error: "Password must be at least 6 characters long.",
+                    }
+                case "Invalid email":
+                    return { error: "Please enter a valid email address." }
+                case "Signup is disabled":
+                    return {
+                        error: "Account registration is currently disabled. Please contact support.",
+                    }
+                case "Email rate limit exceeded":
+                    return {
+                        error: "Too many signup attempts. Please wait a few minutes before trying again.",
+                    }
                 default:
-                    return { error: error.message || 'Failed to create account. Please try again.' }
+                    return {
+                        error:
+                            error.message ||
+                            "Failed to create account. Please try again.",
+                    }
             }
         }
 
@@ -70,6 +85,8 @@ export async function signUp(formData: any, isCloudProd: boolean = false) {
             return { error: firstError.message }
         }
 
-        return { error: "An unexpected error occurred during signup. Please try again." }
+        return {
+            error: "An unexpected error occurred during signup. Please try again.",
+        }
     }
 }

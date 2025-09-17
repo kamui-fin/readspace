@@ -1,11 +1,11 @@
 import { getQueryClient } from "@/lib/get-query-client"
-import { ServerApiClient } from "@/lib/api/server"
-import { RSS_QUERY_KEYS } from "@/lib/query-keys"
+import { ApiClient } from "@readspace/shared"
+import { RSS_QUERY_KEYS } from "@readspace/shared"
 import ManageFeedsPageClient from "./manage-feeds-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export const metadata = {
     title: "Manage Feeds | Readspace",
@@ -19,11 +19,11 @@ export default async function ManageFeedsPage() {
     await Promise.all([
         queryClient.prefetchQuery({
             queryKey: [RSS_QUERY_KEYS.FEEDS, {}],
-            queryFn: () => ServerApiClient.getFeeds({}),
+            queryFn: () => ApiClient.rss.getFeeds({}),
         }),
         queryClient.prefetchQuery({
             queryKey: [RSS_QUERY_KEYS.FOLDERS],
-            queryFn: () => ServerApiClient.getFolders(),
+            queryFn: () => ApiClient.rss.getFolders(),
         }),
     ])
 

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import toast from "react-hot-toast"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { useFormik } from "formik"
 import { MailIcon } from "lucide-react"
 import * as React from "react"
@@ -79,7 +79,9 @@ export function SignupForm({
             confirmPassword: "",
             acceptTerms: false,
         },
-        validationSchema: toFormikValidationSchema(createSignUpSchema(isCloudProd)),
+        validationSchema: toFormikValidationSchema(
+            createSignUpSchema(isCloudProd)
+        ),
         onSubmit: async (values, { setTouched }) => {
             // Mark terms as touched to show validation error if not checked (only for cloud)
             if (isCloudProd && !values.acceptTerms) {
@@ -102,9 +104,10 @@ export function SignupForm({
                     router.push("/onboarding")
                 }
             } catch (error) {
-                const errorMessage = error instanceof Error
-                    ? error.message
-                    : "An unexpected error occurred. Please try again."
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : "An unexpected error occurred. Please try again."
 
                 toast.error(errorMessage)
                 console.error("Signup error:", error)
@@ -274,11 +277,12 @@ export function SignupForm({
                             .
                         </label>
                     </div>
-                    {formik.touched.acceptTerms && formik.errors.acceptTerms && (
-                        <p className="text-sm text-red-500 text-start mt-2">
-                            {formik.errors.acceptTerms}
-                        </p>
-                    )}
+                    {formik.touched.acceptTerms &&
+                        formik.errors.acceptTerms && (
+                            <p className="text-sm text-red-500 text-start mt-2">
+                                {formik.errors.acceptTerms}
+                            </p>
+                        )}
                 </>
             )}
         </div>

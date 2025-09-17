@@ -5,28 +5,18 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useDeleteBookMetadata, useUpdateBook } from "@/lib/api/hooks/books"
-import { UserBookLibrary, UserBookLibraryUpdate } from "@/types/api"
+import { useDeleteBookMetadata, useUpdateBook } from "@readspace/shared"
+import {
+    UserBookLibrary,
+    UserBookLibraryUpdate,
+    isEpubProgress,
+} from "@readspace/shared"
 import { BookOpenCheck, MoreVertical, RotateCcw, Trash } from "lucide-react"
 import { MouseEvent, useState } from "react"
 import toast from "react-hot-toast"
 
 interface BookActionsProps {
     book: UserBookLibrary
-}
-
-// Type guard to check if epub_progress has the expected structure
-function isEpubProgressObject(
-    progress: any
-): progress is { globalProgress: { current: number; total: number } } {
-    return (
-        progress &&
-        typeof progress === "object" &&
-        progress.globalProgress &&
-        typeof progress.globalProgress === "object" &&
-        typeof progress.globalProgress.current === "number" &&
-        typeof progress.globalProgress.total === "number"
-    )
 }
 
 export function BookActions({ book }: BookActionsProps) {
@@ -72,7 +62,7 @@ export function BookActions({ book }: BookActionsProps) {
             } else {
                 // For EPUB, get the total from existing progress if available
                 let total = 0
-                if (isEpubProgressObject(book.epub_progress)) {
+                if (isEpubProgress(book.epub_progress)) {
                     total = book.epub_progress.globalProgress.total
                 }
 
@@ -93,10 +83,6 @@ export function BookActions({ book }: BookActionsProps) {
             toast.success("Progress reset")
         } catch (error) {
             console.log(error)
-            const errorMessage =
-                error instanceof Error && (error as any).response?.data?.detail
-                    ? (error as any).response.data.detail
-                    : "An error occurred while resetting progress."
             toast.error("Reset failed")
         }
 
@@ -122,7 +108,7 @@ export function BookActions({ book }: BookActionsProps) {
             } else {
                 // For EPUB, get the total from existing progress if available
                 let total = 0
-                if (isEpubProgressObject(book.epub_progress)) {
+                if (isEpubProgress(book.epub_progress)) {
                     total = book.epub_progress.globalProgress.total
                 }
 
@@ -143,10 +129,6 @@ export function BookActions({ book }: BookActionsProps) {
             toast.success("Marked complete")
         } catch (error) {
             console.log(error)
-            const errorMessage =
-                error instanceof Error && (error as any).response?.data?.detail
-                    ? (error as any).response.data.detail
-                    : "An error occurred while marking the book as complete."
             toast.error("Mark complete failed")
         }
 

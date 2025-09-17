@@ -4,10 +4,11 @@ import { useQuery } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
 import NextImage from "next/image"
 
-import { ApiClient } from "@/lib/api/client"
+import { ApiClient, feedDiscoveryResultToFeed } from "@readspace/shared"
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
+import type { FeedDiscoveryResult } from "@readspace/shared"
 
 interface DiscoverResultsProps {
     query?: string
@@ -29,11 +30,7 @@ export function DiscoverResults({
         isFetching,
         error: searchError,
     } = useQuery({
-        queryKey: [
-            "discover",
-            "search", 
-            { q: query, category, language },
-        ],
+        queryKey: ["discover", "search", { q: query, category, language }],
         queryFn: async () => {
             try {
                 return await ApiClient.rss.searchFeeds({
@@ -51,7 +48,7 @@ export function DiscoverResults({
         retry: (failureCount, error) => {
             // Only retry on network errors, not API errors
             return failureCount < 2 && !error?.message?.includes("400")
-        }
+        },
     })
 
     if (!hasSearchParams) {
@@ -84,7 +81,9 @@ export function DiscoverResults({
                     {searchError ? "Search failed" : "No matching feeds found"}
                 </h3>
                 <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                    {searchError ? "Please try again later." : "Try rephrasing your query."}
+                    {searchError
+                        ? "Please try again later."
+                        : "Try rephrasing your query."}
                 </p>
             </div>
         )
@@ -102,15 +101,26 @@ export function DiscoverResults({
             )}
 
             <div className="space-y-4">
-                {searchData?.results.map((feed: any) => (
-                    <div key={feed.id}>
-                        {feed.is_preview ? (
-                            <FeedPreviewCard feed={feed} />
-                        ) : (
-                            <FeedCard feed={feed} />
-                        )}
-                    </div>
-                ))}
+                {searchData?.results.map(
+                    (discoveryResult: FeedDiscoveryResult) => {
+                        const feed = feedDiscoveryResultToFeed(discoveryResult)
+                        return (
+                            <div key={feed.id}>
+                                {feed.is_preview && feed.preview_url ? (
+                                    <FeedPreviewCard
+                                        feed={{
+                                            ...feed,
+                                            is_preview: true,
+                                            preview_url: feed.preview_url,
+                                        }}
+                                    />
+                                ) : (
+                                    <FeedCard feed={discoveryResult} />
+                                )}
+                            </div>
+                        )
+                    }
+                )}
             </div>
         </div>
     )

@@ -31,7 +31,6 @@ export default function UploadBookDialog() {
     const [isOpen, setIsOpen] = useState(false)
     const [isUploading, setIsUploading] = useState(false)
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
-    const [uploadedBookId, setUploadedBookId] = useState<string>("")
 
     const { user } = useCurrentUser()
     const router = useRouter()
@@ -59,7 +58,6 @@ export default function UploadBookDialog() {
                 charCounts,
             })
 
-            setUploadedBookId(bookId)
             setIsOpen(false)
             router.push(`/library/${bookId}`)
         } catch (err) {
@@ -71,9 +69,7 @@ export default function UploadBookDialog() {
             }
 
             toast.error(
-                err instanceof Error
-                    ? err.message
-                    : "Upload failed. Try again."
+                err instanceof Error ? err.message : "Upload failed. Try again."
             )
         } finally {
             setIsUploading(false)

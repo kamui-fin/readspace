@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { useRefreshFeed, useSubscribeToFeed } from "@/lib/api/hooks/feeds"
+import { useRefreshFeed, useSubscribeToFeed } from "@readspace/shared"
 import { Check, Plus } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
@@ -18,7 +18,10 @@ interface OnboardingFeedCardProps {
     onSubscribed?: (feedId: string) => void
 }
 
-export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardProps) {
+export function OnboardingFeedCard({
+    feed,
+    onSubscribed,
+}: OnboardingFeedCardProps) {
     const [isSubscribed, setIsSubscribed] = useState(false)
     const subscribeToFeed = useSubscribeToFeed()
     const refreshFeed = useRefreshFeed()
@@ -39,41 +42,39 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
             // Subscribe to feed with default folder (backend will handle creating default folder)
             await subscribeToFeed.mutateAsync({
                 feedId: feed.id,
-                folderId: 'default' // Backend will handle this
+                folderId: "default", // Backend will handle this
             })
 
             // Trigger background refresh - user doesn't need to wait
             refreshFeed.mutate({
                 feedId: feed.id,
                 forceRefetch: true,
-                silent: true,
             })
         } catch (error) {
             // Revert UI state on error
             setIsSubscribed(false)
-            const currentSubscribedFeeds = onSubscribed ? [] : []
-            console.error('Failed to subscribe:', error)
+            console.error("Failed to subscribe:", error)
         }
     }
 
     const getFeedIcon = () => {
-        if (feed.title?.toLowerCase().includes('techcrunch')) {
-            return 'bg-green-600 text-white'
+        if (feed.title?.toLowerCase().includes("techcrunch")) {
+            return "bg-green-600 text-white"
         }
-        if (feed.title?.toLowerCase().includes('hacker news')) {
-            return 'bg-orange-500 text-white'
+        if (feed.title?.toLowerCase().includes("hacker news")) {
+            return "bg-orange-500 text-white"
         }
-        return 'bg-gradient-to-br from-gray-600 to-gray-700 text-white'
+        return "bg-gradient-to-br from-gray-600 to-gray-700 text-white"
     }
 
     const getFeedInitials = () => {
-        if (feed.title?.toLowerCase().includes('techcrunch')) {
-            return 'TC'
+        if (feed.title?.toLowerCase().includes("techcrunch")) {
+            return "TC"
         }
-        if (feed.title?.toLowerCase().includes('hacker news')) {
-            return 'Y'
+        if (feed.title?.toLowerCase().includes("hacker news")) {
+            return "Y"
         }
-        return feed.title ? feed.title.charAt(0).toUpperCase() : 'F'
+        return feed.title ? feed.title.charAt(0).toUpperCase() : "F"
     }
 
     return (
@@ -83,21 +84,22 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
                     {feed.image_url ? (
                         <NextImage
                             src={feed.image_url}
-                            alt={feed.title || 'Feed icon'}
+                            alt={feed.title || "Feed icon"}
                             className="w-12 h-12 rounded-xl object-cover"
                             width={48}
                             height={48}
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
-                                target.style.display = 'none'
-                                const fallback = target.nextElementSibling as HTMLElement
-                                if (fallback) fallback.style.display = 'flex'
+                                target.style.display = "none"
+                                const fallback =
+                                    target.nextElementSibling as HTMLElement
+                                if (fallback) fallback.style.display = "flex"
                             }}
                         />
                     ) : null}
                     <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-sm ${getFeedIcon()}`}
-                        style={{ display: feed.image_url ? 'none' : 'flex' }}
+                        style={{ display: feed.image_url ? "none" : "flex" }}
                     >
                         {getFeedInitials()}
                     </div>
@@ -112,10 +114,11 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
                         <Button
                             onClick={handleSubscribe}
                             disabled={isSubscribed}
-                            className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors ${isSubscribed
-                                ? 'bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default'
-                                : 'bg-primary hover:bg-primary/90 text-primary-foreground'
-                                }`}
+                            className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors ${
+                                isSubscribed
+                                    ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
+                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                            }`}
                             variant={isSubscribed ? "outline" : "default"}
                         >
                             {isSubscribed ? (
@@ -133,7 +136,9 @@ export function OnboardingFeedCard({ feed, onSubscribed }: OnboardingFeedCardPro
                     </div>
 
                     <div className="text-xs text-muted-foreground mb-1">
-                        {(feed.link || feed.url)?.replace(/^https?:\/\//, '').replace(/\/$/, '') || 'Unknown source'}
+                        {(feed.link || feed.url)
+                            ?.replace(/^https?:\/\//, "")
+                            .replace(/\/$/, "") || "Unknown source"}
                     </div>
 
                     {feed.description && (

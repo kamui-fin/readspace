@@ -41,13 +41,9 @@ class FeedService:
         """Get a global feed by URL."""
         return await crud_feed.get_feed_by_url(self.db, url=url)
 
-    async def refresh_feed(
-        self, *, feed_id: UUID, force_refetch: bool = False
-    ) -> FeedResponse | None:
+    async def refresh_feed(self, *, feed_id: UUID, force_refetch: bool = False) -> FeedResponse | None:
         """Refresh a global feed by fetching latest content."""
-        logger.info(
-            "Refreshing global feed", feed_id=feed_id, force_refetch=force_refetch
-        )
+        logger.info("Refreshing global feed", feed_id=feed_id, force_refetch=force_refetch)
 
         feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
         if not feed_db:
@@ -73,16 +69,12 @@ class FeedService:
                 return FeedResponse.model_validate(feed_db)
 
             if fetch_result["status_code"] != 200 or not fetch_result["content"]:
-                error_msg = (
-                    f"Failed to fetch content: status {fetch_result.get('status_code')}"
-                )
+                error_msg = f"Failed to fetch content: status {fetch_result.get('status_code')}"
                 logger.error("Feed fetch failed", feed_id=feed_id, error=error_msg)
                 return None
 
             # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_data(
-                fetch_result["content"], str(feed_db.url)
-            )
+            parsed_feed = self.feed_parser.parse_feed_data(fetch_result["content"], str(feed_db.url))
 
             # Update feed metadata
             feed_headers = fetch_result.get("headers", {})
@@ -92,9 +84,7 @@ class FeedService:
                 # Find the latest article publication date
                 latest_published = None
                 for entry in parsed_feed.entries:
-                    article_dict = self.feed_parser.extract_article_data(
-                        entry, str(feed_db.url)
-                    )
+                    article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
                     if article_dict and article_dict.get("published_at"):
                         entry_published = article_dict["published_at"]
                         if not latest_published or entry_published > latest_published:
@@ -106,18 +96,10 @@ class FeedService:
             updated_feed = await crud_feed.update_feed_metadata(
                 self.db,
                 feed_db=feed_db,
-                title=parsed_feed.feed.title
-                if hasattr(parsed_feed.feed, "title")
-                else None,
-                description=parsed_feed.feed.description
-                if hasattr(parsed_feed.feed, "description")
-                else None,
-                link=parsed_feed.feed.link
-                if hasattr(parsed_feed.feed, "link")
-                else None,
-                language=parsed_feed.feed.language
-                if hasattr(parsed_feed.feed, "language")
-                else None,
+                title=parsed_feed.feed.title if hasattr(parsed_feed.feed, "title") else None,
+                description=parsed_feed.feed.description if hasattr(parsed_feed.feed, "description") else None,
+                link=parsed_feed.feed.link if hasattr(parsed_feed.feed, "link") else None,
+                language=parsed_feed.feed.language if hasattr(parsed_feed.feed, "language") else None,
                 image_url=getattr(parsed_feed.feed, "image", {}).get("href")
                 if hasattr(parsed_feed.feed, "image")
                 else None,
@@ -139,9 +121,7 @@ class FeedService:
             logger.error("Error refreshing feed", feed_id=feed_id, error=error_msg)
 
             # Update error count
-            await crud_feed.update_feed_error(
-                self.db, feed_db=feed_db, error_message=error_msg
-            )
+            await crud_feed.update_feed_error(self.db, feed_db=feed_db, error_message=error_msg)
             raise
 
     async def _create_new_articles(self, feed_db: Feed, entries: list) -> int:
@@ -162,9 +142,7 @@ class FeedService:
         for entry in entries:
             try:
                 # Extract article data
-                article_dict = self.feed_parser.extract_article_data(
-                    entry, str(feed_db.url)
-                )
+                article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
                 if not article_dict:
                     continue
 
@@ -173,9 +151,7 @@ class FeedService:
                     original_guid=article_dict.get("guid"),
                     link=article_dict.get("link"),
                     title=article_dict.get("title"),
-                    published_at=str(article_dict.get("published_at"))
-                    if article_dict.get("published_at")
-                    else None,
+                    published_at=str(article_dict.get("published_at")) if article_dict.get("published_at") else None,
                     content=article_dict.get("content"),
                 )
 
@@ -188,17 +164,13 @@ class FeedService:
                     "author": article_dict.get("author"),
                     "published_at": article_dict.get("published_at"),
                     "image_url": article_dict.get("image_url"),
-                    "estimated_read_time_minutes": article_dict.get(
-                        "estimated_read_time_minutes"
-                    ),
+                    "estimated_read_time_minutes": article_dict.get("estimated_read_time_minutes"),
                     "created_at": datetime.now(timezone.utc),
                     "updated_at": datetime.now(timezone.utc),
                 }
 
                 content_to_create.append(content_data)
-                articles_to_create.append(
-                    (guid, len(content_to_create) - 1)
-                )  # Store index reference
+                articles_to_create.append((guid, len(content_to_create) - 1))  # Store index reference
 
             except Exception as e:
                 logger.warning(
@@ -214,9 +186,7 @@ class FeedService:
         try:
             # Step 2: Bulk create content first
             content_insert_stmt = insert(ArticleContent).values(content_to_create)
-            content_result = await self.db.execute(
-                content_insert_stmt.returning(ArticleContent.id)
-            )
+            content_result = await self.db.execute(content_insert_stmt.returning(ArticleContent.id))
             content_rows = content_result.fetchall()
             await self.db.flush()
 
@@ -240,9 +210,7 @@ class FeedService:
             from sqlalchemy.dialects.postgresql import insert as pg_insert
 
             article_insert_stmt = pg_insert(FeedArticle).values(article_insert_data)
-            article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(
-                index_elements=["feed_id", "guid"]
-            )
+            article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(index_elements=["feed_id", "guid"])
 
             result = await self.db.execute(article_insert_stmt)
             await self.db.commit()
@@ -264,9 +232,7 @@ class FeedService:
 
         except Exception as e:
             await self.db.rollback()
-            logger.error(
-                "Error in bulk article creation", feed_id=str(feed_db.id), error=str(e)
-            )
+            logger.error("Error in bulk article creation", feed_id=str(feed_db.id), error=str(e))
             raise
 
     async def get_feeds_needing_refresh(self, *, limit: int = 100) -> list[Feed]:

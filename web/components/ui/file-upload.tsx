@@ -1,10 +1,11 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import {
     Children,
     cloneElement,
     createContext,
+    useCallback,
     useContext,
     useEffect,
     useRef,
@@ -36,14 +37,17 @@ function FileUpload({
     const [isDragging, setIsDragging] = useState(false)
     const dragCounter = useRef(0)
 
-    const handleFiles = (files: FileList) => {
-        const newFiles = Array.from(files)
-        if (multiple) {
-            onFilesAdded(newFiles)
-        } else {
-            onFilesAdded(newFiles.slice(0, 1))
-        }
-    }
+    const handleFiles = useCallback(
+        (files: FileList) => {
+            const newFiles = Array.from(files)
+            if (multiple) {
+                onFilesAdded(newFiles)
+            } else {
+                onFilesAdded(newFiles.slice(0, 1))
+            }
+        },
+        [multiple, onFilesAdded]
+    )
 
     useEffect(() => {
         const handleDrag = (e: DragEvent) => {

@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import * as React from "react"
 
 import {
@@ -11,15 +10,12 @@ import {
     SidebarLeftMenuButton,
     SidebarMenu,
     SidebarMenuItem,
-    useSidebarLeft,
 } from "@/components/ui/sidebar"
-import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
 import { createClient } from "@/lib/supabase/client"
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { User } from "@supabase/supabase-js"
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import { NavMain } from "./nav-main"
 import { NavSecondary } from "./nav-secondary"
@@ -30,7 +26,7 @@ const data = {
         {
             title: "Github",
             url: "https://github.com/kamui-fin/readspace",
-            icon: function Github(props: React.SVGProps<SVGSVGElement>) {
+            icon: function Github() {
                 return (
                     <>
                         <Image
@@ -39,7 +35,6 @@ const data = {
                             height={24}
                             alt="Github"
                             className="w-4 h-4 dark:hidden"
-                            {...props}
                         />
                         <Image
                             src="/github-dark.svg"
@@ -47,7 +42,6 @@ const data = {
                             height={24}
                             alt="Github"
                             className="w-4 h-4 hidden dark:block"
-                            {...props}
                         />
                     </>
                 )
@@ -56,7 +50,7 @@ const data = {
         {
             title: "Join the Discord",
             url: "https://discord.gg/vmfafzqdX5",
-            icon: function Discord(props: React.SVGProps<SVGSVGElement>) {
+            icon: function Discord() {
                 return (
                     <Image
                         src="/discord.svg"
@@ -64,7 +58,6 @@ const data = {
                         height={24}
                         alt="Discord"
                         className="w-4 h-4"
-                        {...props}
                     />
                 )
             },
@@ -75,15 +68,9 @@ const data = {
 export function AppSidebar({
     ...props
 }: React.ComponentProps<typeof SidebarLeft>) {
-    const { toggleSidebar } = useSidebarLeft()
-    const pathname = usePathname()
-    const router = useRouter()
-    const isMobile = useIsMobile()
-    const isTablet = useIsTablet()
     const [user, setUser] = useState<User | null>(null)
     const [isLoadingUser, setIsLoadingUser] = useState(true)
     const supabase = createClient()
-    const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
 
     useEffect(() => {
         const getUser = async () => {
@@ -106,14 +93,15 @@ export function AppSidebar({
     const name =
         user?.user_metadata?.full_name || user?.user_metadata?.display_name
     const email = user?.email || null
-    const userId = user?.id || null
     return (
         <>
             <SidebarLeft
                 variant="inset"
                 collapsible="offcanvas"
                 {...props}
-                className={cn(props.className, { hidden: !isLoadingUser && !user })}
+                className={cn(props.className, {
+                    hidden: !isLoadingUser && !user,
+                })}
             >
                 <SidebarHeader>
                     <SidebarMenu>
@@ -122,9 +110,7 @@ export function AppSidebar({
                                 asChild
                                 className="data-[slot=sidebar-menu-button]:!p-1.5 pl-2 py-2"
                             >
-                                <Link
-                                    href="/"
-                                >
+                                <Link href="/">
                                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                                         <Image
                                             src="/readspace.svg"

@@ -37,13 +37,7 @@ def generate_stable_guid(
 
     # Last resort: generate hash from content
     # Combine title, publication date, and first 1000 characters of content
-    hash_input = (
-        (title or "").strip()
-        + "|"
-        + (published_at or "").strip()
-        + "|"
-        + (content or "")[:1000].strip()
-    )
+    hash_input = (title or "").strip() + "|" + (published_at or "").strip() + "|" + (content or "")[:1000].strip()
 
     # Generate SHA-256 hash
     hash_bytes = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()

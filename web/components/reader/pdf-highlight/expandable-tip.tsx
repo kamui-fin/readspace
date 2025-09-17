@@ -1,6 +1,4 @@
-import GeneralPopover from "@/components/reader/general-popover"
 import HighlightColorOptions from "@/components/reader/highlight-options"
-import { useCurrentUser } from "@/hooks/use-current-user"
 import { useReaderStore } from "@/stores/reader"
 import { PdfHighlight } from "@/types/library"
 import { useEffect, useLayoutEffect, useRef, useState } from "react"
@@ -16,9 +14,6 @@ interface ExpandableTipProps {
 }
 
 const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
-    const { user } = useCurrentUser()
-    const { role: userRole } = user || {}
-
     const [compact] = useState(true)
     const selectionRef = useRef<PdfSelection | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)
@@ -38,7 +33,7 @@ const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
 
     useLayoutEffect(() => {
         updateTipPosition!()
-    }, [compact, isInitialized])
+    }, [compact, isInitialized, updateTipPosition])
 
     useEffect(() => {
         const selection = getCurrentSelection()

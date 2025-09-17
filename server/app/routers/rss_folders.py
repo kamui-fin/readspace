@@ -9,7 +9,7 @@ from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import FolderCreate, FolderResponse, FolderUpdate
 from app.services.auth import get_current_user
-from app.services.rss_service import RssService
+from app.services.rss_service import RssOrchestrationService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/folders", tags=["RSS Folders"])
@@ -21,14 +21,12 @@ async def create_folder(
     db: AsyncSession = Depends(get_db),
     folder_in: FolderCreate = Body(...),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FolderResponse:
     """Create a new folder for the current user."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         folder = await rss_service.create_folder(folder_in=folder_in)
-        logger.info(
-            "Folder created successfully", folder_id=folder.id, user_id=current_user.sub
-        )
+        logger.info("Folder created successfully", folder_id=folder.id, user_id=current_user.sub)
         return folder
     except ValueError as e:
         logger.warning(
@@ -37,7 +35,7 @@ async def create_folder(
             user_id=current_user.sub,
             folder_name=folder_in.name,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data") from e
     except Exception as e:
         logger.error(
             "Unexpected error creating folder",
@@ -48,7 +46,7 @@ async def create_folder(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while creating the folder.",
-        )
+        ) from e
 
 
 @router.get("/", response_model=list[FolderResponse])
@@ -57,9 +55,9 @@ async def list_folders(
     skip: int = 0,
     limit: int = 100,
     current_user: TokenData = Depends(get_current_user),
-):
+) -> list[FolderResponse]:
     """List all folders for the current user."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     folders = await rss_service.list_folders(skip=skip, limit=limit)
     return folders
 
@@ -69,9 +67,9 @@ async def get_folder(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FolderResponse:
     """Get a specific folder by its ID."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     folder = await rss_service.get_folder(folder_id=folder_id)
     if not folder:
         logger.warning(
@@ -79,9 +77,7 @@ async def get_folder(
             folder_id=folder_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
     return folder
 
 
@@ -91,22 +87,18 @@ async def update_folder(
     folder_in: FolderUpdate = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FolderResponse:
     """Update a folder's details."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
-        updated_folder = await rss_service.update_folder(
-            folder_id=folder_id, folder_in=folder_in
-        )
+        updated_folder = await rss_service.update_folder(folder_id=folder_id, folder_in=folder_in)
         if not updated_folder:
             logger.warning(
                 "Folder not found for update or access denied",
                 folder_id=folder_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
         logger.info(
             "Folder updated successfully",
             folder_id=updated_folder.id,
@@ -120,7 +112,7 @@ async def update_folder(
             user_id=current_user.sub,
             folder_id=folder_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data") from e
     except Exception as e:
         logger.error(
             "Unexpected error updating folder",
@@ -131,7 +123,7 @@ async def update_folder(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while updating the folder.",
-        )
+        ) from e
 
 
 @router.delete("/{folder_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -139,9 +131,9 @@ async def delete_folder(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> JSONResponse:
     """Delete a folder."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         # First check if folder exists
         folder = await rss_service.get_folder(folder_id=folder_id)
@@ -151,9 +143,7 @@ async def delete_folder(
                 folder_id=folder_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
         # Then try to delete it
         success = await rss_service.delete_folder(folder_id=folder_id)
@@ -164,13 +154,9 @@ async def delete_folder(
                 folder_id=folder_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
-        logger.info(
-            "Folder deleted successfully", folder_id=folder_id, user_id=current_user.sub
-        )
+        logger.info("Folder deleted successfully", folder_id=folder_id, user_id=current_user.sub)
         return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
     except ValueError as e:
         logger.warning(
@@ -179,7 +165,7 @@ async def delete_folder(
             user_id=current_user.sub,
             folder_id=folder_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data") from e
     except Exception as e:
         logger.error(
             "Unexpected error deleting folder",
@@ -191,4 +177,4 @@ async def delete_folder(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while deleting the folder",
-        )
+        ) from e

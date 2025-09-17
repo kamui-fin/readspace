@@ -4,16 +4,23 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Initial Setup](#initial-setup)
-- [Development Environment Setup](#development-environment-setup)
-  - [1. Start Core Infrastructure](#1-start-core-infrastructure)
-  - [2. Run Application Services](#2-run-application-services)
-- [Working on Background Tasks (Celery)](#working-on-background-tasks-celery)
-- [Database Migrations (Alembic)](#database-migrations-alembic)
-- [Linting and Formatting](#linting-and-formatting)
-- [Submitting a Pull Request](#submitting-a-pull-request)
+- [Contributing to Readspace](#contributing-to-readspace)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Initial Setup](#initial-setup)
+  - [Development Environment Setup](#development-environment-setup)
+    - [1. Start Core Infrastructure](#1-start-core-infrastructure)
+    - [2. Run Application Services](#2-run-application-services)
+      - [Web Client (Next.js)](#web-client-nextjs)
+      - [Backend Server (FastAPI)](#backend-server-fastapi)
+      - [Chrome Extension](#chrome-extension)
+    - [Working on Background Tasks (Celery)](#working-on-background-tasks-celery)
+    - [Database Migrations (Alembic)](#database-migrations-alembic)
+    - [Linting and Formatting](#linting-and-formatting)
+      - [Backend (Server)](#backend-server)
+      - [Frontend (Web) and Browser Extension](#frontend-web-and-browser-extension)
+  - [Submitting a Pull Request](#submitting-a-pull-request)
 
 ## Getting Started
 
@@ -59,9 +66,12 @@ docker compose -f supabase/docker-compose.yml --env-file supabase/.env up -d
 
 # Start Redis from the main docker-compose file
 docker compose up -d redis
+
+# Start RSSHub
+docker compose -f docker-compose.rsshub.yml up -d
 ```
 
--   **Supabase Studio:** You can access the local dashboard at [http://localhost:8000](http://localhost:8000). Log in with email `supabase` and password `not_being_used`.
+-   **Supabase Studio:** You can access the local dashboard at [http://localhost:18000](http://localhost:18000). Log in with email `supabase` and password `not_being_used`.
 
 Wait a minute for the services to initialize. You can check their status with `docker ps`.
 
@@ -83,7 +93,8 @@ The web client will be available at `http://localhost:8042`.
 ```bash
 cd server
 poetry install
-poe start
+poetry run poe migrate
+poetry run poe start
 ```
 The backend API will be available at `http://localhost:8008`.
 

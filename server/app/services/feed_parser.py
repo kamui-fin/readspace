@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
-import feedparser
+import feedparser  # type: ignore[import-untyped]
 import structlog
 from bs4 import BeautifulSoup
 
@@ -25,28 +25,18 @@ class FeedParsingService:
     def __init__(self, default_wpm: int = 230):
         self.default_wpm = default_wpm
 
-    def parse_feed_data(
-        self, feed_content_text: str, url: str
-    ) -> feedparser.FeedParserDict:
+    def parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
         """Parse RSS/Atom feed content and validate its structure"""
         try:
             parsed_feed = feedparser.parse(feed_content_text)
         except Exception as e:
             logger.error("Failed to parse feed content", url=url, error=str(e))
-            raise FeedParsingError(f"Unable to parse feed content: {e}")
+            raise FeedParsingError(f"Unable to parse feed content: {e}") from e
 
         # Check for basic parsing issues
         if parsed_feed.bozo:
-            bozo_type = (
-                type(parsed_feed.bozo_exception).__name__
-                if parsed_feed.bozo_exception
-                else "Unknown"
-            )
-            bozo_message = (
-                str(parsed_feed.bozo_exception)
-                if parsed_feed.bozo_exception
-                else "Unknown error"
-            )
+            bozo_type = type(parsed_feed.bozo_exception).__name__ if parsed_feed.bozo_exception else "Unknown"
+            bozo_message = str(parsed_feed.bozo_exception) if parsed_feed.bozo_exception else "Unknown error"
             logger.warning(
                 "Feed parsed with issues (bozo)",
                 url=url,
@@ -56,8 +46,7 @@ class FeedParsingService:
 
             # Only fail for severe parsing errors
             if parsed_feed.bozo_exception and any(
-                error_type in bozo_type
-                for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
+                error_type in bozo_type for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
             ):
                 # Still allow it if we have some basic feed structure
                 if not parsed_feed.feed or not hasattr(parsed_feed, "entries"):
@@ -66,9 +55,7 @@ class FeedParsingService:
                         url=url,
                         bozo_type=bozo_type,
                     )
-                    raise FeedParsingError(
-                        f"Feed has severe parsing errors: {bozo_message}"
-                    )
+                    raise FeedParsingError(f"Feed has severe parsing errors: {bozo_message}")
 
         # Validate basic feed structure
         if not hasattr(parsed_feed, "feed") or not parsed_feed.feed:
@@ -77,9 +64,7 @@ class FeedParsingService:
 
         if not hasattr(parsed_feed, "entries"):
             logger.error("Feed missing entries structure", url=url)
-            raise FeedParsingError(
-                "Feed content does not contain valid entries structure"
-            )
+            raise FeedParsingError("Feed content does not contain valid entries structure")
 
         # Check if feed has a title (most feeds should have this)
         feed_title = parsed_feed.feed.get("title", "").strip()
@@ -87,14 +72,9 @@ class FeedParsingService:
             logger.warning("Feed has no title", url=url)
 
         # Validate that the feed has at least some content that looks like RSS/Atom
-        if not any(
-            key in parsed_feed.feed
-            for key in ["title", "description", "summary", "link"]
-        ):
+        if not any(key in parsed_feed.feed for key in ["title", "description", "summary", "link"]):
             logger.error("Feed lacks basic RSS/Atom elements", url=url)
-            raise FeedParsingError(
-                "Content does not appear to be a valid RSS or Atom feed"
-            )
+            raise FeedParsingError("Content does not appear to be a valid RSS or Atom feed")
 
         logger.debug(
             "Feed parsed successfully",
@@ -104,9 +84,7 @@ class FeedParsingService:
         )
         return parsed_feed
 
-    def extract_feed_metadata(
-        self, parsed_feed: feedparser.FeedParserDict, feed_url: str
-    ) -> FeedBase:
+    def extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> FeedBase:
         """Extract relevant FeedBase data from parsed feed"""
         feed_info = parsed_feed.get("feed", {})
         title = feed_info.get("title", feed_url)  # Default to URL if no title
@@ -143,23 +121,17 @@ class FeedParsingService:
             image_url=str(image_url) if image_url is not None else None,
         )
 
-    def extract_article_data(
-        self, entry: Any, feed_url: str = None
-    ) -> dict[str, Any] | None:
+    def extract_article_data(self, entry: Any, feed_url: str | None = None) -> dict[str, Any] | None:
         """Extract article data from a single feed entry - returns dict instead of ArticleCreate"""
         guid = entry.get("id") or entry.get("guid") or entry.get("link")
         if not guid:
-            logger.warning(
-                "Skipping entry with no GUID or link", entry_title=entry.get("title")
-            )
+            logger.warning("Skipping entry with no GUID or link", entry_title=entry.get("title"))
             return None
 
         # Validate GUID length and content
         guid_str = str(guid)[:1024]  # Ensure GUID fits in model
         if not guid_str.strip():
-            logger.warning(
-                "Skipping entry with empty GUID", entry_title=entry.get("title")
-            )
+            logger.warning("Skipping entry with empty GUID", entry_title=entry.get("title"))
             return None
 
         title = entry.get("title")
@@ -209,9 +181,7 @@ class FeedParsingService:
         published_dt: datetime | None = None
         if "published_parsed" in entry and entry.published_parsed:
             try:
-                published_dt = datetime(
-                    *entry.published_parsed[:6], tzinfo=timezone.utc
-                )
+                published_dt = datetime(*entry.published_parsed[:6]).replace(tzinfo=timezone.utc)
             except Exception:
                 logger.warning(
                     "Failed to parse published_parsed",
@@ -220,7 +190,7 @@ class FeedParsingService:
                 )
         elif "updated_parsed" in entry and entry.updated_parsed:
             try:
-                published_dt = datetime(*entry.updated_parsed[:6], tzinfo=timezone.utc)
+                published_dt = datetime(*entry.updated_parsed[:6]).replace(tzinfo=timezone.utc)
             except Exception:
                 logger.warning(
                     "Failed to parse updated_parsed",
@@ -230,16 +200,12 @@ class FeedParsingService:
 
         # Skip articles that have no meaningful content
         if not title and not content and not description:
-            logger.warning(
-                "Skipping entry with no title, content, or description", guid=guid
-            )
+            logger.warning("Skipping entry with no title, content, or description", guid=guid)
             return None
 
         try:
             image_url = self.find_best_article_image(entry, content, feed_url)
-            estimated_read_time = self.calculate_estimated_read_time(
-                content or description
-            )
+            estimated_read_time = self.calculate_estimated_read_time(content or description)
 
             return {
                 "guid": guid_str,
@@ -261,9 +227,7 @@ class FeedParsingService:
             )
             return None
 
-    def find_best_article_image(
-        self, entry: Any, content_html: str | None, feed_url: str = None
-    ) -> str | None:
+    def find_best_article_image(self, entry: Any, content_html: str | None, feed_url: str | None = None) -> str | None:
         """Try to find the best image for an article and convert relative URLs to absolute"""
 
         def validate_and_normalize_url(url: str) -> str | None:
@@ -283,8 +247,8 @@ class FeedParsingService:
                     parsed = urlparse(url)
                     if parsed.netloc:  # Must have a domain
                         return url
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # URL parsing is best-effort
                 return None
 
             # Convert relative URL to absolute if we have a feed_url
@@ -294,8 +258,8 @@ class FeedParsingService:
                     parsed = urlparse(absolute_url)
                     if parsed.netloc and parsed.scheme in ["http", "https"]:
                         return absolute_url
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # URL joining is best-effort
 
             return None
 
@@ -310,9 +274,7 @@ class FeedParsingService:
         # Check enclosures
         if "enclosures" in entry and entry.enclosures:
             for enclosure in entry.enclosures:
-                if enclosure.get("type", "").startswith("image/") and enclosure.get(
-                    "href"
-                ):
+                if enclosure.get("type", "").startswith("image/") and enclosure.get("href"):
                     validated_url = validate_and_normalize_url(enclosure.get("href"))
                     if validated_url:
                         return validated_url
@@ -322,10 +284,10 @@ class FeedParsingService:
             try:
                 soup = BeautifulSoup(content_html, "html.parser")
                 img_tag = soup.find("img")
-                if img_tag and img_tag.get("src"):
-                    src = img_tag.get("src")
-                    width = img_tag.get("width")
-                    height = img_tag.get("height")
+                if img_tag and img_tag.get("src"):  # type: ignore[attr-defined]
+                    src = img_tag.get("src")  # type: ignore[attr-defined]
+                    width = img_tag.get("width")  # type: ignore[attr-defined]
+                    height = img_tag.get("height")  # type: ignore[attr-defined]
 
                     # Skip tiny images (likely tracking pixels)
                     if width == "1" and height == "1":
@@ -352,8 +314,8 @@ class FeedParsingService:
                         validated_url = validate_and_normalize_url(img_match.group(2))
                         if validated_url:
                             return validated_url
-                except Exception:
-                    pass
+                except Exception:  # noqa: S110
+                    pass  # HTML parsing is best-effort
 
         return None
 
@@ -364,18 +326,14 @@ class FeedParsingService:
 
         return calculate_reading_time_from_html(text_content, default_wpm=self.default_wpm)
 
-    def extract_feed_scheduling_data(
-        self, parsed_feed: feedparser.FeedParserDict
-    ) -> dict[str, Any]:
+    def extract_feed_scheduling_data(self, parsed_feed: feedparser.FeedParserDict) -> dict[str, Any]:
         """Extract TTL and scheduling data from parsed feed"""
         ttl_value = None
         if parsed_feed.feed.get("ttl"):
             try:
                 ttl_value = int(parsed_feed.feed.get("ttl"))
             except (ValueError, TypeError):
-                logger.warning(
-                    "Invalid TTL value in feed", ttl_raw=parsed_feed.feed.get("ttl")
-                )
+                logger.warning("Invalid TTL value in feed", ttl_raw=parsed_feed.feed.get("ttl"))
                 ttl_value = None
 
         skip_hours_value = []
@@ -429,7 +387,7 @@ class FeedParsingService:
 
         valid_articles_count = len(valid_articles)
 
-        result = {
+        result: dict[str, Any] = {
             "is_valid": True,
             "total_entries": total_entries,
             "valid_articles": valid_articles_count,
@@ -441,15 +399,11 @@ class FeedParsingService:
             if total_entries == 0:
                 result["validation_errors"].append("Feed has no entries at all")
             else:
-                result["validation_errors"].append(
-                    "Feed has entries but no valid articles"
-                )
+                result["validation_errors"].append("Feed has entries but no valid articles")
 
         if valid_articles_count < min_article_count:
             result["is_valid"] = False
-            result["validation_errors"].append(
-                f"Feed has fewer than {min_article_count} valid articles"
-            )
+            result["validation_errors"].append(f"Feed has fewer than {min_article_count} valid articles")
 
         # Additional check for feeds that might be too sparse
         if total_entries > 0 and valid_articles_count < (total_entries * 0.1):

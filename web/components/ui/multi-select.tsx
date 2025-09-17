@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 import { ComponentProps } from "react"
 import Select, { GroupBase } from "react-select"
 

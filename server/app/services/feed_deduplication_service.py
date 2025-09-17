@@ -2,7 +2,7 @@
 
 import urllib.parse
 
-import feedparser
+import feedparser  # type: ignore[import-untyped]
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,18 +22,18 @@ class FeedDeduplicationService:
     async def check_for_duplicates(self, url: str, parsed_feed: feedparser.FeedParserDict | None = None) -> Feed | None:
         """
         Check if a feed already exists using RSS URL normalization only.
-        
+
         Note: We now allow multiple RSS feeds for the same website since different
         feeds may serve different purposes (e.g., blog posts vs announcements).
         Only RSS URL duplicates are checked since the database has a unique constraint.
-        
+
         Args:
             url: The RSS feed URL to check
             parsed_feed: Optional pre-parsed feed data (unused but kept for compatibility)
-            
+
         Returns:
             Existing Feed if duplicate found, None otherwise
-            
+
         Raises:
             FeedSubscriptionError: If a duplicate is detected
         """
@@ -43,9 +43,7 @@ class FeedDeduplicationService:
         normalized_url = self._normalize_url(url)
         duplicate = await self._check_url_duplicate(normalized_url)
         if duplicate:
-            raise FeedSubscriptionError(
-                f"RSS feed already exists with identical URL: {duplicate.url}"
-            )
+            raise FeedSubscriptionError(f"RSS feed already exists with identical URL: {duplicate.url}")
 
         logger.info("No RSS URL duplicates detected", url=url)
         return None
@@ -64,11 +62,11 @@ class FeedDeduplicationService:
 
             # Remove www prefix
             netloc = parsed.netloc
-            if netloc.startswith('www.'):
+            if netloc.startswith("www."):
                 netloc = netloc[4:]
 
             # Remove trailing slash from path
-            path = parsed.path.rstrip('/') or '/'
+            path = parsed.path.rstrip("/") or "/"
 
             # Remove common tracking parameters
             if parsed.query:
@@ -76,21 +74,23 @@ class FeedDeduplicationService:
                 # Keep only essential RSS parameters
                 essential_params = {}
                 for key, values in query_params.items():
-                    if key.lower() in ['format', 'type', 'feed', 'rss', 'atom']:
+                    if key.lower() in ["format", "type", "feed", "rss", "atom"]:
                         essential_params[key] = values
 
-                query = urllib.parse.urlencode(essential_params, doseq=True) if essential_params else ''
+                query = urllib.parse.urlencode(essential_params, doseq=True) if essential_params else ""
             else:
-                query = ''
+                query = ""
 
-            normalized = urllib.parse.urlunparse((
-                'https',  # Always use HTTPS
-                netloc,
-                path,
-                '',  # params
-                query,
-                ''   # fragment
-            ))
+            normalized = urllib.parse.urlunparse(
+                (
+                    "https",  # Always use HTTPS
+                    netloc,
+                    path,
+                    "",  # params
+                    query,
+                    "",  # fragment
+                )
+            )
 
             return normalized
 
@@ -98,15 +98,11 @@ class FeedDeduplicationService:
             logger.warning("URL normalization failed", url=url, error=str(e))
             return url.lower().strip()
 
-
     async def _check_url_duplicate(self, normalized_url: str) -> Feed | None:
         """Check for exact URL duplicates."""
         try:
-            result = await self.db.execute(
-                select(Feed).where(Feed.url == normalized_url)
-            )
+            result = await self.db.execute(select(Feed).where(Feed.url == normalized_url))
             return result.scalar_one_or_none()
         except Exception as e:
             logger.warning("URL duplicate check failed", error=str(e))
             return None
-

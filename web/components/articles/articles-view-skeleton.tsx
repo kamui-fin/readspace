@@ -6,18 +6,7 @@ import {
     ResizablePanelGroup,
 } from "@/components/ui/resizable"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
-    CalendarIcon,
-    CheckCircle2,
-    Eye,
-    RefreshCw,
-} from "lucide-react"
+import { CheckCircle2, Eye, RefreshCw } from "lucide-react"
 
 function ArticleItemSkeleton() {
     return (
@@ -66,8 +55,8 @@ interface ArticlesViewSkeletonProps {
     showUnreadBadge?: boolean
 }
 
-export function ArticlesViewSkeleton({ 
-    showUnreadBadge = false 
+export function ArticlesViewSkeleton({
+    showUnreadBadge = false,
 }: ArticlesViewSkeletonProps) {
     return (
         <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
@@ -127,7 +116,10 @@ export function ArticlesViewSkeleton({
                         </div>
                     </ResizablePanel>
                     <ResizableHandle />
-                    <ResizablePanel defaultSize={75} className="overflow-hidden">
+                    <ResizablePanel
+                        defaultSize={75}
+                        className="overflow-hidden"
+                    >
                         <div className="flex flex-col h-full">
                             <div className="flex-1 p-8">
                                 <ArticleContentSkeleton />

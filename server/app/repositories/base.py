@@ -28,7 +28,7 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             result = await db.execute(query)
             return result.scalar_one_or_none()
         except Exception as e:
-            raise StorageError(f"Failed to get {self.model.__name__}: {str(e)}")
+            raise StorageError(f"Failed to get {self.model.__name__}: {str(e)}") from e
 
     async def get_multi(
         self,
@@ -48,22 +48,22 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
 
             query = query.offset(skip).limit(limit)
             result = await db.execute(query)
-            return result.scalars().all()
+            return list(result.scalars().all())
         except Exception as e:
-            raise StorageError(f"Failed to get {self.model.__name__} list: {str(e)}")
+            raise StorageError(f"Failed to get {self.model.__name__} list: {str(e)}") from e
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
         """Create a new record."""
         try:
             obj_in_data = jsonable_encoder(obj_in)
-            db_obj = self.model(**obj_in_data)
+            db_obj: ModelType = self.model(**obj_in_data)
             db.add(db_obj)
             await db.commit()
             await db.refresh(db_obj)
             return db_obj
         except Exception as e:
             await db.rollback()
-            raise StorageError(f"Failed to create {self.model.__name__}: {str(e)}")
+            raise StorageError(f"Failed to create {self.model.__name__}: {str(e)}") from e
 
     async def update(
         self,
@@ -85,10 +85,13 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             await db.commit()
 
             # Fetch the updated object
-            return await self.get(db, id)
+            updated_obj = await self.get(db, id)
+            if updated_obj is None:
+                raise StorageError(f"Object with id {id} not found after update")
+            return updated_obj
         except Exception as e:
             await db.rollback()
-            raise StorageError(f"Failed to update {self.model.__name__}: {str(e)}")
+            raise StorageError(f"Failed to update {self.model.__name__}: {str(e)}") from e
 
     async def delete(self, db: AsyncSession, *, id: UUID) -> bool:
         """Delete a record."""
@@ -99,4 +102,4 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return result.rowcount > 0
         except Exception as e:
             await db.rollback()
-            raise StorageError(f"Failed to delete {self.model.__name__}: {str(e)}")
+            raise StorageError(f"Failed to delete {self.model.__name__}: {str(e)}") from e

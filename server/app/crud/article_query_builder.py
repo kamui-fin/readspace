@@ -1,11 +1,13 @@
 """Query builder for article queries."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import asc, desc, func, or_, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import InstrumentedAttribute, selectinload
 from sqlalchemy.sql import Select
+from sqlalchemy.sql.elements import ColumnElement
 
 from app.models.rss_models import (
     ArticleContent,
@@ -30,8 +32,7 @@ class ArticleQueryBuilder:
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             .outerjoin(
                 UserArticleState,
-                (UserArticleState.article_id == FeedArticle.id)
-                & (UserArticleState.user_id == self.user_id),
+                (UserArticleState.article_id == FeedArticle.id) & (UserArticleState.user_id == self.user_id),
             )
         )
         count_stmt = (
@@ -39,103 +40,96 @@ class ArticleQueryBuilder:
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             .outerjoin(
                 UserArticleState,
-                (UserArticleState.article_id == FeedArticle.id)
-                & (UserArticleState.user_id == self.user_id),
+                (UserArticleState.article_id == FeedArticle.id) & (UserArticleState.user_id == self.user_id),
             )
         )
 
         # Only join with FeedSubscription and filter by user_id if not allowing preview
         if not self.allow_preview:
-            stmt = stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(FeedSubscription.user_id == self.user_id)
-            count_stmt = count_stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(FeedSubscription.user_id == self.user_id)
+            stmt = stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(
+                FeedSubscription.user_id == self.user_id
+            )
+            count_stmt = count_stmt.join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id).filter(
+                FeedSubscription.user_id == self.user_id
+            )
 
         return stmt, count_stmt
 
-    def apply_feed_filter(
-        self, stmt: Select, count_stmt: Select, feed_ids: list[UUID]
-    ) -> tuple[Select, Select]:
+    def apply_feed_filter(self, stmt: Select, count_stmt: Select, feed_ids: list[UUID]) -> tuple[Select, Select]:
         """Apply feed ID filter to queries."""
         stmt = stmt.filter(FeedArticle.feed_id.in_(feed_ids))
         count_stmt = count_stmt.filter(FeedArticle.feed_id.in_(feed_ids))
         return stmt, count_stmt
 
-    def apply_folder_filter(
-        self, stmt: Select, count_stmt: Select, folder_id: UUID
-    ) -> tuple[Select, Select]:
+    def apply_folder_filter(self, stmt: Select, count_stmt: Select, folder_id: UUID) -> tuple[Select, Select]:
         """Apply folder filter to queries."""
         # FeedSubscription join is already done in build_base_query, just add filter
         stmt = stmt.filter(FeedSubscription.folder_id == folder_id)
         count_stmt = count_stmt.filter(FeedSubscription.folder_id == folder_id)
         return stmt, count_stmt
 
-    def apply_read_status_filter(
-        self, stmt: Select, count_stmt: Select, is_read: bool
-    ) -> tuple[Select, Select]:
+    def apply_read_status_filter(self, stmt: Select, count_stmt: Select, is_read: bool) -> tuple[Select, Select]:
         """Apply read status filter to queries."""
         if is_read:
             # Only show articles that are explicitly marked as read
-            stmt = stmt.filter(UserArticleState.is_read == True)
-            count_stmt = count_stmt.filter(UserArticleState.is_read == True)
+            stmt = stmt.filter(UserArticleState.is_read.is_(True))
+            count_stmt = count_stmt.filter(UserArticleState.is_read.is_(True))
         else:
             # Show articles that are either not tracked (NULL) or explicitly unread
             stmt = stmt.filter(
                 or_(
                     UserArticleState.is_read.is_(None),
-                    UserArticleState.is_read == False,
+                    UserArticleState.is_read.is_(False),
                 )
             )
             count_stmt = count_stmt.filter(
                 or_(
                     UserArticleState.is_read.is_(None),
-                    UserArticleState.is_read == False,
+                    UserArticleState.is_read.is_(False),
                 )
             )
         return stmt, count_stmt
 
-    def apply_read_later_filter(
-        self, stmt: Select, count_stmt: Select, is_read_later: bool
-    ) -> tuple[Select, Select]:
+    def apply_read_later_filter(self, stmt: Select, count_stmt: Select, is_read_later: bool) -> tuple[Select, Select]:
         """Apply read later filter to queries."""
         if is_read_later:
             # Only show articles that are explicitly marked as read later
-            stmt = stmt.filter(UserArticleState.is_read_later == True)
-            count_stmt = count_stmt.filter(UserArticleState.is_read_later == True)
+            stmt = stmt.filter(UserArticleState.is_read_later.is_(True))
+            count_stmt = count_stmt.filter(UserArticleState.is_read_later.is_(True))
         else:
             # Show articles that are either not tracked (NULL) or explicitly not read later
             stmt = stmt.filter(
                 or_(
                     UserArticleState.is_read_later.is_(None),
-                    UserArticleState.is_read_later == False,
+                    UserArticleState.is_read_later.is_(False),
                 )
             )
             count_stmt = count_stmt.filter(
                 or_(
                     UserArticleState.is_read_later.is_(None),
-                    UserArticleState.is_read_later == False,
+                    UserArticleState.is_read_later.is_(False),
                 )
             )
         return stmt, count_stmt
 
-    def apply_favorite_filter(
-        self, stmt: Select, count_stmt: Select, is_favorite: bool
-    ) -> tuple[Select, Select]:
+    def apply_favorite_filter(self, stmt: Select, count_stmt: Select, is_favorite: bool) -> tuple[Select, Select]:
         """Apply favorite filter to queries."""
         if is_favorite:
             # Only show articles that are explicitly marked as favorite
-            stmt = stmt.filter(UserArticleState.is_favorite == True)
-            count_stmt = count_stmt.filter(UserArticleState.is_favorite == True)
+            stmt = stmt.filter(UserArticleState.is_favorite.is_(True))
+            count_stmt = count_stmt.filter(UserArticleState.is_favorite.is_(True))
         else:
             # Show articles that are either not tracked (NULL) or explicitly not favorite
             stmt = stmt.filter(
                 or_(
                     UserArticleState.is_favorite.is_(None),
-                    UserArticleState.is_favorite == False,
+                    UserArticleState.is_favorite.is_(False),
                 )
             )
             count_stmt = count_stmt.filter(
                 or_(
                     UserArticleState.is_favorite.is_(None),
-                    UserArticleState.is_favorite == False,
+                    UserArticleState.is_favorite.is_(False),
                 )
             )
         return stmt, count_stmt
@@ -157,25 +151,19 @@ class ArticleQueryBuilder:
         self,
         stmt: Select,
         count_stmt: Select,
-        published_since: datetime = None,
-        published_until: datetime = None,
+        published_since: datetime | None = None,
+        published_until: datetime | None = None,
     ) -> tuple[Select, Select]:
         """Apply date range filter to queries."""
         if published_since:
             stmt = stmt.filter(ArticleContent.published_at >= published_since)
-            count_stmt = count_stmt.filter(
-                ArticleContent.published_at >= published_since
-            )
+            count_stmt = count_stmt.filter(ArticleContent.published_at >= published_since)
         if published_until:
             stmt = stmt.filter(ArticleContent.published_at <= published_until)
-            count_stmt = count_stmt.filter(
-                ArticleContent.published_at <= published_until
-            )
+            count_stmt = count_stmt.filter(ArticleContent.published_at <= published_until)
         return stmt, count_stmt
 
-    def apply_search_filter(
-        self, stmt: Select, count_stmt: Select, search_query: str
-    ) -> tuple[Select, Select]:
+    def apply_search_filter(self, stmt: Select, count_stmt: Select, search_query: str) -> tuple[Select, Select]:
         """Apply search filter to queries."""
         search_filter = or_(
             ArticleContent.title.ilike(f"%{search_query}%"),
@@ -185,11 +173,10 @@ class ArticleQueryBuilder:
         count_stmt = count_stmt.filter(search_filter)
         return stmt, count_stmt
 
-    def apply_sorting(
-        self, stmt: Select, sort_by: str = "published_at", sort_order: str = "desc"
-    ) -> Select:
+    def apply_sorting(self, stmt: Select, sort_by: str = "published_at", sort_order: str = "desc") -> Select:
         """Apply sorting to query."""
         # Map sort_by to correct table columns
+        sort_column: ColumnElement[Any] | InstrumentedAttribute[Any]
         if sort_by == "published_at":
             sort_column = ArticleContent.published_at
         elif sort_by == "created_at":
@@ -247,22 +234,16 @@ class ArticleQueryBuilder:
             stmt, count_stmt = self.apply_read_status_filter(stmt, count_stmt, is_read)
 
         if is_read_later is not None:
-            stmt, count_stmt = self.apply_read_later_filter(
-                stmt, count_stmt, is_read_later
-            )
+            stmt, count_stmt = self.apply_read_later_filter(stmt, count_stmt, is_read_later)
 
         if is_favorite is not None:
             stmt, count_stmt = self.apply_favorite_filter(stmt, count_stmt, is_favorite)
 
         if feed_is_favorite is not None:
-            stmt, count_stmt = self.apply_feed_favorite_filter(
-                stmt, count_stmt, feed_is_favorite, folder_joined
-            )
+            stmt, count_stmt = self.apply_feed_favorite_filter(stmt, count_stmt, feed_is_favorite, folder_joined)
 
         if published_since or published_until:
-            stmt, count_stmt = self.apply_date_range_filter(
-                stmt, count_stmt, published_since, published_until
-            )
+            stmt, count_stmt = self.apply_date_range_filter(stmt, count_stmt, published_since, published_until)
 
         if search_query:
             stmt, count_stmt = self.apply_search_filter(stmt, count_stmt, search_query)

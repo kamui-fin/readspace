@@ -35,16 +35,10 @@ class WebArticleService:
         """Save a web article with content provided by the extension."""
 
         if not content:
-            raise ValueError(
-                "No content provided. Content must be extracted by the extension."
-            )
+            raise ValueError("No content provided. Content must be extracted by the extension.")
 
         # First, check if we already have content extracted by the chrome extension for this URL
-        existing_extracted_content = (
-            await crud_article_content.get_by_link_extracted_by_extension(
-                self.db, link=url
-            )
-        )
+        existing_extracted_content = await crud_article_content.get_by_link_extracted_by_extension(self.db, link=url)
 
         if existing_extracted_content:
             # We have extension-extracted content, use it
@@ -102,13 +96,14 @@ class WebArticleService:
                 title=content_create.title,
                 published_at=content_create.published_at,
             )
-            content_record = await crud_article_content.create(
-                self.db, obj_in=content_create
-            )
+            content_record = await crud_article_content.create(self.db, obj_in=content_create)
 
         # Now check if user already has this specific content clipped
+        # Type ignore needed due to SQLAlchemy mypy plugin issue with UUID columns
         existing_clipped = await crud_clipped_article.get_by_user_and_content(
-            self.db, user_id=self.user_id, content_id=content_record.id
+            self.db,
+            user_id=self.user_id,
+            content_id=content_record.id,  # type: ignore[arg-type]
         )
         if existing_clipped:
             logger.info(
@@ -131,13 +126,13 @@ class WebArticleService:
         )
 
         # Save to database
-        clipped_article = await crud_clipped_article.create(
-            self.db, obj_in=clipped_article_create
-        )
+        clipped_article = await crud_clipped_article.create(self.db, obj_in=clipped_article_create)
 
         # Load with content for response
+        # Type ignore needed due to SQLAlchemy mypy plugin issue with UUID columns
         clipped_with_content = await crud_clipped_article.get_with_content(
-            self.db, article_id=clipped_article.id
+            self.db,
+            article_id=clipped_article.id,  # type: ignore[arg-type]
         )
 
         # Tags are now handled as ARRAY field on feeds - no association needed
@@ -213,9 +208,7 @@ class WebArticleService:
 
                 for fmt in formats:
                     try:
-                        result = datetime.strptime(date_str, fmt).replace(
-                            tzinfo=timezone.utc
-                        )
+                        result = datetime.strptime(date_str, fmt).replace(tzinfo=timezone.utc)
                         logger.debug("Parsed with strptime", format=fmt, result=result)
                         return result
                     except ValueError:
@@ -233,4 +226,3 @@ class WebArticleService:
             return None
 
         return calculate_reading_time(content, default_wpm=230)
-

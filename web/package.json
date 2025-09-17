@@ -10,7 +10,6 @@
         "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
         "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
         "type-check": "tsc --noEmit",
-        "prepare": "husky",
         "migrate": "ts-node scripts/migrate-to-supabase.ts"
     },
     "dependencies": {
@@ -44,6 +43,7 @@
         "@radix-ui/react-toggle": "^1.1.2",
         "@radix-ui/react-toggle-group": "^1.1.2",
         "@radix-ui/react-tooltip": "^1.1.8",
+        "@readspace/shared": "workspace:^",
         "@supabase/ssr": "^0.6.1",
         "@supabase/supabase-js": "^2.39.3",
         "@t3-oss/env-core": "^0.12.0",
@@ -147,7 +147,6 @@
         "eslint-plugin-prettier": "^5.2.3",
         "eslint-plugin-react-hooks": "^5.1.0",
         "gray-matter": "^4.0.3",
-        "husky": "^9.1.7",
         "jiti": "^2.4.2",
         "lint-staged": "^15.4.3",
         "postcss": "^8",
@@ -157,26 +156,6 @@
         "tailwindcss": "^4.0.15",
         "ts-node": "^10.9.2",
         "typescript": "^5"
-    },
-    "pnpm": {
-        "ignoredBuiltDependencies": [
-            "bcrypt"
-        ],
-        "onlyBuiltDependencies": [
-            "@firebase/util",
-            "bcrypt",
-            "canvas",
-            "core-js",
-            "es5-ext",
-            "esbuild",
-            "protobufjs",
-            "rxdb",
-            "sharp",
-            "supabase"
-        ],
-        "overrides": {
-            "pdfjs-dist": "4.4.168"
-        }
     },
     "packageManager": "pnpm@10.10.0"
 }

@@ -6,7 +6,6 @@ import {
     SidebarRightProvider,
 } from "@/components/ui/sidebar"
 import { Toaster } from "react-hot-toast"
-import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
 
 interface ClientLayoutProps {

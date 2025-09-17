@@ -4,12 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import delete, select
+from sqlalchemy import select
 
 from app.core.exceptions import StorageError
 from app.models.book_models import Highlight, UserBookLibrary
 from app.repositories.highlights import HighlightRepository
-from app.schemas.highlights import HighlightCreate, HighlightUpdate
 
 
 @pytest.mark.unit
@@ -35,18 +34,22 @@ class TestHighlightRepository:
         mock_result.scalars.return_value.all.return_value = mock_highlights
         mock_db.execute.return_value = mock_result
 
-        with patch('app.repositories.highlights.logger') as mock_logger:
+        with patch("app.repositories.highlights.logger") as mock_logger:
             result = await self.repository.get_book_highlights(
                 db=mock_db, book_id=self.book_id
             )
 
             assert result == mock_highlights
             mock_db.execute.assert_called_once()
-            
+
             # Verify logging calls
             assert mock_logger.info.call_count >= 3
-            mock_logger.info.assert_any_call(f"Building query for book_id: {self.book_id}")
-            mock_logger.info.assert_any_call(f"Query returned {len(mock_highlights)} highlights")
+            mock_logger.info.assert_any_call(
+                f"Building query for book_id: {self.book_id}"
+            )
+            mock_logger.info.assert_any_call(
+                f"Query returned {len(mock_highlights)} highlights"
+            )
 
     @pytest.mark.asyncio
     async def test_get_book_highlights_exception(self):
@@ -54,7 +57,7 @@ class TestHighlightRepository:
         mock_db = AsyncMock()
         mock_db.execute.side_effect = Exception("Database error")
 
-        with patch('app.repositories.highlights.logger') as mock_logger:
+        with patch("app.repositories.highlights.logger") as mock_logger:
             with pytest.raises(StorageError) as exc_info:
                 await self.repository.get_book_highlights(
                     db=mock_db, book_id=self.book_id
@@ -76,7 +79,7 @@ class TestHighlightRepository:
 
         assert result == mock_highlight
         mock_db.execute.assert_called_once()
-        
+
         # Verify the query
         call_args = mock_db.execute.call_args[0][0]
         assert isinstance(call_args, type(select(Highlight)))
@@ -118,7 +121,7 @@ class TestHighlightRepository:
         assert result is True
         mock_db.execute.assert_called_once()
         mock_db.commit.assert_called_once()
-        
+
         # Verify the delete statement
         call_args = mock_db.execute.call_args[0][0]
         query_str = str(call_args)
@@ -248,13 +251,13 @@ class TestHighlightRepository:
         """Test that the query for get_book_highlights contains expected elements."""
         # This is more of a smoke test to ensure the query can be constructed
         from sqlalchemy import select
-        
+
         query = (
             select(Highlight)
             .join(UserBookLibrary)
             .where(UserBookLibrary.id == self.book_id)
         )
-        
+
         query_str = str(query)
         # Basic verification that it's a valid query structure
         assert "SELECT" in query_str.upper()
@@ -264,6 +267,6 @@ class TestHighlightRepository:
     def test_inherits_from_base_repository(self):
         """Test that HighlightRepository inherits from BaseRepository."""
         from app.repositories.base import BaseRepository
-        
+
         assert issubclass(HighlightRepository, BaseRepository)
         assert isinstance(self.repository, BaseRepository)

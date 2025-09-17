@@ -1,11 +1,10 @@
 import { getQueryClient } from "@/lib/get-query-client"
-import { ServerApiClient } from "@/lib/api/server"
+import { ApiClient, type SimilarFeedsResponse } from "@readspace/shared"
 import SimilarFeedsClient from "./similar-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { notFound } from "next/navigation"
 
 // Force dynamic rendering since we're fetching data
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic"
 
 export async function generateMetadata({
     params,
@@ -13,12 +12,15 @@ export async function generateMetadata({
     params: Promise<{ id: string }>
 }) {
     const { id } = await params
-    
+
     // Try to get the source feed info from similar feeds API for metadata
     try {
-        const similarData = await ServerApiClient.getSimilarFeeds(id, { limit: 1 })
+        const similarData: SimilarFeedsResponse =
+            await ApiClient.rss.getSimilarFeeds(id, {
+                limit: 1,
+            })
         const sourceFeed = similarData.source_feed
-        
+
         if (sourceFeed?.title) {
             return {
                 title: `Similar to ${sourceFeed.title} | Readspace`,
@@ -45,15 +47,13 @@ export default async function SimilarFeedsPage({
 
     // Prefetch similar feeds data (which includes source feed info)
     await queryClient.prefetchQuery({
-        queryKey: ['similarFeeds', feedId],
-        queryFn: () => ServerApiClient.getSimilarFeeds(feedId, { limit: 10 }),
+        queryKey: ["similarFeeds", feedId],
+        queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
     })
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <SimilarFeedsClient 
-                feedId={feedId}
-            />
+            <SimilarFeedsClient feedId={feedId} />
         </HydrationBoundary>
     )
 }

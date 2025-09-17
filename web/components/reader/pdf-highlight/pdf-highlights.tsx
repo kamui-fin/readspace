@@ -8,9 +8,11 @@ import {
     CSSProperties,
     PointerEventHandler,
     ReactNode,
+    useCallback,
     useContext,
     useEffect,
     useLayoutEffect,
+    useMemo,
     useRef,
     useState,
 } from "react"
@@ -69,7 +71,6 @@ let EventBus: typeof TEventBus,
 })()
 
 const SCROLL_MARGIN = 10
-const DEFAULT_SCALE_VALUE = 0.1
 const DEFAULT_TEXT_SELECTION_COLOR = "rgba(153,193,218,255)"
 
 const findOrCreateHighlightLayer = (textLayer: HTMLElement) => {
@@ -310,6 +311,7 @@ export const PdfHighlighter = ({
     const setProgressPercentage = useReaderStore(
         (state) => state.setProgressPercentage
     )
+    const setCurrentPage = useReaderStore((state) => state.setCurrentPage)
     const setTotalPages = useReaderStore((state) => state.setTotalPages)
     const goToPage = useReaderStore((state) => state.goToPage)
 
@@ -344,10 +346,7 @@ export const PdfHighlighter = ({
     const viewerRef = useRef<InstanceType<typeof PDFViewer> | null>(null)
 
     const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const [currentPage, setCurrentPage] = useState<number | undefined>(
-        startPage
-    )
-    const { open, setOpen } = useSidebarRight()
+    const { open } = useSidebarRight()
 
     const [showHeader, setShowHeader] = useState(true)
     const headerRef = useRef<HTMLDivElement>(null)
@@ -415,7 +414,9 @@ export const PdfHighlighter = ({
 
             // Apply initial zoom if provided
             if (pdfScaleValue && viewerRef.current) {
-                ;`Setting initial zoom to ${pdfScaleValue} during initialization`
+                console.debug(
+                    `Setting initial zoom to ${pdfScaleValue} during initialization`
+                )
                 viewerRef.current.currentScaleValue = pdfScaleValue.toString()
             }
         }, 100)
@@ -425,7 +426,81 @@ export const PdfHighlighter = ({
         return () => {
             debouncedDocumentInit.cancel()
         }
-    }, [document, pdfDocument, pdfScaleValue])
+    }, [pdfDocument, pdfScaleValue, setPdfRef])
+
+    // Define callback functions used in effects
+    const clearTextSelection = useCallback(() => {
+        selectionRef.current = null
+
+        const container = containerNodeRef.current
+        const selection = getWindow(container).getSelection()
+        if (!container || !selection) return
+        selection.removeAllRanges()
+    }, [])
+
+    const isEditingOrHighlighting = useCallback(() => {
+        return (
+            Boolean(selectionRef.current) ||
+            Boolean(ghostHighlightRef.current) ||
+            isAreaSelectionInProgressRef.current ||
+            isEditInProgressRef.current
+        )
+    }, [])
+
+    const toggleEditInProgress = useCallback((flag?: boolean) => {
+        if (flag !== undefined) {
+            isEditInProgressRef.current = flag
+        } else {
+            isEditInProgressRef.current = !isEditInProgressRef.current
+        }
+
+        // Disable text selection
+        if (viewerRef.current)
+            viewerRef.current.viewer?.classList.toggle(
+                "PdfHighlighter--disable-selection",
+                isEditInProgressRef.current
+            )
+    }, [])
+
+    const handleScaleValue = useCallback(
+        (zoom: number | string) => {
+            const zoomValue = zoom.toString()
+
+            if (viewerRef.current && zoomValue !== "[object Object]") {
+                // Set zooming flag to prevent header from hiding
+                setIsZooming(true)
+                viewerRef.current.currentScaleValue = zoomValue
+                // Reset zooming flag after a short delay
+                setTimeout(() => {
+                    setIsZooming(false)
+                }, 300)
+            }
+        },
+        [setIsZooming]
+    )
+
+    // Create a ref for the rendering function to avoid circular dependencies
+    const renderHighlightLayersRef = useRef<(() => void) | null>(null)
+
+    const removeGhostHighlight = useCallback(() => {
+        if (onRemoveGhostHighlight && ghostHighlightRef.current)
+            onRemoveGhostHighlight(ghostHighlightRef.current)
+        ghostHighlightRef.current = null
+        if (renderHighlightLayersRef.current) {
+            renderHighlightLayersRef.current()
+        }
+    }, [onRemoveGhostHighlight])
+
+    const handleKeyDown = useCallback(
+        (event: KeyboardEvent) => {
+            if (event.code === "Escape") {
+                clearTextSelection()
+                removeGhostHighlight()
+                setTip(null)
+            }
+        },
+        [clearTextSelection, removeGhostHighlight, setTip]
+    )
 
     // Set initial page when viewer is ready
     useEffect(() => {
@@ -496,8 +571,10 @@ export const PdfHighlighter = ({
             setTimeout(checkAndSetInitialPage, 200)
         }
 
-        eventBusRef.current.on("pagesloaded", onPagesLoaded)
-        eventBusRef.current.on("pagesinit", onPagesInit)
+        const eventBus = eventBusRef.current
+
+        eventBus.on("pagesloaded", onPagesLoaded)
+        eventBus.on("pagesinit", onPagesInit)
 
         // Also try to set it now in case the pages are already loaded
         setTimeout(checkAndSetInitialPage, 300)
@@ -505,30 +582,57 @@ export const PdfHighlighter = ({
         onTotalPagesChange(pdfDocument.numPages)
 
         return () => {
-            eventBusRef.current.off("pagesloaded", onPagesLoaded)
-            eventBusRef.current.off("pagesinit", onPagesInit)
+            if (eventBus) {
+                eventBus.off("pagesloaded", onPagesLoaded)
+                eventBus.off("pagesinit", onPagesInit)
+            }
         }
-    }, [isViewerReady, pdfDocument, pdfScaleValue])
+    }, [
+        isViewerReady,
+        pdfDocument,
+        pdfScaleValue,
+        onTotalPagesChange,
+        setTotalPages,
+        startPage,
+    ])
 
     // Initialise viewer event listeners
     useLayoutEffect(() => {
         if (!containerNodeRef.current) return
 
         const doc = containerNodeRef.current.ownerDocument
+        const eventBus = eventBusRef.current
+        const resizeObserver = resizeObserverRef.current
 
-        eventBusRef.current.on("textlayerrendered", renderHighlightLayers)
-        eventBusRef.current.on("pagesinit", handleScaleValue)
+        const renderLayers = () => {
+            if (renderHighlightLayersRef.current) {
+                renderHighlightLayersRef.current()
+            }
+        }
+
+        eventBus.on("textlayerrendered", renderLayers)
+        eventBus.on("pagesinit", handleScaleValue)
         doc.addEventListener("keydown", handleKeyDown)
 
-        renderHighlightLayers()
+        renderLayers()
 
         return () => {
-            eventBusRef.current.off("pagesinit", handleScaleValue)
-            eventBusRef.current.off("textlayerrendered", renderHighlightLayers)
+            if (eventBus) {
+                eventBus.off("pagesinit", handleScaleValue)
+                eventBus.off("textlayerrendered", renderLayers)
+            }
             doc.removeEventListener("keydown", handleKeyDown)
-            resizeObserverRef.current?.disconnect()
+            if (resizeObserver) {
+                resizeObserver.disconnect()
+            }
         }
-    }, [selectionTip, highlights, onSelectionFinished])
+    }, [
+        selectionTip,
+        highlights,
+        onSelectionFinished,
+        handleKeyDown,
+        handleScaleValue,
+    ])
 
     useEffect(() => {
         const viewer = viewerRef.current
@@ -548,14 +652,21 @@ export const PdfHighlighter = ({
         return () => {
             viewer.eventBus.off("pagechanging", handlePageChange)
         }
-    }, [viewerRef.current, onPageChange])
+    }, [
+        onPageChange,
+        pdfDocument.numPages,
+        setProgressPercentage,
+        setCurrentPage,
+    ])
 
     // Event listeners
-    const handleScroll = () => {
+    const handleScroll = useCallback(() => {
         if (onScrollAway) onScrollAway()
         scrolledToHighlightIdRef.current = null
-        renderHighlightLayers()
-    }
+        if (renderHighlightLayersRef.current) {
+            renderHighlightLayersRef.current()
+        }
+    }, [onScrollAway])
 
     const handleMouseUp: PointerEventHandler = () => {
         const container = containerNodeRef.current
@@ -637,7 +748,9 @@ export const PdfHighlighter = ({
                 if (onCreateGhostHighlight)
                     onCreateGhostHighlight(ghostHighlightRef.current)
                 clearTextSelection()
-                renderHighlightLayers()
+                if (renderHighlightLayersRef.current) {
+                    renderHighlightLayersRef.current()
+                }
                 return ghostHighlightRef.current
             },
         }
@@ -664,60 +777,19 @@ export const PdfHighlighter = ({
         }
 
         setTip(null)
-        clearTextSelection() // TODO: Check if clearing text selection only if not clicking on tip breaks anything.
+        clearTextSelection()
         removeGhostHighlight()
         toggleEditInProgress(false)
     }
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.code === "Escape") {
-            clearTextSelection()
-            removeGhostHighlight()
-            setTip(null)
-        }
-    }
+    // Create a ref for the individual layer rendering function
+    const renderHighlightLayerRef = useRef<
+        | ((highlightBindings: HighlightBindings, pageNumber: number) => void)
+        | null
+    >(null)
 
-    const handleScaleValue = (zoom: number | string) => {
-        const zoomValue = zoom.toString()
-
-        if (viewerRef.current && zoomValue !== "[object Object]") {
-            // Set zooming flag to prevent header from hiding
-            setIsZooming(true)
-            viewerRef.current.currentScaleValue = zoomValue
-            // Reset zooming flag after a short delay
-            setTimeout(() => {
-                setIsZooming(false)
-            }, 300)
-        }
-    }
-
-    // Render Highlight layers
-    const renderHighlightLayer = (
-        highlightBindings: HighlightBindings,
-        pageNumber: number
-    ) => {
-        if (!viewerRef.current) return
-
-        highlightBindings.reactRoot.render(
-            <PdfHighlighterContext.Provider value={pdfHighlighterUtils}>
-                <HighlightLayer
-                    highlightsByPage={groupHighlightsByPage([
-                        ...highlights,
-                        ghostHighlightRef.current,
-                    ])}
-                    pageNumber={pageNumber}
-                    scrolledToHighlightId={scrolledToHighlightIdRef.current}
-                    viewer={viewerRef.current}
-                    highlightBindings={highlightBindings}
-                >
-                    {children}
-                </HighlightLayer>
-            </PdfHighlighterContext.Provider>
-        )
-    }
-
-    const renderHighlightLayers = () => {
-        if (!viewerRef.current) return
+    const renderHighlightLayers = useCallback(() => {
+        if (!viewerRef.current || !renderHighlightLayerRef.current) return
 
         for (
             let pageNumber = 1;
@@ -728,7 +800,7 @@ export const PdfHighlighter = ({
 
             // Need to check if container is still attached to the DOM as PDF.js can unload pages.
             if (highlightBindings?.container?.isConnected) {
-                renderHighlightLayer(highlightBindings, pageNumber)
+                renderHighlightLayerRef.current(highlightBindings, pageNumber)
             } else {
                 const pageView = viewerRef.current!.getPageView(pageNumber - 1)
                 if (!pageView) continue
@@ -750,119 +822,129 @@ export const PdfHighlighter = ({
                         textLayer: textLayer.div, // textLayer.div for version >=3.0 and textLayer.textLayerDiv otherwise.
                     }
 
-                    renderHighlightLayer(
+                    renderHighlightLayerRef.current(
                         highlightBindingsRef.current[pageNumber],
                         pageNumber
                     )
                 }
             }
         }
-    }
+    }, [pdfDocument.numPages])
 
-    // Utils
-    const isEditingOrHighlighting = () => {
-        return (
-            Boolean(selectionRef.current) ||
-            Boolean(ghostHighlightRef.current) ||
-            isAreaSelectionInProgressRef.current ||
-            isEditInProgressRef.current
-        )
-    }
+    // Assign the render function to the ref
+    useEffect(() => {
+        renderHighlightLayersRef.current = renderHighlightLayers
+    }, [renderHighlightLayers])
 
-    const toggleEditInProgress = (flag?: boolean) => {
-        if (flag !== undefined) {
-            isEditInProgressRef.current = flag
-        } else {
-            isEditInProgressRef.current = !isEditInProgressRef.current
-        }
+    const scrollToHighlight = useCallback(
+        (highlight: Highlight) => {
+            const { boundingRect, usePdfCoordinates } = highlight.position
+            const pageNumber = Number(boundingRect.pageNumber)
 
-        // Disable text selection
-        if (viewerRef.current)
-            viewerRef.current.viewer?.classList.toggle(
-                "PdfHighlighter--disable-selection",
-                isEditInProgressRef.current
-            )
-    }
-
-    const removeGhostHighlight = () => {
-        if (onRemoveGhostHighlight && ghostHighlightRef.current)
-            onRemoveGhostHighlight(ghostHighlightRef.current)
-        ghostHighlightRef.current = null
-        renderHighlightLayers()
-    }
-
-    const clearTextSelection = () => {
-        selectionRef.current = null
-
-        const container = containerNodeRef.current
-        const selection = getWindow(container).getSelection()
-        if (!container || !selection) return
-        selection.removeAllRanges()
-    }
-
-    const scrollToHighlight = (highlight: Highlight) => {
-        const { boundingRect, usePdfCoordinates } = highlight.position
-        const pageNumber = Number(boundingRect.pageNumber)
-
-        // Remove scroll listener in case user auto-scrolls in succession.
-        viewerRef.current!.container.removeEventListener("scroll", handleScroll)
-
-        const pageViewport = viewerRef.current!.getPageView(
-            pageNumber - 1
-        ).viewport
-
-        viewerRef.current!.scrollPageIntoView({
-            pageNumber,
-            destArray: [
-                null, // null since we pass pageNumber already as an arg
-                { name: "XYZ" },
-                ...pageViewport.convertToPdfPoint(
-                    0, // Default x coord
-                    scaledToViewport(
-                        boundingRect,
-                        pageViewport,
-                        usePdfCoordinates
-                    ).top - SCROLL_MARGIN
-                ),
-                0, // Default z coord
-            ],
-        })
-
-        scrolledToHighlightIdRef.current = highlight.id
-        renderHighlightLayers()
-
-        // wait for scrolling to finish
-        setTimeout(() => {
-            viewerRef.current!.container.addEventListener(
+            // Remove scroll listener in case user auto-scrolls in succession.
+            viewerRef.current!.container.removeEventListener(
                 "scroll",
-                handleScroll,
-                {
-                    once: true,
-                }
+                handleScroll
             )
-        }, 100)
-    }
 
-    const pdfHighlighterUtils: PdfHighlighterUtils = {
-        isEditingOrHighlighting,
-        getScrollContainer: () => scrollContainerRef.current,
-        getCurrentSelection: () => selectionRef.current,
-        getGhostHighlight: () => ghostHighlightRef.current,
-        removeGhostHighlight,
-        toggleEditInProgress,
-        isEditInProgress: () => isEditInProgressRef.current,
-        isSelectionInProgress: () =>
-            Boolean(selectionRef.current) ||
-            isAreaSelectionInProgressRef.current,
-        scrollToHighlight,
-        getViewer: () => viewerRef.current,
-        getTip: () => tip,
-        setTip,
-        updateTipPosition: updateTipPositionRef.current,
-        scrollToPage: (page: number) => {
-            goToPage(Number(page))
+            const pageViewport = viewerRef.current!.getPageView(
+                pageNumber - 1
+            ).viewport
+
+            viewerRef.current!.scrollPageIntoView({
+                pageNumber,
+                destArray: [
+                    null, // null since we pass pageNumber already as an arg
+                    { name: "XYZ" },
+                    ...pageViewport.convertToPdfPoint(
+                        0, // Default x coord
+                        scaledToViewport(
+                            boundingRect,
+                            pageViewport,
+                            usePdfCoordinates
+                        ).top - SCROLL_MARGIN
+                    ),
+                    0, // Default z coord
+                ],
+            })
+
+            scrolledToHighlightIdRef.current = highlight.id
+            if (renderHighlightLayersRef.current) {
+                renderHighlightLayersRef.current()
+            }
+
+            // wait for scrolling to finish
+            setTimeout(() => {
+                viewerRef.current!.container.addEventListener(
+                    "scroll",
+                    handleScroll,
+                    {
+                        once: true,
+                    }
+                )
+            }, 100)
         },
-    }
+        [handleScroll]
+    )
+
+    const pdfHighlighterUtils: PdfHighlighterUtils = useMemo(
+        () => ({
+            isEditingOrHighlighting,
+            getScrollContainer: () => scrollContainerRef.current,
+            getCurrentSelection: () => selectionRef.current,
+            getGhostHighlight: () => ghostHighlightRef.current,
+            removeGhostHighlight,
+            toggleEditInProgress,
+            isEditInProgress: () => isEditInProgressRef.current,
+            isSelectionInProgress: () =>
+                Boolean(selectionRef.current) ||
+                isAreaSelectionInProgressRef.current,
+            scrollToHighlight,
+            getViewer: () => viewerRef.current,
+            getTip: () => tip,
+            setTip,
+            updateTipPosition: updateTipPositionRef.current,
+            scrollToPage: (page: number) => {
+                goToPage(page)
+            },
+        }),
+        [
+            isEditingOrHighlighting,
+            removeGhostHighlight,
+            toggleEditInProgress,
+            scrollToHighlight,
+            tip,
+            setTip,
+            goToPage,
+        ]
+    )
+
+    // Now assign the render function after pdfHighlighterUtils is defined
+    useEffect(() => {
+        renderHighlightLayerRef.current = (
+            highlightBindings: HighlightBindings,
+            pageNumber: number
+        ) => {
+            if (!viewerRef.current) return
+
+            highlightBindings.reactRoot.render(
+                <PdfHighlighterContext.Provider value={pdfHighlighterUtils}>
+                    <HighlightLayer
+                        highlightsByPage={groupHighlightsByPage([
+                            ...highlights,
+                            ghostHighlightRef.current,
+                        ])}
+                        pageNumber={pageNumber}
+                        scrolledToHighlightId={scrolledToHighlightIdRef.current}
+                        viewer={viewerRef.current}
+                        highlightBindings={highlightBindings}
+                    >
+                        {children}
+                    </HighlightLayer>
+                </PdfHighlighterContext.Provider>
+            )
+        }
+    }, [pdfHighlighterUtils, highlights, children])
 
     utilsRef(pdfHighlighterUtils)
 
@@ -979,7 +1061,11 @@ export const PdfHighlighter = ({
                                                     ghostHighlightRef.current
                                                 )
                                             resetSelection()
-                                            renderHighlightLayers()
+                                            if (
+                                                renderHighlightLayersRef.current
+                                            ) {
+                                                renderHighlightLayersRef.current()
+                                            }
                                             return ghostHighlightRef.current
                                         },
                                     }

@@ -126,13 +126,9 @@ def http_conflict(message: str = "Resource already exists") -> HTTPException:
 
 def http_validation_error(message: str = "Validation failed") -> HTTPException:
     """Create a 422 HTTP exception"""
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message
-    )
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message)
 
 
 def http_internal_server_error(message: str = "Internal server error") -> HTTPException:
     """Create a 500 HTTP exception"""
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message
-    )
+    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message)

@@ -20,9 +20,7 @@ class CRUDProfile(CRUDBase[Profile, ProfileCreate, ProfileUpdate]):
         result = await db.execute(select(Profile).where(Profile.id == user_id))
         return result.scalar_one_or_none()
 
-    async def create_if_not_exists(
-        self, db: AsyncSession, *, user_id: UUID, email: str
-    ) -> Profile:
+    async def create_if_not_exists(self, db: AsyncSession, *, user_id: UUID, email: str) -> Profile:
         """Create profile if it doesn't exist, otherwise return existing"""
         existing = await self.get_by_id(db, user_id=user_id)
         if existing:

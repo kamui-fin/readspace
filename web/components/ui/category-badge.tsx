@@ -11,19 +11,21 @@ import {
     Paintbrush,
     Palette,
     Shield,
-    TrendingUp
+    TrendingUp,
 } from "lucide-react"
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@readspace/shared"
 
 const categoryBadgeVariants = cva(
     "inline-flex items-center gap-2 rounded-[6px] border px-4 py-2 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-sm",
     {
         variants: {
             variant: {
-                default: "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent",
-                selected: "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7] dark:border-primary/30 dark:bg-card dark:text-primary dark:hover:bg-accent",
+                default:
+                    "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent",
+                selected:
+                    "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7] dark:border-primary/30 dark:bg-card dark:text-primary dark:hover:bg-accent",
             },
         },
         defaultVariants: {
@@ -68,18 +70,24 @@ const getCategoryIcon = (categoryName: string) => {
 
 export interface CategoryBadgeProps
     extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof categoryBadgeVariants> {
+        VariantProps<typeof categoryBadgeVariants> {
     category: string
     iconKey?: string
     selected?: boolean
 }
 
-function CategoryBadge({ className, category, iconKey, selected = false, ...props }: CategoryBadgeProps) {
+function CategoryBadge({
+    className,
+    category,
+    iconKey,
+    selected = false,
+    ...props
+}: CategoryBadgeProps) {
     return (
         <div
             className={cn(
                 categoryBadgeVariants({
-                    variant: selected ? "selected" : "default"
+                    variant: selected ? "selected" : "default",
                 }),
                 className
             )}

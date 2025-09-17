@@ -1,5 +1,11 @@
 import { PDFViewer } from "pdfjs-dist/types/web/pdf_viewer"
-import { MutableRefObject, useLayoutEffect, useRef, useState } from "react"
+import {
+    MutableRefObject,
+    useCallback,
+    useLayoutEffect,
+    useRef,
+    useState,
+} from "react"
 import { usePdfHighlighterContext } from "./contexts/PdfHighlighterContext"
 
 const clamp = (value: number, left: number, right: number) =>
@@ -41,12 +47,12 @@ export const TipContainer = ({
     const [width, setWidth] = useState(0)
     const containerRef = useRef<HTMLDivElement | null>(null)
 
-    const updatePosition = () => {
+    const updatePosition = useCallback(() => {
         if (!containerRef.current) return
         const { offsetHeight, offsetWidth } = containerRef.current
         setHeight(offsetHeight)
         setWidth(offsetWidth)
-    }
+    }, [setHeight, setWidth])
 
     updateTipPositionRef.current = updatePosition
 

@@ -1,5 +1,5 @@
-import logging
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import structlog
@@ -14,10 +14,10 @@ from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from prometheus_fastapi_instrumentator import Instrumentator
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME, SERVICE_VERSION
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.redis_cache import RedisCache
@@ -28,8 +28,9 @@ from app.utils.logging_config import setup_logging
 setup_logging()
 logger = structlog.get_logger(__name__)
 
+
 # Initialize OpenTelemetry
-def setup_tracing():
+def setup_tracing() -> None:
     """Configure OpenTelemetry tracing"""
     settings = get_settings()
     service_name = settings.SERVICE_NAME
@@ -40,10 +41,12 @@ def setup_tracing():
         return
 
     # Configure resource with service information
-    resource = Resource.create({
-        SERVICE_NAME: service_name,
-        "service.instance.id": f"{service_name}-{os.getpid()}",
-    })
+    resource = Resource.create(
+        {
+            SERVICE_NAME: service_name,
+            "service.instance.id": f"{service_name}-{os.getpid()}",
+        }
+    )
 
     # Set up tracer provider
     tracer_provider = TracerProvider(resource=resource)
@@ -62,13 +65,14 @@ def setup_tracing():
 
     logger.info("OpenTelemetry tracing configured", endpoint=otel_endpoint, service=service_name)
 
+
 # Initialize tracing after logging setup
 setup_tracing()
 
 
 # Lifespan context manager
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Startup: Initialize Redis client
     await RedisCache._get_client()
     yield
@@ -97,7 +101,7 @@ app.add_middleware(
 
 # Exception handler for validation errors
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError):
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     logger.error(f"Validation error: {exc.errors()}")
     return JSONResponse(
         status_code=400,
@@ -106,6 +110,4 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 # Include the main API router
-app.include_router(
-    api_router, prefix="/api"
-)  # Add all routes from app.routers with /api prefix
+app.include_router(api_router, prefix="/api")  # Add all routes from app.routers with /api prefix

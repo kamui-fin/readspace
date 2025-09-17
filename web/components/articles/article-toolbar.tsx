@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuTrigger
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
     Tooltip,
@@ -13,7 +13,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
-import type { Article } from "@/lib/api/hooks/feeds"
+import type { Article } from "@readspace/shared"
 import {
     ArrowLeft,
     BookmarkIcon,
@@ -67,14 +67,14 @@ export function ArticleToolbar({
         try {
             await navigator.clipboard.writeText(article.link)
             toast.success("URL copied to clipboard")
-        } catch (error) {
+        } catch {
             toast.error("Failed to copy URL")
         }
     }
 
     const handleOpenOriginal = () => {
         if (article.link) {
-            window.open(article.link, '_blank', 'noopener,noreferrer')
+            window.open(article.link, "_blank", "noopener,noreferrer")
         } else {
             toast.error("No original URL available")
         }
@@ -86,7 +86,9 @@ export function ArticleToolbar({
     }
 
     return (
-        <div className={`flex items-center gap-1 ${hideBackground ? '' : 'justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b'}`}>
+        <div
+            className={`flex items-center gap-1 ${hideBackground ? "" : "justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b"}`}
+        >
             {!hideBackground && (
                 <div className="flex items-center">
                     {isMobile && onBack && (
@@ -106,12 +108,14 @@ export function ArticleToolbar({
                                 <TooltipContent>
                                     Back to articles
                                 </TooltipContent>
-                                </Tooltip>
+                            </Tooltip>
                         </TooltipProvider>
                     )}
                 </div>
             )}
-            <div className={`flex items-center gap-1 ${hideBackground ? '' : 'ml-auto'}`}>
+            <div
+                className={`flex items-center gap-1 ${hideBackground ? "" : "ml-auto"}`}
+            >
                 <TooltipProvider>
                     {/* Bookmark/Save for Later */}
                     <Tooltip>
@@ -123,15 +127,18 @@ export function ArticleToolbar({
                                 onClick={onToggleReadLater}
                             >
                                 <BookmarkIcon
-                                    className={`h-4 w-4 transition-all duration-200 ${isReadLater
-                                        ? "fill-primary text-primary scale-110"
-                                        : "hover:scale-110"
-                                        }`}
+                                    className={`h-4 w-4 transition-all duration-200 ${
+                                        isReadLater
+                                            ? "fill-primary text-primary scale-110"
+                                            : "hover:scale-110"
+                                    }`}
                                 />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {isReadLater ? "Remove from Read Later" : "Save for Later"}
+                            {isReadLater
+                                ? "Remove from Read Later"
+                                : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 
@@ -149,7 +156,9 @@ export function ArticleToolbar({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {article.link ? "Open Original Article" : "No original URL available"}
+                            {article.link
+                                ? "Open Original Article"
+                                : "No original URL available"}
                         </TooltipContent>
                     </Tooltip>
 
@@ -189,7 +198,9 @@ export function ArticleToolbar({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {isExtracting ? "Extracting..." : "Extract Full Text"}
+                            {isExtracting
+                                ? "Extracting..."
+                                : "Extract Full Text"}
                         </TooltipContent>
                     </Tooltip>
 
@@ -211,12 +222,17 @@ export function ArticleToolbar({
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {isSummarizing ? "Generating Summary..." : "AI Summary"}
+                            {isSummarizing
+                                ? "Generating Summary..."
+                                : "AI Summary"}
                         </TooltipContent>
                     </Tooltip>
 
                     {/* AI Translation */}
-                    <DropdownMenu open={showLanguageSelector} onOpenChange={setShowLanguageSelector}>
+                    <DropdownMenu
+                        open={showLanguageSelector}
+                        onOpenChange={setShowLanguageSelector}
+                    >
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <DropdownMenuTrigger asChild>
@@ -235,7 +251,9 @@ export function ArticleToolbar({
                                 </DropdownMenuTrigger>
                             </TooltipTrigger>
                             <TooltipContent>
-                                {isTranslating ? "Translating..." : "Translate Article"}
+                                {isTranslating
+                                    ? "Translating..."
+                                    : "Translate Article"}
                             </TooltipContent>
                         </Tooltip>
                         <DropdownMenuContent align="end" className="w-56">

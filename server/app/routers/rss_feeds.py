@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -17,18 +18,23 @@ from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
 from app.schemas.subscription_schemas import (
+    LegacyFeedResponse,
     SubscriptionCreateByFeedId,
     SubscriptionResponse,
 )
 from app.services.auth import get_current_user
-from app.services.rss_service import RssService
+from app.services.rss_service import RssOrchestrationService
 from app.services.subscription_service import SubscriptionService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
 
 
-@router.post("/{feed_id}/subscribe", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{feed_id}/subscribe",
+    response_model=SubscriptionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 @require_resource_limit("max_subscriptions")
 async def subscribe_to_feed(
     *,
@@ -36,17 +42,18 @@ async def subscribe_to_feed(
     subscription_data: SubscriptionCreateByFeedId = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> SubscriptionResponse:
     """Subscribe to an existing feed by its ID without URL parsing or deduplication."""
     subscription_service = SubscriptionService(db=db, user_id=UUID(current_user.sub))
 
     try:
         # First, we need to get the feed's URL to create the subscription
         # The subscription service expects a URL, but we want to bypass deduplication
-        rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+        RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
 
         # Check if the feed exists in the global feeds table
         from app.crud import crud_feed
+
         feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
         if not feed:
             logger.warning(
@@ -54,12 +61,11 @@ async def subscribe_to_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
 
         # Check if user is already subscribed to this feed
         from app.crud import crud_subscription
+
         existing_subscription = await crud_subscription.get_subscription_by_feed_id(
             db, feed_id=feed_id, user_id=UUID(current_user.sub)
         )
@@ -71,7 +77,7 @@ async def subscribe_to_feed(
             )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Already subscribed to this feed"
+                detail="Already subscribed to this feed",
             )
 
         # Create subscription directly using the feed's URL
@@ -99,7 +105,7 @@ async def subscribe_to_feed(
             user_id=current_user.sub,
             feed_id=feed_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
         logger.error(
             "Unexpected error creating feed subscription",
@@ -111,19 +117,19 @@ async def subscribe_to_feed(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
-        )
+        ) from e
 
 
-@router.post("/", response_model=FeedResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=LegacyFeedResponse, status_code=status.HTTP_201_CREATED)
 @require_resource_limit("max_subscriptions")
 async def add_new_feed(
     *,
     db: AsyncSession = Depends(get_db),
     feed_in: FeedCreate = Body(...),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> LegacyFeedResponse:
     """Add a new RSS feed by URL, associate with a folder and optional tags."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         # Tags are now handled as ARRAY field on feeds - no tag_ids processing needed
         feed = await rss_service.add_new_feed(
@@ -145,7 +151,7 @@ async def add_new_feed(
             user_id=current_user.sub,
             url=feed_in.url,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except FeedConnectionError as e:
         logger.error(
             "Connection error adding feed",
@@ -156,7 +162,7 @@ async def add_new_feed(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not connect to feed URL: {e}",
-        )
+        ) from e
     except HTTPException:
         # Re-raise HTTP exceptions (like tag not found)
         raise
@@ -165,7 +171,7 @@ async def add_new_feed(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
-        )
+        ) from e
 
 
 @router.get("/", response_model=list[FeedResponse])
@@ -176,16 +182,14 @@ async def list_feeds(
         None,
         description="Filter feeds by a list of tag names (case-insensitive, matches all provided tags)",
     ),
-    is_favorite: bool | None = Query(
-        None, description="Filter feeds by favorite status"
-    ),
+    is_favorite: bool | None = Query(None, description="Filter feeds by favorite status"),
     search_query: str | None = Query(None, description="Search query for feed titles"),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=200),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> list[FeedResponse]:
     """List feeds for the current user with optional filtering."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     feeds = await rss_service.list_feeds(
         folder_id=folder_id,
         tag_names=tag_names,
@@ -202,19 +206,14 @@ async def get_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FeedResponse:
     """Get a specific feed by its ID."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     feed = await rss_service.get_feed(feed_id=feed_id)
     if not feed:
-        logger.warning(
-            "Feed not found or access denied", feed_id=feed_id, user_id=current_user.sub
-        )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
-        )
+        logger.warning("Feed not found or access denied", feed_id=feed_id, user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
     return feed
-
 
 
 @router.put("/{feed_id}", response_model=FeedResponse)
@@ -223,22 +222,18 @@ async def update_feed_settings(
     feed_in: FeedUpdate = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FeedResponse:
     """Update a feed's user-configurable settings (folder, tags, favorite status, title)."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
-        updated_feed = await rss_service.update_feed_user_settings(
-            feed_id=feed_id, feed_in=feed_in
-        )
+        updated_feed = await rss_service.update_feed_user_settings(feed_id=feed_id, feed_in=feed_in)
         if not updated_feed:
             logger.warning(
                 "Feed not found for update or access denied",
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
         logger.info(
             "Feed settings updated successfully",
             feed_id=updated_feed.id,
@@ -246,10 +241,8 @@ async def update_feed_settings(
         )
         return updated_feed
     except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
-        logger.warning(
-            f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}"
-        )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        logger.warning(f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
         logger.error(
             "Unexpected error updating feed settings",
@@ -260,7 +253,7 @@ async def update_feed_settings(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred.",
-        )
+        ) from e
 
 
 @router.post("/{feed_id}/refresh", response_model=FeedResponse)
@@ -276,9 +269,9 @@ async def refresh_feed(
     ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> FeedResponse:
     """Manually trigger a refresh of a specific feed to fetch new articles."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         refreshed_feed = await rss_service.refresh_feed(
             feed_id=feed_id, force_refetch=force_refetch, preview_mode=preview
@@ -289,9 +282,7 @@ async def refresh_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
         logger.info(
             "Feed refresh triggered/completed",
             feed_id=refreshed_feed.id,
@@ -308,7 +299,7 @@ async def refresh_feed(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not connect to feed URL during refresh: {e}",
-        )
+        ) from e
     except (FeedValidationError, FeedParsingError) as e:
         logger.warning(
             "Validation/parsing error during feed refresh",
@@ -316,7 +307,7 @@ async def refresh_feed(
             user_id=current_user.sub,
             feed_id=feed_id,
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except HTTPException:
         # Re-raise HTTP exceptions (like feed not found)
         raise
@@ -330,7 +321,7 @@ async def refresh_feed(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during feed refresh.",
-        )
+        ) from e
 
 
 @router.get("/refresh_status/{task_id}", response_model=dict)
@@ -338,8 +329,8 @@ async def get_refresh_status(
     task_id: str,
     page: int = Query(1, ge=1, description="Page number for paginated task checking"),
     page_size: int = Query(100, ge=1, le=500, description="Number of tasks to check per page"),
-    current_user: TokenData = Depends(get_current_user)
-):
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, Any]:
     """Get the status of a background feed refresh task."""
     try:
         from app.core.celery_app import celery
@@ -411,7 +402,7 @@ async def get_refresh_status(
 
             # Get Redis connection from Celery backend
             redis_client = None
-            if hasattr(celery, 'backend') and hasattr(celery.backend, 'client'):
+            if hasattr(celery, "backend") and hasattr(celery.backend, "client"):
                 redis_client = celery.backend.client
 
             # Fallback to creating new Redis connection if needed
@@ -429,22 +420,23 @@ async def get_refresh_status(
 
                     # Parse results
                     import json
+
                     for task_id, result in zip(paginated_task_ids, results, strict=False):
                         if result:
                             try:
-                                task_data = json.loads(result.decode('utf-8'))
-                                task_results[task_id] = task_data.get('status', 'PENDING')
+                                task_data = json.loads(result.decode("utf-8"))
+                                task_results[task_id] = task_data.get("status", "PENDING")
                             except (json.JSONDecodeError, AttributeError):
-                                task_results[task_id] = 'PENDING'
+                                task_results[task_id] = "PENDING"
                         else:
-                            task_results[task_id] = 'PENDING'
+                            task_results[task_id] = "PENDING"
             else:
                 # Fallback to individual calls if Redis pipeline fails
                 task_results = {task_id: celery.AsyncResult(task_id).state for task_id in paginated_task_ids}
 
             # Process paginated task states efficiently
             for i, feed_task_id in enumerate(paginated_task_ids):
-                task_state = task_results.get(feed_task_id, 'PENDING')
+                task_state = task_results.get(feed_task_id, "PENDING")
                 logger.debug(
                     "Checking feed refresh task",
                     task_index=i,
@@ -468,13 +460,8 @@ async def get_refresh_status(
                         if hasattr(feed_task_result, "info") and feed_task_result.info:
                             error_str = str(feed_task_result.info)
                             # Categorize common errors for better user understanding
-                            if (
-                                "timeout" in error_str.lower()
-                                or "timed out" in error_str.lower()
-                            ):
-                                error_info["error"] = (
-                                    "Feed timed out (server not responding)"
-                                )
+                            if "timeout" in error_str.lower() or "timed out" in error_str.lower():
+                                error_info["error"] = "Feed timed out (server not responding)"
                                 error_info["category"] = "timeout"
                             elif "404" in error_str or "not found" in error_str.lower():
                                 error_info["error"] = "Feed not found (404)"
@@ -482,26 +469,16 @@ async def get_refresh_status(
                             elif "403" in error_str or "forbidden" in error_str.lower():
                                 error_info["error"] = "Access denied (403)"
                                 error_info["category"] = "access_denied"
-                            elif (
-                                "500" in error_str
-                                or "502" in error_str
-                                or "503" in error_str
-                            ):
+                            elif "500" in error_str or "502" in error_str or "503" in error_str:
                                 error_info["error"] = "Server error"
                                 error_info["category"] = "server_error"
-                            elif (
-                                "parse" in error_str.lower()
-                                or "xml" in error_str.lower()
-                            ):
+                            elif "parse" in error_str.lower() or "xml" in error_str.lower():
                                 error_info["error"] = "Invalid feed format"
                                 error_info["category"] = "parse_error"
                             elif "connection" in error_str.lower():
                                 error_info["error"] = "Connection failed"
                                 error_info["category"] = "connection_error"
-                            elif (
-                                "invalid types" in error_str.lower()
-                                or "dataerror" in error_str.lower()
-                            ):
+                            elif "invalid types" in error_str.lower() or "dataerror" in error_str.lower():
                                 error_info["error"] = "Feed contains invalid data types"
                                 error_info["category"] = "data_error"
                             else:
@@ -595,12 +572,10 @@ async def get_refresh_status(
             if failed_feeds:
                 result["result"]["failed_feeds"] = failed_feeds
                 # Summarize error categories for this page
-                error_categories = {}
+                error_categories: dict[str, int] = {}
                 for failed_feed in failed_feeds:
                     category = failed_feed.get("category", "other")
-                    error_categories[category] = (
-                        error_categories.get(category, 0) + 1
-                    )
+                    error_categories[category] = error_categories.get(category, 0) + 1
                 result["result"]["error_summary"] = error_categories
 
             return result
@@ -628,7 +603,7 @@ async def get_refresh_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not check refresh status.",
-        )
+        ) from e
 
 
 @router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -636,9 +611,9 @@ async def delete_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-):
+) -> JSONResponse:
     """Delete a feed. Associated articles will also be deleted (cascade)."""
-    rss_service = RssService(db=db, user_id=UUID(current_user.sub))
+    rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     success = await rss_service.delete_feed(feed_id=feed_id)
     if not success:
         logger.warning(
@@ -646,8 +621,6 @@ async def delete_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
     logger.info("Feed deleted successfully", feed_id=feed_id, user_id=current_user.sub)
     return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})

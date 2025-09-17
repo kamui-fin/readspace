@@ -1,8 +1,10 @@
 import logging
 import sys  # Import sys for console handler
+from collections.abc import Mapping, MutableMapping
+from typing import Any
 
 import structlog
-from logging_loki import LokiHandler
+from logging_loki import LokiHandler  # type: ignore[import-untyped]
 from opentelemetry import trace
 from pythonjsonlogger import jsonlogger
 
@@ -13,7 +15,7 @@ from app.core.config import Settings
 settings = Settings()
 
 
-def setup_logging(service_name: str = None) -> None:
+def setup_logging(service_name: str | None = None) -> None:
     """Configures structlog using values from Settings.
 
     Args:
@@ -26,10 +28,12 @@ def setup_logging(service_name: str = None) -> None:
         return
 
     # Check if running under Celery
-    is_celery_worker = 'celery' in sys.argv[0] if sys.argv else False
+    is_celery_worker = "celery" in sys.argv[0] if sys.argv else False
 
     # Add OpenTelemetry trace context processor
-    def add_trace_context(logger, method_name, event_dict):
+    def add_trace_context(
+        logger: Any, method_name: str, event_dict: MutableMapping[str, Any]
+    ) -> Mapping[str, Any] | str | bytes | bytearray | tuple[Any, ...]:
         """Add OpenTelemetry trace context to log records."""
         span = trace.get_current_span()
         if span and span.get_span_context().is_valid:
@@ -75,7 +79,7 @@ def setup_logging(service_name: str = None) -> None:
         # JSON formatter for standard library logs using python-json-logger
         if is_celery_worker:
             # Use ProcessorFormatter for Celery to properly handle structlog messages
-            console_formatter = structlog.stdlib.ProcessorFormatter(
+            console_formatter: Any = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(),
                 foreign_pre_chain=[
                     structlog.contextvars.merge_contextvars,
@@ -83,7 +87,7 @@ def setup_logging(service_name: str = None) -> None:
                     structlog.processors.TimeStamper(fmt="iso"),
                 ],
             )
-            json_formatter = structlog.stdlib.ProcessorFormatter(
+            json_formatter: Any = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(),
                 foreign_pre_chain=[
                     structlog.contextvars.merge_contextvars,
@@ -93,12 +97,22 @@ def setup_logging(service_name: str = None) -> None:
             )
         else:
             console_formatter = jsonlogger.JsonFormatter(
-                '%(asctime)s %(name)s %(levelname)s %(message)s',
-                rename_fields={"asctime": "timestamp", "name": "logger", "levelname": "level", "message": "event"}
+                "%(asctime)s %(name)s %(levelname)s %(message)s",
+                rename_fields={
+                    "asctime": "timestamp",
+                    "name": "logger",
+                    "levelname": "level",
+                    "message": "event",
+                },
             )
             json_formatter = jsonlogger.JsonFormatter(
-                '%(asctime)s %(name)s %(levelname)s %(message)s',
-                rename_fields={"asctime": "timestamp", "name": "logger", "levelname": "level", "message": "event"}
+                "%(asctime)s %(name)s %(levelname)s %(message)s",
+                rename_fields={
+                    "asctime": "timestamp",
+                    "name": "logger",
+                    "levelname": "level",
+                    "message": "event",
+                },
             )
     else:
         # Development: Use stdlib integration for proper JSON formatting to Loki
@@ -180,7 +194,7 @@ def setup_logging(service_name: str = None) -> None:
 
             # Only send INFO+ logs to Loki, exclude SQLAlchemy noise
             loki_handler.setLevel(logging.INFO)
-            loki_handler.addFilter(lambda record: not record.name.startswith('sqlalchemy'))
+            loki_handler.addFilter(lambda record: not record.name.startswith("sqlalchemy"))
 
             root_logger.addHandler(loki_handler)
             handlers_active.append("Loki")
@@ -198,5 +212,3 @@ def setup_logging(service_name: str = None) -> None:
         level=settings.LOG_LEVEL,
         environment=settings.ENVIRONMENT,
     )
-
-    return log

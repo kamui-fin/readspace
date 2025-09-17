@@ -1,11 +1,11 @@
-import { ApiClient } from "@/lib/api/client"
+import { ApiClient } from "@readspace/shared"
 import { cacheBook } from "@/lib/reader/bookstore"
 import { createClient } from "@/lib/supabase/client"
 import { UserBookLibrary } from "@/types/api"
 import { User } from "@supabase/supabase-js"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
-import { BookMetadata as UploadBookMetadata } from "./types"
+import { BookMetadata as UploadBookMetadata, UploadResponse } from "./types"
 import {
     sanitizeJsonRecursively,
     sanitizeText,
@@ -18,7 +18,10 @@ export const uploadToCloudStorage = async (file: File, bookId: string) => {
     formData.append("file", file)
     formData.append("book_id", bookId)
 
-    return ApiClient.uploadFile("/api/upload/", formData)
+    return ApiClient.uploadFile(
+        "/api/upload/",
+        formData
+    ) as Promise<UploadResponse>
 }
 
 export const useUploadBook = () => {

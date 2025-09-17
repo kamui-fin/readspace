@@ -39,9 +39,7 @@ USER_CACHE_PREFIX = "user:"
 ARTICLE_CACHE_PREFIX = "article:"
 
 # User Agent
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
-)
+DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
 
 # Highlight Colors
 HIGHLIGHT_COLORS = ["yellow", "green", "blue"]

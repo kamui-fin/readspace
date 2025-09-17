@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 import structlog  # Added for logging
@@ -10,7 +10,6 @@ from app.core.decorators import require_resource_limit
 from app.db.session import get_db
 from app.models.book_models import (  # Added UserBookLibrary for type hint
     BookMetadata,
-    UserBookLibrary,
 )
 from app.repositories.books import BookRepository
 from app.repositories.supabase import (
@@ -40,7 +39,7 @@ async def create_book_metadata(
     metadata: BookMetadataCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-):
+) -> BookMetadataResponse:
     """Create a new book metadata entry."""
     db_obj = BookMetadata(**metadata.model_dump())
     db.add(db_obj)
@@ -55,16 +54,14 @@ async def update_book_metadata(
     metadata: BookMetadataUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-):
+) -> BookMetadataResponse:
     """Update a book metadata entry."""
     query = select(BookMetadata).where(BookMetadata.id == metadata_id)
     result = await db.execute(query)
     db_obj = result.scalar_one_or_none()
 
     if not db_obj:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Book metadata not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book metadata not found")
 
     update_data = metadata.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -81,8 +78,11 @@ async def delete_book_metadata(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
     storage_client: Annotated[SupabaseStorageClient, Depends(get_storage_client)],
-):
-    """Delete a book metadata entry and its associated file from storage. This will cascade delete all user library entries."""
+) -> dict[str, Any]:
+    """Delete a book metadata entry and its associated file from storage.
+
+    This will cascade delete all user library entries.
+    """
 
     # 1. First fetch the metadata to get the file_url before deletion
     query = select(BookMetadata).where(BookMetadata.id == metadata_id)
@@ -90,11 +90,9 @@ async def delete_book_metadata(
     db_metadata = result.scalar_one_or_none()
 
     if not db_metadata:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Book metadata not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Book metadata not found")
 
-    file_url_to_delete = db_metadata.file_url
+    file_url_to_delete = str(db_metadata.file_url) if db_metadata.file_url else None
 
     # 2. Attempt to delete the associated file from Supabase storage if file_url exists
     if file_url_to_delete:
@@ -146,11 +144,9 @@ async def get_user_books(
     current_user: Annotated[TokenData, Depends(get_current_user)],
     skip: int = 0,
     limit: int = 100,
-):
+) -> list[UserBookLibraryResponse]:
     """Get all books in a user's library."""
-    return await book_repo.get_user_books(
-        db, user_id=current_user.sub, skip=skip, limit=limit
-    )
+    return await book_repo.get_user_books(db, user_id=UUID(current_user.sub), skip=skip, limit=limit)
 
 
 @router.get("/{library_id}", response_model=UserBookLibraryResponse)
@@ -158,15 +154,11 @@ async def get_user_book(
     library_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> (
-    UserBookLibrary
-):  # Return type hint for clarity if db_user_book_library_entry uses it
+) -> UserBookLibraryResponse:
     """Get a specific book from a user's library."""
     # Note: book_repo.get_user_book should ideally handle the "not found" for the user
     # and raise an appropriate exception or return None, which is then handled.
-    book = await book_repo.get_user_book(
-        db, library_id=library_id, user_id=current_user.sub
-    )
+    book = await book_repo.get_user_book(db, library_id=library_id, user_id=UUID(current_user.sub))
     if not book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -181,9 +173,9 @@ async def add_book_to_library(
     book: UserBookLibraryCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-):
+) -> UserBookLibraryResponse:
     """Add a book to user's library."""
-    book.user_id = current_user.sub  # Ensure user_id is set from authenticated user
+    book.user_id = UUID(current_user.sub)  # Ensure user_id is set from authenticated user
     return await book_repo.add_to_library(db, obj_in=book)
 
 
@@ -193,10 +185,10 @@ async def update_user_book(
     book: UserBookLibraryUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-):
+) -> UserBookLibraryResponse:
     """Update a book in user's library."""
     updated_book = await book_repo.update_user_book(
-        db, library_id=library_id, user_id=current_user.sub, obj_in=book
+        db, library_id=library_id, user_id=UUID(current_user.sub), obj_in=book
     )
     if not updated_book:
         raise HTTPException(
@@ -212,7 +204,7 @@ async def update_book_progress(
     progress: dict,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-):
+) -> UserBookLibraryResponse:
     """Update reading progress for a book."""
     logger.info(
         "Updating book progress",
@@ -222,9 +214,7 @@ async def update_book_progress(
     )
 
     # First, get the user book to ensure it exists
-    book = await book_repo.get_user_book(
-        db, library_id=library_id, user_id=current_user.sub
-    )
+    book = await book_repo.get_user_book(db, library_id=library_id, user_id=UUID(current_user.sub))
     if not book:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -236,9 +226,7 @@ async def update_book_progress(
         logger.info("Updating PDF page progress", page=progress["pdf_current_page"])
 
         # Create update object with the progress
-        update_obj = UserBookLibraryUpdate(
-            pdf_current_page=progress["pdf_current_page"]
-        )
+        UserBookLibraryUpdate(pdf_current_page=progress["pdf_current_page"])
 
         # Update the book using direct SQL rather than the repository
         # to avoid the async relationship loading issue
@@ -256,7 +244,7 @@ async def update_book_progress(
         logger.info("Updating EPUB progress")
 
         # Create update object with the progress
-        update_obj = UserBookLibraryUpdate(epub_progress=progress["epub_progress"])
+        UserBookLibraryUpdate(epub_progress=progress["epub_progress"])
 
         # Update directly and refresh
         book.epub_progress = progress["epub_progress"]

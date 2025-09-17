@@ -36,3 +36,8 @@ export interface ProcessedFileMetadata {
     metadata: BookMetadata
     charCounts: number[]
 }
+
+export interface UploadResponse {
+    file_path: string
+    book_id: string
+}

@@ -19,12 +19,11 @@ import toast from "react-hot-toast"
 interface FeedbackModalProps {
     isOpen: boolean
     onClose: () => void
-    userId?: string | null
 }
 
 type FeedbackType = "bug" | "suggestion" | "confusing" | "other"
 
-export function FeedbackModal({ isOpen, onClose, userId }: FeedbackModalProps) {
+export function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     const [feedbackType, setFeedbackType] = useState<FeedbackType>("bug")
     const [description, setDescription] = useState("")
     const [allowFollowUp, setAllowFollowUp] = useState(true)
@@ -101,7 +100,7 @@ export function FeedbackModal({ isOpen, onClose, userId }: FeedbackModalProps) {
                                         id="confusing"
                                     />
                                     <Label htmlFor="confusing">
-                                        Something's Confusing
+                                        Something&apos;s Confusing
                                     </Label>
                                 </div>
                                 <div className="flex items-center space-x-2">

@@ -1,17 +1,9 @@
 "use client"
 
 import { Switch } from "@/components/ui/switch"
-import { MoonIcon, SunIcon, type LucideIcon } from "lucide-react"
+import { MoonIcon, SunIcon } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useId, useState } from "react"
-
-import {
-    SidebarGroup,
-    SidebarGroupContent,
-    SidebarMenu,
-    SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
 
 export default function ThemeSwitcher() {
     const { setTheme, theme } = useTheme()

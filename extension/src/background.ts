@@ -1,6 +1,6 @@
 // Background script for Readspace extension
 import { browser, getBrowserName, storage } from '@/lib/browser'
-import { trimSaveArticleRequest } from '@/lib/data-trimmer'
+import { ApiClient, trimSaveArticleRequest } from '@readspace/shared'
 import type { Runtime } from 'webextension-polyfill'
 
 
@@ -14,7 +14,44 @@ interface ContentExtractionResult {
   image_url?: string
 }
 
+// Configure API client for extension
+async function getExtensionAuthToken(): Promise<string | null> {
+  try {
+    const settings = await storage.get('readspace-extension')
+    const settingsData = (settings as any)?.state?.settings
+    return settingsData?.access_token || null
+  } catch (error) {
+    console.warn('Failed to get auth token from extension storage:', error)
+    return null
+  }
+}
+
+async function getExtensionBaseUrl(): Promise<string> {
+  try {
+    const settings = await storage.get('readspace-extension')
+    const settingsData = (settings as any)?.state?.settings
+    return settingsData?.readspace_url || 'https://api.readspace.ai'
+  } catch (error) {
+    console.warn('Failed to get base URL from extension storage:', error)
+    return 'https://api.readspace.ai'
+  }
+}
+
+// Initialize API client with extension-specific configuration
+async function initializeApiClient() {
+  const baseUrl = await getExtensionBaseUrl()
+  ApiClient.configure({
+    baseUrl,
+    getAuthToken: getExtensionAuthToken
+  })
+}
+
 console.log(`Readspace background script loaded on ${getBrowserName()}`)
+
+// Initialize API client when background script loads
+initializeApiClient().catch(error => {
+  console.error('Failed to initialize API client:', error)
+})
 
 // Check if URL is supported (http/https)
 function isSupportedUrl(url: string): boolean {
@@ -186,19 +223,10 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
   try {
     console.log('handleSaveToReadspace called with:', { url, tabId: tab?.id, tabTitle: tab?.title })
     
-    // Get extension settings using our storage helper
-    const settings = await storage.get('readspace-extension')
-    const settingsData = (settings as any)?.state?.settings
-    
-    console.log('Extension settings loaded:', {
-      hasAccessToken: !!settingsData?.access_token,
-      readspaceUrl: settingsData?.readspace_url,
-      settings: settingsData
-    })
-
-    if (!settingsData?.access_token) {
+    // Check if user is authenticated
+    const authToken = await getExtensionAuthToken()
+    if (!authToken) {
       console.log('No access token found, showing authentication notification')
-      // Show notification that user needs to authenticate
       browser.notifications.create('auth-required', {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
@@ -235,37 +263,18 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
     })
     
     console.log('Saving to Readspace API with request:', requestBody)
-    
-    // Save to Readspace API
-    const response = await fetch(`${settingsData.readspace_url}/api/v1/articles/save`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${settingsData.access_token}`
-      },
-      body: JSON.stringify(requestBody)
-    })
 
-    console.log('API response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    })
+    // Save to Readspace API using shared client
+    await initializeApiClient() // Ensure client is configured
+    const responseData = await ApiClient.rss.saveArticle(requestBody)
+    console.log('Article saved successfully:', responseData)
 
-    if (response.ok) {
-      const responseData = await response.json()
-      console.log('Article saved successfully:', responseData)
-      browser.notifications.create('save-success', {
-        type: 'basic',
-        iconUrl: 'icons/icon-48.png',
-        title: 'Readspace',
-        message: 'Article saved successfully!'
-      })
-    } else {
-      const errorText = await response.text()
-      console.error('API error response:', errorText)
-      throw new Error(`Failed to save article: ${response.statusText} - ${errorText}`)
-    }
+    browser.notifications.create('save-success', {
+      type: 'basic',
+      iconUrl: 'icons/icon-48.png',
+      title: 'Readspace',
+      message: 'Article saved successfully!'
+    })
   } catch (error) {
     console.error('Failed to save article:', error)
     browser.notifications.create('save-error', {
@@ -324,10 +333,7 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
 
 async function handleOpenReadspace() {
   try {
-    const settings = await storage.get('readspace-extension')
-    const settingsData = (settings as any)?.state?.settings
-    const url = settingsData?.readspace_url || 'https://api.readspace.ai'
-    
+    const url = await getExtensionBaseUrl()
     browser.tabs.create({ url })
   } catch (error) {
     browser.tabs.create({ url: 'https://api.readspace.ai' })

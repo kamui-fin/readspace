@@ -4,7 +4,8 @@ export default function manifest(): MetadataRoute.Manifest {
     return {
         name: "Readspace",
         short_name: "Readspace",
-        description: "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books.",
+        description:
+            "All your reading in one place — a privacy-friendly inbox for RSS, newsletters, threads, and books.",
         start_url: "/articles",
         display: "standalone",
         background_color: "#ffffff",

@@ -29,7 +29,7 @@ async def get_book_highlights(
 ) -> list[HighlightResponse]:
     """Get all highlights for a book."""
     highlights = await highlight_repo.get_book_highlights(db, book_id)
-    return highlights
+    return [HighlightResponse.model_validate(highlight) for highlight in highlights]
 
 
 @router.post("/", response_model=HighlightResponse)
@@ -37,14 +37,12 @@ async def create_highlight(
     highlight_data: HighlightCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
     user: Annotated[TokenData | None, Depends(get_current_user)] = None,
-):
+) -> HighlightResponse:
     """
     Create a new highlight entry and its location.
     """
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
 
     # Get the user_book_library entry using the correct ID
     stmt = select(UserBookLibrary).where(
@@ -57,13 +55,16 @@ async def create_highlight(
     if not user_book_lib:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Book not found in user's library. Ensure 'user_book_lib_id' in the request refers to a valid UserBookLibrary entry.",
+            detail=(
+                "Book not found in user's library. Ensure 'user_book_lib_id' "
+                "in the request refers to a valid UserBookLibrary entry."
+            ),
         )
 
     # Create the Highlight object
     db_highlight = Highlight(
         user_book_lib_id=user_book_lib.id,
-        color=highlight_data.color.upper(),
+        color=highlight_data.color.upper() if highlight_data.color else None,
         original_text=highlight_data.original_text,
         note=highlight_data.note,
         chapter_idx=highlight_data.chapter_idx,
@@ -91,11 +92,9 @@ async def update_highlight(
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
 ) -> HighlightResponse:
     """Update a highlight."""
-    updated_highlight = await highlight_repo.update(highlight_id, highlight)
+    updated_highlight = await highlight_repo.update(db, id=highlight_id, obj_in=highlight)
     if not updated_highlight:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found")
     return updated_highlight
 
 
@@ -104,13 +103,11 @@ async def delete_highlight(
     highlight_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
-):
+) -> dict[str, str | bool]:
     """Delete a highlight."""
-    success = await highlight_repo.delete(highlight_id)
+    success = await highlight_repo.delete(db, id=highlight_id)
     if not success:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found")
     return {"ok": True, "message": "Highlight deleted successfully"}
 
 
@@ -119,7 +116,7 @@ async def delete_highlights_by_text(
     text: str,
     db: Annotated[AsyncSession, Depends(get_db)],
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
-):
+) -> dict[str, str | bool]:
     """Delete highlights by text content."""
     success = await highlight_repo.delete_by_text(db, text)
     if not success:
@@ -138,13 +135,9 @@ async def update_highlight_note(
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
 ) -> HighlightResponse:
     """Update a highlight's note."""
-    updated_highlight = await highlight_repo.update_note(
-        db, highlight_id, note_data.note
-    )
+    updated_highlight = await highlight_repo.update_note(db, highlight_id, note_data.note)
     if not updated_highlight:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found")
     return updated_highlight
 
 
@@ -156,23 +149,15 @@ async def update_highlight_note_by_text(
     highlight_repo: HighlightRepository = Depends(get_highlight_repository),
 ) -> HighlightResponse:
     """Update a highlight's note by text content."""
-    updated_highlight = await highlight_repo.update_note_by_text(
-        db, text, note_data.note
-    )
+    updated_highlight = await highlight_repo.update_note_by_text(db, text, note_data.note)
     if not updated_highlight:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found")
     return updated_highlight
 
 
 @router.get("/{highlight_id}", response_model=HighlightResponse)
-async def get_highlight_by_id(
-    highlight_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]
-):
+async def get_highlight_by_id(highlight_id: UUID, db: Annotated[AsyncSession, Depends(get_db)]) -> HighlightResponse:
     highlight = await highlight_repo.get(db, highlight_id)
     if not highlight:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Highlight not found")
     return highlight

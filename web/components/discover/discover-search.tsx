@@ -3,7 +3,7 @@
 import { Search, X } from "lucide-react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import { CategoryBadge } from "@/components/ui/category-badge"
@@ -16,9 +16,9 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
-import { useIsMobile, useIsTablet } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 
-function usePersistentState(key: string, initialValue: any) {
+function usePersistentState<T>(key: string, initialValue: T) {
     const [state, setState] = useState(() => {
         if (typeof window === "undefined") return initialValue
         try {
@@ -43,56 +43,55 @@ function usePersistentState(key: string, initialValue: any) {
 }
 
 interface DiscoverSearchProps {
-    initialQuery?: string
-    initialCategory?: string
     initialLanguage?: string
 }
 
-export function DiscoverSearch({
-    initialQuery,
-    initialCategory,
-    initialLanguage,
-}: DiscoverSearchProps) {
+export function DiscoverSearch({ initialLanguage }: DiscoverSearchProps) {
     const searchParams = useSearchParams()
     const pathname = usePathname()
     const { replace } = useRouter()
-    
+
     // Get current state from URL
-    const activeQuery = searchParams.get('q') || ''
-    const activeCategory = searchParams.get('category') || ''
-    const urlLanguage = searchParams.get('language')
-    
+    const activeQuery = searchParams.get("q") || ""
+    const activeCategory = searchParams.get("category") || ""
+    const urlLanguage = searchParams.get("language")
+
     // Use URL language if available, fallback to localStorage, then 'en'
-    const [persistedLanguage, setPersistedLanguage] = usePersistentState("discover-language", "en")
+    const [persistedLanguage, setPersistedLanguage] = usePersistentState(
+        "discover-language",
+        "en"
+    )
     const language = urlLanguage || initialLanguage || persistedLanguage
-    
+
     // Local search input state (for typing before submission)
     const [searchQuery, setSearchQuery] = useState(activeQuery)
 
-    // Sidebar state for tablet mode
-    const isTablet = useIsTablet()
+    // Sidebar state for mobile mode
     const isMobile = useIsMobile()
     const { state: sidebarState } = useSidebarLeft()
-    
+
     // Sync search input with URL when URL changes (browser navigation)
     useEffect(() => {
         setSearchQuery(activeQuery)
     }, [activeQuery])
-    
+
     // Helper function to update URL parameters
-    const updateSearchParams = useCallback((updates: Record<string, string | null>) => {
-        const params = new URLSearchParams(searchParams)
-        
-        Object.entries(updates).forEach(([key, value]) => {
-            if (value) {
-                params.set(key, value)
-            } else {
-                params.delete(key)
-            }
-        })
-        
-        replace(`${pathname}?${params.toString()}`)
-    }, [searchParams, pathname, replace])
+    const updateSearchParams = useCallback(
+        (updates: Record<string, string | null>) => {
+            const params = new URLSearchParams(searchParams)
+
+            Object.entries(updates).forEach(([key, value]) => {
+                if (value) {
+                    params.set(key, value)
+                } else {
+                    params.delete(key)
+                }
+            })
+
+            replace(`${pathname}?${params.toString()}`)
+        },
+        [searchParams, pathname, replace]
+    )
 
     // Shorter category names for mobile
     const getMobileCategoryName = (category: string) => {
@@ -108,9 +107,9 @@ export function DiscoverSearch({
             "Culture & Arts": "Culture",
             "Security & Privacy": "Security",
             "Education & Learning": "Education",
-            "Miscellaneous": "Other",
+            Miscellaneous: "Other",
         }
-        return isMobile ? (mobileNames[category] || category) : category
+        return isMobile ? mobileNames[category] || category : category
     }
 
     const hasSearchParams = Boolean(activeQuery || activeCategory)
@@ -240,10 +239,7 @@ export function DiscoverSearch({
                                 />
                                 <feOffset dy="7" />
                                 <feGaussianBlur stdDeviation="4.5" />
-                                <feComposite
-                                    in2="hardAlpha"
-                                    operator="out"
-                                />
+                                <feComposite in2="hardAlpha" operator="out" />
                                 <feColorMatrix
                                     type="matrix"
                                     values="0 0 0 0 0.960784 0 0 0 0 0.980392 0 0 0 0 0.964706 0 0 0 1 0"
@@ -281,10 +277,7 @@ export function DiscoverSearch({
                                 />
                                 <feOffset dy="7" />
                                 <feGaussianBlur stdDeviation="4.5" />
-                                <feComposite
-                                    in2="hardAlpha"
-                                    operator="out"
-                                />
+                                <feComposite in2="hardAlpha" operator="out" />
                                 <feColorMatrix
                                     type="matrix"
                                     values="0 0 0 0 0.960784 0 0 0 0 0.980392 0 0 0 0 0.964706 0 0 0 1 0"
@@ -306,9 +299,7 @@ export function DiscoverSearch({
                 </div>
                 {/* Mobile: Sidebar Toggle, Title and Language Selector */}
                 <div className="flex md:hidden items-center w-full max-w-2xl mb-6 gap-3">
-                    {sidebarState === "collapsed" && (
-                        <SidebarLeftTrigger />
-                    )}
+                    {sidebarState === "collapsed" && <SidebarLeftTrigger />}
 
                     <h1 className="text-3xl font-semibold text-black dark:text-foreground min-h-[2.5rem] flex items-center truncate break-words flex-1">
                         {getPageTitle()}
@@ -318,9 +309,7 @@ export function DiscoverSearch({
                         value={language}
                         onValueChange={handleLanguageChange}
                     >
-                        <SelectTrigger
-                            className="bg-[#F3F9EF] dark:bg-input border-0 h-8 w-16 text-sm text-[#91998C] dark:text-muted-foreground flex-shrink-0"
-                        >
+                        <SelectTrigger className="bg-[#F3F9EF] dark:bg-input border-0 h-8 w-16 text-sm text-[#91998C] dark:text-muted-foreground flex-shrink-0">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -344,17 +333,14 @@ export function DiscoverSearch({
                     <div className="relative flex-1 min-w-0">
                         <Input
                             type="text"
-                            placeholder={
-                                searchQuery
-                                    ? ""
-                                    : "Search feeds..."
-                            }
+                            placeholder={searchQuery ? "" : "Search feeds..."}
                             value={searchQuery}
                             onChange={handleSearchInputChange}
-                            className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
-                                ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
-                                : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
-                                }`}
+                            className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${
+                                searchQuery
+                                    ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
+                                    : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
+                            }`}
                             style={{
                                 color: searchQuery ? "#91998C" : "#D8E5D0",
                             }}
@@ -367,9 +353,7 @@ export function DiscoverSearch({
                             value={language}
                             onValueChange={handleLanguageChange}
                         >
-                            <SelectTrigger
-                                className="bg-[#F3F9EF] dark:bg-input border-0 h-14 w-24 text-lg text-[#91998C] dark:text-muted-foreground flex-shrink-0"
-                            >
+                            <SelectTrigger className="bg-[#F3F9EF] dark:bg-input border-0 h-14 w-24 text-lg text-[#91998C] dark:text-muted-foreground flex-shrink-0">
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -422,7 +406,11 @@ export function DiscoverSearch({
                                     onClick={() =>
                                         handleCategoryClick(category)
                                     }
-                                    className={isMobile ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1" : ""}
+                                    className={
+                                        isMobile
+                                            ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1"
+                                            : ""
+                                    }
                                 />
                             </motion.div>
                         ))}

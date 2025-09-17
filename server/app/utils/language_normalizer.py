@@ -11,18 +11,18 @@ logger = structlog.get_logger(__name__)
 def normalize_language_code(language_code: str | None) -> str | None:
     """
     Normalize language codes to simple two-letter ISO 639-1 codes.
-    
+
     Examples:
         en-US -> en
-        zh-Hans -> zh  
+        zh-Hans -> zh
         en-GB -> en
         zh-CN -> zh
         fr-FR -> fr
         Spanish -> es (if iso639 can map it)
-        
+
     Args:
         language_code: Raw language code from feed or other source
-        
+
     Returns:
         Normalized two-letter language code or None if invalid
     """
@@ -41,30 +41,35 @@ def normalize_language_code(language_code: str | None) -> str | None:
             # Try to validate/normalize using iso639
             lang = Lang(base_code)
             if lang.pt1:  # pt1 is the two-letter code
-                logger.debug("Language normalized",
-                           original=language_code,
-                           base=base_code,
-                           normalized=lang.pt1)
+                logger.debug(
+                    "Language normalized",
+                    original=language_code,
+                    base=base_code,
+                    normalized=lang.pt1,
+                )
                 return lang.pt1
         except Exception:
             # If iso639 fails, but we have a valid-looking base code, use it
             if len(base_code) == 2 and base_code.isalpha():
-                logger.debug("Using base language code directly",
-                           original=language_code,
-                           normalized=base_code)
+                logger.debug(
+                    "Using base language code directly",
+                    original=language_code,
+                    normalized=base_code,
+                )
                 return base_code.lower()
 
     # Try to parse the original code with iso639
     try:
         lang = Lang(language_code)
         if lang.pt1:
-            logger.debug("Language normalized via iso639",
-                       original=language_code,
-                       normalized=lang.pt1)
+            logger.debug(
+                "Language normalized via iso639",
+                original=language_code,
+                normalized=lang.pt1,
+            )
             return lang.pt1
     except Exception:
-        logger.debug("Failed to normalize language code",
-                    language_code=language_code)
+        logger.debug("Failed to normalize language code", language_code=language_code)
         return None
 
     return None
@@ -73,7 +78,7 @@ def normalize_language_code(language_code: str | None) -> str | None:
 def _extract_base_language(language_code: str) -> str | None:
     """
     Extract the base language code from complex language tags.
-    
+
     Examples:
         en-US -> en
         zh-Hans -> zh
@@ -83,10 +88,10 @@ def _extract_base_language(language_code: str) -> str | None:
     """
     # Common patterns for language tags
     patterns = [
-        r'^([a-z]{2,3})-[a-z]{2}$',      # en-us, zh-cn (after lowercase)
-        r'^([a-z]{2,3})-[a-z]{4}$',      # zh-hans, zh-hant (after lowercase)
-        r'^([a-z]{2,3})-[a-z]+$',        # other variants (after lowercase)
-        r'^([a-z]{2,3})_[a-z]{2}$',      # en_us (underscore variant, after lowercase)
+        r"^([a-z]{2,3})-[a-z]{2}$",  # en-us, zh-cn (after lowercase)
+        r"^([a-z]{2,3})-[a-z]{4}$",  # zh-hans, zh-hant (after lowercase)
+        r"^([a-z]{2,3})-[a-z]+$",  # other variants (after lowercase)
+        r"^([a-z]{2,3})_[a-z]{2}$",  # en_us (underscore variant, after lowercase)
     ]
 
     language_code_lower = language_code.lower()
