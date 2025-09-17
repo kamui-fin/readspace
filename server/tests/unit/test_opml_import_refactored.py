@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from server.app.services.rss_service import RssOrchestrationService
 
 

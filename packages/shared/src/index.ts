@@ -7,9 +7,6 @@ export * from './types/index'
 // Export business logic utilities
 export * from './utils/index'
 
-// Export UI utilities (styling, CSS classes)
-export * from './ui/index'
-
 // Export formatters (date, reading time, data processing)
 export * from './formatters/index'
 

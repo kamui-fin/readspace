@@ -8,11 +8,14 @@ Readspace is an open-source, privacy-first reading hub that brings RSS feeds, ne
 
 ## Architecture
 
-### Monorepo Structure
-- **`server/`**: Python FastAPI backend with PostgreSQL and Supabase
-- **`web/`**: Next.js 15 frontend with TypeScript and Tailwind CSS
-- **`extension/`**: Chrome/Firefox browser extension built with Vite and React
-- **`supabase/`**: Database schema, migrations, and local development setup
+### Turborepo Monorepo Structure
+- **`apps/web/`**: Next.js 15 frontend with TypeScript and Tailwind CSS
+- **`apps/extension/`**: Chrome/Firefox browser extension built with Vite and React
+- **`packages/shared/`**: Shared utilities and types between apps
+- **`packages/eslint-config/`**: Shared ESLint configuration
+- **`packages/typescript-config/`**: Shared TypeScript configuration
+- **`server/`**: Python FastAPI backend with PostgreSQL and Supabase (separate from monorepo)
+- **`docker/`**: Docker configurations and orchestration scripts
 
 ### Backend Architecture (`server/`)
 - **FastAPI** with async/await patterns throughout
@@ -28,7 +31,7 @@ Key service patterns:
 - CRUD operations abstracted (`crud/`)
 - Background workers for RSS feed fetching and processing (`workers/`)
 
-### Frontend Architecture (`web/`)
+### Frontend Architecture (`apps/web/`)
 - **Next.js 15** with App Router and Server Components
 - **TypeScript** throughout with strict type checking
 - **Tailwind CSS** for styling with shadcn/ui components
@@ -36,27 +39,57 @@ Key service patterns:
 - **TanStack Query** for server state and caching
 - **Supabase Auth** integration with session management
 
-### Browser Extension (`extension/`)
+### Browser Extension (`apps/extension/`)
 - **Manifest V3** Chrome extension with Firefox compatibility
 - **React** with TypeScript
 - **Vite** for building with separate Chrome/Firefox targets
 - Content script for page analysis and RSS feed detection
 - Background service worker for API communication
 
+### Shared Packages (`packages/`)
+- **`shared/`**: Common utilities, types, and business logic shared between web and extension
+- **`eslint-config/`**: Centralized ESLint configuration for consistent code quality
+- **`typescript-config/`**: Shared TypeScript configurations for different project types
+
 ## Development Commands
 
 ### Environment Setup
 ```bash
 # Initial setup - generates all .env files
-./setup.sh
+./docker/setup.sh
 
 # Start all services with Docker
-./start_docker.sh
+./docker/launch.sh
 
 # Start infrastructure only (recommended for development)
-docker compose -f supabase/docker-compose.yml --env-file supabase/.env up -d
-docker compose up -d redis
-docker compose -f docker-compose.rsshub.yml up -d
+docker compose -f docker/supabase/docker-compose.yml --env-file docker/supabase/.env up -d
+docker compose -f docker/docker-compose.yml up -d redis
+docker compose -f docker/docker-compose.rsshub.yml up -d
+```
+
+### Monorepo Development Commands
+
+```bash
+# Install dependencies for all workspaces
+bun install
+
+# Build all apps and packages
+bun run build
+
+# Start all apps in development mode
+bun run dev
+
+# Lint all projects
+bun run lint
+
+# Format all code
+bun run format
+
+# Type check all projects
+bun run check-types
+
+# Clean all build artifacts
+turbo run clean
 ```
 
 ### Backend Development (`server/`)
@@ -80,26 +113,34 @@ docker compose exec api alembic revision --autogenerate -m "Description"
 docker compose exec api alembic upgrade head
 ```
 
-### Frontend Development (`web/`)
+### Frontend Development (`apps/web/`)
 ```bash
-cd web
-pnpm i
-pnpm dev                    # Start Next.js dev server (localhost:8042)
-pnpm build                  # Build for production
-pnpm lint                   # Lint with ESLint
-pnpm format                 # Format with Prettier
-pnpm type-check            # TypeScript type checking
+cd apps/web
+bun install
+bun run dev                 # Start Next.js dev server (localhost:8042)
+bun run build              # Build for production
+bun run lint               # Lint with ESLint
+bun run format             # Format with Prettier
+bun run check-types        # TypeScript type checking
+
+# Or from root using Turborepo (runs all apps)
+bun run dev                # Start all apps in development
+turbo run dev --filter=web # Start only web app
 ```
 
-### Extension Development (`extension/`)
+### Extension Development (`apps/extension/`)
 ```bash
-cd extension
-pnpm i
-pnpm dev                   # Build for Chrome development
-pnpm build                 # Build for Chrome production
-pnpm build:firefox         # Build for Firefox
-pnpm lint                  # Lint with ESLint
-pnpm type-check           # TypeScript type checking
+cd apps/extension
+bun install
+bun run dev                # Build for Chrome development
+bun run build             # Build for Chrome production
+bun run build:firefox     # Build for Firefox
+bun run lint              # Lint with ESLint
+bun run check-types       # TypeScript type checking
+
+# Or from root using Turborepo
+turbo run dev --filter=extension    # Start only extension
+turbo run build --filter=extension  # Build only extension
 ```
 
 ## Key Integration Points
@@ -165,14 +206,23 @@ pnpm type-check           # TypeScript type checking
 - **Component Architecture**: Keep components relatively small and focused
   - Abstract functionality into reusable components
   - Leverage the existing shadcn/ui component system
+  - Use shared packages for common utilities and types
 - **Responsive Design**: All components must be responsive across all screen sizes
 - **Dark Theme Support**: All components must properly support dark theme
-- **Color Scheme**: Respect `web/app/globals.css` for consistent color schemes
+- **Color Scheme**: Respect `apps/web/app/globals.css` for consistent color schemes
+- **Shared Code**: Extract common functionality to `packages/shared` for reuse between web and extension
 - **Code Quality**: After writing frontend code, always:
-  1. Build the project (`pnpm build`)
-  2. Run type checking (`pnpm type-check`)
-  3. Format code (`pnpm format`)
-  4. Lint code (`pnpm lint`)
+  1. Build the project (`bun run build`)
+  2. Run type checking (`bun run check-types`)
+  3. Format code (`bun run format`)
+  4. Lint code (`bun run lint`)
+
+### Monorepo Guidelines
+- **Workspace Dependencies**: Use workspace references (e.g., `"@readspace/shared": "workspace:*"`) for internal packages
+- **Shared Code**: Place common utilities, types, and business logic in `packages/shared`
+- **Configuration**: Use shared ESLint and TypeScript configs from `packages/` for consistency
+- **Turborepo**: Leverage Turborepo's caching and parallelization for faster builds
+- **Package Naming**: Follow the `@readspace/package-name` convention for internal packages
 
 ### Extension Patterns
 - Message passing between content script and background worker
@@ -183,10 +233,10 @@ pnpm type-check           # TypeScript type checking
 
 Each component requires its own `.env` file:
 - `server/.env` - Backend API keys and database config
-- `web/.env` - Frontend Supabase configuration
-- `supabase/.env` - Database credentials and JWT secrets
+- `apps/web/.env` - Frontend Supabase configuration
+- `docker/supabase/.env` - Database credentials and JWT secrets
 
-The `setup.sh` script generates these files with appropriate defaults for local development.
+The `docker/setup.sh` script generates these files with appropriate defaults for local development.
 
 ## Deployment Notes
 
@@ -198,7 +248,7 @@ The `setup.sh` script generates these files with appropriate defaults for local 
 
 ## Codebase Navigation Guide
 
-### Frontend (`web/`) Directory Structure
+### Frontend (`apps/web/`) Directory Structure
 
 #### Core Application Files
 - **`app/`** - Next.js App Router structure
@@ -230,6 +280,18 @@ The `setup.sh` script generates these files with appropriate defaults for local 
 - **`database.types.ts`** - Supabase generated types
 - **`env.ts`** - Environment variable validation
 - **`middleware.ts`** - Next.js middleware for auth
+
+### Shared Packages (`packages/`) Directory Structure
+
+#### Shared Package (`packages/shared/`)
+- **`src/utils/`** - Shared utility functions
+- **`src/types/`** - Common TypeScript type definitions
+- **`src/constants/`** - Shared constants and configuration
+- **`package.json`** - Package configuration with proper exports
+
+#### Configuration Packages
+- **`packages/eslint-config/`** - Shared ESLint rules for web and extension
+- **`packages/typescript-config/`** - TypeScript configurations for different project types
 
 ### Backend (`server/`) Directory Structure
 
@@ -314,6 +376,7 @@ When working with feeds, there are two distinct URL fields:
 - **`link`**: The website URL (the human-readable website the feed belongs to, e.g., `https://example.com`)
 
 This distinction is critical in both:
-- Database schema (`web/database.types.ts` - line 287+)
+- Database schema (`apps/web/database.types.ts` - line 287+)
 - Server API schemas (`server/app/schemas/rss_schemas.py` and `subscription_schemas.py`)
-- Frontend types (`web/lib/api/hooks/feeds.ts`)
+- Frontend types (`apps/web/lib/api/hooks/feeds.ts`)
+- Shared types (`packages/shared/src/types/`)

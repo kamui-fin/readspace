@@ -1,52 +1,24 @@
 {
   "name": "@readspace/monorepo",
-  "version": "1.0.0",
-  "description": "Readspace monorepo with shared packages",
   "private": true,
   "scripts": {
-    "build": "pnpm -r build",
-    "dev": "pnpm -r --parallel dev",
-    "lint": "pnpm -r lint",
-    "type-check": "pnpm -r type-check",
-    "format": "pnpm -r format",
-    "clean": "pnpm -r clean",
-    "test": "pnpm -r test"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md,css,json}\"",
+    "check-types": "turbo run check-types"
   },
-  "keywords": [
-    "readspace",
-    "rss",
-    "monorepo",
-    "workspace"
-  ],
-  "author": "Readspace Team",
-  "license": "MIT",
   "devDependencies": {
-    "@changesets/cli": "^2.27.1",
-    "typescript": "^5.3.0"
+    "prettier": "^3.6.2",
+    "turbo": "^2.5.6",
+    "typescript": "5.9.2"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "pnpm": ">=8.0.0"
+    "node": ">=18"
   },
-  "packageManager": "pnpm@8.15.4",
-  "pnpm": {
-    "ignoredBuiltDependencies": [
-      "bcrypt"
-    ],
-    "onlyBuiltDependencies": [
-      "@firebase/util",
-      "bcrypt",
-      "canvas",
-      "core-js",
-      "es5-ext",
-      "esbuild",
-      "protobufjs",
-      "rxdb",
-      "sharp",
-      "supabase"
-    ],
-    "overrides": {
-      "pdfjs-dist": "4.4.168"
-    }
-  }
+  "packageManager": "bun@1.2.22",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
 }
