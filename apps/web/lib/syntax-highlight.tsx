@@ -10,7 +10,7 @@ function detectLanguage(code: string, className: string = ""): string {
     // First try to get language from class name
     const langMatch = className.match(/(?:language-|lang-)(\w+)/)
     if (langMatch) {
-        const lang = langMatch[1].toLowerCase()
+        const lang = langMatch[1]?.toLowerCase() ?? ""
         // Map common aliases
         const langMap: Record<string, string> = {
             js: "javascript",
@@ -90,7 +90,7 @@ function detectLanguage(code: string, className: string = ""): string {
         try {
             JSON.parse(code)
             return "json"
-        } catch {}
+        } catch { /* empty */ }
     }
 
     // Shell/Bash patterns
@@ -237,6 +237,8 @@ function ProcessedContent({ doc, isDark }: ProcessedContentProps) {
             // Copy important attributes
             for (let i = 0; i < element.attributes.length; i++) {
                 const attr = element.attributes[i]
+                if (!attr) continue
+
                 if (attr.name === "class") {
                     props.className = attr.value
                 } else if (

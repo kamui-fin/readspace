@@ -1,3 +1,3 @@
-export * from "./date"
-export * from "./reading-time"
-export * from "./data-trimmer"
+export * from "./date";
+export * from "./reading-time";
+export * from "./data-trimmer";

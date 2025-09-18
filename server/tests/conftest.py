@@ -91,9 +91,7 @@ def mock_http_client():
     return mock
 
 
-async def create_test_user(
-    session: AsyncSession, user_id: str = None, email: str = None
-) -> Profile:
+async def create_test_user(session: AsyncSession, user_id: str = None, email: str = None) -> Profile:
     """Create a test user with auth entry and profile."""
     import uuid
 

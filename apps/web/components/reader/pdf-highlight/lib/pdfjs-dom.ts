@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { Page } from "react-pdf-highlighter-extended"
 
 export const getDocument = (elm: any): Document =>

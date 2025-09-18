@@ -22,12 +22,12 @@ import { fuzzySearch } from "@readspace/shared"
 import { exportFeedsToOPML } from "@readspace/shared"
 import { useDebounce } from "use-debounce"
 import Header from "@/components/navigation/header"
-import { FeedTableRow } from "@/components/feeds/feed-table-row"
-import { FeedEditModal } from "@/components/feeds/feed-edit-modal"
-import { FeedDeleteModal } from "@/components/feeds/feed-delete-modal"
-import { BulkEditFolderModal } from "@/components/feeds/bulk-edit-folder-modal"
-import { FeedFiltersPanel } from "@/components/feeds/feed-filters-panel"
-import { ManageFeedsPageSkeleton } from "@/components/feeds/manage-feeds-skeleton"
+import { FeedTableRow } from "@/components/feeds/FeedTableRow"
+import { FeedEditModal } from "@/components/feeds/FeedEditModal"
+import { FeedDeleteModal } from "@/components/feeds/FeedDeleteModal"
+import { BulkEditFolderModal } from "@/components/feeds/BulkEditFolderModal"
+import { FeedFiltersPanel } from "@/components/feeds/FeedFiltersPanel"
+import { ManageFeedsPageSkeleton } from "@/components/feeds/ManageFeedsSkeleton"
 
 /**
  * Main client component for managing RSS feeds.

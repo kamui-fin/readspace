@@ -16,18 +16,9 @@ class TestArticleTransformerCore:
 
     def test_extract_source_domain_valid_url(self):
         """Test extracting domain from valid URLs."""
-        assert (
-            self.transformer._extract_source_domain("https://example.com/path")
-            == "example.com"
-        )
-        assert (
-            self.transformer._extract_source_domain("http://news.site.org/article/123")
-            == "news.site.org"
-        )
-        assert (
-            self.transformer._extract_source_domain("https://www.blog.com")
-            == "www.blog.com"
-        )
+        assert self.transformer._extract_source_domain("https://example.com/path") == "example.com"
+        assert self.transformer._extract_source_domain("http://news.site.org/article/123") == "news.site.org"
+        assert self.transformer._extract_source_domain("https://www.blog.com") == "www.blog.com"
 
     def test_extract_source_domain_none_input(self):
         """Test extracting domain from None input."""

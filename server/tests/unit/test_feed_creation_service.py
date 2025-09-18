@@ -58,14 +58,10 @@ class TestFeedCreationService:
                 # Mock feed creation
                 expected_response = Mock(spec=LegacyFeedResponse)
                 expected_response.url = url
-                self.service._create_new_feed = AsyncMock(
-                    return_value=expected_response
-                )
+                self.service._create_new_feed = AsyncMock(return_value=expected_response)
 
                 # Mock the deduplication service to prevent any issues
-                with patch(
-                    "app.services.feed_creation_service.FeedDeduplicationService"
-                ) as mock_dedup_class:
+                with patch("app.services.feed_creation_service.FeedDeduplicationService") as mock_dedup_class:
                     mock_dedup = Mock()
                     mock_dedup.check_for_duplicates = AsyncMock()
                     mock_dedup_class.return_value = mock_dedup
@@ -92,12 +88,8 @@ class TestFeedCreationService:
                 "app.crud.crud_subscription.get_subscription_by_feed_id",
                 return_value=existing_subscription,
             ):
-                with pytest.raises(
-                    FeedSubscriptionError, match="You are already subscribed to feed"
-                ):
-                    await self.service.add_new_feed(
-                        url, folder_id, update_existing=False
-                    )
+                with pytest.raises(FeedSubscriptionError, match="You are already subscribed to feed"):
+                    await self.service.add_new_feed(url, folder_id, update_existing=False)
 
     @pytest.mark.asyncio
     async def test_add_new_feed_existing_feed_update_true(self):
@@ -114,14 +106,10 @@ class TestFeedCreationService:
             expected_response = Mock()
             self.service._handle_existing_feed.return_value = expected_response
 
-            result = await self.service.add_new_feed(
-                url, folder_id, tag_names, update_existing=True
-            )
+            result = await self.service.add_new_feed(url, folder_id, tag_names, update_existing=True)
 
             assert result == expected_response
-            self.service._handle_existing_feed.assert_called_once_with(
-                existing_feed, url, folder_id, tag_names, True
-            )
+            self.service._handle_existing_feed.assert_called_once_with(existing_feed, url, folder_id, tag_names, True)
 
     @pytest.mark.asyncio
     async def test_validate_folder_success(self):
@@ -207,9 +195,7 @@ class TestFeedCreationService:
         total_entries = 0
         url = "https://example.com/feed.xml"
 
-        with pytest.raises(
-            FeedValidationError, match="Feed appears to be broken: no entries found"
-        ):
+        with pytest.raises(FeedValidationError, match="Feed appears to be broken: no entries found"):
             await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     @pytest.mark.asyncio
@@ -221,9 +207,7 @@ class TestFeedCreationService:
         total_entries = 5  # But has entries
         url = "https://example.com/feed.xml"
 
-        with pytest.raises(
-            FeedValidationError, match="no valid articles found despite having entries"
-        ):
+        with pytest.raises(FeedValidationError, match="no valid articles found despite having entries"):
             await self.service._validate_articles(db_feed, articles, total_entries, url)
 
     def test_extract_ttl_valid(self):
@@ -269,9 +253,7 @@ class TestFeedCreationService:
     def test_extract_skip_hours_invalid_values(self):
         """Test skip hours extraction with some invalid values."""
         parsed_feed = Mock()
-        parsed_feed.feed = {
-            "skipHours": {"hour": [1, 25, "invalid", 12]}
-        }  # 25 and "invalid" are invalid
+        parsed_feed.feed = {"skipHours": {"hour": [1, 25, "invalid", 12]}}  # 25 and "invalid" are invalid
         feed_id = uuid4()
 
         result = self.service._extract_skip_hours(parsed_feed, feed_id)
@@ -332,9 +314,7 @@ class TestFeedCreationService:
         result = self.service._extract_article_data(entry, feed_id, self.user_id)
 
         assert result == expected_article
-        self.service.feed_parser.extract_article_data.assert_called_once_with(
-            entry, None
-        )
+        self.service.feed_parser.extract_article_data.assert_called_once_with(entry, "")
 
     def test_extract_article_data_failure(self):
         """Test article data extraction failure."""
@@ -342,9 +322,7 @@ class TestFeedCreationService:
         entry.get.return_value = "test-id"
         feed_id = uuid4()
 
-        self.service.feed_parser.extract_article_data.side_effect = Exception(
-            "Extraction error"
-        )
+        self.service.feed_parser.extract_article_data.side_effect = Exception("Extraction error")
 
         result = self.service._extract_article_data(entry, feed_id, self.user_id)
 

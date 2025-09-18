@@ -82,7 +82,7 @@ export async function signUp(
         if (error instanceof z.ZodError) {
             // Handle validation errors
             const firstError = error.errors[0]
-            return { error: firstError.message }
+            return { error: firstError?.message || "Validation error occurred" }
         }
 
         return {

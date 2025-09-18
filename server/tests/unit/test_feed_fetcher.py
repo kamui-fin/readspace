@@ -31,9 +31,7 @@ class TestFeedFetcher:
         self.redis_cache.get.return_value = None  # No cached data
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = (
-                mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
             result = await self.fetcher.fetch_content("http://example.com/feed.xml")
 
@@ -59,13 +57,9 @@ class TestFeedFetcher:
         self.redis_cache.get.return_value = cached_data
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.return_value = (
-                mock_response
-            )
+            mock_client.return_value.__aenter__.return_value.get.return_value = mock_response
 
-            result = await self.fetcher.fetch_content(
-                "http://example.com/feed.xml", etag="test-etag"
-            )
+            result = await self.fetcher.fetch_content("http://example.com/feed.xml", etag="test-etag")
 
         assert result["status_code"] == 304
         assert result["not_modified"] == True
@@ -77,9 +71,7 @@ class TestFeedFetcher:
         self.redis_cache.get.return_value = None
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.side_effect = (
-                httpx.ConnectTimeout("Timeout")
-            )
+            mock_client.return_value.__aenter__.return_value.get.side_effect = httpx.ConnectTimeout("Timeout")
 
             result = await self.fetcher.fetch_content("http://example.com/feed.xml")
 
@@ -96,10 +88,8 @@ class TestFeedFetcher:
         self.redis_cache.get.return_value = None
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get.side_effect = (
-                httpx.HTTPStatusError(
-                    "Not found", request=Mock(), response=mock_response
-                )
+            mock_client.return_value.__aenter__.return_value.get.side_effect = httpx.HTTPStatusError(
+                "Not found", request=Mock(), response=mock_response
             )
 
             result = await self.fetcher.fetch_content("http://example.com/feed.xml")
@@ -111,23 +101,16 @@ class TestFeedFetcher:
     @pytest.mark.asyncio
     async def test_build_request_headers(self):
         """Test request header building."""
-        headers = self.fetcher._build_request_headers(
-            "test-etag", "test-modified", None
-        )
+        headers = self.fetcher._build_request_headers("test-etag", "test-modified", None)
 
-        assert (
-            headers["User-Agent"]
-            == "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
-        )
+        assert headers["User-Agent"] == "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
         assert headers["If-None-Match"] == "test-etag"
         assert headers["If-Modified-Since"] == "test-modified"
 
     @pytest.mark.asyncio
     async def test_build_request_headers_with_cache(self):
         """Test request header building with cached data."""
-        cached_data = {
-            "headers": {"ETag": "cached-etag", "Last-Modified": "cached-modified"}
-        }
+        cached_data = {"headers": {"ETag": "cached-etag", "Last-Modified": "cached-modified"}}
 
         headers = self.fetcher._build_request_headers(None, None, cached_data)
 

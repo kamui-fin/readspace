@@ -1,19 +1,15 @@
-import { PDFViewer } from "@/components/reader/pdf-reader"
-import EPUBReader from "@/components/reader/reader"
+import { PDFViewer } from "@/components/reader/PdfReader"
+import EPUBReader from "@/components/reader/Reader"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ApiClient } from "@readspace/shared"
-import { BOOK_QUERY_KEYS } from "@readspace/shared"
 import { createClient } from "@/lib/supabase/server"
-import {
-    BookViewProps,
-    isEpubProgress,
-    SerializedRange,
-    isSerializedRange,
-} from "@readspace/shared"
 import { EpubHighlight, EpubLocation, PdfHighlight } from "@/types/library"
+import {
+    ApiClient, BOOK_QUERY_KEYS, BookViewProps,
+    isEpubProgress, isSerializedRange, SerializedRange
+} from "@readspace/shared"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -109,9 +105,9 @@ export default async function BookReaderPage({ params }: PageProps) {
     // Convert EpubProgress to EpubLocation for the reader component
     const epubLocation: EpubLocation | null = epubProgress
         ? {
-              globalProgress: epubProgress.globalProgress,
-              loc: epubProgress.loc,
-          }
+            globalProgress: epubProgress.globalProgress,
+            loc: epubProgress.loc,
+        }
         : null
 
     const bookViewProps: BookViewProps = {
@@ -155,11 +151,11 @@ export default async function BookReaderPage({ params }: PageProps) {
                         h.html_range && isSerializedRange(h.html_range)
                             ? (h.html_range as SerializedRange)
                             : {
-                                  startContainerPath: [],
-                                  startOffset: 0,
-                                  endContainerPath: [],
-                                  endOffset: 0,
-                              },
+                                startContainerPath: [],
+                                startOffset: 0,
+                                endContainerPath: [],
+                                endOffset: 0,
+                            },
                     chapter: {
                         idx: h.chapter_idx || 0,
                         href: h.chapter_href || "",

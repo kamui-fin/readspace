@@ -8,32 +8,21 @@ class TestUrlNormalizer:
 
     def test_trailing_slash_removal(self):
         """Test removal of trailing slashes."""
-        assert (
-            normalize_feed_url("https://example.com/feed/")
-            == "https://example.com/feed"
-        )
+        assert normalize_feed_url("https://example.com/feed/") == "https://example.com/feed"
         # Root path should keep the slash
         assert normalize_feed_url("https://example.com/") == "https://example.com/"
 
     def test_http_to_https_conversion(self):
         """Test HTTP to HTTPS conversion."""
-        assert (
-            normalize_feed_url("http://example.com/feed") == "https://example.com/feed"
-        )
+        assert normalize_feed_url("http://example.com/feed") == "https://example.com/feed"
 
     def test_www_removal(self):
         """Test www prefix removal."""
-        assert (
-            normalize_feed_url("https://www.example.com/feed")
-            == "https://example.com/feed"
-        )
+        assert normalize_feed_url("https://www.example.com/feed") == "https://example.com/feed"
 
     def test_combined_normalizations(self):
         """Test multiple normalizations together."""
-        assert (
-            normalize_feed_url("http://www.example.com/feed/")
-            == "https://example.com/feed"
-        )
+        assert normalize_feed_url("http://www.example.com/feed/") == "https://example.com/feed"
 
     def test_tracking_parameter_removal(self):
         """Test removal of tracking parameters."""
@@ -50,16 +39,11 @@ class TestUrlNormalizer:
 
     def test_fragment_removal(self):
         """Test removal of URL fragments."""
-        assert (
-            normalize_feed_url("https://example.com/feed#section1")
-            == "https://example.com/feed"
-        )
+        assert normalize_feed_url("https://example.com/feed#section1") == "https://example.com/feed"
 
     def test_domain_case_normalization(self):
         """Test domain case normalization (path case preserved)."""
-        assert (
-            normalize_feed_url("https://EXAMPLE.COM/Feed") == "https://example.com/Feed"
-        )
+        assert normalize_feed_url("https://EXAMPLE.COM/Feed") == "https://example.com/Feed"
 
     def test_complex_normalization(self):
         """Test complex URL with multiple issues."""
@@ -87,20 +71,10 @@ class TestUrlNormalizer:
 
     def test_url_equivalence(self):
         """Test URL equivalence checking."""
-        assert are_urls_equivalent(
-            "https://example.com/feed", "http://example.com/feed/"
-        )
-        assert are_urls_equivalent(
-            "https://www.example.com/feed", "https://example.com/feed"
-        )
-        assert are_urls_equivalent(
-            "https://example.com/feed?utm_source=test", "https://example.com/feed"
-        )
+        assert are_urls_equivalent("https://example.com/feed", "http://example.com/feed/")
+        assert are_urls_equivalent("https://www.example.com/feed", "https://example.com/feed")
+        assert are_urls_equivalent("https://example.com/feed?utm_source=test", "https://example.com/feed")
 
         # Non-equivalent URLs
-        assert not are_urls_equivalent(
-            "https://example.com/feed", "https://different.com/feed"
-        )
-        assert not are_urls_equivalent(
-            "https://example.com/feed1", "https://example.com/feed2"
-        )
+        assert not are_urls_equivalent("https://example.com/feed", "https://different.com/feed")
+        assert not are_urls_equivalent("https://example.com/feed1", "https://example.com/feed2")

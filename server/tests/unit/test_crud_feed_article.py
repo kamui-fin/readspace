@@ -27,9 +27,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = mock_article
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        result = await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         assert result == mock_article
         mock_db.execute.assert_called_once()
@@ -46,9 +44,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        result = await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         assert result is None
         mock_db.execute.assert_called_once()
@@ -62,9 +58,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = mock_article
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_with_content(
-            db=mock_db, article_id=self.article_id
-        )
+        result = await self.crud.get_with_content(db=mock_db, article_id=self.article_id)
 
         assert result == mock_article
         mock_db.execute.assert_called_once()
@@ -81,9 +75,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_with_content(
-            db=mock_db, article_id=self.article_id
-        )
+        result = await self.crud.get_with_content(db=mock_db, article_id=self.article_id)
 
         assert result is None
         mock_db.execute.assert_called_once()
@@ -118,9 +110,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         # Verify execute was called once
         mock_db.execute.assert_called_once()
@@ -130,9 +120,7 @@ class TestCRUDFeedArticle:
         query_str = str(query)
 
         # Check that the query contains expected elements
-        assert (
-            "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()
-        )
+        assert "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()
 
     @pytest.mark.asyncio
     async def test_query_construction_get_with_content(self):
@@ -152,6 +140,4 @@ class TestCRUDFeedArticle:
         query_str = str(query)
 
         # Check that the query contains expected elements
-        assert (
-            "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()
-        )
+        assert "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()

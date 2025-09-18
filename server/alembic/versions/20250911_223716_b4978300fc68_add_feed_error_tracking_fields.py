@@ -24,9 +24,7 @@ def upgrade() -> None:
     # Add error tracking fields to feeds table
     op.add_column(
         "feeds",
-        sa.Column(
-            "fetch_error_count", sa.Integer(), nullable=False, server_default="0"
-        ),
+        sa.Column("fetch_error_count", sa.Integer(), nullable=False, server_default="0"),
     )
     op.add_column("feeds", sa.Column("last_error_message", sa.Text(), nullable=True))
 

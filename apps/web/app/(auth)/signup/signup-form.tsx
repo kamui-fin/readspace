@@ -19,7 +19,7 @@ import * as React from "react"
 import { z } from "zod"
 import { toFormikValidationSchema } from "zod-formik-adapter"
 import { signUp } from "./actions"
-import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { useIsCloudProd } from "@/hooks/useIsCloudProd"
 import { useRouter } from "next/navigation"
 
 const createSignUpSchema = (isCloudProd: boolean) => {

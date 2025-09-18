@@ -31,7 +31,7 @@ class TestRssFeedsRouter:
         """Test successful feed listing."""
         folder_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
@@ -64,7 +64,7 @@ class TestRssFeedsRouter:
         """Test feed listing with filters."""
         tag_names = ["tag1", "tag2"]
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
@@ -97,16 +97,14 @@ class TestRssFeedsRouter:
         """Test successful single feed retrieval."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
             expected_feed = Mock()
             mock_service.get_feed = AsyncMock(return_value=expected_feed)
 
-            result = await get_feed(
-                feed_id=feed_id, db=self.db, current_user=self.current_user
-            )
+            result = await get_feed(feed_id=feed_id, db=self.db, current_user=self.current_user)
 
             assert result == expected_feed
             mock_service.get_feed.assert_called_once_with(feed_id=feed_id)
@@ -116,15 +114,13 @@ class TestRssFeedsRouter:
         """Test feed retrieval when feed doesn't exist."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
             mock_service.get_feed = AsyncMock(return_value=None)
 
             with pytest.raises(HTTPException) as exc_info:
-                await get_feed(
-                    feed_id=feed_id, db=self.db, current_user=self.current_user
-                )
+                await get_feed(feed_id=feed_id, db=self.db, current_user=self.current_user)
 
             assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
             assert "Feed not found" in str(exc_info.value.detail)
@@ -137,14 +133,12 @@ class TestRssFeedsRouter:
 
         feed_update = FeedUpdate(folder_id=new_folder_id)
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
             expected_feed = Mock()
-            mock_service.update_feed_user_settings = AsyncMock(
-                return_value=expected_feed
-            )
+            mock_service.update_feed_user_settings = AsyncMock(return_value=expected_feed)
 
             result = await update_feed_settings(
                 feed_id=feed_id,
@@ -154,9 +148,7 @@ class TestRssFeedsRouter:
             )
 
             assert result == expected_feed
-            mock_service.update_feed_user_settings.assert_called_once_with(
-                feed_id=feed_id, feed_in=feed_update
-            )
+            mock_service.update_feed_user_settings.assert_called_once_with(feed_id=feed_id, feed_in=feed_update)
 
     @pytest.mark.asyncio
     async def test_update_feed_settings_not_found(self):
@@ -166,12 +158,10 @@ class TestRssFeedsRouter:
 
         from app.core.custom_exceptions import NotFoundError
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
-            mock_service.update_feed_user_settings = AsyncMock(
-                side_effect=NotFoundError("Feed not found")
-            )
+            mock_service.update_feed_user_settings = AsyncMock(side_effect=NotFoundError("Feed not found"))
 
             with pytest.raises(HTTPException) as exc_info:
                 await update_feed_settings(
@@ -189,14 +179,12 @@ class TestRssFeedsRouter:
         """Test successful feed deletion."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
             mock_service.delete_feed = AsyncMock(return_value=True)
 
-            result = await delete_feed(
-                feed_id=feed_id, db=self.db, current_user=self.current_user
-            )
+            result = await delete_feed(feed_id=feed_id, db=self.db, current_user=self.current_user)
 
             # The actual router returns a JSONResponse, not a dict
             assert result.status_code == 200
@@ -207,15 +195,13 @@ class TestRssFeedsRouter:
         """Test feed deletion when feed doesn't exist."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
             mock_service.delete_feed = AsyncMock(return_value=False)
 
             with pytest.raises(HTTPException) as exc_info:
-                await delete_feed(
-                    feed_id=feed_id, db=self.db, current_user=self.current_user
-                )
+                await delete_feed(feed_id=feed_id, db=self.db, current_user=self.current_user)
 
             assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
             assert "Feed not found" in str(exc_info.value.detail)
@@ -225,7 +211,7 @@ class TestRssFeedsRouter:
         """Test triggering single feed refresh."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
@@ -241,16 +227,14 @@ class TestRssFeedsRouter:
             )
 
             assert result == expected_feed
-            mock_service.refresh_feed.assert_called_once_with(
-                feed_id=feed_id, force_refetch=False, preview_mode=False
-            )
+            mock_service.refresh_feed.assert_called_once_with(feed_id=feed_id, force_refetch=False, preview_mode=False)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_force_refetch(self):
         """Test forcing feed refresh."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
 
@@ -266,16 +250,14 @@ class TestRssFeedsRouter:
             )
 
             assert result == expected_feed
-            mock_service.refresh_feed.assert_called_once_with(
-                feed_id=feed_id, force_refetch=True, preview_mode=False
-            )
+            mock_service.refresh_feed.assert_called_once_with(feed_id=feed_id, force_refetch=True, preview_mode=False)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_not_found(self):
         """Test refresh when feed doesn't exist."""
         feed_id = uuid4()
 
-        with patch("app.routers.rss_feeds.RssService") as mock_service_class:
+        with patch("app.routers.rss_feeds.RssOrchestrationService") as mock_service_class:
             mock_service = Mock()
             mock_service_class.return_value = mock_service
             mock_service.refresh_feed = AsyncMock(return_value=None)

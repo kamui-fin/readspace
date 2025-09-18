@@ -32,9 +32,7 @@ class TestRedisCache:
         assert client == mock_client
         mock_redis.from_url.assert_called_once()
         call_args = mock_redis.from_url.call_args
-        assert call_args[0][0].startswith(
-            "redis://localhost:6379"
-        )  # Allow for /0 suffix
+        assert call_args[0][0].startswith("redis://localhost:6379")  # Allow for /0 suffix
         assert call_args[1]["encoding"] == "utf-8"
         assert call_args[1]["decode_responses"] is True
         mock_client.ping.assert_called_once()
@@ -167,9 +165,7 @@ class TestRedisCache:
 
         # Verify
         assert result is True
-        mock_client.setex.assert_called_once_with(
-            "test_key", ttl, json.dumps(test_data)
-        )
+        mock_client.setex.assert_called_once_with("test_key", ttl, json.dumps(test_data))
         mock_client.set.assert_not_called()
         mock_client.close.assert_called_once()
 
@@ -342,9 +338,7 @@ class TestRedisCacheEdgeCases:
 
         # Verify
         assert result is True
-        mock_client.set.assert_called_once_with(
-            "empty_key", '""'
-        )  # JSON-encoded empty string
+        mock_client.set.assert_called_once_with("empty_key", '""')  # JSON-encoded empty string
         mock_client.close.assert_called_once()
 
     @patch.object(RedisCache, "_get_client")

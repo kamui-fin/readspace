@@ -77,7 +77,9 @@ function resolveNodePath(path: number[], container: Node): Node | null {
     let node: Node = container
     for (const index of path) {
         if (index < 0 || index >= node.childNodes.length) return null
-        node = node.childNodes[index]
+        const childNode = node.childNodes[index]
+        if (!childNode) return null
+        node = childNode
     }
     return node
 }
@@ -87,7 +89,7 @@ export function scrollToRange(range: Range) {
     const rect = range.getBoundingClientRect()
 
     // Calculate the position to scroll to
-    const scrollTop = window.scrollY + rect.top - window.innerHeight / 2
+    const scrollTop = window.scrollY + rect.top - window.innerHeight // 2
 
     // Scroll to the position
     window.scrollTo({

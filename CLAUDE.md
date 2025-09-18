@@ -380,3 +380,4 @@ This distinction is critical in both:
 - Server API schemas (`server/app/schemas/rss_schemas.py` and `subscription_schemas.py`)
 - Frontend types (`apps/web/lib/api/hooks/feeds.ts`)
 - Shared types (`packages/shared/src/types/`)
+- Use bun over npm or pnpm

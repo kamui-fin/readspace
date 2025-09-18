@@ -13,6 +13,3 @@ from .rss_models import (
     UserArticleState,  # noqa: F401
 )
 from .user_models import AuthUser, Profile  # noqa: F401
-
-# If you have other model files, import their models here as well
-# Example: from .another_model_file import AnotherModel

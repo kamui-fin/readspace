@@ -332,9 +332,7 @@ class TestArticleManagementService:
             result = await self.service.get_unread_counts_by_folder()
 
             assert result == expected_counts
-            mock_get_unread_counts.assert_called_once_with(
-                db=self.db, user_id=self.user_id
-            )
+            mock_get_unread_counts.assert_called_once_with(db=self.db, user_id=self.user_id)
 
     @pytest.mark.asyncio
     async def test_get_total_unread_count(self):

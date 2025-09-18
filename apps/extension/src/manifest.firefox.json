@@ -9,16 +9,8 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": [
-    "activeTab",
-    "storage",
-    "scripting",
-    "notifications"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
+  "permissions": ["activeTab", "storage", "scripting", "notifications"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "action": {
     "default_popup": "index.html",
     "default_title": "Save to Readspace"
@@ -30,13 +22,8 @@
   },
   "content_scripts": [
     {
-      "matches": [
-        "http://*/*",
-        "https://*/*"
-      ],
-      "js": [
-        "src/content.ts"
-      ]
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content.ts"]
     }
   ],
   "commands": {
@@ -57,12 +44,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": [
-        "src/assets/readspace.svg"
-      ],
-      "matches": [
-        "*://*/*"
-      ]
+      "resources": ["src/assets/readspace.svg"],
+      "matches": ["*://*/*"]
     }
   ],
   "browser_specific_settings": {
@@ -71,4 +54,4 @@
       "strict_min_version": "109.0"
     }
   }
-} 
+}

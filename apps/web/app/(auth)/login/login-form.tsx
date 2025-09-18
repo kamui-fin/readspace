@@ -18,7 +18,7 @@ import { useRouter } from "next/navigation"
 import * as React from "react"
 import z from "zod"
 import { toFormikValidationSchema } from "zod-formik-adapter"
-import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { useIsCloudProd } from "@/hooks/useIsCloudProd"
 
 const signInSchema = z.object({
     email: z.string().email("Please enter a valid email address"),

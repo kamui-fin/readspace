@@ -259,7 +259,7 @@ export default function ImportOPMLPageClient() {
                                 <div className="min-w-0 flex-1">
                                     <CardTitle className="text-base sm:text-lg flex flex-col sm:flex-row sm:items-center gap-2">
                                         <span>Import in Progress</span>
-                                        {activeImport.current_status && (
+                                        {activeImport?.current_status && (
                                             <span className="text-sm font-normal text-muted-foreground capitalize">
                                                 (
                                                 {activeImport.current_status.replace(
@@ -274,11 +274,11 @@ export default function ImportOPMLPageClient() {
                                         <span className="flex items-center gap-2">
                                             <FileText className="h-4 w-4" />
                                             <span className="truncate">
-                                                {activeImport.filename}
+                                                {activeImport?.filename}
                                             </span>
                                         </span>
                                         <span className="text-xs sm:text-sm">
-                                            {activeImport.estimated_feeds} feeds
+                                            {activeImport?.estimated_feeds} feeds
                                         </span>
                                     </CardDescription>
                                 </div>
@@ -286,9 +286,9 @@ export default function ImportOPMLPageClient() {
                             <div className="text-left sm:text-right">
                                 <div className="text-xs sm:text-sm text-muted-foreground">
                                     Started:{" "}
-                                    {new Date(
+                                    {activeImport?.created_at ? new Date(
                                         activeImport.created_at
-                                    ).toLocaleString()}
+                                    ).toLocaleString() : 'Unknown'}
                                 </div>
                             </div>
                         </div>
@@ -299,7 +299,7 @@ export default function ImportOPMLPageClient() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    router.push(
+                                    activeImport?.task_id && router.push(
                                         `/import-opml/status/${activeImport.task_id}`
                                     )
                                 }
@@ -312,7 +312,7 @@ export default function ImportOPMLPageClient() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    handleCancelImport(activeImport.task_id)
+                                    activeImport?.task_id && handleCancelImport(activeImport.task_id)
                                 }
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50 sm:w-auto"
                             >
@@ -332,7 +332,10 @@ export default function ImportOPMLPageClient() {
             setIsDragging(false)
 
             if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleFileUpload(e.dataTransfer.files[0])
+                const file = e.dataTransfer.files[0]
+                if (file) {
+                    handleFileUpload(file)
+                }
             }
         },
         [handleFileUpload]
@@ -350,7 +353,10 @@ export default function ImportOPMLPageClient() {
 
     const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
-            handleFileUpload(e.target.files[0])
+            const file = e.target.files[0]
+            if (file) {
+                handleFileUpload(file)
+            }
         }
     }
 

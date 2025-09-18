@@ -76,10 +76,7 @@ class TestArticleQueryBuilder:
 
         # Should join with ArticleContent for published_at
         query_str = str(query)
-        assert (
-            "article_content" in query_str.lower()
-            or "articlecontent" in query_str.lower()
-        )
+        assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
 
     def test_build_feed_article_query_with_search(self):
         """Test building feed article query with search query."""
@@ -89,10 +86,7 @@ class TestArticleQueryBuilder:
 
         # Should join with ArticleContent for search
         query_str = str(query)
-        assert (
-            "article_content" in query_str.lower()
-            or "articlecontent" in query_str.lower()
-        )
+        assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
 
     def test_build_clipped_article_query_basic(self):
         """Test building basic clipped article query."""
@@ -274,9 +268,7 @@ class TestArticleQueryBuilder:
         feed_query = self.builder.build_feed_article_query(self.user_id, {})
         clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
 
-        union_query = self.builder.build_union_query(
-            feed_query, clipped_query, skip=10, limit=20
-        )
+        union_query = self.builder.build_union_query(feed_query, clipped_query, skip=10, limit=20)
 
         assert isinstance(union_query, Select)
         # Should contain limit and offset
@@ -288,9 +280,7 @@ class TestArticleQueryBuilder:
         feed_query = self.builder.build_feed_article_query(self.user_id, {})
         clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
 
-        union_query = self.builder.build_union_query(
-            feed_query, clipped_query, sort_order="asc"
-        )
+        union_query = self.builder.build_union_query(feed_query, clipped_query, sort_order="asc")
 
         assert isinstance(union_query, Select)
         # Should contain ascending order

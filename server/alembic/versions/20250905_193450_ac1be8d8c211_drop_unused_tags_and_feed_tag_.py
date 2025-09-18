@@ -33,9 +33,7 @@ def downgrade() -> None:
     # Recreate tags table
     op.create_table(
         "tags",
-        sa.Column(
-            "id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False
-        ),
+        sa.Column("id", sa.UUID(), server_default=sa.text("gen_random_uuid()"), nullable=False),
         sa.Column("name", sa.String(length=100), nullable=False),
         sa.Column("user_id", sa.UUID(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=True),

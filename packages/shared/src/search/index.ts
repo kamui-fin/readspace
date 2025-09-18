@@ -1,1 +1,1 @@
-export * from "./fuzzy-search"
+export * from "./fuzzy-search";

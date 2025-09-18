@@ -1,7 +1,14 @@
 // Content script for Readspace extension
 
-if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
-  ;(globalThis as any).readspaceContentScriptHasRun = true
+// Extend globalThis with our extension property
+interface ExtendedGlobalThis {
+  readspaceContentScriptHasRun?: boolean
+}
+
+const extendedGlobal = globalThis as ExtendedGlobalThis
+
+if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
+  extendedGlobal.readspaceContentScriptHasRun = true
 
   console.log('Readspace content script loaded')
 
@@ -14,12 +21,12 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       case 'extractContent':
         extractArticleContent()
           .then(sendResponse)
-          .catch(error => sendResponse({ error: error.message }))
+          .catch((error) => sendResponse({ error: error.message }))
         return true // Keep message channel open for async response
       case 'discoverFeeds':
         discoverRSSFeeds()
           .then(sendResponse)
-          .catch(error => sendResponse({ error: error.message }))
+          .catch((error) => sendResponse({ error: error.message }))
         return true // Keep message channel open for async response
     }
   })
@@ -29,7 +36,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
    */
   async function extractPageMetadata() {
     const feeds = await discoverRSSFeeds()
-    
+
     const metadata = {
       title: getTitle(),
       description: getDescription(),
@@ -148,7 +155,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
     // Try to find the largest image in the article
     const images = Array.from(document.querySelectorAll('img'))
     const articleImages = images
-      .filter(img => {
+      .filter((img) => {
         const src = img.src
         const alt = img.alt || ''
         const width =
@@ -215,36 +222,42 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
   /**
    * Validate if a URL is a valid RSS/Atom feed using HEAD request
    */
-  async function validateFeed(url: string): Promise<{ isValid: boolean; error?: string }> {
+  async function validateFeed(
+    url: string
+  ): Promise<{ isValid: boolean; error?: string }> {
     try {
       const response = await fetch(url, {
         method: 'HEAD',
         signal: AbortSignal.timeout(5000),
         headers: {
-          'User-Agent': 'Readspace Extension Feed Validator'
-        }
+          'User-Agent': 'Readspace Extension Feed Validator',
+        },
       })
 
       if (!response.ok) {
         return { isValid: false, error: `HTTP ${response.status}` }
       }
 
-      const contentType = response.headers.get('content-type')?.toLowerCase() || ''
-      
+      const contentType =
+        response.headers.get('content-type')?.toLowerCase() || ''
+
       // Check if content type indicates a feed
-      const isFeed = contentType.includes('xml') || 
-                    contentType.includes('rss') || 
-                    contentType.includes('atom') || 
-                    contentType.includes('json') ||
-                    contentType.includes('application/rss') ||
-                    contentType.includes('application/atom')
+      const isFeed =
+        contentType.includes('xml') ||
+        contentType.includes('rss') ||
+        contentType.includes('atom') ||
+        contentType.includes('json') ||
+        contentType.includes('application/rss') ||
+        contentType.includes('application/atom')
 
-      return { isValid: isFeed, error: isFeed ? undefined : 'Invalid content type' }
-
+      return {
+        isValid: isFeed,
+        error: isFeed ? undefined : 'Invalid content type',
+      }
     } catch (error) {
-      return { 
-        isValid: false, 
-        error: error instanceof Error ? error.message : 'Validation failed' 
+      return {
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Validation failed',
       }
     }
   }
@@ -259,39 +272,48 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
     console.log('=== Starting RSS Feed Discovery ===')
 
     // Phase 1: Enhanced link tag detection
-    const feedLinks = document.querySelectorAll([
-      'link[type="application/rss+xml"]',
-      'link[type="application/atom+xml"]', 
-      'link[type="application/json"]',
-      'link[type="application/feed+json"]',
-      'link[rel="alternate"][type*="xml"]',
-      'link[rel="alternate"][type*="rss"]',
-      'link[rel="alternate"][type*="atom"]',
-      'link[href*="feed"]',
-      'link[href*="rss"]',
-      'link[href*="atom"]'
-    ].join(', '))
+    const feedLinks = document.querySelectorAll(
+      [
+        'link[type="application/rss+xml"]',
+        'link[type="application/atom+xml"]',
+        'link[type="application/json"]',
+        'link[type="application/feed+json"]',
+        'link[rel="alternate"][type*="xml"]',
+        'link[rel="alternate"][type*="rss"]',
+        'link[rel="alternate"][type*="atom"]',
+        'link[href*="feed"]',
+        'link[href*="rss"]',
+        'link[href*="atom"]',
+      ].join(', ')
+    )
 
-    console.log('Feed discovery: found', feedLinks.length, 'potential feed links')
+    console.log(
+      'Feed discovery: found',
+      feedLinks.length,
+      'potential feed links'
+    )
 
     // Process link tags first
     for (const link of feedLinks) {
       const href = link.getAttribute('href')
       const title = link.getAttribute('title')
       const type = link.getAttribute('type')
-      
+
       if (href) {
         const absoluteUrl = makeAbsoluteUrl(href)
         if (!discoveredUrls.has(absoluteUrl)) {
           discoveredUrls.add(absoluteUrl)
-          
+
           console.log('Validating link tag feed:', absoluteUrl)
           const validation = await validateFeed(absoluteUrl)
-          
+
           if (validation.isValid) {
-            const feedType = type?.includes('atom') ? 'atom' : 
-                           type?.includes('json') ? 'json' : 'rss'
-            
+            const feedType = type?.includes('atom')
+              ? 'atom'
+              : type?.includes('json')
+                ? 'json'
+                : 'rss'
+
             feeds.push({
               url: absoluteUrl,
               title: title || undefined,
@@ -299,7 +321,11 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
             })
             console.log('✓ Valid feed found via link tag:', absoluteUrl)
           } else {
-            console.log('✗ Invalid feed from link tag:', absoluteUrl, validation.error)
+            console.log(
+              '✗ Invalid feed from link tag:',
+              absoluteUrl,
+              validation.error
+            )
           }
         }
       }
@@ -308,10 +334,10 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
     // Phase 2: Heuristic URL pattern discovery (only if we found few feeds)
     if (feeds.length < 3) {
       console.log('Running heuristic discovery for additional feeds...')
-      
+
       const baseUrl = window.location.origin
       const currentPath = window.location.pathname
-      
+
       // Common feed patterns to try
       const feedPatterns = ['/feed', '/feed/', '/rss', '/rss.xml', '/atom.xml']
 
@@ -325,10 +351,10 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
         const testUrl = baseUrl + pattern
         if (!discoveredUrls.has(testUrl)) {
           discoveredUrls.add(testUrl)
-          
+
           console.log('Testing heuristic pattern:', testUrl)
           const validation = await validateFeed(testUrl)
-          
+
           if (validation.isValid) {
             feeds.push({
               url: testUrl,
@@ -344,14 +370,16 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
     // Phase 3: Content-based feed link discovery (limited)
     if (feeds.length < 2) {
       console.log('Scanning page content for feed links...')
-      
-      const contentFeedLinks = document.querySelectorAll([
-        'a[href*="/feed"]',
-        'a[href*="/rss"]', 
-        'a[href*="/atom"]',
-        '.rss-link',
-        '.feed-link'
-      ].join(', '))
+
+      const contentFeedLinks = document.querySelectorAll(
+        [
+          'a[href*="/feed"]',
+          'a[href*="/rss"]',
+          'a[href*="/atom"]',
+          '.rss-link',
+          '.feed-link',
+        ].join(', ')
+      )
 
       for (const link of Array.from(contentFeedLinks).slice(0, 3)) {
         const href = link.getAttribute('href')
@@ -359,10 +387,10 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
           const absoluteUrl = makeAbsoluteUrl(href)
           if (!discoveredUrls.has(absoluteUrl)) {
             discoveredUrls.add(absoluteUrl)
-            
+
             console.log('Validating content feed link:', absoluteUrl)
             const validation = await validateFeed(absoluteUrl)
-            
+
             if (validation.isValid) {
               feeds.push({
                 url: absoluteUrl,
@@ -377,8 +405,10 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
     }
 
     console.log('=== Feed Discovery Complete ===')
-    console.log(`Found ${feeds.length} valid feeds out of ${discoveredUrls.size} tested URLs`)
-    
+    console.log(
+      `Found ${feeds.length} valid feeds out of ${discoveredUrls.size} tested URLs`
+    )
+
     return feeds
   }
 
@@ -410,7 +440,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       console.log('Content length:', result.content?.length || 0)
       console.log(
         'Content preview (first 500 chars):',
-        result.content?.substring(0, 500),
+        result.content?.substring(0, 500)
       )
       console.log('Title:', result.title)
       console.log('Description:', result.description)
@@ -433,7 +463,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       console.log('Final extracted data being returned:', extractedData)
       console.log(
         'Content will be sent to backend - length:',
-        extractedData.content?.length || 0,
+        extractedData.content?.length || 0
       )
       return extractedData
     } catch (error) {
@@ -466,7 +496,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       if (element) {
         content = element.innerHTML?.trim() || '' // Get HTML, not just text
         console.log(
-          `Found content using selector '${selector}', length: ${content.length}`,
+          `Found content using selector '${selector}', length: ${content.length}`
         )
         if (content.length > 200) break
       }
@@ -474,17 +504,19 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
 
     // If still no content, try to get all paragraphs as HTML
     if (!content) {
-      console.log('No content found with selectors, trying paragraph extraction...')
+      console.log(
+        'No content found with selectors, trying paragraph extraction...'
+      )
       const paragraphs = Array.from(document.querySelectorAll('p'))
-        .filter(p => {
+        .filter((p) => {
           const text = p.textContent?.trim()
           return text && text.length > 50
         })
         .slice(0, 10) // Limit to first 10 paragraphs
 
-      content = paragraphs.map(p => p.outerHTML).join('\n')
+      content = paragraphs.map((p) => p.outerHTML).join('\n')
       console.log(
-        `Extracted ${paragraphs.length} paragraphs, total HTML length: ${content.length}`,
+        `Extracted ${paragraphs.length} paragraphs, total HTML length: ${content.length}`
       )
     }
 
@@ -495,9 +527,7 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
       author: getAuthor(),
       published_at: getPublishedDate(),
       image_url: getImageUrl(),
-      estimated_read_time: estimateReadingTime(
-        content.replace(/<[^>]*>/g, ''),
-      ), // Strip HTML for word count
+      estimated_read_time: estimateReadingTime(content.replace(/<[^>]*>/g, '')), // Strip HTML for word count
     }
 
     console.log('Basic extraction complete:', {
@@ -511,27 +541,28 @@ if (typeof (globalThis as any).readspaceContentScriptHasRun === 'undefined') {
   function estimateReadingTime(text: string): number {
     const cleanText = text.trim()
     if (!cleanText) return 1
-    
+
     // Check if text contains significant CJK characters
-    const cjkPattern = /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]/g
+    const cjkPattern =
+      /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]/g
     const nonWhitespace = cleanText.replace(/\s+/g, '')
-    
+
     if (nonWhitespace.length > 0) {
       const cjkMatches = cleanText.match(cjkPattern)
       const cjkChars = cjkMatches ? cjkMatches.length : 0
-      
+
       // Consider text CJK if more than 20% of characters are CJK
-      if ((cjkChars / nonWhitespace.length) > 0.2) {
+      if (cjkChars / nonWhitespace.length > 0.2) {
         // For CJK text, count characters (excluding whitespace)
         const charactersPerMinute = 300
         const charCount = nonWhitespace.length
         return Math.max(1, Math.round(charCount / charactersPerMinute))
       }
     }
-    
+
     // For non-CJK text, count words
     const wordsPerMinute = 200
     const wordCount = cleanText.split(/\s+/).length
     return Math.max(1, Math.round(wordCount / wordsPerMinute))
   }
-} 
+}

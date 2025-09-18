@@ -71,7 +71,7 @@ export function insertCharCountAttributes(
     let charCount = 0
     let lastElement: Element | null = null
 
-    // Page mapping based on character count (page = char / 2300)
+    // Page mapping based on character count (page = char // 2300)
     const PAGE_SIZE = 2300
     const pageMap: Record<number, string> = {}
     let currentPageNum = Math.floor(prevChapterCharCount / PAGE_SIZE) + 1
@@ -414,7 +414,7 @@ export function findChapterByCharLocation(
     let cumulativeCount = 0
 
     for (let i = 0; i < chapterCharCounts.length; i++) {
-        const nextCumulativeCount = cumulativeCount + chapterCharCounts[i]
+        const nextCumulativeCount = cumulativeCount + (chapterCharCounts[i] ?? 0)
 
         // If the location is within this chapter's range
         if (

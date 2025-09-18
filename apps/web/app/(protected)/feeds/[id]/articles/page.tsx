@@ -1,5 +1,5 @@
 import { getQueryClient } from "@/lib/get-query-client"
-import { ArticlesSuspenseWrapper } from "@/components/articles/articles-suspense-wrapper"
+import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
 import { ApiClient, ArticlesPaginatedResponse, Feed } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"

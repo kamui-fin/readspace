@@ -106,12 +106,8 @@ class TestSubscriptionService:
             mock_create.return_value.folder_id = sample_subscription_response.folder_id
             mock_create.return_value.is_favorite = False
             mock_create.return_value.custom_title = None
-            mock_create.return_value.created_at = (
-                sample_subscription_response.created_at
-            )
-            mock_create.return_value.updated_at = (
-                sample_subscription_response.updated_at
-            )
+            mock_create.return_value.created_at = sample_subscription_response.created_at
+            mock_create.return_value.updated_at = sample_subscription_response.updated_at
             mock_create.return_value.feed = sample_subscription_response.feed
             mock_create.return_value.folder = sample_subscription_response.folder
 
@@ -125,9 +121,7 @@ class TestSubscriptionService:
             mock_create.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_create_subscription_duplicate_raises_error(
-        self, subscription_service
-    ):
+    async def test_create_subscription_duplicate_raises_error(self, subscription_service):
         """Should raise error when trying to create duplicate subscription."""
         from sqlalchemy.exc import IntegrityError
 
@@ -137,14 +131,10 @@ class TestSubscriptionService:
             mock_create.side_effect = IntegrityError("", "", "")
 
             with pytest.raises(ValueError, match="already exists"):
-                await subscription_service.create_subscription(
-                    url="https://example.com/feed.xml", folder_id=folder_id
-                )
+                await subscription_service.create_subscription(url="https://example.com/feed.xml", folder_id=folder_id)
 
     @pytest.mark.asyncio
-    async def test_get_subscription_by_id_found(
-        self, subscription_service, sample_subscription_response
-    ):
+    async def test_get_subscription_by_id_found(self, subscription_service, sample_subscription_response):
         """Should return subscription when found."""
         subscription_id = sample_subscription_response.id
 
@@ -163,9 +153,7 @@ class TestSubscriptionService:
 
             mock_get.return_value = mock_sub
 
-            result = await subscription_service.get_subscription_by_id(
-                subscription_id=subscription_id
-            )
+            result = await subscription_service.get_subscription_by_id(subscription_id=subscription_id)
 
             assert result is not None
             assert result.id == subscription_id
@@ -183,9 +171,7 @@ class TestSubscriptionService:
         with patch("app.crud.crud_subscription.get_subscription_by_id") as mock_get:
             mock_get.return_value = None
 
-            result = await subscription_service.get_subscription_by_id(
-                subscription_id=subscription_id
-            )
+            result = await subscription_service.get_subscription_by_id(subscription_id=subscription_id)
 
             assert result is None
 
@@ -225,9 +211,7 @@ class TestSubscriptionService:
         with patch("app.crud.crud_subscription.delete_subscription") as mock_delete:
             mock_delete.return_value = Mock()  # Non-None indicates success
 
-            result = await subscription_service.delete_subscription(
-                subscription_id=subscription_id
-            )
+            result = await subscription_service.delete_subscription(subscription_id=subscription_id)
 
             assert result is True
             mock_delete.assert_called_once_with(
@@ -244,16 +228,12 @@ class TestSubscriptionService:
         with patch("app.crud.crud_subscription.delete_subscription") as mock_delete:
             mock_delete.return_value = None
 
-            result = await subscription_service.delete_subscription(
-                subscription_id=subscription_id
-            )
+            result = await subscription_service.delete_subscription(subscription_id=subscription_id)
 
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_get_legacy_feed_response_maps_correctly(
-        self, subscription_service, sample_subscription_response
-    ):
+    async def test_get_legacy_feed_response_maps_correctly(self, subscription_service, sample_subscription_response):
         """Should correctly map subscription to legacy feed format."""
         subscription_id = sample_subscription_response.id
 
@@ -279,23 +259,15 @@ class TestSubscriptionService:
             mock_feed.ttl = sample_subscription_response.feed.ttl
             mock_feed.skip_hours = sample_subscription_response.feed.skip_hours
             mock_feed.skip_days = sample_subscription_response.feed.skip_days
-            mock_feed.last_fetched_at = (
-                sample_subscription_response.feed.last_fetched_at
-            )
-            mock_feed.last_modified_header = (
-                sample_subscription_response.feed.last_modified_header
-            )
+            mock_feed.last_fetched_at = sample_subscription_response.feed.last_fetched_at
+            mock_feed.last_modified_header = sample_subscription_response.feed.last_modified_header
             mock_feed.etag_header = sample_subscription_response.feed.etag_header
-            mock_feed.last_article_published_at = (
-                sample_subscription_response.feed.last_article_published_at
-            )
+            mock_feed.last_article_published_at = sample_subscription_response.feed.last_article_published_at
 
             mock_sub.feed = mock_feed
             mock_get.return_value = mock_sub
 
-            result = await subscription_service.get_legacy_feed_response(
-                subscription_id=subscription_id
-            )
+            result = await subscription_service.get_legacy_feed_response(subscription_id=subscription_id)
 
             assert result is not None
             assert result.id == subscription_id  # Uses subscription ID as "feed" ID

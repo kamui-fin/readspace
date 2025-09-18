@@ -3,7 +3,6 @@ import { browser, getBrowserName, storage } from '@/lib/browser'
 import { ApiClient, trimSaveArticleRequest } from '@readspace/shared'
 import type { Runtime } from 'webextension-polyfill'
 
-
 // Type for content extraction result
 interface ContentExtractionResult {
   content?: string
@@ -14,11 +13,33 @@ interface ContentExtractionResult {
   image_url?: string
 }
 
+// Type for extension storage structure
+interface ExtensionStorageState {
+  state: {
+    settings: {
+      access_token?: string
+      readspace_url?: string
+    }
+  }
+}
+
+// Type for page metadata response
+interface PageMetadataResponse {
+  feeds?: Array<{ url: string; title?: string; type: string }>
+  title?: string
+  description?: string
+  author?: string
+  published_at?: string
+  image_url?: string
+  favicon?: string
+  canonical_url?: string
+}
+
 // Configure API client for extension
 async function getExtensionAuthToken(): Promise<string | null> {
   try {
     const settings = await storage.get('readspace-extension')
-    const settingsData = (settings as any)?.state?.settings
+    const settingsData = (settings as ExtensionStorageState)?.state?.settings
     return settingsData?.access_token || null
   } catch (error) {
     console.warn('Failed to get auth token from extension storage:', error)
@@ -29,11 +50,11 @@ async function getExtensionAuthToken(): Promise<string | null> {
 async function getExtensionBaseUrl(): Promise<string> {
   try {
     const settings = await storage.get('readspace-extension')
-    const settingsData = (settings as any)?.state?.settings
-    return settingsData?.readspace_url || 'https://api.readspace.ai'
+    const settingsData = (settings as ExtensionStorageState)?.state?.settings
+    return settingsData?.readspace_url || 'https:///api.readspace.ai'
   } catch (error) {
     console.warn('Failed to get base URL from extension storage:', error)
-    return 'https://api.readspace.ai'
+    return 'https:///api.readspace.ai'
   }
 }
 
@@ -42,22 +63,21 @@ async function initializeApiClient() {
   const baseUrl = await getExtensionBaseUrl()
   ApiClient.configure({
     baseUrl,
-    getAuthToken: getExtensionAuthToken
+    getAuthToken: getExtensionAuthToken,
   })
 }
 
 console.log(`Readspace background script loaded on ${getBrowserName()}`)
 
 // Initialize API client when background script loads
-initializeApiClient().catch(error => {
+initializeApiClient().catch((error) => {
   console.error('Failed to initialize API client:', error)
 })
 
 // Check if URL is supported (http/https)
 function isSupportedUrl(url: string): boolean {
-  return url.startsWith('http://') || url.startsWith('https://')
+  return url.startsWith('http:///') || url.startsWith('https:///')
 }
-
 
 // Update badge with RSS feed count
 async function updateFeedBadge(tabId: number, feedCount: number) {
@@ -65,29 +85,29 @@ async function updateFeedBadge(tabId: number, feedCount: number) {
     if (feedCount > 0) {
       // Try MV3 action API first (Chrome)
       try {
-        await browser.action.setBadgeText({ 
-          text: feedCount.toString(), 
-          tabId 
+        await browser.action.setBadgeText({
+          text: feedCount.toString(),
+          tabId,
         })
-        await browser.action.setBadgeBackgroundColor({ 
+        await browser.action.setBadgeBackgroundColor({
           color: '#FF6B35', // Orange color for RSS
-          tabId 
+          tabId,
         })
       } catch {
         // Fallback to MV2 browserAction API (Firefox)
-        await browser.browserAction.setBadgeText({ 
-          text: feedCount.toString(), 
-          tabId 
+        await browser.browserAction.setBadgeText({
+          text: feedCount.toString(),
+          tabId,
         })
-        await browser.browserAction.setBadgeBackgroundColor({ 
+        await browser.browserAction.setBadgeBackgroundColor({
           color: '#FF6B35', // Orange color for RSS
-          tabId 
+          tabId,
         })
         // Firefox supports text color
         try {
-          await browser.browserAction.setBadgeTextColor({ 
+          await browser.browserAction.setBadgeTextColor({
             color: '#FFFFFF',
-            tabId 
+            tabId,
           })
         } catch {
           // Some versions might not support this
@@ -114,17 +134,23 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       setTimeout(async () => {
         try {
           // Get full metadata which includes feeds
-          const metadata = await browser.tabs.sendMessage(tabId, { 
-            action: 'extractMetadata' 
-          }) as any
-          
+          const metadata = (await browser.tabs.sendMessage(tabId, {
+            action: 'extractMetadata',
+          })) as PageMetadataResponse
+
           const feedCount = metadata?.feeds?.length || 0
-          console.log(`Found ${feedCount} feeds on tab ${tabId}:`, metadata?.feeds)
-          
+          console.log(
+            `Found ${feedCount} feeds on tab ${tabId}:`,
+            metadata?.feeds
+          )
+
           await updateFeedBadge(tabId, feedCount)
         } catch (error) {
           // Content script might not be available yet, ignore error
-          console.log('Could not check for feeds, content script not available:', error)
+          console.log(
+            'Could not check for feeds, content script not available:',
+            error
+          )
           await updateFeedBadge(tabId, 0)
         }
       }, 2000) // Increased timeout to ensure content script is ready
@@ -159,70 +185,97 @@ browser.runtime.onInstalled.addListener(() => {
 
 // Handle keyboard shortcuts
 browser.commands.onCommand.addListener((command: string) => {
-  browser.tabs.query({ active: true, currentWindow: true }).then((tabs: browser.Tabs.Tab[]) => {
-    const tab = tabs[0]
-    if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
-      console.log('Keyboard shortcut used on unsupported page:', tab?.url)
-      browser.notifications.create('unsupported-shortcut', {
-        type: 'basic',
-        iconUrl: 'icons/icon-48.png',
-        title: 'Readspace',
-        message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).'
-      })
-      return
-    }
+  browser.tabs
+    .query({ active: true, currentWindow: true })
+    .then((tabs: browser.Tabs.Tab[]) => {
+      const tab = tabs[0]
+      if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
+        console.log('Keyboard shortcut used on unsupported page:', tab?.url)
+        browser.notifications.create('unsupported-shortcut', {
+          type: 'basic',
+          iconUrl: 'icons/icon-48.png',
+          title: 'Readspace',
+          message:
+            'This page type is not supported. Readspace only works on websites (http:/// and https:/// pages).',
+        })
+        return
+      }
 
-    switch (command) {
-      case 'save-current-page':
-        handleSaveToReadspace(tab.url || '', tab)
-        break
-      case 'open-readspace':
-        handleOpenReadspace()
-        break
-    }
-  })
+      switch (command) {
+        case 'save-current-page':
+          handleSaveToReadspace(tab.url || '', tab)
+          break
+        case 'open-readspace':
+          handleOpenReadspace()
+          break
+      }
+    })
 })
 
 // Handle messages from content script and popup
-// @ts-ignore
-browser.runtime.onMessage.addListener((request: any, sender: Runtime.MessageSender, sendResponse: (response?: any) => void): boolean | void => {
-  // Handle the async extractContent case
-  if (request.action === 'extractContent') {
-    if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
-      handleExtractContent(sender.tab?.id, request.url)
-        .then(sendResponse)
-        .catch(error => sendResponse({ error: error.message }))
-      return true // Keep message channel open for async response
-    } else {
-      sendResponse({ error: 'Unsupported page type' })
-      return // Synchronous response, don't return anything
-    }
-  }
+// Message request types
+interface MessageRequest {
+  action: string
+  url?: string
+  [key: string]: unknown
+}
 
-  // Handle synchronous cases - these don't need to return anything
-  switch (request.action) {
-    case 'saveArticle':
+browser.runtime.onMessage.addListener(
+  (
+    request: unknown,
+    sender: Runtime.MessageSender,
+    sendResponse: (response?: unknown) => void
+  ) => {
+    const messageRequest = request as MessageRequest
+    // Handle the async extractContent case
+    if (messageRequest.action === 'extractContent') {
       if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
-        handleSaveToReadspace(request.url, sender.tab)
+        handleExtractContent(sender.tab?.id, messageRequest.url)
+          .then(sendResponse)
+          .catch((error) => sendResponse({ error: error.message }))
+        return true // Keep message channel open for async response
       } else {
-        console.log('Save article requested from unsupported page:', sender.tab?.url)
+        sendResponse({ error: 'Unsupported page type' })
+        return true // Still return true even for error responses
       }
-      break
-    case 'discoverFeeds':
-      if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
-        handleDiscoverFeeds(sender.tab)
-      } else {
-        console.log('Feed discovery requested from unsupported page:', sender.tab?.url)
-      }
-      break
+    }
+
+    // Handle synchronous cases
+    switch (messageRequest.action) {
+      case 'saveArticle':
+        if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
+          handleSaveToReadspace(messageRequest.url || sender.tab.url, sender.tab)
+        } else {
+          console.log(
+            'Save article requested from unsupported page:',
+            sender.tab?.url
+          )
+        }
+        break
+      case 'discoverFeeds':
+        if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
+          handleDiscoverFeeds(sender.tab)
+        } else {
+          console.log(
+            'Feed discovery requested from unsupported page:',
+            sender.tab?.url
+          )
+        }
+        break
+    }
+    // Return true for all message types to avoid type issues
+    return true
   }
-  // No return statement for sync cases (implicitly returns undefined)
-})
+)
 
 async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
   try {
-    console.log('handleSaveToReadspace called with:', { url, tabId: tab?.id, tabTitle: tab?.title })
-    
+    console.log('handleSaveToReadspace called with:', {
+      url,
+      tabId: tab?.id,
+      tabTitle: tab?.title,
+    })
+
     // Check if user is authenticated
     const authToken = await getExtensionAuthToken()
     if (!authToken) {
@@ -231,7 +284,7 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
-        message: 'Please sign in to Readspace first'
+        message: 'Please sign in to Readspace first',
       })
       return
     }
@@ -246,10 +299,10 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       title: content?.title,
       description: content?.description,
       author: content?.author,
-      fullContent: content
+      fullContent: content,
     })
-    
-    const requestBody = trimSaveArticleRequest({
+
+    const trimmedData = trimSaveArticleRequest({
       url,
       title: content?.title || tab?.title,
       content: content?.content,
@@ -258,10 +311,20 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
         author: content?.author,
         published_at: content?.published_at,
         image_url: content?.image_url,
-        favicon: tab?.favIconUrl
-      }
+        favicon: tab?.favIconUrl,
+      },
     })
-    
+
+    // Filter out undefined values from metadata for API client
+    const requestBody = {
+      ...trimmedData,
+      metadata: trimmedData.metadata
+        ? Object.fromEntries(
+            Object.entries(trimmedData.metadata).filter(([_, value]) => value !== undefined)
+          ) as Record<string, string>
+        : undefined,
+    }
+
     console.log('Saving to Readspace API with request:', requestBody)
 
     // Save to Readspace API using shared client
@@ -273,7 +336,7 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       type: 'basic',
       iconUrl: 'icons/icon-48.png',
       title: 'Readspace',
-      message: 'Article saved successfully!'
+      message: 'Article saved successfully!',
     })
   } catch (error) {
     console.error('Failed to save article:', error)
@@ -281,25 +344,34 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       type: 'basic',
       iconUrl: 'icons/icon-48.png',
       title: 'Readspace',
-      message: `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`
+      message: `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`,
     })
   }
 }
 
-async function handleExtractContent(tabId?: number, url?: string): Promise<ContentExtractionResult | null> {
+async function handleExtractContent(
+  tabId?: number,
+  url?: string
+): Promise<ContentExtractionResult | null> {
   if (!tabId) {
     console.log('handleExtractContent: no tabId provided')
     return null
   }
 
   try {
-    console.log('handleExtractContent: sending message to content script', { tabId, url })
+    console.log('handleExtractContent: sending message to content script', {
+      tabId,
+      url,
+    })
     // Send message to content script to extract content
-    const content = await browser.tabs.sendMessage(tabId, { 
+    const content = (await browser.tabs.sendMessage(tabId, {
       action: 'extractContent',
-      url 
-    }) as ContentExtractionResult
-    console.log('handleExtractContent: received response from content script:', content)
+      url,
+    })) as ContentExtractionResult
+    console.log(
+      'handleExtractContent: received response from content script:',
+      content
+    )
     return content
   } catch (error) {
     console.error('Failed to extract content:', error)
@@ -311,10 +383,10 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
   if (!tab?.id) return
 
   try {
-    const feeds = await browser.tabs.sendMessage(tab.id, { 
-      action: 'discoverFeeds' 
-    }) as any[]
-    
+    const feeds = (await browser.tabs.sendMessage(tab.id, {
+      action: 'discoverFeeds',
+    })) as Array<{ url: string; title?: string; type: string }>
+
     if (feeds?.length > 0) {
       // TODO: Show feed subscription interface
       console.log('Discovered feeds:', feeds)
@@ -323,7 +395,7 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
-        message: 'No RSS feeds found on this page'
+        message: 'No RSS feeds found on this page',
       })
     }
   } catch (error) {
@@ -335,7 +407,7 @@ async function handleOpenReadspace() {
   try {
     const url = await getExtensionBaseUrl()
     browser.tabs.create({ url })
-  } catch (error) {
-    browser.tabs.create({ url: 'https://api.readspace.ai' })
+  } catch {
+    browser.tabs.create({ url: 'https:///api.readspace.ai' })
   }
-} 
+}

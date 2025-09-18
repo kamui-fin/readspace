@@ -1,12 +1,12 @@
 import { Button } from "@/components/ui/button"
-import { useCurrentUser } from "@/hooks/use-current-user"
-import { ApiClient } from "@readspace/shared"
+import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useOnboardingStore } from "@/stores/onboarding"
+import { ApiClient } from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
-import OnboardingLayout from "../layout"
+import OnboardingLayout from "../Layout"
 import { OnboardingFeedCard } from "../OnboardingFeedCard"
 
 // API response type for search feeds

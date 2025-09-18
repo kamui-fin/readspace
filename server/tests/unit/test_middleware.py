@@ -90,9 +90,7 @@ class TestSetupMiddleware:
         assert all(mw[0] == "http" for mw in self.mock_middlewares)
 
         # Check logger was called
-        mock_logger.info.assert_called_with(
-            "Middleware setup completed", public_paths=[]
-        )
+        mock_logger.info.assert_called_with("Middleware setup completed", public_paths=[])
 
     @patch("app.middleware.logger")
     def test_setup_middleware_with_custom_public_paths(self, mock_logger):
@@ -105,9 +103,7 @@ class TestSetupMiddleware:
         assert len(self.mock_middlewares) == 2
 
         # Check logger was called with custom paths
-        mock_logger.info.assert_called_with(
-            "Middleware setup completed", public_paths=public_paths
-        )
+        mock_logger.info.assert_called_with("Middleware setup completed", public_paths=public_paths)
 
     @pytest.mark.asyncio
     @patch("app.middleware.logger")
@@ -193,9 +189,7 @@ class TestSetupMiddleware:
     @patch("app.middleware.logger")
     @patch("app.middleware.get_optional_user")
     @patch("app.middleware.settings")
-    async def test_auth_middleware_options_request(
-        self, mock_settings, mock_get_user, mock_logger
-    ):
+    async def test_auth_middleware_options_request(self, mock_settings, mock_get_user, mock_logger):
         """Test auth middleware allows OPTIONS requests through."""
         setup_middleware(self.mock_app, public_paths=[])
 
@@ -221,9 +215,7 @@ class TestSetupMiddleware:
     @patch("app.middleware.get_optional_user")
     @patch("app.middleware.settings")
     @pytest.mark.asyncio
-    async def test_auth_middleware_public_path(
-        self, mock_settings, mock_get_user, mock_logger
-    ):
+    async def test_auth_middleware_public_path(self, mock_settings, mock_get_user, mock_logger):
         """Test auth middleware allows public paths through."""
         setup_middleware(self.mock_app, public_paths=["/health", "/docs"])
 
@@ -251,9 +243,7 @@ class TestSetupMiddleware:
     @patch("app.middleware.settings")
     @patch("app.middleware.create_error_response")
     @pytest.mark.asyncio
-    async def test_auth_middleware_no_auth_header(
-        self, mock_create_error, mock_settings, mock_get_user, mock_logger
-    ):
+    async def test_auth_middleware_no_auth_header(self, mock_create_error, mock_settings, mock_get_user, mock_logger):
         """Test auth middleware returns 401 when no auth header present."""
         setup_middleware(self.mock_app, public_paths=[])
 
@@ -277,9 +267,7 @@ class TestSetupMiddleware:
         # Should return error response without calling next
         assert result == mock_error_response
         mock_call_next.assert_not_called()
-        mock_create_error.assert_called_once_with(
-            status.HTTP_401_UNAUTHORIZED, "Authentication required", mock_request
-        )
+        mock_create_error.assert_called_once_with(status.HTTP_401_UNAUTHORIZED, "Authentication required", mock_request)
 
     @patch("app.middleware.logger")
     @patch("app.middleware.get_optional_user")
@@ -312,17 +300,13 @@ class TestSetupMiddleware:
         # Should return error response
         assert result == mock_error_response
         mock_call_next.assert_not_called()
-        mock_create_error.assert_called_once_with(
-            status.HTTP_401_UNAUTHORIZED, "Authentication required", mock_request
-        )
+        mock_create_error.assert_called_once_with(status.HTTP_401_UNAUTHORIZED, "Authentication required", mock_request)
 
     @patch("app.middleware.logger")
     @patch("app.middleware.get_optional_user")
     @patch("app.middleware.settings")
     @pytest.mark.asyncio
-    async def test_auth_middleware_valid_token_with_user(
-        self, mock_settings, mock_get_user, mock_logger
-    ):
+    async def test_auth_middleware_valid_token_with_user(self, mock_settings, mock_get_user, mock_logger):
         """Test auth middleware with valid token and user."""
         setup_middleware(self.mock_app, public_paths=[])
 

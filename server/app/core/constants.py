@@ -50,3 +50,12 @@ ARTICLE_PRIORITIES = ["low", "medium", "high"]
 # Time Deltas
 RECENT_READ_CUTOFF = timedelta(days=30)
 OLD_ARTICLE_CUTOFF = timedelta(days=90)
+
+# Common Error Messages
+ERROR_FEED_NOT_FOUND = "Feed not found"
+ERROR_ARTICLE_NOT_FOUND = "Article not found"
+ERROR_HIGHLIGHT_NOT_FOUND = "Highlight not found"
+ERROR_FOLDER_NOT_FOUND = "Folder not found"
+ERROR_USER_NOT_FOUND = "User profile not found"
+ERROR_BOOK_NOT_FOUND = "Book metadata not found"
+ERROR_INVALID_FOLDER_DATA = "Invalid folder data"

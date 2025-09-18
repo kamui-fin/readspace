@@ -1,6 +1,6 @@
 """Unit tests for last 24 hours articles functionality."""
 
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -24,7 +24,7 @@ class TestLast24HoursArticles:
 
     @pytest.fixture
     def mock_rss_service(self):
-        """Mock RSS service."""
+        """Mock RSS orchestration service."""
         service = AsyncMock()
         service.get_articles.return_value = {
             "items": [],
@@ -36,16 +36,12 @@ class TestLast24HoursArticles:
         return service
 
     @pytest.mark.asyncio
-    async def test_get_todays_articles_last_24_hours(
-        self, mock_db_session, mock_current_user, mock_rss_service
-    ):
+    async def test_get_todays_articles_last_24_hours(self, mock_db_session, mock_current_user, mock_rss_service):
         """Test getting articles from the last 24 hours in UTC."""
-        with patch("app.routers.rss_articles.RssService") as mock_service_class:
+        with patch("app.routers.rss_articles.RssOrchestrationService") as mock_service_class:
             mock_service_class.return_value = mock_rss_service
 
-            result = await get_todays_articles(
-                db=mock_db_session, current_user=mock_current_user, page=1, size=25
-            )
+            result = await get_todays_articles(db=mock_db_session, current_user=mock_current_user, page=1, size=25)
 
             # Verify the service was called
             mock_rss_service.get_articles.assert_called_once()
@@ -68,16 +64,12 @@ class TestLast24HoursArticles:
             assert 23.99 <= time_diff.total_seconds() / 3600 <= 24.01
 
     @pytest.mark.asyncio
-    async def test_get_todays_articles_pagination_params(
-        self, mock_db_session, mock_current_user, mock_rss_service
-    ):
+    async def test_get_todays_articles_pagination_params(self, mock_db_session, mock_current_user, mock_rss_service):
         """Test that pagination parameters are correctly passed through."""
-        with patch("app.routers.rss_articles.RssService") as mock_service_class:
+        with patch("app.routers.rss_articles.RssOrchestrationService") as mock_service_class:
             mock_service_class.return_value = mock_rss_service
 
-            await get_todays_articles(
-                db=mock_db_session, current_user=mock_current_user, page=3, size=50
-            )
+            await get_todays_articles(db=mock_db_session, current_user=mock_current_user, page=3, size=50)
 
             call_args = mock_rss_service.get_articles.call_args[1]
 
@@ -88,15 +80,13 @@ class TestLast24HoursArticles:
     async def test_get_todays_articles_service_instantiation(
         self, mock_db_session, mock_current_user, mock_rss_service
     ):
-        """Test that RssService is correctly instantiated with user_id."""
-        with patch("app.routers.rss_articles.RssService") as mock_service_class:
+        """Test that RssOrchestrationService is correctly instantiated with user_id."""
+        with patch("app.routers.rss_articles.RssOrchestrationService") as mock_service_class:
             mock_service_class.return_value = mock_rss_service
 
-            await get_todays_articles(
-                db=mock_db_session, current_user=mock_current_user, page=1, size=25
-            )
+            await get_todays_articles(db=mock_db_session, current_user=mock_current_user, page=1, size=25)
 
-            # Verify RssService was instantiated with correct parameters
+            # Verify RssOrchestrationService was instantiated with correct parameters
             mock_service_class.assert_called_once()
             call_args = mock_service_class.call_args
 
@@ -104,30 +94,18 @@ class TestLast24HoursArticles:
             assert str(call_args[1]["user_id"]) == mock_current_user.sub
 
     @pytest.mark.asyncio
-    async def test_get_todays_articles_default_pagination(
-        self, mock_db_session, mock_current_user, mock_rss_service
-    ):
+    async def test_get_todays_articles_default_pagination(self, mock_db_session, mock_current_user, mock_rss_service):
         """Test that default pagination values are used when not specified."""
-        with patch("app.routers.rss_articles.RssService") as mock_service_class:
+        with patch("app.routers.rss_articles.RssOrchestrationService") as mock_service_class:
             mock_service_class.return_value = mock_rss_service
 
-            await get_todays_articles(
-                db=mock_db_session, current_user=mock_current_user
-            )
+            await get_todays_articles(db=mock_db_session, current_user=mock_current_user)
 
             call_args = mock_rss_service.get_articles.call_args[1]
 
             # Should use default values (Query objects have default values)
-            page_value = (
-                call_args["page"].default
-                if hasattr(call_args["page"], "default")
-                else call_args["page"]
-            )
-            size_value = (
-                call_args["size"].default
-                if hasattr(call_args["size"], "default")
-                else call_args["size"]
-            )
+            page_value = call_args["page"].default if hasattr(call_args["page"], "default") else call_args["page"]
+            size_value = call_args["size"].default if hasattr(call_args["size"], "default") else call_args["size"]
             assert page_value == 1
             assert size_value == 25
 
@@ -137,7 +115,7 @@ class TestDateCalculations:
 
     def test_24_hour_time_range(self):
         """Test that the time range is exactly 24 hours."""
-        now = datetime.utcnow()
+        now = datetime.now(UTC)
         twenty_four_hours_ago = now - timedelta(hours=24)
 
         time_diff = now - twenty_four_hours_ago
@@ -145,12 +123,9 @@ class TestDateCalculations:
 
     def test_utc_datetime_creation(self):
         """Test that UTC datetime objects are created correctly."""
-        now = datetime.utcnow()
-        assert now.tzinfo is None  # datetime.utcnow() returns naive datetime
+        now = datetime.now(UTC)
+        assert now.tzinfo is not None  # datetime.now(UTC) returns timezone-aware datetime
+        assert now.tzinfo == UTC
 
-        # Test that we can create timezone-aware datetime if needed
-        import zoneinfo
-
-        now_tz_aware = now.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
-        assert now_tz_aware.tzinfo is not None
-        assert now_tz_aware.tzinfo.key == "UTC"
+        # Test that the datetime is properly timezone-aware
+        assert now.tzname() == "UTC"

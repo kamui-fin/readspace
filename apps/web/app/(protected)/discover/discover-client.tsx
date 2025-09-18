@@ -12,7 +12,7 @@ import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { Button } from "@/components/ui/button"
-import { CategoryBadge } from "@/components/ui/category-badge"
+import { CategoryBadge } from "@/components/ui/CategoryBadge"
 import { Input } from "@/components/ui/input"
 import {
     Select,
@@ -22,7 +22,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/use-mobile"
+import { useIsMobile } from "@/hooks/useMobile"
 import {
     ApiClient,
     feedDiscoveryResultToFeed,
@@ -121,7 +121,7 @@ export default function DiscoverPageClient({
     )
 
     // Shorter category names for mobile
-    // Helper function to detect rsshub:// URLs
+    // Helper function to detect rsshub:/ URLs
 
     const getMobileCategoryName = (category: string) => {
         const mobileNames: Record<string, string> = {

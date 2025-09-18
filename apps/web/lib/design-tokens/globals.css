@@ -2,7 +2,6 @@
 
 @custom-variant dark (&:is(.dark *));
 
-
 @plugin "@tailwindcss/typography";
 
 @utility perspective {

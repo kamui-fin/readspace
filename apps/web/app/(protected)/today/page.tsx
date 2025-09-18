@@ -1,4 +1,4 @@
-import { ArticlesSuspenseWrapper } from "@/components/articles/articles-suspense-wrapper"
+import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
 import { getQueryClient } from "@/lib/get-query-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 

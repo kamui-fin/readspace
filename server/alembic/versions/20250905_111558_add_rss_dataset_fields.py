@@ -31,23 +31,13 @@ def upgrade() -> None:
     feed_category_enum.create(op.get_bind())
 
     # Add new columns to feeds table for RSS dataset integration
-    op.add_column(
-        "feeds", sa.Column("tags", postgresql.ARRAY(sa.String()), nullable=True)
-    )
-    op.add_column(
-        "feeds", sa.Column("top_level_category", feed_category_enum, nullable=True)
-    )
-    op.add_column(
-        "feeds", sa.Column("popularity_score", sa.Float(), nullable=True, default=0.0)
-    )
+    op.add_column("feeds", sa.Column("tags", postgresql.ARRAY(sa.String()), nullable=True))
+    op.add_column("feeds", sa.Column("top_level_category", feed_category_enum, nullable=True))
+    op.add_column("feeds", sa.Column("popularity_score", sa.Float(), nullable=True, default=0.0))
 
     # Add search helper columns for full-text search
-    op.add_column(
-        "feeds", sa.Column("tsv_title_link", postgresql.TSVECTOR(), nullable=True)
-    )
-    op.add_column(
-        "feeds", sa.Column("tsv_desc_tags", postgresql.TSVECTOR(), nullable=True)
-    )
+    op.add_column("feeds", sa.Column("tsv_title_link", postgresql.TSVECTOR(), nullable=True))
+    op.add_column("feeds", sa.Column("tsv_desc_tags", postgresql.TSVECTOR(), nullable=True))
 
     # Add embedding column for vector similarity search (768 dimensions)
     # Note: Requires pgvector extension to be enabled
@@ -55,12 +45,8 @@ def upgrade() -> None:
     op.execute("ALTER TABLE feeds ADD COLUMN embedding vector(768)")
 
     # Create GIN indexes for full-text search
-    op.create_index(
-        "idx_feeds_tsv_title_link", "feeds", ["tsv_title_link"], postgresql_using="gin"
-    )
-    op.create_index(
-        "idx_feeds_tsv_desc_tags", "feeds", ["tsv_desc_tags"], postgresql_using="gin"
-    )
+    op.create_index("idx_feeds_tsv_title_link", "feeds", ["tsv_title_link"], postgresql_using="gin")
+    op.create_index("idx_feeds_tsv_desc_tags", "feeds", ["tsv_desc_tags"], postgresql_using="gin")
 
     # Create index for vector similarity search (using pgvector)
     op.execute(

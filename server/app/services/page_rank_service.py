@@ -1,7 +1,7 @@
 """PageRank service for domain authority scoring."""
 
 import json
-import os
+from pathlib import Path
 from typing import Any
 
 import structlog
@@ -23,20 +23,16 @@ class PageRankService:
         """Load the merged PageRank dataset."""
         try:
             # Look for merged dataset in app/data/
-            dataset_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                "data",
-                "merged_pagerank.json",
-            )
+            dataset_path = Path(__file__).parent.parent / "data" / "merged_pagerank.json"
 
-            if os.path.exists(dataset_path):
-                with open(dataset_path, encoding="utf-8") as f:
+            if dataset_path.exists():
+                with dataset_path.open(encoding="utf-8") as f:
                     self._domain_scores = json.load(f)
 
                 logger.info(
                     "PageRank dataset loaded",
                     total_domains=len(self._domain_scores),
-                    file_size_mb=round(os.path.getsize(dataset_path) / 1024 / 1024, 1),
+                    file_size_mb=round(dataset_path.stat().st_size / 1024 / 1024, 1),
                 )
             else:
                 logger.warning(

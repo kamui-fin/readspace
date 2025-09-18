@@ -75,9 +75,7 @@ class TestAuthService:
         mock_request.headers = {"Authorization": "Bearer valid_token"}
 
         with patch("app.services.auth.verify_token") as mock_verify:
-            expected_token_data = TokenData(
-                sub="user123", email="test@example.com", role="authenticated"
-            )
+            expected_token_data = TokenData(sub="user123", email="test@example.com", role="authenticated")
             mock_verify.return_value = expected_token_data
 
             result = get_current_user(mock_request)
@@ -113,9 +111,7 @@ class TestAuthService:
         mock_request.headers = {"Authorization": "Bearer invalid_token"}
 
         with patch("app.services.auth.verify_token") as mock_verify:
-            mock_verify.side_effect = HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-            )
+            mock_verify.side_effect = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
             with pytest.raises(HTTPException) as exc_info:
                 get_current_user(mock_request)
@@ -129,9 +125,7 @@ class TestAuthService:
         mock_request.headers = {"Authorization": "Bearer valid_token"}
 
         with patch("app.services.auth.verify_token") as mock_verify:
-            expected_token_data = TokenData(
-                sub="user123", email="test@example.com", role="authenticated"
-            )
+            expected_token_data = TokenData(sub="user123", email="test@example.com", role="authenticated")
             mock_verify.return_value = expected_token_data
 
             result = get_optional_user(mock_request)
@@ -163,9 +157,7 @@ class TestAuthService:
         mock_request.headers = {"Authorization": "Bearer invalid_token"}
 
         with patch("app.services.auth.verify_token") as mock_verify:
-            mock_verify.side_effect = HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-            )
+            mock_verify.side_effect = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
             result = get_optional_user(mock_request)
 
@@ -181,9 +173,7 @@ class TestAuthService:
 
         mock_request = Mock(spec=Request)
         mock_request.state = Mock()
-        mock_request.state.user = TokenData(
-            sub="user123", email="test@example.com", role="authenticated"
-        )
+        mock_request.state.user = TokenData(sub="user123", email="test@example.com", role="authenticated")
 
         result = await test_route(mock_request)
 
@@ -218,9 +208,7 @@ class TestAuthService:
         mock_request = Mock(spec=Request)
         mock_request.state = Mock()
         # Remove user attribute to simulate missing user
-        delattr(mock_request.state, "user") if hasattr(
-            mock_request.state, "user"
-        ) else None
+        delattr(mock_request.state, "user") if hasattr(mock_request.state, "user") else None
 
         with pytest.raises(HTTPException) as exc_info:
             await test_route(mock_request)

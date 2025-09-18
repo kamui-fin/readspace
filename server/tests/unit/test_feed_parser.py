@@ -36,9 +36,7 @@ class TestFeedParsingService:
             </channel>
         </rss>"""
 
-        parsed_feed = self.parser.parse_feed_data(
-            rss_content, "https://example.com/feed.xml"
-        )
+        parsed_feed = self.parser.parse_feed_data(rss_content, "https://example.com/feed.xml")
 
         assert parsed_feed is not None
         assert parsed_feed.feed.title == "Test Feed"
@@ -60,9 +58,7 @@ class TestFeedParsingService:
             <not_a_feed>Some content</not_a_feed>
         </root>"""
 
-        with pytest.raises(
-            FeedParsingError, match="Feed content does not contain valid feed structure"
-        ):
+        with pytest.raises(FeedParsingError, match="Feed content does not contain valid feed structure"):
             self.parser.parse_feed_data(invalid_feed, "https://example.com/feed.xml")
 
     def test_extract_feed_metadata_basic(self):
@@ -75,9 +71,7 @@ class TestFeedParsingService:
             "language": "en",
         }
 
-        metadata = self.parser.extract_feed_metadata(
-            mock_parsed_feed, "https://testblog.com/feed.xml"
-        )
+        metadata = self.parser.extract_feed_metadata(mock_parsed_feed, "https://testblog.com/feed.xml")
 
         assert metadata.title == "Test Blog"
         assert metadata.description == "A test blog"
@@ -93,9 +87,7 @@ class TestFeedParsingService:
             "image": {"href": "https://testblog.com/logo.png"},
         }
 
-        metadata = self.parser.extract_feed_metadata(
-            mock_parsed_feed, "https://testblog.com/feed.xml"
-        )
+        metadata = self.parser.extract_feed_metadata(mock_parsed_feed, "https://testblog.com/feed.xml")
 
         assert str(metadata.image_url) == "https://testblog.com/logo.png"
 
@@ -107,9 +99,7 @@ class TestFeedParsingService:
             "link": "https://testblog.com",
         }
 
-        metadata = self.parser.extract_feed_metadata(
-            mock_parsed_feed, "https://testblog.com/feed.xml"
-        )
+        metadata = self.parser.extract_feed_metadata(mock_parsed_feed, "https://testblog.com/feed.xml")
 
         assert str(metadata.image_url) == "https://testblog.com/favicon.ico"
 
@@ -135,9 +125,7 @@ class TestFeedParsingService:
 
         mock_entry.__contains__ = mock_contains_content
 
-        article_data = self.parser.extract_article_data(
-            mock_entry, "https://example.com/feed.xml"
-        )
+        article_data = self.parser.extract_article_data(mock_entry, "https://example.com/feed.xml")
 
         assert article_data is not None
         assert article_data["guid"] == "test-guid-123"
@@ -252,9 +240,7 @@ class TestFeedParsingService:
         mock_entry = {}
         html_content = '<p>Some text</p><img src="https://example.com/content-image.png" alt="Test">'
 
-        image_url = self.parser.find_best_article_image(
-            mock_entry, html_content, "https://example.com/feed.xml"
-        )
+        image_url = self.parser.find_best_article_image(mock_entry, html_content, "https://example.com/feed.xml")
         assert image_url == "https://example.com/content-image.png"
 
     def test_find_best_article_image_relative_url(self):
@@ -262,9 +248,7 @@ class TestFeedParsingService:
         mock_entry = {}
         html_content = '<img src="/images/photo.jpg" alt="Test">'
 
-        image_url = self.parser.find_best_article_image(
-            mock_entry, html_content, "https://example.com/feed.xml"
-        )
+        image_url = self.parser.find_best_article_image(mock_entry, html_content, "https://example.com/feed.xml")
         assert image_url == "https://example.com/images/photo.jpg"
 
     def test_find_best_article_image_skip_tracking_pixel(self):
@@ -323,9 +307,7 @@ class TestFeedParsingService:
             },
         ]
 
-        result = self.parser.validate_feed_quality(
-            mock_parsed_feed, min_article_count=1
-        )
+        result = self.parser.validate_feed_quality(mock_parsed_feed, min_article_count=1)
 
         assert result["is_valid"] is True
         assert result["total_entries"] == 2
@@ -340,9 +322,7 @@ class TestFeedParsingService:
             {"title": "Article 2"},  # Missing required fields
         ]
 
-        result = self.parser.validate_feed_quality(
-            mock_parsed_feed, min_article_count=1
-        )
+        result = self.parser.validate_feed_quality(mock_parsed_feed, min_article_count=1)
 
         assert result["is_valid"] is False
         assert result["total_entries"] == 2
@@ -354,9 +334,7 @@ class TestFeedParsingService:
         mock_parsed_feed = Mock()
         mock_parsed_feed.entries = []
 
-        result = self.parser.validate_feed_quality(
-            mock_parsed_feed, min_article_count=1
-        )
+        result = self.parser.validate_feed_quality(mock_parsed_feed, min_article_count=1)
 
         assert result["is_valid"] is False
         assert result["total_entries"] == 0

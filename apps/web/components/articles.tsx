@@ -1,6 +1,6 @@
 "use client"
 
-import { FeedPreviewBanner } from "@/components/feeds/feed-preview-banner"
+import { FeedPreviewBanner } from "@/components/feeds/FeedPreviewBanner"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
 import { Button } from "@/components/ui/button"
 import {
@@ -8,7 +8,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/DropdownMenu"
 import {
     ResizableHandle,
     ResizablePanel,
@@ -21,10 +21,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useIsMobile } from "@/hooks/use-mobile"
-import { useClearPendingNavigation } from "@/hooks/use-navigation-state"
-import { useArticlesQuery } from "@/hooks/use-articles-query"
-import { useArticlesRefresh } from "@/hooks/use-articles-refresh"
+import { useIsMobile } from "@/hooks/useMobile"
+import { useClearPendingNavigation } from "@/hooks/useNavigationState"
+import { useArticlesQuery } from "@/hooks/useArticlesQuery"
+import { useArticlesRefresh } from "@/hooks/useArticlesRefresh"
 import type { Article, Feed } from "@readspace/shared"
 import {
     useArticle,
@@ -40,8 +40,8 @@ import {
     RefreshCw,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { ArticleContent } from "./articles/article-content"
-import { ArticlesList } from "./articles/articles-list"
+import { ArticleContent } from "./articles/ArticleContent"
+import { ArticlesList } from "./articles/ArticlesList"
 
 interface ArticlesViewProps {
     /** Initial title for the sidebar */

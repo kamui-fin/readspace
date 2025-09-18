@@ -145,9 +145,7 @@ class TestOpmlProcessorExtractFeeds:
             </head>
         </opml>"""
 
-        with pytest.raises(
-            ValidationError, match="Invalid OPML format: No body element found"
-        ):
+        with pytest.raises(ValidationError, match="Invalid OPML format: No body element found"):
             await self.processor.extract_feeds_from_opml(opml_content)
 
     @pytest.mark.asyncio
@@ -268,11 +266,7 @@ class TestOpmlProcessorExportFeeds:
         assert folder_names == {"Tech News", "Science"}
 
         # Check feeds in Tech News folder
-        tech_folder = next(
-            outline
-            for outline in folder_outlines
-            if outline.get("title") == "Tech News"
-        )
+        tech_folder = next(outline for outline in folder_outlines if outline.get("title") == "Tech News")
         tech_feeds = tech_folder.findall("outline")
         assert len(tech_feeds) == 2
 
@@ -386,9 +380,7 @@ class TestOpmlProcessorValidation:
             </channel>
         </rss>"""
 
-        with pytest.raises(
-            ValidationError, match="This appears to be an RSS/Atom feed file"
-        ):
+        with pytest.raises(ValidationError, match="This appears to be an RSS/Atom feed file"):
             self.processor.validate_opml_content(wrong_root)
 
     def test_validate_opml_content_no_body(self):
@@ -399,9 +391,7 @@ class TestOpmlProcessorValidation:
             </head>
         </opml>"""
 
-        with pytest.raises(
-            ValidationError, match="Invalid OPML format: No body element found"
-        ):
+        with pytest.raises(ValidationError, match="Invalid OPML format: No body element found"):
             self.processor.validate_opml_content(no_body)
 
     def test_validate_opml_content_no_outlines(self):
@@ -411,9 +401,7 @@ class TestOpmlProcessorValidation:
             </body>
         </opml>"""
 
-        with pytest.raises(
-            ValidationError, match="Invalid OPML format: No feed entries found"
-        ):
+        with pytest.raises(ValidationError, match="Invalid OPML format: No feed entries found"):
             self.processor.validate_opml_content(no_outlines)
 
     def test_validate_opml_content_case_insensitive_root(self):

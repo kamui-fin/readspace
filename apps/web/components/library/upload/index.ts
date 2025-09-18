@@ -1,1 +1,1 @@
-export { default as UploadBookDialog } from "./upload-book-dialog"
+export { default as UploadBookDialog } from "./UploadBookDialog"

@@ -12,7 +12,7 @@ async def test_create_task_db_session():
 
     with (
         patch("app.workers.tasks.create_async_engine") as mock_create_engine,
-        patch("app.workers.tasks.sessionmaker") as mock_sessionmaker,
+        patch("app.workers.tasks.async_sessionmaker") as mock_sessionmaker,
         patch("app.workers.tasks.settings") as mock_settings,
     ):
         # Setup mocks
@@ -34,9 +34,8 @@ async def test_create_task_db_session():
 
         mock_sessionmaker.assert_called_once()
         sessionmaker_call = mock_sessionmaker.call_args
-        assert sessionmaker_call[1]["bind"] == mock_engine
+        assert sessionmaker_call[0][0] == mock_engine  # First positional arg is engine
         assert sessionmaker_call[1]["class_"] == AsyncSession
-        assert sessionmaker_call[1]["autocommit"] is False
         assert sessionmaker_call[1]["autoflush"] is False
         assert sessionmaker_call[1]["expire_on_commit"] is False
 

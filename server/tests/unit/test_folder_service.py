@@ -66,9 +66,7 @@ class TestFolderService:
             result = await self.service.get_folder(folder_id)
 
             assert isinstance(result, FolderResponse)
-            mock_crud_folder.get_folder.assert_called_once_with(
-                db=self.db, folder_id=folder_id, user_id=self.user_id
-            )
+            mock_crud_folder.get_folder.assert_called_once_with(db=self.db, folder_id=folder_id, user_id=self.user_id)
 
     @pytest.mark.asyncio
     async def test_get_folder_not_found(self):

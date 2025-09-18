@@ -115,9 +115,7 @@ class FeedArticleFactory(SQLAlchemyModelFactory):
     # feed_id, content_id, and user_id must be provided when creating feed articles
     guid = factory.Faker("uuid4")
     is_read = factory.Faker("boolean", chance_of_getting_true=30)
-    read_at = factory.LazyAttribute(
-        lambda obj: datetime.now(timezone.utc) if obj.is_read else None
-    )
+    read_at = factory.LazyAttribute(lambda obj: datetime.now(timezone.utc) if obj.is_read else None)
     is_read_later = factory.Faker("boolean", chance_of_getting_true=40)
     is_favorite = factory.Faker("boolean", chance_of_getting_true=10)
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
@@ -136,11 +134,7 @@ class ClippedArticleFactory(SQLAlchemyModelFactory):
     priority = factory.Faker("random_element", elements=["low", "medium", "high"])
     note = factory.Faker("text", max_nb_chars=200)
     is_read = factory.Faker("boolean", chance_of_getting_true=20)
-    read_at = factory.LazyAttribute(
-        lambda obj: datetime.now(timezone.utc) if obj.is_read else None
-    )
-    is_read_later = factory.Faker(
-        "boolean", chance_of_getting_true=80
-    )  # Most clipped articles are read later
+    read_at = factory.LazyAttribute(lambda obj: datetime.now(timezone.utc) if obj.is_read else None)
+    is_read_later = factory.Faker("boolean", chance_of_getting_true=80)  # Most clipped articles are read later
     is_favorite = factory.Faker("boolean", chance_of_getting_true=15)
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))

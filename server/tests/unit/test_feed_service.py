@@ -81,9 +81,7 @@ class TestFeedService:
             result = await feed_service.get_or_create_feed(feed_data=sample_feed_data)
 
             assert result == mock_feed
-            mock_create.assert_called_once_with(
-                feed_service.db, feed_data=sample_feed_data
-            )
+            mock_create.assert_called_once_with(feed_service.db, feed_data=sample_feed_data)
 
     @pytest.mark.asyncio
     async def test_get_feed_by_id_found(self, feed_service, sample_feed_db):
@@ -177,9 +175,7 @@ class TestFeedService:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_refresh_feed_successful_parse_and_update(
-        self, feed_service, sample_feed_db
-    ):
+    async def test_refresh_feed_successful_parse_and_update(self, feed_service, sample_feed_db):
         """Should successfully parse and update feed."""
         feed_id = sample_feed_db.id
 
@@ -204,9 +200,7 @@ class TestFeedService:
             patch("app.crud.crud_feed.get_feed_by_id") as mock_get,
             patch.object(feed_service.feed_fetcher, "fetch_content") as mock_fetch,
             patch.object(feed_service.feed_parser, "parse_feed_data") as mock_parse,
-            patch.object(
-                feed_service.feed_parser, "extract_article_data"
-            ) as mock_extract,
+            patch.object(feed_service.feed_parser, "extract_article_data") as mock_extract,
             patch("app.crud.crud_feed.update_feed_metadata") as mock_update,
             patch.object(feed_service, "_create_new_articles") as mock_create_articles,
         ):
@@ -222,9 +216,7 @@ class TestFeedService:
             assert result is not None
             mock_parse.assert_called_once()
             mock_update.assert_called_once()
-            mock_create_articles.assert_called_once_with(
-                sample_feed_db, [mock_parsed_feed.entries[0]]
-            )
+            mock_create_articles.assert_called_once_with(sample_feed_db, [mock_parsed_feed.entries[0]])
 
     @pytest.mark.asyncio
     async def test_get_feeds_needing_refresh(self, feed_service):
@@ -240,9 +232,7 @@ class TestFeedService:
             mock_get.assert_called_once_with(feed_service.db, limit=100)
 
     @pytest.mark.asyncio
-    async def test_refresh_feed_force_refetch_ignores_cache_headers(
-        self, feed_service, sample_feed_db
-    ):
+    async def test_refresh_feed_force_refetch_ignores_cache_headers(self, feed_service, sample_feed_db):
         """Should ignore cache headers when force_refetch is True."""
         feed_id = sample_feed_db.id
         sample_feed_db.etag_header = "existing-etag"
@@ -274,6 +264,4 @@ class TestFeedService:
             await feed_service.refresh_feed(feed_id=feed_id, force_refetch=True)
 
             # Should call fetch_content with None for cache headers
-            mock_fetch.assert_called_once_with(
-                str(sample_feed_db.url), etag=None, last_modified=None
-            )
+            mock_fetch.assert_called_once_with(str(sample_feed_db.url), etag=None, last_modified=None)

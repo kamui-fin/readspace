@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from server.app.services.rss_service import RssOrchestrationService
+from app.services.rss_service import RssOrchestrationService
 
 from app.core.custom_exceptions import ValidationError
 
@@ -78,9 +78,7 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder creation with explicit name mapping
         tech_folder_id = uuid4()
@@ -101,14 +99,10 @@ class TestRssOrchestrationServiceOpmlImport:
             "World News": world_folder_id,
         }
 
-        result = await self.service.extract_feeds_from_opml(
-            opml_content, "Imported Feeds"
-        )
+        result = await self.service.extract_feeds_from_opml(opml_content, "Imported Feeds")
 
         # Verify opml processor was called correctly
-        self.service.opml_processor.extract_feeds_from_opml.assert_called_once_with(
-            opml_content, "Imported Feeds"
-        )
+        self.service.opml_processor.extract_feeds_from_opml.assert_called_once_with(opml_content, "Imported Feeds")
 
         # Verify folders were batch created
         self.service.folder_service.create_folders_batch.assert_called_once()
@@ -167,9 +161,7 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder creation to fail first, then return existing folder
         existing_folder = MagicMock()
@@ -218,9 +210,7 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         prog_folder = MagicMock()
         prog_folder.id = uuid4()
@@ -228,9 +218,7 @@ class TestRssOrchestrationServiceOpmlImport:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Programming": prog_folder.id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Programming": prog_folder.id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -269,13 +257,9 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
-        result = await self.service.extract_feeds_from_opml(
-            opml_content, "My Default Folder"
-        )
+        result = await self.service.extract_feeds_from_opml(opml_content, "My Default Folder")
 
         # No folders should be created since feeds have no folder
         self.service.folder_service.create_folders_batch.assert_not_called()
@@ -289,9 +273,7 @@ class TestRssOrchestrationServiceOpmlImport:
         """Test handling of validation errors from OpmlProcessor."""
         opml_content = "invalid xml content"
 
-        self.service.opml_processor.extract_feeds_from_opml.side_effect = (
-            ValidationError("Invalid OPML format")
-        )
+        self.service.opml_processor.extract_feeds_from_opml.side_effect = ValidationError("Invalid OPML format")
 
         with pytest.raises(ValidationError, match="Invalid OPML format"):
             await self.service.extract_feeds_from_opml(opml_content)

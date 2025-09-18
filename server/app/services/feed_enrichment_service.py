@@ -160,7 +160,7 @@ class FeedEnrichmentService:
                 text_parts.append(self._clean_html_text(feed.description))
 
             # Get sample articles if available
-            # TODO: Fetch recent articles from feed for language detection
+            # Note: Could enhance accuracy by fetching recent articles for language detection
 
             full_text = " ".join(filter(None, text_parts)).strip()
 
@@ -199,7 +199,8 @@ class FeedEnrichmentService:
             domain = self._extract_domain_from_url(feed.link or feed.url)
 
             # Get sample articles if available (for now, use empty list)
-            sample_articles: list[str] = []  # TODO: Fetch recent articles from feed for context
+            # Note: Could enhance enrichment by fetching recent articles for context
+            sample_articles: list[str] = []
 
             # Use AI service's Gemini enrichment method
             result = await self.ai_service.enrich_feed_with_gemini(

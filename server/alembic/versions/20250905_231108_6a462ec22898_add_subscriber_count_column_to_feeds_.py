@@ -76,12 +76,8 @@ def upgrade() -> None:
 def downgrade() -> None:
     """Remove subscriber_count column and triggers."""
     # Drop triggers
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON feed_subscriptions;"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON feed_subscriptions;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_insert_trigger ON feed_subscriptions;")
+    op.execute("DROP TRIGGER IF EXISTS feed_subscription_delete_trigger ON feed_subscriptions;")
     op.execute("DROP FUNCTION IF EXISTS update_feed_subscriber_count();")
 
     # Drop index and column

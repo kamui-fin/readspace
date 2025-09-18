@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Generic, TypeVar
 from uuid import UUID
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 T = TypeVar("T")
 
@@ -55,8 +55,9 @@ class FeedCreate(FeedBase):
     folder_id: UUID
 
 
-# TODO: can't this be based on FeedBase
 class FeedUpdate(BaseModel):
+    """Schema for updating feed information - all fields optional."""
+
     url: AnyUrl | None = None
     title: str | None = Field(None, max_length=500)
     description: str | None = None
@@ -371,3 +372,44 @@ class FeedEnrichmentResponse(BaseModel):
     tags: list[str] = Field(..., min_length=1, max_length=10, description="Specific keywords and topics")
     category: str = Field(..., description="One of the 12 predefined categories")
     popularity_estimate: int = Field(..., ge=1, le=100, description="Popularity estimate on scale 1-100")
+
+
+# ========= Article Management Schemas =========
+
+
+class SaveArticleRequest(BaseModel):
+    """Schema for saving external articles to the user's collection."""
+
+    url: HttpUrl
+    title: str | None = Field(None, max_length=1000)
+    content: str | None = Field(None, max_length=5_000_000)  # 5MB content limit
+    metadata: dict[str, Any] | None = Field(None, max_length=50)
+    priority: str | None = Field(None, max_length=20)
+    note: str | None = Field(None, max_length=10_000)
+
+    @field_validator("metadata")
+    @classmethod
+    def validate_metadata(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        if v is None:
+            return v
+
+        # Limit total metadata size by serialized JSON length
+        import json
+
+        serialized = json.dumps(v)
+        if len(serialized) > 100_000:  # 100KB limit for metadata JSON
+            raise ValueError("Metadata too large - maximum 100KB when serialized")
+
+        # Prevent deeply nested objects to avoid DoS
+        def check_depth(obj: Any, max_depth: int = 10, current_depth: int = 0) -> None:
+            if current_depth > max_depth:
+                raise ValueError("Metadata nesting too deep - maximum 10 levels")
+            if isinstance(obj, dict):
+                for value in obj.values():
+                    check_depth(value, max_depth, current_depth + 1)
+            elif isinstance(obj, list):
+                for item in obj:
+                    check_depth(item, max_depth, current_depth + 1)
+
+        check_depth(v)
+        return v

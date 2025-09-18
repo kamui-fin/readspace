@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from server.app.services.rss_service import RssOrchestrationService
+from app.services.rss_service import RssOrchestrationService
 
 
 @pytest.mark.unit
@@ -51,9 +51,7 @@ class TestOpmlImportEdgeCases:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         tech_folder = MagicMock()
         tech_folder_id = uuid4()
@@ -62,9 +60,7 @@ class TestOpmlImportEdgeCases:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Tech": tech_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Tech": tech_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -102,9 +98,7 @@ class TestOpmlImportEdgeCases:
             }
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         specific_folder = MagicMock()
         specific_folder_id = uuid4()
@@ -113,13 +107,9 @@ class TestOpmlImportEdgeCases:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Specific Folder": specific_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Specific Folder": specific_folder_id}
 
-        result = await self.service.extract_feeds_from_opml(
-            opml_content, "Default Folder Name"
-        )
+        result = await self.service.extract_feeds_from_opml(opml_content, "Default Folder Name")
 
         # Feed should be in the specific folder, not default
         assert len(result) == 1
@@ -127,9 +117,7 @@ class TestOpmlImportEdgeCases:
         assert result[0]["title"] == "Specific Feed"
 
         # Verify folder batch creation was called with correct name
-        self.service.folder_service.create_folders_batch.assert_called_once_with(
-            ["Specific Folder"]
-        )
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Specific Folder"])
 
     @pytest.mark.asyncio
     async def test_nested_folder_structure_flattened(self):
@@ -157,9 +145,7 @@ class TestOpmlImportEdgeCases:
             }
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         nested_folder = MagicMock()
         nested_folder_id = uuid4()
@@ -168,9 +154,7 @@ class TestOpmlImportEdgeCases:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Parent/Child/Grandchild": nested_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Parent/Child/Grandchild": nested_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -178,9 +162,7 @@ class TestOpmlImportEdgeCases:
         assert result[0]["folder_id"] == nested_folder_id
 
         # Verify the nested folder name was used
-        self.service.folder_service.create_folders_batch.assert_called_once_with(
-            ["Parent/Child/Grandchild"]
-        )
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Parent/Child/Grandchild"])
 
     @pytest.mark.asyncio
     async def test_folder_creation_error_recovery(self):
@@ -203,15 +185,11 @@ class TestOpmlImportEdgeCases:
             }
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Both folder creation and lookup fail
         self.service.folder_service.list_folders.return_value = []  # No existing folders
-        self.service.folder_service.create_folders_batch.side_effect = Exception(
-            "Creation failed"
-        )
+        self.service.folder_service.create_folders_batch.side_effect = Exception("Creation failed")
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -251,9 +229,7 @@ class TestOpmlImportEdgeCases:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder service methods - no folders should be created for empty names
         self.service.folder_service.list_folders.return_value = []
@@ -297,9 +273,7 @@ class TestOpmlImportEdgeCases:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         news_folder = MagicMock()
         news_folder_id = uuid4()
@@ -308,9 +282,7 @@ class TestOpmlImportEdgeCases:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "News": news_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"News": news_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -353,9 +325,7 @@ class TestOpmlImportEdgeCases:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         folder1_id = uuid4()
         folder1 = MagicMock()

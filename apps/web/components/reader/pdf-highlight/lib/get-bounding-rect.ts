@@ -28,6 +28,22 @@ const getBoundingRect = (clientRects: Array<LTWHP>): LTWHP => {
             rect.pageNumber === firstPageNumber
     )
 
+    if (rectsWithSizeOnFirstPage.length === 0) {
+        // Return a default rect if no valid rects found
+        return {
+            left: 0,
+            top: 0,
+            width: 0,
+            height: 0,
+            pageNumber: firstPageNumber,
+        }
+    }
+
+    const firstRect = rectsWithSizeOnFirstPage[0]
+    if (!firstRect) {
+        throw new Error("No rects found for bounding calculation")
+    }
+
     const optimal = rectsWithSizeOnFirstPage.reduce((res, rect) => {
         return {
             X0: Math.min(res.X0, rect.X0),
@@ -38,7 +54,7 @@ const getBoundingRect = (clientRects: Array<LTWHP>): LTWHP => {
 
             pageNumber: firstPageNumber,
         }
-    }, rectsWithSizeOnFirstPage[0])
+    }, firstRect)
 
     const { X0, X1, Y0, Y1, pageNumber } = optimal
 

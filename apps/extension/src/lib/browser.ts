@@ -11,11 +11,19 @@ export const getBrowser = () => {
 
 // Browser detection utilities
 export const isChrome = () => {
-  return typeof (globalThis as any).chrome !== 'undefined' && (globalThis as any).chrome.runtime
+  const globalChrome = (globalThis as { chrome?: typeof chrome }).chrome
+  return (
+    typeof globalChrome !== 'undefined' &&
+    globalChrome?.runtime !== undefined
+  )
 }
 
 export const isFirefox = () => {
-  return typeof (globalThis as any).browser !== 'undefined' && (globalThis as any).browser.runtime
+  const globalBrowser = (globalThis as { browser?: typeof browser }).browser
+  return (
+    typeof globalBrowser !== 'undefined' &&
+    globalBrowser?.runtime !== undefined
+  )
 }
 
 export const getBrowserName = (): 'chrome' | 'firefox' | 'unknown' => {
@@ -41,20 +49,20 @@ export const storage = {
 
   async clear(): Promise<void> {
     await browser.storage.local.clear()
-  }
+  },
 }
 
 // Messaging helpers
 export const messaging = {
-  async sendToTab<T>(tabId: number, message: any): Promise<T> {
+  async sendToTab<T>(tabId: number, message: Record<string, unknown>): Promise<T> {
     return browser.tabs.sendMessage(tabId, message) as Promise<T>
   },
 
-  async sendToBackground<T>(message: any): Promise<T> {
+  async sendToBackground<T>(message: Record<string, unknown>): Promise<T> {
     return browser.runtime.sendMessage(message) as Promise<T>
   },
 
-  onMessage: browser.runtime.onMessage
+  onMessage: browser.runtime.onMessage,
 }
 
 // Tab helpers
@@ -67,16 +75,19 @@ export const tabs = {
     return browser.tabs.create(createProperties)
   },
 
-  async sendMessage<T>(tabId: number, message: any): Promise<T> {
+  async sendMessage<T>(tabId: number, message: Record<string, unknown>): Promise<T> {
     return browser.tabs.sendMessage(tabId, message) as Promise<T>
-  }
+  },
 }
 
 // Notifications helpers
 export const notifications = {
-  async create(notificationId: string, options: browser.Notifications.CreateNotificationOptions) {
+  async create(
+    notificationId: string,
+    options: browser.Notifications.CreateNotificationOptions
+  ) {
     return browser.notifications.create(notificationId, options)
-  }
+  },
 }
 
-export default browser 
+export default browser

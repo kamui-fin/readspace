@@ -35,21 +35,15 @@ class TestHighlightRepository:
         mock_db.execute.return_value = mock_result
 
         with patch("app.repositories.highlights.logger") as mock_logger:
-            result = await self.repository.get_book_highlights(
-                db=mock_db, book_id=self.book_id
-            )
+            result = await self.repository.get_book_highlights(db=mock_db, book_id=self.book_id)
 
             assert result == mock_highlights
             mock_db.execute.assert_called_once()
 
             # Verify logging calls
             assert mock_logger.info.call_count >= 3
-            mock_logger.info.assert_any_call(
-                f"Building query for book_id: {self.book_id}"
-            )
-            mock_logger.info.assert_any_call(
-                f"Query returned {len(mock_highlights)} highlights"
-            )
+            mock_logger.info.assert_any_call(f"Building query for book_id: {self.book_id}")
+            mock_logger.info.assert_any_call(f"Query returned {len(mock_highlights)} highlights")
 
     @pytest.mark.asyncio
     async def test_get_book_highlights_exception(self):
@@ -59,9 +53,7 @@ class TestHighlightRepository:
 
         with patch("app.repositories.highlights.logger") as mock_logger:
             with pytest.raises(StorageError) as exc_info:
-                await self.repository.get_book_highlights(
-                    db=mock_db, book_id=self.book_id
-                )
+                await self.repository.get_book_highlights(db=mock_db, book_id=self.book_id)
 
             assert "Failed to get book highlights" in str(exc_info.value)
             mock_logger.error.assert_called_once()
@@ -162,9 +154,7 @@ class TestHighlightRepository:
         mock_result.scalar_one_or_none.return_value = mock_highlight
         mock_db.execute.return_value = mock_result
 
-        result = await self.repository.update_note(
-            db=mock_db, highlight_id=self.highlight_id, note=self.test_note
-        )
+        result = await self.repository.update_note(db=mock_db, highlight_id=self.highlight_id, note=self.test_note)
 
         assert result == mock_highlight
         assert mock_highlight.note == self.test_note
@@ -180,9 +170,7 @@ class TestHighlightRepository:
         mock_db.execute.return_value = mock_result
 
         with pytest.raises(StorageError) as exc_info:
-            await self.repository.update_note(
-                db=mock_db, highlight_id=self.highlight_id, note=self.test_note
-            )
+            await self.repository.update_note(db=mock_db, highlight_id=self.highlight_id, note=self.test_note)
 
         assert f"Highlight not found: {self.highlight_id}" in str(exc_info.value)
 
@@ -193,9 +181,7 @@ class TestHighlightRepository:
         mock_db.execute.side_effect = Exception("Database error")
 
         with pytest.raises(StorageError) as exc_info:
-            await self.repository.update_note(
-                db=mock_db, highlight_id=self.highlight_id, note=self.test_note
-            )
+            await self.repository.update_note(db=mock_db, highlight_id=self.highlight_id, note=self.test_note)
 
         assert "Failed to update highlight note" in str(exc_info.value)
         mock_db.rollback.assert_called_once()
@@ -209,9 +195,7 @@ class TestHighlightRepository:
         mock_result.scalar_one_or_none.return_value = mock_highlight
         mock_db.execute.return_value = mock_result
 
-        result = await self.repository.update_note_by_text(
-            db=mock_db, text=self.test_text, note=self.test_note
-        )
+        result = await self.repository.update_note_by_text(db=mock_db, text=self.test_text, note=self.test_note)
 
         assert result == mock_highlight
         assert mock_highlight.note == self.test_note
@@ -227,9 +211,7 @@ class TestHighlightRepository:
         mock_db.execute.return_value = mock_result
 
         with pytest.raises(StorageError) as exc_info:
-            await self.repository.update_note_by_text(
-                db=mock_db, text=self.test_text, note=self.test_note
-            )
+            await self.repository.update_note_by_text(db=mock_db, text=self.test_text, note=self.test_note)
 
         assert f"Highlight not found with text: {self.test_text}" in str(exc_info.value)
 
@@ -240,9 +222,7 @@ class TestHighlightRepository:
         mock_db.execute.side_effect = Exception("Database error")
 
         with pytest.raises(StorageError) as exc_info:
-            await self.repository.update_note_by_text(
-                db=mock_db, text=self.test_text, note=self.test_note
-            )
+            await self.repository.update_note_by_text(db=mock_db, text=self.test_text, note=self.test_note)
 
         assert "Failed to update highlight note by text" in str(exc_info.value)
         mock_db.rollback.assert_called_once()
@@ -252,11 +232,7 @@ class TestHighlightRepository:
         # This is more of a smoke test to ensure the query can be constructed
         from sqlalchemy import select
 
-        query = (
-            select(Highlight)
-            .join(UserBookLibrary)
-            .where(UserBookLibrary.id == self.book_id)
-        )
+        query = select(Highlight).join(UserBookLibrary).where(UserBookLibrary.id == self.book_id)
 
         query_str = str(query)
         # Basic verification that it's a valid query structure

@@ -57,8 +57,8 @@ interface ExtensionState {
 }
 
 const defaultSettings: ExtensionSettings = {
-  readspace_url: 'https://api.readspace.ai',
-  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
+  readspace_url: 'https:///api.readspace.ai',
+  supabase_url: 'https:///hnqyngkyugiamvlhqoaf.supabase.co',
   supabase_anon_key:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
   auto_save: false,
@@ -72,7 +72,7 @@ const configureApiClient = (settings: ExtensionSettings) => {
     baseUrl: settings.readspace_url,
     getAuthToken: async () => {
       return settings.access_token || null
-    }
+    },
   })
 }
 
@@ -158,7 +158,7 @@ export const useExtensionStore = create<ExtensionState>()(
           configureApiClient(updatedSettings)
 
           // Test authentication by getting user profile
-          const user = await ApiClient.users.getProfile() as User
+          const user = (await ApiClient.users.getProfile()) as User
 
           set({
             user,
@@ -230,7 +230,7 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isLoading: true })
         try {
-          const folders = await ApiClient.rss.getFolders() as Folder[]
+          const folders = (await ApiClient.rss.getFolders()) as Folder[]
 
           set({ folders })
         } catch (error) {
@@ -270,10 +270,13 @@ export const useExtensionStore = create<ExtensionState>()(
 
           // Build metadata object with only defined string values
           const metadata: Record<string, string> = {}
-          const description = extractedContent?.description || currentPageMetadata?.description
+          const description =
+            extractedContent?.description || currentPageMetadata?.description
           const author = extractedContent?.author || currentPageMetadata?.author
-          const published_at = extractedContent?.published_at || currentPageMetadata?.published_at
-          const image_url = extractedContent?.image_url || currentPageMetadata?.image_url
+          const published_at =
+            extractedContent?.published_at || currentPageMetadata?.published_at
+          const image_url =
+            extractedContent?.image_url || currentPageMetadata?.image_url
           const favicon = currentPageMetadata?.favicon
 
           if (description) metadata.description = description
@@ -299,7 +302,9 @@ export const useExtensionStore = create<ExtensionState>()(
               : 'no content',
           })
 
-          const article = await ApiClient.rss.saveArticle(saveRequest) as Article
+          const article = (await ApiClient.rss.saveArticle(
+            saveRequest
+          )) as Article
           return article
         } finally {
           set({ isSaving: false })

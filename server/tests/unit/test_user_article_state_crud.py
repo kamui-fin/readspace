@@ -51,9 +51,7 @@ class TestUserArticleStateCRUD:
     """Test cases for user article state CRUD operations."""
 
     @pytest.mark.asyncio
-    async def test_get_user_article_state_found(
-        self, mock_db, sample_user_article_state
-    ):
+    async def test_get_user_article_state_found(self, mock_db, sample_user_article_state):
         """Should return state when found."""
         user_id = sample_user_article_state.user_id
         article_id = sample_user_article_state.article_id
@@ -63,9 +61,7 @@ class TestUserArticleStateCRUD:
         mock_result.scalars().first.return_value = sample_user_article_state
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = await get_user_article_state(
-            db=mock_db, user_id=user_id, article_id=article_id
-        )
+        result = await get_user_article_state(db=mock_db, user_id=user_id, article_id=article_id)
 
         assert result == sample_user_article_state
         mock_db.execute.assert_called_once()
@@ -81,9 +77,7 @@ class TestUserArticleStateCRUD:
         mock_result.scalars().first.return_value = None
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = await get_user_article_state(
-            db=mock_db, user_id=user_id, article_id=article_id
-        )
+        result = await get_user_article_state(db=mock_db, user_id=user_id, article_id=article_id)
 
         assert result is None
 
@@ -93,9 +87,7 @@ class TestUserArticleStateCRUD:
         user_id = uuid4()
         article_id = uuid4()
 
-        state_in = UserArticleStateCreate(
-            user_id=user_id, article_id=article_id, is_read=False
-        )
+        state_in = UserArticleStateCreate(user_id=user_id, article_id=article_id, is_read=False)
 
         mock_db.add = Mock()
         mock_db.commit = AsyncMock()
@@ -113,9 +105,7 @@ class TestUserArticleStateCRUD:
         user_id = uuid4()
         article_id = uuid4()
 
-        state_in = UserArticleStateCreate(
-            user_id=user_id, article_id=article_id, is_read=True
-        )
+        state_in = UserArticleStateCreate(user_id=user_id, article_id=article_id, is_read=True)
 
         mock_db.add = Mock()
         mock_db.commit = AsyncMock()
@@ -132,9 +122,7 @@ class TestUserArticleStateCRUD:
             assert hasattr(added_state, "read_at")
 
     @pytest.mark.asyncio
-    async def test_update_user_article_state_mark_read(
-        self, mock_db, sample_user_article_state
-    ):
+    async def test_update_user_article_state_mark_read(self, mock_db, sample_user_article_state):
         """Should set read_at when marking article as read."""
         sample_user_article_state.is_read = False
         sample_user_article_state.read_at = None
@@ -159,9 +147,7 @@ class TestUserArticleStateCRUD:
             assert sample_user_article_state.read_at == mock_now
 
     @pytest.mark.asyncio
-    async def test_update_user_article_state_mark_unread(
-        self, mock_db, sample_user_article_state
-    ):
+    async def test_update_user_article_state_mark_unread(self, mock_db, sample_user_article_state):
         """Should clear read_at when marking article as unread."""
         sample_user_article_state.is_read = True
         sample_user_article_state.read_at = datetime.now(timezone.utc)
@@ -172,9 +158,7 @@ class TestUserArticleStateCRUD:
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 
-        result = await update_user_article_state(
-            db=mock_db, state_db=sample_user_article_state, state_in=state_update
-        )
+        result = await update_user_article_state(db=mock_db, state_db=sample_user_article_state, state_in=state_update)
 
         assert result == sample_user_article_state
         assert sample_user_article_state.is_read is False
@@ -202,9 +186,7 @@ class TestUserArticleStateCRUD:
             mock_datetime.now.return_value = mock_now
             mock_datetime.timezone = timezone
 
-            result = await mark_article_read(
-                db=mock_db, user_id=user_id, article_id=article_id
-            )
+            result = await mark_article_read(db=mock_db, user_id=user_id, article_id=article_id)
 
             assert existing_state.is_read is True
             assert existing_state.read_at == mock_now
@@ -224,9 +206,7 @@ class TestUserArticleStateCRUD:
         mock_db.commit = AsyncMock()
         mock_db.refresh = AsyncMock()
 
-        result = await mark_article_read(
-            db=mock_db, user_id=user_id, article_id=article_id
-        )
+        result = await mark_article_read(db=mock_db, user_id=user_id, article_id=article_id)
 
         # Should create new state
         mock_db.add.assert_called_once()
@@ -242,17 +222,13 @@ class TestUserArticleStateCRUD:
         existing_state = Mock()
         existing_state.is_favorite = False
 
-        with patch(
-            "app.crud.crud_user_article_state.get_or_create_user_article_state"
-        ) as mock_get_create:
+        with patch("app.crud.crud_user_article_state.get_or_create_user_article_state") as mock_get_create:
             mock_get_create.return_value = existing_state
             mock_db.add = Mock()
             mock_db.commit = AsyncMock()
             mock_db.refresh = AsyncMock()
 
-            result = await toggle_article_favorite(
-                db=mock_db, user_id=user_id, article_id=article_id
-            )
+            result = await toggle_article_favorite(db=mock_db, user_id=user_id, article_id=article_id)
 
             assert existing_state.is_favorite is True
             mock_db.add.assert_called_once_with(existing_state)
@@ -266,17 +242,13 @@ class TestUserArticleStateCRUD:
         existing_state = Mock()
         existing_state.is_read_later = False
 
-        with patch(
-            "app.crud.crud_user_article_state.get_or_create_user_article_state"
-        ) as mock_get_create:
+        with patch("app.crud.crud_user_article_state.get_or_create_user_article_state") as mock_get_create:
             mock_get_create.return_value = existing_state
             mock_db.add = Mock()
             mock_db.commit = AsyncMock()
             mock_db.refresh = AsyncMock()
 
-            result = await toggle_article_read_later(
-                db=mock_db, user_id=user_id, article_id=article_id
-            )
+            result = await toggle_article_read_later(db=mock_db, user_id=user_id, article_id=article_id)
 
             assert existing_state.is_read_later is True
             mock_db.add.assert_called_once_with(existing_state)
@@ -310,9 +282,7 @@ class TestUserArticleStateCRUD:
         mock_result.scalars().all.return_value = [uuid4()]  # 1 article
         mock_db.execute = AsyncMock(return_value=mock_result)
 
-        result = await get_user_unread_count(
-            db=mock_db, user_id=user_id, subscription_ids=subscription_ids
-        )
+        result = await get_user_unread_count(db=mock_db, user_id=user_id, subscription_ids=subscription_ids)
 
         assert result == 1
         mock_db.execute.assert_called_once()

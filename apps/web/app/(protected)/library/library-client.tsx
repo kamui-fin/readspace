@@ -1,16 +1,16 @@
 "use client"
 
-import { LibraryCatalog } from "@/components/library/library-catalog"
-import FloatingUploadButton from "@/components/library/floating-upload-button"
-import UploadBookDialog from "@/components/library/upload-book"
+import { LibraryCatalog } from "@/components/library/LibraryCatalog"
+import FloatingUploadButton from "@/components/library/FloatingUploadButton"
+import UploadBookDialog from "@/components/library/UploadBook"
 import Header from "@/components/navigation/header"
 import { useBooks } from "@readspace/shared"
 import { UserBookLibrary } from "@readspace/shared"
 import {
     BookCardSkeleton,
     BookCardListSkeleton,
-} from "@/components/library/book-card-skeleton"
-import { useIsMobile } from "@/hooks/use-mobile"
+} from "@/components/library/BookCardSkeleton"
+import { useIsMobile } from "@/hooks/useMobile"
 import { useState, useEffect } from "react"
 
 interface LibraryErrorProps {

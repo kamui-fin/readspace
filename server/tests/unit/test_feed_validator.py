@@ -33,9 +33,7 @@ class TestFeedValidator:
         mock_feed = Mock()
         mock_feed.get.return_value = None
 
-        with pytest.raises(
-            ValidationError, match="Invalid feed format: No feed data found"
-        ):
+        with pytest.raises(ValidationError, match="Invalid feed format: No feed data found"):
             self.validator.validate_feed_structure(mock_feed)
 
     def test_validate_feed_structure_no_title(self):
@@ -45,9 +43,7 @@ class TestFeedValidator:
         mock_feed.entries = [{"title": "Entry 1"}]
         mock_feed.get.return_value = mock_feed.entries
 
-        with pytest.raises(
-            ValidationError, match="Invalid feed format: Feed title is missing"
-        ):
+        with pytest.raises(ValidationError, match="Invalid feed format: Feed title is missing"):
             self.validator.validate_feed_structure(mock_feed)
 
     def test_validate_feed_structure_no_entries(self):
@@ -66,9 +62,7 @@ class TestFeedValidator:
 
         mock_feed.get = mock_get
 
-        with pytest.raises(
-            ValidationError, match="Invalid feed format: No articles found in feed"
-        ):
+        with pytest.raises(ValidationError, match="Invalid feed format: No articles found in feed"):
             self.validator.validate_feed_structure(mock_feed)
 
     def test_validate_feed_structure_insufficient_content(self):
@@ -86,9 +80,7 @@ class TestFeedValidator:
 
         mock_feed.get = mock_get
 
-        with pytest.raises(
-            ValidationError, match="Invalid feed format: No articles found in feed"
-        ):
+        with pytest.raises(ValidationError, match="Invalid feed format: No articles found in feed"):
             self.validator.validate_feed_structure(mock_feed)
 
     def test_validate_feed_articles_valid(self):
@@ -148,24 +140,16 @@ class TestFeedValidator:
         with pytest.raises(ValidationError, match="Feed URL cannot be empty"):
             self.validator.validate_feed_url("   ")
 
-        with pytest.raises(
-            ValidationError, match="Feed URL must start with http:// or https://"
-        ):
+        with pytest.raises(ValidationError, match="Feed URL must start with http:// or https://"):
             self.validator.validate_feed_url("ftp://example.com/feed")
 
-        with pytest.raises(
-            ValidationError, match="Feed URL must start with http:// or https://"
-        ):
+        with pytest.raises(ValidationError, match="Feed URL must start with http:// or https://"):
             self.validator.validate_feed_url("not-a-url")
 
-        with pytest.raises(
-            ValidationError, match="Feed URL is too long \\(max 2000 characters\\)"
-        ):
+        with pytest.raises(ValidationError, match="Feed URL is too long \\(max 2000 characters\\)"):
             self.validator.validate_feed_url("http://example.com/" + "a" * 2100)
 
-        with pytest.raises(
-            ValidationError, match="Feed URL contains invalid characters"
-        ):
+        with pytest.raises(ValidationError, match="Feed URL contains invalid characters"):
             self.validator.validate_feed_url("http://example .com/feed")
 
     def test_extract_feed_metadata(self):

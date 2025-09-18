@@ -13,68 +13,85 @@ interface SettingsProps {
 }
 
 const PRODUCTION_DEFAULTS = {
-  readspace_url: 'https://api.readspace.ai',
-  readspace_app_url: 'https://app.readspace.ai',
-  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
-  supabase_anon_key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
+  readspace_url: 'https:///api.readspace.ai',
+  readspace_app_url: 'https:///app.readspace.ai',
+  supabase_url: 'https:///hnqyngkyugiamvlhqoaf.supabase.co',
+  supabase_anon_key:
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
 }
 
 export function Settings({ onBack }: SettingsProps) {
   const { settings, user, updateSettings, logout } = useExtensionStore()
   const [readspaceUrl, setReadspaceUrl] = useState(
-    settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url ? '' : settings.readspace_url
+    settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url
+      ? ''
+      : settings.readspace_url
   )
   const [supabaseUrl, setSupabaseUrl] = useState(
-    settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url ? '' : settings.supabase_url
+    settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url
+      ? ''
+      : settings.supabase_url
   )
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(
-    settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key ? '' : settings.supabase_anon_key
+    settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
+      ? ''
+      : settings.supabase_anon_key
   )
   const [isSaving, setIsSaving] = useState(false)
 
   // Check if using production settings
-  const isUsingProduction = (
+  const isUsingProduction =
     settings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
     settings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
     settings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
-  )
 
   const handleSave = async () => {
     setIsSaving(true)
     const toastId = toast.loading('Saving settings...')
-    
+
     try {
       // Check if user is trying to configure self-hosted settings
-      const hasAnyCustomField = readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
-      
+      const hasAnyCustomField =
+        readspaceUrl.trim() || supabaseUrl.trim() || supabaseAnonKey.trim()
+
       // If any field is filled (indicating self-hosted setup), all 3 fields are required
       if (hasAnyCustomField) {
-        if (!readspaceUrl.trim() || !supabaseUrl.trim() || !supabaseAnonKey.trim()) {
-          toast.error('For self-hosted configuration, all 3 fields are required', { id: toastId })
+        if (
+          !readspaceUrl.trim() ||
+          !supabaseUrl.trim() ||
+          !supabaseAnonKey.trim()
+        ) {
+          toast.error(
+            'For self-hosted configuration, all 3 fields are required',
+            { id: toastId }
+          )
           setIsSaving(false)
           return
         }
       }
-      
+
       // Use production defaults if fields are empty, otherwise use custom values
       const finalSettings = {
         readspace_url: readspaceUrl.trim() || PRODUCTION_DEFAULTS.readspace_url,
         supabase_url: supabaseUrl.trim() || PRODUCTION_DEFAULTS.supabase_url,
-        supabase_anon_key: supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key
+        supabase_anon_key:
+          supabaseAnonKey.trim() || PRODUCTION_DEFAULTS.supabase_anon_key,
       }
 
       // Check if switching from cloud to self-hosted or vice versa
-      const switchingToSelfHosted = isUsingProduction && (
-        finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
-        finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
-        finalSettings.supabase_anon_key !== PRODUCTION_DEFAULTS.supabase_anon_key
-      )
-      
-      const switchingToCloud = !isUsingProduction && (
+      const switchingToSelfHosted =
+        isUsingProduction &&
+        (finalSettings.readspace_url !== PRODUCTION_DEFAULTS.readspace_url ||
+          finalSettings.supabase_url !== PRODUCTION_DEFAULTS.supabase_url ||
+          finalSettings.supabase_anon_key !==
+            PRODUCTION_DEFAULTS.supabase_anon_key)
+
+      const switchingToCloud =
+        !isUsingProduction &&
         finalSettings.readspace_url === PRODUCTION_DEFAULTS.readspace_url &&
         finalSettings.supabase_url === PRODUCTION_DEFAULTS.supabase_url &&
-        finalSettings.supabase_anon_key === PRODUCTION_DEFAULTS.supabase_anon_key
-      )
+        finalSettings.supabase_anon_key ===
+          PRODUCTION_DEFAULTS.supabase_anon_key
 
       // If user is authenticated and switching configurations, log them out first
       if (user && (switchingToSelfHosted || switchingToCloud)) {
@@ -83,10 +100,10 @@ export function Settings({ onBack }: SettingsProps) {
       }
 
       await updateSettings(finalSettings)
-      
+
       // Reset Supabase client to use new settings
       resetSupabaseClient()
-      
+
       if (switchingToSelfHosted || switchingToCloud) {
         toast.success('Settings saved! Please sign in again.', { id: toastId })
       } else {
@@ -95,7 +112,8 @@ export function Settings({ onBack }: SettingsProps) {
       onBack()
     } catch (error) {
       console.error('Failed to save settings:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to save settings'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to save settings'
       toast.error(errorMessage, { id: toastId })
     } finally {
       setIsSaving(false)
@@ -111,7 +129,7 @@ export function Settings({ onBack }: SettingsProps) {
   const handleUseCloudConfig = async () => {
     setIsSaving(true)
     const toastId = toast.loading('Switching to Readspace Cloud...')
-    
+
     try {
       // If user is authenticated with self-hosted, log them out first
       if (user && !isUsingProduction) {
@@ -125,15 +143,20 @@ export function Settings({ onBack }: SettingsProps) {
       setSupabaseAnonKey('')
 
       await updateSettings(PRODUCTION_DEFAULTS)
-      
+
       // Reset Supabase client to use new settings
       resetSupabaseClient()
-      
-      toast.success('Switched to Readspace Cloud! Please sign in.', { id: toastId })
+
+      toast.success('Switched to Readspace Cloud! Please sign in.', {
+        id: toastId,
+      })
       onBack()
     } catch (error) {
       console.error('Failed to switch to cloud config:', error)
-      const errorMessage = error instanceof Error ? error.message : 'Failed to switch to cloud config'
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : 'Failed to switch to cloud config'
       toast.error(errorMessage, { id: toastId })
     } finally {
       setIsSaving(false)
@@ -161,7 +184,9 @@ export function Settings({ onBack }: SettingsProps) {
           {isUsingProduction ? (
             <>
               <Cloud className="w-4 h-4 text-green-600" />
-              <span className="font-medium text-sm">Connected to Readspace Cloud</span>
+              <span className="font-medium text-sm">
+                Connected to Readspace Cloud
+              </span>
               <Badge variant="secondary" className="text-xs">
                 Official
               </Badge>
@@ -169,7 +194,9 @@ export function Settings({ onBack }: SettingsProps) {
           ) : (
             <>
               <Server className="w-4 h-4 text-amber-500" />
-              <span className="font-medium text-sm">Using Self-Hosted Server</span>
+              <span className="font-medium text-sm">
+                Using Self-Hosted Server
+              </span>
               <Badge variant="outline" className="text-xs">
                 Custom
               </Badge>
@@ -211,7 +238,8 @@ export function Settings({ onBack }: SettingsProps) {
 
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
           <p className="text-sm text-blue-800">
-            Leave empty to use official Readspace. Don't modify unless you know what you're doing.
+            Leave empty to use official Readspace. Don't modify unless you know
+            what you're doing.
           </p>
         </div>
 
@@ -221,9 +249,11 @@ export function Settings({ onBack }: SettingsProps) {
             <Input
               id="readspaceUrl"
               type="url"
-              placeholder="http://localhost:8008"
+              placeholder="http:///localhost:8008"
               value={readspaceUrl}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setReadspaceUrl(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setReadspaceUrl(e.target.value)
+              }
               className="w-full text-sm"
             />
           </div>
@@ -233,9 +263,11 @@ export function Settings({ onBack }: SettingsProps) {
             <Input
               id="supabaseUrl"
               type="url"
-              placeholder="http://localhost:8000"
+              placeholder="http:///localhost:8000"
               value={supabaseUrl}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSupabaseUrl(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSupabaseUrl(e.target.value)
+              }
               className="w-full text-sm"
             />
           </div>
@@ -247,7 +279,9 @@ export function Settings({ onBack }: SettingsProps) {
               type="password"
               placeholder="Your Supabase anon key"
               value={supabaseAnonKey}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSupabaseAnonKey(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                setSupabaseAnonKey(e.target.value)
+              }
               className="w-full text-sm"
             />
           </div>
@@ -256,12 +290,12 @@ export function Settings({ onBack }: SettingsProps) {
             <Button onClick={handleSave} className="w-full" disabled={isSaving}>
               {isSaving ? 'Saving...' : 'Save'}
             </Button>
-            
+
             {!isUsingProduction && (
-              <Button 
-                variant="outline" 
-                onClick={handleUseCloudConfig} 
-                className="w-full" 
+              <Button
+                variant="outline"
+                onClick={handleUseCloudConfig}
+                className="w-full"
                 disabled={isSaving}
               >
                 <Cloud className="w-4 h-4 mr-2" />
@@ -273,4 +307,4 @@ export function Settings({ onBack }: SettingsProps) {
       </div>
     </div>
   )
-} 
+}

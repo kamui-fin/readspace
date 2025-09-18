@@ -72,12 +72,8 @@ def downgrade() -> None:
     """Downgrade schema."""
 
     # Drop triggers
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_feed_delete ON feed_articles;"
-    )
-    op.execute(
-        "DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_clipped_delete ON clipped_articles;"
-    )
+    op.execute("DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_feed_delete ON feed_articles;")
+    op.execute("DROP TRIGGER IF EXISTS trg_cleanup_article_contents_after_clipped_delete ON clipped_articles;")
 
     # Drop trigger function
     op.execute("DROP FUNCTION IF EXISTS cleanup_orphaned_article_contents_stmt();")

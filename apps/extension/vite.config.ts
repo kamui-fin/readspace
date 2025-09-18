@@ -7,10 +7,10 @@ import { readFileSync } from 'fs'
 // Load browser-specific manifest
 function getManifest(mode: string) {
   const isFirefox = mode === 'firefox'
-  const manifestPath = isFirefox 
-    ? resolve(__dirname, 'src/manifest.firefox.json')
-    : resolve(__dirname, 'src/manifest.chrome.json')
-  
+  const manifestPath = isFirefox
+    ? resolve('./src/manifest.firefox.json')
+    : resolve('./src/manifest.chrome.json')
+
   return JSON.parse(readFileSync(manifestPath, 'utf-8'))
 }
 
@@ -27,14 +27,14 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       alias: {
-        '@': resolve(__dirname, './src'),
+        '@': resolve('./src'),
       },
     },
     build: {
       outDir: isFirefox ? 'dist-firefox' : 'dist',
       rollupOptions: {
         input: {
-          popup: resolve(__dirname, 'index.html'),
+          popup: resolve('./index.html'),
         },
         external: [
           '@tailwindcss/typography',

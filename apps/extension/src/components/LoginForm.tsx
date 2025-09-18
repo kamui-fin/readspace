@@ -7,7 +7,6 @@ import { getSupabaseClient } from '@/lib/supabase'
 import { Loader2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-
 export function LoginForm() {
   const { login, isConnecting, settings } = useExtensionStore()
   const [email, setEmail] = useState('')
@@ -26,25 +25,30 @@ export function LoginForm() {
     }
 
     if (!settings.supabase_url || !settings.supabase_anon_key) {
-      const errorMsg = 'Supabase configuration is missing. Please check settings.'
+      const errorMsg =
+        'Supabase configuration is missing. Please check settings.'
       setError(errorMsg)
       toast.error(errorMsg)
       return
     }
 
     const toastId = toast.loading('Signing in...')
-    
+
     try {
-      const supabase = getSupabaseClient(settings.supabase_url, settings.supabase_anon_key)
-      
+      const supabase = getSupabaseClient(
+        settings.supabase_url,
+        settings.supabase_anon_key
+      )
+
       if (!supabase) {
         throw new Error('Failed to initialize Supabase client')
       }
 
-      const { data, error: signinError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: password.trim(),
-      })
+      const { data, error: signinError } =
+        await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password: password.trim(),
+        })
 
       if (signinError) {
         throw new Error(signinError.message)
@@ -57,9 +61,9 @@ export function LoginForm() {
       // Login to the extension store with the access token
       await login(data.session.access_token)
       toast.success('Successfully signed in!', { id: toastId })
-      
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in'
+      const errorMessage =
+        error instanceof Error ? error.message : 'Failed to sign in'
       setError(errorMessage)
       toast.error(errorMessage, { id: toastId })
     }
@@ -75,7 +79,9 @@ export function LoginForm() {
             type="email"
             placeholder="email@example.com"
             value={email}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setEmail(e.target.value)
+            }
             disabled={isConnecting}
             required
             className="h-12"
@@ -89,7 +95,9 @@ export function LoginForm() {
             type="password"
             placeholder="Enter your password"
             value={password}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+              setPassword(e.target.value)
+            }
             disabled={isConnecting}
             required
             className="h-12"
@@ -119,4 +127,4 @@ export function LoginForm() {
       </form>
     </div>
   )
-} 
+}

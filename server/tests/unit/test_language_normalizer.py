@@ -154,9 +154,7 @@ class TestLanguageNormalizerIntegration:
 
         for input_code, expected in test_cases:
             result = normalize_language_code(input_code)
-            assert result == expected, (
-                f"Expected {input_code} -> {expected}, got {result}"
-            )
+            assert result == expected, f"Expected {input_code} -> {expected}, got {result}"
 
     def test_edge_cases_from_feeds(self):
         """Test edge cases that might appear in RSS feeds."""
@@ -175,6 +173,4 @@ class TestLanguageNormalizerIntegration:
         for case in edge_cases:
             result = normalize_language_code(case)
             # Should either be None or a valid 2-letter code
-            assert result is None or (
-                isinstance(result, str) and len(result) == 2 and result.isalpha()
-            )
+            assert result is None or (isinstance(result, str) and len(result) == 2 and result.isalpha())

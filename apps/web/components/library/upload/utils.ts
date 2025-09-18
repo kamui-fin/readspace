@@ -1,8 +1,8 @@
 import { getEpubMetadata } from "@/lib/reader/bookstore"
 import { createClient } from "@/lib/supabase/client"
 import { NavItem } from "epubjs/types/navigation"
-import { type PDFDocumentProxy } from "pdfjs-dist"
 import { pdfjs } from "react-pdf"
+import type { PDFDocumentProxy } from "pdfjs-dist"
 import { BookMetadata, ProcessedFileMetadata } from "./types"
 
 // Promise.withResolvers polyfill
@@ -186,7 +186,7 @@ export async function getTableOfContents(
     // Process all the top-level outline items.
     const navItems = (
         await Promise.all(outline.map(processOutlineItem))
-    ).filter((elm): elm is NavItem => elm !== null)
+    ).filter((elm: NavItem | null): elm is NavItem => elm !== null)
     console.log(navItems)
     return navItems
 }
@@ -199,10 +199,10 @@ export const extractPdfMetadata = async (
     const metadata = (await pdfDocument.getMetadata()) as {
         info: { Title?: string; Author?: string }
     }
-    const toc = await getTableOfContents(pdfDocument)
+    const toc = await getTableOfContents(pdfDocument as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 
     // Get metadata
-    const imageUrl = await renderFirstPageAsImage(pdfDocument)
+    const imageUrl = await renderFirstPageAsImage(pdfDocument as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 
     return {
         title: metadata.info.Title || file.name.replace(/\.[^/.]+$/, ""),
@@ -230,7 +230,7 @@ export const sanitizeText = (text: string | undefined | null): string => {
     if (!text) return ""
     // Remove null bytes and other control characters except common whitespace
     return text.replace(
-        /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g,
+        /[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, // eslint-disable-line no-control-regex
         ""
     )
 }

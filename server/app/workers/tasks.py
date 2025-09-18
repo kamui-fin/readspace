@@ -9,9 +9,6 @@ from sqlalchemy.pool import NullPool
 from app.core.celery_app import celery
 from app.core.config import get_settings
 
-# AsyncSessionLocal is no longer imported directly from app.db.session for use in tasks
-# from app.db.session import AsyncSessionLocal
-
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 

@@ -34,9 +34,7 @@ class TestArticleBusinessLogic:
             feed_id2: {"existing3"},
         }
 
-        new_to_create, duplicates = self.service.detect_duplicate_articles(
-            new_articles, existing_articles
-        )
+        new_to_create, duplicates = self.service.detect_duplicate_articles(new_articles, existing_articles)
 
         assert len(new_to_create) == 3
         assert len(duplicates) == 0
@@ -54,9 +52,7 @@ class TestArticleBusinessLogic:
 
         existing_articles = {feed_id: {"duplicate", "existing1"}}
 
-        new_to_create, duplicates = self.service.detect_duplicate_articles(
-            new_articles, existing_articles
-        )
+        new_to_create, duplicates = self.service.detect_duplicate_articles(new_articles, existing_articles)
 
         assert len(new_to_create) == 2
         assert len(duplicates) == 1
@@ -75,9 +71,7 @@ class TestArticleBusinessLogic:
 
         existing_articles = {}
 
-        new_to_create, duplicates = self.service.detect_duplicate_articles(
-            new_articles, existing_articles
-        )
+        new_to_create, duplicates = self.service.detect_duplicate_articles(new_articles, existing_articles)
 
         assert len(new_to_create) == 2  # Only unique articles
         assert len(duplicates) == 1
@@ -108,20 +102,12 @@ class TestArticleBusinessLogic:
     def test_validate_article_data_missing_required_fields(self):
         """Test validation fails for missing required fields"""
         # Test missing guid
-        with pytest.raises(
-            ValidationError, match="Article missing required field: guid"
-        ):
-            self.service.validate_article_data(
-                {"link": "https://example.com", "feed_id": uuid4(), "user_id": uuid4()}
-            )
+        with pytest.raises(ValidationError, match="Article missing required field: guid"):
+            self.service.validate_article_data({"link": "https://example.com", "feed_id": uuid4(), "user_id": uuid4()})
 
         # Test missing link
-        with pytest.raises(
-            ValidationError, match="Article missing required field: link"
-        ):
-            self.service.validate_article_data(
-                {"guid": "test", "feed_id": uuid4(), "user_id": uuid4()}
-            )
+        with pytest.raises(ValidationError, match="Article missing required field: link"):
+            self.service.validate_article_data({"guid": "test", "feed_id": uuid4(), "user_id": uuid4()})
 
     def test_validate_article_data_invalid_link(self):
         """Test validation fails for invalid links"""
@@ -212,17 +198,13 @@ class TestArticleBusinessLogic:
         # High priority article (recent, good content, reasonable length)
         high_priority_article = {
             "title": "Important Article",
-            "content": "This is substantial content that provides value. "
-            * 50,  # ~500 chars
+            "content": "This is substantial content that provides value. " * 50,  # ~500 chars
             "description": "Good description",
-            "published_at": datetime.now(timezone.utc)
-            - timedelta(hours=1),  # Very recent
+            "published_at": datetime.now(timezone.utc) - timedelta(hours=1),  # Very recent
             "estimated_read_time_minutes": 5,  # Sweet spot
         }
 
-        high_score = self.service.calculate_article_priority_score(
-            high_priority_article
-        )
+        high_score = self.service.calculate_article_priority_score(high_priority_article)
 
         # Lower priority article (older, minimal content)
         low_priority_article = {
@@ -304,15 +286,10 @@ class TestArticleBusinessLogic:
         ]
 
         # Filter to last week
-        filtered = self.service.filter_articles_by_date_range(
-            articles, start_date=week_ago, end_date=now
-        )
+        filtered = self.service.filter_articles_by_date_range(articles, start_date=week_ago, end_date=now)
 
         assert len(filtered) == 2  # Recent and week old
-        assert all(
-            "Recent" in article["title"] or "Week old" in article["title"]
-            for article in filtered
-        )
+        assert all("Recent" in article["title"] or "Week old" in article["title"] for article in filtered)
 
     def test_filter_articles_by_date_range_naive_datetime(self):
         """Test filtering with naive datetime (should convert to UTC)"""
@@ -327,13 +304,9 @@ class TestArticleBusinessLogic:
         start_date = datetime(2024, 1, 1, 11, 0, 0, tzinfo=timezone.utc)
         end_date = datetime(2024, 1, 1, 13, 0, 0, tzinfo=timezone.utc)
 
-        filtered = self.service.filter_articles_by_date_range(
-            articles, start_date, end_date
-        )
+        filtered = self.service.filter_articles_by_date_range(articles, start_date, end_date)
 
-        assert (
-            len(filtered) == 2
-        )  # Both should be included after timezone normalization
+        assert len(filtered) == 2  # Both should be included after timezone normalization
 
     def test_sort_articles_by_priority(self):
         """Test sorting articles by priority score"""

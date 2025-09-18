@@ -1,12 +1,12 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field, HttpUrl, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import ERROR_ARTICLE_NOT_FOUND
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.rss_schemas import (
@@ -14,6 +14,7 @@ from app.schemas.rss_schemas import (
     ArticleUpdate,
     ClippedArticleResponse,
     PaginatedResponse,
+    SaveArticleRequest,
 )
 from app.services.auth import get_current_user
 from app.services.rss_service import RssOrchestrationService
@@ -22,44 +23,6 @@ from app.services.web_article_service import WebArticleService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["RSS Articles"])
-
-
-# TODO: shouldn't this be in models?
-class SaveArticleRequest(BaseModel):
-    url: HttpUrl
-    title: str | None = Field(None, max_length=1000)  # Reasonable title limit
-    content: str | None = Field(None, max_length=5_000_000)  # 5MB content limit to prevent abuse
-    metadata: dict[str, Any] | None = Field(None, max_length=50)  # Limit metadata keys to prevent abuse
-    priority: str | None = Field(None, max_length=20)  # Reasonable priority string limit
-    # tag_ids removed - using ARRAY field on feeds
-    note: str | None = Field(None, max_length=10_000)  # 10k character note limit
-
-    @field_validator("metadata")
-    @classmethod
-    def validate_metadata(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
-        if v is None:
-            return v
-
-        # Limit total metadata size by serialized JSON length
-        import json
-
-        serialized = json.dumps(v)
-        if len(serialized) > 100_000:  # 100KB limit for metadata JSON
-            raise ValueError("Metadata too large - maximum 100KB when serialized")
-
-        # Prevent deeply nested objects to avoid DoS
-        def check_depth(obj: Any, max_depth: int = 10, current_depth: int = 0) -> None:
-            if current_depth > max_depth:
-                raise ValueError("Metadata nesting too deep - maximum 10 levels")
-            if isinstance(obj, dict):
-                for value in obj.values():
-                    check_depth(value, max_depth, current_depth + 1)
-            elif isinstance(obj, list):
-                for item in obj:
-                    check_depth(item, max_depth, current_depth + 1)
-
-        check_depth(v)
-        return v
 
 
 @router.post("/save", response_model=ClippedArticleResponse)
@@ -204,7 +167,7 @@ async def get_todays_articles(
     from datetime import timedelta
 
     # Get current time in UTC
-    now_utc = datetime.utcnow()
+    now_utc = datetime.now(UTC)
 
     # Get articles from the last 24 hours
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
@@ -282,7 +245,7 @@ async def get_article(
             article_id=article_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_ARTICLE_NOT_FOUND)
     return article
 
 
@@ -305,7 +268,7 @@ async def update_article(
             article_id=article_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_ARTICLE_NOT_FOUND)
     logger.info(
         "Article status updated successfully",
         article_id=updated_article.id,

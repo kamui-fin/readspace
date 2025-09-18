@@ -8,7 +8,7 @@ import {
     Noto_Serif_JP,
     Noto_Serif_TC,
 } from "next/font/google"
-import { QueryProvider } from "@/components/providers/query-provider"
+import { QueryProvider } from "@/components/providers/QueryProvider"
 import { PostHogProvider } from "./providers"
 import "./globals.css"
 

@@ -2,7 +2,16 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatRelativeDate, extractDomain } from '@readspace/shared'
 import type { PageMetadata, DiscoveredFeed } from '@readspace/shared'
-import { BookOpen, Clock, Calendar, Globe, Rss, Settings, BellPlus, Copy } from 'lucide-react'
+import {
+  BookOpen,
+  Clock,
+  Calendar,
+  Globe,
+  Rss,
+  Settings,
+  BellPlus,
+  Copy,
+} from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
@@ -15,17 +24,21 @@ interface ArticlePreviewProps {
   readingTime?: number
 }
 
-export function ArticlePreview({ 
-  metadata, 
-  isLoading = false, 
-  onSave, 
+export function ArticlePreview({
+  metadata,
+  isLoading = false,
+  onSave,
   onAdvancedSave,
-  readingTime
+  readingTime,
 }: ArticlePreviewProps) {
   const [selectedFeed, setSelectedFeed] = useState<DiscoveredFeed | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const domain = metadata.canonical_url ? extractDomain(metadata.canonical_url) : ''
-  const publishedDate = metadata.published_at ? new Date(metadata.published_at) : null
+  const domain = metadata.canonical_url
+    ? extractDomain(metadata.canonical_url)
+    : ''
+  const publishedDate = metadata.published_at
+    ? new Date(metadata.published_at)
+    : null
 
   const handleSubscribeClick = (feed: DiscoveredFeed) => {
     setSelectedFeed(feed)
@@ -60,8 +73,8 @@ export function ArticlePreview({
         {/* Article Image */}
         {metadata.image_url && (
           <div className="relative overflow-hidden rounded-md">
-            <img 
-              src={metadata.image_url} 
+            <img
+              src={metadata.image_url}
               alt={metadata.title || 'Article image'}
               className="w-full h-32 object-cover"
             />
@@ -90,7 +103,7 @@ export function ArticlePreview({
                 <span>{domain}</span>
               </div>
             )}
-            
+
             {metadata.author && (
               <div className="flex items-center gap-1">
                 <span>by {metadata.author}</span>
@@ -109,14 +122,16 @@ export function ArticlePreview({
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="w-3 h-3" />
             <span>
-              {readingTime ? `${readingTime} min read` : 'Calculating reading time...'}
+              {readingTime
+                ? `${readingTime} min read`
+                : 'Calculating reading time...'}
             </span>
           </div>
         </div>
 
         {/* Article Action Buttons */}
         <div className="flex gap-2 pt-2">
-          <Button 
+          <Button
             onClick={onSave}
             disabled={isLoading}
             className="flex-1"
@@ -134,8 +149,8 @@ export function ArticlePreview({
               </>
             )}
           </Button>
-          
-          <Button 
+
+          <Button
             onClick={onAdvancedSave}
             variant="outline"
             size="sm"
@@ -152,7 +167,7 @@ export function ArticlePreview({
             <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
               RSS FEEDS DISCOVERED ({metadata.feeds.length})
             </h4>
-            
+
             <div className="space-y-2">
               {metadata.feeds.map((feed, index) => (
                 <div
@@ -167,20 +182,23 @@ export function ArticlePreview({
                           {feed.title || 'RSS Feed'}
                         </h5>
                       </div>
-                      
+
                       {feed.description && (
                         <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                           {feed.description}
                         </p>
                       )}
-                      
+
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs px-1.5 py-0.5 h-auto">
+                        <Badge
+                          variant="outline"
+                          className="text-xs px-1.5 py-0.5 h-auto"
+                        >
                           {feed.type.toUpperCase()}
                         </Badge>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-1">
                       <Button
                         onClick={() => copyFeedUrl(feed.url)}
@@ -191,7 +209,7 @@ export function ArticlePreview({
                       >
                         <Copy className="w-3 h-3" />
                       </Button>
-                      
+
                       <Button
                         onClick={() => handleSubscribeClick(feed)}
                         variant="ghost"
@@ -224,4 +242,4 @@ export function ArticlePreview({
       </div>
     </div>
   )
-} 
+}

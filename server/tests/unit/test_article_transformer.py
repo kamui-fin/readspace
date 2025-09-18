@@ -60,9 +60,7 @@ class TestArticleTransformer:
             assert hasattr(result, "article_type")
         except Exception as e:
             # For now, just test that the logic doesn't crash on attribute access
-            assert (
-                "id" in str(e) or "link" in str(e) or "created_at" in str(e)
-            )  # Expected validation errors
+            assert "id" in str(e) or "link" in str(e) or "created_at" in str(e)  # Expected validation errors
 
     def test_feed_to_unified_no_content(self):
         """Test converting FeedArticle with no content."""
@@ -230,26 +228,14 @@ class TestArticleTransformer:
 
     def test_extract_source_domain_valid_url(self):
         """Test extracting domain from valid URLs."""
-        assert (
-            self.transformer._extract_source_domain("https://example.com/path")
-            == "example.com"
-        )
-        assert (
-            self.transformer._extract_source_domain("http://news.site.org/article/123")
-            == "news.site.org"
-        )
-        assert (
-            self.transformer._extract_source_domain("https://www.blog.com")
-            == "www.blog.com"
-        )
+        assert self.transformer._extract_source_domain("https://example.com/path") == "example.com"
+        assert self.transformer._extract_source_domain("http://news.site.org/article/123") == "news.site.org"
+        assert self.transformer._extract_source_domain("https://www.blog.com") == "www.blog.com"
 
     def test_extract_source_domain_invalid_input(self):
         """Test extracting domain from invalid input."""
         assert self.transformer._extract_source_domain(None) is None
-        assert (
-            self.transformer._extract_source_domain("") is None
-            or self.transformer._extract_source_domain("") == ""
-        )
+        assert self.transformer._extract_source_domain("") is None or self.transformer._extract_source_domain("") == ""
         assert (
             self.transformer._extract_source_domain("not-a-url") is None
             or self.transformer._extract_source_domain("not-a-url") == ""

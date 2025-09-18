@@ -33,24 +33,14 @@ class TestCRUDUnifiedArticles:
 
         # Mock query builder methods
         with (
-            patch.object(
-                self.crud.query_builder, "build_feed_article_query"
-            ) as mock_feed_query,
-            patch.object(
-                self.crud.query_builder, "build_clipped_article_query"
-            ) as mock_clipped_query,
-            patch.object(
-                self.crud.query_builder, "build_union_query"
-            ) as mock_union_query,
-            patch.object(
-                self.crud.query_builder, "build_count_query"
-            ) as mock_count_query,
+            patch.object(self.crud.query_builder, "build_feed_article_query") as mock_feed_query,
+            patch.object(self.crud.query_builder, "build_clipped_article_query") as mock_clipped_query,
+            patch.object(self.crud.query_builder, "build_union_query") as mock_union_query,
+            patch.object(self.crud.query_builder, "build_count_query") as mock_count_query,
         ):
             # Mock db execution
             mock_result = MagicMock()
-            mock_result.fetchall.return_value = [
-                {"id": uuid4(), "title": "Test Article", "article_type": "feed"}
-            ]
+            mock_result.fetchall.return_value = [{"id": uuid4(), "title": "Test Article", "article_type": "feed"}]
             mock_db.execute.return_value = mock_result
 
             # Mock count result
@@ -61,9 +51,7 @@ class TestCRUDUnifiedArticles:
             mock_db.execute.side_effect = [mock_result, mock_count_result]
 
             # Mock transformer
-            with patch.object(
-                self.crud.transformer, "raw_row_to_unified"
-            ) as mock_transform:
+            with patch.object(self.crud.transformer, "raw_row_to_unified") as mock_transform:
                 mock_article = ArticleResponse(
                     id=uuid4(),
                     title="Test Article",
@@ -100,15 +88,9 @@ class TestCRUDUnifiedArticles:
 
         # Mock query builder methods
         with (
-            patch.object(
-                self.crud.query_builder, "build_feed_article_query"
-            ) as mock_feed_query,
-            patch.object(
-                self.crud.query_builder, "build_count_query"
-            ) as mock_count_query,
-            patch.object(
-                self.crud, "_apply_sorting_and_pagination"
-            ) as mock_sort_paginate,
+            patch.object(self.crud.query_builder, "build_feed_article_query") as mock_feed_query,
+            patch.object(self.crud.query_builder, "build_count_query") as mock_count_query,
+            patch.object(self.crud, "_apply_sorting_and_pagination") as mock_sort_paginate,
         ):
             # Mock db execution
             mock_result = MagicMock()
@@ -127,9 +109,7 @@ class TestCRUDUnifiedArticles:
             mock_sort_paginate.return_value = mock_feed_query.return_value
 
             # Mock transformer
-            with patch.object(
-                self.crud.transformer, "feed_to_unified"
-            ) as mock_transform:
+            with patch.object(self.crud.transformer, "feed_to_unified") as mock_transform:
                 mock_article = ArticleResponse(
                     id=uuid4(),
                     title="Feed Article",
@@ -163,15 +143,9 @@ class TestCRUDUnifiedArticles:
 
         # Mock query builder methods
         with (
-            patch.object(
-                self.crud.query_builder, "build_clipped_article_query"
-            ) as mock_clipped_query,
-            patch.object(
-                self.crud.query_builder, "build_count_query"
-            ) as mock_count_query,
-            patch.object(
-                self.crud, "_apply_sorting_and_pagination"
-            ) as mock_sort_paginate,
+            patch.object(self.crud.query_builder, "build_clipped_article_query") as mock_clipped_query,
+            patch.object(self.crud.query_builder, "build_count_query") as mock_count_query,
+            patch.object(self.crud, "_apply_sorting_and_pagination") as mock_sort_paginate,
         ):
             # Mock db execution
             mock_result = MagicMock()
@@ -190,9 +164,7 @@ class TestCRUDUnifiedArticles:
             mock_sort_paginate.return_value = mock_clipped_query.return_value
 
             # Mock transformer
-            with patch.object(
-                self.crud.transformer, "clipped_to_unified"
-            ) as mock_transform:
+            with patch.object(self.crud.transformer, "clipped_to_unified") as mock_transform:
                 mock_article = ArticleResponse(
                     id=uuid4(),
                     title="Clipped Article",
@@ -238,18 +210,10 @@ class TestCRUDUnifiedArticles:
         }
 
         with (
-            patch.object(
-                self.crud.query_builder, "build_feed_article_query"
-            ) as mock_feed_query,
-            patch.object(
-                self.crud.query_builder, "build_clipped_article_query"
-            ) as mock_clipped_query,
-            patch.object(
-                self.crud.query_builder, "build_union_query"
-            ) as mock_union_query,
-            patch.object(
-                self.crud.query_builder, "build_count_query"
-            ) as mock_count_query,
+            patch.object(self.crud.query_builder, "build_feed_article_query") as mock_feed_query,
+            patch.object(self.crud.query_builder, "build_clipped_article_query") as mock_clipped_query,
+            patch.object(self.crud.query_builder, "build_union_query") as mock_union_query,
+            patch.object(self.crud.query_builder, "build_count_query") as mock_count_query,
         ):
             # Mock db execution
             mock_result = MagicMock()
@@ -258,9 +222,7 @@ class TestCRUDUnifiedArticles:
             mock_count_result.scalar.return_value = 0
             mock_db.execute.side_effect = [mock_result, mock_count_result]
 
-            result = await self.crud.get_unified_articles_by_user(
-                db=mock_db, user_id=self.user_id, **filters
-            )
+            result = await self.crud.get_unified_articles_by_user(db=mock_db, user_id=self.user_id, **filters)
 
             articles, total_count = result
 
@@ -291,9 +253,7 @@ class TestCRUDUnifiedArticles:
         with (
             patch.object(self.crud.query_builder, "build_feed_article_query"),
             patch.object(self.crud.query_builder, "build_clipped_article_query"),
-            patch.object(
-                self.crud.query_builder, "build_union_query"
-            ) as mock_union_query,
+            patch.object(self.crud.query_builder, "build_union_query") as mock_union_query,
             patch.object(self.crud.query_builder, "build_count_query"),
         ):
             mock_result = MagicMock()
@@ -339,9 +299,7 @@ class TestCRUDUnifiedArticles:
         mock_query.offset.return_value = mock_offset_result
 
         # Test that pagination methods are called
-        result = self.crud._apply_sorting_and_pagination(
-            mock_query, "published_at", "desc", 10, 20
-        )
+        result = self.crud._apply_sorting_and_pagination(mock_query, "published_at", "desc", 10, 20)
 
         # Should apply pagination in the correct order
         mock_query.offset.assert_called_once_with(10)
@@ -355,9 +313,7 @@ class TestCRUDUnifiedArticles:
         mock_query = MagicMock()
         mock_query.column_descriptions = []
 
-        result = self.crud._apply_sorting_and_pagination(
-            mock_query, "published_at", "desc", 0, 0
-        )
+        result = self.crud._apply_sorting_and_pagination(mock_query, "published_at", "desc", 0, 0)
 
         # Should not call offset or limit with 0 values
         mock_query.offset.assert_not_called()
@@ -377,9 +333,7 @@ class TestCRUDUnifiedArticles:
         mock_offset_result = MagicMock()
         mock_query.offset.return_value = mock_offset_result
 
-        result = self.crud._apply_sorting_and_pagination(
-            mock_query, "unknown_column", "desc", 5, 15
-        )
+        result = self.crud._apply_sorting_and_pagination(mock_query, "unknown_column", "desc", 5, 15)
 
         # Should not call order_by since no sort column found
         mock_query.order_by.assert_not_called()
@@ -400,9 +354,7 @@ class TestCRUDUnifiedArticles:
         mock_query.offset.return_value = mock_offset_result
 
         # This should not raise an exception
-        result = self.crud._apply_sorting_and_pagination(
-            mock_query, "published_at", "desc", 5, 10
-        )
+        result = self.crud._apply_sorting_and_pagination(mock_query, "published_at", "desc", 5, 10)
 
         # Should still apply pagination even if sorting fails
         mock_query.offset.assert_called_once_with(5)

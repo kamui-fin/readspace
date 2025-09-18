@@ -36,9 +36,7 @@ class TestArticleExtractor:
         assert result.title == "Test Article"
         assert str(result.link) == "http://example.com/article"
         # The summary extraction prioritizes content over short summaries
-        assert (
-            "Article" in result.description
-        )  # Should contain content since it's longer
+        assert "Article" in result.description  # Should contain content since it's longer
         assert result.content == "Article content"  # HTML tags stripped
         assert result.author == "Test Author"
         assert result.feed_id == self.feed_id
@@ -175,11 +173,7 @@ class TestArticleExtractor:
 
     def test_extract_image_url_from_media_content(self):
         """Test image extraction from media_content."""
-        entry = {
-            "media_content": [
-                {"medium": "image", "url": "http://example.com/image.jpg"}
-            ]
-        }
+        entry = {"media_content": [{"medium": "image", "url": "http://example.com/image.jpg"}]}
 
         result = self.extractor._extract_image_url(entry, "")
         assert result == "http://example.com/image.jpg"

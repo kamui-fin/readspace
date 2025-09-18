@@ -33,23 +33,15 @@ class BookMetadataFactory(SQLAlchemyModelFactory):
     file_url = factory.Faker("url")
     format = factory.Faker("random_element", elements=[BookFormat.EPUB, BookFormat.PDF])
     num_pages = factory.Faker("random_int", min=50, max=500)
-    file_size_bytes = factory.Faker(
-        "random_int", min=1024 * 1024, max=50 * 1024 * 1024
-    )  # 1MB to 50MB
+    file_size_bytes = factory.Faker("random_int", min=1024 * 1024, max=50 * 1024 * 1024)  # 1MB to 50MB
     epub_chapter_char_counts = factory.LazyAttribute(
-        lambda obj: [2500 + (i * 200) for i in range(10)]
-        if obj.format == BookFormat.EPUB
-        else None
+        lambda obj: [2500 + (i * 200) for i in range(10)] if obj.format == BookFormat.EPUB else None
     )
     epub_page_char_counts = factory.LazyAttribute(
-        lambda obj: [400 + (i % 100) for i in range(200)]
-        if obj.format == BookFormat.EPUB
-        else None
+        lambda obj: [400 + (i % 100) for i in range(200)] if obj.format == BookFormat.EPUB else None
     )
     pdf_toc = factory.LazyAttribute(
-        lambda obj: {
-            "chapters": [{"title": f"Chapter {i}", "page": i * 10} for i in range(1, 6)]
-        }
+        lambda obj: {"chapters": [{"title": f"Chapter {i}", "page": i * 10} for i in range(1, 6)]}
         if obj.format == BookFormat.PDF
         else None
     )
@@ -78,9 +70,7 @@ class UserBookLibraryFactory(SQLAlchemyModelFactory):
         else None
     )
     pdf_current_page = factory.LazyAttribute(
-        lambda obj: 1
-        if obj.book_metadata and obj.book_metadata.format == BookFormat.PDF
-        else None
+        lambda obj: 1 if obj.book_metadata and obj.book_metadata.format == BookFormat.PDF else None
     )
 
 
@@ -111,6 +101,4 @@ class HighlightFactory(SQLAlchemyModelFactory):
             "endOffset": 50,
         }
     )
-    pdf_rect_position = factory.LazyFunction(
-        lambda: {"x": 100, "y": 200, "width": 300, "height": 20, "page": 1}
-    )
+    pdf_rect_position = factory.LazyFunction(lambda: {"x": 100, "y": 200, "width": 300, "height": 20, "page": 1})

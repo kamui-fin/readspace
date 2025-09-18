@@ -6,6 +6,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,
@@ -61,7 +62,7 @@ async def subscribe_to_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
         # Check if user is already subscribed to this feed
         from app.crud import crud_subscription
@@ -212,7 +213,7 @@ async def get_feed(
     feed = await rss_service.get_feed(feed_id=feed_id)
     if not feed:
         logger.warning("Feed not found or access denied", feed_id=feed_id, user_id=current_user.sub)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
     return feed
 
 
@@ -233,7 +234,7 @@ async def update_feed_settings(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
         logger.info(
             "Feed settings updated successfully",
             feed_id=updated_feed.id,
@@ -282,7 +283,7 @@ async def refresh_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
         logger.info(
             "Feed refresh triggered/completed",
             feed_id=refreshed_feed.id,
@@ -621,6 +622,6 @@ async def delete_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
     logger.info("Feed deleted successfully", feed_id=feed_id, user_id=current_user.sub)
     return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})

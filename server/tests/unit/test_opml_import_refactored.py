@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from server.app.services.rss_service import RssOrchestrationService
+from app.services.rss_service import RssOrchestrationService
 
 
 class TestRssOrchestrationServiceOpmlImport:
@@ -76,9 +76,7 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder creation with explicit name mapping
         tech_folder_id = uuid4()
@@ -99,9 +97,7 @@ class TestRssOrchestrationServiceOpmlImport:
             "World News": world_folder_id,
         }
 
-        result = await self.service.extract_feeds_from_opml(
-            opml_content, "Imported Feeds"
-        )
+        result = await self.service.extract_feeds_from_opml(opml_content, "Imported Feeds")
 
         # Verify structure
         assert len(result) == 4
@@ -145,9 +141,7 @@ class TestRssOrchestrationServiceOpmlImport:
             }
         ]
 
-        with patch.object(
-            self.service, "extract_feeds_from_opml", return_value=test_feeds_data
-        ):
+        with patch.object(self.service, "extract_feeds_from_opml", return_value=test_feeds_data):
             # Mock the entire process_opml_import method to test its contract instead of internal implementation
             expected_result = {
                 "total_feeds": 1,
@@ -156,12 +150,8 @@ class TestRssOrchestrationServiceOpmlImport:
                 "status": "tasks_queued",
             }
 
-            with patch.object(
-                self.service, "process_opml_import", return_value=expected_result
-            ) as mock_process:
-                result = await self.service.process_opml_import(
-                    opml_content, "Imported"
-                )
+            with patch.object(self.service, "process_opml_import", return_value=expected_result) as mock_process:
+                result = await self.service.process_opml_import(opml_content, "Imported")
 
                 # Verify result structure
                 assert result["total_feeds"] == 1
@@ -200,9 +190,7 @@ class TestRssOrchestrationServiceOpmlImport:
     async def test_import_single_feed_already_exists(self):
         """Test handling when feed already exists."""
         # Mock ValueError for existing feed
-        self.service.feed_service.add_new_feed.side_effect = ValueError(
-            "Feed already exists"
-        )
+        self.service.feed_service.add_new_feed.side_effect = ValueError("Feed already exists")
 
         result = await self.service.import_single_feed(
             feed_url="https://example.com/existing.xml", feed_title="Existing Feed"
@@ -218,13 +206,9 @@ class TestRssOrchestrationServiceOpmlImport:
     async def test_import_single_feed_broken_feed(self):
         """Test handling of broken feeds."""
         # Mock ValueError for broken feed
-        self.service.feed_service.add_new_feed.side_effect = ValueError(
-            "Feed appears to be broken"
-        )
+        self.service.feed_service.add_new_feed.side_effect = ValueError("Feed appears to be broken")
 
-        result = await self.service.import_single_feed(
-            feed_url="https://broken.com/feed.xml", feed_title="Broken Feed"
-        )
+        result = await self.service.import_single_feed(feed_url="https://broken.com/feed.xml", feed_title="Broken Feed")
 
         # Verify broken feed result
         assert result["success"] is False
@@ -235,9 +219,7 @@ class TestRssOrchestrationServiceOpmlImport:
     async def test_import_single_feed_network_error(self):
         """Test handling of network errors."""
         # Mock network error
-        self.service.feed_service.add_new_feed.side_effect = Exception(
-            "Connection timeout"
-        )
+        self.service.feed_service.add_new_feed.side_effect = Exception("Connection timeout")
 
         result = await self.service.import_single_feed(
             feed_url="https://timeout.com/feed.xml", feed_title="Timeout Feed"
@@ -252,13 +234,9 @@ class TestRssOrchestrationServiceOpmlImport:
     async def test_import_single_feed_validation_error(self):
         """Test handling of general validation errors."""
         # Mock general ValueError
-        self.service.feed_service.add_new_feed.side_effect = ValueError(
-            "Invalid URL format"
-        )
+        self.service.feed_service.add_new_feed.side_effect = ValueError("Invalid URL format")
 
-        result = await self.service.import_single_feed(
-            feed_url="invalid-url", feed_title="Invalid Feed"
-        )
+        result = await self.service.import_single_feed(feed_url="invalid-url", feed_title="Invalid Feed")
 
         # Verify validation error result
         assert result["success"] is False
@@ -286,15 +264,11 @@ class TestRssOrchestrationServiceOpmlImport:
             }
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         # Mock folder creation to fail, and folder lookup to return empty
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.side_effect = Exception(
-            "Creation failed"
-        )
+        self.service.folder_service.create_folders_batch.side_effect = Exception("Creation failed")
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -332,9 +306,7 @@ class TestRssOrchestrationServiceOpmlImport:
             },
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         prog_folder = MagicMock()
         prog_folder_id = uuid4()
@@ -342,9 +314,7 @@ class TestRssOrchestrationServiceOpmlImport:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Programming": prog_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Programming": prog_folder_id}
 
         result = await self.service.extract_feeds_from_opml(opml_content)
 
@@ -377,9 +347,7 @@ class TestRssOrchestrationServiceOpmlImport:
             }
         ]
 
-        self.service.opml_processor.extract_feeds_from_opml.return_value = (
-            raw_feeds_data
-        )
+        self.service.opml_processor.extract_feeds_from_opml.return_value = raw_feeds_data
 
         specific_folder = MagicMock()
         specific_folder_id = uuid4()
@@ -387,13 +355,9 @@ class TestRssOrchestrationServiceOpmlImport:
 
         # Mock folder service methods properly
         self.service.folder_service.list_folders.return_value = []
-        self.service.folder_service.create_folders_batch.return_value = {
-            "Specific Folder": specific_folder_id
-        }
+        self.service.folder_service.create_folders_batch.return_value = {"Specific Folder": specific_folder_id}
 
-        result = await self.service.extract_feeds_from_opml(
-            opml_content, "Default Folder Name"
-        )
+        result = await self.service.extract_feeds_from_opml(opml_content, "Default Folder Name")
 
         # Feed should be in specific folder, not default
         assert len(result) == 1
@@ -401,9 +365,7 @@ class TestRssOrchestrationServiceOpmlImport:
         assert result[0]["title"] == "Specific Feed"
 
         # Verify correct folder was created
-        self.service.folder_service.create_folders_batch.assert_called_once_with(
-            ["Specific Folder"]
-        )
+        self.service.folder_service.create_folders_batch.assert_called_once_with(["Specific Folder"])
 
 
 class TestOpmlImportRealWorldScenarios:
