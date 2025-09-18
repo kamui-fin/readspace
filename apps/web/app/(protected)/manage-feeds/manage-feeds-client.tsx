@@ -1,7 +1,12 @@
 "use client"
 
-import { useMemo, useState } from "react"
-import { toast } from "react-hot-toast"
+import { BulkEditFolderModal } from "@/components/feeds/BulkEditFolderModal"
+import { FeedDeleteModal } from "@/components/feeds/FeedDeleteModal"
+import { FeedEditModal } from "@/components/feeds/FeedEditModal"
+import { FeedFiltersPanel } from "@/components/feeds/FeedFiltersPanel"
+import { FeedTableRow } from "@/components/feeds/FeedTableRow"
+import { ManageFeedsPageSkeleton } from "@/components/feeds/ManageFeedsSkeleton"
+import Header from "@/components/navigation/Header"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
     Table,
@@ -12,22 +17,17 @@ import {
     TableRow,
 } from "@/components/ui/table"
 import {
+    exportFeedsToOPML,
+    fuzzySearch,
     useDeleteFeed,
     useFeeds,
     useFolders,
     useUpdateFeed,
     type Feed,
 } from "@readspace/shared"
-import { fuzzySearch } from "@readspace/shared"
-import { exportFeedsToOPML } from "@readspace/shared"
+import { useMemo, useState } from "react"
+import { toast } from "react-hot-toast"
 import { useDebounce } from "use-debounce"
-import Header from "@/components/navigation/header"
-import { FeedTableRow } from "@/components/feeds/FeedTableRow"
-import { FeedEditModal } from "@/components/feeds/FeedEditModal"
-import { FeedDeleteModal } from "@/components/feeds/FeedDeleteModal"
-import { BulkEditFolderModal } from "@/components/feeds/BulkEditFolderModal"
-import { FeedFiltersPanel } from "@/components/feeds/FeedFiltersPanel"
-import { ManageFeedsPageSkeleton } from "@/components/feeds/ManageFeedsSkeleton"
 
 /**
  * Main client component for managing RSS feeds.
@@ -173,9 +173,8 @@ export default function ManageFeedsPageClient() {
                     ).length
                     const failed = results.length - successful
                     setSelectedFeedIds([])
-                    return `Deleted ${successful} feeds. ${
-                        failed > 0 ? `${failed} failed.` : ""
-                    }`
+                    return `Deleted ${successful} feeds. ${failed > 0 ? `${failed} failed.` : ""
+                        }`
                 },
                 error: "An unexpected error occurred while deleting feeds.",
             })

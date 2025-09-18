@@ -4,12 +4,11 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
-import { useDeleteBookMetadata, useUpdateBook } from "@readspace/shared"
+} from "@/components/ui/dropdown-menu"
 import {
     UserBookLibrary,
     UserBookLibraryUpdate,
-    isEpubProgress,
+    isEpubProgress, useDeleteBookMetadata, useUpdateBook
 } from "@readspace/shared"
 import { BookOpenCheck, MoreVertical, RotateCcw, Trash } from "lucide-react"
 import { MouseEvent, useState } from "react"

@@ -1,24 +1,14 @@
 "use client"
 
-import { formatDistanceToNow, parseISO } from "date-fns"
-import {
-    AlertTriangle,
-    CheckCircle,
-    Edit3,
-    ExternalLink,
-    MoreHorizontal,
-    Trash2,
-} from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import Image from "next/image"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
+} from "@/components/ui/dropdown-menu"
 import {
     Select,
     SelectContent,
@@ -28,6 +18,16 @@ import {
 } from "@/components/ui/select"
 import { TableCell, TableRow } from "@/components/ui/table"
 import type { Feed } from "@readspace/shared"
+import { formatDistanceToNow, parseISO } from "date-fns"
+import {
+    AlertTriangle,
+    CheckCircle,
+    Edit3,
+    ExternalLink,
+    MoreHorizontal,
+    Trash2,
+} from "lucide-react"
+import Image from "next/image"
 
 interface FeedTableRowProps {
     /** Feed data to display */

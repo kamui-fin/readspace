@@ -2,13 +2,6 @@
 
 export { UploadBookDialog as default } from "./upload/index"
 
-// Initialize PDF Worker for PDF.js (needs to be done at module level)
-import { pdfjs } from "react-pdf"
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-    import.meta.url
-).toString()
-
 import { Card } from "@/components/ui/card"
 import {
     FileList,
@@ -23,7 +16,7 @@ import {
     FileListItem,
     FileListName,
     FileListSize,
-} from "@/components/ui/FileList"
+} from "@/components/ui/file-list"
 import { cn } from "@readspace/shared"
 import { BookOpen, LoaderCircle, X } from "lucide-react"
 import { useCallback } from "react"
@@ -42,8 +35,8 @@ if (typeof Promise.withResolvers === "undefined") {
         }
 }
 
-import { formatFileSize } from "./upload/utils"
 import { DragDropBookProps } from "./upload/types"
+import { formatFileSize } from "./upload/utils"
 
 export const DragDropBook = ({
     isUploading,
@@ -93,7 +86,7 @@ export const DragDropBook = ({
                                         </FileListDescriptionSeparator>
                                         <FileListDescriptionText>
                                             {selectedFile.type ===
-                                            "application/pdf"
+                                                "application/pdf"
                                                 ? "PDF"
                                                 : "EPUB"}
                                         </FileListDescriptionText>

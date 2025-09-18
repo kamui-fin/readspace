@@ -27,7 +27,7 @@ const ReaderSlider: React.FC<ReaderSliderProps> = ({
                     min={min}
                     max={maxNum}
                     aria-label="Slider with ticks"
-                    onValueChange={(value) => onSlideChange(value[0])}
+                    onValueChange={(value) => onSlideChange(value[0] ?? 0)}
                 />
                 <span
                     className="text-muted-foreground mt-3 flex w-full items-center justify-between gap-1 px-2.5 text-xs font-medium"

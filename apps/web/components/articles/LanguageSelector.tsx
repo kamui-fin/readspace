@@ -1,6 +1,6 @@
 "use client"
 
-import { DropdownMenuItem } from "@/components/ui/DropdownMenu"
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Check } from "lucide-react"
 
 interface LanguageSelectorProps {

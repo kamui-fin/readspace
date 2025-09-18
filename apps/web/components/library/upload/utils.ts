@@ -1,7 +1,7 @@
 import { getEpubMetadata } from "@/lib/reader/bookstore"
 import { createClient } from "@/lib/supabase/client"
+import { getPdfJs } from "@/lib/pdf-worker"
 import { NavItem } from "epubjs/types/navigation"
-import { pdfjs } from "react-pdf"
 import type { PDFDocumentProxy } from "pdfjs-dist"
 import { BookMetadata, ProcessedFileMetadata } from "./types"
 
@@ -194,6 +194,7 @@ export async function getTableOfContents(
 export const extractPdfMetadata = async (
     file: File
 ): Promise<BookMetadata & { toc: NavItem[] }> => {
+    const pdfjs = await getPdfJs()
     const fileBuffer = await file.arrayBuffer()
     const pdfDocument = await pdfjs.getDocument(fileBuffer).promise
     const metadata = (await pdfDocument.getMetadata()) as {

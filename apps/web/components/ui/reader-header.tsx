@@ -1,7 +1,7 @@
+import { ReaderNavActions } from "@/components/reader/ReaderNavActions"
 import { cn } from "@readspace/shared"
 import React from "react"
-import Header from "../navigation/header"
-import { ReaderNavActions } from "../reader/reader-nav-actions"
+import Header from "../navigation/Header"
 
 const ReaderHeader = () => {
     const [scrollDirection, setScrollDirection] = React.useState("")

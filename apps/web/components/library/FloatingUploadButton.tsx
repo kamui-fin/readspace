@@ -18,16 +18,9 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useQueryClient } from "@tanstack/react-query"
 import { BOOK_QUERY_KEYS } from "@readspace/shared"
-import { pdfjs } from "react-pdf"
 import { DragDropBook } from "./UploadBook"
 import { useUploadBook } from "./upload/api"
 import { processFileMetadata } from "./upload/utils"
-
-// Set PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-    import.meta.url
-).toString()
 
 export default function FloatingUploadButton() {
     const [isOpen, setIsOpen] = useState(false)

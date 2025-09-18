@@ -17,6 +17,7 @@ import type {
 
 import { useRef, useState } from "react"
 import { PdfLoader } from "react-pdf-highlighter-extended"
+import { configurePdfJs } from "@/lib/pdf-worker"
 
 import { PdfHighlighterUtils } from "@/components/reader/pdf-highlight/contexts/pdf-highlighter-context"
 import ExpandableTip from "@/components/reader/pdf-highlight/ExpandableTip"
@@ -26,15 +27,9 @@ import { PdfHighlighter } from "@/components/reader/pdf-highlight/PdfHighlights"
 import { Loading } from "@/components/reader/ReaderContent"
 import { ApiClient } from "@readspace/shared"
 import { useMutation } from "@tanstack/react-query"
-import { pdfjs } from "react-pdf"
 
 // Global storage key for zoom preference (same as in pdf-zoom.tsx)
 const STORAGE_KEY = "pdf-zoom-level"
-
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
-).toString()
 
 const parseIdFromHash = () => {
     return document.location.hash.slice("#highlight-".length)

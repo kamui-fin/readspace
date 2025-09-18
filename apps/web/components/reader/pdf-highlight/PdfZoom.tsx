@@ -9,10 +9,10 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { cn } from "@readspace/shared"
 import { ZoomValue } from "@/types/library"
+import { cn } from "@readspace/shared"
 
 // Global storage key for zoom preference
 const STORAGE_KEY = "pdf-zoom-level"

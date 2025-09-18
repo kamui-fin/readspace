@@ -16,16 +16,9 @@ import { LoaderCircle, Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
-import { pdfjs } from "react-pdf"
 import { DragDropBook } from "../UploadBook"
 import { useUploadBook } from "./api"
 import { processFileMetadata } from "./utils"
-
-// Set PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
-    import.meta.url
-).toString()
 
 export default function UploadBookDialog() {
     const [isOpen, setIsOpen] = useState(false)

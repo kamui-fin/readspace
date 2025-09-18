@@ -46,7 +46,7 @@ import {
 import { MouseSelection } from "./MouseSelection"
 import { TipContainer } from "./TipContainer"
 
-import Header from "@/components/navigation/header"
+import Header from "@/components/navigation/Header"
 import ReadingProgressBar from "@/components/reader/ProgressBar"
 import { SidebarRightTrigger, useSidebarRight } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
@@ -62,13 +62,13 @@ import { PdfZoom } from "./PdfZoom"
 let EventBus: typeof TEventBus,
     PDFLinkService: typeof TPDFLinkService,
     PDFViewer: typeof TPDFViewer
-;(async () => {
-    // Due to breaking changes in PDF.js 4.0.189. See issue #17228
-    const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
-    EventBus = pdfjs.EventBus
-    PDFLinkService = pdfjs.PDFLinkService
-    PDFViewer = pdfjs.PDFViewer
-})()
+    ; (async () => {
+        // Due to breaking changes in PDF.js 4.0.189. See issue #17228
+        const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
+        EventBus = pdfjs.EventBus
+        PDFLinkService = pdfjs.PDFLinkService
+        PDFViewer = pdfjs.PDFViewer
+    })()
 
 const SCROLL_MARGIN = 10
 const DEFAULT_TEXT_SELECTION_COLOR = "rgba(153,193,218,255)"
@@ -333,7 +333,7 @@ export const PdfHighlighter = ({
     const scrolledToHighlightIdRef = useRef<string | null>(null)
     const isAreaSelectionInProgressRef = useRef(false)
     const isEditInProgressRef = useRef(false)
-    const updateTipPositionRef = useRef(() => {})
+    const updateTipPositionRef = useRef(() => { })
 
     const eventBusRef = useRef<InstanceType<typeof EventBus>>(new EventBus())
     const linkServiceRef = useRef<InstanceType<typeof PDFLinkService>>(
@@ -977,15 +977,15 @@ export const PdfHighlighter = ({
                             isMobile
                                 ? []
                                 : [
-                                      { href: "/library", label: "Home" },
-                                      {
-                                          href: `/library/${bookId}`,
-                                          label:
-                                              bookTitle.length > 30
-                                                  ? `${bookTitle.substring(0, 30)}...`
-                                                  : bookTitle,
-                                      },
-                                  ]
+                                    { href: "/library", label: "Home" },
+                                    {
+                                        href: `/library/${bookId}`,
+                                        label:
+                                            bookTitle.length > 30
+                                                ? `${bookTitle.substring(0, 30)}...`
+                                                : bookTitle,
+                                    },
+                                ]
                         }
                     >
                         <div className="flex items-center gap-2">
@@ -1025,8 +1025,8 @@ export const PdfHighlighter = ({
                             <MouseSelection
                                 viewer={viewerRef.current!}
                                 onChange={(isVisible) =>
-                                    (isAreaSelectionInProgressRef.current =
-                                        isVisible)
+                                (isAreaSelectionInProgressRef.current =
+                                    isVisible)
                                 }
                                 enableAreaSelection={enableAreaSelection}
                                 style={mouseSelectionStyle}

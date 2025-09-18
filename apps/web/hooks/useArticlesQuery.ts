@@ -1,4 +1,3 @@
-import { useMemo } from "react"
 import {
     useInfiniteArticles,
     useInfiniteReadLaterArticles,
@@ -7,6 +6,7 @@ import {
     type Article,
     type PaginatedResponse,
 } from "@readspace/shared"
+import { useMemo } from "react"
 
 interface UseArticlesQueryParams {
     /** Current view mode */
@@ -15,8 +15,6 @@ interface UseArticlesQueryParams {
     feedId?: string | null
     /** Folder ID for filtering */
     folderId?: string | null
-    /** Library ID for filtering */
-    libraryId?: string | null
     /** Published since date for filtering */
     publishedSince?: string | null
     /** Published until date for filtering */
@@ -50,7 +48,6 @@ export function useArticlesQuery({
     mode,
     feedId,
     folderId,
-    libraryId,
     publishedSince,
     publishedUntil,
     pageSize = 25,
@@ -62,47 +59,57 @@ export function useArticlesQuery({
         staleTime: 5 * 60 * 1000, // 5 minutes
     }
 
-    // Select appropriate query based on mode
+    // Prepare parameters for all articles query
+    const allArticlesParams = useMemo(() => ({
+        feedIds: feedId ? [feedId] : undefined,
+        folderId: folderId || undefined,
+        publishedSince: publishedSince || undefined,
+        publishedUntil: publishedUntil || undefined,
+        sortBy: "published_at" as const,
+        sortOrder: "desc" as const,
+        size: pageSize,
+        viewType: folderId
+            ? ("folder" as const)
+            : feedId
+                ? ("feed" as const)
+                : ("all" as const),
+        viewId: folderId || feedId || "all",
+    }), [feedId, folderId, publishedSince, publishedUntil, pageSize])
+
+    // Call all hooks at the top level (Rules of Hooks)
+    const allArticlesQuery = useInfiniteArticles(
+        allArticlesParams,
+        { ...queryOptions, enabled: mode === "allArticles" }
+    )
+
+    const recentlyReadQuery = useInfiniteRecentlyReadArticles(
+        { size: pageSize },
+        { ...queryOptions, enabled: mode === "recentlyRead" }
+    )
+
+    const readLaterQuery = useInfiniteReadLaterArticles(
+        { size: pageSize },
+        { ...queryOptions, enabled: mode === "readLater" }
+    )
+
+    const todayQuery = useInfiniteTodayArticles(
+        { size: pageSize },
+        { ...queryOptions, enabled: mode === "today" }
+    )
+
+    // Select the appropriate query result based on mode
     const infiniteQuery = useMemo(() => {
         switch (mode) {
             case "recentlyRead":
-                return useInfiniteRecentlyReadArticles(
-                    { size: pageSize },
-                    queryOptions
-                )
-
+                return recentlyReadQuery
             case "readLater":
-                return useInfiniteReadLaterArticles(
-                    { size: pageSize },
-                    queryOptions
-                )
-
+                return readLaterQuery
             case "today":
-                return useInfiniteTodayArticles(
-                    { size: pageSize },
-                    queryOptions
-                )
-
+                return todayQuery
             default: // "allArticles"
-                const params = {
-                    feedIds: feedId ? [feedId] : undefined,
-                    folderId: folderId || undefined,
-                    publishedSince: publishedSince || undefined,
-                    publishedUntil: publishedUntil || undefined,
-                    sortBy: "published_at" as const,
-                    sortOrder: "desc" as const,
-                    size: pageSize,
-                    viewType: folderId
-                        ? ("folder" as const)
-                        : feedId
-                          ? ("feed" as const)
-                          : ("all" as const),
-                    viewId: folderId || feedId || "all",
-                }
-
-                return useInfiniteArticles(params, queryOptions)
+                return allArticlesQuery
         }
-    }, [mode, feedId, folderId, publishedSince, publishedUntil, pageSize])
+    }, [mode, allArticlesQuery, recentlyReadQuery, readLaterQuery, todayQuery])
 
     const {
         data,

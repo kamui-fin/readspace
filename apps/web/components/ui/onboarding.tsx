@@ -86,7 +86,7 @@ export function Onboarding({
                     dialogClassName
                 )}
             >
-                {currentStep.image && (
+                {currentStep?.image && (
                     <div className="p-2">
                         <Image
                             className="rounded-md max-h-[400px] object-cover"
@@ -99,9 +99,9 @@ export function Onboarding({
                 )}
                 <div className={cn("space-y-6 px-6 pt-3 pb-6", className)}>
                     <DialogHeader>
-                        <DialogTitle>{currentStep.title}</DialogTitle>
+                        <DialogTitle>{currentStep?.title}</DialogTitle>
                         <DialogDescription>
-                            {currentStep.description}
+                            {currentStep?.description}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">

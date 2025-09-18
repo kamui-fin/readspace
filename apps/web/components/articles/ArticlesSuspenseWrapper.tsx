@@ -1,5 +1,5 @@
-import { Suspense } from "react"
 import { ArticlesView } from "@/components/articles"
+import { Suspense } from "react"
 import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 
 interface ArticlesSuspenseWrapperProps {
@@ -7,7 +7,6 @@ interface ArticlesSuspenseWrapperProps {
     initialSidebarTitle?: string
     feedId?: string
     folderId?: string
-    libraryId?: string
     publishedSince?: string
     publishedUntil?: string
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"

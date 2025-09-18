@@ -8,7 +8,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
+} from "@/components/ui/dropdown-menu"
 import {
     ResizableHandle,
     ResizablePanel,
@@ -21,10 +21,10 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useIsMobile } from "@/hooks/useMobile"
-import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import { useArticlesQuery } from "@/hooks/useArticlesQuery"
 import { useArticlesRefresh } from "@/hooks/useArticlesRefresh"
+import { useIsMobile } from "@/hooks/useMobile"
+import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import type { Article, Feed } from "@readspace/shared"
 import {
     useArticle,
@@ -50,8 +50,6 @@ interface ArticlesViewProps {
     feedId?: string
     /** Folder ID for filtering articles */
     folderId?: string
-    /** Library ID for filtering articles */
-    libraryId?: string
     /** Published since date filter */
     publishedSince?: string
     /** Published until date filter */
@@ -72,7 +70,6 @@ export function ArticlesView({
     initialSidebarTitle,
     feedId,
     folderId,
-    libraryId,
     publishedSince,
     publishedUntil,
     mode = "allArticles",
@@ -127,10 +124,10 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : initialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : initialSidebarTitle || "All Articles"
 
     // Articles query
     const {
@@ -144,7 +141,6 @@ export function ArticlesView({
         mode: mode || "allArticles",
         feedId: feedId,
         folderId: folderId,
-        libraryId: libraryId,
         publishedSince: publishedSince,
         publishedUntil: publishedUntil,
     })

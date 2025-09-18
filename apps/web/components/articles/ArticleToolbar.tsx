@@ -5,7 +5,7 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
+} from "@/components/ui/dropdown-menu"
 import {
     Tooltip,
     TooltipContent,
@@ -127,11 +127,10 @@ export function ArticleToolbar({
                                 onClick={onToggleReadLater}
                             >
                                 <BookmarkIcon
-                                    className={`h-4 w-4 transition-all duration-200 ${
-                                        isReadLater
+                                    className={`h-4 w-4 transition-all duration-200 ${isReadLater
                                             ? "fill-primary text-primary scale-110"
                                             : "hover:scale-110"
-                                    }`}
+                                        }`}
                                 />
                             </Button>
                         </TooltipTrigger>

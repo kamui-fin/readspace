@@ -8,7 +8,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/ToggleGroup"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { ArrowUpDown, Filter, LayoutGrid, List, Search } from "lucide-react"
 
 interface CatalogHeaderProps {

@@ -1,5 +1,7 @@
 "use client"
 
+import Header from "@/components/navigation/Header"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
     Card,
@@ -8,24 +10,20 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import Header from "@/components/navigation/header"
-import { ApiClient, ActiveImportTask } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import { ActiveImportTask, ApiClient, opml, RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-    Upload,
-    Clock,
-    FileText,
     Activity,
+    Clock,
     ExternalLink,
+    FileText,
     Info,
+    Upload,
     X,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
-import { opml } from "@readspace/shared"
 
 // OPML import response types
 interface OPMLImportResponse {
@@ -394,11 +392,10 @@ export default function ImportOPMLPageClient() {
                     {/* Upload Section - Only show if no active imports */}
                     {activeImports.length === 0 && (
                         <Card
-                            className={`transition-colors duration-200 ${
-                                isDragging
+                            className={`transition-colors duration-200 ${isDragging
                                     ? "border-primary bg-primary/5"
                                     : "border-dashed border-2"
-                            }`}
+                                }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

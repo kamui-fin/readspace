@@ -1,6 +1,6 @@
 "use client"
 
-import Header from "@/components/navigation/header"
+import Header from "@/components/navigation/Header"
 import ReadingProgressBar from "@/components/reader/ProgressBar"
 import ReaderContent from "@/components/reader/ReaderContent"
 import { ReaderNavActions } from "@/components/reader/ReaderNavActions"
@@ -9,8 +9,8 @@ import { useReaderStore } from "@/stores/reader"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
-import useChapterNavigation from "../../hooks/reader/useChapterNavigation"
 import useAutoBookmark from "../../hooks/reader/useAutoBookmark"
+import useChapterNavigation from "../../hooks/reader/useChapterNavigation"
 import { insertCharCountAttributes } from "../../lib/reader/reader-utils"
 import { BookViewProps, EpubHighlight } from "../../types/library"
 import HighlightPopover from "./HighlightPopover"
@@ -146,21 +146,21 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 breadcrumbItems={
                     isMobile
                         ? [
-                              {
-                                  href: `/library/${bookId}`,
-                                  label: bookMeta.title.slice(0, 15) + "...",
-                              },
-                          ]
+                            {
+                                href: `/library/${bookId}`,
+                                label: bookMeta.title.slice(0, 15) + "...",
+                            },
+                        ]
                         : [
-                              { href: "/library", label: "Home" },
-                              {
-                                  href: `/library/${bookId}`,
-                                  label:
-                                      bookMeta.title.length > 30
-                                          ? `${bookMeta.title.substring(0, 30)}...`
-                                          : bookMeta.title,
-                              },
-                          ]
+                            { href: "/library", label: "Home" },
+                            {
+                                href: `/library/${bookId}`,
+                                label:
+                                    bookMeta.title.length > 30
+                                        ? `${bookMeta.title.substring(0, 30)}...`
+                                        : bookMeta.title,
+                            },
+                        ]
                 }
             >
                 <ReaderNavActions />

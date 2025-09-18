@@ -1,8 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { toast } from "react-hot-toast"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -17,16 +14,19 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
-} from "@/components/ui/DropdownMenu"
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
+    cn,
     useDeleteFeed,
     useDeleteFolder,
     useUpdateFeed,
     useUpdateFolder,
 } from "@readspace/shared"
-import { cn } from "@readspace/shared"
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { useState } from "react"
+import { toast } from "react-hot-toast"
 
 interface FeedContextMenuProps {
     /** Whether this is a folder or feed item */
@@ -245,7 +245,7 @@ export function FeedContextMenu({
                                 }
                             >
                                 {updateFeed.status === "pending" ||
-                                updateFolder.status === "pending"
+                                    updateFolder.status === "pending"
                                     ? "Renaming..."
                                     : "Rename"}
                             </Button>
@@ -289,8 +289,8 @@ export function FeedContextMenu({
                             {isProcessingDelete
                                 ? "Processing..."
                                 : isFolder
-                                  ? "Delete"
-                                  : "Unfollow"}
+                                    ? "Delete"
+                                    : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

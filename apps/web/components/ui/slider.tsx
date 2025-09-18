@@ -3,13 +3,13 @@
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import * as React from "react"
 
-import { cn } from "@readspace/shared"
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { cn } from "@readspace/shared"
 
 function Slider({
     className,
@@ -28,8 +28,8 @@ function Slider({
         Array.isArray(value)
             ? value
             : Array.isArray(defaultValue)
-              ? defaultValue
-              : [min, max]
+                ? defaultValue
+                : [min, max]
     )
 
     React.useEffect(() => {
@@ -124,7 +124,7 @@ function Slider({
             </SliderPrimitive.Track>
             {Array.from({ length: internalValues.length }, (_, index) => (
                 <React.Fragment key={index}>
-                    {renderThumb(internalValues[index])}
+                    {renderThumb(internalValues[index] ?? 0)}
                 </React.Fragment>
             ))}
         </SliderPrimitive.Root>

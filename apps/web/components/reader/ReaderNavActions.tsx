@@ -23,12 +23,14 @@ import {
     DescriptionGroup,
     DescriptionList,
     DescriptionTerm,
-} from "@/components/ui/DescriptionList"
+} from "@/components/ui/description-list"
+import { Label } from "@/components/ui/label"
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import ReaderSlider from "@/components/ui/reader-slider"
 import {
     Select,
     SelectContent,
@@ -36,14 +38,12 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import { SidebarRightTrigger } from "@/components/ui/sidebar"
 import { useReaderStore } from "@/stores/reader"
 import useReaderSettingsStore, {
     ReaderFontFamily,
 } from "@/stores/reader-settings"
-import { Label } from "../ui/label"
-import ReaderSlider from "../ui/ReaderSlider"
-import { Separator } from "../ui/separator"
 
 // Constants for slider configurations
 const SLIDER_CONFIG = {

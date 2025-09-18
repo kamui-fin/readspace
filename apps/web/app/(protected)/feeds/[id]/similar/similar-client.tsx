@@ -4,15 +4,15 @@ import { useQuery } from "@tanstack/react-query"
 import { Sparkles } from "lucide-react"
 import Image from "next/image"
 
-import Header from "@/components/navigation/header"
+import { FeedCard } from "@/components/feeds/FeedCard"
+import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
+import Header from "@/components/navigation/Header"
 import { Card } from "@/components/ui/card"
 import {
     ApiClient,
-    type SimilarFeedsResponse,
     type FeedDiscoveryResult,
+    type SimilarFeedsResponse,
 } from "@readspace/shared"
-import { FeedCard } from "@/components/feeds/FeedCard"
-import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 
 interface SimilarFeedsClientProps {
     feedId: string
