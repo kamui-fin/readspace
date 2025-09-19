@@ -16,10 +16,10 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
-    ApiClient,
     type FeedDiscoveryResult,
     type SimilarFeedsResponse,
 } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 
 interface SimilarFeedsClientProps {
     feedId: string
@@ -37,7 +37,7 @@ export default function SimilarFeedsClient({
         error,
     } = useQuery<SimilarFeedsResponse>({
         queryKey: ["similarFeeds", feedId],
-        queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
+        queryFn: () => ApiWebClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
         staleTime: 5 * 60 * 1000, // 5 minutes
     })
 

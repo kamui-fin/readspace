@@ -344,7 +344,9 @@ class OpmlImportStatusResponse(BaseModel):
     task_id: str = Field(..., description="Celery task ID")
     status: str = Field(..., description="Current status: pending, in_progress, completed, failed")
     message: str = Field(..., description="Human-readable status message")
-    progress: OpmlImportProgress | dict[str, Any] | None = Field(None, description="Progress information for active imports")
+    progress: OpmlImportProgress | dict[str, Any] | None = Field(
+        None, description="Progress information for active imports"
+    )
     result: OpmlImportResult | None = Field(None, description="Final results for completed imports")
     error: str | None = Field(None, description="Error message for failed imports")
     metadata: OpmlTaskMetadata | None = Field(None, description="Task metadata from Redis")

@@ -10,7 +10,8 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { ActiveImportTask, ApiClient, opml, RSS_QUERY_KEYS } from "@readspace/shared"
+import { ActiveImportTask, opml, RSS_QUERY_KEYS } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
     Activity,
@@ -44,12 +45,11 @@ export default function ImportOPMLPageClient() {
     const queryClient = useQueryClient()
 
     // Use the prefetched data for active imports
-    const { data: activeImports = [], isLoading: isLoadingActiveImports } =
-        useQuery<ActiveImportTask[]>({
-            queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
-            queryFn: () => ApiClient.rss.listImportTasks(),
-            refetchInterval: 5000, // Poll every 5 seconds for updates
-        })
+    const { data: activeImports = [] } = useQuery<ActiveImportTask[]>({
+        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+        queryFn: () => ApiWebClient.rss.listImportTasks(),
+        refetchInterval: 5000, // Poll every 5 seconds for updates
+    })
 
     const validateOpmlFile = useCallback(
         async (
@@ -179,7 +179,7 @@ export default function ImportOPMLPageClient() {
             setIsUploading(true)
 
             try {
-                const data = (await ApiClient.rss.importOPML(
+                const data = (await ApiWebClient.rss.importOPML(
                     formData
                 )) as OPMLImportResponse
 
@@ -201,7 +201,7 @@ export default function ImportOPMLPageClient() {
 
     const handleCancelImport = async (taskId: string) => {
         try {
-            await ApiClient.rss.cancelImportTask(taskId)
+            await ApiWebClient.rss.cancelImportTask(taskId)
             toast.success("Import cancelled successfully")
 
             // Invalidate the import tasks query to refetch
@@ -217,21 +217,6 @@ export default function ImportOPMLPageClient() {
     }
 
     const renderActiveImports = () => {
-        if (isLoadingActiveImports) {
-            return (
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <Activity className="h-5 w-5 text-blue-600 animate-pulse" />
-                            <CardTitle className="text-lg">
-                                Checking for active imports...
-                            </CardTitle>
-                        </div>
-                    </CardHeader>
-                </Card>
-            )
-        }
-
         if (!activeImports || activeImports.length === 0) {
             return null
         }
@@ -385,7 +370,7 @@ export default function ImportOPMLPageClient() {
                     </div>
 
                     {/* Active Imports Section */}
-                    {((activeImports?.length > 0) || isLoadingActiveImports) && (
+                    {(activeImports?.length > 0) && (
                         <div className="mb-8">{renderActiveImports()}</div>
                     )}
 

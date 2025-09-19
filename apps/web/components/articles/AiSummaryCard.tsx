@@ -23,14 +23,14 @@ export function AiSummaryCard({ summary, onDismiss }: AiSummaryCardProps) {
             className="overflow-hidden"
         >
             <Card className="mb-6 border-none bg-gradient-to-br from-primary/5 via-secondary/5 to-accent/10 dark:from-primary/10 dark:via-secondary/10 dark:to-accent/15">
-                <CardContent className="p-6">
-                    <div className="flex items-start gap-3">
-                        <div className="flex-shrink-0 p-2 bg-gradient-to-br from-primary to-secondary rounded-lg">
-                            <Sparkles className="h-4 w-4 text-primary-foreground" />
+                <CardContent className="p-4 md:p-6">
+                    <div className="flex items-start gap-2 md:gap-3">
+                        <div className="flex-shrink-0 p-1.5 md:p-2 bg-gradient-to-br from-primary to-secondary rounded-lg">
+                            <Sparkles className="h-3 w-3 md:h-4 md:w-4 text-primary-foreground" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between mb-3">
-                                <h3 className="text-sm font-semibold text-primary">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-sm font-semibold text-primary mt-0 mb-0 p-0">
                                     AI Summary
                                 </h3>
                                 <Button
@@ -84,11 +84,21 @@ export function AiSummaryCard({ summary, onDismiss }: AiSummaryCardProps) {
                                                 {children}
                                             </li>
                                         ),
-                                        code: ({ children }) => (
-                                            <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
-                                                {children}
-                                            </code>
-                                        ),
+                                        code: ({ children }) => {
+                                            // Remove backticks from inline code content
+                                            const cleanChildren =
+                                                typeof children === "string"
+                                                    ? children.replace(
+                                                          /^`+|`+$/g,
+                                                          ""
+                                                      )
+                                                    : children
+                                            return (
+                                                <code className="bg-muted/50 px-1 py-0.5 rounded text-xs">
+                                                    {cleanChildren}
+                                                </code>
+                                            )
+                                        },
                                     }}
                                 >
                                     {summary}

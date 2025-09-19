@@ -100,8 +100,8 @@ export function SignupForm({
                 if (isCloudProd) {
                     setIsAwaitingVerification(true)
                 } else {
-                    // For self-hosted, redirect directly to onboarding
-                    router.push("/onboarding")
+                    // For self-hosted, redirect to dashboard/home instead of onboarding
+                    router.push("/")
                 }
             } catch (error) {
                 const errorMessage =

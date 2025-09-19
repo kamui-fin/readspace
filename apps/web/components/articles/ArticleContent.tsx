@@ -16,6 +16,7 @@ import {
     type Article,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
+import { useTheme } from "next-themes"
 import { AiSummaryCard } from "./AiSummaryCard"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleToolbar } from "./ArticleToolbar"
@@ -79,37 +80,17 @@ export function ArticleContent({
     const [aiSummary, setAiSummary] = useState<string | null>(null)
     const [contentKey, setContentKey] = useState(`original-${article.id}`)
     // Local optimistic state for read later
-    const [optimisticReadLater, setOptimisticReadLater] = useState(article.is_read_later)
+    const [optimisticReadLater, setOptimisticReadLater] = useState(
+        article.is_read_later
+    )
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
+    const { theme } = useTheme()
 
     // Only create AI hooks when we actually have a valid article ID to prevent unnecessary queries
     const extractFullText = useExtractFullText(article?.id || "skip")
     const summarizeArticle = useSummarizeArticle(article?.id || "skip")
-
-    // Debug logging for AI hooks
-    console.log("🔧 ArticleContent Debug:", {
-        articleId: article?.id,
-        extractHookEnabled: !!article?.id && article?.id !== "skip",
-        summarizeHookEnabled: !!article?.id && article?.id !== "skip",
-        currentContent: currentContent.substring(0, 100) + "...",
-        isShowingSummary,
-        aiSummary: aiSummary ? aiSummary.substring(0, 100) + "..." : null,
-        aiSummaryType: typeof aiSummary,
-        contentKey
-    })
-
-    // Debug when aiSummary state changes
-    useEffect(() => {
-        console.log("🧠 aiSummary state changed:", {
-            aiSummary: aiSummary ? aiSummary.substring(0, 100) + "..." : null,
-            aiSummaryType: typeof aiSummary,
-            length: aiSummary?.length || 0,
-            isNull: aiSummary === null,
-            isUndefined: aiSummary === undefined
-        })
-    }, [aiSummary])
 
     // Sync optimistic state when article changes
     useEffect(() => {
@@ -123,8 +104,8 @@ export function ArticleContent({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -137,38 +118,20 @@ export function ArticleContent({
      * Handles extraction of full text content from article URL
      */
     const handleExtractContent = async () => {
-        console.log("🚀 Starting content extraction for article:", article.id)
-
         try {
-            console.log("📞 Calling extractFullText.refetch()...")
             const { data } = await extractFullText.refetch()
-
-            console.log("📥 Extract response:", {
-                success: data?.success,
-                hasContent: !!data?.content,
-                contentLength: data?.content?.length || 0,
-                readTime: data?.estimated_read_time_minutes,
-                error: data?.error
-            })
 
             if (data && data.success && data.content) {
                 const newKey = `extracted-${article.id}`
-                console.log("✅ Extraction successful, updating content:", {
-                    newKey,
-                    contentPreview: data.content.substring(0, 200) + "...",
-                    readTime: data.estimated_read_time_minutes
-                })
-
                 setContentKey(newKey)
                 onContentChange(data.content, newKey)
                 onReadTimeChange(data.estimated_read_time_minutes || null)
                 toast.success("Full content extracted successfully")
             } else if (data) {
-                console.log("❌ Extraction failed:", data.error)
                 toast.error(data.error || "Failed to extract content")
             }
         } catch (error) {
-            console.error("💥 Extract content exception:", error)
+            console.error("Extract content error:", error)
             toast.error("Failed to extract content")
         }
     }
@@ -177,45 +140,18 @@ export function ArticleContent({
      * Handles AI summarization of article content
      */
     const handleSummarize = async () => {
-        console.log("🧠 Starting AI summarization for article:", article.id)
-
         try {
-            console.log("📞 Calling summarizeArticle.refetch()...")
             const { data } = await summarizeArticle.refetch()
 
-            console.log("📥 Summarize response:", {
-                success: data?.success,
-                hasSummary: !!data?.summary,
-                summaryLength: data?.summary?.length || 0,
-                error: data?.error
-            })
-
             if (data && data.success && data.summary) {
-                console.log("✅ Summarization successful:", {
-                    summaryPreview: data.summary.substring(0, 200) + "...",
-                    summaryLength: data.summary.length,
-                    willShowSummary: true
-                })
-
-                console.log("🔄 Calling setAiSummary with:", data.summary.substring(0, 100) + "...")
                 setAiSummary(data.summary)
-
-                console.log("🔄 Calling onSummaryChange with:", {
-                    summary: data.summary.substring(0, 100) + "...",
-                    isShowing: true
-                })
                 onSummaryChange(data.summary, true)
-
                 toast.success("Summary generated successfully")
-
-                // Log the state immediately after setting (won't show the updated state due to React batching)
-                console.log("📊 State update called - React will batch these updates")
             } else if (data) {
-                console.log("❌ Summarization failed:", data.error)
                 toast.error(data.error || "Failed to generate summary")
             }
         } catch (error) {
-            console.error("💥 Summarize article exception:", error)
+            console.error("Summarize article error:", error)
             toast.error("Failed to generate summary")
         }
     }
@@ -224,8 +160,6 @@ export function ArticleContent({
      * Handles translation of article content to target language
      */
     const handleTranslate = async (targetLanguage: string) => {
-        console.log("🌐 Starting translation for article:", article.id, "to", targetLanguage)
-
         try {
             onTranslationChange(true)
             const contentToUse =
@@ -233,20 +167,12 @@ export function ArticleContent({
                     ? currentContent
                     : undefined
 
-            console.log("📝 Translation content check:", {
-                currentContentLength: currentContent.length,
-                originalContentLength: (article.content || "").length,
-                willUseCustomContent: !!contentToUse,
-                customContentPreview: contentToUse?.substring(0, 100) + "..." || "Using original"
-            })
-
             // Check cache first
             const queryKey = createTranslationQueryKey(
                 article.id,
                 targetLanguage,
                 contentToUse
             )
-            console.log("🔍 Checking translation cache with key:", queryKey)
 
             type TranslationCache = {
                 success: boolean
@@ -260,18 +186,12 @@ export function ArticleContent({
                 cachedData.success &&
                 cachedData.translated_content
             ) {
-                console.log("💾 Found cached translation:", {
-                    translatedLength: cachedData.translated_content.length,
-                    preview: cachedData.translated_content.substring(0, 200) + "..."
-                })
-
                 const newKey = `translated-${targetLanguage}-${article.id}`
                 setContentKey(newKey)
                 onContentChange(cachedData.translated_content, newKey)
                 return
             }
 
-            console.log("📞 Fetching new translation...")
             // Fetch new translation with caching
             const data = await fetchTranslation(
                 queryClient,
@@ -280,29 +200,16 @@ export function ArticleContent({
                 contentToUse
             )
 
-            console.log("📥 Translation response:", {
-                success: data?.success,
-                hasTranslatedContent: !!data?.translated_content,
-                contentLength: data?.translated_content?.length || 0,
-                error: data?.error
-            })
-
             if (data && data.success && data.translated_content) {
                 const newKey = `translated-${targetLanguage}-${article.id}`
-                console.log("✅ Translation successful:", {
-                    newKey,
-                    contentPreview: data.translated_content.substring(0, 200) + "..."
-                })
-
                 setContentKey(newKey)
                 onContentChange(data.translated_content, newKey)
                 toast.success(`Article translated to ${targetLanguage}`)
             } else if (data) {
-                console.log("❌ Translation failed:", data.error)
                 toast.error(data.error || "Failed to translate article")
             }
         } catch (error) {
-            console.error("💥 Translation exception:", error)
+            console.error("Translation error:", error)
             toast.error("Failed to translate article")
         } finally {
             onTranslationChange(false)
@@ -311,12 +218,6 @@ export function ArticleContent({
 
     // Reset content when article ID changes (not content/read time)
     useEffect(() => {
-        console.log("🔄 Article ID changed, resetting content:", {
-            articleId: article.id,
-            originalContentLength: (article.content || "").length,
-            readTime: article.estimated_read_time_minutes
-        })
-
         const originalKey = `original-${article.id}`
         setContentKey(originalKey)
         onContentChange(article.content || "", originalKey)
@@ -325,12 +226,6 @@ export function ArticleContent({
         onReadTimeChange(article.estimated_read_time_minutes)
         setHasMarkedRead(false) // Reset read state for new article
         setOptimisticReadLater(article.is_read_later) // Reset optimistic read later state
-
-        console.log("✅ Article reset complete:", {
-            newContentKey: originalKey,
-            clearedAiSummary: true,
-            resetReadState: true
-        })
     }, [
         article.id, // Only reset when article ID changes, not content/read time
         // Callbacks removed from deps to prevent unnecessary re-runs
@@ -350,7 +245,6 @@ export function ArticleContent({
         const handleScroll = () => {
             // Mark as read on minimal scroll (just 50px) to be more responsive
             if (el.scrollTop > 50 && !hasMarkedRead && !article.is_read) {
-                console.log("Scroll detected - marking as read")
                 setHasMarkedRead(true)
 
                 if (onMarkAsRead) {
@@ -360,20 +254,21 @@ export function ArticleContent({
                     queryClient.setQueriesData(
                         { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
                         (oldData: any) => {
-                            if (!oldData?.pages) return oldData;
+                            if (!oldData?.pages) return oldData
                             return {
                                 ...oldData,
                                 pages: oldData.pages.map((page: any) => ({
                                     ...page,
-                                    items: page.items?.map((item: any) =>
-                                        item.id === article.id
-                                            ? { ...item, is_read: true }
-                                            : item
-                                    ) || []
-                                }))
-                            };
+                                    items:
+                                        page.items?.map((item: any) =>
+                                            item.id === article.id
+                                                ? { ...item, is_read: true }
+                                                : item
+                                        ) || [],
+                                })),
+                            }
                         }
-                    );
+                    )
 
                     updateArticle.mutate({
                         articleId: article.id,
@@ -480,7 +375,7 @@ export function ArticleContent({
     return (
         <div className="flex-1 overflow-hidden flex flex-col h-full">
             {/* Mobile Toolbar - Fixed at top */}
-            {(typeof window !== "undefined" && window.innerWidth < 768) && (
+            {typeof window !== "undefined" && window.innerWidth < 768 && (
                 <div className="md:hidden bg-background/95 backdrop-blur-sm border-b px-4 py-3 flex-shrink-0">
                     <ArticleToolbar
                         article={article}
@@ -505,11 +400,80 @@ export function ArticleContent({
                                 {
                                     onError: () => {
                                         // Revert optimistic update on error and show error
-                                        setOptimisticReadLater(!newReadLaterState)
-                                        toast.error("Failed to update article. Please try again.")
+                                        setOptimisticReadLater(
+                                            !newReadLaterState
+                                        )
+                                        toast.error(
+                                            "Failed to update article. Please try again."
+                                        )
                                     },
                                 }
                             )
+                        }}
+                        onMarkAsRead={() => {
+                            // Mark as read and remove from read later instantly
+                            setOptimisticReadLater(false)
+                            toast.success("Article marked as read")
+
+                            // Optimistically update the articles cache to instantly remove from read-later list
+                            queryClient.setQueriesData(
+                                { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
+                                (oldData: any) => {
+                                    if (!oldData?.pages) return oldData;
+                                    return {
+                                        ...oldData,
+                                        pages: oldData.pages.map((page: any) => ({
+                                            ...page,
+                                            items: page.items?.filter((item: any) =>
+                                                // In read-later mode, remove this article entirely
+                                                isReadLaterMode ? item.id !== article.id : true
+                                            ).map((item: any) =>
+                                                item.id === article.id
+                                                    ? { ...item, is_read: true, is_read_later: false }
+                                                    : item
+                                            ) || []
+                                        }))
+                                    };
+                                }
+                            );
+
+                            // Also update unread counts optimistically
+                            queryClient.setQueryData(
+                                [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                                (oldData: any) => {
+                                    if (!oldData) return oldData;
+                                    return {
+                                        ...oldData,
+                                        read_later_count: Math.max(0, (oldData.read_later_count || 0) - 1)
+                                    };
+                                }
+                            );
+
+                            // Immediately remove from list UI
+                            onArticleRemoved?.()
+
+                            updateArticle.mutate({
+                                articleId: article.id,
+                                data: {
+                                    is_read: true,
+                                    is_read_later: false
+                                },
+                                articleType: article.article_type,
+                            }, {
+                                onError: () => {
+                                    // Revert optimistic update on error
+                                    setOptimisticReadLater(true)
+                                    toast.error("Failed to mark article as read. Please try again.")
+
+                                    // Revert cache optimistic updates
+                                    queryClient.invalidateQueries({
+                                        queryKey: [RSS_QUERY_KEYS.ARTICLES]
+                                    });
+                                    queryClient.invalidateQueries({
+                                        queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS]
+                                    });
+                                },
+                            })
                         }}
                         onExtractFullText={handleExtractContent}
                         onSummarize={handleSummarize}
@@ -519,6 +483,7 @@ export function ArticleContent({
                         isTranslating={isTranslating}
                         onBack={onBack}
                         hideBackground={true}
+                        isReadLaterMode={isReadLaterMode}
                     />
                 </div>
             )}
@@ -533,7 +498,8 @@ export function ArticleContent({
                         !isRecentlyReadMode &&
                         !isReadLaterMode &&
                         !article.is_read &&
-                        (typeof window !== "undefined" && window.innerWidth >= 768) // Desktop only
+                        typeof window !== "undefined" &&
+                        window.innerWidth >= 768 // Desktop only
                     ) {
                         if (onMarkAsRead) {
                             onMarkAsRead()
@@ -542,20 +508,28 @@ export function ArticleContent({
                             queryClient.setQueriesData(
                                 { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
                                 (oldData: any) => {
-                                    if (!oldData?.pages) return oldData;
+                                    if (!oldData?.pages) return oldData
                                     return {
                                         ...oldData,
-                                        pages: oldData.pages.map((page: any) => ({
-                                            ...page,
-                                            items: page.items?.map((item: any) =>
-                                                item.id === article.id
-                                                    ? { ...item, is_read: true }
-                                                    : item
-                                            ) || []
-                                        }))
-                                    };
+                                        pages: oldData.pages.map(
+                                            (page: any) => ({
+                                                ...page,
+                                                items:
+                                                    page.items?.map(
+                                                        (item: any) =>
+                                                            item.id ===
+                                                            article.id
+                                                                ? {
+                                                                      ...item,
+                                                                      is_read: true,
+                                                                  }
+                                                                : item
+                                                    ) || [],
+                                            })
+                                        ),
+                                    }
                                 }
-                            );
+                            )
 
                             updateArticle.mutate({
                                 articleId: article.id,
@@ -575,27 +549,37 @@ export function ArticleContent({
                             </h1>
 
                             {/* Article Meta */}
-                            <div className="flex items-center justify-between border-b border-border pb-6">
-                                <div className="flex items-center gap-3 text-sm text-muted-foreground font-mono">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6 gap-4">
+                                <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground font-mono">
                                     {article.author && (
                                         <>
-                                            <span className="text-foreground font-medium">
+                                            <span className="text-foreground font-medium break-words">
                                                 {article.author}
                                             </span>
-                                            <span>•</span>
+                                            <span className="hidden sm:inline">
+                                                •
+                                            </span>
                                         </>
                                     )}
-                                    <span>{publishedAtDisplay}</span>
+                                    <span className="whitespace-nowrap">
+                                        {publishedAtDisplay}
+                                    </span>
                                     {currentReadTime && (
                                         <>
-                                            <span>•</span>
-                                            <span>{currentReadTime} min read</span>
+                                            <span className="hidden sm:inline">
+                                                •
+                                            </span>
+                                            <span className="whitespace-nowrap">
+                                                {currentReadTime} min read
+                                            </span>
                                         </>
                                     )}
                                     {priority && (
                                         <>
-                                            <span>•</span>
-                                            <span className="capitalize">
+                                            <span className="hidden sm:inline">
+                                                •
+                                            </span>
+                                            <span className="capitalize whitespace-nowrap">
                                                 {priority} priority
                                             </span>
                                         </>
@@ -603,83 +587,157 @@ export function ArticleContent({
                                 </div>
 
                                 {/* Desktop Article Toolbar */}
-                                {!shouldShowPreviewBanner && (typeof window !== "undefined" && window.innerWidth >= 768) && (
-                                    <ArticleToolbar
-                                        article={article}
-                                        isReadLater={optimisticReadLater}
-                                        onToggleReadLater={() => {
-                                            const newReadLaterState = !optimisticReadLater
-                                            setOptimisticReadLater(newReadLaterState)
+                                {!shouldShowPreviewBanner &&
+                                    typeof window !== "undefined" &&
+                                    window.innerWidth >= 768 && (
+                                        <ArticleToolbar
+                                            article={article}
+                                            isReadLater={optimisticReadLater}
+                                            onToggleReadLater={() => {
+                                                const newReadLaterState =
+                                                    !optimisticReadLater
+                                                setOptimisticReadLater(
+                                                    newReadLaterState
+                                                )
 
-                                            // Show toast immediately for instant feedback
-                                            toast.success(
-                                                newReadLaterState
-                                                    ? "Article saved to Read Later"
-                                                    : "Article removed from Read Later"
-                                            )
+                                                // Show toast immediately for instant feedback
+                                                toast.success(
+                                                    newReadLaterState
+                                                        ? "Article saved to Read Later"
+                                                        : "Article removed from Read Later"
+                                                )
 
-                                            updateArticle.mutate(
-                                                {
-                                                    articleId: article.id,
-                                                    data: { is_read_later: newReadLaterState },
-                                                    articleType: article.article_type,
-                                                },
-                                                {
-                                                    onError: () => {
-                                                        // Revert optimistic update on error and show error
-                                                        setOptimisticReadLater(!newReadLaterState)
-                                                        toast.error("Failed to update article. Please try again.")
+                                                updateArticle.mutate(
+                                                    {
+                                                        articleId: article.id,
+                                                        data: {
+                                                            is_read_later:
+                                                                newReadLaterState,
+                                                        },
+                                                        articleType:
+                                                            article.article_type,
                                                     },
-                                                }
-                                            )
-                                        }}
-                                        onExtractFullText={handleExtractContent}
-                                        onSummarize={handleSummarize}
-                                        onTranslate={handleTranslate}
-                                        isExtracting={extractFullText.isFetching}
-                                        isSummarizing={summarizeArticle.isFetching}
-                                        isTranslating={isTranslating}
-                                        onBack={onBack}
-                                        hideBackground={true}
-                                    />
-                                )}
+                                                    {
+                                                        onError: () => {
+                                                            // Revert optimistic update on error and show error
+                                                            setOptimisticReadLater(
+                                                                !newReadLaterState
+                                                            )
+                                                            toast.error(
+                                                                "Failed to update article. Please try again."
+                                                            )
+                                                        },
+                                                    }
+                                                )
+                                            }}
+                                            onMarkAsRead={() => {
+                                                // Mark as read and remove from read later instantly
+                                                setOptimisticReadLater(false)
+                                                toast.success("Article marked as read")
+
+                                                // Optimistically update the articles cache to instantly remove from read-later list
+                                                queryClient.setQueriesData(
+                                                    { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
+                                                    (oldData: any) => {
+                                                        if (!oldData?.pages) return oldData;
+                                                        return {
+                                                            ...oldData,
+                                                            pages: oldData.pages.map((page: any) => ({
+                                                                ...page,
+                                                                items: page.items?.filter((item: any) =>
+                                                                    // In read-later mode, remove this article entirely
+                                                                    isReadLaterMode ? item.id !== article.id : true
+                                                                ).map((item: any) =>
+                                                                    item.id === article.id
+                                                                        ? { ...item, is_read: true, is_read_later: false }
+                                                                        : item
+                                                                ) || []
+                                                            }))
+                                                        };
+                                                    }
+                                                );
+
+                                                // Also update unread counts optimistically
+                                                queryClient.setQueryData(
+                                                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                                                    (oldData: any) => {
+                                                        if (!oldData) return oldData;
+                                                        return {
+                                                            ...oldData,
+                                                            read_later_count: Math.max(0, (oldData.read_later_count || 0) - 1)
+                                                        };
+                                                    }
+                                                );
+
+                                                // Immediately remove from list UI
+                                                onArticleRemoved?.()
+
+                                                updateArticle.mutate({
+                                                    articleId: article.id,
+                                                    data: {
+                                                        is_read: true,
+                                                        is_read_later: false
+                                                    },
+                                                    articleType: article.article_type,
+                                                }, {
+                                                    onError: () => {
+                                                        // Revert optimistic update on error
+                                                        setOptimisticReadLater(true)
+                                                        toast.error("Failed to mark article as read. Please try again.")
+
+                                                        // Revert cache optimistic updates
+                                                        queryClient.invalidateQueries({
+                                                            queryKey: [RSS_QUERY_KEYS.ARTICLES]
+                                                        });
+                                                        queryClient.invalidateQueries({
+                                                            queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS]
+                                                        });
+                                                    },
+                                                })
+                                            }}
+                                            onExtractFullText={
+                                                handleExtractContent
+                                            }
+                                            onSummarize={handleSummarize}
+                                            onTranslate={handleTranslate}
+                                            isExtracting={
+                                                extractFullText.isFetching
+                                            }
+                                            isSummarizing={
+                                                summarizeArticle.isFetching
+                                            }
+                                            isTranslating={isTranslating}
+                                            onBack={onBack}
+                                            hideBackground={true}
+                                            isReadLaterMode={isReadLaterMode}
+                                        />
+                                    )}
                             </div>
                         </div>
 
                         {/* Content Display */}
                         <div className="mt-8">
-                            {(() => {
-                                const hasValidSummary = aiSummary !== null && aiSummary !== undefined && aiSummary.length > 0;
-                                const shouldShowSummary = (isShowingSummary || hasValidSummary) && hasValidSummary;
-                                console.log("🎨 Rendering decision:", {
-                                    shouldShowSummary,
-                                    isShowingSummary,
-                                    hasValidSummary,
-                                    aiSummaryType: typeof aiSummary,
-                                    aiSummaryValue: aiSummary,
-                                    hasCurrentContent: !!currentContent,
-                                    currentContentLength: currentContent.length,
-                                    renderChoice: shouldShowSummary ? "AI_SUMMARY_WITH_CONTENT" : currentContent ? "CONTENT_ONLY" : "FALLBACK"
-                                });
-                                return null;
-                            })()}
-
                             {/* AI Summary - Show when available */}
                             {(() => {
-                                const hasValidSummary = aiSummary !== null && aiSummary !== undefined && aiSummary.length > 0;
-                                return (isShowingSummary || hasValidSummary) && hasValidSummary;
+                                const hasValidSummary =
+                                    aiSummary !== null &&
+                                    aiSummary !== undefined &&
+                                    aiSummary.length > 0
+                                return (
+                                    (isShowingSummary || hasValidSummary) &&
+                                    hasValidSummary
+                                )
                             })() && (
-                                    <div className="mb-8">
-                                        <AiSummaryCard
-                                            summary={aiSummary!}
-                                            onDismiss={() => {
-                                                console.log("❌ Dismissing AI summary")
-                                                setAiSummary(null)
-                                                onSummaryChange(null, false)
-                                            }}
-                                        />
-                                    </div>
-                                )}
+                                <div className="mb-8">
+                                    <AiSummaryCard
+                                        summary={aiSummary!}
+                                        onDismiss={() => {
+                                            setAiSummary(null)
+                                            onSummaryChange(null, false)
+                                        }}
+                                    />
+                                </div>
+                            )}
 
                             {/* Article Content - Always show if available */}
                             {currentContent ? (
@@ -693,26 +751,33 @@ export function ArticleContent({
                                             fontFamily:
                                                 "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
                                         }}
-                                        dangerouslySetInnerHTML={{
-                                            __html: currentContent,
-                                        }}
-                                    />
+                                    >
+                                        <div
+                                            dangerouslySetInnerHTML={{
+                                                __html: currentContent,
+                                            }}
+                                        />
+                                    </div>
                                 </AnimatedContent>
                             ) : (
                                 <div className="space-y-6">
                                     {(article.description || article.note) && (
-                                        <blockquote
-                                            className="border-l-4 border-primary/30 bg-muted/30 pl-4 py-3 italic text-muted-foreground prose prose-sm max-w-none"
-                                            dangerouslySetInnerHTML={{
-                                                __html: article.note || article.description || "",
-                                            }}
-                                        />
+                                        <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html:
+                                                        article.note ||
+                                                        article.description ||
+                                                        "",
+                                                }}
+                                            />
+                                        </blockquote>
                                     )}
                                     <div className="flex flex-col items-center justify-center py-8 text-center">
                                         <div className="mx-auto max-w-md">
-                                            <p className="text-muted-foreground">
-                                                This article doesn&apos;t have any
-                                                content available.
+                                            <p className="text-sm text-muted-foreground">
+                                                This article doesn&apos;t have
+                                                any content available.
                                             </p>
                                         </div>
                                     </div>
@@ -731,9 +796,14 @@ export function ArticleContent({
                                         <Lightbulb className="w-4 h-4 text-primary flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-foreground">
-                                                <span className="font-medium">Want the full article?</span>{" "}
+                                                <span className="font-medium">
+                                                    Want the full article?
+                                                </span>{" "}
                                                 <span className="text-muted-foreground">
-                                                    Click <FileText className="inline w-3.5 h-3.5 mx-0.5" /> in the toolbar to extract complete content.
+                                                    Click{" "}
+                                                    <FileText className="inline w-3.5 h-3.5 mx-0.5" />{" "}
+                                                    in the toolbar to extract
+                                                    complete content.
                                                 </span>
                                             </p>
                                         </div>

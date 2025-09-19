@@ -4,19 +4,21 @@ import Header from "@/components/navigation/Header"
 import ReadingProgressBar from "@/components/reader/ProgressBar"
 import ReaderContent from "@/components/reader/ReaderContent"
 import { ReaderNavActions } from "@/components/reader/ReaderNavActions"
+import useAutoBookmark from "@/hooks/reader/useAutoBookmark"
+import useChapterNavigation from "@/hooks/reader/useChapterNavigation"
 import { useIsMobile } from "@/hooks/useMobile"
+import { insertCharCountAttributes } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
+import { BookViewProps, EpubHighlight } from "@/types/library"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
-import useAutoBookmark from "../../hooks/reader/useAutoBookmark"
-import useChapterNavigation from "../../hooks/reader/useChapterNavigation"
-import { insertCharCountAttributes } from "../../lib/reader/reader-utils"
-import { BookViewProps, EpubHighlight } from "../../types/library"
 import HighlightPopover from "./HighlightPopover"
 
 // Custom hook for scroll direction detection
-const useScrollDirection = () => {
+const useScrollDirection = (
+    containerRef: React.RefObject<HTMLElement | null>
+) => {
     const [isScrollingUp, setIsScrollingUp] = useState(true)
     const lastScrollY = useRef(0)
 
@@ -75,7 +77,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
                 restorePoint(bookMeta.epub_progress)
             }
         })
-    }, [bookMeta, fetch, restorePoint])
+    }, [bookMeta])
 
     useEffect(() => {
         const loadChapter = async () => {
@@ -107,13 +109,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
         }
 
         loadChapter()
-    }, [
-        currentLocation,
-        bookMeta.epub_chapter_char_counts,
-        epubBook,
-        getCurrentChapterIdx,
-        setChapterHTML,
-    ])
+    }, [currentLocation])
 
     // Auto-hide the app sidebar for better reading experience
     // const { setOpen } = useSidebarLeft()
@@ -122,7 +118,7 @@ const EPUBReader = ({ bookMeta, savedHighlights }: EpubReaderProps) => {
     // }, [])
 
     const readerRef = useRef<HTMLDivElement>(null)
-    const isScrollingUp = useScrollDirection()
+    const isScrollingUp = useScrollDirection(readerRef)
     const isMobile = useIsMobile()
 
     // Mouse proximity logic

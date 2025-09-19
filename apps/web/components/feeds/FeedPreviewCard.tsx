@@ -181,7 +181,7 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
     }
 
     return (
-        <div className="p-4 border-2 border-dashed border-[#6A994E] bg-[#F3F9EF] rounded-lg">
+        <div className="p-4 border-2 border-dashed border-primary bg-primary/5 dark:bg-primary/10 rounded-lg">
             <div className="flex gap-4">
                 <div className="relative">
                     {feed.image_url && (
@@ -225,21 +225,21 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                 <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-4">
                         <div>
-                            <h3 className="font-semibold text-lg text-black leading-tight">
+                            <h3 className="font-semibold text-lg text-foreground leading-tight">
                                 {feed.title || "Untitled Feed"}
                             </h3>
                             <a
                                 href={feed.link || undefined}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-[#BDC6B7] mt-0.5"
+                                className="text-xs text-muted-foreground mt-0.5"
                             >
                                 {feed.link
                                     ?.replace(/^https?:\/\//, "")
                                     .replace(/\/$/, "") || "No URL"}
                             </a>
                             {feed.description && (
-                                <p className="text-xs text-[#91998C] mt-2 leading-relaxed">
+                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                                     {truncateText(feed.description, 120)}
                                 </p>
                             )}
@@ -252,7 +252,7 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
                                 className={`h-8 text-xs ${
                                     isFollowed
                                         ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
-                                        : "bg-[#6A994E] hover:bg-[#6A994E]/90 text-white"
+                                        : "bg-primary hover:bg-primary/90 text-primary-foreground"
                                 }`}
                             >
                                 {isFollowed && (

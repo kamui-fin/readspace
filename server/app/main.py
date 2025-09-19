@@ -87,11 +87,13 @@ docs_config = {}
 
 if settings.ENVIRONMENT not in SHOW_DOCS_ENVIRONMENTS:
     # Hide documentation in production
-    docs_config.update({
-        "openapi_url": None,
-        "docs_url": None,
-        "redoc_url": None,
-    })
+    docs_config.update(
+        {
+            "openapi_url": None,
+            "docs_url": None,
+            "redoc_url": None,
+        }
+    )
 
 app = FastAPI(
     title="Readspace API",
@@ -131,17 +133,11 @@ app = FastAPI(
         "url": "https://github.com/readspace-app/readspace/blob/main/LICENSE",
     },
     servers=[
-        {
-            "url": "http://localhost:8008",
-            "description": "Development server"
-        },
-        {
-            "url": "https://api.readspace.app",
-            "description": "Production server"
-        }
+        {"url": "http://localhost:8008", "description": "Development server"},
+        {"url": "https://api.readspace.app", "description": "Production server"},
     ],
     lifespan=lifespan,
-    **docs_config
+    **docs_config,
 )
 
 # Instrument FastAPI after app creation

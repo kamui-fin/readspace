@@ -90,7 +90,7 @@ export function ArticlesEmptyState({
                     action: (
                         <Button
                             variant="outline"
-                            onClick={() => router.push("/articles")}
+                            onClick={() => router.push("/today")}
                             className="transition-all duration-200 hover:scale-105 hover:shadow-md"
                         >
                             <BookOpen className="mr-2 h-4 w-4" />
@@ -107,7 +107,7 @@ export function ArticlesEmptyState({
                     action: (
                         <Button
                             variant="outline"
-                            onClick={() => router.push("/articles")}
+                            onClick={() => router.push("/today")}
                             className="transition-all duration-200 hover:scale-105 hover:shadow-md"
                         >
                             <BookOpen className="mr-2 h-4 w-4" />
@@ -169,10 +169,6 @@ export function ArticlesEmptyState({
                         <SidebarLeftTrigger />
                     </div>
                 )}
-                <div className="text-center space-y-4">
-                    <RefreshCw className="mx-auto h-12 w-12 text-muted-foreground animate-spin" />
-                    <p className="text-muted-foreground">Loading feeds...</p>
-                </div>
             </div>
         )
     }

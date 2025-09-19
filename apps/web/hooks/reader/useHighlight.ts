@@ -1,5 +1,5 @@
 import { Json } from "@/database.types"
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import {
     useCreateHighlight,
     useDeleteHighlightByText,

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useOnboardingStore } from "@/stores/onboarding"
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -49,7 +49,7 @@ const StepTwo: React.FC = () => {
         queryKey: ["onboarding-feeds", onboardingData.selectedCategories],
         queryFn: async () => {
             const promises = onboardingData.selectedCategories.map((category) =>
-                ApiClient.rss.searchFeeds({
+                ApiWebClient.rss.searchFeeds({
                     category,
                     limit: 8, // Get top 8 per category
                 })
@@ -93,7 +93,7 @@ const StepTwo: React.FC = () => {
 
         try {
             // Redirect to main app
-            router.push("/articles")
+            router.push("/today")
         } catch (error) {
             console.error("Failed to complete onboarding:", error)
         }

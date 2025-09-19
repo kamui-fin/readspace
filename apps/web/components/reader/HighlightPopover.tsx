@@ -13,7 +13,7 @@ import useHighlight from "../../hooks/reader/useHighlight"
 import { EpubHighlight } from "../../types/library"
 import { useIsMobile } from "@/hooks/useMobile"
 
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
 import HighlightColorOptions from "./HighlightOptions"
@@ -69,7 +69,7 @@ export default function HighlightPopover({
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiClient.put(
+            ApiWebClient.put(
                 `/api/highlights/text/${encodeURIComponent(text)}/note`,
                 { note }
             ),

@@ -1,4 +1,4 @@
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { useReaderStore } from "@/stores/reader"
 import { useMutation } from "@tanstack/react-query"
 import { useCallback, useEffect } from "react"
@@ -39,7 +39,7 @@ export default function useAutoBookmark() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiClient.books.updateBookProgress(bookId, {
+            ApiWebClient.books.updateBookProgress(bookId, {
                 epub_progress: progress,
             }),
         onError: (err: Error) => {

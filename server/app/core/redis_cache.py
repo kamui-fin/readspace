@@ -71,7 +71,22 @@ class RedisCache:
         client = None
         try:
             client = await self._get_client()
-            serialized_value = json.dumps(value)
+            # Handle Pydantic models that may contain non-JSON serializable types (like URLs)
+            if hasattr(value, "model_dump"):
+                # Use Pydantic's model_dump with mode="json" to properly serialize URL objects
+                serialized_value = json.dumps(value.model_dump(mode="json"))
+            elif isinstance(value, dict) and any(hasattr(v, "model_dump") for v in value.values() if v is not None):
+                # Handle dictionaries containing Pydantic models
+                serializable_dict = {}
+                for k, v in value.items():
+                    if hasattr(v, "model_dump"):
+                        serializable_dict[k] = v.model_dump(mode="json")
+                    else:
+                        serializable_dict[k] = v
+                serialized_value = json.dumps(serializable_dict)
+            else:
+                serialized_value = json.dumps(value)
+
             if ttl_seconds:
                 await client.setex(key, ttl_seconds, serialized_value)
             else:

@@ -17,7 +17,6 @@ import type {
 
 import { useRef, useState } from "react"
 import { PdfLoader } from "react-pdf-highlighter-extended"
-import { configurePdfJs } from "@/lib/pdf-worker"
 
 import { PdfHighlighterUtils } from "@/components/reader/pdf-highlight/contexts/pdf-highlighter-context"
 import ExpandableTip from "@/components/reader/pdf-highlight/ExpandableTip"
@@ -25,11 +24,16 @@ import HighlightContainer from "@/components/reader/pdf-highlight/HighlightConta
 import { PdfHighlighter } from "@/components/reader/pdf-highlight/PdfHighlights"
 
 import { Loading } from "@/components/reader/ReaderContent"
-import { ApiClient } from "@readspace/shared"
+import { ApiClient } from "@/lib/api/client"
 import { useMutation } from "@tanstack/react-query"
-
+import { pdfjs } from "react-pdf"
 // Global storage key for zoom preference (same as in pdf-zoom.tsx)
 const STORAGE_KEY = "pdf-zoom-level"
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url
+).toString()
 
 const parseIdFromHash = () => {
     return document.location.hash.slice("#highlight-".length)
@@ -45,6 +49,7 @@ interface PDFViewerProps {
 }
 
 export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
+
     const currentPageRef = useRef(useReaderStore.getState().currentPage)
     const [isLoading, setIsLoading] = useState(true)
     const [viewerReady, setViewerReady] = useState(false)
@@ -129,8 +134,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     })
 
     const addHighlightMutation = useMutation({
-        mutationFn: (data: HighlightCreateRequest) =>
-            ApiClient.post("/api/highlights/", data),
+        mutationFn: (data: any) => ApiClient.post("/api/highlights/", data),
         onError: (err: Error) => console.error("Failed to add highlight:", err),
     })
 
@@ -226,16 +230,18 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             // Perform any cleanup, e.g., resetting component-specific state
             // isComponentInitialized.current = false; // Example, if you still use this ref
         }
-        // Ensure dependencies are correct. bookMeta might be complex; consider destructuring if it causes re-runs.
-        // For now, keeping bookMeta as is, but be mindful of its stability.
+        // Extract stable values from bookMeta to prevent infinite re-renders
     }, [
-        bookMeta,
+        bookMeta.id,
+        bookMeta.library_id,
+        bookMeta.pdf_current_page,
+        bookMeta.format,
+        bookMeta.title,
         fetchBook,
         setHighlights,
         setAllHighlights,
-        insertAllHighlight,
-        savedHighlights,
-    ]) // Removed goToPage if not directly called here
+        savedHighlights.length, // Use length instead of the array itself
+    ])
 
     const saveProgress = useCallback(
         (pageLeftOff: number) => {
@@ -263,11 +269,10 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
 
             if (!libraryIdToUse) {
                 const pathParts = window.location.pathname.split("/")
-                // Assuming URL structure like /reader/pdf/{library_id}
-                // Adjust index if your URL structure is different
+                // URL structure is /library/{library_id}
                 if (
                     pathParts.length >= 3 &&
-                    pathParts[pathParts.length - 2] === "pdf"
+                    pathParts[pathParts.length - 2] === "library"
                 ) {
                     libraryIdToUse = pathParts[pathParts.length - 1]
                     console.log(
@@ -305,7 +310,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 bookMeta.pdf_current_page = pageLeftOff
             }
         },
-        [bookMeta, updateProgressMutation]
+        [bookMeta.id, bookMeta.library_id, updateProgressMutation.mutate]
     )
 
     // For debugging, make an initial check to see what page we're starting with
@@ -318,7 +323,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                         bookMeta.library_id
                     )
                     const response =
-                        await ApiClient.get<UserBookLibraryProgressResponse>(
+                        await ApiWebClient.get<UserBookLibraryProgressResponse>(
                             `/api/books/${bookMeta.library_id}`
                         )
 
@@ -350,7 +355,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         }
 
         checkInitialPage()
-    }, [bookMeta, goToPage])
+    }, [bookMeta.library_id, goToPage])
 
     // Add a sequence tracker to ensure we prioritize loading the saved page
     const pageLoadSequence = useRef({
@@ -401,15 +406,18 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 // Save progress to API
                 const pathParts = window.location.pathname.split("/")
                 const libraryIdFromUrl =
-                    pathParts.length > 2
+                    pathParts.length >= 3 &&
+                    pathParts[pathParts.length - 2] === "library"
                         ? pathParts[pathParts.length - 1]
                         : null
                 const libraryId =
-                    libraryIdFromUrl || bookMeta.library_id || bookMeta.id
-                updateProgressMutation.mutate({
-                    bookId: libraryId,
-                    page: pageLeftOff,
-                })
+                    bookMeta.library_id || libraryIdFromUrl
+                if (libraryId) {
+                    updateProgressMutation.mutate({
+                        bookId: libraryId,
+                        page: pageLeftOff,
+                    })
+                }
             }
         }
     }, [
@@ -418,7 +426,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         viewerReady,
         isLoading,
         saveProgress,
-        updateProgressMutation,
+        updateProgressMutation.mutate, // Use stable reference
     ])
 
     // Add a useEffect hook to ensure currentPage is correctly synchronized with bookMeta.pdf_current_page
@@ -476,7 +484,8 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 if (!bookMeta.library_id) {
                     const pathParts = window.location.pathname.split("/")
                     const libraryIdFromUrl =
-                        pathParts.length > 2
+                        pathParts.length >= 3 &&
+                        pathParts[pathParts.length - 2] === "library"
                             ? pathParts[pathParts.length - 1]
                             : null
                     if (libraryIdFromUrl) {
@@ -491,7 +500,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             insertHighlight,
             insertAllHighlight,
             bookMeta.library_id,
-            addHighlightMutation,
+            addHighlightMutation.mutateAsync,
         ]
     )
 
@@ -518,7 +527,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             setAllHighlights(updatedAllHighlights)
             await deleteHighlightMutation.mutateAsync(highlightText)
         },
-        [highlights, setHighlights, setAllHighlights, deleteHighlightMutation]
+        [highlights, setHighlights, setAllHighlights, deleteHighlightMutation.mutateAsync]
     )
 
     const addNote = useCallback(
@@ -562,7 +571,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             setAllHighlights(updatedAllHighlights)
             await addAnnotationMutation.mutateAsync({ note, text: textToAddTo })
         },
-        [highlights, setHighlights, setAllHighlights, addAnnotationMutation]
+        [highlights, setHighlights, setAllHighlights, addAnnotationMutation.mutateAsync]
     )
 
     // Scroll to highlight based on hash in the URL
@@ -628,7 +637,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                                     event.altKey || isAreaSelectionActive
                                 }
                                 onPageChange={handlePageChange}
-                                pdfDocument={pdfDocument}
+                                pdfDocument={pdfDocument as any}
                                 onScrollAway={resetHash}
                                 utilsRef={(_pdfHighlighterUtils) => {
                                     highlighterUtilsRef.current =

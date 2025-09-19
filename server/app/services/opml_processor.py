@@ -39,18 +39,34 @@ class OpmlProcessor:
                 f"Invalid XML format: {str(e)}. Please check that you've uploaded a valid OPML file."
             ) from e
 
-        # Find the body element
-        body = root.find(".//body")
-        if body is None:
-            raise ValidationError("Invalid OPML format: No body element found")
-
         feeds_data = []
 
-        # Process only direct child outline elements (not recursive)
-        for outline in body.findall("outline"):
-            feed_data = self._process_outline_element(outline, default_folder_name=default_folder_name, current_depth=0)
-            if feed_data:
-                feeds_data.extend(feed_data)
+        # Find the body element
+        body = root.find(".//body")
+        if body is not None:
+            # Standard OPML format with body element
+            for outline in body.findall("outline"):
+                feed_data = self._process_outline_element(
+                    outline, default_folder_name=default_folder_name, current_depth=0
+                )
+                if feed_data:
+                    feeds_data.extend(feed_data)
+        else:
+            # Fallback: Look for outline elements anywhere in the document
+            # This handles cases where OPML has non-standard structure
+            direct_outlines = root.findall(".//outline")
+            if direct_outlines:
+                logger.info(
+                    "Processing OPML with relaxed structure - no body element found", outline_count=len(direct_outlines)
+                )
+                for outline in direct_outlines:
+                    feed_data = self._process_outline_element(
+                        outline, default_folder_name=default_folder_name, current_depth=0
+                    )
+                    if feed_data:
+                        feeds_data.extend(feed_data)
+            else:
+                raise ValidationError("Invalid OPML format: No body element or outline elements found")
 
         # Deduplicate feeds by XML URL
         seen_urls = set()
@@ -112,11 +128,12 @@ class OpmlProcessor:
         if xml_url:
             # This is a feed
             folder_name = parent_folder
-            if folder_name is None and default_folder_name:
-                folder_name = default_folder_name
+            if folder_name is None:
+                # Always use default folder name if no parent folder is specified
+                folder_name = default_folder_name or "Imported Feeds"
 
             feed_info = {
-                "title": title,
+                "title": title or "Untitled Feed",
                 "xml_url": xml_url,
                 "html_url": html_url,
                 "folder_name": folder_name,
@@ -281,12 +298,18 @@ class OpmlProcessor:
         try:
             root = ET.fromstring(content)  # noqa: S314
         except ET.ParseError as e:
-            raise ValidationError(
-                f"Invalid XML format: {str(e)}. "
-                "Please check that you've uploaded a valid OPML file exported from your RSS reader."
-            ) from e
+            # Try to wrap content in a root element if it might be missing
+            wrapped_content = f"<opml>{content}</opml>"
+            try:
+                root = ET.fromstring(wrapped_content)  # noqa: S314
+                logger.info("Successfully parsed OPML by adding root element wrapper")
+            except ET.ParseError:
+                raise ValidationError(
+                    f"Invalid XML format: {str(e)}. "
+                    "Please check that you've uploaded a valid OPML file exported from your RSS reader."
+                ) from e
 
-        # Check for required OPML structure
+        # Check for required OPML structure - be more permissive
         if root.tag.lower() != "opml":
             # Check if it might be another type of XML file
             if root.tag.lower() in ["rss", "feed", "atom"]:
@@ -294,24 +317,45 @@ class OpmlProcessor:
                     "This appears to be an RSS/Atom feed file, not an OPML file. "
                     "Please export your feed list as OPML from your RSS reader instead of exporting individual feeds."
                 )
-            raise ValidationError(
-                f"Invalid OPML format: Root element must be 'opml' but found '{root.tag}'. "
-                "Please check that you've uploaded a valid OPML file."
-            )
 
+            # Check if the root element might contain outline elements directly
+            # This handles cases where the root element is missing or non-standard
+            direct_outlines = root.findall(".//outline")
+            if direct_outlines:
+                logger.info(
+                    "OPML file has non-standard root element but contains outline elements",
+                    root_tag=root.tag,
+                    outline_count=len(direct_outlines),
+                )
+                # Continue validation with relaxed requirements
+            else:
+                raise ValidationError(
+                    f"Invalid OPML format: Root element must be 'opml' but found '{root.tag}'. "
+                    "Please check that you've uploaded a valid OPML file."
+                )
+
+        # Look for body element or outline elements anywhere in the document
         body = root.find(".//body")
         if body is None:
-            raise ValidationError(
-                "Invalid OPML format: No body element found. "
-                "This doesn't appear to be a valid OPML file exported from an RSS reader."
-            )
-
-        # Check for at least one outline element
-        outlines = body.findall(".//outline")
-        if not outlines:
-            raise ValidationError(
-                "Invalid OPML format: No feed entries found. "
-                "The OPML file appears to be empty or doesn't contain any feed subscriptions."
-            )
-
-        logger.info("OPML validation passed", outline_count=len(outlines))
+            # Check if outline elements exist directly under root (relaxed validation)
+            direct_outlines = root.findall(".//outline")
+            if not direct_outlines:
+                raise ValidationError(
+                    "Invalid OPML format: No body element or outline elements found. "
+                    "This doesn't appear to be a valid OPML file exported from an RSS reader."
+                )
+            logger.info("OPML file missing body element but has outline elements", outline_count=len(direct_outlines))
+        else:
+            # Check for at least one outline element in body
+            outlines = body.findall(".//outline")
+            if not outlines:
+                # Check if there are outline elements elsewhere in the document
+                global_outlines = root.findall(".//outline")
+                if not global_outlines:
+                    raise ValidationError(
+                        "Invalid OPML format: No feed entries found. "
+                        "The OPML file appears to be empty or doesn't contain any feed subscriptions."
+                    )
+                logger.info("OPML validation passed with relaxed requirements", outline_count=len(global_outlines))
+            else:
+                logger.info("OPML validation passed", outline_count=len(outlines))

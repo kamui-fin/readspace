@@ -8,7 +8,7 @@ import {
 } from "@/components/library/BookCardSkeleton"
 import { CatalogHeader } from "@/components/library/CatalogHeader"
 import { useIsMobile } from "@/hooks/useMobile"
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { BOOK_QUERY_KEYS } from "@readspace/shared"
 import { UserBookLibrary, isEpubProgress } from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
@@ -33,10 +33,12 @@ export function LibraryCatalog({
     >({
         queryKey: [BOOK_QUERY_KEYS.BOOKS],
         queryFn: async () => {
-            const response = await ApiClient.books.getUserBooks()
+            const response = await ApiWebClient.books.getUserBooks()
             return response as UserBookLibrary[]
         },
         initialData: initialBooks,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+        refetchOnWindowFocus: true,
     })
 
     useEffect(() => {

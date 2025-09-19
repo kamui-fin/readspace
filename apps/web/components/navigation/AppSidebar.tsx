@@ -110,7 +110,10 @@ export function AppSidebar({
                                 asChild
                                 className="data-[slot=sidebar-menu-button]:!p-1.5 pl-2 py-2"
                             >
-                                <Link href="/">
+                                <Link
+                                    href="/today"
+                                    className="flex items-center"
+                                >
                                     <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
                                         <Image
                                             src="/readspace.svg"
@@ -120,7 +123,7 @@ export function AppSidebar({
                                             className="rounded"
                                         />
                                     </div>
-                                    <span className="truncate font-logo text-xl font-medium tracking-normal">
+                                    <span className="truncate font-logo text-xl font-medium tracking-normal pb-[2px]">
                                         readspace
                                     </span>
                                 </Link>

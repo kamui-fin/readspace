@@ -38,6 +38,7 @@ class ArticleManagementService:
         self.user_id = user_id
         self.transformer = ArticleTransformer()
 
+
     async def get_articles(
         self,
         feed_ids: list[UUID] | None = None,
@@ -57,7 +58,6 @@ class ArticleManagementService:
         allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering and pagination."""
-
         skip = (page - 1) * size
 
         articles_db, total_count = await get_articles_by_user(
@@ -83,13 +83,15 @@ class ArticleManagementService:
 
         pages = (total_count + size - 1) // size if size > 0 else 0
 
-        return PaginatedResponse(
+        result = PaginatedResponse(
             items=articles,
             total=total_count,
             page=page,
             size=size,
             pages=pages,
         )
+
+        return result
 
     async def get_article(self, article_id: UUID, allow_preview: bool = False) -> ArticleResponse | None:
         """Get a single article by its ID."""

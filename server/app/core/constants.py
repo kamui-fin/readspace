@@ -38,6 +38,11 @@ FEED_CONTENT_CACHE_PREFIX = "feed_content:"
 USER_CACHE_PREFIX = "user:"
 ARTICLE_CACHE_PREFIX = "article:"
 
+# Cache TTL (Time To Live) in seconds
+ARTICLE_LIST_CACHE_TTL = 300  # 5 minutes for article lists
+AI_CACHE_TTL = 86400  # 24 hours for AI results
+OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
+
 # User Agent
 DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
 

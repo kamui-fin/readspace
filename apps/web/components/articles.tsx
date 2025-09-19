@@ -25,7 +25,6 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useArticlesQuery } from "@/hooks/useArticlesQuery"
-import { useArticlesRefresh } from "@/hooks/useArticlesRefresh"
 import { useIsMobile, useIsTablet } from "@/hooks/useMobile"
 import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import { useQueryClient } from "@tanstack/react-query"
@@ -34,18 +33,20 @@ import {
     useArticle,
     useFeed,
     useFeeds,
+    useRefreshFeed,
     useUnreadCounts,
     useUpdateArticle,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import {
-    CheckCircle2,
     Eye,
     EyeOff,
+    Globe,
     MoreVertical,
     RefreshCw,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
+import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
 import { ArticlesList } from "./articles/ArticlesList"
 
@@ -96,6 +97,7 @@ export function ArticlesView({
     const [currentReadTime, setCurrentReadTime] = useState<number | null>(null)
     const [isShowingSummary, setIsShowingSummary] = useState(false)
     const [isTranslating, setIsTranslating] = useState(false)
+    const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
 
     // Hooks
     const isMobile = useIsMobile()
@@ -138,6 +140,9 @@ export function ArticlesView({
     // Article update mutation
     const updateArticle = useUpdateArticle()
 
+    // Feed refresh mutation
+    const refreshFeed = useRefreshFeed()
+
     // View mode flags
     const isRecentlyReadMode = mode === "recentlyRead"
     const isReadLaterMode = mode === "readLater"
@@ -146,22 +151,23 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-            ? "Read Later"
-            : isTodayMode
-                ? "Today"
-                : initialSidebarTitle || "All Articles"
+          ? "Read Later"
+          : isTodayMode
+            ? "Today"
+            : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
-        const typedUnreadCounts = (unreadCounts as {
-            total_unread?: number
-            today_count?: number
-            read_later_count?: number
-            unread_by_folder?: Array<{
-                folder_id: string
-                unread_count: number
-            }>
-        }) || {}
+        const typedUnreadCounts =
+            (unreadCounts as {
+                total_unread?: number
+                today_count?: number
+                read_later_count?: number
+                unread_by_folder?: Array<{
+                    folder_id: string
+                    unread_count: number
+                }>
+            }) || {}
 
         // Don't show unread count for recently read mode
         if (isRecentlyReadMode) return 0
@@ -218,10 +224,6 @@ export function ArticlesView({
         publishedUntil: publishedUntil,
     })
 
-    // Refresh functionality
-    const { startRefresh, isDeepRefreshing } = useArticlesRefresh({
-        onRefreshComplete: refetchArticles,
-    })
 
     // Determine if we should show preview banner for feeds
     const shouldShowPreviewBanner = !!(
@@ -246,68 +248,75 @@ export function ArticlesView({
     /**
      * Handle article selection with automatic mark as read
      */
-    const handleArticleSelect = useCallback((articleId: string) => {
-        setSelectedArticleId(articleId)
-        // Reset content state when selecting new article
-        setCurrentContent("")
-        setCurrentReadTime(null)
-        setIsShowingSummary(false)
-        setIsTranslating(false)
-        if (isMobile) {
-            setShowContent(true)
-        }
-
-        // Auto-mark as read on click (desktop only, not in preview mode)
-        if (!isMobile && !shouldShowPreviewBanner) {
-            const article = allArticles.find((a) => a.id === articleId)
-            if (!isRecentlyReadMode && article && !article.is_read) {
-                // Optimistically update the UI immediately
-                queryClient.setQueriesData(
-                    { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                    (oldData: any) => {
-                        if (!oldData?.pages) return oldData;
-                        return {
-                            ...oldData,
-                            pages: oldData.pages.map((page: any) => ({
-                                ...page,
-                                items: page.items?.map((item: any) =>
-                                    item.id === articleId
-                                        ? { ...item, is_read: true }
-                                        : item
-                                ) || []
-                            }))
-                        };
-                    }
-                );
-
-                // Also update unread counts optimistically
-                queryClient.setQueryData(
-                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                    (oldData: any) => {
-                        if (!oldData) return oldData;
-                        return {
-                            ...oldData,
-                            total_unread: Math.max(0, (oldData.total_unread || 0) - 1)
-                        };
-                    }
-                );
-
-                // Now perform the actual mutation
-                updateArticle.mutate({
-                    articleId,
-                    data: { is_read: true },
-                    articleType: article.article_type || "feed",
-                })
+    const handleArticleSelect = useCallback(
+        (articleId: string) => {
+            setSelectedArticleId(articleId)
+            // Reset content state when selecting new article
+            setCurrentContent("")
+            setCurrentReadTime(null)
+            setIsShowingSummary(false)
+            setIsTranslating(false)
+            if (isMobile) {
+                setShowContent(true)
             }
-        }
-    }, [
-        isMobile,
-        shouldShowPreviewBanner,
-        allArticles,
-        isRecentlyReadMode,
-        updateArticle,
-        queryClient,
-    ])
+
+            // Auto-mark as read on click (desktop only, not in preview mode)
+            if (!isMobile && !shouldShowPreviewBanner) {
+                const article = allArticles.find((a) => a.id === articleId)
+                if (!isRecentlyReadMode && article && !article.is_read) {
+                    // Optimistically update the UI immediately
+                    queryClient.setQueriesData(
+                        { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
+                        (oldData: any) => {
+                            if (!oldData?.pages) return oldData
+                            return {
+                                ...oldData,
+                                pages: oldData.pages.map((page: any) => ({
+                                    ...page,
+                                    items:
+                                        page.items?.map((item: any) =>
+                                            item.id === articleId
+                                                ? { ...item, is_read: true }
+                                                : item
+                                        ) || [],
+                                })),
+                            }
+                        }
+                    )
+
+                    // Also update unread counts optimistically
+                    queryClient.setQueryData(
+                        [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                        (oldData: any) => {
+                            if (!oldData) return oldData
+                            return {
+                                ...oldData,
+                                total_unread: Math.max(
+                                    0,
+                                    (oldData.total_unread || 0) - 1
+                                ),
+                            }
+                        }
+                    )
+
+                    // Now perform the actual mutation
+                    updateArticle.mutate({
+                        articleId,
+                        data: { is_read: true },
+                        articleType: article.article_type || "feed",
+                    })
+                }
+            }
+        },
+        [
+            isMobile,
+            shouldShowPreviewBanner,
+            allArticles,
+            isRecentlyReadMode,
+            updateArticle,
+            queryClient,
+        ]
+    )
 
     /**
      * Handle back to list on mobile
@@ -321,13 +330,7 @@ export function ArticlesView({
     /**
      * Handle content updates from ArticleContent
      */
-    const handleContentChange = (content: string, key?: string) => {
-        console.log("📄 Parent: Content change received:", {
-            contentLength: content.length,
-            contentKey: key,
-            contentPreview: content.substring(0, 100) + "...",
-            selectedArticleId
-        })
+    const handleContentChange = (content: string) => {
         setCurrentContent(content)
     }
 
@@ -345,12 +348,6 @@ export function ArticlesView({
         summary: string | null,
         isShowing: boolean
     ) => {
-        console.log("🧠 Parent: Summary change received:", {
-            hasSummary: !!summary,
-            summaryLength: summary?.length || 0,
-            isShowing,
-            summaryPreview: summary?.substring(0, 100) + "..." || null
-        })
         setIsShowingSummary(isShowing)
     }
 
@@ -397,27 +394,69 @@ export function ArticlesView({
         }
     }
 
-    /**
-     * Handle refresh actions
-     */
-    const handleRefresh = (isDeep = false) => {
-        if (isDeep) {
-            // For deep refresh, use the background task system
-            if (folderId) {
-                // Get all feeds in the folder
-                const folderFeeds = (allUserFeeds as Feed[])?.filter(
-                    (feed) => feed.folder_id === folderId
-                )
-                const feedIds = folderFeeds?.map((feed) => feed.id) || []
-                startRefresh(feedIds, "folder", isDeep)
-            } else {
-                startRefresh(undefined, "all", isDeep)
-            }
-        } else {
-            // For normal refresh, just refetch articles from the database
-            refetchArticles()
+    // Refresh with custom message
+    const handleRefreshWithMessage = async (message: string) => {
+        toast.loading(message, { id: "refresh" })
+        try {
+            // Invalidate articles cache to force fresh fetch from server
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+
+            // Also invalidate unread counts to ensure they're updated
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
+
+            await refetchArticles()
+            toast.success("Articles refreshed!", { id: "refresh" })
+        } catch (error) {
+            console.error("Refresh failed:", error)
+            toast.error("Failed to refresh articles. Please try again.", {
+                id: "refresh",
+            })
         }
     }
+
+    // Deep refresh: poll external RSS feed (only for individual feeds)
+    const handleDeepRefresh = async () => {
+        if (!feedId) return
+
+        setIsDeepRefreshing(true)
+        toast.loading("Checking for new articles...", { id: "deep-refresh" })
+
+        try {
+            await refreshFeed.mutateAsync({
+                feedId: feedId,
+                forceRefetch: true,
+            })
+
+            // Invalidate all relevant caches to force fresh fetch from server
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FEEDS],
+            })
+
+            // After deep refresh completes, refetch articles
+            await refetchArticles()
+            toast.success("Check complete! Articles updated.", {
+                id: "deep-refresh",
+            })
+        } catch (error) {
+            console.error("Deep refresh failed:", error)
+            toast.error("Failed to check for new articles. Please try again.", {
+                id: "deep-refresh",
+            })
+        } finally {
+            setIsDeepRefreshing(false)
+        }
+    }
+
 
     const toggleShowUnreadOnly = () => {
         setShowUnreadOnly((prev) => !prev)
@@ -464,7 +503,7 @@ export function ArticlesView({
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) ||
-                        allArticles[0]
+                          allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle?.id || null)
                 }
@@ -482,11 +521,7 @@ export function ArticlesView({
 
     // Show skeleton during initial loading
     if (isArticlesLoading && allArticles.length === 0) {
-        return (
-            <ArticlesViewSkeleton
-                showUnreadBadge={false}
-            />
-        )
+        return <ArticlesViewSkeleton showUnreadBadge={false} />
     }
 
     // Show empty state when no articles
@@ -501,7 +536,7 @@ export function ArticlesView({
                     mode={mode}
                     feedId={feedId}
                     folderId={folderId}
-                    onRefresh={() => handleRefresh(false)}
+                    onRefresh={() => handleRefreshWithMessage("Refreshing articles...")}
                 />
             </div>
         )
@@ -525,7 +560,6 @@ export function ArticlesView({
 
     return (
         <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
-
             {isMobile ? (
                 // Mobile: Single panel with navigation
                 <div className="w-full">
@@ -539,7 +573,9 @@ export function ArticlesView({
                                 isTranslating={isTranslating}
                                 isRecentlyReadMode={isRecentlyReadMode}
                                 isReadLaterMode={isReadLaterMode}
-                                shouldShowPreviewBanner={shouldShowPreviewBanner}
+                                shouldShowPreviewBanner={
+                                    shouldShowPreviewBanner
+                                }
                                 onContentChange={handleContentChange}
                                 onReadTimeChange={handleReadTimeChange}
                                 onSummaryChange={handleSummaryChange}
@@ -553,11 +589,16 @@ export function ArticlesView({
                         <div className="flex h-full flex-col">
                             {/* Mobile Toolbar */}
                             <div className="flex items-center justify-between border-b px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                    <SidebarLeftTrigger />
-                                    <h1 className="text-lg font-semibold">{sidebarTitle}</h1>
+                                <div className="flex items-center gap-2 flex-1">
+                                    <SidebarLeftTrigger className="flex-shrink-0" />
+                                    <h1 className="text-lg font-semibold truncate max-w-[200px]">
+                                        {sidebarTitle}
+                                    </h1>
                                     {unreadCount > 0 && (
-                                        <Badge variant="outline" className="min-w-3 px-2 flex-shrink-0">
+                                        <Badge
+                                            variant="outline"
+                                            className="min-w-3 px-2 flex-shrink-0"
+                                        >
                                             {unreadCount}
                                         </Badge>
                                     )}
@@ -569,10 +610,14 @@ export function ArticlesView({
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant={
-                                                        showUnreadOnly ? "default" : "ghost"
+                                                        showUnreadOnly
+                                                            ? "default"
+                                                            : "ghost"
                                                     }
                                                     size="sm"
-                                                    onClick={toggleShowUnreadOnly}
+                                                    onClick={
+                                                        toggleShowUnreadOnly
+                                                    }
                                                 >
                                                     {showUnreadOnly ? (
                                                         <Eye className="h-4 w-4" />
@@ -596,7 +641,9 @@ export function ArticlesView({
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => handleRefresh(false)}
+                                                    onClick={() =>
+                                                        handleRefreshWithMessage("Refreshing articles...")
+                                                    }
                                                     disabled={isDeepRefreshing}
                                                 >
                                                     <RefreshCw
@@ -610,30 +657,45 @@ export function ArticlesView({
                                         </Tooltip>
                                     </TooltipProvider>
 
-                                    {/* More actions - hide for preview feeds */}
-                                    {!shouldShowPreviewBanner && (
+                                    {/* More actions - only show for individual feeds and not in preview mode */}
+                                    {feedId && !shouldShowPreviewBanner && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="sm">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
-                                                    onClick={() => handleRefresh(true)}
-                                                    disabled={isDeepRefreshing}
+                                                    onClick={() =>
+                                                        handleRefreshWithMessage("Quick refresh...")
+                                                    }
                                                 >
                                                     <RefreshCw className="h-4 w-4 mr-2" />
-                                                    Force Refresh
+                                                    Quick Refresh
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onClick={handleDeepRefresh}
+                                                    disabled={isDeepRefreshing}
+                                                >
+                                                    <Globe className="h-4 w-4 mr-2" />
+                                                    {isDeepRefreshing ? "Checking..." : "Check for New Articles"}
                                                 </DropdownMenuItem>
                                                 {onCreateFolder && (
-                                                    <DropdownMenuItem onClick={onCreateFolder}>
+                                                    <DropdownMenuItem
+                                                        onClick={onCreateFolder}
+                                                    >
                                                         Create Folder
                                                     </DropdownMenuItem>
                                                 )}
                                                 {onAddFeed && (
                                                     <DropdownMenuItem
-                                                        onClick={() => onAddFeed(folderId)}
+                                                        onClick={() =>
+                                                            onAddFeed(folderId)
+                                                        }
                                                     >
                                                         Add Feed
                                                     </DropdownMenuItem>
@@ -649,7 +711,9 @@ export function ArticlesView({
                                 <FeedPreviewBanner
                                     feedTitle={feedData?.title}
                                     feedDescription={feedData?.description}
-                                    onFollow={() => setIsSubscriptionModalOpen(true)}
+                                    onFollow={() =>
+                                        setIsSubscriptionModalOpen(true)
+                                    }
                                 />
                             )}
 
@@ -672,7 +736,11 @@ export function ArticlesView({
                 // Desktop: Resizable panels with proper toolbar structure
                 <div className="hidden md:flex w-full">
                     <ResizablePanelGroup direction="horizontal">
-                        <ResizablePanel defaultSize={35} minSize={20} maxSize={60}>
+                        <ResizablePanel
+                            defaultSize={35}
+                            minSize={20}
+                            maxSize={60}
+                        >
                             <div className="flex h-full flex-col border-r">
                                 {/* Desktop List Toolbar */}
                                 <div className="flex h-14 items-center justify-between border-b px-4">
@@ -693,7 +761,10 @@ export function ArticlesView({
                                             </Tooltip>
                                         </TooltipProvider>
                                         {unreadCount > 0 && (
-                                            <Badge variant="outline" className="min-w-3 px-1 flex-shrink-0">
+                                            <Badge
+                                                variant="outline"
+                                                className="min-w-3 px-1 flex-shrink-0"
+                                            >
                                                 {unreadCount}
                                             </Badge>
                                         )}
@@ -717,55 +788,67 @@ export function ArticlesView({
                                             )}
                                         </Button>
 
-                                        {/* Direct refresh button */}
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8"
-                                            onClick={() => handleRefresh(false)}
-                                            disabled={isDeepRefreshing}
-                                            title="Refresh articles"
-                                        >
-                                            <RefreshCw
-                                                className={`h-4 w-4 ${isDeepRefreshing ? "animate-spin" : ""}`}
-                                            />
-                                        </Button>
-
-                                        {/* More actions - hide for preview feeds */}
-                                        {!shouldShowPreviewBanner && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8"
-                                                    >
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuItem
-                                                        onClick={() => handleRefresh(true)}
-                                                        disabled={isDeepRefreshing}
-                                                    >
-                                                        <RefreshCw className="h-4 w-4 mr-2" />
-                                                        Force Refresh
-                                                    </DropdownMenuItem>
-                                                    {onCreateFolder && (
-                                                        <DropdownMenuItem onClick={onCreateFolder}>
-                                                            Create Folder
-                                                        </DropdownMenuItem>
-                                                    )}
-                                                    {onAddFeed && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => onAddFeed(folderId)}
+                                        {/* Individual feeds: refresh and more actions */}
+                                        {feedId ? (
+                                            <div className="flex">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                    onClick={() =>
+                                                        handleRefreshWithMessage("Quick refresh...")
+                                                    }
+                                                    title="Quick refresh"
+                                                    disabled={isDeepRefreshing}
+                                                >
+                                                    <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
+                                                </Button>
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                            title="More refresh options"
+                                                            disabled={isDeepRefreshing}
                                                         >
-                                                            Add Feed
+                                                            <MoreVertical className="h-3 w-3 transition-transform duration-200" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem
+                                                            onClick={() =>
+                                                                handleRefreshWithMessage("Quick refresh...")
+                                                            }
+                                                        >
+                                                            <RefreshCw className="mr-2 h-4 w-4" />
+                                                            Quick Refresh
                                                         </DropdownMenuItem>
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
+                                                        <DropdownMenuItem
+                                                            onClick={handleDeepRefresh}
+                                                            disabled={isDeepRefreshing}
+                                                        >
+                                                            <Globe className="mr-2 h-4 w-4" />
+                                                            {isDeepRefreshing ? "Checking..." : "Check for New Articles"}
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        ) : (
+                                            /* Other views: simple refresh button (shallow only) */
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                onClick={() =>
+                                                    handleRefreshWithMessage("Refreshing articles...")
+                                                }
+                                                title="Refresh"
+                                            >
+                                                <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
+                                            </Button>
                                         )}
+
                                     </div>
                                 </div>
 
@@ -774,7 +857,9 @@ export function ArticlesView({
                                     <FeedPreviewBanner
                                         feedTitle={feedData?.title}
                                         feedDescription={feedData?.description}
-                                        onFollow={() => setIsSubscriptionModalOpen(true)}
+                                        onFollow={() =>
+                                            setIsSubscriptionModalOpen(true)
+                                        }
                                     />
                                 )}
 
@@ -805,11 +890,15 @@ export function ArticlesView({
                                     isTranslating={isTranslating}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
-                                    shouldShowPreviewBanner={shouldShowPreviewBanner}
+                                    shouldShowPreviewBanner={
+                                        shouldShowPreviewBanner
+                                    }
                                     onContentChange={handleContentChange}
                                     onReadTimeChange={handleReadTimeChange}
                                     onSummaryChange={handleSummaryChange}
-                                    onTranslationChange={handleTranslationChange}
+                                    onTranslationChange={
+                                        handleTranslationChange
+                                    }
                                     onMarkAsRead={handleMarkAsRead}
                                     onArticleRemoved={handleArticleRemoved}
                                 />

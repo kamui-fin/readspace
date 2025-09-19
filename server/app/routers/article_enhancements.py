@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import ServiceUnavailableError
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.services.ai_service import get_ai_service
@@ -175,6 +176,16 @@ async def summarize_article(
         if not content_to_summarize:
             return SummarizeResponse(success=False, error="No content available to summarize")
 
+        logger.info(
+            "Content sources for summarization",
+            article_id=str(article_id),
+            has_request_content=bool(request.content),
+            has_article_content=bool(article.content),
+            has_article_description=bool(article.description),
+            content_length=len(content_to_summarize),
+            content_source="request" if request.content else ("article_content" if article.content else "description"),
+        )
+
         # Generate summary using AI service
         summary = await ai_service.summarize_article(title=article.title or "", content=content_to_summarize)
 
@@ -191,6 +202,13 @@ async def summarize_article(
 
     except HTTPException:
         raise
+    except ServiceUnavailableError as e:
+        logger.warning(
+            "AI service unavailable for summary",
+            error=str(e),
+            article_id=str(article_id),
+        )
+        return SummarizeResponse(success=False, error=str(e))
     except Exception as e:
         logger.error(
             "Error generating summary",
@@ -257,6 +275,14 @@ async def translate_article(
 
     except HTTPException:
         raise
+    except ServiceUnavailableError as e:
+        logger.warning(
+            "AI service unavailable for translation",
+            error=str(e),
+            article_id=str(article_id),
+            target_language=request.target_language,
+        )
+        return TranslateResponse(success=False, error=str(e), target_language=request.target_language)
     except Exception as e:
         logger.error(
             "Error translating article",

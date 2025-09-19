@@ -24,11 +24,11 @@ import {
 import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
 import {
-    ApiClient,
     feedDiscoveryResultToFeed,
     type DiscoverSearchResponse,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 
 function usePersistentState(key: string, initialValue: string) {
     const [state, setState] = useState(() => {
@@ -162,23 +162,27 @@ export default function DiscoverPageClient({
             { q: activeQuery, category: activeCategory, language },
         ],
         queryFn: async () => {
-            try {
-                return await ApiClient.rss.searchFeeds({
-                    q: activeQuery,
-                    category: activeCategory,
-                    language,
-                    limit: 50,
-                })
-            } catch (error) {
-                toast.error("Failed to search feeds. Please try again.")
-                throw error
-            }
+            return await ApiWebClient.rss.searchFeeds({
+                q: activeQuery,
+                category: activeCategory,
+                language,
+                limit: 50,
+            })
         },
         enabled: hasSearchParams,
         retry: (failureCount, error) => {
+            // Don't retry on auth errors or bad requests
+            if (error?.message?.includes("401") || error?.message?.includes("Authentication required")) {
+                return false
+            }
             // Only retry on network errors, not API errors
             return failureCount < 2 && !error?.message?.includes("400")
         },
+        retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+        // Avoid showing errors immediately on mount by adding a delay
+        staleTime: 1000,
+        // Don't throw errors to the error boundary immediately
+        throwOnError: false,
     })
 
     const handleSearch = (e: React.FormEvent) => {

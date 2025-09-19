@@ -49,40 +49,32 @@ router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
                     "examples": {
                         "already_subscribed": {
                             "summary": "Already subscribed",
-                            "value": {"detail": "Already subscribed to this feed"}
+                            "value": {"detail": "Already subscribed to this feed"},
                         },
                         "validation_error": {
                             "summary": "Validation error",
-                            "value": {"detail": "Feed validation failed"}
-                        }
+                            "value": {"detail": "Feed validation failed"},
+                        },
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Feed not found",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Feed not found"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Validation error in request body"
-        },
-        429: {
-            "description": "Too many subscriptions - resource limit exceeded"
-        },
-        500: {
-            "description": "Internal server error"
-        }
-    }
+        422: {"description": "Validation error in request body"},
+        429: {"description": "Too many subscriptions - resource limit exceeded"},
+        500: {"description": "Internal server error"},
+    },
 )
 @require_resource_limit("max_subscriptions")
 async def subscribe_to_feed(
     *,
     feed_id: UUID,
-    subscription_data: SubscriptionCreateByFeedId = Body(..., description="Subscription configuration including folder assignment"),
+    subscription_data: SubscriptionCreateByFeedId = Body(
+        ..., description="Subscription configuration including folder assignment"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> SubscriptionResponse:
@@ -206,36 +198,25 @@ async def subscribe_to_feed(
             "content": {
                 "application/json": {
                     "examples": {
-                        "invalid_url": {
-                            "summary": "Invalid feed URL",
-                            "value": {"detail": "Invalid RSS feed URL"}
-                        },
+                        "invalid_url": {"summary": "Invalid feed URL", "value": {"detail": "Invalid RSS feed URL"}},
                         "parsing_error": {
                             "summary": "Feed parsing failed",
-                            "value": {"detail": "Could not parse RSS feed content"}
-                        }
+                            "value": {"detail": "Could not parse RSS feed content"},
+                        },
                     }
                 }
-            }
+            },
         },
-        422: {
-            "description": "Validation error in request body"
-        },
-        429: {
-            "description": "Too many subscriptions - resource limit exceeded"
-        },
+        422: {"description": "Validation error in request body"},
+        429: {"description": "Too many subscriptions - resource limit exceeded"},
         503: {
             "description": "Service unavailable - could not connect to feed URL",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Could not connect to feed URL: Connection timeout"}
-                }
-            }
+                "application/json": {"example": {"detail": "Could not connect to feed URL: Connection timeout"}}
+            },
         },
-        500: {
-            "description": "Internal server error"
-        }
-    }
+        500: {"description": "Internal server error"},
+    },
 )
 @require_resource_limit("max_subscriptions")
 async def add_new_feed(
@@ -332,16 +313,10 @@ async def add_new_feed(
         },
         400: {
             "description": "Bad request - invalid query parameters",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid folder_id format"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Invalid folder_id format"}}},
         },
-        422: {
-            "description": "Validation error in query parameters"
-        }
-    }
+        422: {"description": "Validation error in query parameters"},
+    },
 )
 async def list_feeds(
     db: AsyncSession = Depends(get_db),
@@ -413,16 +388,10 @@ async def list_feeds(
         },
         404: {
             "description": "Feed not found or user not subscribed to this feed",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Feed not found"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Invalid feed ID format"
-        }
-    }
+        422: {"description": "Invalid feed ID format"},
+    },
 )
 async def get_feed(
     feed_id: UUID,
@@ -480,31 +449,23 @@ async def get_feed(
                     "examples": {
                         "invalid_folder": {
                             "summary": "Invalid folder ID",
-                            "value": {"detail": "Folder not found or access denied"}
+                            "value": {"detail": "Folder not found or access denied"},
                         },
                         "validation_error": {
                             "summary": "Field validation failed",
-                            "value": {"detail": "Title must be less than 500 characters"}
-                        }
+                            "value": {"detail": "Title must be less than 500 characters"},
+                        },
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Feed not found or user not subscribed to this feed",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Feed not found"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Validation error in request body or invalid feed ID format"
-        },
-        500: {
-            "description": "Internal server error"
-        }
-    }
+        422: {"description": "Validation error in request body or invalid feed ID format"},
+        500: {"description": "Internal server error"},
+    },
 )
 async def update_feed_settings(
     feed_id: UUID,
@@ -584,6 +545,127 @@ async def update_feed_settings(
 
 
 @router.post(
+    "/refresh_all",
+    response_model=dict[str, Any],
+    summary="Refresh all user feeds",
+    description="Trigger a background refresh of all feeds the user is subscribed to",
+    responses={
+        200: {
+            "description": "Successfully initiated bulk feed refresh",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "success": {
+                            "summary": "Refresh started",
+                            "value": {
+                                "task_id": "abc123-def456-ghi789",
+                                "message": "Bulk feed refresh started",
+                                "total_feeds": 25,
+                            },
+                        }
+                    }
+                }
+            },
+        },
+        500: {
+            "description": "Internal server error starting refresh",
+            "content": {"application/json": {"example": {"detail": "Could not start feed refresh"}}},
+        },
+    },
+)
+async def refresh_all_feeds(
+    force_refetch: bool = Query(
+        False,
+        description="Force refetch even if not modified based on ETag/Last-Modified headers",
+    ),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Trigger a background refresh of all feeds the user is subscribed to.
+
+    This endpoint initiates a bulk refresh operation for all feeds in the user's
+    subscription list. Each feed is queued as a separate background task for
+    parallel processing to improve performance and reliability.
+
+    Args:
+        force_refetch: If True, ignores ETag/Last-Modified headers and forces full refetch
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        dict: Task information including task_id for tracking progress
+
+    Refresh Process:
+        1. Retrieves all feeds the user is subscribed to
+        2. Queues individual refresh tasks for each feed
+        3. Returns a task ID for monitoring progress
+        4. Tasks are processed asynchronously in the background
+
+    Note:
+        - Requires authentication
+        - Only refreshes feeds the user is subscribed to
+        - Returns immediately with task ID - use refresh status endpoint to monitor
+        - Large subscription lists are processed efficiently in parallel
+        - Force refetch bypasses HTTP caching for immediate updates
+    """
+    try:
+        rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
+
+        # Get all feeds for the user
+        user_feeds = await rss_service.list_feeds(limit=1000)  # Get all feeds
+
+        if not user_feeds:
+            logger.info(
+                "No feeds to refresh for user",
+                user_id=current_user.sub,
+            )
+            return {
+                "task_id": None,
+                "message": "No feeds found to refresh",
+                "total_feeds": 0,
+            }
+
+        # Import the refresh task
+        from app.workers.tasks import refresh_single_feed_task
+
+        # Queue individual refresh tasks for each feed
+        task_ids = []
+        for feed in user_feeds:
+            task = refresh_single_feed_task.delay(str(feed.id))
+            task_ids.append(task.id)
+
+        logger.info(
+            "Queued bulk feed refresh tasks",
+            user_id=current_user.sub,
+            total_feeds=len(user_feeds),
+            total_tasks=len(task_ids),
+        )
+
+        # For now, return the first task ID as a representative
+        # In the future, we could create a parent orchestration task
+        representative_task_id = task_ids[0] if task_ids else None
+
+        return {
+            "task_id": representative_task_id,
+            "message": "Bulk feed refresh started",
+            "total_feeds": len(user_feeds),
+        }
+
+    except Exception as e:
+        logger.error(
+            "Error starting bulk feed refresh",
+            error=str(e),
+            user_id=current_user.sub,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not start feed refresh",
+        ) from e
+
+
+@router.post(
     "/{feed_id}/refresh",
     response_model=FeedResponse,
     summary="Refresh RSS feed",
@@ -600,39 +682,31 @@ async def update_feed_settings(
                     "examples": {
                         "parsing_error": {
                             "summary": "Feed parsing failed",
-                            "value": {"detail": "Invalid RSS/XML format"}
+                            "value": {"detail": "Invalid RSS/XML format"},
                         },
                         "validation_error": {
                             "summary": "Feed validation failed",
-                            "value": {"detail": "Feed content validation failed"}
-                        }
+                            "value": {"detail": "Feed content validation failed"},
+                        },
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Feed not found or user not subscribed (unless preview mode)",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Feed not found"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Invalid feed ID format or query parameters"
-        },
+        422: {"description": "Invalid feed ID format or query parameters"},
         503: {
             "description": "Service unavailable - could not connect to feed URL",
             "content": {
                 "application/json": {
                     "example": {"detail": "Could not connect to feed URL during refresh: Connection timeout"}
                 }
-            }
+            },
         },
-        500: {
-            "description": "Internal server error during feed refresh"
-        }
-    }
+        500: {"description": "Internal server error during feed refresh"},
+    },
 )
 async def refresh_feed(
     feed_id: UUID,
@@ -755,8 +829,8 @@ async def refresh_feed(
                             "value": {
                                 "task_id": "abc123",
                                 "status": "pending",
-                                "message": "Feed refresh is queued and waiting to start."
-                            }
+                                "message": "Feed refresh is queued and waiting to start.",
+                            },
                         },
                         "in_progress": {
                             "summary": "Task in progress",
@@ -768,15 +842,15 @@ async def refresh_feed(
                                     "total_pages": 3,
                                     "page_size": 100,
                                     "total_tasks": 250,
-                                    "has_more": True
+                                    "has_more": True,
                                 },
                                 "result": {
                                     "page_refreshed_count": 45,
                                     "page_failed_count": 5,
                                     "page_completed_count": 50,
-                                    "total_feeds": 250
-                                }
-                            }
+                                    "total_feeds": 250,
+                                },
+                            },
                         },
                         "completed": {
                             "summary": "Task completed",
@@ -787,26 +861,20 @@ async def refresh_feed(
                                     "refreshed_count": 240,
                                     "failed_count": 10,
                                     "total_feeds": 250,
-                                    "message": "Refresh completed successfully"
-                                }
-                            }
-                        }
+                                    "message": "Refresh completed successfully",
+                                },
+                            },
+                        },
                     }
                 }
-            }
+            },
         },
-        422: {
-            "description": "Invalid task ID or query parameters"
-        },
+        422: {"description": "Invalid task ID or query parameters"},
         500: {
             "description": "Error checking task status",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Could not check refresh status."}
-                }
-            }
-        }
-    }
+            "content": {"application/json": {"example": {"detail": "Could not check refresh status."}}},
+        },
+    },
 )
 async def get_refresh_status(
     task_id: str,
@@ -1145,21 +1213,13 @@ async def get_refresh_status(
     summary="Delete RSS feed subscription",
     description="Remove user's subscription to an RSS feed and delete associated user data",
     responses={
-        204: {
-            "description": "Successfully deleted feed subscription"
-        },
+        204: {"description": "Successfully deleted feed subscription"},
         404: {
             "description": "Feed not found or user not subscribed to this feed",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Feed not found"}
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Invalid feed ID format"
-        }
-    }
+        422: {"description": "Invalid feed ID format"},
+    },
 )
 async def delete_feed(
     feed_id: UUID,

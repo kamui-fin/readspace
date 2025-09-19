@@ -155,7 +155,9 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
                         },
                         "invalid_opml": {
                             "summary": "Malformed OPML content",
-                            "value": {"detail": "Invalid OPML file: Invalid XML structure. Please check that you've exported a valid OPML file from your RSS reader."},
+                            "value": {
+                                "detail": "Invalid OPML file: Invalid XML structure. Please check that you've exported a valid OPML file from your RSS reader."
+                            },
                         },
                     }
                 }
@@ -164,11 +166,7 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
         401: {"description": "Authentication required"},
         413: {
             "description": "File too large",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "File too large. Maximum size is 50MB."}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "File too large. Maximum size is 50MB."}}},
         },
         422: {"description": "Validation error"},
         500: {"description": "Internal server error during import"},
@@ -394,18 +392,12 @@ async def import_opml_file(
         403: {
             "description": "Access denied - user doesn't own this task",
             "content": {
-                "application/json": {
-                    "example": {"detail": "You don't have permission to access this import task."}
-                }
+                "application/json": {"example": {"detail": "You don't have permission to access this import task."}}
             },
         },
         404: {
             "description": "Import task not found or expired",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Import task not found or has expired."}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Import task not found or has expired."}}},
         },
         500: {"description": "Error retrieving task status"},
     },
@@ -618,6 +610,8 @@ async def get_import_status(
                 result: dict[str, Any] = {
                     "task_id": task_id,
                     "status": "completed",
+                    "message": f"{successful_imports} feeds added. {already_existed} were already in your library."
+                    + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
                     "result": {
                         "imported_count": successful_imports,
                         "failed_count": failed_imports,
@@ -880,18 +874,12 @@ async def get_active_import_task(
         403: {
             "description": "Access denied - user doesn't own this task",
             "content": {
-                "application/json": {
-                    "example": {"detail": "You don't have permission to cancel this import task."}
-                }
+                "application/json": {"example": {"detail": "You don't have permission to cancel this import task."}}
             },
         },
         404: {
             "description": "Import task not found or already completed",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Import task not found or has already completed."}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Import task not found or has already completed."}}},
         },
         500: {"description": "Error cancelling import task"},
     },
@@ -957,7 +945,7 @@ async def cancel_import_task(
         )
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Import task not found or has already completed.",
+            detail="Import task not found or has already completed. Redirecting to import page.",
         )
 
     # Verify user ownership
@@ -989,9 +977,10 @@ async def cancel_import_task(
             await cleanup_completed_task(current_user.sub, task_id)
             return {
                 "task_id": task_id,
-                "message": f"Task was already {task_result.state.lower()}.",
+                "message": f"Task was already {task_result.state.lower()}. Redirecting to import page.",
                 "cancelled": False,
                 "previous_state": task_result.state.lower(),
+                "redirect_url": "/import-opml",
             }
 
         # Check if it's an orchestration task with individual feed tasks
@@ -1040,9 +1029,10 @@ async def cancel_import_task(
 
         return {
             "task_id": task_id,
-            "message": "Import task cancelled successfully.",
+            "message": "Import task cancelled successfully. Redirecting to import page.",
             "cancelled": True,
             "cancelled_subtasks": cancelled_tasks if "cancelled_tasks" in locals() else 0,
+            "redirect_url": "/import-opml",
         }
 
     except Exception as e:
@@ -1077,9 +1067,7 @@ async def cancel_import_task(
         500: {
             "description": "Error generating OPML export",
             "content": {
-                "application/json": {
-                    "example": {"detail": "An unexpected error occurred during OPML export."}
-                }
+                "application/json": {"example": {"detail": "An unexpected error occurred during OPML export."}}
             },
         },
     },

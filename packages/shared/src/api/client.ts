@@ -5,7 +5,7 @@ import type {
   HighlightUpdate,
   UserBookLibrary,
   UserBookLibraryUpdate,
-} from "./types/books.js";
+} from "./types/books";
 import type {
   ActiveImportTask,
   ArticlesPaginatedResponse,
@@ -15,7 +15,7 @@ import type {
   ImportTaskStatus,
   OPMLImportResponse,
   SimilarFeedsResponse,
-} from "./types/rss.js";
+} from "./types/rss";
 
 export class ApiError extends Error {
   constructor(

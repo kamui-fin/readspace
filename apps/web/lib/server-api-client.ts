@@ -9,6 +9,9 @@ let configurationPromise: Promise<void> | null = null
  * Ensures ApiClient is configured for server-side usage.
  * This must be called before making any ApiClient calls in server components.
  * Handles concurrent calls to prevent race conditions.
+ *
+ * NOTE: This function uses the base ApiClient for server-side usage.
+ * For client-side usage, use ApiWebClient.create() directly instead.
  */
 export async function ensureServerApiClient() {
     // If already configured, return immediately
@@ -70,3 +73,12 @@ export async function ensureServerApiClient() {
 export function isApiClientConfigured(): boolean {
     return isServerConfigured
 }
+
+/**
+ * NOTE: For client-side usage, simply use ApiWebClient directly:
+ *
+ * import { ApiWebClient } from '@/lib/api-client'
+ * const articles = await ApiWebClient.rss.getArticles({ page: 1 })
+ *
+ * ApiWebClient will auto-configure itself on first use in browser environments.
+ */

@@ -62,15 +62,16 @@ import { PdfZoom } from "./PdfZoom"
 let EventBus: typeof TEventBus,
     PDFLinkService: typeof TPDFLinkService,
     PDFViewer: typeof TPDFViewer
-    ; (async () => {
-        // Due to breaking changes in PDF.js 4.0.189. See issue #17228
-        const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
-        EventBus = pdfjs.EventBus
-        PDFLinkService = pdfjs.PDFLinkService
-        PDFViewer = pdfjs.PDFViewer
-    })()
+;(async () => {
+    // Due to breaking changes in PDF.js 4.0.189. See issue #17228
+    const pdfjs = await import("pdfjs-dist/web/pdf_viewer.mjs")
+    EventBus = pdfjs.EventBus
+    PDFLinkService = pdfjs.PDFLinkService
+    PDFViewer = pdfjs.PDFViewer
+})()
 
 const SCROLL_MARGIN = 10
+const DEFAULT_SCALE_VALUE = 0.1
 const DEFAULT_TEXT_SELECTION_COLOR = "rgba(153,193,218,255)"
 
 const findOrCreateHighlightLayer = (textLayer: HTMLElement) => {
@@ -311,9 +312,11 @@ export const PdfHighlighter = ({
     const setProgressPercentage = useReaderStore(
         (state) => state.setProgressPercentage
     )
-    const setCurrentPage = useReaderStore((state) => state.setCurrentPage)
     const setTotalPages = useReaderStore((state) => state.setTotalPages)
     const goToPage = useReaderStore((state) => state.goToPage)
+    const [currentPage, setCurrentPage] = useState<number | undefined>(
+        startPage
+    )
 
     // State
     const [tip, setTip] = useState<Tip | null>(null)
@@ -384,8 +387,13 @@ export const PdfHighlighter = ({
                 startPage
             )
             try {
-                viewerRef.current.currentPageNumber = Number(startPage)
-                initialPageSetRef.current = true
+                // Check if the viewer is properly initialized with currentPageNumber property
+                if (typeof viewerRef.current.currentPageNumber !== 'undefined') {
+                    viewerRef.current.currentPageNumber = Number(startPage)
+                    initialPageSetRef.current = true
+                } else {
+                    console.warn("PDF viewer not fully initialized yet, currentPageNumber property not available")
+                }
             } catch (err) {
                 console.error("Error setting page on prop change:", err)
             }
@@ -414,9 +422,7 @@ export const PdfHighlighter = ({
 
             // Apply initial zoom if provided
             if (pdfScaleValue && viewerRef.current) {
-                console.debug(
-                    `Setting initial zoom to ${pdfScaleValue} during initialization`
-                )
+                `Setting initial zoom to ${pdfScaleValue} during initialization`
                 viewerRef.current.currentScaleValue = pdfScaleValue.toString()
             }
         }, 100)
@@ -426,7 +432,7 @@ export const PdfHighlighter = ({
         return () => {
             debouncedDocumentInit.cancel()
         }
-    }, [pdfDocument, pdfScaleValue, setPdfRef])
+    }, [document, pdfDocument, pdfScaleValue])
 
     // Define callback functions used in effects
     const clearTextSelection = useCallback(() => {
@@ -479,16 +485,12 @@ export const PdfHighlighter = ({
         [setIsZooming]
     )
 
-    // Create a ref for the rendering function to avoid circular dependencies
-    const renderHighlightLayersRef = useRef<(() => void) | null>(null)
 
     const removeGhostHighlight = useCallback(() => {
         if (onRemoveGhostHighlight && ghostHighlightRef.current)
             onRemoveGhostHighlight(ghostHighlightRef.current)
         ghostHighlightRef.current = null
-        if (renderHighlightLayersRef.current) {
-            renderHighlightLayersRef.current()
-        }
+        renderHighlightLayers()
     }, [onRemoveGhostHighlight])
 
     const handleKeyDown = useCallback(
@@ -530,7 +532,7 @@ export const PdfHighlighter = ({
                 if (attempt > 5) return // max 5 attempts
 
                 try {
-                    if (viewerRef.current) {
+                    if (viewerRef.current && typeof viewerRef.current.currentPageNumber !== 'undefined') {
                         console.log(
                             `PdfHighlighter: Setting page attempt ${attempt}`,
                             startPage
@@ -571,10 +573,8 @@ export const PdfHighlighter = ({
             setTimeout(checkAndSetInitialPage, 200)
         }
 
-        const eventBus = eventBusRef.current
-
-        eventBus.on("pagesloaded", onPagesLoaded)
-        eventBus.on("pagesinit", onPagesInit)
+        eventBusRef.current.on("pagesloaded", onPagesLoaded)
+        eventBusRef.current.on("pagesinit", onPagesInit)
 
         // Also try to set it now in case the pages are already loaded
         setTimeout(checkAndSetInitialPage, 300)
@@ -582,49 +582,28 @@ export const PdfHighlighter = ({
         onTotalPagesChange(pdfDocument.numPages)
 
         return () => {
-            if (eventBus) {
-                eventBus.off("pagesloaded", onPagesLoaded)
-                eventBus.off("pagesinit", onPagesInit)
-            }
+            eventBusRef.current.off("pagesloaded", onPagesLoaded)
+            eventBusRef.current.off("pagesinit", onPagesInit)
         }
-    }, [
-        isViewerReady,
-        pdfDocument,
-        pdfScaleValue,
-        onTotalPagesChange,
-        setTotalPages,
-        startPage,
-    ])
+    }, [isViewerReady, pdfDocument, pdfScaleValue])
 
     // Initialise viewer event listeners
     useLayoutEffect(() => {
         if (!containerNodeRef.current) return
 
         const doc = containerNodeRef.current.ownerDocument
-        const eventBus = eventBusRef.current
-        const resizeObserver = resizeObserverRef.current
 
-        const renderLayers = () => {
-            if (renderHighlightLayersRef.current) {
-                renderHighlightLayersRef.current()
-            }
-        }
-
-        eventBus.on("textlayerrendered", renderLayers)
-        eventBus.on("pagesinit", handleScaleValue)
+        eventBusRef.current.on("textlayerrendered", renderHighlightLayers)
+        eventBusRef.current.on("pagesinit", handleScaleValue)
         doc.addEventListener("keydown", handleKeyDown)
 
-        renderLayers()
+        renderHighlightLayers()
 
         return () => {
-            if (eventBus) {
-                eventBus.off("pagesinit", handleScaleValue)
-                eventBus.off("textlayerrendered", renderLayers)
-            }
+            eventBusRef.current.off("pagesinit", handleScaleValue)
+            eventBusRef.current.off("textlayerrendered", renderHighlightLayers)
             doc.removeEventListener("keydown", handleKeyDown)
-            if (resizeObserver) {
-                resizeObserver.disconnect()
-            }
+            resizeObserverRef.current?.disconnect()
         }
     }, [
         selectionTip,
@@ -652,20 +631,13 @@ export const PdfHighlighter = ({
         return () => {
             viewer.eventBus.off("pagechanging", handlePageChange)
         }
-    }, [
-        onPageChange,
-        pdfDocument.numPages,
-        setProgressPercentage,
-        setCurrentPage,
-    ])
+    }, [viewerRef.current, onPageChange])
 
     // Event listeners
     const handleScroll = useCallback(() => {
         if (onScrollAway) onScrollAway()
         scrolledToHighlightIdRef.current = null
-        if (renderHighlightLayersRef.current) {
-            renderHighlightLayersRef.current()
-        }
+        renderHighlightLayers()
     }, [onScrollAway])
 
     const handleMouseUp: PointerEventHandler = () => {

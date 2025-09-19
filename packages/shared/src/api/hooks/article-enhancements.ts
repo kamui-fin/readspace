@@ -1,6 +1,6 @@
 import { useQuery, QueryClient } from "@tanstack/react-query";
 import { ARTICLE_ENHANCEMENT_QUERY_KEYS } from "../query-keys";
-import { ApiClient } from "../client";
+import { ClientProvider } from "../client-provider";
 
 // Re-export for convenience
 export { ARTICLE_ENHANCEMENT_QUERY_KEYS };
@@ -49,7 +49,7 @@ export function useExtractFullText(articleId: string) {
       if (!isValidArticleId) {
         throw new Error("Invalid article ID");
       }
-      const response = await ApiClient.post<ExtractFullTextResponse>(
+      const response = await ClientProvider.getClient().post<ExtractFullTextResponse>(
         `/api/articles/${articleId}/extract-full-text`,
       );
       return response;
@@ -98,7 +98,7 @@ export function useSummarizeArticle(articleId: string, content?: string) {
         throw new Error("Invalid article ID");
       }
       const requestBody: SummarizeRequest = content ? { content } : {};
-      const response = await ApiClient.post<SummarizeResponse>(
+      const response = await ClientProvider.getClient().post<SummarizeResponse>(
         `/api/articles/${articleId}/summarize`,
         requestBody,
       );
@@ -156,7 +156,7 @@ export async function fetchTranslation(
         target_language: targetLanguage,
         ...(content && { content }),
       };
-      const response = await ApiClient.post<TranslateResponse>(
+      const response = await ClientProvider.getClient().post<TranslateResponse>(
         `/api/articles/${articleId}/translate`,
         requestBody,
       );

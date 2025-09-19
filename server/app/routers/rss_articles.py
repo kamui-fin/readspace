@@ -38,26 +38,22 @@ router = APIRouter(prefix="/articles", tags=["RSS Articles"])
         },
         400: {
             "description": "Bad request - invalid URL, validation error, or connection error",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Unable to fetch article: Connection timeout"}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Unable to fetch article: Connection timeout"}}},
         },
         422: {
             "description": "Validation error in request data",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["body", "url"], "msg": "invalid url format", "type": "value_error.url"}]}
+                    "example": {
+                        "detail": [{"loc": ["body", "url"], "msg": "invalid url format", "type": "value_error.url"}]
+                    }
                 }
             },
         },
         500: {
             "description": "Internal server error",
             "content": {
-                "application/json": {
-                    "example": {"detail": "An unexpected error occurred while saving the article."}
-                }
+                "application/json": {"example": {"detail": "An unexpected error occurred while saving the article."}}
             },
         },
     },
@@ -168,12 +164,14 @@ async def save_web_article(
                     "examples": {
                         "invalid_sort": {
                             "summary": "Invalid sort parameter",
-                            "value": {"detail": "Invalid sort_by parameter. Allowed values: ['published_at', 'created_at', 'read_at', 'title']"}
+                            "value": {
+                                "detail": "Invalid sort_by parameter. Allowed values: ['published_at', 'created_at', 'read_at', 'title']"
+                            },
                         },
                         "invalid_order": {
                             "summary": "Invalid sort order",
-                            "value": {"detail": "Invalid sort_order parameter. Allowed values: asc, desc"}
-                        }
+                            "value": {"detail": "Invalid sort_order parameter. Allowed values: asc, desc"},
+                        },
                     }
                 }
             },
@@ -182,7 +180,15 @@ async def save_web_article(
             "description": "Validation error in query parameters",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["query", "page"], "msg": "ensure this value is greater than or equal to 1", "type": "value_error.number.not_ge"}]}
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["query", "page"],
+                                "msg": "ensure this value is greater than or equal to 1",
+                                "type": "value_error.number.not_ge",
+                            }
+                        ]
+                    }
                 }
             },
         },
@@ -310,7 +316,15 @@ async def list_articles(
             "description": "Validation error in pagination parameters",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["query", "size"], "msg": "ensure this value is less than or equal to 100", "type": "value_error.number.not_le"}]}
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["query", "size"],
+                                "msg": "ensure this value is less than or equal to 100",
+                                "type": "value_error.number.not_le",
+                            }
+                        ]
+                    }
                 }
             },
         },
@@ -383,7 +397,15 @@ async def get_todays_articles(
             "description": "Validation error in pagination parameters",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["query", "page"], "msg": "ensure this value is greater than or equal to 1", "type": "value_error.number.not_ge"}]}
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["query", "page"],
+                                "msg": "ensure this value is greater than or equal to 1",
+                                "type": "value_error.number.not_ge",
+                            }
+                        ]
+                    }
                 }
             },
         },
@@ -442,7 +464,15 @@ async def get_recently_read_articles(
             "description": "Validation error in pagination parameters",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["query", "size"], "msg": "ensure this value is less than or equal to 200", "type": "value_error.number.not_le"}]}
+                    "example": {
+                        "detail": [
+                            {
+                                "loc": ["query", "size"],
+                                "msg": "ensure this value is less than or equal to 200",
+                                "type": "value_error.number.not_le",
+                            }
+                        ]
+                    }
                 }
             },
         },
@@ -503,20 +533,14 @@ async def get_read_later_articles(
                             "summary": "Global unread counts (no folder filter)",
                             "value": {
                                 "total_unread": 42,
-                                "by_folder": {
-                                    "folder-uuid-1": 15,
-                                    "folder-uuid-2": 27
-                                },
-                                "uncategorized": 0
-                            }
+                                "by_folder": {"folder-uuid-1": 15, "folder-uuid-2": 27},
+                                "uncategorized": 0,
+                            },
                         },
                         "folder_specific": {
                             "summary": "Counts for specific folder",
-                            "value": {
-                                "total_unread": 15,
-                                "folder_id": "folder-uuid-1"
-                            }
-                        }
+                            "value": {"total_unread": 15, "folder_id": "folder-uuid-1"},
+                        },
                     }
                 }
             },
@@ -525,7 +549,11 @@ async def get_read_later_articles(
             "description": "Validation error in folder ID parameter",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["query", "folder_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}]}
+                    "example": {
+                        "detail": [
+                            {"loc": ["query", "folder_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}
+                        ]
+                    }
                 }
             },
         },
@@ -587,17 +615,17 @@ async def get_unread_article_counts(
         },
         404: {
             "description": "Article not found or access denied",
-            "content": {
-                "application/json": {
-                    "example": {"detail": ERROR_ARTICLE_NOT_FOUND}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": ERROR_ARTICLE_NOT_FOUND}}},
         },
         422: {
             "description": "Invalid article ID format",
             "content": {
                 "application/json": {
-                    "example": {"detail": [{"loc": ["path", "article_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}]}
+                    "example": {
+                        "detail": [
+                            {"loc": ["path", "article_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}
+                        ]
+                    }
                 }
             },
         },
@@ -670,11 +698,7 @@ async def get_article(
         },
         404: {
             "description": "Article not found or access denied",
-            "content": {
-                "application/json": {
-                    "example": {"detail": ERROR_ARTICLE_NOT_FOUND}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": ERROR_ARTICLE_NOT_FOUND}}},
         },
         422: {
             "description": "Validation error in request data",
@@ -683,12 +707,28 @@ async def get_article(
                     "examples": {
                         "invalid_uuid": {
                             "summary": "Invalid article ID",
-                            "value": {"detail": [{"loc": ["path", "article_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}]}
+                            "value": {
+                                "detail": [
+                                    {
+                                        "loc": ["path", "article_id"],
+                                        "msg": "invalid uuid format",
+                                        "type": "value_error.uuid",
+                                    }
+                                ]
+                            },
                         },
                         "invalid_type": {
                             "summary": "Invalid article type",
-                            "value": {"detail": [{"loc": ["query", "article_type"], "msg": "string does not match regex '^(feed|clipped)$'", "type": "value_error.str.regex"}]}
-                        }
+                            "value": {
+                                "detail": [
+                                    {
+                                        "loc": ["query", "article_type"],
+                                        "msg": "string does not match regex '^(feed|clipped)$'",
+                                        "type": "value_error.str.regex",
+                                    }
+                                ]
+                            },
+                        },
                     }
                 }
             },

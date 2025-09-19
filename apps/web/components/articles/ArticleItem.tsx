@@ -45,8 +45,8 @@ export function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     /**
@@ -133,12 +133,12 @@ export function ArticleItem({
                     className={`flex-1 space-y-1.5 min-w-0 overflow-hidden ${!article.image_url || articleImageError ? "max-w-full" : "max-w-[calc(100vw-5rem)]"}`}
                 >
                     {/* Header with feed info and priority */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-1 min-w-0 flex-1">
                             {/* Priority badge for clipped articles */}
                             {article.article_type === "clipped" && (
                                 <div
-                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border ${getPriorityColor(priority || "default")}`}
+                                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-medium border flex-shrink-0 ${getPriorityColor(priority || "default")}`}
                                 >
                                     <Paperclip className="h-2.5 w-2.5" />
                                     <span className="capitalize">
@@ -151,7 +151,7 @@ export function ArticleItem({
                             {(article.feed?.image_url ||
                                 (article.article_type === "clipped" &&
                                     article.link)) &&
-                                !feedImageError ? (
+                            !feedImageError ? (
                                 <Image
                                     src={
                                         article.feed?.image_url ||
@@ -168,15 +168,9 @@ export function ArticleItem({
                             )}
 
                             {/* Feed name or domain */}
-                            <span
-                                className="text-[10px] text-muted-foreground truncate max-w-[min(120px,calc(100vw-12rem))]"
-                                style={{
-                                    wordBreak: "break-all",
-                                    overflowWrap: "anywhere",
-                                }}
-                            >
+                            <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden">
                                 {article.article_type === "clipped" &&
-                                    article.link
+                                article.link
                                     ? extractDomain(article.link)
                                     : article.feed?.title || "Unknown Feed"}
                             </span>
@@ -184,17 +178,20 @@ export function ArticleItem({
                             {/* Time display with clock icon */}
                             <div className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
                                 <Clock className="h-2.5 w-2.5" />
-                                <span>{timeDisplay}</span>
+                                <span className="whitespace-nowrap">
+                                    {timeDisplay}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     {/* Article title */}
                     <h3
-                        className={`text-sm font-medium leading-snug line-clamp-2 ${article.is_read
-                            ? "text-muted-foreground"
-                            : "text-foreground"
-                            }`}
+                        className={`text-sm font-medium leading-snug line-clamp-2 ${
+                            article.is_read
+                                ? "text-muted-foreground"
+                                : "text-foreground"
+                        }`}
                         style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
@@ -207,10 +204,11 @@ export function ArticleItem({
                     {/* Article description/content preview */}
                     {displayText && (
                         <p
-                            className={`text-xs leading-relaxed line-clamp-2 ${article.is_read
-                                ? "text-muted-foreground/70"
-                                : "text-muted-foreground"
-                                }`}
+                            className={`text-xs leading-relaxed line-clamp-2 ${
+                                article.is_read
+                                    ? "text-muted-foreground/70"
+                                    : "text-muted-foreground"
+                            }`}
                             style={{
                                 wordBreak: "break-word",
                                 overflowWrap: "break-word",

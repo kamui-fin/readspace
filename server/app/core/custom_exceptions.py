@@ -94,6 +94,12 @@ class ConfigurationError(ReadspaceException):
     pass
 
 
+class ServiceUnavailableError(ReadspaceException):
+    """Raised when a service is unavailable or not configured"""
+
+    pass
+
+
 # HTTP Exception Factories
 def http_not_found(message: str = "Resource not found") -> HTTPException:
     """Create a 404 HTTP exception"""

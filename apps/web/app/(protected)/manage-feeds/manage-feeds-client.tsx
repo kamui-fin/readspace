@@ -225,14 +225,14 @@ export default function ManageFeedsPageClient() {
         filteredFeeds.length > 0
 
     return (
-        <div className="flex flex-col min-h-screen">
+        <div className="flex flex-col h-full">
             <Header
                 breadcrumbItems={[
                     { href: "/manage-feeds", label: "Manage Feeds" },
                 ]}
             />
-            <main className="flex-1">
-                <div className="container mx-auto p-4 md:p-8 space-y-6">
+            <main className="flex-1 p-4 md:p-8 overflow-hidden">
+                <div className="h-full space-y-6 overflow-y-auto">
                     {/* Header */}
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>

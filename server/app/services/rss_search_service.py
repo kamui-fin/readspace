@@ -41,15 +41,42 @@ class RssSearchService:
                 from urllib.parse import urlparse
 
                 parsed = urlparse(url_str)
-                # Basic validation - must have a valid netloc (domain)
+
+                # Comprehensive validation for netloc (domain part)
                 if not parsed.netloc or " " in parsed.netloc:
                     return None
+
+                # Check for common malformed URL patterns
+                netloc = parsed.netloc.lower()
+
+                # Invalid characters in domain/port
+                if any(char in netloc for char in [",", ";", "|", "<", ">", "[", "]", "{", "}"]):
+                    logger.warning(
+                        "Malformed URL detected with invalid characters in netloc", url=url_str, netloc=netloc
+                    )
+                    return None
+
+                # Check for valid port if present
+                if ":" in netloc:
+                    domain_port = netloc.split(":")
+                    if len(domain_port) > 2:  # More than one colon (invalid IPv4)
+                        return None
+                    if len(domain_port) == 2:
+                        try:
+                            port = int(domain_port[1])
+                            if not (1 <= port <= 65535):
+                                return None
+                        except ValueError:
+                            # Port is not a valid integer
+                            return None
+
                 return url_str
-            except Exception:
+            except Exception as e:
+                logger.warning("URL parsing failed during normalization", url=url_str, error=str(e))
                 return None
 
         # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
-        if ":" in url_str:
+        if ":" in url_str and not url_str.startswith(("http://", "https://", "rsshub://")):
             return None
 
         # Otherwise, assume it's a web URL missing the protocol and add it.

@@ -1,6 +1,5 @@
 import { getSupabaseClient, resetSupabaseClient } from '@/lib/supabase'
 import {
-  ApiClient,
   Article,
   DiscoveredFeed,
   ExtensionSettings,
@@ -9,6 +8,7 @@ import {
   SaveOptions,
   User,
 } from '@readspace/shared'
+import { ApiExtensionClient } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -22,8 +22,8 @@ interface ExtensionState {
   user: User | null
   isAuthenticated: boolean
   login: (accessToken: string) => Promise<void>
-  logout: () => void
-  updateToken: (accessToken: string) => void
+  logout: () => Promise<void>
+  updateToken: (accessToken: string) => Promise<void>
   checkExistingSession: () => Promise<void>
 
   // Data
@@ -57,8 +57,8 @@ interface ExtensionState {
 }
 
 const defaultSettings: ExtensionSettings = {
-  readspace_url: 'https:///api.readspace.ai',
-  supabase_url: 'https:///hnqyngkyugiamvlhqoaf.supabase.co',
+  readspace_url: 'https://api.readspace.ai',
+  supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
   supabase_anon_key:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
   auto_save: false,
@@ -66,15 +66,8 @@ const defaultSettings: ExtensionSettings = {
   theme: 'system',
 }
 
-// Configure API client with current settings and token
-const configureApiClient = (settings: ExtensionSettings) => {
-  ApiClient.configure({
-    baseUrl: settings.readspace_url,
-    getAuthToken: async () => {
-      return settings.access_token || null
-    },
-  })
-}
+// Note: ApiExtensionClient auto-configures itself from extension storage
+// No manual configuration needed
 
 export const useExtensionStore = create<ExtensionState>()(
   persist(
@@ -94,9 +87,9 @@ export const useExtensionStore = create<ExtensionState>()(
         const settings = { ...get().settings, ...newSettings }
         set({ settings })
 
-        // Reconfigure API client if URL or token changed
+        // Force reconfiguration of API client if URL or token changed
         if (newSettings.readspace_url || newSettings.access_token) {
-          configureApiClient(settings)
+          await ApiExtensionClient.reconfigure()
         }
 
         // Reset Supabase client if settings changed to force recreation with new settings
@@ -154,11 +147,9 @@ export const useExtensionStore = create<ExtensionState>()(
           const { settings } = get()
           const updatedSettings = { ...settings, access_token: accessToken }
 
-          // Configure API client with new token
-          configureApiClient(updatedSettings)
-
-          // Test authentication by getting user profile
-          const user = (await ApiClient.users.getProfile()) as User
+          // Force reconfiguration and test authentication by getting user profile
+          await ApiExtensionClient.reconfigure()
+          const user = (await ApiExtensionClient.users.getProfile()) as User
 
           set({
             user,
@@ -178,7 +169,7 @@ export const useExtensionStore = create<ExtensionState>()(
         }
       },
 
-      logout: () => {
+      logout: async () => {
         const { settings } = get()
 
         // Sign out from Supabase with local scope to avoid affecting other apps
@@ -201,19 +192,19 @@ export const useExtensionStore = create<ExtensionState>()(
           settings: updatedSettings,
         })
 
-        // Reconfigure API client without token
-        configureApiClient(updatedSettings)
+        // Force reconfiguration without token
+        await ApiExtensionClient.reconfigure()
       },
 
-      updateToken: (accessToken: string) => {
+      updateToken: async (accessToken: string) => {
         const { settings } = get()
         const updatedSettings = { ...settings, access_token: accessToken }
 
         // Update settings
         set({ settings: updatedSettings })
 
-        // Reconfigure API client with new token
-        configureApiClient(updatedSettings)
+        // Force reconfiguration with new token
+        await ApiExtensionClient.reconfigure()
       },
 
       // Loading states
@@ -230,7 +221,7 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isLoading: true })
         try {
-          const folders = (await ApiClient.rss.getFolders()) as Folder[]
+          const folders = (await ApiExtensionClient.rss.getFolders()) as Folder[]
 
           set({ folders })
         } catch (error) {
@@ -302,7 +293,7 @@ export const useExtensionStore = create<ExtensionState>()(
               : 'no content',
           })
 
-          const article = (await ApiClient.rss.saveArticle(
+          const article = (await ApiExtensionClient.rss.saveArticle(
             saveRequest
           )) as Article
           return article
@@ -319,7 +310,7 @@ export const useExtensionStore = create<ExtensionState>()(
         }
 
         try {
-          await ApiClient.rss.createFeed({
+          await ApiExtensionClient.rss.createFeed({
             url: feedUrl,
             folder_id: options.folder_id || settings.default_folder_id,
           })
@@ -344,7 +335,7 @@ export const useExtensionStore = create<ExtensionState>()(
           // Subscribe to feeds one by one since there's no bulk endpoint in the current API
           await Promise.all(
             feeds.map((feed) =>
-              ApiClient.rss.createFeed({
+              ApiExtensionClient.rss.createFeed({
                 url: feed.url,
                 folder_id: options.folder_id || settings.default_folder_id,
               })
@@ -374,11 +365,10 @@ export const useExtensionStore = create<ExtensionState>()(
           state?.settings?.access_token &&
           state?.settings?.readspace_url
         ) {
-          // Configure API client on rehydration
-          configureApiClient(state.settings)
+          // API client will auto-configure on first use
           console.log(
-            'API client configured on rehydration with token',
-            state.settings.access_token
+            'Extension state rehydrated with authentication token',
+            state.settings.access_token ? 'present' : 'missing'
           )
         }
       },

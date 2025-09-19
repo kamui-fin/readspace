@@ -1,4 +1,4 @@
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { cacheBook } from "@/lib/reader/bookstore"
 import { createClient } from "@/lib/supabase/client"
 import { UserBookLibrary } from "@/types/api"
@@ -18,7 +18,7 @@ export const uploadToCloudStorage = async (file: File, bookId: string) => {
     formData.append("file", file)
     formData.append("book_id", bookId)
 
-    return ApiClient.uploadFile(
+    return ApiWebClient.uploadFile(
         "/api/upload/",
         formData
     ) as Promise<UploadResponse>
@@ -62,7 +62,7 @@ export const useUploadBook = () => {
                           }),
                 }
 
-                const createdMetadata = await ApiClient.post<{ id: string }>(
+                const createdMetadata = await ApiWebClient.post<{ id: string }>(
                     "/api/books/metadata",
                     bookMetadata
                 )
@@ -77,7 +77,7 @@ export const useUploadBook = () => {
 
                 // Update metadata with cover_url if upload was successful
                 if (coverUrl && coverUrl !== metadata.coverUrl) {
-                    await ApiClient.put(
+                    await ApiWebClient.put(
                         `/api/books/metadata/${createdMetadata.id}`,
                         {
                             cover_url: coverUrl,
@@ -108,7 +108,7 @@ export const useUploadBook = () => {
                           }),
                 }
 
-                const libraryResult = await ApiClient.post<UserBookLibrary>(
+                const libraryResult = await ApiWebClient.post<UserBookLibrary>(
                     "/api/books/",
                     libraryData
                 )
@@ -123,7 +123,7 @@ export const useUploadBook = () => {
                 )
 
                 // Update the book metadata with the file URL
-                await ApiClient.put(
+                await ApiWebClient.put(
                     `/api/books/metadata/${createdMetadata.id}`,
                     {
                         file_url: uploadResponse.file_path,

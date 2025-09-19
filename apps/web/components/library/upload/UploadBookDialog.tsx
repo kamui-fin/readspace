@@ -44,7 +44,7 @@ export default function UploadBookDialog() {
             )
 
             // Upload the book
-            const { bookId } = await uploadBook.mutateAsync({
+            await uploadBook.mutateAsync({
                 file: selectedFile,
                 user,
                 metadata,
@@ -52,7 +52,6 @@ export default function UploadBookDialog() {
             })
 
             setIsOpen(false)
-            router.push(`/library/${bookId}`)
         } catch (err) {
             console.error("Error during file upload process:", err)
 

@@ -6,6 +6,15 @@ export const readspaceConfig: Omit<Config, "content"> = {
     darkMode: "class",
     theme: {
         extend: {
+            fontFamily: {
+                sans: ["var(--font-sans)", "ui-sans-serif", "system-ui"],
+                mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular"],
+                serif: ["var(--font-garamond-serif)", "ui-serif", "Georgia"],
+                logo: ["var(--font-logo)", "ui-sans-serif", "system-ui"],
+                "noto-sc": ["var(--font-noto-serif-sc)", "ui-serif", "Georgia"],
+                "noto-jp": ["var(--font-noto-serif-jp)", "ui-serif", "Georgia"],
+                "noto-tc": ["var(--font-noto-serif-tc)", "ui-serif", "Georgia"],
+            },
             colors: {
                 background: "hsl(var(--background))",
                 foreground: "hsl(var(--foreground))",

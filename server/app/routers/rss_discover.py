@@ -47,23 +47,34 @@ async def search_feeds(
         # Convert to response schema
         feed_results = []
         for result in results:
-            feed_result = FeedDiscoveryResult(
-                id=result["id"],
-                title=result["title"],
-                description=result["description"],
-                url=result["url"],
-                link=result["link"],
-                image_url=result["image_url"],
-                tags=result["tags"],
-                language=result["language"],
-                category=result["category"],
-                popularity_score=result["popularity_score"],
-                relevance=result["relevance"],
-                search_metadata=result.get("search_metadata"),
-                is_preview=result.get("is_preview", False),
-                preview_url=result.get("preview_url"),
-            )
-            feed_results.append(feed_result)
+            try:
+                feed_result = FeedDiscoveryResult(
+                    id=result["id"],
+                    title=result["title"],
+                    description=result["description"],
+                    url=result["url"],
+                    link=result["link"],
+                    image_url=result["image_url"],
+                    tags=result["tags"],
+                    language=result["language"],
+                    category=result["category"],
+                    popularity_score=result["popularity_score"],
+                    relevance=result["relevance"],
+                    search_metadata=result.get("search_metadata"),
+                    is_preview=result.get("is_preview", False),
+                    preview_url=result.get("preview_url"),
+                )
+                feed_results.append(feed_result)
+            except Exception as e:
+                logger.warning(
+                    "Skipping malformed feed result due to validation error",
+                    feed_id=result.get("id"),
+                    url=result.get("url"),
+                    link=result.get("link"),
+                    error=str(e),
+                )
+                # Skip this result but continue processing others
+                continue
 
         response = DiscoverSearchResponse(
             results=feed_results,
@@ -151,23 +162,34 @@ async def get_category_feeds(
         # Convert to response schema
         feed_results = []
         for result in results:
-            feed_result = FeedDiscoveryResult(
-                id=result["id"],
-                title=result["title"],
-                description=result["description"],
-                url=result["url"],
-                link=result["link"],
-                image_url=result["image_url"],
-                tags=result["tags"],
-                language=result["language"],
-                category=result["category"],
-                popularity_score=result["popularity_score"],
-                relevance=result["relevance"],
-                search_metadata=result.get("search_metadata"),
-                is_preview=result.get("is_preview", False),
-                preview_url=result.get("preview_url"),
-            )
-            feed_results.append(feed_result)
+            try:
+                feed_result = FeedDiscoveryResult(
+                    id=result["id"],
+                    title=result["title"],
+                    description=result["description"],
+                    url=result["url"],
+                    link=result["link"],
+                    image_url=result["image_url"],
+                    tags=result["tags"],
+                    language=result["language"],
+                    category=result["category"],
+                    popularity_score=result["popularity_score"],
+                    relevance=result["relevance"],
+                    search_metadata=result.get("search_metadata"),
+                    is_preview=result.get("is_preview", False),
+                    preview_url=result.get("preview_url"),
+                )
+                feed_results.append(feed_result)
+            except Exception as e:
+                logger.warning(
+                    "Skipping malformed feed result due to validation error",
+                    feed_id=result.get("id"),
+                    url=result.get("url"),
+                    link=result.get("link"),
+                    error=str(e),
+                )
+                # Skip this result but continue processing others
+                continue
 
         if not feed_results:
             logger.warning(f"No feeds found for category: {category_name}")

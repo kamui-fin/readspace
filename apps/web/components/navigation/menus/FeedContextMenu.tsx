@@ -156,9 +156,9 @@ export function FeedContextMenu({
 
         // Navigate away if currently viewing the item being deleted
         if (isFolder && pathname.includes(`/folders/${itemId}`)) {
-            router.push("/articles")
+            router.push("/today")
         } else if (!isFolder && pathname.includes(itemId)) {
-            router.push("/articles")
+            router.push("/today")
         }
 
         try {

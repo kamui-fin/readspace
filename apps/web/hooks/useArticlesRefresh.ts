@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { useRefreshFeed, useRefreshStatus } from "@readspace/shared"
+import { useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus } from "@readspace/shared"
 
 // Define types for refresh responses
 interface RefreshResponse {
@@ -59,6 +59,8 @@ export function useArticlesRefresh({
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
 
     const refreshFeed = useRefreshFeed()
+    const refreshFolderFeeds = useRefreshFolderFeeds()
+    const refreshAllFeeds = useRefreshAllFeeds()
     const { data: refreshStatus } = useRefreshStatus(
         refreshTaskId,
         !!refreshTaskId
@@ -77,30 +79,36 @@ export function useArticlesRefresh({
 
         const refreshLabel = type === "folder" ? "folder feeds" : "feeds"
 
-        if (isDeep) {
-            toast.loading(
-                `Starting deep refresh of ${refreshLabel}. This will force re-fetch all articles and may take longer.`,
-                { id: "bulk-refresh" }
-            )
-        } else {
-            toast.loading(`Starting refresh of ${refreshLabel}...`, {
-                id: "bulk-refresh",
-            })
+        if (!isDeep) {
+            // For simple refresh, just refetch articles without API calls
+            toast.success("Articles refreshed!", { id: "bulk-refresh" })
+            onRefreshComplete()
+            setRefreshType(null)
+            setIsDeepRefreshing(false)
+            return
         }
 
-        if (feedIds && feedIds.length > 0) {
+        // For deep refresh operations
+        toast.loading(
+            `Starting deep refresh of ${refreshLabel}. This will force re-fetch all articles and may take longer.`,
+            { id: "bulk-refresh" }
+        )
+
+        if (feedIds && feedIds.length === 1) {
+            // Single feed refresh
             refreshFeed.mutate(
                 {
-                    feedId: feedIds[0] ?? "", // Use the first feedId for single feed refresh
-                    forceRefetch: isDeep,
+                    feedId: feedIds[0] ?? "",
+                    forceRefetch: true,
                 },
                 {
                     onSuccess: () => {
-                        // For simple refresh operations, assume immediate completion
-                        toast.success("Refresh completed!", {
+                        toast.success("Feed refresh completed!", {
                             id: "bulk-refresh",
                         })
                         onRefreshComplete()
+                        setRefreshType(null)
+                        setIsDeepRefreshing(false)
                     },
                     onError: (error) => {
                         console.error("Refresh failed:", error)
@@ -115,6 +123,63 @@ export function useArticlesRefresh({
                     },
                 }
             )
+        } else if (type === "folder" && feedIds && feedIds.length > 1) {
+            // Folder refresh - need to get folder ID from context
+            // For now, use the refreshAllFeeds as fallback
+            refreshAllFeeds.mutate(undefined, {
+                onSuccess: (data: any) => {
+                    // Extract task ID if available for progress tracking
+                    if (data && typeof data === 'object' && 'task_id' in data) {
+                        setRefreshTaskId(data.task_id as string)
+                    } else {
+                        toast.success("Refresh started successfully!", {
+                            id: "bulk-refresh",
+                        })
+                        setRefreshType(null)
+                        setIsDeepRefreshing(false)
+                        onRefreshComplete()
+                    }
+                },
+                onError: (error) => {
+                    console.error("Refresh failed:", error)
+                    toast.error(
+                        "Failed to start refresh. Please try again.",
+                        {
+                            id: "bulk-refresh",
+                        }
+                    )
+                    setRefreshType(null)
+                    setIsDeepRefreshing(false)
+                },
+            })
+        } else {
+            // All feeds refresh
+            refreshAllFeeds.mutate(undefined, {
+                onSuccess: (data: any) => {
+                    // Extract task ID if available for progress tracking
+                    if (data && typeof data === 'object' && 'task_id' in data) {
+                        setRefreshTaskId(data.task_id as string)
+                    } else {
+                        toast.success("Refresh started successfully!", {
+                            id: "bulk-refresh",
+                        })
+                        setRefreshType(null)
+                        setIsDeepRefreshing(false)
+                        onRefreshComplete()
+                    }
+                },
+                onError: (error) => {
+                    console.error("Refresh failed:", error)
+                    toast.error(
+                        "Failed to start refresh. Please try again.",
+                        {
+                            id: "bulk-refresh",
+                        }
+                    )
+                    setRefreshType(null)
+                    setIsDeepRefreshing(false)
+                },
+            })
         }
     }
 

@@ -9,7 +9,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { ApiClient } from "@readspace/shared"
+import { ApiWebClient } from "@/lib/api-client"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -78,11 +78,11 @@ export default function ImportStatusPage() {
 
     const handleCancelImport = async () => {
         try {
-            await ApiClient.rss.cancelImportTask(taskId)
+            await ApiWebClient.rss.cancelImportTask(taskId)
             toast.success("Import cancelled successfully")
 
             // Force refresh the task status
-            const status = await ApiClient.rss.getImportTaskStatus(taskId)
+            const status = await ApiWebClient.rss.getImportTaskStatus(taskId)
             setTaskStatus(status as ImportTaskStatus)
         } catch (error) {
             console.error("Error cancelling import task:", error)
@@ -100,7 +100,7 @@ export default function ImportStatusPage() {
 
         const pollStatus = async () => {
             try {
-                const status = (await ApiClient.rss.getImportTaskStatus(
+                const status = (await ApiWebClient.rss.getImportTaskStatus(
                     taskId
                 )) as ImportTaskStatus
                 setTaskStatus(status)
@@ -477,7 +477,7 @@ export default function ImportStatusPage() {
 
                             <div className="flex flex-col sm:flex-row gap-3 pt-4">
                                 <Button
-                                    onClick={() => router.push("/articles")}
+                                    onClick={() => router.push("/today")}
                                     className="flex-1"
                                 >
                                     View Articles

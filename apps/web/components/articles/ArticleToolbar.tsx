@@ -12,11 +12,13 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { colorTokens } from "@/lib/design-tokens/colors"
 import { useIsMobile } from "@/hooks/useMobile"
 import type { Article } from "@readspace/shared"
 import {
     ArrowLeft,
     BookmarkIcon,
+    Check,
     Copy,
     ExternalLink,
     FileText,
@@ -32,6 +34,7 @@ interface ArticleToolbarProps {
     article: Article
     isReadLater: boolean
     onToggleReadLater: () => void
+    onMarkAsRead?: () => void
     onExtractFullText: () => Promise<void>
     onSummarize: () => Promise<void>
     onTranslate: (language: string) => Promise<void>
@@ -40,12 +43,14 @@ interface ArticleToolbarProps {
     isTranslating?: boolean
     onBack?: () => void
     hideBackground?: boolean
+    isReadLaterMode?: boolean
 }
 
 export function ArticleToolbar({
     article,
     isReadLater,
     onToggleReadLater,
+    onMarkAsRead,
     onExtractFullText,
     onSummarize,
     onTranslate,
@@ -54,6 +59,7 @@ export function ArticleToolbar({
     isTranslating = false,
     onBack,
     hideBackground = false,
+    isReadLaterMode = false,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
@@ -116,25 +122,47 @@ export function ArticleToolbar({
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
                 <TooltipProvider>
-                    {/* Bookmark/Save for Later */}
+                    {/* Bookmark/Save for Later or Mark as Read */}
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={onToggleReadLater}
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110`}
+                                style={{
+                                    backgroundColor: isReadLaterMode && isReadLater
+                                        ? colorTokens.accent.DEFAULT
+                                        : 'transparent',
+                                    color: isReadLaterMode && isReadLater
+                                        ? colorTokens.accent.foreground
+                                        : colorTokens.foreground
+                                }}
+                                onClick={isReadLaterMode ? onMarkAsRead : onToggleReadLater}
                             >
-                                <BookmarkIcon
-                                    className={`h-4 w-4 transition-all duration-200 ${isReadLater
-                                            ? "fill-primary text-primary scale-110"
-                                            : "hover:scale-110"
-                                        }`}
-                                />
+                                {isReadLaterMode ? (
+                                    <Check
+                                        className="h-4 w-4 transition-all duration-200 hover:scale-110"
+                                        style={{
+                                            color: isReadLater
+                                                ? colorTokens.primary.DEFAULT
+                                                : colorTokens.muted.foreground
+                                        }}
+                                    />
+                                ) : (
+                                    <BookmarkIcon
+                                        className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${isReadLater ? "scale-110" : ""}`}
+                                        style={{
+                                            fill: isReadLater ? colorTokens.primary.DEFAULT : 'transparent',
+                                            color: isReadLater ? colorTokens.primary.DEFAULT : colorTokens.foreground
+                                        }}
+                                    />
+                                )}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            {isReadLater
+                            {isReadLaterMode
+                                ? "Mark as Read & Remove"
+                                : isReadLater
                                 ? "Remove from Read Later"
                                 : "Save for Later"}
                         </TooltipContent>

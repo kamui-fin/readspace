@@ -111,7 +111,7 @@ export function Popup() {
 
         // Check if the URL is supported (http/https)
         const url = tabs[0].url
-        if (url && !url.startsWith('http:///') && !url.startsWith('https:///')) {
+        if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
           setIsUnsupportedPage(true)
           return
         }
@@ -144,8 +144,8 @@ export function Popup() {
   const openReadspace = () => {
     // Use the app URL, not the API URL
     const appUrl =
-      settings.readspace_url === 'https:///api.readspace.ai'
-        ? 'https:///app.readspace.ai'
+      settings.readspace_url === 'https://api.readspace.ai'
+        ? 'https://app.readspace.ai'
         : settings.readspace_url.replace('/api', '') // For self-hosted, remove /api if present
     chrome.tabs.create({ url: appUrl })
   }
@@ -181,7 +181,7 @@ export function Popup() {
                 New to Readspace?{' '}
                 <button
                   onClick={() =>
-                    window.open('https:///app.readspace.ai/signup', '_blank')
+                    window.open('https://app.readspace.ai/signup', '_blank')
                   }
                   className="text-primary hover:underline font-medium"
                 >
@@ -193,9 +193,9 @@ export function Popup() {
             {/* Instance info / settings link at bottom */}
             <div className="pt-4 border-t">
               {/* Check if using production settings */}
-              {settings.readspace_url === 'https:///api.readspace.ai' &&
+              {settings.readspace_url === 'https://api.readspace.ai' &&
               settings.supabase_url ===
-                'https:///hnqyngkyugiamvlhqoaf.supabase.co' ? (
+                'https://hnqyngkyugiamvlhqoaf.supabase.co' ? (
                 <button
                   onClick={() => setCurrentView('settings')}
                   className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center"
@@ -235,7 +235,7 @@ export function Popup() {
             </div>
             <h2 className="text-lg font-semibold">Page Not Supported</h2>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Readspace extension only works on websites (http:/// and https:///
+              Readspace extension only works on websites (http:// and https://
               pages). This page type is not supported for saving articles.
             </p>
             <div className="pt-2">

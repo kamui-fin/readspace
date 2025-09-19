@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ApiClient } from "../client";
+import { ClientProvider } from "../client-provider";
 import type { Highlight, HighlightCreate, HighlightUpdate } from "../types";
 
 const HIGHLIGHTS_QUERY_KEY = "highlights";
@@ -7,7 +7,7 @@ const HIGHLIGHTS_QUERY_KEY = "highlights";
 export function useBookHighlights(bookId: string) {
   return useQuery({
     queryKey: [HIGHLIGHTS_QUERY_KEY, bookId],
-    queryFn: () => ApiClient.highlights.getBookHighlights(bookId),
+    queryFn: () => ClientProvider.getClient().highlights.getBookHighlights(bookId),
   });
 }
 
@@ -15,7 +15,7 @@ export function useCreateHighlight() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (highlight: HighlightCreate) =>
-      ApiClient.highlights.createHighlight(highlight),
+      ClientProvider.getClient().highlights.createHighlight(highlight),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] });
     },
@@ -30,7 +30,7 @@ export function useUpdateHighlight() {
   const queryClient = useQueryClient();
   return useMutation<Highlight, Error, UpdateHighlightVariables>({
     mutationFn: ({ highlightId, highlight }) =>
-      ApiClient.highlights.updateHighlight(highlightId, highlight),
+      ClientProvider.getClient().highlights.updateHighlight(highlightId, highlight),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] });
     },
@@ -41,7 +41,7 @@ export function useDeleteHighlight() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (highlightId: string) =>
-      ApiClient.highlights.deleteHighlight(highlightId),
+      ClientProvider.getClient().highlights.deleteHighlight(highlightId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] });
     },
@@ -52,7 +52,7 @@ export function useDeleteHighlightByText() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (text: string) =>
-      ApiClient.highlights.deleteHighlightByText(text),
+      ClientProvider.getClient().highlights.deleteHighlightByText(text),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] });
     },
@@ -68,7 +68,7 @@ export function useUpdateHighlightNote() {
     }: {
       highlightId: string;
       note: string;
-    }) => ApiClient.highlights.updateHighlightNote(highlightId, note),
+    }) => ClientProvider.getClient().highlights.updateHighlightNote(highlightId, note),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [HIGHLIGHTS_QUERY_KEY] });
     },
