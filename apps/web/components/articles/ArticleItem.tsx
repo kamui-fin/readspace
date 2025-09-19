@@ -1,7 +1,7 @@
 "use client"
 
-import { parseISO, formatDistanceToNow } from "date-fns"
-import { Paperclip } from "lucide-react"
+import { formatDistanceToNow, parseISO } from "date-fns"
+import { Clock, Paperclip } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
 
@@ -45,8 +45,8 @@ export function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     /**
@@ -151,7 +151,7 @@ export function ArticleItem({
                             {(article.feed?.image_url ||
                                 (article.article_type === "clipped" &&
                                     article.link)) &&
-                            !feedImageError ? (
+                                !feedImageError ? (
                                 <Image
                                     src={
                                         article.feed?.image_url ||
@@ -176,25 +176,25 @@ export function ArticleItem({
                                 }}
                             >
                                 {article.article_type === "clipped" &&
-                                article.link
+                                    article.link
                                     ? extractDomain(article.link)
                                     : article.feed?.title || "Unknown Feed"}
                             </span>
-                        </div>
 
-                        {/* Time display */}
-                        <span className="text-[10px] text-muted-foreground ml-auto shrink-0">
-                            {timeDisplay}
-                        </span>
+                            {/* Time display with clock icon */}
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                                <Clock className="h-2.5 w-2.5" />
+                                <span>{timeDisplay}</span>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Article title */}
                     <h3
-                        className={`text-sm font-medium leading-snug line-clamp-2 ${
-                            article.is_read
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                        }`}
+                        className={`text-sm font-medium leading-snug line-clamp-2 ${article.is_read
+                            ? "text-muted-foreground"
+                            : "text-foreground"
+                            }`}
                         style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
@@ -207,11 +207,10 @@ export function ArticleItem({
                     {/* Article description/content preview */}
                     {displayText && (
                         <p
-                            className={`text-xs leading-relaxed line-clamp-2 ${
-                                article.is_read
-                                    ? "text-muted-foreground/70"
-                                    : "text-muted-foreground"
-                            }`}
+                            className={`text-xs leading-relaxed line-clamp-2 ${article.is_read
+                                ? "text-muted-foreground/70"
+                                : "text-muted-foreground"
+                                }`}
                             style={{
                                 wordBreak: "break-word",
                                 overflowWrap: "break-word",

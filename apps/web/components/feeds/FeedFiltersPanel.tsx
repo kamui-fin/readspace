@@ -51,23 +51,24 @@ export function FeedFiltersPanel({
     onBulkDelete,
 }: FeedFiltersPanelProps) {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
             {/* Search input */}
             <div className="md:col-span-1">
                 <Input
                     placeholder="Search feeds by title or URL..."
                     value={searchTerm}
                     onChange={(e) => onSearchChange(e.target.value)}
+                    className="h-10"
                 />
             </div>
 
             {/* Folder filter and export */}
-            <div className="md:col-span-1 flex gap-2">
+            <div className="md:col-span-1 flex gap-2 items-center">
                 <Select
                     value={filterFolderId}
                     onValueChange={onFolderFilterChange}
                 >
-                    <SelectTrigger className="max-w-xs">
+                    <SelectTrigger className="max-w-xs h-10">
                         <SelectValue placeholder="Filter by folder" />
                     </SelectTrigger>
                     <SelectContent>
@@ -83,7 +84,7 @@ export function FeedFiltersPanel({
                     variant="outline"
                     onClick={onExportOPML}
                     disabled={exportableCount === 0}
-                    className="whitespace-nowrap"
+                    className="whitespace-nowrap h-10"
                 >
                     <Download className="h-4 w-4 mr-2" />
                     Export OPML
@@ -91,13 +92,13 @@ export function FeedFiltersPanel({
             </div>
 
             {/* Bulk actions */}
-            <div className="md:col-span-1 flex justify-end gap-2">
+            <div className="md:col-span-1 flex justify-end gap-2 items-center">
                 {selectedCount > 0 && (
                     <>
-                        <Button variant="outline" onClick={onBulkChangeFolder}>
+                        <Button variant="outline" onClick={onBulkChangeFolder} className="h-10">
                             Change Folder ({selectedCount})
                         </Button>
-                        <Button variant="destructive" onClick={onBulkDelete}>
+                        <Button variant="destructive" onClick={onBulkDelete} className="h-10">
                             Delete ({selectedCount})
                         </Button>
                     </>

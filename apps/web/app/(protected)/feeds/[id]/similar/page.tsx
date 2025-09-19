@@ -2,6 +2,7 @@ import { getQueryClient } from "@/lib/get-query-client"
 import { ApiClient, type SimilarFeedsResponse } from "@readspace/shared"
 import SimilarFeedsClient from "./similar-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching data
 export const dynamic = "force-dynamic"
@@ -11,6 +12,9 @@ export async function generateMetadata({
 }: {
     params: Promise<{ id: string }>
 }) {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const { id } = await params
 
     // Try to get the source feed info from similar feeds API for metadata
@@ -42,6 +46,9 @@ export default async function SimilarFeedsPage({
 }: {
     params: Promise<{ id: string }>
 }) {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const { id: feedId } = await params
     const queryClient = getQueryClient()
 

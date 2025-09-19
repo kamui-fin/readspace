@@ -17,7 +17,7 @@ export function FeedPreviewBanner({
     return (
         <div
             className={cn(
-                "z-20 w-full bg-orange-50/95 dark:bg-orange-950/95 backdrop-blur-sm border-b border-orange-200/60 dark:border-orange-800/60",
+                "relative z-20 w-full bg-orange-50/95 dark:bg-orange-950/95 backdrop-blur-sm border-b border-orange-200/60 dark:border-orange-800/60",
                 className
             )}
         >

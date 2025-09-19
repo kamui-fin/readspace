@@ -19,14 +19,42 @@ export function QueryProvider({ children }: QueryProviderProps) {
     const queryClient = getQueryClient()
 
     useEffect(() => {
-        // Configure ApiClient with auth token provider
+        // Configure ApiClient with auth token provider for client-side usage
         const supabase = createClient()
 
         ApiClient.configure({
             baseUrl: env.NEXT_PUBLIC_API_BASE_URL,
             getAuthToken: async () => {
-                const { data: { session } } = await supabase.auth.getSession()
-                return session?.access_token || null
+                try {
+                    // Always fetch fresh session - Supabase handles automatic token refresh
+                    const { data: { session }, error } = await supabase.auth.getSession()
+
+                    if (error) {
+                        console.warn("Failed to get session:", error.message)
+                        // Try to refresh the session if getSession fails
+                        try {
+                            const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+                            if (refreshError || !refreshData.session) {
+                                console.warn("Session refresh also failed:", refreshError?.message)
+                                return null
+                            }
+                            return refreshData.session.access_token
+                        } catch (refreshErr) {
+                            console.error("Error refreshing session:", refreshErr)
+                            return null
+                        }
+                    }
+
+                    if (!session) {
+                        console.warn("No session available for API request")
+                        return null
+                    }
+
+                    return session.access_token
+                } catch (err) {
+                    console.error("Error getting auth token:", err)
+                    return null
+                }
             }
         })
     }, [])

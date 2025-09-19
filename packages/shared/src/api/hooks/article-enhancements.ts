@@ -40,9 +40,15 @@ export type TranslateRequest = {
  * Hook for extracting full text content from article URL
  */
 export function useExtractFullText(articleId: string) {
+  // Validate that we have a proper article ID (not empty, skip, etc.)
+  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+
   return useQuery({
     queryKey: [ARTICLE_ENHANCEMENT_QUERY_KEYS.EXTRACTED_CONTENT, articleId],
     queryFn: async (): Promise<ExtractFullTextResponse> => {
+      if (!isValidArticleId) {
+        throw new Error("Invalid article ID");
+      }
       const response = await ApiClient.post<ExtractFullTextResponse>(
         `/api/articles/${articleId}/extract-full-text`,
       );
@@ -79,12 +85,18 @@ function createContentHash(content: string): string {
  * Hook for generating AI summaries of articles
  */
 export function useSummarizeArticle(articleId: string, content?: string) {
+  // Validate that we have a proper article ID (not empty, skip, etc.)
+  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+
   // Create a content hash for cache key
   const contentHash = content ? createContentHash(content) : "original";
 
   return useQuery({
     queryKey: [ARTICLE_ENHANCEMENT_QUERY_KEYS.SUMMARY, articleId, contentHash],
     queryFn: async (): Promise<SummarizeResponse> => {
+      if (!isValidArticleId) {
+        throw new Error("Invalid article ID");
+      }
       const requestBody: SummarizeRequest = content ? { content } : {};
       const response = await ApiClient.post<SummarizeResponse>(
         `/api/articles/${articleId}/summarize`,
@@ -124,6 +136,13 @@ export async function fetchTranslation(
   targetLanguage: string,
   content?: string,
 ): Promise<TranslateResponse> {
+  // Validate that we have a proper article ID (not empty, skip, etc.)
+  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+
+  if (!isValidArticleId) {
+    throw new Error("Invalid article ID for translation");
+  }
+
   const queryKey = createTranslationQueryKey(
     articleId,
     targetLanguage,

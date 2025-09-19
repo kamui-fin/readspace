@@ -1,7 +1,7 @@
-import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
-import { ApiClient, ArticlesPaginatedResponse, Feed } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import { getQueryClient } from "@/lib/get-query-client"
+import { ensureServerApiClient } from "@/lib/server-api-client"
+import { ApiClient, ArticlesPaginatedResponse, Feed, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
@@ -20,6 +20,9 @@ export default async function FeedArticlesPage({
     const feedId = resolvedParams.id
     const resolvedSearchParams = await searchParams
     const isPreview = resolvedSearchParams.preview === "true"
+
+    // Ensure ApiClient is configured for server-side use
+    await ensureServerApiClient()
 
     const queryClient = getQueryClient()
 
@@ -65,7 +68,7 @@ export default async function FeedArticlesPage({
         viewId: feedId,
     }
 
-    // Prefetch the feed data and infinite articles that this page needs
+    // Prefetch only the essential data needed for immediate page render
     await Promise.all([
         queryClient.prefetchQuery({
             queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
@@ -104,11 +107,7 @@ export default async function FeedArticlesPage({
             <ArticlesSuspenseWrapper
                 showUnreadBadge={!isPreview}
                 feedId={feedId}
-                initialSidebarTitle={
-                    isPreview
-                        ? `Preview: ${feed.title || "Feed"}`
-                        : feed.title || "Unknown Feed"
-                }
+                initialSidebarTitle={feed.title || "Unknown Feed"}
             />
         </HydrationBoundary>
     )

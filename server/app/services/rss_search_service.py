@@ -611,7 +611,7 @@ class RssSearchService:
             # SQL query using named parameters and the standard CAST() function
             sql_query = f"""
                 WITH q AS (
-                    SELECTwebsearch_to_tsquery('english', :query) AS query,
+                    SELECT websearch_to_tsquery('english', :query) AS query,
                            LOWER(:query) AS query_lower
                 ),
                 -- Full-text search results with ranks
@@ -624,7 +624,7 @@ class RssSearchService:
                             (0.7 * ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) +
                              0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) DESC
                         ) AS fts_rank
-                    FROM feedsf
+                    FROM feeds f
                     WHERE (f.tsv_title_link @@ (SELECT query FROM q)
                            OR f.tsv_desc_tags @@ (SELECT query FROM q))
                       AND (f.language = :language OR f.language IS NULL)
@@ -648,7 +648,7 @@ class RssSearchService:
                                 ELSE 1.0
                             END
                         ) AS vector_rank
-                    FROM feedsf
+                    FROM feeds f
                     WHERE (f.language = :language OR f.language IS NULL)
                       {category_filter}
                     ORDER BY

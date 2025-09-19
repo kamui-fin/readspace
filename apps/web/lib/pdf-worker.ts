@@ -26,7 +26,7 @@ export const configurePdfJs = async () => {
   }
 }
 
-export const getPdfJs = async () => {
+export const getPdfJs = async (): Promise<any> => {
   await configurePdfJs()
   const { pdfjs } = await import('react-pdf')
   return pdfjs

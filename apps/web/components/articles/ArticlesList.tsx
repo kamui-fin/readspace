@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useMemo } from "react"
 import { useIsMobile } from "@/hooks/useMobile"
 import type { Article } from "@readspace/shared"
 import { ArticleItem } from "./ArticleItem"
 import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 import { ArticlesEmptyState } from "./ArticlesEmptyState"
+import { format, parseISO } from "date-fns"
+import { CalendarIcon } from "lucide-react"
 
 interface ArticlesListProps {
     /** Array of articles to display */
@@ -62,6 +64,48 @@ export function ArticlesList({
     const filteredArticles = showUnreadOnly
         ? articles.filter((article) => !article.is_read)
         : articles
+
+    // Group articles by date for non-recently-read modes
+    const groupedArticles = useMemo(() => {
+        if (isRecentlyReadMode || filteredArticles.length === 0) {
+            return {}
+        }
+
+        const groups: Record<string, { label: string; articles: Article[] }> = {}
+
+        filteredArticles.forEach((article) => {
+            if (!article.published_at) return
+
+            const date = parseISO(article.published_at)
+            const today = new Date()
+            const yesterday = new Date()
+            yesterday.setDate(today.getDate() - 1)
+
+            let dateGroup: string
+            let dateLabel: string
+
+            if (date.toDateString() === today.toDateString()) {
+                dateGroup = "today"
+                dateLabel = "Today"
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                dateGroup = "yesterday"
+                dateLabel = "Yesterday"
+            } else {
+                dateGroup = format(date, "yyyy-MM-dd")
+                dateLabel = format(date, "EEEE, MMMM d")
+            }
+
+            if (!groups[dateGroup]) {
+                groups[dateGroup] = {
+                    label: dateLabel,
+                    articles: [],
+                }
+            }
+            groups[dateGroup]?.articles.push(article)
+        })
+
+        return groups
+    }, [filteredArticles, isRecentlyReadMode])
 
     // Infinite scroll implementation
     useEffect(() => {
@@ -125,16 +169,57 @@ export function ArticlesList({
             style={{ scrollbarGutter: "stable" }}
         >
             <div className="space-y-0">
-                {filteredArticles.map((article, index) => (
-                    <ArticleItem
-                        key={article.id}
-                        article={article}
-                        isActive={selectedArticleId === article.id}
-                        isLastInGroup={index === filteredArticles.length - 1}
-                        isRecentlyReadMode={isRecentlyReadMode}
-                        onClick={() => onArticleSelect(article.id)}
-                    />
-                ))}
+                {isRecentlyReadMode || Object.keys(groupedArticles).length === 0 ? (
+                    // Simple list for recently read mode or when no grouping
+                    <>
+                        {filteredArticles.map((article, index) => (
+                            <ArticleItem
+                                key={article.id}
+                                article={article}
+                                isActive={selectedArticleId === article.id}
+                                isLastInGroup={index === filteredArticles.length - 1}
+                                isRecentlyReadMode={isRecentlyReadMode}
+                                onClick={() => onArticleSelect(article.id)}
+                            />
+                        ))}
+                    </>
+                ) : (
+                    // Grouped articles with date headers
+                    <>
+                        {Object.entries(groupedArticles)
+                            .sort(([a], [b]) => {
+                                // Sort by date group - today first, then yesterday, then by date desc
+                                if (a === "today") return -1
+                                if (b === "today") return 1
+                                if (a === "yesterday") return -1
+                                if (b === "yesterday") return 1
+                                return b.localeCompare(a) // Latest dates first
+                            })
+                            .map(([dateGroup, group]) => (
+                                <div key={dateGroup}>
+                                    {/* Date Header */}
+                                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-2">
+                                        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                            <CalendarIcon className="h-4 w-4" />
+                                            {group.label}
+                                        </h3>
+                                    </div>
+
+                                    {/* Articles in this date group */}
+                                    {group.articles.map((article, index) => (
+                                        <ArticleItem
+                                            key={article.id}
+                                            article={article}
+                                            isActive={selectedArticleId === article.id}
+                                            isLastInGroup={index === group.articles.length - 1}
+                                            isRecentlyReadMode={isRecentlyReadMode}
+                                            onClick={() => onArticleSelect(article.id)}
+                                        />
+                                    ))}
+                                </div>
+                            ))}
+                    </>
+                )}
 
                 {/* Load more trigger */}
                 {hasNextPage && (

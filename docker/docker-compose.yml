@@ -16,7 +16,7 @@ services:
 
   web:
     build:
-      context: ./web
+      context: ../apps/web
       dockerfile: Dockerfile
     container_name: readspace_web
     extra_hosts:
@@ -33,7 +33,7 @@ services:
 
   api:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: readspace_api
     command: >
@@ -61,7 +61,7 @@ services:
 
   worker:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: readspace_worker
     command: celery -A app.core.celery_app  worker -l info
@@ -87,7 +87,7 @@ services:
 
   beat:
     build:
-      context: ./server
+      context: ../server
       dockerfile: Dockerfile
     container_name: readspace_beat
     command: celery -A app.core.celery_app beat -l info

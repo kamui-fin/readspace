@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     # Observability Configuration
-    LOKI_URL: str = "http://loki:3100"
+    LOKI_URL: str = ""
     SERVICE_NAME: str = "readspace-server"  # Can be overridden via env var
 
     # OpenTelemetry Configuration

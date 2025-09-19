@@ -8,6 +8,17 @@ function makeQueryClient() {
                 // above 0 to avoid refetching immediately on the client
                 staleTime: 5 * 60 * 1000, // 5 minutes
                 retry: 1,
+                // Prevent redundant requests during navigation
+                refetchOnMount: false,
+                refetchOnWindowFocus: false,
+                // Enable background refetching for stale data
+                refetchOnReconnect: "always",
+                // Dedupe requests to the same endpoint
+                notifyOnChangeProps: "all",
+            },
+            mutations: {
+                // Add global error handling for mutations
+                retry: false,
             },
         },
     })

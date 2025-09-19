@@ -1,13 +1,20 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { Sparkles } from "lucide-react"
+import { ArrowLeft, Sparkles } from "lucide-react"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
-import Header from "@/components/navigation/Header"
+import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip"
 import {
     ApiClient,
     type FeedDiscoveryResult,
@@ -21,6 +28,8 @@ interface SimilarFeedsClientProps {
 export default function SimilarFeedsClient({
     feedId,
 }: SimilarFeedsClientProps) {
+    const router = useRouter()
+
     // Query for similar feeds data (includes source feed)
     const {
         data: similarData,
@@ -35,14 +44,35 @@ export default function SimilarFeedsClient({
     const sourceFeed = similarData?.source_feed
     const similarFeeds = similarData?.similar_feeds || []
 
+    const handleBack = () => {
+        router.back()
+    }
+
     if (error) {
         return (
-            <div className="min-h-screen bg-white">
-                <Header
-                    breadcrumbItems={[{ label: "Discover", href: "/discover" }]}
-                />
-
+            <div className="min-h-screen bg-background">
                 <div className="max-w-4xl mx-auto px-6 py-8">
+                    {/* Back Button */}
+                    <div className="mb-6">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 w-9 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                        onClick={handleBack}
+                                        title="Back to feed"
+                                    >
+                                        <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Back to feed
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
                     <div className="mb-8">
                         <div className="text-center space-y-4">
                             <div className="flex items-center justify-center gap-2 mb-4">
@@ -95,12 +125,29 @@ export default function SimilarFeedsClient({
     }
 
     return (
-        <div className="min-h-screen bg-white">
-            <Header
-                breadcrumbItems={[{ label: "Discover", href: "/discover" }]}
-            />
-
+        <div className="min-h-screen bg-background">
             <div className="max-w-4xl mx-auto px-6 py-8">
+                {/* Back Button */}
+                <div className="mb-6">
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 w-9 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                    onClick={handleBack}
+                                    title="Back to feed"
+                                >
+                                    <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Back to feed
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="text-center space-y-4">

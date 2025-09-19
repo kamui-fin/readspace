@@ -143,7 +143,7 @@ export default function ImportOPMLPageClient() {
     const handleFileUpload = useCallback(
         async (file: File) => {
             // Check if there's already an active import
-            if (activeImports.length > 0) {
+            if (activeImports && activeImports.length > 0) {
                 toast.error(
                     "Please wait for the current import to complete before starting a new one."
                 )
@@ -232,7 +232,7 @@ export default function ImportOPMLPageClient() {
             )
         }
 
-        if (activeImports.length === 0) {
+        if (!activeImports || activeImports.length === 0) {
             return null
         }
 
@@ -385,12 +385,12 @@ export default function ImportOPMLPageClient() {
                     </div>
 
                     {/* Active Imports Section */}
-                    {(activeImports.length > 0 || isLoadingActiveImports) && (
+                    {((activeImports?.length > 0) || isLoadingActiveImports) && (
                         <div className="mb-8">{renderActiveImports()}</div>
                     )}
 
                     {/* Upload Section - Only show if no active imports */}
-                    {activeImports.length === 0 && (
+                    {(!activeImports || activeImports.length === 0) && (
                         <Card
                             className={`transition-colors duration-200 ${isDragging
                                     ? "border-primary bg-primary/5"
@@ -453,7 +453,7 @@ export default function ImportOPMLPageClient() {
                     )}
 
                     {/* Message when upload is disabled due to active import */}
-                    {activeImports.length > 0 && (
+                    {activeImports && activeImports.length > 0 && (
                         <Card className="border-gray-200 bg-gray-50/50">
                             <CardContent className="p-8 sm:p-12 text-center">
                                 <div className="flex flex-col items-center justify-center gap-6">

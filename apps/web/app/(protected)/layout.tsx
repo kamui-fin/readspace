@@ -6,6 +6,7 @@ import { ReaderSidebar } from "@/components/reader/ReaderSidebar"
 import { SidebarInset } from "@/components/ui/sidebar"
 import { ApiClient } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -15,6 +16,9 @@ export default async function ProtectedLayout({
 }: {
     children: React.ReactNode
 }) {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const queryClient = getQueryClient()
 
     // Prefetch shared sidebar data that all protected pages need

@@ -72,21 +72,15 @@ export function FolderModal({ isOpen, onClose }: FolderModalProps) {
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <label htmlFor="folder-name" className="text-right">
-                                Name
-                            </label>
-                            <Input
-                                id="folder-name"
-                                value={folderName}
-                                onChange={(e) => setFolderName(e.target.value)}
-                                className="col-span-3"
-                                placeholder="e.g., Tech News, Sports, etc."
-                                autoFocus
-                                disabled={createFolder.status === "pending"}
-                            />
-                        </div>
+                    <div className="space-y-4 py-4">
+                        <Input
+                            id="folder-name"
+                            value={folderName}
+                            onChange={(e) => setFolderName(e.target.value)}
+                            placeholder="Folder name (e.g., Tech News, Sports)"
+                            autoFocus
+                            disabled={createFolder.status === "pending"}
+                        />
                     </div>
                     <DialogFooter>
                         <Button

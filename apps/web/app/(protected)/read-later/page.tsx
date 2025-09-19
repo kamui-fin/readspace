@@ -3,11 +3,15 @@ import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseW
 import { ApiClient } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
 
 export default async function ReadLaterPage() {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const queryClient = getQueryClient()
 
     // Prefetch infinite read later articles to match client useInfiniteReadLaterArticles

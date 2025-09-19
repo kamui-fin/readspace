@@ -87,34 +87,33 @@ export function ArticleToolbar({
 
     return (
         <div
-            className={`flex items-center gap-1 ${hideBackground ? "" : "justify-between px-4 py-3 bg-background/95 backdrop-blur-sm border-b"}`}
+            className={`flex items-center ${isMobile && onBack ? "justify-between" : "justify-end"} ${hideBackground ? "gap-1" : "px-4 py-3 bg-background/95 backdrop-blur-sm border-b"}`}
         >
-            {!hideBackground && (
+            {/* Mobile back button - shown when onBack is provided */}
+            {isMobile && onBack && (
                 <div className="flex items-center">
-                    {isMobile && onBack && (
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                        onClick={onBack}
-                                        title="Back to articles"
-                                    >
-                                        <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    Back to articles
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-9 w-9 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                    onClick={onBack}
+                                    title="Back to articles"
+                                >
+                                    <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                Back to articles
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             )}
             <div
-                className={`flex items-center gap-1 ${hideBackground ? "" : "ml-auto"}`}
+                className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
                 <TooltipProvider>
                     {/* Bookmark/Save for Later */}
@@ -123,7 +122,7 @@ export function ArticleToolbar({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                 onClick={onToggleReadLater}
                             >
                                 <BookmarkIcon
@@ -147,7 +146,7 @@ export function ArticleToolbar({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                 onClick={handleOpenOriginal}
                                 disabled={!article.link}
                             >
@@ -167,7 +166,7 @@ export function ArticleToolbar({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                 onClick={handleCopyUrl}
                                 disabled={!article.link}
                             >
@@ -185,7 +184,7 @@ export function ArticleToolbar({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                 onClick={onExtractFullText}
                                 disabled={isExtracting || !article.link}
                             >
@@ -209,7 +208,7 @@ export function ArticleToolbar({
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                 onClick={onSummarize}
                                 disabled={isSummarizing}
                             >
@@ -238,7 +237,7 @@ export function ArticleToolbar({
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        className="h-8 w-8 p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                        className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
                                         disabled={isTranslating}
                                     >
                                         {isTranslating ? (

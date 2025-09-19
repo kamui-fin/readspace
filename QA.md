@@ -1,0 +1,10 @@
+- refresh doesn't work
+- api version mismatch in upload book
+- discover feeds load http://localhost:8042/discover?q=big+tech+eng+blogs causes toast error even tho its working fine
+- logo font
+- 2025-09-18 20:24:27 [error    ] Error in feed discovery search category=None error="1 validation error for FeedDiscoveryResult\nlink\n  Input should be a valid URL, invalid port number [type=url_parsing, input_value='https://nwb.sh,2023-01-04:default-atom-feed/', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.9/v/url_parsing" query=https://bun.sh/rss.xml
+- rss/reddit feed preview in dark mode
+- manage feeds page has scrolling
+- ai summary preview padding
+- remove excessive debug logging
+- OPML cancel is fucked

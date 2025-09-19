@@ -3,6 +3,7 @@ import { ApiClient } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
 import ManageFeedsPageClient from "./manage-feeds-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -13,6 +14,9 @@ export const metadata = {
 }
 
 export default async function ManageFeedsPage() {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const queryClient = getQueryClient()
 
     // Prefetch feeds and folders data that the page needs

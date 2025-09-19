@@ -10,6 +10,7 @@ import {
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -40,6 +41,9 @@ function BookNotFound({
 export async function generateMetadata({
     params,
 }: PageProps): Promise<Metadata> {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const resolvedParams = await params
     try {
         const libraryBook = await ApiClient.books.getBook(resolvedParams.id)
@@ -67,6 +71,9 @@ export async function generateMetadata({
 }
 
 export default async function BookReaderPage({ params }: PageProps) {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const resolvedParams = await params
     const supabase = await createClient()
     const {

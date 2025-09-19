@@ -19,6 +19,29 @@ import {
 import { TableCell, TableRow } from "@/components/ui/table"
 import type { Feed } from "@readspace/shared"
 import { formatDistanceToNow, parseISO } from "date-fns"
+import { useEffect, useState } from "react"
+
+// Custom hook to handle time formatting without hydration issues
+function useRelativeTime(dateString: string | null) {
+    const [timeString, setTimeString] = useState<string | null>(null)
+    const [isClient, setIsClient] = useState(false)
+
+    useEffect(() => {
+        setIsClient(true)
+        if (dateString) {
+            setTimeString(
+                formatDistanceToNow(parseISO(dateString), { addSuffix: true })
+            )
+        }
+    }, [dateString])
+
+    if (!isClient || !dateString) {
+        return null
+    }
+
+    return timeString
+}
+
 import {
     AlertTriangle,
     CheckCircle,
@@ -59,6 +82,8 @@ export function FeedTableRow({
     onEdit,
     onDelete,
 }: FeedTableRowProps) {
+    // Use the hydration-safe relative time hook
+    const relativeTime = useRelativeTime(feed.last_article_published_at)
     /**
      * Determine if a feed should be considered "dead" based on error count and last activity
      */
@@ -212,10 +237,7 @@ export function FeedTableRow({
             <TableCell className="text-right text-xs">
                 {feed.last_article_published_at ? (
                     <div className="text-muted-foreground whitespace-nowrap">
-                        {formatDistanceToNow(
-                            parseISO(feed.last_article_published_at),
-                            { addSuffix: true }
-                        )}
+                        {relativeTime || "Loading..."}
                     </div>
                 ) : (
                     <div className="text-muted-foreground whitespace-nowrap">

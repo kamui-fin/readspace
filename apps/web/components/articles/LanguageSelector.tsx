@@ -41,21 +41,23 @@ export function LanguageSelector({
             <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
                 Select Language
             </div>
-            {LANGUAGES.map((language) => (
-                <DropdownMenuItem
-                    key={language.code}
-                    onClick={() => onSelect(language.code)}
-                    className="flex items-center justify-between gap-2 cursor-pointer"
-                >
-                    <div className="flex items-center gap-2">
-                        <span className="text-base">{language.flag}</span>
-                        <span>{language.name}</span>
-                    </div>
-                    {selectedLanguage === language.code && (
-                        <Check className="h-4 w-4 text-primary" />
-                    )}
-                </DropdownMenuItem>
-            ))}
+            <div className="max-h-60 overflow-y-auto">
+                {LANGUAGES.map((language) => (
+                    <DropdownMenuItem
+                        key={language.code}
+                        onClick={() => onSelect(language.code)}
+                        className="flex items-center justify-between gap-2 cursor-pointer"
+                    >
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">{language.flag}</span>
+                            <span>{language.name}</span>
+                        </div>
+                        {selectedLanguage === language.code && (
+                            <Check className="h-4 w-4 text-primary" />
+                        )}
+                    </DropdownMenuItem>
+                ))}
+            </div>
         </>
     )
 }

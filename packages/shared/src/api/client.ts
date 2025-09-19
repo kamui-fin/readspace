@@ -56,6 +56,39 @@ async function getAuthHeaders(
   return headers;
 }
 
+// Helper function to perform a request with automatic token refresh retry
+async function fetchWithRetry<T>(
+  url: string,
+  options: RequestInit,
+  getAuthToken: AuthTokenProvider,
+): Promise<T> {
+  let response = await fetch(url, options);
+
+  // If we get a 401, try refreshing the token and retry once
+  if (response.status === 401) {
+    console.log("Received 401, attempting token refresh and retry");
+
+    try {
+      // Get a fresh token (this should trigger a refresh in Supabase)
+      const freshHeaders = await getAuthHeaders(getAuthToken);
+
+      // Retry the request with fresh token
+      response = await fetch(url, {
+        ...options,
+        headers: {
+          ...freshHeaders,
+          ...options.headers,
+        },
+      });
+    } catch (retryError) {
+      console.warn("Token refresh retry failed:", retryError);
+      // Fall through to handle the original 401 response
+    }
+  }
+
+  return handleResponse<T>(response);
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     const error = await response
@@ -87,16 +120,19 @@ export class ApiClient {
 
     try {
       const headers = await getAuthHeaders(this.config.getAuthToken);
-      const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
-        ...options,
-        headers: {
-          ...headers,
-          ...options.headers,
-        },
-        cache: "no-store", // Disable caching for authenticated requests
-      });
 
-      return handleResponse<T>(response);
+      return await fetchWithRetry<T>(
+        `${this.config.baseUrl}${endpoint}`,
+        {
+          ...options,
+          headers: {
+            ...headers,
+            ...options.headers,
+          },
+          cache: "no-store", // Disable caching for authenticated requests
+        },
+        this.config.getAuthToken
+      );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
         throw new Error("Authentication required");
@@ -153,14 +189,45 @@ export class ApiClient {
       string,
       string
     >;
-    const response = await fetch(`${this.config.baseUrl}${endpoint}`, {
-      method: "POST",
-      body: formData,
-      signal,
-      headers: uploadHeaders,
-    });
 
-    return handleResponse(response);
+    try {
+      let response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+        method: "POST",
+        body: formData,
+        signal,
+        headers: uploadHeaders,
+      });
+
+      // Handle 401 retry for file uploads too
+      if (response.status === 401) {
+        console.log("Upload received 401, attempting token refresh and retry");
+
+        try {
+          const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { "Content-Type": _, ...freshUploadHeaders } = freshHeaders as Record<
+            string,
+            string
+          >;
+
+          response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+            method: "POST",
+            body: formData,
+            signal,
+            headers: freshUploadHeaders,
+          });
+        } catch (retryError) {
+          console.warn("Upload token refresh retry failed:", retryError);
+        }
+      }
+
+      return handleResponse(response);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 401) {
+        throw new Error("Authentication required");
+      }
+      throw error;
+    }
   }
 
   // Book endpoints

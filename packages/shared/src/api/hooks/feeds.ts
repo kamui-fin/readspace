@@ -1131,13 +1131,11 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await ApiClient.rss.updateArticle(articleId, data, articleType);
       },
       onSuccess: (_, { articleId }) => {
+        // Only invalidate the specific article, not all articles
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
         });
-        queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.ARTICLES],
-        });
-        // Invalidate all unread count queries (both with and without folderId)
+        // Only invalidate unread counts, not all articles to prevent infinite loops
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
           refetchType: "active",

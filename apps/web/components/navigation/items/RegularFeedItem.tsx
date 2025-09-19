@@ -8,6 +8,7 @@ import {
     useOptimisticNavigation,
 } from "@/hooks/useNavigationState"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
+import { Inbox } from "lucide-react"
 
 interface RegularFeedItemData {
     /** Unique identifier for the feed */
@@ -63,7 +64,10 @@ export function RegularFeedItem({ feed }: RegularFeedItemProps) {
                                 React.createElement(feed.icon, {
                                     className: "h-4 w-4 mr-1 shrink-0",
                                 })}
-                            {!feed.icon && (
+                            {!feed.icon && isAll && (
+                                <Inbox className="h-4 w-4 mr-1 shrink-0" />
+                            )}
+                            {!feed.icon && !isAll && (
                                 <div className="w-4 mr-1 shrink-0" />
                             )}
                             <span className="ml-1 truncate">{feed.title}</span>

@@ -81,12 +81,16 @@ async def create_subscription(
     feed_data: dict | None = None,
 ) -> FeedSubscription:
     """Create a new feed subscription for a user."""
-    # Validate folder exists (handle string case for default folder)
+    # Handle folder_id conversion (string UUID or 'default' should be handled by service layer)
     folder_id = subscription_in.folder_id
     if isinstance(folder_id, str):
-        # This handles the 'default' case - convert to actual UUID
-        # For now, let's assume we need to resolve this elsewhere
-        raise ValueError("String folder_id not yet supported in this method")
+        if folder_id == "default":
+            raise ValueError("'default' folder_id should be resolved by the service layer")
+        # Convert string UUID to UUID object
+        try:
+            folder_id = UUID(folder_id)
+        except ValueError as e:
+            raise ValueError(f"Invalid folder_id format: {folder_id}") from e
 
     folder = await crud_folder.get_folder(db, folder_id=folder_id, user_id=user_id)
     if not folder:

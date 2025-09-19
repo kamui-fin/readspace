@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server"
 import { redirect } from "next/navigation"
 import LibraryClient from "./library-client"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -15,6 +16,9 @@ export const metadata = {
 }
 
 export default async function LibraryPage() {
+    // Ensure ApiClient is configured for server-side usage
+    await ensureServerApiClient()
+
     const supabase = await createClient()
     const {
         data: { user },

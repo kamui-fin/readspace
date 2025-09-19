@@ -20,10 +20,11 @@ import {
     cn,
     useDeleteFeed,
     useDeleteFolder,
+    useRefreshFeed,
     useUpdateFeed,
     useUpdateFolder,
 } from "@readspace/shared"
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, RefreshCw, Trash2 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
@@ -62,6 +63,7 @@ export function FeedContextMenu({
     const updateFolder = useUpdateFolder()
     const deleteFeed = useDeleteFeed()
     const deleteFolder = useDeleteFolder()
+    const refreshFeed = useRefreshFeed()
     const router = useRouter()
     const pathname = usePathname()
 
@@ -121,6 +123,28 @@ export function FeedContextMenu({
         e.stopPropagation()
         setIsDropdownOpen(false)
         setIsDeleteModalOpen(true)
+    }
+
+    /**
+     * Handle force refresh feed
+     */
+    const handleRefresh = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setIsDropdownOpen(false)
+        if (itemId) {
+            refreshFeed.mutate(
+                { feedId: itemId, forceRefetch: true },
+                {
+                    onSuccess: () => {
+                        toast.success("Feed refresh initiated!")
+                    },
+                    onError: () => {
+                        toast.error("Failed to refresh feed")
+                    },
+                }
+            )
+        }
     }
 
     /**
@@ -185,6 +209,16 @@ export function FeedContextMenu({
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Rename</span>
                     </DropdownMenuItem>
+                    {/* Only show refresh option for feeds, not folders */}
+                    {!isFolder && (
+                        <DropdownMenuItem
+                            onClick={handleRefresh}
+                            disabled={refreshFeed.status === "pending"}
+                        >
+                            <RefreshCw className={`mr-2 h-4 w-4 ${refreshFeed.status === "pending" ? "animate-spin" : ""}`} />
+                            <span>Force check new articles</span>
+                        </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem
                         onClick={handleDelete}
                         className="text-destructive focus:text-destructive"
@@ -322,7 +356,7 @@ interface FeedDropdownMenuProps {
 
 /**
  * Dropdown menu wrapper component that handles both context menu and count display.
- * For "All" items, only shows the count without context menu.
+ * Shows context menu for both feeds and folders. Only excludes special items like "All".
  */
 export function FeedDropdownMenu({
     isFolder,
@@ -332,8 +366,21 @@ export function FeedDropdownMenu({
     isAll,
     count,
 }: FeedDropdownMenuProps) {
-    // Don't show context menu for "All" item, only count
+    // Don't show context menu for special items (All), only count
     if (isAll) {
+        return (
+            <>
+                {count != null && count > 0 && (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                        {count}
+                    </span>
+                )}
+            </>
+        )
+    }
+
+    // Show context menu for both feeds and folders with valid itemId
+    if (!itemId) {
         return (
             <>
                 {count != null && count > 0 && (
