@@ -35,16 +35,85 @@ router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
     "/{feed_id}/subscribe",
     response_model=SubscriptionResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Subscribe to an existing feed",
+    description="Subscribe to an RSS feed by its UUID without URL parsing or deduplication",
+    responses={
+        201: {
+            "description": "Successfully subscribed to the feed",
+            "model": SubscriptionResponse,
+        },
+        400: {
+            "description": "Bad request - already subscribed to this feed or validation error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "already_subscribed": {
+                            "summary": "Already subscribed",
+                            "value": {"detail": "Already subscribed to this feed"}
+                        },
+                        "validation_error": {
+                            "summary": "Validation error",
+                            "value": {"detail": "Feed validation failed"}
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Feed not found",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Feed not found"}
+                }
+            }
+        },
+        422: {
+            "description": "Validation error in request body"
+        },
+        429: {
+            "description": "Too many subscriptions - resource limit exceeded"
+        },
+        500: {
+            "description": "Internal server error"
+        }
+    }
 )
 @require_resource_limit("max_subscriptions")
 async def subscribe_to_feed(
     *,
     feed_id: UUID,
-    subscription_data: SubscriptionCreateByFeedId = Body(...),
+    subscription_data: SubscriptionCreateByFeedId = Body(..., description="Subscription configuration including folder assignment"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> SubscriptionResponse:
-    """Subscribe to an existing feed by its ID without URL parsing or deduplication."""
+    """
+    Subscribe to an existing RSS feed by its UUID.
+
+    This endpoint allows users to subscribe to a feed that already exists in the global
+    feeds table without triggering URL parsing or deduplication logic. This is useful
+    for subscribing to feeds discovered through the feed discovery system.
+
+    Args:
+        feed_id: UUID of the existing feed to subscribe to
+        subscription_data: Configuration for the subscription including folder assignment
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        SubscriptionResponse: Complete subscription details including feed and folder info
+
+    Raises:
+        HTTPException:
+            - 400: If user is already subscribed to this feed or validation fails
+            - 404: If the feed doesn't exist
+            - 429: If user has reached maximum subscription limit
+            - 500: If an unexpected error occurs during subscription creation
+
+    Note:
+        - Requires authentication
+        - Subject to max_subscriptions resource limit
+        - Creates a direct subscription without URL validation
+    """
     subscription_service = SubscriptionService(db=db, user_id=UUID(current_user.sub))
 
     try:
@@ -121,15 +190,91 @@ async def subscribe_to_feed(
         ) from e
 
 
-@router.post("/", response_model=LegacyFeedResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/",
+    response_model=LegacyFeedResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Add a new RSS feed",
+    description="Add a new RSS feed by URL with automatic parsing, validation, and subscription creation",
+    responses={
+        201: {
+            "description": "Successfully added and subscribed to the feed",
+            "model": LegacyFeedResponse,
+        },
+        400: {
+            "description": "Bad request - invalid feed URL, parsing error, or validation failure",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_url": {
+                            "summary": "Invalid feed URL",
+                            "value": {"detail": "Invalid RSS feed URL"}
+                        },
+                        "parsing_error": {
+                            "summary": "Feed parsing failed",
+                            "value": {"detail": "Could not parse RSS feed content"}
+                        }
+                    }
+                }
+            }
+        },
+        422: {
+            "description": "Validation error in request body"
+        },
+        429: {
+            "description": "Too many subscriptions - resource limit exceeded"
+        },
+        503: {
+            "description": "Service unavailable - could not connect to feed URL",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Could not connect to feed URL: Connection timeout"}
+                }
+            }
+        },
+        500: {
+            "description": "Internal server error"
+        }
+    }
+)
 @require_resource_limit("max_subscriptions")
 async def add_new_feed(
     *,
     db: AsyncSession = Depends(get_db),
-    feed_in: FeedCreate = Body(...),
+    feed_in: FeedCreate = Body(..., description="Feed URL and folder assignment for the new subscription"),
     current_user: TokenData = Depends(get_current_user),
 ) -> LegacyFeedResponse:
-    """Add a new RSS feed by URL, associate with a folder and optional tags."""
+    """
+    Add a new RSS feed by URL with automatic parsing and subscription creation.
+
+    This endpoint performs the complete workflow of adding a new RSS feed:
+    1. Validates and fetches the RSS feed from the provided URL
+    2. Parses feed metadata (title, description, etc.)
+    3. Creates or finds existing feed in global feeds table
+    4. Creates user subscription with specified folder assignment
+    5. Returns complete feed information for immediate use
+
+    Args:
+        feed_in: Feed creation data including URL and folder assignment
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        LegacyFeedResponse: Complete feed details with subscription information
+
+    Raises:
+        HTTPException:
+            - 400: Invalid feed URL, parsing errors, or validation failures
+            - 429: User has reached maximum subscription limit
+            - 503: Cannot connect to the feed URL (network/server issues)
+            - 500: Unexpected error during feed processing
+
+    Note:
+        - Requires authentication
+        - Subject to max_subscriptions resource limit
+        - Performs full feed validation and content parsing
+        - Automatically handles feed deduplication
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         # Tags are now handled as ARRAY field on feeds - no tag_ids processing needed
@@ -175,7 +320,29 @@ async def add_new_feed(
         ) from e
 
 
-@router.get("/", response_model=list[FeedResponse])
+@router.get(
+    "/",
+    response_model=list[FeedResponse],
+    summary="List user's RSS feeds",
+    description="Retrieve all RSS feeds the user is subscribed to with optional filtering and pagination",
+    responses={
+        200: {
+            "description": "Successfully retrieved feeds list",
+            "model": list[FeedResponse],
+        },
+        400: {
+            "description": "Bad request - invalid query parameters",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Invalid folder_id format"}
+                }
+            }
+        },
+        422: {
+            "description": "Validation error in query parameters"
+        }
+    }
+)
 async def list_feeds(
     db: AsyncSession = Depends(get_db),
     folder_id: UUID | None = Query(None, description="Filter feeds by folder ID"),
@@ -184,12 +351,44 @@ async def list_feeds(
         description="Filter feeds by a list of tag names (case-insensitive, matches all provided tags)",
     ),
     is_favorite: bool | None = Query(None, description="Filter feeds by favorite status"),
-    search_query: str | None = Query(None, description="Search query for feed titles"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(100, ge=1, le=200),
+    search_query: str | None = Query(None, description="Search query for feed titles and descriptions"),
+    skip: int = Query(0, ge=0, description="Number of feeds to skip for pagination"),
+    limit: int = Query(100, ge=1, le=200, description="Maximum number of feeds to return (1-200)"),
     current_user: TokenData = Depends(get_current_user),
 ) -> list[FeedResponse]:
-    """List feeds for the current user with optional filtering."""
+    """
+    Retrieve all RSS feeds the authenticated user is subscribed to.
+
+    This endpoint provides a comprehensive list of the user's RSS feed subscriptions
+    with powerful filtering and search capabilities. Results are paginated and
+    include subscription-specific metadata like unread counts and folder assignments.
+
+    Args:
+        db: Database session dependency
+        folder_id: Optional UUID to filter feeds by specific folder
+        tag_names: Optional list of tag names to filter by (all tags must match)
+        is_favorite: Optional boolean to filter by favorite status
+        search_query: Optional text search in feed titles and descriptions
+        skip: Number of results to skip for pagination (default: 0)
+        limit: Maximum results to return, capped at 200 (default: 100)
+        current_user: Authenticated user information
+
+    Returns:
+        list[FeedResponse]: List of feed objects with subscription metadata
+
+    Filtering Examples:
+        - Get feeds in specific folder: `?folder_id=123e4567-e89b-12d3-a456-426614174000`
+        - Get favorite feeds only: `?is_favorite=true`
+        - Search by title: `?search_query=tech news`
+        - Filter by tags: `?tag_names=technology&tag_names=programming`
+        - Combine filters: `?folder_id=123&is_favorite=true&limit=50`
+
+    Note:
+        - Requires authentication
+        - Returns only feeds the user is subscribed to
+        - Tag filtering uses AND logic (all specified tags must match)
+        - Search is case-insensitive and searches titles and descriptions
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     feeds = await rss_service.list_feeds(
         folder_id=folder_id,
@@ -202,13 +401,60 @@ async def list_feeds(
     return feeds
 
 
-@router.get("/{feed_id}", response_model=FeedResponse)
+@router.get(
+    "/{feed_id}",
+    response_model=FeedResponse,
+    summary="Get a specific RSS feed",
+    description="Retrieve detailed information about a specific RSS feed by its UUID",
+    responses={
+        200: {
+            "description": "Successfully retrieved feed details",
+            "model": FeedResponse,
+        },
+        404: {
+            "description": "Feed not found or user not subscribed to this feed",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Feed not found"}
+                }
+            }
+        },
+        422: {
+            "description": "Invalid feed ID format"
+        }
+    }
+)
 async def get_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
-    """Get a specific feed by its ID."""
+    """
+    Retrieve detailed information about a specific RSS feed.
+
+    This endpoint returns comprehensive information about a single RSS feed,
+    including feed metadata, subscription details, and current status. The user
+    must be subscribed to the feed to access its details.
+
+    Args:
+        feed_id: UUID of the feed to retrieve
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        FeedResponse: Complete feed details including subscription metadata
+
+    Raises:
+        HTTPException:
+            - 404: Feed not found or user is not subscribed to this feed
+            - 422: Invalid UUID format for feed_id
+
+    Note:
+        - Requires authentication
+        - User must be subscribed to the feed to access its details
+        - Returns subscription-specific metadata like folder assignment
+        - Includes feed status information (last fetched, error state, etc.)
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     feed = await rss_service.get_feed(feed_id=feed_id)
     if not feed:
@@ -217,14 +463,94 @@ async def get_feed(
     return feed
 
 
-@router.put("/{feed_id}", response_model=FeedResponse)
+@router.put(
+    "/{feed_id}",
+    response_model=FeedResponse,
+    summary="Update feed settings",
+    description="Update user-configurable settings for an RSS feed subscription",
+    responses={
+        200: {
+            "description": "Successfully updated feed settings",
+            "model": FeedResponse,
+        },
+        400: {
+            "description": "Bad request - validation error in update data",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "invalid_folder": {
+                            "summary": "Invalid folder ID",
+                            "value": {"detail": "Folder not found or access denied"}
+                        },
+                        "validation_error": {
+                            "summary": "Field validation failed",
+                            "value": {"detail": "Title must be less than 500 characters"}
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Feed not found or user not subscribed to this feed",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Feed not found"}
+                }
+            }
+        },
+        422: {
+            "description": "Validation error in request body or invalid feed ID format"
+        },
+        500: {
+            "description": "Internal server error"
+        }
+    }
+)
 async def update_feed_settings(
     feed_id: UUID,
-    feed_in: FeedUpdate = Body(...),
+    feed_in: FeedUpdate = Body(..., description="Feed settings to update (all fields optional)"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
-    """Update a feed's user-configurable settings (folder, tags, favorite status, title)."""
+    """
+    Update user-configurable settings for an RSS feed subscription.
+
+    This endpoint allows users to modify their personal settings for a subscribed
+    RSS feed without affecting the global feed data. Users can update folder
+    assignment, custom title, favorite status, and other subscription preferences.
+
+    Args:
+        feed_id: UUID of the feed subscription to update
+        feed_in: Feed update data with optional fields to modify
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        FeedResponse: Updated feed details with new settings applied
+
+    Updatable Fields:
+        - folder_id: Move feed to different folder
+        - title: Custom title override for the feed
+        - description: Custom description override
+        - language: Feed language preference
+        - image_url: Custom image URL override
+        - ttl: Custom refresh interval (minutes)
+        - skip_hours: Hours to skip when fetching (0-23)
+        - skip_days: Days to skip when fetching
+
+    Raises:
+        HTTPException:
+            - 400: Validation error (invalid folder, title too long, etc.)
+            - 404: Feed not found or user not subscribed
+            - 422: Invalid request format or feed ID
+            - 500: Unexpected error during update
+
+    Note:
+        - Requires authentication
+        - User must be subscribed to the feed to update it
+        - All fields in the request body are optional
+        - Only affects user's subscription, not the global feed data
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         updated_feed = await rss_service.update_feed_user_settings(feed_id=feed_id, feed_in=feed_in)
@@ -257,21 +583,109 @@ async def update_feed_settings(
         ) from e
 
 
-@router.post("/{feed_id}/refresh", response_model=FeedResponse)
+@router.post(
+    "/{feed_id}/refresh",
+    response_model=FeedResponse,
+    summary="Refresh RSS feed",
+    description="Manually trigger a refresh of a specific RSS feed to fetch new articles",
+    responses={
+        200: {
+            "description": "Successfully triggered/completed feed refresh",
+            "model": FeedResponse,
+        },
+        400: {
+            "description": "Bad request - feed validation or parsing error",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "parsing_error": {
+                            "summary": "Feed parsing failed",
+                            "value": {"detail": "Invalid RSS/XML format"}
+                        },
+                        "validation_error": {
+                            "summary": "Feed validation failed",
+                            "value": {"detail": "Feed content validation failed"}
+                        }
+                    }
+                }
+            }
+        },
+        404: {
+            "description": "Feed not found or user not subscribed (unless preview mode)",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Feed not found"}
+                }
+            }
+        },
+        422: {
+            "description": "Invalid feed ID format or query parameters"
+        },
+        503: {
+            "description": "Service unavailable - could not connect to feed URL",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Could not connect to feed URL during refresh: Connection timeout"}
+                }
+            }
+        },
+        500: {
+            "description": "Internal server error during feed refresh"
+        }
+    }
+)
 async def refresh_feed(
     feed_id: UUID,
     force_refetch: bool = Query(
         False,
-        description="Force refetch even if not modified based on ETag/Last-Modified",
+        description="Force refetch even if not modified based on ETag/Last-Modified headers",
     ),
     preview: bool = Query(
         False,
-        description="Preview mode - refresh feed without requiring subscription",
+        description="Preview mode - refresh feed without requiring user subscription",
     ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
-    """Manually trigger a refresh of a specific feed to fetch new articles."""
+    """
+    Manually trigger a refresh of a specific RSS feed to fetch new articles.
+
+    This endpoint initiates an immediate refresh of the specified RSS feed,
+    bypassing the normal scheduled refresh cycle. It fetches the latest content
+    from the feed URL, parses new articles, and updates the database.
+
+    Args:
+        feed_id: UUID of the feed to refresh
+        force_refetch: If True, ignores ETag/Last-Modified headers and forces full refetch
+        preview: If True, allows refresh without user subscription (for feed preview)
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        FeedResponse: Updated feed details after refresh completion
+
+    Refresh Process:
+        1. Validates user access to the feed (unless preview mode)
+        2. Fetches current feed content from the source URL
+        3. Respects HTTP caching headers (ETag, Last-Modified) unless force_refetch=True
+        4. Parses RSS/Atom content and extracts articles
+        5. Updates feed metadata and adds new articles to database
+        6. Returns updated feed information
+
+    Raises:
+        HTTPException:
+            - 400: Feed parsing errors or content validation failures
+            - 404: Feed not found or user not subscribed (unless preview mode)
+            - 503: Network connectivity issues or feed server unavailable
+            - 500: Unexpected errors during refresh process
+
+    Note:
+        - Requires authentication
+        - In normal mode, user must be subscribed to refresh the feed
+        - Preview mode allows refreshing any feed for evaluation
+        - Force refetch bypasses HTTP caching for immediate updates
+        - Refresh is synchronous and may take several seconds for large feeds
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     try:
         refreshed_feed = await rss_service.refresh_feed(
@@ -325,14 +739,132 @@ async def refresh_feed(
         ) from e
 
 
-@router.get("/refresh_status/{task_id}", response_model=dict)
+@router.get(
+    "/refresh_status/{task_id}",
+    response_model=dict[str, Any],
+    summary="Get background refresh status",
+    description="Check the status of a background feed refresh task with detailed progress information",
+    responses={
+        200: {
+            "description": "Successfully retrieved task status",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "pending": {
+                            "summary": "Task pending",
+                            "value": {
+                                "task_id": "abc123",
+                                "status": "pending",
+                                "message": "Feed refresh is queued and waiting to start."
+                            }
+                        },
+                        "in_progress": {
+                            "summary": "Task in progress",
+                            "value": {
+                                "task_id": "abc123",
+                                "status": "in_progress",
+                                "pagination": {
+                                    "current_page": 1,
+                                    "total_pages": 3,
+                                    "page_size": 100,
+                                    "total_tasks": 250,
+                                    "has_more": True
+                                },
+                                "result": {
+                                    "page_refreshed_count": 45,
+                                    "page_failed_count": 5,
+                                    "page_completed_count": 50,
+                                    "total_feeds": 250
+                                }
+                            }
+                        },
+                        "completed": {
+                            "summary": "Task completed",
+                            "value": {
+                                "task_id": "abc123",
+                                "status": "completed",
+                                "result": {
+                                    "refreshed_count": 240,
+                                    "failed_count": 10,
+                                    "total_feeds": 250,
+                                    "message": "Refresh completed successfully"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        422: {
+            "description": "Invalid task ID or query parameters"
+        },
+        500: {
+            "description": "Error checking task status",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Could not check refresh status."}
+                }
+            }
+        }
+    }
+)
 async def get_refresh_status(
     task_id: str,
-    page: int = Query(1, ge=1, description="Page number for paginated task checking"),
-    page_size: int = Query(100, ge=1, le=500, description="Number of tasks to check per page"),
+    page: int = Query(1, ge=1, description="Page number for paginated task checking (1-based)"),
+    page_size: int = Query(100, ge=1, le=500, description="Number of tasks to check per page (1-500)"),
     current_user: TokenData = Depends(get_current_user),
 ) -> dict[str, Any]:
-    """Get the status of a background feed refresh task."""
+    """
+    Check the status of a background feed refresh task with detailed progress tracking.
+
+    This endpoint provides real-time status information for bulk feed refresh operations
+    that are processed asynchronously. It supports pagination for large refresh jobs
+    and provides detailed error reporting for failed feeds.
+
+    Args:
+        task_id: Unique identifier of the background refresh task
+        page: Page number for pagination when checking large task batches (default: 1)
+        page_size: Number of individual feed tasks to check per page (default: 100, max: 500)
+        current_user: Authenticated user information
+
+    Returns:
+        dict: Task status information with pagination and progress details
+
+    Response Structure:
+        - task_id: Original task identifier
+        - status: Current status (pending, in_progress, completed, failed)
+        - pagination: Page information for large task batches
+        - result: Detailed progress counts and error information
+        - failed_feeds: List of feeds that failed with error categorization
+
+    Task Status Values:
+        - "pending": Task is queued and waiting to start
+        - "in_progress": Task is actively processing feeds
+        - "completed": All feeds have been processed (some may have failed)
+        - "failed": Task failed completely (orchestration error)
+
+    Error Categories:
+        - "timeout": Feed server not responding
+        - "not_found": Feed URL returns 404
+        - "access_denied": Feed URL returns 403
+        - "server_error": Feed server returns 5xx errors
+        - "parse_error": Invalid RSS/XML format
+        - "connection_error": Network connectivity issues
+        - "data_error": Invalid data types in feed content
+        - "other": Uncategorized errors
+
+    Raises:
+        HTTPException:
+            - 422: Invalid task ID format or query parameters
+            - 500: Error accessing task status or Redis connectivity issues
+
+    Note:
+        - Requires authentication
+        - For large refresh jobs, use pagination to avoid timeouts
+        - Failed feeds include detailed error categorization
+        - Client should check all pages to determine overall completion
+        - Task results are cached for efficiency
+    """
     try:
         from app.core.celery_app import celery
 
@@ -607,13 +1139,68 @@ async def get_refresh_status(
         ) from e
 
 
-@router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{feed_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete RSS feed subscription",
+    description="Remove user's subscription to an RSS feed and delete associated user data",
+    responses={
+        204: {
+            "description": "Successfully deleted feed subscription"
+        },
+        404: {
+            "description": "Feed not found or user not subscribed to this feed",
+            "content": {
+                "application/json": {
+                    "example": {"detail": "Feed not found"}
+                }
+            }
+        },
+        422: {
+            "description": "Invalid feed ID format"
+        }
+    }
+)
 async def delete_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> JSONResponse:
-    """Delete a feed. Associated articles will also be deleted (cascade)."""
+    """
+    Delete user's subscription to an RSS feed and remove associated user data.
+
+    This endpoint removes the user's subscription to the specified RSS feed.
+    It deletes the subscription record and any user-specific data associated
+    with articles from this feed, including read status, favorites, and notes.
+
+    Args:
+        feed_id: UUID of the feed subscription to delete
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        JSONResponse: Empty response with 204 status code on success
+
+    Deletion Effects:
+        - Removes user's subscription to the feed
+        - Deletes user-specific article states (read, favorite, notes)
+        - Removes feed from user's folders and organization
+        - Does NOT delete the global feed or articles (other users may be subscribed)
+        - Cascading deletion handles related user data automatically
+
+    Raises:
+        HTTPException:
+            - 404: Feed not found or user is not subscribed to this feed
+            - 422: Invalid UUID format for feed_id
+
+    Note:
+        - Requires authentication
+        - User must be subscribed to the feed to delete it
+        - This is a user-specific deletion (unsubscribe)
+        - Global feed data remains for other subscribers
+        - Action is irreversible - user data cannot be recovered
+        - Returns 204 No Content on successful deletion
+    """
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     success = await rss_service.delete_feed(feed_id=feed_id)
     if not success:

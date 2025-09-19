@@ -5,6 +5,8 @@ services:
     image: redis:alpine
     container_name: readspace_redis
     restart: always
+    ports:
+      - 6379:6379
     volumes:
         - redis-data:/data
     healthcheck:
@@ -66,7 +68,7 @@ services:
     container_name: readspace_worker
     command: celery -A app.core.celery_app  worker -l info
     volumes:
-      - ./server:/app
+      - ../server:/app
     depends_on:
       redis:
         condition: service_healthy
@@ -92,7 +94,7 @@ services:
     container_name: readspace_beat
     command: celery -A app.core.celery_app beat -l info
     volumes:
-      - ./server:/app
+      - ../server:/app
     depends_on:
       redis:
         condition: service_healthy

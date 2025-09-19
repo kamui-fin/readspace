@@ -22,11 +22,11 @@ from . import (
 router = APIRouter()
 
 # Include all route modules
-router.include_router(article_enhancements.router, tags=["Article Enhancements"])
-router.include_router(books.router, tags=["Books"])
-router.include_router(highlights.router, tags=["Highlights"])
+router.include_router(article_enhancements.router)
+router.include_router(books.router)
+router.include_router(highlights.router)
 router.include_router(upload.router, prefix="/upload", tags=["Upload"])
-router.include_router(users.router, tags=["Users"])
+router.include_router(users.router)
 
 # RSS Routers
 router.include_router(rss_folders.router, prefix="/rss")

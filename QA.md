@@ -8,3 +8,10 @@
 - ai summary preview padding
 - remove excessive debug logging
 - OPML cancel is fucked
+- OPML Checking for active imports... ugly not needed (shouldnt this be SSRed too?)
+- Extract content -> summarize broken
+- default page should be /today
+- syntax highlighting broken
+- Improve AI prompting:
+  - [ ]  Translate: maintain html structure & original tone
+  - [ ]  Summarize: be slightly more concise and stick to original language the article was written in. if unsure, default to english
