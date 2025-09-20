@@ -13,9 +13,7 @@ from app.schemas.subscription_schemas import (
 )
 
 
-async def get_user_article_state(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState | None:
+async def get_user_article_state(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState | None:
     """Get user's state for a specific article."""
     result = await db.execute(
         select(UserArticleState).filter(
@@ -39,12 +37,10 @@ async def get_user_article_states_batch(
             UserArticleState.article_id.in_(article_ids),
         )
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
-async def create_user_article_state(
-    db: AsyncSession, *, state_in: UserArticleStateCreate
-) -> UserArticleState:
+async def create_user_article_state(db: AsyncSession, *, state_in: UserArticleStateCreate) -> UserArticleState:
     """Create a new user article state."""
     state_data = state_in.model_dump()
     if state_data.get("is_read") and "read_at" not in state_data:
@@ -78,13 +74,9 @@ async def update_user_article_state(
     return state_db
 
 
-async def get_or_create_user_article_state(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState:
+async def get_or_create_user_article_state(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState:
     """Get existing state or create a new default state."""
-    existing_state = await get_user_article_state(
-        db, user_id=user_id, article_id=article_id
-    )
+    existing_state = await get_user_article_state(db, user_id=user_id, article_id=article_id)
     if existing_state:
         return existing_state
 
@@ -95,9 +87,7 @@ async def get_or_create_user_article_state(
     return await create_user_article_state(db, state_in=state_in)
 
 
-async def mark_article_read(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState:
+async def mark_article_read(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState:
     """Mark an article as read for a user."""
     state = await get_user_article_state(db, user_id=user_id, article_id=article_id)
 
@@ -112,17 +102,13 @@ async def mark_article_read(
         # Create new state marked as read
         from app.schemas.subscription_schemas import UserArticleStateCreate
 
-        state_in = UserArticleStateCreate(
-            user_id=user_id, article_id=article_id, is_read=True
-        )
+        state_in = UserArticleStateCreate(user_id=user_id, article_id=article_id, is_read=True)
         state = await create_user_article_state(db, state_in=state_in)
 
     return state
 
 
-async def mark_article_unread(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState:
+async def mark_article_unread(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState:
     """Mark an article as unread for a user."""
     state = await get_user_article_state(db, user_id=user_id, article_id=article_id)
 
@@ -143,13 +129,9 @@ async def mark_article_unread(
     return state
 
 
-async def toggle_article_favorite(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState:
+async def toggle_article_favorite(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState:
     """Toggle favorite status for an article."""
-    state = await get_or_create_user_article_state(
-        db, user_id=user_id, article_id=article_id
-    )
+    state = await get_or_create_user_article_state(db, user_id=user_id, article_id=article_id)
 
     state.is_favorite = not state.is_favorite
     db.add(state)
@@ -158,13 +140,9 @@ async def toggle_article_favorite(
     return state
 
 
-async def toggle_article_read_later(
-    db: AsyncSession, *, user_id: UUID, article_id: UUID
-) -> UserArticleState:
+async def toggle_article_read_later(db: AsyncSession, *, user_id: UUID, article_id: UUID) -> UserArticleState:
     """Toggle read later status for an article."""
-    state = await get_or_create_user_article_state(
-        db, user_id=user_id, article_id=article_id
-    )
+    state = await get_or_create_user_article_state(db, user_id=user_id, article_id=article_id)
 
     state.is_read_later = not state.is_read_later
     db.add(state)
@@ -173,9 +151,7 @@ async def toggle_article_read_later(
     return state
 
 
-async def get_user_unread_count(
-    db: AsyncSession, *, user_id: UUID, subscription_ids: list[UUID] | None = None
-) -> int:
+async def get_user_unread_count(db: AsyncSession, *, user_id: UUID, subscription_ids: list[UUID] | None = None) -> int:
     """Get count of unread articles for a user."""
     from app.models.rss_models import FeedArticle, FeedSubscription
 
@@ -199,7 +175,7 @@ async def get_user_unread_count(
     ).filter(
         or_(
             UserArticleState.id.is_(None),  # No state record (unread by default)
-            UserArticleState.is_read == False,  # Explicitly marked unread
+            UserArticleState.is_read.is_(False),  # Explicitly marked unread
         )
     )
 
@@ -207,25 +183,21 @@ async def get_user_unread_count(
     return len(result.scalars().all())
 
 
-async def get_user_favorite_article_ids(
-    db: AsyncSession, *, user_id: UUID
-) -> list[UUID]:
+async def get_user_favorite_article_ids(db: AsyncSession, *, user_id: UUID) -> list[UUID]:
     """Get IDs of user's favorite articles."""
     result = await db.execute(
         select(UserArticleState.article_id).filter(
-            UserArticleState.user_id == user_id, UserArticleState.is_favorite == True
+            UserArticleState.user_id == user_id, UserArticleState.is_favorite.is_(True)
         )
     )
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
-async def get_user_read_later_article_ids(
-    db: AsyncSession, *, user_id: UUID
-) -> list[UUID]:
+async def get_user_read_later_article_ids(db: AsyncSession, *, user_id: UUID) -> list[UUID]:
     """Get IDs of user's read-later articles."""
     result = await db.execute(
         select(UserArticleState.article_id).filter(
-            UserArticleState.user_id == user_id, UserArticleState.is_read_later == True
+            UserArticleState.user_id == user_id, UserArticleState.is_read_later.is_(True)
         )
     )
-    return result.scalars().all()
+    return list(result.scalars().all())

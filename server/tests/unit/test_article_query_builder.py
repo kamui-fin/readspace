@@ -24,7 +24,7 @@ class TestArticleQueryBuilder:
         """Test building basic feed article query."""
         filters = {}
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         assert isinstance(query, Select)
         # Query should filter by user_id
         query_str = str(query)
@@ -34,9 +34,9 @@ class TestArticleQueryBuilder:
         """Test building feed article query with feed_ids filter."""
         feed_ids = [uuid4(), uuid4()]
         filters = {"feed_ids": feed_ids}
-        
+
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         # Should contain feed_id filter
         query_str = str(query)
         assert "feed_id" in query_str.lower()
@@ -44,9 +44,9 @@ class TestArticleQueryBuilder:
     def test_build_feed_article_query_with_folder_id(self):
         """Test building feed article query with folder_id filter."""
         filters = {"folder_id": self.folder_id}
-        
+
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         # Should contain join with Feed table
         query_str = str(query)
         assert "feed" in query_str.lower()
@@ -59,9 +59,9 @@ class TestArticleQueryBuilder:
             "is_favorite": True,
             "feed_is_favorite": False,
         }
-        
+
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         query_str = str(query)
         assert "is_read" in query_str.lower()
 
@@ -71,9 +71,9 @@ class TestArticleQueryBuilder:
             "published_since": self.test_time,
             "published_until": self.test_time,
         }
-        
+
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         # Should join with ArticleContent for published_at
         query_str = str(query)
         assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
@@ -81,9 +81,9 @@ class TestArticleQueryBuilder:
     def test_build_feed_article_query_with_search(self):
         """Test building feed article query with search query."""
         filters = {"search_query": "test search"}
-        
+
         query = self.builder.build_feed_article_query(self.user_id, filters)
-        
+
         # Should join with ArticleContent for search
         query_str = str(query)
         assert "article_content" in query_str.lower() or "articlecontent" in query_str.lower()
@@ -92,7 +92,7 @@ class TestArticleQueryBuilder:
         """Test building basic clipped article query."""
         filters = {}
         query = self.builder.build_clipped_article_query(self.user_id, filters)
-        
+
         assert isinstance(query, Select)
         # Should filter by user_id
         query_str = str(query)
@@ -108,9 +108,9 @@ class TestArticleQueryBuilder:
             "published_until": self.test_time,
             "search_query": "test search",
         }
-        
+
         query = self.builder.build_clipped_article_query(self.user_id, filters)
-        
+
         query_str = str(query)
         assert "is_read" in query_str.lower()
 
@@ -128,9 +128,9 @@ class TestArticleQueryBuilder:
             "published_until": self.test_time,
             "search_query": "test",
         }
-        
+
         result_query = self.builder._apply_feed_article_filters(base_query, filters)
-        
+
         assert isinstance(result_query, Select)
         query_str = str(result_query)
         assert "feed_id" in query_str.lower()
@@ -146,9 +146,9 @@ class TestArticleQueryBuilder:
             "published_until": self.test_time,
             "search_query": "test",
         }
-        
+
         result_query = self.builder._apply_clipped_article_filters(base_query, filters)
-        
+
         assert isinstance(result_query, Select)
         query_str = str(result_query)
         assert "is_read" in query_str.lower()
@@ -162,9 +162,9 @@ class TestArticleQueryBuilder:
             "is_favorite": None,
             "feed_is_favorite": None,
         }
-        
+
         result_query = self.builder._apply_feed_article_filters(base_query, filters)
-        
+
         # Query should be essentially unchanged (only user filter)
         assert isinstance(result_query, Select)
 
@@ -176,9 +176,9 @@ class TestArticleQueryBuilder:
             "is_read_later": None,
             "is_favorite": None,
         }
-        
+
         result_query = self.builder._apply_clipped_article_filters(base_query, filters)
-        
+
         # Query should be essentially unchanged
         assert isinstance(result_query, Select)
 
@@ -186,7 +186,7 @@ class TestArticleQueryBuilder:
         """Test normalizing feed article query for union."""
         base_query = self.builder.build_feed_article_query(self.user_id, {})
         normalized = self.builder._normalize_feed_article_query(base_query)
-        
+
         assert isinstance(normalized, Select)
         # Should select specific columns
         query_str = str(normalized)
@@ -196,7 +196,7 @@ class TestArticleQueryBuilder:
         """Test normalizing clipped article query for union."""
         base_query = select(ClippedArticle)
         normalized = self.builder._normalize_clipped_article_query(base_query)
-        
+
         assert isinstance(normalized, Select)
         # Should select specific columns
         query_str = str(normalized)
@@ -205,40 +205,40 @@ class TestArticleQueryBuilder:
     def test_get_sort_column_published_at(self):
         """Test getting sort column for published_at."""
         from unittest.mock import MagicMock
-        
+
         mock_table = MagicMock()
         mock_table.c.published_at = "published_at_column"
-        
+
         result = self.builder._get_sort_column(mock_table, "published_at")
         assert result == "published_at_column"
 
     def test_get_sort_column_title(self):
         """Test getting sort column for title."""
         from unittest.mock import MagicMock
-        
+
         mock_table = MagicMock()
         mock_table.c.title = "title_column"
-        
+
         result = self.builder._get_sort_column(mock_table, "title")
         assert result == "title_column"
 
     def test_get_sort_column_created_at(self):
         """Test getting sort column for created_at (maps to published_at)."""
         from unittest.mock import MagicMock
-        
+
         mock_table = MagicMock()
         mock_table.c.published_at = "published_at_column"
-        
+
         result = self.builder._get_sort_column(mock_table, "created_at")
         assert result == "published_at_column"
 
     def test_get_sort_column_default(self):
         """Test getting sort column for unknown sort_by (defaults to published_at)."""
         from unittest.mock import MagicMock
-        
+
         mock_table = MagicMock()
         mock_table.c.published_at = "published_at_column"
-        
+
         result = self.builder._get_sort_column(mock_table, "unknown_column")
         assert result == "published_at_column"
 
@@ -246,7 +246,7 @@ class TestArticleQueryBuilder:
         """Test building count query from base query."""
         base_query = select(FeedArticle)
         count_query = self.builder.build_count_query(base_query)
-        
+
         assert isinstance(count_query, Select)
         # Should contain count function
         query_str = str(count_query)
@@ -256,22 +256,20 @@ class TestArticleQueryBuilder:
         """Test building basic union query."""
         feed_query = self.builder.build_feed_article_query(self.user_id, {})
         clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
-        
+
         union_query = self.builder.build_union_query(
             feed_query, clipped_query, sort_by="published_at", sort_order="desc"
         )
-        
+
         assert isinstance(union_query, Select)
 
     def test_build_union_query_with_pagination(self):
         """Test building union query with pagination."""
         feed_query = self.builder.build_feed_article_query(self.user_id, {})
         clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
-        
-        union_query = self.builder.build_union_query(
-            feed_query, clipped_query, skip=10, limit=20
-        )
-        
+
+        union_query = self.builder.build_union_query(feed_query, clipped_query, skip=10, limit=20)
+
         assert isinstance(union_query, Select)
         # Should contain limit and offset
         query_str = str(union_query)
@@ -281,11 +279,9 @@ class TestArticleQueryBuilder:
         """Test building union query with ascending order."""
         feed_query = self.builder.build_feed_article_query(self.user_id, {})
         clipped_query = self.builder.build_clipped_article_query(self.user_id, {})
-        
-        union_query = self.builder.build_union_query(
-            feed_query, clipped_query, sort_order="asc"
-        )
-        
+
+        union_query = self.builder.build_union_query(feed_query, clipped_query, sort_order="asc")
+
         assert isinstance(union_query, Select)
         # Should contain ascending order
         query_str = str(union_query)

@@ -10,9 +10,7 @@ from app.schemas.rss_schemas import ArticleResponse
 class ArticleTransformer:
     """Transforms articles between different representations."""
 
-    def feed_to_unified(
-        self, feed_article: FeedArticle | tuple[FeedArticle, UserArticleState]
-    ) -> ArticleResponse:
+    def feed_to_unified(self, feed_article: FeedArticle | tuple[FeedArticle, UserArticleState]) -> ArticleResponse:
         """Convert FeedArticle to unified ArticleResponse."""
         # Handle both single FeedArticle and tuple of (FeedArticle, UserArticleState)
         if isinstance(feed_article, tuple):
@@ -49,9 +47,7 @@ class ArticleTransformer:
             published_at=content.published_at if content else None,
             author=content.author if content else None,
             image_url=content.image_url if content else None,
-            estimated_read_time_minutes=content.estimated_read_time_minutes
-            if content
-            else None,
+            estimated_read_time_minutes=content.estimated_read_time_minutes if content else None,
             is_read=is_read,
             is_read_later=is_read_later,
             is_favorite=is_favorite,
@@ -77,9 +73,7 @@ class ArticleTransformer:
             published_at=clipped_article.created_at,  # Use created_at as published_at
             author=content.author if content else None,
             image_url=content.image_url if content else None,
-            estimated_read_time_minutes=content.estimated_read_time_minutes
-            if content
-            else None,
+            estimated_read_time_minutes=content.estimated_read_time_minutes if content else None,
             is_read=clipped_article.is_read,
             is_read_later=clipped_article.is_read_later,
             is_favorite=clipped_article.is_favorite,

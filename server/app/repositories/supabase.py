@@ -32,7 +32,7 @@ def get_supabase_client() -> Client:
         return client
     except Exception as e:
         logger.error("Failed to create Supabase client", error=str(e))
-        raise StorageError("Failed to initialize storage client")
+        raise StorageError("Failed to initialize storage client") from e
 
 
 def get_storage_client() -> "SupabaseStorageClient":
@@ -43,7 +43,7 @@ def get_storage_client() -> "SupabaseStorageClient":
 class SupabaseStorageClient:
     """Client for interacting with Supabase Storage."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.client = get_supabase_client()
         self.bucket_name = "documents"
 
@@ -74,17 +74,17 @@ class SupabaseStorageClient:
 
             logger.info("Uploading file to storage", path=path)
 
-            result = self.client.storage.from_(self.bucket_name).upload(
+            self.client.storage.from_(self.bucket_name).upload(
                 path=path,
                 file=file_bytes,
             )
 
             logger.info("File upload successful", path=path)
-            return result
+            return path
 
         except Exception as e:
             logger.error("Storage upload failed", error=str(e), path=path)
-            raise StorageError(f"Failed to upload file: {str(e)}")
+            raise StorageError(f"Failed to upload file: {str(e)}") from e
 
     async def download_file(self, object_name: str) -> bytes:
         """
@@ -102,14 +102,14 @@ class SupabaseStorageClient:
         try:
             logger.info("Downloading file from storage", path=object_name)
 
-            result = self.client.storage.from_(self.bucket_name).download(object_name)
+            result: bytes = self.client.storage.from_(self.bucket_name).download(object_name)
 
             logger.info("File download successful", path=object_name)
             return result
 
         except Exception as e:
             logger.error("Storage download failed", error=str(e), path=object_name)
-            raise StorageError(f"Failed to download file: {str(e)}")
+            raise StorageError(f"Failed to download file: {str(e)}") from e
 
     async def delete_file(self, object_name: str) -> bool:
         """
@@ -134,4 +134,4 @@ class SupabaseStorageClient:
 
         except Exception as e:
             logger.error("Storage deletion failed", error=str(e), path=object_name)
-            raise StorageError(f"Failed to delete file: {str(e)}")
+            raise StorageError(f"Failed to delete file: {str(e)}") from e

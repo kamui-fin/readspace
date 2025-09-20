@@ -1,5 +1,5 @@
 import json
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import redis.asyncio as redis
@@ -12,15 +12,15 @@ class TestRedisCache:
     def setup_method(self):
         self.cache = RedisCache()
 
-    @patch('app.core.redis_cache.redis')
-    @patch('app.core.redis_cache.get_settings')
+    @patch("app.core.redis_cache.redis")
+    @patch("app.core.redis_cache.get_settings")
     @pytest.mark.asyncio
     async def test_get_client_success(self, mock_get_settings, mock_redis):
         # Setup
         mock_settings = MagicMock()
         mock_settings.REDIS_URL = "redis://localhost:6379"
         mock_get_settings.return_value = mock_settings
-        
+
         mock_client = AsyncMock()
         mock_redis.from_url.return_value = mock_client
         mock_client.ping.return_value = None
@@ -37,29 +37,29 @@ class TestRedisCache:
         assert call_args[1]["decode_responses"] is True
         mock_client.ping.assert_called_once()
 
-    @patch('app.core.redis_cache.get_settings')
+    @patch("app.core.redis_cache.get_settings")
     @pytest.mark.asyncio
     async def test_get_client_connection_error(self, mock_get_settings):
         # Setup
         mock_settings = MagicMock()
         mock_settings.REDIS_URL = "redis://localhost:6379"
         mock_get_settings.return_value = mock_settings
-        
+
         # Patch redis.from_url to raise an exception
-        with patch('app.core.redis_cache.redis.from_url') as mock_from_url:
+        with patch("app.core.redis_cache.redis.from_url") as mock_from_url:
             mock_from_url.side_effect = redis.ConnectionError("Connection failed")
 
             # Execute & Verify
             with pytest.raises(ConnectionError, match="Failed to connect to Redis"):
                 await RedisCache._get_client()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_cache_hit_json(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         test_data = {"key": "value", "number": 123}
         mock_client.get.return_value = json.dumps(test_data)
 
@@ -71,17 +71,17 @@ class TestRedisCache:
         mock_client.get.assert_called_once_with("test_key")
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_cache_hit_non_json(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         test_value = "simple string value"
         mock_client.get.return_value = test_value
 
-        # Execute  
+        # Execute
         result = await self.cache.get("test_key")
 
         # Verify - should return raw value when JSON decode fails
@@ -89,7 +89,7 @@ class TestRedisCache:
         mock_client.get.assert_called_once_with("test_key")
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_cache_miss(self, mock_get_client):
         # Setup
@@ -105,7 +105,7 @@ class TestRedisCache:
         mock_client.get.assert_called_once_with("missing_key")
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_connection_error(self, mock_get_client):
         # Setup
@@ -117,7 +117,7 @@ class TestRedisCache:
         # Verify
         assert result is None
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_general_exception(self, mock_get_client):
         # Setup
@@ -132,13 +132,13 @@ class TestRedisCache:
         assert result is None
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_without_ttl(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         test_data = {"key": "value", "number": 123}
 
         # Execute
@@ -150,13 +150,13 @@ class TestRedisCache:
         mock_client.setex.assert_not_called()
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_with_ttl(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         test_data = {"key": "value"}
         ttl = 3600
 
@@ -169,7 +169,7 @@ class TestRedisCache:
         mock_client.set.assert_not_called()
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_connection_error(self, mock_get_client):
         # Setup
@@ -181,7 +181,7 @@ class TestRedisCache:
         # Verify
         assert result is False
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_general_exception(self, mock_get_client):
         # Setup
@@ -196,7 +196,7 @@ class TestRedisCache:
         assert result is False
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_delete_success(self, mock_get_client):
         # Setup
@@ -211,7 +211,7 @@ class TestRedisCache:
         mock_client.delete.assert_called_once_with("test_key")
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_delete_connection_error(self, mock_get_client):
         # Setup
@@ -223,7 +223,7 @@ class TestRedisCache:
         # Verify
         assert result is False
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_delete_general_exception(self, mock_get_client):
         # Setup
@@ -239,19 +239,18 @@ class TestRedisCache:
         mock_client.close.assert_called_once()
 
 
-
 @pytest.mark.unit
 class TestRedisCacheDataSerialization:
     def setup_method(self):
         self.cache = RedisCache()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_get_complex_data(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         complex_data = {
             "string": "test",
             "number": 42,
@@ -259,24 +258,22 @@ class TestRedisCacheDataSerialization:
             "boolean": True,
             "null": None,
             "list": [1, 2, 3],
-            "nested": {
-                "inner": "value"
-            }
+            "nested": {"inner": "value"},
         }
-        
+
         # Mock set operation
         serialized_data = json.dumps(complex_data)
-        
+
         # Mock get operation to return the serialized data
         mock_client.get.return_value = serialized_data
 
         # Execute set
         set_result = await self.cache.set("complex_key", complex_data)
-        
+
         # Verify set
         assert set_result is True
         mock_client.set.assert_called_once_with("complex_key", serialized_data)
-        
+
         # Reset mock for get operation
         mock_get_client.reset_mock()
         mock_client.reset_mock()
@@ -289,13 +286,13 @@ class TestRedisCacheDataSerialization:
         # Verify get
         assert get_result == complex_data
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_non_serializable_data(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         # Create non-serializable data (function)
         non_serializable = lambda x: x
 
@@ -312,13 +309,13 @@ class TestRedisCacheEdgeCases:
     def setup_method(self):
         self.cache = RedisCache()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_get_with_malformed_json(self, mock_get_client):
         # Setup
         mock_client = AsyncMock()
         mock_get_client.return_value = mock_client
-        
+
         # Return malformed JSON
         mock_client.get.return_value = '{"invalid": json,}'
 
@@ -329,7 +326,7 @@ class TestRedisCacheEdgeCases:
         assert result == '{"invalid": json,}'
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_empty_string(self, mock_get_client):
         # Setup
@@ -344,7 +341,7 @@ class TestRedisCacheEdgeCases:
         mock_client.set.assert_called_once_with("empty_key", '""')  # JSON-encoded empty string
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_set_zero_ttl(self, mock_get_client):
         # Setup
@@ -360,7 +357,7 @@ class TestRedisCacheEdgeCases:
         mock_client.setex.assert_not_called()
         mock_client.close.assert_called_once()
 
-    @patch.object(RedisCache, '_get_client')
+    @patch.object(RedisCache, "_get_client")
     @pytest.mark.asyncio
     async def test_client_close_error_handling(self, mock_get_client):
         # Setup

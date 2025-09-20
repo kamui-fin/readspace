@@ -1,8 +1,8 @@
 """PageRank service for domain authority scoring."""
 
 import json
-import os
-from functools import lru_cache
+from pathlib import Path
+from typing import Any
 
 import structlog
 
@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 class PageRankService:
     """Service for domain authority scoring using merged PageRank datasets."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.settings = get_settings()
         self._domain_scores: dict[str, float] | None = None
         self._load_dataset()
@@ -23,25 +23,21 @@ class PageRankService:
         """Load the merged PageRank dataset."""
         try:
             # Look for merged dataset in app/data/
-            dataset_path = os.path.join(
-                os.path.dirname(os.path.dirname(__file__)),
-                'data',
-                'merged_pagerank.json'
-            )
+            dataset_path = Path(__file__).parent.parent / "data" / "merged_pagerank.json"
 
-            if os.path.exists(dataset_path):
-                with open(dataset_path, encoding='utf-8') as f:
+            if dataset_path.exists():
+                with dataset_path.open(encoding="utf-8") as f:
                     self._domain_scores = json.load(f)
 
                 logger.info(
                     "PageRank dataset loaded",
                     total_domains=len(self._domain_scores),
-                    file_size_mb=round(os.path.getsize(dataset_path) / 1024 / 1024, 1)
+                    file_size_mb=round(dataset_path.stat().st_size / 1024 / 1024, 1),
                 )
             else:
                 logger.warning(
                     "PageRank dataset not found, using empty dataset",
-                    expected_path=dataset_path
+                    expected_path=dataset_path,
                 )
                 self._domain_scores = {}
 
@@ -49,14 +45,13 @@ class PageRankService:
             logger.error("Failed to load PageRank dataset", error=str(e), exc_info=True)
             self._domain_scores = {}
 
-    @lru_cache(maxsize=1024)
     def get_domain_score(self, domain: str) -> float:
         """
         Get PageRank score for a domain.
-        
+
         Args:
             domain: Domain to score (e.g., 'example.com')
-            
+
         Returns:
             Score from 0.0 to 100.0 (higher = more authoritative)
         """
@@ -67,18 +62,18 @@ class PageRankService:
             return 0.0
 
         # Clean domain
-        domain_clean = domain.lower().replace('www.', '')
+        domain_clean = domain.lower().replace("www.", "")
 
         # Direct lookup
         if domain_clean in self._domain_scores:
             return self._domain_scores[domain_clean]
 
         # Try subdomain fallback (e.g., blog.example.com -> example.com)
-        if '.' in domain_clean:
-            parts = domain_clean.split('.')
+        if "." in domain_clean:
+            parts = domain_clean.split(".")
             if len(parts) > 2:
                 # Try parent domain
-                parent_domain = '.'.join(parts[-2:])
+                parent_domain = ".".join(parts[-2:])
                 if parent_domain in self._domain_scores:
                     # Give subdomain slightly lower score
                     return self._domain_scores[parent_domain] * 0.8
@@ -89,7 +84,7 @@ class PageRankService:
         """Check if PageRank dataset is loaded."""
         return self._domain_scores is not None and len(self._domain_scores) > 0
 
-    def get_stats(self) -> dict[str, any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get dataset statistics."""
         if not self._domain_scores:
             return {"loaded": False, "total_domains": 0}

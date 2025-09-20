@@ -1,9 +1,17 @@
 <div align="center">
-  <img src="./web/public/readspace.svg" alt="Readspace Logo" width="100" />
+  <img src="./web/public/wordmark.png" alt="Readspace Logo" width="300" />
 </div>
 
 
 # Readspace
+
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kamui-fin/readspace/ci.yml)
+![Discord](https://img.shields.io/discord/1349476822290530357?style=flat&logo=discord&label=discord&link=https%3A%2F%2Fdiscord.com%2Finvite%2F2Q5PtYwUQZ)
+![X (formerly Twitter) Follow](https://img.shields.io/twitter/follow/readspace_ai)
+![GitHub License](https://img.shields.io/github/license/kamui-fin/readspace)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/kamui-fin/readspace)
+![GitHub Repo stars](https://img.shields.io/github/stars/kamui-fin/readspace)
+
 
 **Tired of digital noise? Readspace brings all your content into one clean, distraction-free inbox.**
 
@@ -40,6 +48,7 @@ Readspace is perfect if you:
 * **Git**: For cloning the repository.
 * **Docker**: Ensure Docker Desktop or Docker Engine is installed and running (v20 or higher recommended).
 * **jq**: Command-line JSON processor used by setup scripts.
+* **Bun** (optional): For local development of the frontend apps. Install from [bun.sh](https://bun.sh)
 
 ### Self-Hosting with 3 steps
 
@@ -56,13 +65,13 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 2.  **Configure `.env` files**
 
     ```bash
-    ./setup.sh
+    ./docker/setup.sh
     ```
 
 3.  **Launch services**
 
     ```bash
-    ./start_docker.sh
+    ./docker/launch.sh
     ```
 4.  **Access your instance**
 
@@ -75,7 +84,7 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
     To connect the browser extension to your self-hosted instance, configure:
     - **Server URL**: `http://your-ip-or-domain:18042`
     - **Supabase URL**: `http://your-ip-or-domain:18000`
-    - **Supabase Anon Key**: `grep NEXT_PUBLIC_SUPABASE_ANON_KEY web/.env`
+    - **Supabase Anon Key**: `grep NEXT_PUBLIC_SUPABASE_ANON_KEY apps/web/.env`
 
 ## Contributing
 

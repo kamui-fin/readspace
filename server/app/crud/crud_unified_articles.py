@@ -1,6 +1,7 @@
 """Unified CRUD operations for both feed and clipped articles."""
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,7 @@ from app.schemas.rss_schemas import ArticleResponse
 class CRUDUnifiedArticles:
     """CRUD operations for unified article views combining feed and clipped articles."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.query_builder = ArticleQueryBuilder()
         self.transformer = ArticleTransformer()
 
@@ -21,15 +22,15 @@ class CRUDUnifiedArticles:
         self,
         db: AsyncSession,
         user_id: UUID,
-        feed_ids: list[UUID] = None,
-        folder_id: UUID = None,
-        is_read: bool = None,
-        is_read_later: bool = None,
-        is_favorite: bool = None,
-        feed_is_favorite: bool = None,
-        published_since: datetime = None,
-        published_until: datetime = None,
-        search_query: str = None,
+        feed_ids: list[UUID] | None = None,
+        folder_id: UUID | None = None,
+        is_read: bool | None = None,
+        is_read_later: bool | None = None,
+        is_favorite: bool | None = None,
+        feed_is_favorite: bool | None = None,
+        published_since: datetime | None = None,
+        published_until: datetime | None = None,
+        search_query: str | None = None,
         sort_by: str = "published_at",
         sort_order: str = "desc",
         skip: int = 0,
@@ -58,9 +59,7 @@ class CRUDUnifiedArticles:
         if include_feed_articles and include_clipped_articles:
             # Build union query
             feed_query = self.query_builder.build_feed_article_query(user_id, filters)
-            clipped_query = self.query_builder.build_clipped_article_query(
-                user_id, filters
-            )
+            clipped_query = self.query_builder.build_clipped_article_query(user_id, filters)
 
             union_query = self.query_builder.build_union_query(
                 feed_query, clipped_query, sort_by, sort_order, skip, limit
@@ -76,16 +75,14 @@ class CRUDUnifiedArticles:
             # Get total count
             count_query = self.query_builder.build_count_query(union_query)
             count_result = await db.execute(count_query)
-            total_count = count_result.scalar()
+            total_count = count_result.scalar() or 0
 
         elif include_feed_articles:
             # Only feed articles
             feed_query = self.query_builder.build_feed_article_query(user_id, filters)
 
             # Apply sorting and pagination
-            feed_query = self._apply_sorting_and_pagination(
-                feed_query, sort_by, sort_order, skip, limit
-            )
+            feed_query = self._apply_sorting_and_pagination(feed_query, sort_by, sort_order, skip, limit)
 
             result = await db.execute(feed_query)
             feed_articles = result.scalars().all()
@@ -97,38 +94,30 @@ class CRUDUnifiedArticles:
                 self.query_builder.build_feed_article_query(user_id, filters)
             )
             count_result = await db.execute(count_query)
-            total_count = count_result.scalar()
+            total_count = count_result.scalar() or 0
 
         elif include_clipped_articles:
             # Only clipped articles
-            clipped_query = self.query_builder.build_clipped_article_query(
-                user_id, filters
-            )
+            clipped_query = self.query_builder.build_clipped_article_query(user_id, filters)
 
             # Apply sorting and pagination
-            clipped_query = self._apply_sorting_and_pagination(
-                clipped_query, sort_by, sort_order, skip, limit
-            )
+            clipped_query = self._apply_sorting_and_pagination(clipped_query, sort_by, sort_order, skip, limit)
 
             result = await db.execute(clipped_query)
             clipped_articles = result.scalars().all()
 
-            articles = [
-                self.transformer.clipped_to_unified(ca) for ca in clipped_articles
-            ]
+            articles = [self.transformer.clipped_to_unified(ca) for ca in clipped_articles]
 
             # Get count
             count_query = self.query_builder.build_count_query(
                 self.query_builder.build_clipped_article_query(user_id, filters)
             )
             count_result = await db.execute(count_query)
-            total_count = count_result.scalar()
+            total_count = count_result.scalar() or 0
 
         return articles, total_count
 
-    def _apply_sorting_and_pagination(
-        self, query, sort_by: str, sort_order: str, skip: int, limit: int
-    ):
+    def _apply_sorting_and_pagination(self, query: Any, sort_by: str, sort_order: str, skip: int, limit: int) -> Any:
         """Apply sorting and pagination to a query."""
         from sqlalchemy import asc, desc
 

@@ -23,7 +23,7 @@ class RedisCache:
         # managing connections for multiple concurrent loops, but for Celery tasks with asyncio.run(),
         # creating a client per task run is more straightforward.
         try:
-            client = redis.from_url(
+            client: redis.Redis = redis.from_url(
                 settings.REDIS_URL,
                 encoding="utf-8",
                 decode_responses=True,  # Automatically decode responses from bytes to str
@@ -61,9 +61,7 @@ class RedisCache:
             logger.error("Redis connection error during GET, returning None", key=key)
             return None
         except Exception as e:
-            logger.error(
-                "Error getting value from Redis", key=key, error=str(e), exc_info=True
-            )
+            logger.error("Error getting value from Redis", key=key, error=str(e), exc_info=True)
             return None
         finally:
             if client:
@@ -73,7 +71,22 @@ class RedisCache:
         client = None
         try:
             client = await self._get_client()
-            serialized_value = json.dumps(value)
+            # Handle Pydantic models that may contain non-JSON serializable types (like URLs)
+            if hasattr(value, "model_dump"):
+                # Use Pydantic's model_dump with mode="json" to properly serialize URL objects
+                serialized_value = json.dumps(value.model_dump(mode="json"))
+            elif isinstance(value, dict) and any(hasattr(v, "model_dump") for v in value.values() if v is not None):
+                # Handle dictionaries containing Pydantic models
+                serializable_dict = {}
+                for k, v in value.items():
+                    if hasattr(v, "model_dump"):
+                        serializable_dict[k] = v.model_dump(mode="json")
+                    else:
+                        serializable_dict[k] = v
+                serialized_value = json.dumps(serializable_dict)
+            else:
+                serialized_value = json.dumps(value)
+
             if ttl_seconds:
                 await client.setex(key, ttl_seconds, serialized_value)
             else:
@@ -84,9 +97,7 @@ class RedisCache:
             logger.error("Redis connection error during SET, operation failed", key=key)
             return False
         except Exception as e:
-            logger.error(
-                "Error setting value in Redis", key=key, error=str(e), exc_info=True
-            )
+            logger.error("Error setting value in Redis", key=key, error=str(e), exc_info=True)
             return False
         finally:
             if client:
@@ -100,14 +111,10 @@ class RedisCache:
             logger.debug("Key deleted from cache", key=key)
             return True
         except ConnectionError:
-            logger.error(
-                "Redis connection error during DELETE, operation failed", key=key
-            )
+            logger.error("Redis connection error during DELETE, operation failed", key=key)
             return False
         except Exception as e:
-            logger.error(
-                "Error deleting key from Redis", key=key, error=str(e), exc_info=True
-            )
+            logger.error("Error deleting key from Redis", key=key, error=str(e), exc_info=True)
             return False
         finally:
             if client:

@@ -1,37 +1,44 @@
 """
 Factory classes for RSS-related models
 """
+
 import uuid
 from datetime import datetime, timezone
+
 import factory
-from factory import LazyAttribute, SubFactory
 from factory.alchemy import SQLAlchemyModelFactory
 
-from app.models.rss_models import Folder, Tag, Feed, ArticleContent, FeedArticle, ClippedArticle
-from tests.factories.user_factories import ProfileFactory
+from app.models.rss_models import (
+    ArticleContent,
+    ClippedArticle,
+    Feed,
+    FeedArticle,
+    Folder,
+    Tag,
+)
 
 
 class FolderFactory(SQLAlchemyModelFactory):
     """Factory for Folder model"""
-    
+
     class Meta:
         model = Folder
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     name = factory.Faker("word")
-    # user_id must be provided when creating folders 
+    # user_id must be provided when creating folders
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
     updated_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
 
 
 class TagFactory(SQLAlchemyModelFactory):
     """Factory for Tag model"""
-    
+
     class Meta:
         model = Tag
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     name = factory.Faker("word")
     # user_id must be provided when creating tags
@@ -41,11 +48,11 @@ class TagFactory(SQLAlchemyModelFactory):
 
 class FeedFactory(SQLAlchemyModelFactory):
     """Factory for Feed model"""
-    
+
     class Meta:
         model = Feed
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     # user_id and folder_id must be provided when creating feeds
     url = factory.Faker("url")
@@ -72,11 +79,11 @@ class FeedFactory(SQLAlchemyModelFactory):
 
 class ArticleContentFactory(SQLAlchemyModelFactory):
     """Factory for ArticleContent model"""
-    
+
     class Meta:
         model = ArticleContent
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     title = factory.Faker("sentence", nb_words=6)
     link = factory.Faker("url")
@@ -86,29 +93,29 @@ class ArticleContentFactory(SQLAlchemyModelFactory):
     author = factory.Faker("name")
     published_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
     estimated_read_time_minutes = factory.Faker("random_int", min=1, max=30)
-    custom_metadata = factory.LazyFunction(lambda: {
-        "source": "rss",
-        "word_count": 1000,
-        "tags": ["test", "article", "content"]
-    })
+    custom_metadata = factory.LazyFunction(
+        lambda: {
+            "source": "rss",
+            "word_count": 1000,
+            "tags": ["test", "article", "content"],
+        }
+    )
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
     updated_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
 
 
 class FeedArticleFactory(SQLAlchemyModelFactory):
     """Factory for FeedArticle model"""
-    
+
     class Meta:
         model = FeedArticle
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     # feed_id, content_id, and user_id must be provided when creating feed articles
     guid = factory.Faker("uuid4")
     is_read = factory.Faker("boolean", chance_of_getting_true=30)
-    read_at = factory.LazyAttribute(
-        lambda obj: datetime.now(timezone.utc) if obj.is_read else None
-    )
+    read_at = factory.LazyAttribute(lambda obj: datetime.now(timezone.utc) if obj.is_read else None)
     is_read_later = factory.Faker("boolean", chance_of_getting_true=40)
     is_favorite = factory.Faker("boolean", chance_of_getting_true=10)
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))
@@ -117,19 +124,17 @@ class FeedArticleFactory(SQLAlchemyModelFactory):
 
 class ClippedArticleFactory(SQLAlchemyModelFactory):
     """Factory for ClippedArticle model"""
-    
+
     class Meta:
         model = ClippedArticle
         sqlalchemy_session_persistence = "commit"
-    
+
     id = factory.LazyFunction(uuid.uuid4)
     # content_id and user_id must be provided when creating clipped articles
     priority = factory.Faker("random_element", elements=["low", "medium", "high"])
     note = factory.Faker("text", max_nb_chars=200)
     is_read = factory.Faker("boolean", chance_of_getting_true=20)
-    read_at = factory.LazyAttribute(
-        lambda obj: datetime.now(timezone.utc) if obj.is_read else None
-    )
+    read_at = factory.LazyAttribute(lambda obj: datetime.now(timezone.utc) if obj.is_read else None)
     is_read_later = factory.Faker("boolean", chance_of_getting_true=80)  # Most clipped articles are read later
     is_favorite = factory.Faker("boolean", chance_of_getting_true=15)
     created_at = factory.LazyFunction(lambda: datetime.now(timezone.utc))

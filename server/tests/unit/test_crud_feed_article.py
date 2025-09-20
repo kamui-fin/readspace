@@ -5,11 +5,9 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.orm import selectinload
 
 from app.crud.crud_feed_article import CRUDFeedArticle, crud_feed_article
 from app.models.rss_models import FeedArticle
-from app.schemas.rss_schemas import FeedArticleCreate, FeedArticleUpdate
 
 
 @pytest.mark.unit
@@ -29,13 +27,11 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = mock_article
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        result = await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         assert result == mock_article
         mock_db.execute.assert_called_once()
-        
+
         # Verify the query was constructed correctly
         call_args = mock_db.execute.call_args[0][0]
         assert isinstance(call_args, type(select(FeedArticle)))
@@ -48,9 +44,7 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        result = await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        result = await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         assert result is None
         mock_db.execute.assert_called_once()
@@ -68,7 +62,7 @@ class TestCRUDFeedArticle:
 
         assert result == mock_article
         mock_db.execute.assert_called_once()
-        
+
         # Verify the query was constructed correctly
         call_args = mock_db.execute.call_args[0][0]
         assert isinstance(call_args, type(select(FeedArticle)))
@@ -100,12 +94,12 @@ class TestCRUDFeedArticle:
     def test_crud_feed_article_inherits_from_crud_base(self):
         """Test that CRUDFeedArticle inherits from CRUDBase."""
         from app.crud.base import CRUDBase
-        
+
         assert issubclass(CRUDFeedArticle, CRUDBase)
-        
+
         # Verify generic type parameters
         crud_instance = CRUDFeedArticle(FeedArticle)
-        assert hasattr(crud_instance, 'model')
+        assert hasattr(crud_instance, "model")
         assert crud_instance.model == FeedArticle
 
     @pytest.mark.asyncio
@@ -116,17 +110,15 @@ class TestCRUDFeedArticle:
         mock_result.scalar_one_or_none.return_value = None
         mock_db.execute.return_value = mock_result
 
-        await self.crud.get_by_feed_and_guid(
-            db=mock_db, feed_id=self.feed_id, guid=self.guid
-        )
+        await self.crud.get_by_feed_and_guid(db=mock_db, feed_id=self.feed_id, guid=self.guid)
 
         # Verify execute was called once
         mock_db.execute.assert_called_once()
-        
+
         # Get the query that was executed
         query = mock_db.execute.call_args[0][0]
         query_str = str(query)
-        
+
         # Check that the query contains expected elements
         assert "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()
 
@@ -142,10 +134,10 @@ class TestCRUDFeedArticle:
 
         # Verify execute was called once
         mock_db.execute.assert_called_once()
-        
+
         # Get the query that was executed
         query = mock_db.execute.call_args[0][0]
         query_str = str(query)
-        
+
         # Check that the query contains expected elements
         assert "feed_articles" in query_str.lower() or "feedarticle" in query_str.lower()

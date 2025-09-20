@@ -1,9 +1,9 @@
 """Unit tests for dependencies."""
-import pytest
-from unittest.mock import AsyncMock, MagicMock
+
+from unittest.mock import MagicMock
 from uuid import uuid4
 
-from fastapi import HTTPException
+import pytest
 
 from app.core.dependencies import get_db, get_request_id
 

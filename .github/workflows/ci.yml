@@ -2,66 +2,66 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
 
 env:
-  PYTHON_VERSION: '3.13'
-  POETRY_VERSION: '2.1.2'
+  PYTHON_VERSION: "3.13"
+  POETRY_VERSION: "2.1.2"
 
 jobs:
-  # lint-and-typecheck:
-  #   name: Lint and Type Check
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v4
+  lint-and-typecheck:
+    name: Lint and Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
 
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ env.PYTHON_VERSION }}
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
 
-  #     - name: Install Poetry
-  #       uses: snok/install-poetry@v1
-  #       with:
-  #         version: ${{ env.POETRY_VERSION }}
-  #         virtualenvs-create: true
-  #         virtualenvs-in-project: true
-  #         installer-parallel: true
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: ${{ env.POETRY_VERSION }}
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
 
-  #     - name: Load cached venv
-  #       id: cached-poetry-dependencies
-  #       uses: actions/cache@v4
-  #       with:
-  #         path: server/.venv
-  #         key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: server/.venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('server/poetry.lock') }}
 
-  #     - name: Install dependencies
-  #       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-  #       working-directory: ./server
-  #       run: poetry install --no-interaction --no-root
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        working-directory: ./server
+        run: poetry install --no-interaction --no-root
 
-  #     - name: Install project
-  #       working-directory: ./server
-  #       run: poetry install --no-interaction
+      - name: Install project
+        working-directory: ./server
+        run: poetry install --no-interaction
 
-  #     - name: Run ruff linting
-  #       working-directory: ./server
-  #       run: |
-  #         poetry run ruff check --output-format=github .
-          
-  #     - name: Run ruff formatting check
-  #       working-directory: ./server
-  #       run: |
-  #         poetry run ruff format --check .
+      - name: Run ruff linting
+        working-directory: ./server
+        run: |
+          poetry run ruff check --output-format=github app
 
-  #     - name: Run type checking with mypy
-  #       working-directory: ./server
-  #       run: |
-  #         poetry run mypy app/ --ignore-missing-imports
-  #       continue-on-error: true  # Allow to fail initially while improving type coverage
+      - name: Run ruff formatting check
+        working-directory: ./server
+        run: |
+          poetry run ruff format --check app
+
+      - name: Run type checking with mypy
+        working-directory: ./server
+        run: |
+          poetry run mypy app
+        continue-on-error: true # Allow to fail initially while improving type coverage
 
   test-unit:
     name: Test Unit
@@ -88,7 +88,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: server/.venv
-          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('server/poetry.lock') }}
 
       - name: Install dependencies
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
@@ -108,103 +108,45 @@ jobs:
             --cov-report=html \
             --cov-report=term-missing \
             --cov-fail-under=30 \
-            --junitxml=junit.xml \
             -v
 
-      - name: Upload coverage reports to Codecov
-        uses: codecov/codecov-action@v4
+  frontend-lint-and-typecheck:
+    name: Frontend Lint and Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          file: ./server/coverage.xml
-          flags: backend-unit
-          name: backend-unit-coverage
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          node-version: '20'
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          name: unit-test-results
-          path: |
-            server/junit.xml
-            server/htmlcov/
+          bun-version: latest
 
-  # frontend-lint-and-test:
-  #   name: Frontend Lint and Test
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./web
+      - name: Cache Turbo
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-
 
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v4
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
 
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-  #         cache-dependency-path: web/package-lock.json
+      - name: Install Turbo globally
+        run: bun install --global turbo@latest
 
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v4
-  #       with:
-  #         version: 8
+      - name: Build packages
+        run: turbo run build --filter="./packages/*"
 
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
+      - name: Run TypeScript type checking
+        run: turbo run check-types
 
-  #     - name: Run ESLint
-  #       run: pnpm lint
-
-  #     - name: Check Prettier formatting
-  #       run: pnpm format:check
-
-  #     - name: Run TypeScript type checking
-  #       run: pnpm type-check
-
-  #     - name: Build application
-  #       run: pnpm build
-
-  # extension-lint-and-build:
-  #   name: Extension Lint and Build
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: ./extension
-
-  #   steps:
-  #     - name: Check out code
-  #       uses: actions/checkout@v4
-
-  #     - name: Set up Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '20'
-  #         cache: 'npm'
-  #         cache-dependency-path: extension/package-lock.json
-
-  #     - name: Install pnpm
-  #       uses: pnpm/action-setup@v4
-  #       with:
-  #         version: 8
-
-  #     - name: Install dependencies
-  #       run: pnpm install --frozen-lockfile
-
-  #     - name: Run ESLint
-  #       run: pnpm lint
-
-  #     - name: Check Prettier formatting
-  #       run: pnpm format:check
-
-  #     - name: Run TypeScript type checking
-  #       run: pnpm type-check
-
-  #     - name: Build Chrome extension
-  #       run: pnpm build:chrome
-
-  #     - name: Build Firefox extension
-  #       run: pnpm build:firefox
+      - name: Run ESLint
+        run: turbo run lint

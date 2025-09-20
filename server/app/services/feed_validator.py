@@ -9,9 +9,7 @@ from app.utils.language_normalizer import normalize_language_code
 
 logger = structlog.get_logger(__name__)
 
-MIN_ARTICLE_COUNT = (
-    1  # Minimum number of articles required for a feed to be considered valid
-)
+MIN_ARTICLE_COUNT = 1  # Minimum number of articles required for a feed to be considered valid
 
 
 class FeedValidator:

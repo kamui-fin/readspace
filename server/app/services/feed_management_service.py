@@ -1,5 +1,6 @@
 """Service for RSS feed management operations."""
 
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.redis_cache import RedisCache
 from app.crud import crud_feed, crud_subscription
 from app.schemas.rss_schemas import FeedResponse, FeedUpdate
+from app.schemas.subscription_schemas import LegacyFeedResponse
 from app.services.feed_creation_service import FeedCreationService
 from app.services.feed_fetcher import FeedFetcher
 from app.services.feed_parser import FeedParsingService
@@ -33,15 +35,15 @@ class FeedManagementService:
         url_str = str(url_str).strip()
 
         # Keep rsshub:// URLs as-is for display purposes
-        if url_str.startswith('rsshub://'):
+        if url_str.startswith("rsshub://"):
             return url_str
 
         # If it's already a valid web URL, return it
-        if url_str.startswith(('http://', 'https://')):
+        if url_str.startswith(("http://", "https://")):
             return url_str
 
         # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
-        if ':' in url_str:
+        if ":" in url_str:
             return None
 
         # Otherwise, assume it's a web URL missing the protocol and add it.
@@ -53,7 +55,7 @@ class FeedManagementService:
         folder_id: UUID,
         tag_names: list[str] | None = None,
         update_existing: bool = False,
-    ) -> FeedResponse:
+    ) -> LegacyFeedResponse:
         """Add a new RSS feed."""
         logger.info(
             "Adding new feed",
@@ -115,7 +117,7 @@ class FeedManagementService:
                 .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
                 .where(
                     UserArticleState.user_id == self.user_id,
-                    UserArticleState.is_read == False,
+                    ~UserArticleState.is_read,
                     FeedArticle.feed_id == feed_id,
                 )
             )
@@ -123,12 +125,14 @@ class FeedManagementService:
             unread_count = unread_count_result.scalar_one_or_none() or 0
 
             # Override title with custom title if set, and add subscription data
-            feed_data.update({
-                "title": subscription_db.custom_title or feed_db.title,
-                "user_id": subscription_db.user_id,
-                "folder_id": subscription_db.folder_id,
-                "unread_count": unread_count,
-            })
+            feed_data.update(
+                {
+                    "title": subscription_db.custom_title or feed_db.title,
+                    "user_id": subscription_db.user_id,
+                    "folder_id": subscription_db.folder_id,
+                    "unread_count": unread_count,
+                }
+            )
 
         return FeedResponse(**feed_data)
 
@@ -178,14 +182,15 @@ class FeedManagementService:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        ~UserArticleState.is_read,
                     ),
                 )
             )
             .group_by(FeedArticle.feed_id)
         )
         unread_counts_result = await self.db.execute(unread_counts_stmt)
-        unread_counts = dict(unread_counts_result.all())
+        unread_counts_raw = unread_counts_result.all()
+        unread_counts: dict[UUID, int] = {row[0]: row[1] for row in unread_counts_raw}
 
         feed_responses = []
         for feed, subscription in feeds_db:
@@ -216,9 +221,7 @@ class FeedManagementService:
 
         return feed_responses
 
-    async def update_feed_user_settings(
-        self, feed_id: UUID, feed_in: FeedUpdate
-    ) -> FeedResponse | None:
+    async def update_feed_user_settings(self, feed_id: UUID, feed_in: FeedUpdate) -> FeedResponse | None:
         """Update user-configurable feed settings."""
         logger.info("Updating feed settings", feed_id=feed_id, user_id=self.user_id)
 
@@ -259,7 +262,7 @@ class FeedManagementService:
                 .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
                 .where(
                     UserArticleState.user_id == self.user_id,
-                    UserArticleState.is_read == False,
+                    ~UserArticleState.is_read,
                     FeedArticle.feed_id == feed_id,
                 )
             )
@@ -326,7 +329,7 @@ class FeedManagementService:
                 user_id=self.user_id,
             )
 
-        return result
+        return subscription_db is not None
 
     async def refresh_feed(
         self, feed_id: UUID, force_refetch: bool = False, preview_mode: bool = False
@@ -382,9 +385,7 @@ class FeedManagementService:
                     return self._construct_feed_response_preview(feed_db)
                 else:
                     unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(
-                        feed_db, subscription_db, unread_count
-                    )
+                    return self._construct_feed_response(feed_db, subscription_db, unread_count)
 
             if fetch_result["status_code"] != 200 or not fetch_result["content"]:
                 logger.error(
@@ -397,14 +398,10 @@ class FeedManagementService:
                     return self._construct_feed_response_preview(feed_db)
                 else:
                     unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(
-                        feed_db, subscription_db, unread_count
-                    )
+                    return self._construct_feed_response(feed_db, subscription_db, unread_count)
 
             # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_data(
-                fetch_result["content"], str(feed_db.url)
-            )
+            parsed_feed = self.feed_parser.parse_feed_data(fetch_result["content"], str(feed_db.url))
 
             # Update feed metadata and create new articles
             await self._update_feed_and_articles(feed_db, fetch_result, parsed_feed)
@@ -418,9 +415,7 @@ class FeedManagementService:
                     return self._construct_feed_response_preview(refreshed_feed)
                 else:
                     unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(
-                        refreshed_feed, subscription_db, unread_count
-                    )
+                    return self._construct_feed_response(refreshed_feed, subscription_db, unread_count)
             return None
 
         except Exception as e:
@@ -447,7 +442,7 @@ class FeedManagementService:
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
-                        UserArticleState.is_read == False,
+                        ~UserArticleState.is_read,
                     ),
                 )
             )
@@ -455,9 +450,7 @@ class FeedManagementService:
         unread_count_result = await self.db.execute(unread_counts_stmt)
         return unread_count_result.scalar_one_or_none() or 0
 
-    def _construct_feed_response(
-        self, feed_db, subscription_db, unread_count: int
-    ) -> FeedResponse:
+    def _construct_feed_response(self, feed_db: Any, subscription_db: Any, unread_count: int) -> FeedResponse:
         feed_data = {
             "id": feed_db.id,
             "url": self._normalize_url(str(feed_db.url) if feed_db.url else None),
@@ -482,7 +475,7 @@ class FeedManagementService:
         }
         return FeedResponse(**feed_data)
 
-    def _construct_feed_response_preview(self, feed_db) -> FeedResponse:
+    def _construct_feed_response_preview(self, feed_db: Any) -> FeedResponse:
         """Construct a FeedResponse for preview mode (no subscription data)."""
         feed_data = {
             "id": feed_db.id,
@@ -508,7 +501,7 @@ class FeedManagementService:
         }
         return FeedResponse(**feed_data)
 
-    async def _update_feed_and_articles(self, feed_db, fetch_result, parsed_feed):
+    async def _update_feed_and_articles(self, feed_db: Any, fetch_result: dict[str, Any], parsed_feed: Any) -> None:
         """Update feed metadata and create new articles."""
         # This is a simplified version - could be expanded or moved to feed_creation_service
         from datetime import datetime, timezone
@@ -523,9 +516,7 @@ class FeedManagementService:
             for entry in parsed_feed.entries:
                 # Use FeedParsingService for proper article data extraction
                 try:
-                    article_dict = self.feed_parser.extract_article_data(
-                        entry, str(feed_db.url)
-                    )
+                    article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
                     if article_dict:
                         article_data = ArticleCreate(
                             title=article_dict["title"],
@@ -537,9 +528,7 @@ class FeedManagementService:
                             feed_id=feed_db.id,
                             user_id=self.user_id,
                             image_url=article_dict.get("image_url"),
-                            estimated_read_time_minutes=article_dict.get(
-                                "estimated_read_time_minutes"
-                            ),
+                            estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
                         )
                         articles_data.append(article_data)
 
@@ -548,9 +537,7 @@ class FeedManagementService:
                             if latest_published_at is None or article_data.published_at > latest_published_at:
                                 latest_published_at = article_data.published_at
                 except Exception as e:
-                    logger.warning(
-                        "Error parsing article", feed_id=feed_db.id, error=str(e)
-                    )
+                    logger.warning("Error parsing article", feed_id=feed_db.id, error=str(e))
                     continue
 
             if articles_data:

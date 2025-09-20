@@ -4,16 +4,23 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 ## Table of Contents
 
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Initial Setup](#initial-setup)
-- [Development Environment Setup](#development-environment-setup)
-  - [1. Start Core Infrastructure](#1-start-core-infrastructure)
-  - [2. Run Application Services](#2-run-application-services)
-- [Working on Background Tasks (Celery)](#working-on-background-tasks-celery)
-- [Database Migrations (Alembic)](#database-migrations-alembic)
-- [Linting and Formatting](#linting-and-formatting)
-- [Submitting a Pull Request](#submitting-a-pull-request)
+- [Contributing to Readspace](#contributing-to-readspace)
+  - [Table of Contents](#table-of-contents)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Initial Setup](#initial-setup)
+  - [Development Environment Setup](#development-environment-setup)
+    - [1. Start Core Infrastructure](#1-start-core-infrastructure)
+    - [2. Run Application Services](#2-run-application-services)
+      - [Web Client (Next.js)](#web-client-nextjs)
+      - [Backend Server (FastAPI)](#backend-server-fastapi)
+      - [Chrome Extension](#chrome-extension)
+    - [Working on Background Tasks (Celery)](#working-on-background-tasks-celery)
+    - [Database Migrations (Alembic)](#database-migrations-alembic)
+    - [Linting and Formatting](#linting-and-formatting)
+      - [Backend (Server)](#backend-server)
+      - [Frontend (Web) and Browser Extension](#frontend-web-and-browser-extension)
+  - [Submitting a Pull Request](#submitting-a-pull-request)
 
 ## Getting Started
 
@@ -21,9 +28,9 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 - [Git](https://git-scm.com/)
 - [Docker](https://www.docker.com/products/docker-desktop/) and Docker Compose
-- [Node.js v22](https://nodejs.org/en/) (we recommend using a version manager like `nvm`)
-- [pnpm](https://pnpm.io/) 
-- [Python](https://www.python.org/)
+- [Node.js v20+](https://nodejs.org/en/) (we recommend using a version manager like `nvm`)
+- [Bun](https://bun.sh/) - Fast all-in-one JavaScript runtime and package manager
+- [Python 3.13+](https://www.python.org/)
 - [Poetry](https://python-poetry.org/)
 
 ### Initial Setup
@@ -40,10 +47,20 @@ First off, thank you for considering contributing to Readspace! It's people like
     Run the setup script to generate the necessary `.env` files for all services.
 
     ```bash
-    ./setup.sh
+    ./docker/setup.sh
     ```
 
-    This will create `.env` files in `supabase/`, `web/`, and `server/`.
+    This will create `.env` files in `docker/supabase/`, `apps/web/`, and `server/`.
+
+3.  **Install Dependencies**
+
+    Install all workspace dependencies using Bun:
+
+    ```bash
+    bun i
+    ```
+
+    This will install dependencies for all apps and packages in the monorepo.
 
 ## Development Environment Setup
 
@@ -54,14 +71,10 @@ Our recommended development setup uses Docker to run the core infrastructure (Su
 First, start the Supabase stack and Redis in Docker.
 
 ```bash
-# Start the full Supabase stack in the background
-docker compose -f supabase/docker-compose.yml --env-file supabase/.env up -d
-
-# Start Redis from the main docker-compose file
-docker compose up -d redis
+./docker/launch.sh
 ```
 
--   **Supabase Studio:** You can access the local dashboard at [http://localhost:8000](http://localhost:8000). Log in with email `supabase` and password `not_being_used`.
+-   **Supabase Studio:** You can access the local dashboard at [http://localhost:18000](http://localhost:18000). Log in with email `supabase` and password `not_being_used`.
 
 Wait a minute for the services to initialize. You can check their status with `docker ps`.
 
@@ -72,9 +85,8 @@ With the infrastructure running, you can now launch any of the application servi
 #### Web Client (Next.js)
 
 ```bash
-cd web
-pnpm i
-pnpm dev
+cd apps/web
+bun dev
 ```
 The web client will be available at `http://localhost:8042`.
 
@@ -83,28 +95,26 @@ The web client will be available at `http://localhost:8042`.
 ```bash
 cd server
 poetry install
-poe start
+poetry run poe migrate
+poetry run poe start
 ```
 The backend API will be available at `http://localhost:8008`.
 
 #### Chrome Extension
 
-The extension is built with Vite.
+The extension is built with Vite and uses the same monorepo setup.
 
-1.  **Install dependencies:**
+1.  **Start the development server:**
     ```bash
-    cd extension
-    pnpm i
+    cd apps/extension
+    bun dev
     ```
-2.  **Start the development server:**
-    ```bash
-    pnpm dev
-    ```
-3.  **Load the extension in Chrome:**
+
+2.  **Load the extension in Chrome:**
     -   Open Chrome and navigate to `chrome://extensions`.
     -   Enable "Developer mode".
     -   Click "Load unpacked".
-    -   Select the `extension/dist` directory.
+    -   Select the `apps/extension/dist` directory.
 
 Changes to the source code will be automatically rebuilt.
 
@@ -154,7 +164,7 @@ To maintain code quality and consistency, please run the linters and formatters 
 
 #### Backend (Server)
 
-We use `ruff` for both linting and formatting.
+We use `ruff` for both linting and formatting. `lint` also runs `mypy` for type checking.
 
 ```bash
 cd server
@@ -167,14 +177,17 @@ poe format
 
 #### Frontend (Web) and Browser Extension
 
-We use ESLint for linting and Prettier for formatting. Run these commands from the `web/` or `extension/` directory.
+We use ESLint for linting and Prettier for formatting.
 
 ```bash
-# Lint the code
-pnpm lint
+# Lint all projects
+bun run lint
 
-# Format the code
-pnpm format
+# Format all projects
+bun run format
+
+# Type check all projects
+bun run check-types
 ```
 
 ## Submitting a Pull Request

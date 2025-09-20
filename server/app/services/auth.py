@@ -1,4 +1,6 @@
 import functools
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import structlog
 from fastapi import HTTPException, Request, status
@@ -29,9 +31,7 @@ def verify_token(token: str) -> TokenData:
         )
     except JWTError as e:
         logger.error(f"JWT verification error: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from e
 
 
 def get_current_user(request: Request) -> TokenData:
@@ -62,7 +62,7 @@ def get_optional_user(request: Request) -> TokenData | None:
         return None
 
 
-def requires_auth(f):
+def requires_auth(f: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
     """
     Decorator for routes that require authentication.
     This simplifies protecting routes and handling errors.
@@ -76,7 +76,7 @@ def requires_auth(f):
     """
 
     @functools.wraps(f)
-    async def decorated_function(request: Request, *args, **kwargs):
+    async def decorated_function(request: Request, *args: Any, **kwargs: Any) -> Any:
         if not hasattr(request.state, "user") or request.state.user is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

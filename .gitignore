@@ -1,10 +1,85 @@
-.cursor/
-.vscode/
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production builds
+build/
+dist/
+.next/
+
+# Environment variables
 .env
 .env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .env.prod
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+bun-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Docker volumes and data
+docker/supabase/volumes/db/data
+docker/supabase/volumes/storage/stub
 supabase/volumes/db/data
-CLAUDE.md
-GEMINI.md
 supabase/volumes/storage/stub
-otel
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.cursor/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Turborepo
+.turbo
+
+# Testing
+coverage/
+*.lcov
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+server/.env
+server/venv/
+server/.venv/
+
+# Temporary files
+tmp/
+temp/
+.enk
+.playwright-mcp/
+
+# Package manager locks (keep bun.lock)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml

@@ -38,10 +38,13 @@ FEED_CONTENT_CACHE_PREFIX = "feed_content:"
 USER_CACHE_PREFIX = "user:"
 ARTICLE_CACHE_PREFIX = "article:"
 
+# Cache TTL (Time To Live) in seconds
+ARTICLE_LIST_CACHE_TTL = 300  # 5 minutes for article lists
+AI_CACHE_TTL = 86400  # 24 hours for AI results
+OPML_TASK_CACHE_TTL = 86400  # 24 hours for OPML import tasks
+
 # User Agent
-DEFAULT_USER_AGENT = (
-    "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
-)
+DEFAULT_USER_AGENT = "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
 
 # Highlight Colors
 HIGHLIGHT_COLORS = ["yellow", "green", "blue"]
@@ -52,3 +55,12 @@ ARTICLE_PRIORITIES = ["low", "medium", "high"]
 # Time Deltas
 RECENT_READ_CUTOFF = timedelta(days=30)
 OLD_ARTICLE_CUTOFF = timedelta(days=90)
+
+# Common Error Messages
+ERROR_FEED_NOT_FOUND = "Feed not found"
+ERROR_ARTICLE_NOT_FOUND = "Article not found"
+ERROR_HIGHLIGHT_NOT_FOUND = "Highlight not found"
+ERROR_FOLDER_NOT_FOUND = "Folder not found"
+ERROR_USER_NOT_FOUND = "User profile not found"
+ERROR_BOOK_NOT_FOUND = "Book metadata not found"
+ERROR_INVALID_FOLDER_DATA = "Invalid folder data"

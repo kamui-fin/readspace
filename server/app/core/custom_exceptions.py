@@ -94,6 +94,12 @@ class ConfigurationError(ReadspaceException):
     pass
 
 
+class ServiceUnavailableError(ReadspaceException):
+    """Raised when a service is unavailable or not configured"""
+
+    pass
+
+
 # HTTP Exception Factories
 def http_not_found(message: str = "Resource not found") -> HTTPException:
     """Create a 404 HTTP exception"""
@@ -126,13 +132,9 @@ def http_conflict(message: str = "Resource already exists") -> HTTPException:
 
 def http_validation_error(message: str = "Validation failed") -> HTTPException:
     """Create a 422 HTTP exception"""
-    return HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message
-    )
+    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message)
 
 
 def http_internal_server_error(message: str = "Internal server error") -> HTTPException:
     """Create a 500 HTTP exception"""
-    return HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message
-    )
+    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message)

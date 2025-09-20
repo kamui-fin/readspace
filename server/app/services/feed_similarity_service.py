@@ -1,3 +1,4 @@
+# ruff: noqa: S608
 """Feed Similarity Service for finding similar RSS feeds using vector embeddings."""
 
 from uuid import UUID
@@ -26,34 +27,31 @@ class FeedSimilarityService:
         url_str = str(url_str).strip()
 
         # Keep rsshub:// URLs as-is for display purposes
-        if url_str.startswith('rsshub://'):
+        if url_str.startswith("rsshub://"):
             return url_str
 
         # If it's already a valid web URL, return it
-        if url_str.startswith(('http://', 'https://')):
+        if url_str.startswith(("http://", "https://")):
             return url_str
 
         # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
-        if ':' in url_str:
+        if ":" in url_str:
             return None
 
         # Otherwise, assume it's a web URL missing the protocol and add it.
         return f"https://{url_str}"
 
     async def get_similar_feeds(
-        self,
-        feed_id: UUID,
-        limit: int = 10,
-        min_similarity: float = 0.1
+        self, feed_id: UUID, limit: int = 10, min_similarity: float = 0.1
     ) -> list[FeedDiscoveryResult]:
         """
         Find similar feeds based on vector embeddings.
-        
+
         Args:
             feed_id: The UUID of the source feed
             limit: Maximum number of similar feeds to return (default: 10)
             min_similarity: Minimum similarity score threshold (default: 0.1)
-            
+
         Returns:
             List of similar feeds with similarity scores
         """
@@ -63,13 +61,17 @@ class FeedSimilarityService:
                 feed_id=feed_id,
                 user_id=self.user_id,
                 limit=limit,
-                min_similarity=min_similarity
+                min_similarity=min_similarity,
             )
 
             # First, get the source feed and verify user has access
             source_feed = await self._get_user_feed(feed_id)
             if not source_feed:
-                logger.warning("Source feed not found or user has no access", feed_id=feed_id, user_id=self.user_id)
+                logger.warning(
+                    "Source feed not found or user has no access",
+                    feed_id=feed_id,
+                    user_id=self.user_id,
+                )
                 return []
 
             # Check if source feed has an embedding
@@ -84,7 +86,7 @@ class FeedSimilarityService:
             params = {
                 "source_feed_id": feed_id,
                 "limit": limit,
-                "min_similarity": min_similarity
+                "min_similarity": min_similarity,
             }
 
             # Build exclusion filter for subscribed feeds
@@ -100,12 +102,12 @@ class FeedSimilarityService:
 
             sql_query = f"""
                 WITH source_feed AS (
-                    SELECT embedding 
-                    FROM feeds 
+                    SELECT embedding
+                    FROM feeds
                     WHERE id = :source_feed_id
                     AND embedding IS NOT NULL
                 )
-                SELECT 
+                SELECT
                     f.id,
                     f.title,
                     f.description,
@@ -152,8 +154,8 @@ class FeedSimilarityService:
                     search_metadata={
                         "search_type": "similarity",
                         "similarity_score": float(row.similarity_score),
-                        "source_feed_id": str(feed_id)
-                    }
+                        "source_feed_id": str(feed_id),
+                    },
                 )
                 similar_feeds.append(feed_data)
 
@@ -162,7 +164,7 @@ class FeedSimilarityService:
                 source_feed_id=feed_id,
                 user_id=self.user_id,
                 results_count=len(similar_feeds),
-                avg_similarity=sum(f.relevance for f in similar_feeds) / len(similar_feeds) if similar_feeds else 0
+                avg_similarity=sum(f.relevance for f in similar_feeds) / len(similar_feeds) if similar_feeds else 0,
             )
 
             return similar_feeds
@@ -173,7 +175,7 @@ class FeedSimilarityService:
                 feed_id=feed_id,
                 user_id=self.user_id,
                 error=str(e),
-                exc_info=True
+                exc_info=True,
             )
             return []
 
@@ -184,7 +186,12 @@ class FeedSimilarityService:
             result = await self.db.execute(stmt)
             return result.scalar_one_or_none()
         except Exception as e:
-            logger.error("Error getting feed", feed_id=feed_id, user_id=self.user_id, error=str(e))
+            logger.error(
+                "Error getting feed",
+                feed_id=feed_id,
+                user_id=self.user_id,
+                error=str(e),
+            )
             return None
 
     async def _get_user_subscribed_feed_ids(self) -> list[UUID]:
@@ -194,6 +201,9 @@ class FeedSimilarityService:
             result = await self.db.execute(stmt)
             return [row[0] for row in result.fetchall()]
         except Exception as e:
-            logger.error("Error getting user subscribed feeds", user_id=self.user_id, error=str(e))
+            logger.error(
+                "Error getting user subscribed feeds",
+                user_id=self.user_id,
+                error=str(e),
+            )
             return []
-

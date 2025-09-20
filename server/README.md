@@ -1,14 +1,6 @@
 # Readspace Server
 
-FastAPI backend server for the Readspace reading platform.
-
-## Features
-
-- RSS feed management
-- Book reading and highlighting
-- User authentication with Supabase
-- Background task processing with Celery
-- SQLAlchemy ORM with PostgreSQL
+FastAPI backend for Readspace - a privacy-first reading hub.
 
 ## Development
 
@@ -16,31 +8,17 @@ FastAPI backend server for the Readspace reading platform.
 # Install dependencies
 poetry install
 
-# Run tests  
-poetry run pytest
-
 # Start development server
-poetry run poe start
+poe start
 
-# Lint code
-poetry run poe lint
+# Run tests
+poe test
 
-# Format code
-poetry run poe format
+# Lint and format
+poe lint
+poe format
 ```
 
-## Testing
+## Architecture
 
-```bash
-# Run all tests
-poetry run poe test
-
-# Run unit tests only
-poetry run poe test-unit
-
-# Run integration tests only  
-poetry run poe test-integration
-
-# Run tests with coverage
-poetry run poe test-coverage
-```
+Built with FastAPI, PostgreSQL, Supabase, and Celery for background tasks.

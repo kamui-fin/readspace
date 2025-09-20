@@ -35,11 +35,11 @@ class FeedResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    @field_validator('link', mode='before')
+    @field_validator("link", mode="before")
     @classmethod
-    def convert_empty_string_to_none(cls, v):
+    def convert_empty_string_to_none(cls, v: str | None) -> str | None:
         """Convert empty strings to None for URL fields."""
-        return None if v == '' else v
+        return None if v == "" else v
 
 
 # ========= Subscription Schemas =========
@@ -54,7 +54,7 @@ class SubscriptionBase(BaseModel):
 class SubscriptionCreate(SubscriptionBase):
     """Schema for creating a new subscription."""
 
-    url: AnyUrl  # URL of the feed to subscribe to (allows any URL scheme including rsshub://)
+    url: str  # URL of the feed to subscribe to (allows any URL scheme including rsshub://)
     folder_id: UUID | str  # Allow 'default' string for onboarding
     # tag_ids removed - using ARRAY field on feeds
 
@@ -65,7 +65,7 @@ class SubscriptionCreateByFeedId(SubscriptionBase):
     folder_id: UUID | str  # Allow 'default' string for onboarding
 
 
-class SubscriptionUpdate(SubscriptionBase):
+class SubscriptionUpdate(BaseModel):
     """Schema for updating a subscription."""
 
     folder_id: UUID | None = None

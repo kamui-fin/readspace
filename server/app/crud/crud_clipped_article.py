@@ -13,9 +13,7 @@ from app.models.rss_models import ClippedArticle
 from app.schemas.rss_schemas import ClippedArticleCreate, ClippedArticleUpdate
 
 
-class CRUDClippedArticle(
-    CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedArticleUpdate]
-):
+class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedArticleUpdate]):
     """CRUD operations for manually saved web articles"""
 
     async def get_by_user_and_content(
@@ -34,14 +32,10 @@ class CRUDClippedArticle(
         )
         return result.scalar_one_or_none()
 
-    async def get_with_content(
-        self, db: AsyncSession, *, article_id: UUID
-    ) -> ClippedArticle | None:
+    async def get_with_content(self, db: AsyncSession, *, article_id: UUID) -> ClippedArticle | None:
         """Get clipped article with content"""
         result = await db.execute(
-            select(ClippedArticle)
-            .options(selectinload(ClippedArticle.content))
-            .where(ClippedArticle.id == article_id)
+            select(ClippedArticle).options(selectinload(ClippedArticle.content)).where(ClippedArticle.id == article_id)
         )
         return result.scalar_one_or_none()
 

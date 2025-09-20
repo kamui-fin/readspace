@@ -33,15 +33,11 @@ class FeedFetcher:
         cache_key = f"feed_content:{url}"
         cached_data = await self.redis_cache.get(cache_key)
 
-        timeout = (
-            timeout_seconds if timeout_seconds is not None else DEFAULT_RSS_TIMEOUT
-        )
+        timeout = timeout_seconds if timeout_seconds is not None else DEFAULT_RSS_TIMEOUT
         request_headers = self._build_request_headers(etag, last_modified, cached_data)
 
         try:
-            return await self._make_http_request(
-                actual_url, request_headers, timeout, cache_key
-            )
+            return await self._make_http_request(actual_url, request_headers, timeout, cache_key)
         except httpx.ConnectTimeout:
             return await self._handle_timeout_error(url)
         except httpx.ReadTimeout:
@@ -55,9 +51,7 @@ class FeedFetcher:
         self, etag: str | None, last_modified: str | None, cached_data: dict | None
     ) -> dict[str, str]:
         """Build HTTP request headers including conditional request headers."""
-        headers = {
-            "User-Agent": "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"
-        }
+        headers = {"User-Agent": "Mozilla/5.0 (compatible; Readspace/1.0; +https://readspace.app/bot)"}
 
         if etag:
             headers["If-None-Match"] = etag
@@ -110,17 +104,13 @@ class FeedFetcher:
 
         # Cache the successful response
         await self.redis_cache.set(cache_key, feed_data, 15 * 60)  # 15 minutes
-        logger.info(
-            "Feed fetched and cached successfully", url=url, status=response.status_code
-        )
+        logger.info("Feed fetched and cached successfully", url=url, status=response.status_code)
 
         return feed_data
 
     async def _handle_timeout_error(self, url: str) -> dict[str, Any]:
         """Handle timeout errors."""
-        logger.warning(
-            "Timeout while fetching feed", url=url, timeout=DEFAULT_RSS_TIMEOUT
-        )
+        logger.warning("Timeout while fetching feed", url=url, timeout=DEFAULT_RSS_TIMEOUT)
         return {
             "content": "",
             "headers": {},
@@ -128,9 +118,7 @@ class FeedFetcher:
             "status_code": 408,
         }
 
-    async def _handle_http_error(
-        self, exc: httpx.HTTPStatusError, url: str
-    ) -> dict[str, Any]:
+    async def _handle_http_error(self, exc: httpx.HTTPStatusError, url: str) -> dict[str, Any]:
         """Handle HTTP status errors."""
         logger.warning(
             "HTTP error while fetching feed",
@@ -144,9 +132,7 @@ class FeedFetcher:
             "status_code": exc.response.status_code,
         }
 
-    async def _handle_unexpected_error(
-        self, exc: Exception, url: str
-    ) -> dict[str, Any]:
+    async def _handle_unexpected_error(self, exc: Exception, url: str) -> dict[str, Any]:
         """Handle unexpected errors."""
         logger.error(
             "Unexpected error while fetching feed",

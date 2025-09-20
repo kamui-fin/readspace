@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
-import feedparser
+import feedparser  # type: ignore
 import structlog
 
 from app.core.config import get_settings
@@ -53,6 +53,7 @@ class FeedCreationService(BaseFeedService):
 
         # Normalize URL to prevent duplicates
         from app.utils.url_normalizer import normalize_feed_url
+
         normalized_url = normalize_feed_url(url)
 
         logger.info(
@@ -64,9 +65,7 @@ class FeedCreationService(BaseFeedService):
         # Check if feed already exists using normalized URL
         existing_feed = await crud_feed.get_feed_by_url(self.db, url=normalized_url)
         if existing_feed:
-            return await self._handle_existing_feed(
-                existing_feed, url, folder_id, tag_names, update_existing
-            )
+            return await self._handle_existing_feed(existing_feed, url, folder_id, tag_names, update_existing)
 
         # Validate folder exists
         await self._validate_folder(folder_id)
@@ -157,7 +156,7 @@ class FeedCreationService(BaseFeedService):
 
         return self._create_legacy_feed_response(subscription)
 
-    def _create_legacy_feed_response(self, subscription) -> LegacyFeedResponse:
+    def _create_legacy_feed_response(self, subscription: Any) -> LegacyFeedResponse:
         """Create a legacy feed response from subscription data for backward compatibility."""
         feed = subscription.feed
         return LegacyFeedResponse(
@@ -184,18 +183,14 @@ class FeedCreationService(BaseFeedService):
 
     async def _validate_folder(self, folder_id: UUID) -> None:
         """Validate that folder exists and belongs to user."""
-        folder = await crud_folder.get_folder(
-            self.db, folder_id=folder_id, user_id=self.user_id
-        )
+        folder = await crud_folder.get_folder(self.db, folder_id=folder_id, user_id=self.user_id)
         if not folder:
             logger.warning(
                 "Folder not found or does not belong to user",
                 folder_id=folder_id,
                 user_id=self.user_id,
             )
-            raise NotFoundError(
-                f"Folder with ID '{folder_id}' not found or access denied."
-            )
+            raise NotFoundError(f"Folder with ID '{folder_id}' not found or access denied.")
 
     async def _fetch_and_parse_feed(self, url: str) -> feedparser.FeedParserDict:
         """Fetch feed content and parse it."""
@@ -241,9 +236,7 @@ class FeedCreationService(BaseFeedService):
         )
 
         # Extract and create articles
-        latest_article_date = await self._create_initial_articles(
-            db_feed, parsed_feed, url
-        )
+        latest_article_date = await self._create_initial_articles(db_feed, parsed_feed, url)
 
         # Update feed with additional metadata
         await self._update_feed_metadata(db_feed, parsed_feed, latest_article_date)
@@ -266,7 +259,6 @@ class FeedCreationService(BaseFeedService):
 
         return self._create_legacy_feed_response(subscription)
 
-
     async def _create_initial_articles(
         self, db_feed: Any, parsed_feed: feedparser.FeedParserDict, url: str
     ) -> datetime | None:
@@ -288,16 +280,11 @@ class FeedCreationService(BaseFeedService):
         total_entries = len(entries)
 
         for entry in entries:
-            article_schema = self._extract_article_data(
-                entry, db_feed.id, self.user_id, url
-            )
+            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id, url)
             if article_schema:
                 articles_to_create.append(article_schema)
                 if article_schema.published_at:
-                    if (
-                        latest_article_date is None
-                        or article_schema.published_at > latest_article_date
-                    ):
+                    if latest_article_date is None or article_schema.published_at > latest_article_date:
                         latest_article_date = article_schema.published_at
 
         # Validate feed has valid articles
@@ -335,9 +322,7 @@ class FeedCreationService(BaseFeedService):
         if valid_articles_count == 0:
             # Don't need to delete feed - transaction will be rolled back
             if total_entries == 0:
-                logger.warning(
-                    "Feed has no entries at all", url=url, user_id=self.user_id
-                )
+                logger.warning("Feed has no entries at all", url=url, user_id=self.user_id)
                 raise FeedValidationError("Feed appears to be broken: no entries found in feed")
             else:
                 logger.warning(
@@ -346,9 +331,7 @@ class FeedCreationService(BaseFeedService):
                     user_id=self.user_id,
                     total_entries=total_entries,
                 )
-                raise FeedValidationError(
-                    "Feed appears to be broken: no valid articles found despite having entries"
-                )
+                raise FeedValidationError("Feed appears to be broken: no valid articles found despite having entries")
 
         # Check for sparse feeds
         if total_entries > 0 and valid_articles_count < (total_entries * 0.1):
@@ -384,9 +367,7 @@ class FeedCreationService(BaseFeedService):
             description=updated_feed_info.description,
             link=str(updated_feed_info.link) if updated_feed_info.link else None,
             language=updated_feed_info.language,
-            image_url=str(updated_feed_info.image_url)
-            if updated_feed_info.image_url
-            else None,
+            image_url=str(updated_feed_info.image_url) if updated_feed_info.image_url else None,
             ttl=ttl_value,
             skip_hours=skip_hours,
             skip_days=skip_days,
@@ -396,9 +377,7 @@ class FeedCreationService(BaseFeedService):
             last_article_published_at=latest_article_date,
         )
 
-    def _extract_ttl(
-        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
-    ) -> int | None:
+    def _extract_ttl(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> int | None:
         """Extract TTL value from parsed feed."""
         if not parsed_feed.feed.get("ttl"):
             return None
@@ -413,11 +392,9 @@ class FeedCreationService(BaseFeedService):
             )
             return None
 
-    def _extract_skip_hours(
-        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
-    ) -> list[int]:
+    def _extract_skip_hours(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> list[int]:
         """Extract skip hours from parsed feed."""
-        skip_hours_value = []
+        skip_hours_value: list[int] = []
         skip_hours_raw = parsed_feed.feed.get("skipHours", {}).get("hour", [])
 
         if not skip_hours_raw:
@@ -429,17 +406,13 @@ class FeedCreationService(BaseFeedService):
                 if 0 <= hour_int <= 23:  # Valid hour range
                     skip_hours_value.append(hour_int)
             except (ValueError, TypeError):
-                logger.warning(
-                    "Invalid skip hour value", feed_id=feed_id, hour_raw=hour
-                )
+                logger.warning("Invalid skip hour value", feed_id=feed_id, hour_raw=hour)
 
         return skip_hours_value
 
-    def _extract_skip_days(
-        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
-    ) -> list[str]:
+    def _extract_skip_days(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> list[str]:
         """Extract skip days from parsed feed."""
-        skip_days_value = []
+        skip_days_value: list[str] = []
         skip_days_raw = parsed_feed.feed.get("skipDays", {}).get("day", [])
 
         if not skip_days_raw:
@@ -477,7 +450,7 @@ class FeedCreationService(BaseFeedService):
             # Queue the enrichment task with a small delay to ensure feed is committed
             enrich_feed_task.apply_async(
                 args=[str(feed_id)],
-                countdown=5  # 5 second delay
+                countdown=5,  # 5 second delay
             )
 
             logger.info(
@@ -501,9 +474,7 @@ class FeedCreationService(BaseFeedService):
         timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         """Fetch feed content using the dedicated FeedFetcher service."""
-        result = await self.feed_fetcher.fetch_content(
-            url, etag, last_modified, timeout_seconds
-        )
+        result = await self.feed_fetcher.fetch_content(url, etag, last_modified, timeout_seconds)
 
         # Convert FeedFetcher response format to expected format
         if result.get("not_modified"):
@@ -527,9 +498,7 @@ class FeedCreationService(BaseFeedService):
                 elif status_code in [500, 502, 503]:
                     raise FeedConnectionError(f"Feed server error ({status_code}): {url}")
                 else:
-                    raise FeedConnectionError(
-                        f"HTTP error {status_code} while fetching feed: {url}"
-                    )
+                    raise FeedConnectionError(f"HTTP error {status_code} while fetching feed: {url}")
             else:
                 raise FeedConnectionError(f"Network error fetching feed: {url}")
 
@@ -539,28 +508,18 @@ class FeedCreationService(BaseFeedService):
             "headers": result.get("headers", {}),
         }
 
-    def _parse_feed_data(
-        self, feed_content_text: str, url: str
-    ) -> feedparser.FeedParserDict:
+    def _parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
         """Parse RSS/Atom feed content and validate its structure using FeedValidator."""
         try:
             parsed_feed = feedparser.parse(feed_content_text)
         except Exception as e:
             logger.error("Failed to parse feed content", url=url, error=str(e))
-            raise FeedParsingError(f"Unable to parse feed content: {e}")
+            raise FeedParsingError(f"Unable to parse feed content: {e}") from e
 
         # Handle feedparser's bozo flag (malformed XML)
         if parsed_feed.bozo:
-            bozo_type = (
-                type(parsed_feed.bozo_exception).__name__
-                if parsed_feed.bozo_exception
-                else "Unknown"
-            )
-            bozo_message = (
-                str(parsed_feed.bozo_exception)
-                if parsed_feed.bozo_exception
-                else "Unknown error"
-            )
+            bozo_type = type(parsed_feed.bozo_exception).__name__ if parsed_feed.bozo_exception else "Unknown"
+            bozo_message = str(parsed_feed.bozo_exception) if parsed_feed.bozo_exception else "Unknown error"
             logger.warning(
                 "Feed parsed with issues (bozo)",
                 url=url,
@@ -570,8 +529,7 @@ class FeedCreationService(BaseFeedService):
 
             # Only fail for severe parsing errors
             if parsed_feed.bozo_exception and any(
-                error_type in bozo_type
-                for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
+                error_type in bozo_type for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
             ):
                 if not parsed_feed.feed or not hasattr(parsed_feed, "entries"):
                     logger.error(
@@ -585,13 +543,11 @@ class FeedCreationService(BaseFeedService):
         try:
             self.feed_validator.validate_feed_structure(parsed_feed)
         except Exception as e:
-            raise FeedValidationError(str(e))
+            raise FeedValidationError(str(e)) from e
 
         return parsed_feed
 
-    def _extract_feed_metadata(
-        self, parsed_feed: feedparser.FeedParserDict, feed_url: str
-    ) -> Any:
+    def _extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> Any:
         """Extract feed metadata using FeedValidator service."""
         from app.schemas.rss_schemas import FeedBase
 
@@ -633,12 +589,12 @@ class FeedCreationService(BaseFeedService):
         )
 
     def _extract_article_data(
-        self, entry: Any, feed_id: UUID, user_id: UUID, feed_url: str = None
+        self, entry: Any, feed_id: UUID, user_id: UUID, feed_url: str | None = None
     ) -> ArticleCreate | None:
         """Extract ArticleCreate data from a single feed entry using FeedParsingService."""
         try:
             # Use FeedParsingService for proper article data extraction that preserves HTML
-            article_dict = self.feed_parser.extract_article_data(entry, feed_url)
+            article_dict = self.feed_parser.extract_article_data(entry, feed_url or "")
             if article_dict:
                 return ArticleCreate(
                     title=article_dict["title"],
@@ -650,9 +606,7 @@ class FeedCreationService(BaseFeedService):
                     feed_id=feed_id,
                     user_id=user_id,
                     image_url=article_dict.get("image_url"),
-                    estimated_read_time_minutes=article_dict.get(
-                        "estimated_read_time_minutes"
-                    ),
+                    estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
                 )
             return None
         except Exception as e:

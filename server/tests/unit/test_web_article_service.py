@@ -1,16 +1,16 @@
 from datetime import datetime, timezone
-from uuid import UUID, uuid4
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 
-from app.services.web_article_service import WebArticleService
 from app.schemas.rss_schemas import (
-    ArticleContentCreate, 
+    ArticleContentCreate,
+    ArticleContentResponse,
     ClippedArticleCreate,
     ClippedArticleResponse,
-    ArticleContentResponse,
 )
+from app.services.web_article_service import WebArticleService
 
 
 @pytest.mark.unit
@@ -23,25 +23,25 @@ class TestWebArticleService:
         self.title = "Test Article"
         self.content = "<h1>Test Content</h1><p>This is a test article with some content.</p>"
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_save_article_from_url_success(self, mock_crud_clipped, mock_crud_content):
         # Setup mocks - these are async functions
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=None)
-        
+
         content_id = uuid4()
         mock_content_record = MagicMock()
         mock_content_record.id = content_id
         mock_crud_content.create = AsyncMock(return_value=mock_content_record)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         clipped_id = uuid4()
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = clipped_id
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create a proper mock that looks like a ClippedArticleResponse
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = clipped_id
@@ -54,7 +54,7 @@ class TestWebArticleService:
         mock_clipped_with_content.is_favorite = True
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship
         mock_content = MagicMock()
         mock_content.id = content_id
@@ -70,7 +70,7 @@ class TestWebArticleService:
         mock_content.created_at = datetime.now(timezone.utc)
         mock_content.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         # Mock the response creation
@@ -98,28 +98,21 @@ class TestWebArticleService:
                 custom_metadata={"extracted_by": "chrome_extension"},
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
-            )
+            ),
         )
 
-        with patch.object(ClippedArticleResponse, 'model_validate', return_value=expected_response):
+        with patch.object(ClippedArticleResponse, "model_validate", return_value=expected_response):
             # Execute
             result = await self.service.save_article_from_url(
-                url=self.url,
-                title=self.title,
-                content=self.content,
-                priority="high"
+                url=self.url, title=self.title, content=self.content, priority="high"
             )
 
         # Verify
-        mock_crud_content.get_by_link_extracted_by_extension.assert_called_once_with(
-            self.db, link=self.url
-        )
+        mock_crud_content.get_by_link_extracted_by_extension.assert_called_once_with(self.db, link=self.url)
         mock_crud_content.create.assert_called_once()
         mock_crud_clipped.create.assert_called_once()
-        mock_crud_clipped.get_with_content.assert_called_once_with(
-            self.db, article_id=mock_clipped_article.id
-        )
-        
+        mock_crud_clipped.get_with_content.assert_called_once_with(self.db, article_id=mock_clipped_article.id)
+
         # Check the ArticleContentCreate object passed to create
         create_call_args = mock_crud_content.create.call_args
         create_obj = create_call_args[1]["obj_in"]
@@ -133,14 +126,10 @@ class TestWebArticleService:
     @pytest.mark.asyncio
     async def test_save_article_from_url_no_content_raises_error(self):
         with pytest.raises(ValueError, match="No content provided"):
-            await self.service.save_article_from_url(
-                url=self.url,
-                title=self.title,
-                content=None
-            )
+            await self.service.save_article_from_url(url=self.url, title=self.title, content=None)
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_save_article_existing_content(self, mock_crud_clipped, mock_crud_content):
         # Setup - existing content found
@@ -148,13 +137,13 @@ class TestWebArticleService:
         mock_existing_content.id = uuid4()
         mock_existing_content.content = "existing content"
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=mock_existing_content)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = uuid4()
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create proper mock for get_with_content
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = mock_clipped_article.id
@@ -167,7 +156,7 @@ class TestWebArticleService:
         mock_clipped_with_content.is_favorite = False
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship
         mock_content_obj = MagicMock()
         mock_content_obj.id = mock_existing_content.id
@@ -183,30 +172,26 @@ class TestWebArticleService:
         mock_content_obj.created_at = datetime.now(timezone.utc)
         mock_content_obj.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content_obj
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         # Execute
-        await self.service.save_article_from_url(
-            url=self.url,
-            title=self.title,
-            content=self.content
-        )
+        await self.service.save_article_from_url(url=self.url, title=self.title, content=self.content)
 
         # Verify - should not create new content
         mock_crud_content.get_by_link_extracted_by_extension.assert_called_once()
         mock_crud_content.create.assert_not_called()
         mock_crud_clipped.create.assert_called_once()
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_save_article_already_clipped(self, mock_crud_clipped, mock_crud_content):
         # Setup - existing clipped article
         mock_existing_content = MagicMock()
         mock_existing_content.id = uuid4()
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=mock_existing_content)
-        
+
         mock_existing_clipped = MagicMock()
         mock_existing_clipped.id = uuid4()
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=mock_existing_clipped)
@@ -222,7 +207,7 @@ class TestWebArticleService:
         mock_existing_clipped.is_favorite = False
         mock_existing_clipped.read_at = None
         mock_existing_clipped.created_at = datetime.now(timezone.utc)
-        
+
         # Mock content for the response
         mock_content_for_response = MagicMock()
         mock_content_for_response.id = mock_existing_content.id
@@ -240,11 +225,7 @@ class TestWebArticleService:
         mock_existing_clipped.content = mock_content_for_response
 
         # Execute
-        result = await self.service.save_article_from_url(
-            url=self.url,
-            title=self.title,
-            content=self.content
-        )
+        result = await self.service.save_article_from_url(url=self.url, title=self.title, content=self.content)
 
         # Verify - should return existing clipped article
         mock_crud_clipped.get_by_user_and_content.assert_called_once_with(
@@ -253,24 +234,24 @@ class TestWebArticleService:
         mock_crud_clipped.create.assert_not_called()
         assert result is not None
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_save_article_with_metadata(self, mock_crud_clipped, mock_crud_content):
         # Setup
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=None)
-        
+
         mock_content_record = MagicMock()
         mock_content_record.id = uuid4()
         mock_crud_content.create = AsyncMock(return_value=mock_content_record)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         clipped_id = uuid4()
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = clipped_id
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create proper mock for get_with_content
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = clipped_id
@@ -283,7 +264,7 @@ class TestWebArticleService:
         mock_clipped_with_content.is_favorite = False
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship with metadata
         mock_content_obj = MagicMock()
         mock_content_obj.id = mock_content_record.id
@@ -299,22 +280,19 @@ class TestWebArticleService:
         mock_content_obj.created_at = datetime.now(timezone.utc)
         mock_content_obj.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content_obj
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         metadata = {
             "description": "Test description",
             "author": "Test Author",
             "image_url": "https://example.com/image.jpg",
-            "published_at": "2023-05-31T07:02:04Z"
+            "published_at": "2023-05-31T07:02:04Z",
         }
 
         # Execute
         await self.service.save_article_from_url(
-            url=self.url,
-            title=self.title,
-            content=self.content,
-            metadata=metadata
+            url=self.url, title=self.title, content=self.content, metadata=metadata
         )
 
         # Verify metadata was included
@@ -336,14 +314,14 @@ class TestWebArticleServiceDateTimeParsing:
     def test_parse_datetime_string_iso_z_format(self):
         date_str = "2023-05-31T07:02:04Z"
         result = self.service._parse_datetime_string(date_str)
-        
+
         expected = datetime(2023, 5, 31, 7, 2, 4, tzinfo=timezone.utc)
         assert result == expected
 
     def test_parse_datetime_string_space_timezone(self):
         date_str = "2023-05-31 07:02:04 -0500"
         result = self.service._parse_datetime_string(date_str)
-        
+
         assert result is not None
         assert result.year == 2023
         assert result.month == 5
@@ -352,7 +330,7 @@ class TestWebArticleServiceDateTimeParsing:
     def test_parse_datetime_string_t_timezone_format(self):
         date_str = "2023-05-31T07:02:04-0500"
         result = self.service._parse_datetime_string(date_str)
-        
+
         assert result is not None
         assert result.year == 2023
         assert result.month == 5
@@ -361,14 +339,14 @@ class TestWebArticleServiceDateTimeParsing:
     def test_parse_datetime_string_standard_iso(self):
         date_str = "2023-05-31T07:02:04"
         result = self.service._parse_datetime_string(date_str)
-        
+
         expected = datetime(2023, 5, 31, 7, 2, 4)
         assert result == expected
 
     def test_parse_datetime_string_simple_date(self):
         date_str = "2023-05-31"
         result = self.service._parse_datetime_string(date_str)
-        
+
         assert result is not None
         assert result.year == 2023
         assert result.month == 5
@@ -377,7 +355,7 @@ class TestWebArticleServiceDateTimeParsing:
     def test_parse_datetime_string_slash_format(self):
         date_str = "2023/05/31 07:02:04"
         result = self.service._parse_datetime_string(date_str)
-        
+
         assert result is not None
         assert result.year == 2023
         assert result.month == 5
@@ -386,7 +364,7 @@ class TestWebArticleServiceDateTimeParsing:
     def test_parse_datetime_string_invalid(self):
         date_str = "invalid-date-string"
         result = self.service._parse_datetime_string(date_str)
-        
+
         assert result is None
 
     def test_parse_datetime_string_empty(self):
@@ -398,7 +376,7 @@ class TestWebArticleServiceDateTimeParsing:
         assert result is None
 
 
-@pytest.mark.unit 
+@pytest.mark.unit
 class TestWebArticleServiceReadingTime:
     def setup_method(self):
         self.db = AsyncMock()
@@ -450,24 +428,24 @@ class TestWebArticleServicePriorityHandling:
         self.user_id = uuid4()
         self.service = WebArticleService(self.db, self.user_id)
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_high_priority_makes_favorite(self, mock_crud_clipped, mock_crud_content):
         # Setup
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=None)
-        
+
         mock_content_record = MagicMock()
         mock_content_record.id = uuid4()
         mock_crud_content.create = AsyncMock(return_value=mock_content_record)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         clipped_id = uuid4()
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = clipped_id
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create proper mock for get_with_content
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = clipped_id
@@ -480,7 +458,7 @@ class TestWebArticleServicePriorityHandling:
         mock_clipped_with_content.is_favorite = True
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship
         mock_content_obj = MagicMock()
         mock_content_obj.id = mock_content_record.id
@@ -496,7 +474,7 @@ class TestWebArticleServicePriorityHandling:
         mock_content_obj.created_at = datetime.now(timezone.utc)
         mock_content_obj.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content_obj
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         # Execute with high priority
@@ -504,7 +482,7 @@ class TestWebArticleServicePriorityHandling:
             url="https://example.com/article",
             title="Test Article",
             content="<p>Test content</p>",
-            priority="high"
+            priority="high",
         )
 
         # Verify high priority becomes favorite
@@ -514,24 +492,24 @@ class TestWebArticleServicePriorityHandling:
         assert create_obj.priority == "high"
         assert create_obj.is_favorite is True
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_medium_priority_not_favorite(self, mock_crud_clipped, mock_crud_content):
         # Setup
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=None)
-        
+
         mock_content_record = MagicMock()
         mock_content_record.id = uuid4()
         mock_crud_content.create = AsyncMock(return_value=mock_content_record)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         clipped_id = uuid4()
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = clipped_id
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create proper mock for get_with_content
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = clipped_id
@@ -544,7 +522,7 @@ class TestWebArticleServicePriorityHandling:
         mock_clipped_with_content.is_favorite = False
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship
         mock_content_obj = MagicMock()
         mock_content_obj.id = mock_content_record.id
@@ -560,7 +538,7 @@ class TestWebArticleServicePriorityHandling:
         mock_content_obj.created_at = datetime.now(timezone.utc)
         mock_content_obj.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content_obj
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         # Execute with medium priority
@@ -568,7 +546,7 @@ class TestWebArticleServicePriorityHandling:
             url="https://example.com/article",
             title="Test Article",
             content="<p>Test content</p>",
-            priority="medium"
+            priority="medium",
         )
 
         # Verify medium priority is not favorite
@@ -577,24 +555,24 @@ class TestWebArticleServicePriorityHandling:
         assert create_obj.priority == "medium"
         assert create_obj.is_favorite is False
 
-    @patch('app.services.web_article_service.crud_article_content')
-    @patch('app.services.web_article_service.crud_clipped_article')
+    @patch("app.services.web_article_service.crud_article_content")
+    @patch("app.services.web_article_service.crud_clipped_article")
     @pytest.mark.asyncio
     async def test_default_priority_medium(self, mock_crud_clipped, mock_crud_content):
         # Setup
         mock_crud_content.get_by_link_extracted_by_extension = AsyncMock(return_value=None)
-        
+
         mock_content_record = MagicMock()
         mock_content_record.id = uuid4()
         mock_crud_content.create = AsyncMock(return_value=mock_content_record)
-        
+
         mock_crud_clipped.get_by_user_and_content = AsyncMock(return_value=None)
-        
+
         clipped_id = uuid4()
         mock_clipped_article = MagicMock()
         mock_clipped_article.id = clipped_id
         mock_crud_clipped.create = AsyncMock(return_value=mock_clipped_article)
-        
+
         # Create proper mock for get_with_content
         mock_clipped_with_content = MagicMock()
         mock_clipped_with_content.id = clipped_id
@@ -607,7 +585,7 @@ class TestWebArticleServicePriorityHandling:
         mock_clipped_with_content.is_favorite = False
         mock_clipped_with_content.read_at = None
         mock_clipped_with_content.created_at = datetime.now(timezone.utc)
-        
+
         # Mock the content relationship
         mock_content_obj = MagicMock()
         mock_content_obj.id = mock_content_record.id
@@ -623,14 +601,14 @@ class TestWebArticleServicePriorityHandling:
         mock_content_obj.created_at = datetime.now(timezone.utc)
         mock_content_obj.updated_at = datetime.now(timezone.utc)
         mock_clipped_with_content.content = mock_content_obj
-        
+
         mock_crud_clipped.get_with_content = AsyncMock(return_value=mock_clipped_with_content)
 
         # Execute without priority
         await self.service.save_article_from_url(
             url="https://example.com/article",
             title="Test Article",
-            content="<p>Test content</p>"
+            content="<p>Test content</p>",
         )
 
         # Verify default priority is medium

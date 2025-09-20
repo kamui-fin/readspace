@@ -57,7 +57,6 @@ class ArticleManagementService:
         allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering and pagination."""
-
         skip = (page - 1) * size
 
         articles_db, total_count = await get_articles_by_user(
@@ -79,13 +78,11 @@ class ArticleManagementService:
             allow_preview=allow_preview,
         )
 
-        articles = [
-            self.transformer.feed_to_unified(article) for article in articles_db
-        ]
+        articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
         pages = (total_count + size - 1) // size if size > 0 else 0
 
-        return PaginatedResponse(
+        result = PaginatedResponse(
             items=articles,
             total=total_count,
             page=page,
@@ -93,9 +90,16 @@ class ArticleManagementService:
             pages=pages,
         )
 
+        return result
+
     async def get_article(self, article_id: UUID, allow_preview: bool = False) -> ArticleResponse | None:
         """Get a single article by its ID."""
-        logger.info("Getting article", article_id=article_id, user_id=self.user_id, allow_preview=allow_preview)
+        logger.info(
+            "Getting article",
+            article_id=article_id,
+            user_id=self.user_id,
+            allow_preview=allow_preview,
+        )
 
         article = await get_article(
             db=self.db,
@@ -139,9 +143,7 @@ class ArticleManagementService:
             limit=limit,
         )
 
-        articles = [
-            self.transformer.feed_to_unified(article) for article in articles_db
-        ]
+        articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
         page = skip // limit + 1
         pages = (total_count + limit - 1) // limit if limit > 0 else 0
@@ -199,9 +201,7 @@ class ArticleManagementService:
             limit=limit,
         )
 
-        articles = [
-            self.transformer.feed_to_unified(article) for article in articles_db
-        ]
+        articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
         page = skip // limit + 1
         pages = (total_count + limit - 1) // limit if limit > 0 else 0
@@ -218,7 +218,12 @@ class ArticleManagementService:
         self, article_id: UUID, article_in: ArticleUpdate, article_type: str = "feed"
     ) -> ArticleResponse | None:
         """Update an article (mark as read/unread, favorite, etc.)."""
-        logger.info("Updating article", article_id=article_id, user_id=self.user_id, article_type=article_type)
+        logger.info(
+            "Updating article",
+            article_id=article_id,
+            user_id=self.user_id,
+            article_type=article_type,
+        )
 
         updated_article = await crud_update_article(
             db=self.db,
@@ -232,15 +237,13 @@ class ArticleManagementService:
             return self.transformer.to_unified(updated_article)
         return None
 
-    async def get_unread_counts_by_folder(self) -> dict[str, int]:
+    async def get_unread_counts_by_folder(self) -> dict[UUID, int]:
         """Get unread article counts grouped by folder."""
         return await get_unread_counts_by_folder(db=self.db, user_id=self.user_id)
 
     async def count_unread_articles_by_folder(self, folder_id: UUID) -> int:
         """Count unread articles for a user in a specific folder."""
-        return await count_unread_articles_by_folder(
-            db=self.db, user_id=self.user_id, folder_id=folder_id
-        )
+        return await count_unread_articles_by_folder(db=self.db, user_id=self.user_id, folder_id=folder_id)
 
     async def get_total_unread_count(self) -> int:
         """Get total count of unread articles for the user."""

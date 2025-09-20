@@ -18,9 +18,7 @@ logger = structlog.get_logger(__name__)
 class ArticleExtractor:
     """Extracts article data from RSS/Atom feed entries."""
 
-    def extract_article_data(
-        self, entry: Any, feed_id: UUID, user_id: UUID
-    ) -> ArticleCreate:
+    def extract_article_data(self, entry: Any, feed_id: UUID, user_id: UUID) -> ArticleCreate:
         """Extract article data from a feed entry.
 
         Args:
@@ -85,9 +83,7 @@ class ArticleExtractor:
         link = entry.get("link", "")
         if isinstance(link, list) and link:
             # Handle multiple links, prefer the first one
-            link = (
-                link[0].get("href", "") if isinstance(link[0], dict) else str(link[0])
-            )
+            link = link[0].get("href", "") if isinstance(link[0], dict) else str(link[0])
         elif isinstance(link, dict):
             link = link.get("href", "")
 
@@ -113,8 +109,11 @@ class ArticleExtractor:
             date_tuple = entry.get(field)
             if date_tuple:
                 try:
-                    return datetime(*date_tuple[:6], tzinfo=timezone.utc)
-                except (TypeError, ValueError):
+                    # Extract first 6 elements (year, month, day, hour, minute, second)
+                    # Create datetime without timezone first, then replace with UTC
+                    dt = datetime(*date_tuple[:6])
+                    return dt.replace(tzinfo=timezone.utc)
+                except (TypeError, ValueError, AttributeError):
                     continue
 
         # Try string date fields
@@ -186,7 +185,7 @@ class ArticleExtractor:
                     if last_space > 200:
                         summary = summary[:last_space] + "..."
 
-        return summary[:1000]  # Limit length
+        return str(summary)[:1000]  # Limit length
 
     def _extract_author(self, entry: Any) -> str | None:
         """Extract article author."""
@@ -211,37 +210,39 @@ class ArticleExtractor:
         # Try media content first (common in RSS)
         if "media_content" in entry:
             for media in entry["media_content"]:
-                if media.get("medium") == "image" or media.get("type", "").startswith(
-                    "image/"
-                ):
-                    return media.get("url")
+                if media.get("medium") == "image" or media.get("type", "").startswith("image/"):
+                    url = media.get("url")
+                    return str(url) if url else None
 
         # Try media thumbnail
         if "media_thumbnail" in entry:
             thumbnails = entry["media_thumbnail"]
             if thumbnails:
-                return thumbnails[0].get("url")
+                url = thumbnails[0].get("url")
+                return str(url) if url else None
 
         # Try enclosure
         enclosures = entry.get("enclosures", [])
         for enclosure in enclosures:
             if enclosure.get("type", "").startswith("image/"):
-                return enclosure.get("href")
+                href = enclosure.get("href")
+                return str(href) if href else None
 
         # Search in content for images
         if content:
             soup = BeautifulSoup(content, "html.parser")
             img_tag = soup.find("img", src=True)
-            if img_tag:
+            if img_tag and hasattr(img_tag, "get"):
                 img_src = img_tag.get("src")
-                # Convert relative URLs to absolute if possible
-                entry_link = entry.get("link")
-                if img_src and entry_link:
-                    try:
-                        return urljoin(entry_link, img_src)
-                    except Exception:
-                        return img_src
-                return img_src
+                if img_src:
+                    # Convert relative URLs to absolute if possible
+                    entry_link = entry.get("link")
+                    if entry_link:
+                        try:
+                            return urljoin(str(entry_link), str(img_src))
+                        except Exception:
+                            return str(img_src)
+                    return str(img_src)
 
         return None
 

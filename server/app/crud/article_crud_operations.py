@@ -10,7 +10,6 @@ from sqlalchemy.orm import selectinload
 
 from app.crud.article_query_builder import ArticleQueryBuilder
 from app.models.rss_models import (
-    Article,
     ArticleContent,
     ClippedArticle,
     FeedArticle,
@@ -25,7 +24,11 @@ class ArticleCrudOperations:
 
     @staticmethod
     async def get_article_by_id(
-        db: AsyncSession, *, article_id: UUID, user_id: UUID, allow_preview: bool = False
+        db: AsyncSession,
+        *,
+        article_id: UUID,
+        user_id: UUID,
+        allow_preview: bool = False,
     ) -> tuple[FeedArticle, UserArticleState] | ClippedArticle | None:
         """Get a specific article by its ID, ensuring it belongs to the user."""
         # First try to get from feed_articles (RSS articles) with user state
@@ -36,8 +39,7 @@ class ArticleCrudOperations:
                 .options(selectinload(FeedArticle.feed), selectinload(FeedArticle.content))
                 .outerjoin(
                     UserArticleState,
-                    (UserArticleState.article_id == FeedArticle.id)
-                    & (UserArticleState.user_id == user_id),
+                    (UserArticleState.article_id == FeedArticle.id) & (UserArticleState.user_id == user_id),
                 )
                 .filter(FeedArticle.id == article_id)
             )
@@ -49,8 +51,7 @@ class ArticleCrudOperations:
                 .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
                 .outerjoin(
                     UserArticleState,
-                    (UserArticleState.article_id == FeedArticle.id)
-                    & (UserArticleState.user_id == user_id),
+                    (UserArticleState.article_id == FeedArticle.id) & (UserArticleState.user_id == user_id),
                 )
                 .filter(FeedArticle.id == article_id, FeedSubscription.user_id == user_id)
             )
@@ -69,13 +70,9 @@ class ArticleCrudOperations:
         return result.scalars().first()
 
     @staticmethod
-    async def get_article_by_guid(
-        db: AsyncSession, *, feed_id: UUID, guid: str
-    ) -> Article | None:
+    async def get_article_by_guid(db: AsyncSession, *, feed_id: UUID, guid: str) -> FeedArticle | None:
         """Get a specific article by its GUID for a given feed_id to check for existence."""
-        result = await db.execute(
-            select(Article).filter(Article.feed_id == feed_id, Article.guid == guid)
-        )
+        result = await db.execute(select(FeedArticle).filter(FeedArticle.feed_id == feed_id, FeedArticle.guid == guid))
         return result.scalars().first()
 
     @staticmethod
@@ -123,15 +120,13 @@ class ArticleCrudOperations:
         articles_result = await db.execute(stmt)
         rows = articles_result.all()  # Get all rows
         # Extract the FeedArticle and UserArticleState objects from each row
-        articles = [
-            (row[0], row[1]) for row in rows
-        ]  # row[0] is FeedArticle, row[1] is UserArticleState
+        articles = [(row[0], row[1]) for row in rows]  # row[0] is FeedArticle, row[1] is UserArticleState
         return articles, total_count
 
     @staticmethod
     async def create_articles_batch(
         db: AsyncSession, *, articles_data: list[ArticleCreate], user_id: UUID
-    ) -> list[Article]:
+    ) -> list[FeedArticle]:
         """Create multiple articles in batch for better performance."""
         if not articles_data:
             return []
@@ -142,10 +137,10 @@ class ArticleCrudOperations:
 
             # Single query to check for existing articles
             existing_result = await db.execute(
-                select(Article.feed_id, Article.guid).filter(
+                select(FeedArticle.feed_id, FeedArticle.guid).filter(
                     and_(
-                        Article.feed_id.in_([pair[0] for pair in feed_guid_pairs]),
-                        Article.guid.in_([pair[1] for pair in feed_guid_pairs]),
+                        FeedArticle.feed_id.in_([pair[0] for pair in feed_guid_pairs]),
+                        FeedArticle.guid.in_([pair[1] for pair in feed_guid_pairs]),
                     )
                 )
             )
@@ -153,9 +148,7 @@ class ArticleCrudOperations:
 
             # Step 2: Filter out duplicates
             new_articles = [
-                article
-                for article in articles_data
-                if (article.feed_id, article.guid) not in existing_pairs
+                article for article in articles_data if (article.feed_id, article.guid) not in existing_pairs
             ]
 
             if not new_articles:
@@ -174,9 +167,7 @@ class ArticleCrudOperations:
                         "content": article_in.content,
                         "author": article_in.author,
                         "published_at": article_in.published_at,
-                        "estimated_read_time_minutes": getattr(
-                            article_in, "estimated_read_time_minutes", None
-                        ),
+                        "estimated_read_time_minutes": getattr(article_in, "estimated_read_time_minutes", None),
                         "created_at": current_time,
                         "updated_at": current_time,
                     }
@@ -184,9 +175,7 @@ class ArticleCrudOperations:
 
             # Bulk insert content with RETURNING to get IDs directly
             content_insert_stmt = insert(ArticleContent).values(content_mappings)
-            content_result = await db.execute(
-                content_insert_stmt.returning(ArticleContent.id, ArticleContent.link)
-            )
+            content_result = await db.execute(content_insert_stmt.returning(ArticleContent.id, ArticleContent.link))
             content_rows = content_result.fetchall()
             await db.flush()
 
@@ -207,25 +196,25 @@ class ArticleCrudOperations:
 
             # Bulk insert articles with ON CONFLICT DO NOTHING for safety
             # Use insert().returning() to get the IDs of the newly created articles
-            article_insert_stmt = insert(Article).values(article_mappings)
-            article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(
+            article_insert_stmt = insert(FeedArticle).values(article_mappings)
+            article_returning_stmt = article_insert_stmt.on_conflict_do_nothing(
                 index_elements=["feed_id", "guid"]
             ).returning(
-                Article.id,
-                Article.feed_id,
-                Article.guid,
-                Article.content_id,
-                Article.created_at,
+                FeedArticle.id,
+                FeedArticle.feed_id,
+                FeedArticle.guid,
+                FeedArticle.content_id,
+                FeedArticle.created_at,
             )  # Include all columns needed to reconstruct Article object
 
-            result = await db.execute(article_insert_stmt)
+            result = await db.execute(article_returning_stmt)
             newly_inserted_articles_data = result.fetchall()
 
             # Create UserArticleState entries for each newly inserted article
             for article_data_tuple in newly_inserted_articles_data:
                 # Reconstruct a temporary Article object from the returned data
                 # This is a simplified reconstruction, assuming the order of returning() matches Article constructor
-                temp_article = Article(
+                temp_article = FeedArticle(
                     id=article_data_tuple[0],
                     feed_id=article_data_tuple[1],
                     guid=article_data_tuple[2],
@@ -249,9 +238,7 @@ class ArticleCrudOperations:
 
             if user_article_state_mappings:
                 # Bulk insert UserArticleState entries
-                user_state_insert_stmt = insert(UserArticleState).values(
-                    user_article_state_mappings
-                )
+                user_state_insert_stmt = insert(UserArticleState).values(user_article_state_mappings)
                 # On conflict, do nothing for user states as well
                 user_state_insert_stmt = user_state_insert_stmt.on_conflict_do_nothing(
                     index_elements=["user_id", "article_id"]
@@ -277,7 +264,7 @@ class ArticleCrudOperations:
         article_in: ArticleUpdate,
         user_id: UUID,
         article_type: str = "feed",
-    ) -> Article | None:
+    ) -> FeedArticle | None:
         """Update article status (read, favorite, etc.)."""
         update_data = article_in.model_dump(exclude_unset=True)
 
@@ -293,7 +280,10 @@ class ArticleCrudOperations:
                 select(ClippedArticle)
                 .options(selectinload(ClippedArticle.content))
                 .where(
-                    and_(ClippedArticle.id == article_id, ClippedArticle.user_id == user_id)
+                    and_(
+                        ClippedArticle.id == article_id,
+                        ClippedArticle.user_id == user_id,
+                    )
                 )
             )
             clipped_article = clipped_article_result.scalar_one_or_none()
@@ -325,12 +315,9 @@ class ArticleCrudOperations:
                     and_(
                         UserArticleState.user_id == user_id,
                         UserArticleState.article_id == article_id,
-                    )
+                    ),
                 )
-                .options(
-                    selectinload(FeedArticle.content),
-                    selectinload(FeedArticle.feed)
-                )
+                .options(selectinload(FeedArticle.content), selectinload(FeedArticle.feed))
                 .where(
                     and_(
                         FeedArticle.id == article_id,
@@ -343,6 +330,7 @@ class ArticleCrudOperations:
             if not result_tuple:
                 return None
 
+            feed_article: FeedArticle
             feed_article, subscription, user_state = result_tuple
 
             if user_state:
@@ -352,9 +340,7 @@ class ArticleCrudOperations:
                         setattr(user_state, field, value)
             else:
                 # Create new state
-                user_state = UserArticleState(
-                    user_id=user_id, article_id=article_id, **update_data
-                )
+                user_state = UserArticleState(user_id=user_id, article_id=article_id, **update_data)
                 db.add(user_state)
 
             # Commit the changes

@@ -1,4 +1,4 @@
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 
 from pydantic import BaseModel
 from sqlalchemy import update
@@ -6,7 +6,14 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-ModelType = TypeVar("ModelType")
+
+class HasId(Protocol):
+    """Protocol for models that have an id attribute."""
+
+    id: Any
+
+
+ModelType = TypeVar("ModelType", bound=HasId)
 CreateSchemaType = TypeVar("CreateSchemaType", bound=BaseModel)
 UpdateSchemaType = TypeVar("UpdateSchemaType", bound=BaseModel)
 
@@ -54,19 +61,14 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             return db_obj
 
         # Use UPDATE...RETURNING to get the updated object without refresh()
-        update_stmt = (
-            update(self.model)
-            .where(self.model.id == db_obj.id)
-            .values(**update_data)
-            .returning(self.model)
-        )
+        update_stmt = update(self.model).where(self.model.id == db_obj.id).values(**update_data).returning(self.model)
         result = await db.execute(update_stmt)
         updated_obj = result.scalar_one()
 
         await db.commit()
         return updated_obj
 
-    async def remove(self, db: AsyncSession, *, id: int) -> ModelType:
+    async def remove(self, db: AsyncSession, *, id: Any) -> ModelType | None:
         obj = await self.get(db, id=id)
         if obj:
             await db.delete(obj)

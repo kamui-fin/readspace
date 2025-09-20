@@ -41,38 +41,28 @@ class BookMetadata(Base):
     description = Column(Text)
     cover_url = Column(Text)
     file_url = Column(Text, nullable=False)
-    format = Column(Enum(BookFormat, name="bookformat"), nullable=False)
+    format: Column[BookFormat] = Column(Enum(BookFormat, name="bookformat"), nullable=False)
     num_pages = Column(Integer)
     file_size_bytes = Column(BigInteger)
 
     # EPUB/PDF structure
-    epub_chapter_char_counts = Column(ARRAY(Integer))
-    epub_page_char_counts = Column(ARRAY(Integer))
+    epub_chapter_char_counts: Column[list[int] | None] = Column(ARRAY(Integer))
+    epub_page_char_counts: Column[list[int] | None] = Column(ARRAY(Integer))
     pdf_toc = Column(JSON)
 
-    created_at = Column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow
-    )
+    created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
     # Relationships
-    user_libraries = relationship(
-        "UserBookLibrary", back_populates="book_metadata", cascade="all, delete-orphan"
-    )
+    user_libraries = relationship("UserBookLibrary", back_populates="book_metadata", cascade="all, delete-orphan")
 
 
 class UserBookLibrary(Base):
     __tablename__ = "user_book_library"
 
     id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
-    user_id = Column(
-        PGUUID, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
-    )
-    book_metadata_id = Column(
-        PGUUID, ForeignKey("book_metadata.id", ondelete="CASCADE"), nullable=False
-    )
-    date_added = Column(
-        DateTime(timezone=True), nullable=False, default=datetime.utcnow
-    )
+    user_id = Column(PGUUID, ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
+    book_metadata_id = Column(PGUUID, ForeignKey("book_metadata.id", ondelete="CASCADE"), nullable=False)
+    date_added = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow)
 
     # User-specific progress
     epub_progress = Column(JSON)
@@ -80,23 +70,17 @@ class UserBookLibrary(Base):
 
     # Relationships
     book_metadata = relationship("BookMetadata", back_populates="user_libraries")
-    highlights = relationship(
-        "Highlight", back_populates="user_book_library", cascade="all, delete-orphan"
-    )
+    highlights = relationship("Highlight", back_populates="user_book_library", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        UniqueConstraint("user_id", "book_metadata_id", name="uix_user_book"),
-    )
+    __table_args__ = (UniqueConstraint("user_id", "book_metadata_id", name="uix_user_book"),)
 
 
 class Highlight(Base):
     __tablename__ = "highlights"
 
     id = Column(PGUUID, primary_key=True, default=uuid.uuid4)
-    user_book_lib_id = Column(
-        PGUUID, ForeignKey("user_book_library.id", ondelete="CASCADE"), nullable=False
-    )
-    color = Column(Enum(HighlightColor, name="highlightcolor"), nullable=False)
+    user_book_lib_id = Column(PGUUID, ForeignKey("user_book_library.id", ondelete="CASCADE"), nullable=False)
+    color: Column[HighlightColor] = Column(Enum(HighlightColor, name="highlightcolor"), nullable=False)
     original_text = Column(Text, nullable=False)
     note = Column(Text)
 

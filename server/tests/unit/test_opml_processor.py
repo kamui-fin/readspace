@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as ET
-from datetime import datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -15,7 +14,7 @@ class TestOpmlProcessorExtractFeeds:
 
     @pytest.mark.asyncio
     async def test_extract_feeds_simple_opml(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <head>
                 <title>Test OPML</title>
@@ -24,7 +23,7 @@ class TestOpmlProcessorExtractFeeds:
                 <outline title="Feed 1" xmlUrl="https://example.com/feed1.xml" htmlUrl="https://example.com" />
                 <outline title="Feed 2" xmlUrl="https://example.com/feed2.xml" htmlUrl="https://example2.com" />
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
@@ -34,19 +33,19 @@ class TestOpmlProcessorExtractFeeds:
             "xml_url": "https://example.com/feed1.xml",
             "html_url": "https://example.com",
             "folder_name": None,
-            "type": "feed"
+            "type": "feed",
         }
         assert result[1] == {
             "title": "Feed 2",
             "xml_url": "https://example.com/feed2.xml",
             "html_url": "https://example2.com",
             "folder_name": None,
-            "type": "feed"
+            "type": "feed",
         }
 
     @pytest.mark.asyncio
     async def test_extract_feeds_with_folders(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <head>
                 <title>Test OPML</title>
@@ -58,30 +57,30 @@ class TestOpmlProcessorExtractFeeds:
                 </outline>
                 <outline title="Direct Feed" xmlUrl="https://example.com/direct.xml" htmlUrl="https://example.com" />
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
         assert len(result) == 3  # Fixed: no more duplicates
-        
+
         # Check folder feeds
         tech_feeds = [feed for feed in result if feed["folder_name"] == "Tech News"]
         assert len(tech_feeds) == 2
-        
+
         tech_titles = {feed["title"] for feed in tech_feeds}
         assert tech_titles == {"TechCrunch", "Hacker News"}
-        
+
         # Check direct feed (should be 1 now)
         direct_feeds = [feed for feed in result if feed["folder_name"] is None]
         assert len(direct_feeds) == 1  # Fixed: no more duplicates
-        
+
         # Check that Direct Feed is in the results
         direct_feed_titles = {feed["title"] for feed in direct_feeds}
         assert "Direct Feed" in direct_feed_titles
 
     @pytest.mark.asyncio
     async def test_extract_feeds_nested_folders(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="News" text="News">
@@ -90,12 +89,12 @@ class TestOpmlProcessorExtractFeeds:
                     </outline>
                 </outline>
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
         assert len(result) == 1  # Fixed: no more duplicates
-        
+
         # Check that we have the properly nested folder structure
         nested_feeds = [feed for feed in result if feed["folder_name"] == "Tech"]
         assert len(nested_feeds) == 1
@@ -104,12 +103,12 @@ class TestOpmlProcessorExtractFeeds:
 
     @pytest.mark.asyncio
     async def test_extract_feeds_text_fallback(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline text="Feed Text" xmlUrl="https://example.com/feed.xml" />
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
@@ -118,12 +117,12 @@ class TestOpmlProcessorExtractFeeds:
 
     @pytest.mark.asyncio
     async def test_extract_feeds_no_html_url(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="Feed No HTML" xmlUrl="https://example.com/feed.xml" />
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
@@ -139,37 +138,37 @@ class TestOpmlProcessorExtractFeeds:
 
     @pytest.mark.asyncio
     async def test_extract_feeds_no_body(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <head>
                 <title>Test OPML</title>
             </head>
-        </opml>'''
+        </opml>"""
 
         with pytest.raises(ValidationError, match="Invalid OPML format: No body element found"):
             await self.processor.extract_feeds_from_opml(opml_content)
 
     @pytest.mark.asyncio
     async def test_extract_feeds_no_valid_feeds(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="Just a folder" text="Just a folder" />
             </body>
-        </opml>'''
+        </opml>"""
 
         with pytest.raises(ValidationError, match="No valid feeds found in OPML file"):
             await self.processor.extract_feeds_from_opml(opml_content)
 
     @pytest.mark.asyncio
     async def test_extract_feeds_empty_outlines(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline />
                 <outline title="" />
             </body>
-        </opml>'''
+        </opml>"""
 
         with pytest.raises(ValidationError, match="No valid feeds found in OPML file"):
             await self.processor.extract_feeds_from_opml(opml_content)
@@ -290,7 +289,7 @@ class TestOpmlProcessorExportFeeds:
         root = ET.fromstring(result)
         body = root.find("body")
         outline = body.find("outline")
-        
+
         assert outline.get("htmlUrl") is None
         assert outline.get("xmlUrl") == "https://example.com/feed.xml"
 
@@ -337,7 +336,7 @@ class TestOpmlProcessorExportFeeds:
         root = ET.fromstring(result)
         head = root.find("head")
         date_created = head.find("dateCreated")
-        
+
         # Verify date format (should be RFC 822 format)
         assert date_created is not None
         assert "GMT" in date_created.text
@@ -349,12 +348,12 @@ class TestOpmlProcessorValidation:
         self.processor = OpmlProcessor()
 
     def test_validate_opml_content_valid(self):
-        valid_opml = '''<?xml version="1.0" encoding="UTF-8"?>
+        valid_opml = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="Feed" xmlUrl="https://example.com/feed.xml" />
             </body>
-        </opml>'''
+        </opml>"""
 
         # Should not raise any exception
         self.processor.validate_opml_content(valid_opml)
@@ -374,44 +373,44 @@ class TestOpmlProcessorValidation:
             self.processor.validate_opml_content(invalid_xml)
 
     def test_validate_opml_content_wrong_root_element(self):
-        wrong_root = '''<?xml version="1.0" encoding="UTF-8"?>
+        wrong_root = """<?xml version="1.0" encoding="UTF-8"?>
         <rss version="2.0">
             <channel>
                 <title>Not OPML</title>
             </channel>
-        </rss>'''
+        </rss>"""
 
         with pytest.raises(ValidationError, match="This appears to be an RSS/Atom feed file"):
             self.processor.validate_opml_content(wrong_root)
 
     def test_validate_opml_content_no_body(self):
-        no_body = '''<?xml version="1.0" encoding="UTF-8"?>
+        no_body = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <head>
                 <title>No Body</title>
             </head>
-        </opml>'''
+        </opml>"""
 
         with pytest.raises(ValidationError, match="Invalid OPML format: No body element found"):
             self.processor.validate_opml_content(no_body)
 
     def test_validate_opml_content_no_outlines(self):
-        no_outlines = '''<?xml version="1.0" encoding="UTF-8"?>
+        no_outlines = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
             </body>
-        </opml>'''
+        </opml>"""
 
         with pytest.raises(ValidationError, match="Invalid OPML format: No feed entries found"):
             self.processor.validate_opml_content(no_outlines)
 
     def test_validate_opml_content_case_insensitive_root(self):
-        uppercase_opml = '''<?xml version="1.0" encoding="UTF-8"?>
+        uppercase_opml = """<?xml version="1.0" encoding="UTF-8"?>
         <OPML version="2.0">
             <body>
                 <outline title="Feed" xmlUrl="https://example.com/feed.xml" />
             </body>
-        </OPML>'''
+        </OPML>"""
 
         # Should not raise exception (case insensitive)
         self.processor.validate_opml_content(uppercase_opml)
@@ -432,7 +431,7 @@ class TestOpmlProcessorXmlIndentation:
 
         # Convert to string to check formatting
         xml_str = ET.tostring(root, encoding="unicode")
-        
+
         # Should contain newlines and indentation
         assert "\n" in xml_str
         assert "  " in xml_str  # Should have indentation
@@ -447,35 +446,35 @@ class TestOpmlProcessorXmlIndentation:
         self.processor._indent_xml(root)
 
         xml_str = ET.tostring(root, encoding="unicode")
-        
+
         # Should have proper nesting indentation
-        lines = xml_str.split('\n')
+        lines = xml_str.split("\n")
         assert len(lines) > 1  # Should have multiple lines
 
     def test_indent_xml_empty_element(self):
         root = ET.Element("root")
-        
+
         self.processor._indent_xml(root)
-        
+
         # Should handle empty elements without error
         xml_str = ET.tostring(root, encoding="unicode")
         assert xml_str.startswith("<root")
 
 
-@pytest.mark.unit 
+@pytest.mark.unit
 class TestOpmlProcessorEdgeCases:
     def setup_method(self):
         self.processor = OpmlProcessor()
 
     @pytest.mark.asyncio
     async def test_extract_feeds_special_characters_in_titles(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="Feed with &amp; special chars &lt;&gt;" xmlUrl="https://example.com/feed.xml" />
                 <outline title="Feed with üñíçödé" xmlUrl="https://example.com/feed2.xml" />
             </body>
-        </opml>'''
+        </opml>"""
 
         result = await self.processor.extract_feeds_from_opml(opml_content)
 
@@ -485,17 +484,17 @@ class TestOpmlProcessorEdgeCases:
 
     @pytest.mark.asyncio
     async def test_extract_feeds_empty_attributes(self):
-        opml_content = '''<?xml version="1.0" encoding="UTF-8"?>
+        opml_content = """<?xml version="1.0" encoding="UTF-8"?>
         <opml version="2.0">
             <body>
                 <outline title="" xmlUrl="https://example.com/feed.xml" />
                 <outline title="Valid Feed" xmlUrl="" />
             </body>
-        </opml>'''
+        </opml>"""
 
         # Should extract one feed with empty title, ignore one with empty xmlUrl
         result = await self.processor.extract_feeds_from_opml(opml_content)
-        
+
         assert len(result) == 1
         assert result[0]["title"] == ""  # Empty title is preserved
         assert result[0]["xml_url"] == "https://example.com/feed.xml"
@@ -513,16 +512,16 @@ class TestOpmlProcessorEdgeCases:
         # Parse back to ensure XML is valid
         root = ET.fromstring(result)
         outline = root.find(".//outline")
-        
+
         # XML should properly escape special characters
         assert outline.get("title") == "Feed with & special <chars>"
 
     def test_process_outline_element_no_attributes(self):
         # Create outline element with no attributes
         outline = ET.Element("outline")
-        
+
         result = self.processor._process_outline_element(outline)
-        
+
         # Should return empty list for outline with no useful attributes
         assert result == []
 
@@ -532,8 +531,8 @@ class TestOpmlProcessorEdgeCases:
         outline.set("title", "Test Feed")
         outline.set("xmlUrl", "https://example.com/feed.xml")
         outline.set("type", "rss")
-        
+
         result = self.processor._process_outline_element(outline)
-        
+
         assert len(result) == 1
         assert result[0]["type"] == "feed"  # Type is always "feed" for feeds

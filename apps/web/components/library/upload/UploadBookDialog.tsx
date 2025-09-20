@@ -1,0 +1,123 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog"
+import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { HTTPError } from "@/lib/errors"
+import { LoaderCircle, Plus } from "lucide-react"
+import { useState } from "react"
+import toast from "react-hot-toast"
+import { DragDropBook } from "../UploadBook"
+import { useUploadBook } from "./api"
+import { processFileMetadata } from "./utils"
+
+export default function UploadBookDialog() {
+    const [isOpen, setIsOpen] = useState(false)
+    const [isUploading, setIsUploading] = useState(false)
+    const [selectedFile, setSelectedFile] = useState<File | null>(null)
+
+    const { user } = useCurrentUser()
+    const uploadBook = useUploadBook()
+
+    const handleFileUpload = async () => {
+        if (!selectedFile || !user) return
+
+        setIsUploading(true)
+        try {
+            // Process file metadata
+            const fileBuffer = await selectedFile.arrayBuffer()
+            const isPdf = selectedFile.type === "application/pdf"
+            const { metadata, charCounts } = await processFileMetadata(
+                isPdf,
+                selectedFile,
+                fileBuffer
+            )
+
+            // Upload the book
+            await uploadBook.mutateAsync({
+                file: selectedFile,
+                user,
+                metadata,
+                charCounts,
+            })
+
+            setIsOpen(false)
+        } catch (err) {
+            console.error("Error during file upload process:", err)
+
+            // Check if it's a storage limit error
+            if (err instanceof HTTPError && err.status === 429) {
+                return
+            }
+
+            toast.error(
+                err instanceof Error ? err.message : "Upload failed. Try again."
+            )
+        } finally {
+            setIsUploading(false)
+        }
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button size="sm" className="gap-2" disabled={isUploading}>
+                    {isUploading ? (
+                        <>
+                            <LoaderCircle className="h-4 w-4 animate-spin" />
+                            Uploading...
+                        </>
+                    ) : (
+                        <>
+                            <Plus className="h-4 w-4" />
+                            Upload Book
+                        </>
+                    )}
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
+                <DialogHeader>
+                    <DialogTitle>Upload a Book</DialogTitle>
+                    <DialogDescription>
+                        Upload a PDF or EPUB file to start reading.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                    <DragDropBook
+                        isUploading={isUploading}
+                        onFileSelect={setSelectedFile}
+                        selectedFile={selectedFile}
+                        onRemoveFile={() => setSelectedFile(null)}
+                        user={user}
+                    />
+                </div>
+                <div className="flex justify-end gap-2">
+                    <DialogClose asChild>
+                        <Button variant="outline">Cancel</Button>
+                    </DialogClose>
+                    <Button
+                        onClick={handleFileUpload}
+                        disabled={!selectedFile || isUploading}
+                    >
+                        {isUploading ? (
+                            <>
+                                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                                Uploading...
+                            </>
+                        ) : (
+                            "Upload"
+                        )}
+                    </Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+}

@@ -16,7 +16,7 @@ from app.schemas.books import (
 class BookRepository:
     """Repository for book operations."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = BookMetadata
 
     async def get_by_title(self, db: AsyncSession, title: str) -> BookMetadata | None:
@@ -26,7 +26,7 @@ class BookRepository:
             result = await db.execute(query)
             return result.scalar_one_or_none()
         except Exception as e:
-            raise StorageError(f"Failed to get book by title: {str(e)}")
+            raise StorageError(f"Failed to get book by title: {str(e)}") from e
 
     async def get_user_books(
         self, db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
@@ -40,11 +40,9 @@ class BookRepository:
             .limit(limit)
         )
         result = await db.execute(query)
-        return result.scalars().all()
+        return list(result.scalars().all())
 
-    async def get_user_book(
-        self, db: AsyncSession, library_id: UUID, user_id: UUID
-    ) -> UserBookLibraryResponse | None:
+    async def get_user_book(self, db: AsyncSession, library_id: UUID, user_id: UUID) -> UserBookLibraryResponse | None:
         """Get a specific book from a user's library."""
         stmt = (
             select(UserBookLibrary)
@@ -60,9 +58,7 @@ class BookRepository:
         await db.refresh(db_obj, ["book_metadata"])
         return db_obj
 
-    async def add_to_library(
-        self, db: AsyncSession, obj_in: UserBookLibraryCreate
-    ) -> UserBookLibraryResponse:
+    async def add_to_library(self, db: AsyncSession, obj_in: UserBookLibraryCreate) -> UserBookLibraryResponse:
         """Add a book to user's library."""
         db_obj = UserBookLibrary(**obj_in.model_dump())
         db.add(db_obj)
@@ -98,13 +94,9 @@ class BookRepository:
         await db.refresh(db_obj)
         return db_obj
 
-    async def remove_from_library(
-        self, db: AsyncSession, library_id: UUID, user_id: UUID
-    ) -> bool:
+    async def remove_from_library(self, db: AsyncSession, library_id: UUID, user_id: UUID) -> bool:
         """Remove a book from user's library."""
-        query = select(UserBookLibrary).where(
-            UserBookLibrary.id == library_id, UserBookLibrary.user_id == user_id
-        )
+        query = select(UserBookLibrary).where(UserBookLibrary.id == library_id, UserBookLibrary.user_id == user_id)
         result = await db.execute(query)
         db_obj = result.scalar_one_or_none()
         if not db_obj:
@@ -114,14 +106,12 @@ class BookRepository:
         await db.commit()
         return True
 
-    async def update_progress(
-        self, db: AsyncSession, book_id: UUID, progress_data: dict
-    ) -> BookMetadata:
+    async def update_progress(self, db: AsyncSession, book_id: UUID, progress_data: dict) -> BookMetadata:
         """Update book progress."""
         try:
             query = select(self.model).where(self.model.id == book_id)
             result = await db.execute(query)
-            book = result.scalar_one_or_none()
+            book: BookMetadata | None = result.scalar_one_or_none()
 
             if not book:
                 raise StorageError(f"Book not found: {book_id}")
@@ -137,19 +127,13 @@ class BookRepository:
             return book
         except Exception as e:
             await db.rollback()
-            raise StorageError(f"Failed to update book progress: {str(e)}")
+            raise StorageError(f"Failed to update book progress: {str(e)}") from e
 
-    async def get_with_highlights(
-        self, db: AsyncSession, book_id: UUID
-    ) -> BookMetadata | None:
+    async def get_with_highlights(self, db: AsyncSession, book_id: UUID) -> BookMetadata | None:
         """Get a book with its highlights."""
         try:
-            query = (
-                select(self.model)
-                .options(selectinload(self.model.highlights))
-                .where(self.model.id == book_id)
-            )
+            query = select(self.model).options(selectinload(self.model.highlights)).where(self.model.id == book_id)
             result = await db.execute(query)
             return result.scalar_one_or_none()
         except Exception as e:
-            raise StorageError(f"Failed to get book with highlights: {str(e)}")
+            raise StorageError(f"Failed to get book with highlights: {str(e)}") from e

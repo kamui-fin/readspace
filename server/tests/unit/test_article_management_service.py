@@ -1,10 +1,12 @@
 """Unit tests for ArticleManagementService."""
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
-from app.services.article_management_service import ArticleManagementService
+import pytest
+
 from app.schemas.rss_schemas import ArticleResponse, ArticleUpdate, PaginatedResponse
+from app.services.article_management_service import ArticleManagementService
 
 
 def create_mock_article(is_read=False):
@@ -42,7 +44,7 @@ def create_mock_article(is_read=False):
     mock_article.is_favorite = False
     mock_article.feed_id = mock_feed.id
     mock_article.guid = "test-guid"
-    
+
     return mock_article
 
 
@@ -61,21 +63,24 @@ class TestArticleManagementService:
         """Test successful article retrieval with pagination."""
         mock_article1 = create_mock_article(is_read=False)
         mock_article2 = create_mock_article(is_read=True)
-        
+
         mock_articles = [mock_article1, mock_article2]
         total_count = 2
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_articles_by_user = AsyncMock()
             mock_get_articles_by_user.return_value = (mock_articles, total_count)
-            m.setattr("app.services.article_management_service.get_articles_by_user", mock_get_articles_by_user)
-            
+            m.setattr(
+                "app.services.article_management_service.get_articles_by_user",
+                mock_get_articles_by_user,
+            )
+
             result = await self.service.get_articles(page=1, size=10)
-            
+
             assert isinstance(result, PaginatedResponse)
             assert len(result.items) == 2
             assert result.total == 2
-            
+
             mock_get_articles_by_user.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
@@ -101,12 +106,15 @@ class TestArticleManagementService:
         folder_id = uuid4()
         feed_id = uuid4()
         tag_names = ["tech", "news"]
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_articles_by_user = AsyncMock()
             mock_get_articles_by_user.return_value = ([], 0)
-            m.setattr("app.services.article_management_service.get_articles_by_user", mock_get_articles_by_user)
-            
+            m.setattr(
+                "app.services.article_management_service.get_articles_by_user",
+                mock_get_articles_by_user,
+            )
+
             await self.service.get_articles(
                 folder_id=folder_id,
                 feed_ids=[feed_id],
@@ -115,7 +123,7 @@ class TestArticleManagementService:
                 page=2,  # skip=20, limit=50 means page 2
                 size=50,
             )
-            
+
             mock_get_articles_by_user.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
@@ -141,10 +149,13 @@ class TestArticleManagementService:
         with pytest.MonkeyPatch().context() as m:
             mock_get_articles_by_user = AsyncMock()
             mock_get_articles_by_user.return_value = ([], 100)  # 100 total items
-            m.setattr("app.services.article_management_service.get_articles_by_user", mock_get_articles_by_user)
-            
+            m.setattr(
+                "app.services.article_management_service.get_articles_by_user",
+                mock_get_articles_by_user,
+            )
+
             result = await self.service.get_articles(page=1, size=10)
-            
+
             assert result.total == 100
             assert result.pages == 10
 
@@ -152,19 +163,22 @@ class TestArticleManagementService:
     async def test_get_unread_articles(self):
         """Test getting unread articles calls get_articles with is_read=False."""
         folder_id = uuid4()
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_articles_by_user = AsyncMock()
             mock_get_articles_by_user.return_value = ([], 0)
-            m.setattr("app.services.article_management_service.get_articles_by_user", mock_get_articles_by_user)
-            
+            m.setattr(
+                "app.services.article_management_service.get_articles_by_user",
+                mock_get_articles_by_user,
+            )
+
             await self.service.get_unread_articles(
                 folder_id=folder_id,
                 search_query="python",
                 skip=10,
                 limit=25,
             )
-            
+
             mock_get_articles_by_user.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
@@ -182,18 +196,21 @@ class TestArticleManagementService:
         mock_article = create_mock_article()
         mock_articles = [mock_article]
         total_count = 1
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_unified_articles = AsyncMock()
             mock_get_unified_articles.return_value = (mock_articles, total_count)
-            m.setattr("app.services.article_management_service.crud_unified_articles.get_unified_articles_by_user", mock_get_unified_articles)
-            
+            m.setattr(
+                "app.services.article_management_service.crud_unified_articles.get_unified_articles_by_user",
+                mock_get_unified_articles,
+            )
+
             result = await self.service.get_read_later_articles(skip=5, limit=15)
-            
+
             assert isinstance(result, PaginatedResponse)
             assert len(result.items) == 1
             assert result.total == 1
-            
+
             mock_get_unified_articles.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
@@ -212,18 +229,21 @@ class TestArticleManagementService:
         mock_article = create_mock_article(is_read=True)
         mock_articles = [mock_article]
         total_count = 1
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_recently_read = AsyncMock()
             mock_get_recently_read.return_value = (mock_articles, total_count)
-            m.setattr("app.services.article_management_service.get_recently_read_articles", mock_get_recently_read)
-            
+            m.setattr(
+                "app.services.article_management_service.get_recently_read_articles",
+                mock_get_recently_read,
+            )
+
             result = await self.service.get_recently_read_articles(skip=0, limit=20)
-            
+
             assert isinstance(result, PaginatedResponse)
             assert len(result.items) == 1
             assert result.total == 1
-            
+
             mock_get_recently_read.assert_called_once_with(
                 db=self.db,
                 user_id=self.user_id,
@@ -236,27 +256,30 @@ class TestArticleManagementService:
         """Test successful article update."""
         article_id = uuid4()
         article_update = ArticleUpdate(is_read=True, is_favorite=True)
-        
+
         updated_article = create_mock_article(is_read=True)
         updated_article.id = article_id
         updated_article.is_favorite = True
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_crud_update_article = AsyncMock()
             mock_crud_update_article.return_value = updated_article
-            m.setattr("app.services.article_management_service.crud_update_article", mock_crud_update_article)
-            
+            m.setattr(
+                "app.services.article_management_service.crud_update_article",
+                mock_crud_update_article,
+            )
+
             result = await self.service.update_article(article_id, article_update)
-            
+
             assert isinstance(result, ArticleResponse)
             assert result is not None
-            
+
             mock_crud_update_article.assert_called_once_with(
                 db=self.db,
                 article_id=article_id,
                 article_in=article_update,
                 user_id=self.user_id,
-                article_type='feed',
+                article_type="feed",
             )
 
     @pytest.mark.asyncio
@@ -265,10 +288,13 @@ class TestArticleManagementService:
         with pytest.MonkeyPatch().context() as m:
             mock_get_articles_by_user = AsyncMock()
             mock_get_articles_by_user.return_value = ([], 5)  # 5 total items
-            m.setattr("app.services.article_management_service.get_articles_by_user", mock_get_articles_by_user)
-            
+            m.setattr(
+                "app.services.article_management_service.get_articles_by_user",
+                mock_get_articles_by_user,
+            )
+
             result = await self.service.get_articles(page=1, size=10)
-            
+
             assert result.total == 5
             assert result.pages == 1
 
@@ -277,52 +303,51 @@ class TestArticleManagementService:
         """Test article update when article doesn't exist."""
         article_id = uuid4()
         article_update = ArticleUpdate(is_read=True)
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_crud_update_article = AsyncMock()
             mock_crud_update_article.return_value = None
-            m.setattr("app.services.article_management_service.crud_update_article", mock_crud_update_article)
-            
+            m.setattr(
+                "app.services.article_management_service.crud_update_article",
+                mock_crud_update_article,
+            )
+
             result = await self.service.update_article(article_id, article_update)
-            
+
             assert result is None
 
     @pytest.mark.asyncio
     async def test_get_unread_counts_by_folder(self):
         """Test getting unread counts grouped by folder."""
-        expected_counts = {
-            "Technology": 15,
-            "News": 8,
-            "Science": 3
-        }
-        
+        expected_counts = {"Technology": 15, "News": 8, "Science": 3}
+
         with pytest.MonkeyPatch().context() as m:
             mock_get_unread_counts = AsyncMock()
             mock_get_unread_counts.return_value = expected_counts
-            m.setattr("app.services.article_management_service.get_unread_counts_by_folder", mock_get_unread_counts)
-            
-            result = await self.service.get_unread_counts_by_folder()
-            
-            assert result == expected_counts
-            mock_get_unread_counts.assert_called_once_with(
-                db=self.db,
-                user_id=self.user_id
+            m.setattr(
+                "app.services.article_management_service.get_unread_counts_by_folder",
+                mock_get_unread_counts,
             )
+
+            result = await self.service.get_unread_counts_by_folder()
+
+            assert result == expected_counts
+            mock_get_unread_counts.assert_called_once_with(db=self.db, user_id=self.user_id)
 
     @pytest.mark.asyncio
     async def test_get_total_unread_count(self):
         """Test getting total unread article count."""
         expected_count = 42
-        
+
         with pytest.MonkeyPatch().context() as m:
             mock_count_unread = AsyncMock()
             mock_count_unread.return_value = expected_count
-            m.setattr("app.services.article_management_service.count_unread_articles", mock_count_unread)
-            
-            result = await self.service.get_total_unread_count()
-            
-            assert result == expected_count
-            mock_count_unread.assert_called_once_with(
-                db=self.db,
-                user_id=self.user_id
+            m.setattr(
+                "app.services.article_management_service.count_unread_articles",
+                mock_count_unread,
             )
+
+            result = await self.service.get_total_unread_count()
+
+            assert result == expected_count
+            mock_count_unread.assert_called_once_with(db=self.db, user_id=self.user_id)

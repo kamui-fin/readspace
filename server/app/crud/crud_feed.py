@@ -1,6 +1,7 @@
 """CRUD operations for the new global feeds (feeds_new) table."""
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import UUID
 
 import structlog
@@ -103,9 +104,7 @@ async def update_feed_metadata(
                     validated_hours.append(hour_int)
             feed_db.skip_hours = validated_hours
         except (ValueError, TypeError):
-            logger.warning(
-                "Invalid skip_hours", skip_hours=skip_hours, feed_id=feed_db.id
-            )
+            logger.warning("Invalid skip_hours", skip_hours=skip_hours, feed_id=feed_db.id)
             feed_db.skip_hours = []
 
     if skip_days is not None:
@@ -134,12 +133,12 @@ async def update_feed_metadata(
     return feed_db
 
 
-
-async def get_feeds_needing_refresh(
-    db: AsyncSession, *, limit: int = 100
-) -> list[Feed]:
+async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> list[Feed]:
     """Get global feeds that need refreshing, prioritized by subscriber count."""
-    logger.info("get_feeds_needing_refresh called (filtering feeds with 0 subscribers)", limit=limit)
+    logger.info(
+        "get_feeds_needing_refresh called (filtering feeds with 0 subscribers)",
+        limit=limit,
+    )
     now = datetime.now(timezone.utc)
     current_utc_hour = now.hour
     current_utc_weekday = now.weekday()
@@ -149,10 +148,7 @@ async def get_feeds_needing_refresh(
         select(Feed)
         .filter(Feed.last_fetched_at.is_(None))
         .filter(Feed.subscriber_count > 0)
-        .filter(
-            (Feed.skip_hours.is_(None))
-            | (~Feed.skip_hours.contains([current_utc_hour]))
-        )
+        .filter((Feed.skip_hours.is_(None)) | (~Feed.skip_hours.contains([current_utc_hour])))
         .filter(
             (Feed.skip_days.is_(None))
             | (
@@ -196,19 +192,14 @@ async def get_feeds_needing_refresh(
             else_=DEFAULT_REFRESH_INTERVAL_MINUTES,
         )
 
-        next_fetch_time = Feed.last_fetched_at + (
-            effective_delay * text("INTERVAL '1 minute'")
-        )
+        next_fetch_time = Feed.last_fetched_at + (effective_delay * text("INTERVAL '1 minute'"))
 
         due_feeds_stmt = (
             select(Feed)
             .filter(Feed.last_fetched_at.is_not(None))
             .filter(Feed.subscriber_count > 0)
             .filter(Feed.last_fetched_at < min_interval_ago)
-            .filter(
-                (Feed.skip_hours.is_(None))
-                | (~Feed.skip_hours.contains([current_utc_hour]))
-            )
+            .filter((Feed.skip_hours.is_(None)) | (~Feed.skip_hours.contains([current_utc_hour])))
             .filter(
                 (Feed.skip_days.is_(None))
                 | (
@@ -231,7 +222,7 @@ async def get_feeds_needing_refresh(
             .order_by(
                 # Prioritize feeds with more subscribers, then by last fetch time
                 Feed.subscriber_count.desc(),
-                Feed.last_fetched_at.asc()
+                Feed.last_fetched_at.asc(),
             )
             .limit(remaining_limit)
         )
@@ -246,9 +237,7 @@ async def get_feeds_needing_refresh(
     total_feeds_result = await db.execute(select(func.count(Feed.id)))
     total_feeds = total_feeds_result.scalar()
 
-    zero_subscriber_feeds_result = await db.execute(
-        select(func.count(Feed.id)).filter(Feed.subscriber_count == 0)
-    )
+    zero_subscriber_feeds_result = await db.execute(select(func.count(Feed.id)).filter(Feed.subscriber_count == 0))
     zero_subscriber_feeds = zero_subscriber_feeds_result.scalar()
 
     logger.info(
@@ -256,7 +245,7 @@ async def get_feeds_needing_refresh(
         total_count=len(feeds_needing_refresh),
         total_feeds_in_db=total_feeds,
         feeds_with_zero_subscribers=zero_subscriber_feeds,
-        feeds_skipped_due_to_no_subscribers=zero_subscriber_feeds
+        feeds_skipped_due_to_no_subscribers=zero_subscriber_feeds,
     )
     return feeds_needing_refresh[:limit]
 
@@ -295,15 +284,11 @@ async def get_feeds_by_user(
     stmt = stmt.order_by(Feed.title).offset(skip).limit(limit)
 
     result = await db.execute(stmt)
-    return result.unique().all()
+    rows = result.unique().all()
+    return [(row[0], row[1]) for row in rows]
 
 
-async def update_feed_error(
-    db: AsyncSession,
-    *,
-    feed_db: Feed,
-    error_message: str
-) -> Feed:
+async def update_feed_error(db: AsyncSession, *, feed_db: Feed, error_message: str) -> Feed:
     """Update feed error count and message after a failed fetch."""
     feed_db.fetch_error_count += 1
     feed_db.last_error_message = error_message
@@ -317,62 +302,60 @@ async def update_feed_error(
         "Feed error count updated",
         feed_id=feed_db.id,
         error_count=feed_db.fetch_error_count,
-        error_message=error_message
+        error_message=error_message,
     )
 
     return feed_db
 
 
-async def update_feed_enrichment(
-    db: AsyncSession,
-    feed: Feed,
-    enrichment_data: dict[str, any]
-) -> Feed:
+async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: dict[str, Any]) -> Feed:
     """Update feed with enrichment data from background processing."""
     try:
         # Update basic feed metadata
-        if 'title' in enrichment_data and enrichment_data['title']:
-            feed.title = enrichment_data['title']
+        if "title" in enrichment_data and enrichment_data["title"]:
+            feed.title = enrichment_data["title"]
 
-        if 'description' in enrichment_data and enrichment_data['description']:
-            feed.description = enrichment_data['description']
+        if "description" in enrichment_data and enrichment_data["description"]:
+            feed.description = enrichment_data["description"]
 
-        if 'link' in enrichment_data and enrichment_data['link']:
-            feed.link = enrichment_data['link']
+        if "link" in enrichment_data and enrichment_data["link"]:
+            feed.link = enrichment_data["link"]
 
-        if 'image_url' in enrichment_data and enrichment_data['image_url']:
-            feed.image_url = enrichment_data['image_url']
+        if "image_url" in enrichment_data and enrichment_data["image_url"]:
+            feed.image_url = enrichment_data["image_url"]
 
-        if 'language' in enrichment_data and enrichment_data['language']:
-            feed.language = enrichment_data['language']
+        if "language" in enrichment_data and enrichment_data["language"]:
+            feed.language = enrichment_data["language"]
 
         # Update RSS dataset fields
-        if 'tags' in enrichment_data and isinstance(enrichment_data['tags'], list):
-            feed.tags = enrichment_data['tags']
+        if "tags" in enrichment_data and isinstance(enrichment_data["tags"], list):
+            feed.tags = enrichment_data["tags"]
 
-        if 'top_level_category' in enrichment_data:
-            category_str = enrichment_data['top_level_category']
+        if "top_level_category" in enrichment_data:
+            category_str = enrichment_data["top_level_category"]
             try:
-                # Convert string to enum
-                feed.top_level_category = FeedCategory(category_str)
+                # Convert string to enum value for assignment
+                category_enum = FeedCategory(category_str)
+                feed.top_level_category = category_enum.value
             except ValueError:
                 logger.warning("Invalid category", category=category_str, feed_id=feed.id)
-                feed.top_level_category = FeedCategory.MISCELLANEOUS
+                feed.top_level_category = FeedCategory.MISCELLANEOUS.value
 
-        if 'popularity_score' in enrichment_data:
-            feed.popularity_score = float(enrichment_data['popularity_score'])
+        if "popularity_score" in enrichment_data:
+            feed.popularity_score = float(enrichment_data["popularity_score"])
 
         # Update embedding if present
-        if 'embedding' in enrichment_data and enrichment_data['embedding']:
+        if "embedding" in enrichment_data and enrichment_data["embedding"]:
             # Embedding is handled as a vector column by SQLAlchemy
             # The pgvector extension handles the conversion
             from sqlalchemy import text
-            embedding_list = enrichment_data['embedding']
+
+            embedding_list = enrichment_data["embedding"]
             if isinstance(embedding_list, list) and len(embedding_list) == 768:
                 # Update using raw SQL for vector type
                 await db.execute(
                     text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
-                    {"embedding": str(embedding_list), "feed_id": feed.id}
+                    {"embedding": str(embedding_list), "feed_id": feed.id},
                 )
 
         # Update the feed timestamp
@@ -385,7 +368,7 @@ async def update_feed_enrichment(
         logger.info(
             "Feed enrichment data updated successfully",
             feed_id=feed.id,
-            updated_fields=list(enrichment_data.keys())
+            updated_fields=list(enrichment_data.keys()),
         )
 
         return feed
@@ -395,7 +378,7 @@ async def update_feed_enrichment(
             "Failed to update feed with enrichment data",
             feed_id=feed.id,
             error=str(e),
-            exc_info=True
+            exc_info=True,
         )
         await db.rollback()
         raise

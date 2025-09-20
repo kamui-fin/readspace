@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import local design tokens */
+@import './lib/design-tokens/globals.css';
+
+/* Ensure consistent popup width across browsers */
+body {
+  min-width: 450px;
+  max-width: 450px;
+  width: 450px !important;
+}

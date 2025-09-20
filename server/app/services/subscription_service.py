@@ -39,8 +39,9 @@ class SubscriptionService:
 
         # Handle 'default' folder_id by getting the actual default folder
         actual_folder_id = folder_id
-        if folder_id == 'default':
+        if folder_id == "default":
             from app.services.folder_service import FolderService
+
             folder_service = FolderService(self.db, self.user_id)
             default_folder = await folder_service.get_default_folder()
             if default_folder:
@@ -81,31 +82,17 @@ class SubscriptionService:
             logger.warning("Subscription already exists", url=url, user_id=self.user_id)
             raise ValueError(f"Subscription to feed '{url}' already exists") from e
 
-    async def get_subscription_by_id(
-        self, *, subscription_id: UUID
-    ) -> SubscriptionResponse | None:
+    async def get_subscription_by_id(self, *, subscription_id: UUID) -> SubscriptionResponse | None:
         """Get a subscription by ID."""
         subscription_db = await crud_subscription.get_subscription_by_id(
             self.db, subscription_id=subscription_id, user_id=self.user_id
         )
-        return (
-            SubscriptionResponse.model_validate(subscription_db)
-            if subscription_db
-            else None
-        )
+        return SubscriptionResponse.model_validate(subscription_db) if subscription_db else None
 
-    async def get_subscription_by_feed_url(
-        self, *, url: str
-    ) -> SubscriptionResponse | None:
+    async def get_subscription_by_feed_url(self, *, url: str) -> SubscriptionResponse | None:
         """Get user's subscription to a feed by URL."""
-        subscription_db = await crud_subscription.get_subscription_by_feed_url(
-            self.db, url=url, user_id=self.user_id
-        )
-        return (
-            SubscriptionResponse.model_validate(subscription_db)
-            if subscription_db
-            else None
-        )
+        subscription_db = await crud_subscription.get_subscription_by_feed_url(self.db, url=url, user_id=self.user_id)
+        return SubscriptionResponse.model_validate(subscription_db) if subscription_db else None
 
     async def list_subscriptions(
         self,
@@ -150,9 +137,7 @@ class SubscriptionService:
             self.db, subscription_db=subscription_db, subscription_in=subscription_in
         )
 
-        logger.info(
-            "Subscription updated successfully", subscription_id=subscription_id
-        )
+        logger.info("Subscription updated successfully", subscription_id=subscription_id)
         return SubscriptionResponse.model_validate(updated_subscription)
 
     async def delete_subscription(self, *, subscription_id: UUID) -> bool:
@@ -168,9 +153,7 @@ class SubscriptionService:
         )
 
         if result:
-            logger.info(
-                "Subscription deleted successfully", subscription_id=subscription_id
-            )
+            logger.info("Subscription deleted successfully", subscription_id=subscription_id)
         else:
             logger.warning(
                 "Subscription not found or couldn't be deleted",
@@ -181,15 +164,11 @@ class SubscriptionService:
 
     async def get_all_subscriptions_for_user(self) -> list[SubscriptionResponse]:
         """Get all subscriptions for the user (for OPML export, etc.)."""
-        subscriptions_db = await crud_subscription.get_all_subscriptions_for_user(
-            self.db, user_id=self.user_id
-        )
+        subscriptions_db = await crud_subscription.get_all_subscriptions_for_user(self.db, user_id=self.user_id)
         return [SubscriptionResponse.model_validate(sub) for sub in subscriptions_db]
 
     # Backward compatibility methods
-    async def get_legacy_feed_response(
-        self, *, subscription_id: UUID
-    ) -> LegacyFeedResponse | None:
+    async def get_legacy_feed_response(self, *, subscription_id: UUID) -> LegacyFeedResponse | None:
         """Get a subscription formatted as a legacy feed response for backward compatibility."""
         subscription_db = await crud_subscription.get_subscription_by_id(
             self.db, subscription_id=subscription_id, user_id=self.user_id

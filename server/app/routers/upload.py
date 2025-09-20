@@ -36,9 +36,7 @@ class UploadResponse(BaseModel):
 class FileUploadError(Exception):
     """Custom exception for file upload errors."""
 
-    def __init__(
-        self, message: str, status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR
-    ):
+    def __init__(self, message: str, status_code: int = status.HTTP_500_INTERNAL_SERVER_ERROR):
         self.message = message
         self.status_code = status_code
         super().__init__(message)
@@ -48,7 +46,7 @@ async def validate_file_upload(
     file: UploadFile,
     book_id: str,
     user: TokenData,
-) -> tuple[UUID, str, str]:
+) -> tuple[UUID, str | None, str]:
     """
     Validate file upload request parameters.
 
@@ -60,21 +58,19 @@ async def validate_file_upload(
         user_role = user.role
     except (AttributeError, ValueError, TypeError) as e:
         logger.error("Invalid user data", error=str(e))
-        raise FileUploadError(
-            "Invalid user data provided", status.HTTP_401_UNAUTHORIZED
-        )
+        raise FileUploadError("Invalid user data provided", status.HTTP_401_UNAUTHORIZED) from e
 
     if not book_id:
         raise FileUploadError("Book ID is required", status.HTTP_400_BAD_REQUEST)
 
     try:
+        if not file.filename:
+            raise FileUploadError("File must have a filename", status.HTTP_400_BAD_REQUEST)
         file_extension = pathlib.Path(file.filename).suffix.lower()
         if not file_extension:
-            raise FileUploadError(
-                "File must have an extension", status.HTTP_400_BAD_REQUEST
-            )
+            raise FileUploadError("File must have an extension", status.HTTP_400_BAD_REQUEST)
     except ValueError as e:
-        raise FileUploadError(str(e), status.HTTP_400_BAD_REQUEST)
+        raise FileUploadError(str(e), status.HTTP_400_BAD_REQUEST) from e
 
     return user_id, user_role, file_extension
 
@@ -99,9 +95,7 @@ async def process_file_upload(
         logger.info("File read complete", size=file_size)
     except Exception as e:
         logger.exception("Failed to read file", error=str(e))
-        raise FileUploadError(
-            "Failed to read file", status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        raise FileUploadError("Failed to read file", status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
     try:
         object_name = f"{book_id}{file_extension}"
@@ -118,18 +112,16 @@ async def process_file_upload(
 
     except Exception as e:
         logger.exception("Storage upload failed", error=str(e))
-        raise FileUploadError(
-            "Failed to upload file", status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        raise FileUploadError("Failed to upload file", status.HTTP_500_INTERNAL_SERVER_ERROR) from e
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=UploadResponse)
 async def upload_file(
     file: UploadFile,
     book_id: Annotated[UUID, Form()],
-    user: Annotated[TokenData, Depends(get_current_user)] = None,
+    user: Annotated[TokenData, Depends(get_current_user)],
     storage_client: SupabaseStorageClient = Depends(get_storage_client),
-):
+) -> UploadResponse:
     """
     Upload a file to storage.
 
@@ -144,9 +136,7 @@ async def upload_file(
     """
     try:
         # Validate input
-        user_id, user_role, file_extension = await validate_file_upload(
-            file, book_id, user
-        )
+        user_id, user_role, file_extension = await validate_file_upload(file, str(book_id), user)
         logger.info(
             "Processing upload request",
             user_id=user_id,
@@ -155,9 +145,7 @@ async def upload_file(
         )
 
         # Process and upload file
-        final_file_path = await process_file_upload(
-            file, user_id, book_id, file_extension, storage_client
-        )
+        final_file_path = await process_file_upload(file, user_id, str(book_id), file_extension, storage_client)
 
         # Return success response
         return UploadResponse(
@@ -166,10 +154,10 @@ async def upload_file(
         )
 
     except FileUploadError as e:
-        raise HTTPException(status_code=e.status_code, detail=e.message)
+        raise HTTPException(status_code=e.status_code, detail=e.message) from e
     except Exception as e:
         logger.exception("Unexpected error during file upload", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred",
-        )
+        ) from e

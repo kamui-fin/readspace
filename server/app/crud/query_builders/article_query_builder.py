@@ -1,9 +1,11 @@
 """Query builder for article-related database operations."""
 
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import String, asc, desc, func, literal, or_, select, union_all
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.sql import CompoundSelect, Select
 
 from app.models.rss_models import (
     ArticleContent,
@@ -18,7 +20,7 @@ from app.models.rss_models import (
 class ArticleQueryBuilder:
     """Builder for complex article queries with filtering and sorting."""
 
-    def build_feed_article_query(self, user_id: UUID, filters: dict) -> select:
+    def build_feed_article_query(self, user_id: UUID, filters: dict) -> Select:
         """Build query for feed articles with filters using new architecture."""
         # Join FeedArticle with UserArticleState and FeedSubscription to get user-specific data
         # Use explicit column selection to avoid naming conflicts
@@ -43,15 +45,14 @@ class ArticleQueryBuilder:
             .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
             .outerjoin(
                 UserArticleState,
-                (UserArticleState.article_id == FeedArticle.id)
-                & (UserArticleState.user_id == user_id),
+                (UserArticleState.article_id == FeedArticle.id) & (UserArticleState.user_id == user_id),
             )
             .filter(FeedSubscription.user_id == user_id)
         )
 
         return self._apply_feed_article_filters(query, filters)
 
-    def build_clipped_article_query(self, user_id: UUID, filters: dict) -> select:
+    def build_clipped_article_query(self, user_id: UUID, filters: dict) -> Select:
         """Build query for clipped articles with filters."""
         query = select(ClippedArticle).filter(ClippedArticle.user_id == user_id)
 
@@ -59,20 +60,20 @@ class ArticleQueryBuilder:
 
     def build_union_query(
         self,
-        feed_query: select,
-        clipped_query: select,
+        feed_query: Select,
+        clipped_query: Select,
         sort_by: str = "published_at",
         sort_order: str = "desc",
         skip: int = 0,
         limit: int = 100,
-    ) -> select:
+    ) -> Select:
         """Build union query combining feed and clipped articles."""
         # Create subqueries with common fields for union
         feed_subquery = self._normalize_feed_article_query(feed_query)
         clipped_subquery = self._normalize_clipped_article_query(clipped_query)
 
         # Union the queries
-        union_query = union_all(feed_subquery, clipped_subquery)
+        union_query: CompoundSelect[Any] = union_all(feed_subquery, clipped_subquery)
 
         # Create alias for the union
         unified_articles = union_query.alias("unified_articles")
@@ -95,7 +96,7 @@ class ArticleQueryBuilder:
 
         return final_query
 
-    def _apply_feed_article_filters(self, query: select, filters: dict) -> select:
+    def _apply_feed_article_filters(self, query: Select, filters: dict) -> Select:
         """Apply filters to feed article query."""
         feed_ids = filters.get("feed_ids")
         if feed_ids:
@@ -109,31 +110,26 @@ class ArticleQueryBuilder:
         is_read = filters.get("is_read")
         if is_read is not None:
             if is_read:
-                query = query.filter(UserArticleState.is_read == True)
+                query = query.filter(UserArticleState.is_read.is_(True))
             else:
-                query = query.filter(
-                    (UserArticleState.is_read == False)
-                    | (UserArticleState.is_read.is_(None))
-                )
+                query = query.filter((UserArticleState.is_read.is_(False)) | (UserArticleState.is_read.is_(None)))
 
         is_read_later = filters.get("is_read_later")
         if is_read_later is not None:
             if is_read_later:
-                query = query.filter(UserArticleState.is_read_later == True)
+                query = query.filter(UserArticleState.is_read_later.is_(True))
             else:
                 query = query.filter(
-                    (UserArticleState.is_read_later == False)
-                    | (UserArticleState.is_read_later.is_(None))
+                    (UserArticleState.is_read_later.is_(False)) | (UserArticleState.is_read_later.is_(None))
                 )
 
         is_favorite = filters.get("is_favorite")
         if is_favorite is not None:
             if is_favorite:
-                query = query.filter(UserArticleState.is_favorite == True)
+                query = query.filter(UserArticleState.is_favorite.is_(True))
             else:
                 query = query.filter(
-                    (UserArticleState.is_favorite == False)
-                    | (UserArticleState.is_favorite.is_(None))
+                    (UserArticleState.is_favorite.is_(False)) | (UserArticleState.is_favorite.is_(None))
                 )
 
         feed_is_favorite = filters.get("feed_is_favorite")
@@ -145,9 +141,7 @@ class ArticleQueryBuilder:
         published_since = filters.get("published_since")
         published_until = filters.get("published_until")
         if published_since or published_until:
-            query = query.join(
-                ArticleContent, FeedArticle.content_id == ArticleContent.id
-            )
+            query = query.join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             if published_since:
                 query = query.filter(ArticleContent.published_at >= published_since)
             if published_until:
@@ -157,9 +151,7 @@ class ArticleQueryBuilder:
         search_query = filters.get("search_query")
         if search_query:
             if not (published_since or published_until):  # Join if not already joined
-                query = query.join(
-                    ArticleContent, FeedArticle.content_id == ArticleContent.id
-                )
+                query = query.join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             search_condition = or_(
                 ArticleContent.title.ilike(f"%{search_query}%"),
                 ArticleContent.description.ilike(f"%{search_query}%"),
@@ -169,7 +161,7 @@ class ArticleQueryBuilder:
 
         return query
 
-    def _apply_clipped_article_filters(self, query: select, filters: dict) -> select:
+    def _apply_clipped_article_filters(self, query: Select, filters: dict) -> Select:
         """Apply filters to clipped article query."""
         is_read = filters.get("is_read")
         if is_read is not None:
@@ -195,9 +187,7 @@ class ArticleQueryBuilder:
         # Search query
         search_query = filters.get("search_query")
         if search_query:
-            query = query.join(
-                ArticleContent, ClippedArticle.content_id == ArticleContent.id
-            )
+            query = query.join(ArticleContent, ClippedArticle.content_id == ArticleContent.id)
             search_condition = or_(
                 ArticleContent.title.ilike(f"%{search_query}%"),
                 ArticleContent.description.ilike(f"%{search_query}%"),
@@ -207,7 +197,7 @@ class ArticleQueryBuilder:
 
         return query
 
-    def _normalize_feed_article_query(self, query: select) -> select:
+    def _normalize_feed_article_query(self, query: Select) -> Select:
         """Normalize feed article query for union compatibility."""
         # Create a subquery and join the necessary tables
         subq = query.subquery()
@@ -228,24 +218,20 @@ class ArticleQueryBuilder:
             func.coalesce(subq.c.is_read_later, False).label("is_read_later"),
             func.coalesce(subq.c.is_favorite, False).label("is_favorite"),
             subq.c.feed_id.label("feed_id"),
-            func.cast(None, PGUUID(as_uuid=True)).label(
-                "clipped_article_id"
-            ),  # Placeholder
+            literal(None, PGUUID(as_uuid=True)).label("clipped_article_id"),  # Placeholder
             Feed.title.label("feed_title"),
             Feed.link.label("feed_link"),
             Feed.image_url.label("feed_image_url"),
             literal("feed").label("article_type"),
             subq.c.article_created_at.label("created_at"),
             subq.c.article_updated_at.label("updated_at"),
-            func.cast(None, String).label("priority"),  # Placeholder for feed articles
-            func.coalesce(subq.c.user_note, func.cast(None, String)).label("note"),
+            literal(None, String).label("priority"),  # Placeholder for feed articles
+            func.coalesce(subq.c.user_note, literal(None, String)).label("note"),
         ).select_from(
-            subq.join(ArticleContent, subq.c.content_id == ArticleContent.id).join(
-                Feed, subq.c.feed_id == Feed.id
-            )
+            subq.join(ArticleContent, subq.c.content_id == ArticleContent.id).join(Feed, subq.c.feed_id == Feed.id)
         )
 
-    def _normalize_clipped_article_query(self, query: select) -> select:
+    def _normalize_clipped_article_query(self, query: Select) -> Select:
         """Normalize clipped article query for union compatibility."""
         # Create a subquery and join the necessary tables
         subq = query.subquery()
@@ -263,21 +249,19 @@ class ArticleQueryBuilder:
             subq.c.is_read,
             subq.c.is_read_later,
             subq.c.is_favorite,
-            func.cast(None, PGUUID(as_uuid=True)).label("feed_id"),  # Placeholder
+            literal(None, PGUUID(as_uuid=True)).label("feed_id"),  # Placeholder
             subq.c.id.label("clipped_article_id"),
-            func.cast(None, String).label("feed_title"),  # Placeholder
-            func.cast(None, String).label("feed_link"),  # Placeholder
-            func.cast(None, String).label("feed_image_url"),  # Placeholder
+            literal(None, String).label("feed_title"),  # Placeholder
+            literal(None, String).label("feed_link"),  # Placeholder
+            literal(None, String).label("feed_image_url"),  # Placeholder
             literal("clipped").label("article_type"),
             subq.c.created_at,
-            subq.c.created_at.label(
-                "updated_at"
-            ),  # ClippedArticle doesn't have updated_at, use created_at
+            subq.c.created_at.label("updated_at"),  # ClippedArticle doesn't have updated_at, use created_at
             subq.c.priority,  # Add priority field
             subq.c.note,  # Add note field
         ).select_from(subq.join(ArticleContent, subq.c.content_id == ArticleContent.id))
 
-    def _get_sort_column(self, table, sort_by: str):
+    def _get_sort_column(self, table: Any, sort_by: str) -> Any:
         """Get sort column based on sort_by parameter."""
         sort_columns = {
             "published_at": table.c.published_at,
@@ -286,7 +270,7 @@ class ArticleQueryBuilder:
         }
         return sort_columns.get(sort_by, table.c.published_at)
 
-    def build_count_query(self, base_query: select) -> select:
+    def build_count_query(self, base_query: Select) -> Select:
         """Build count query from base query."""
         # Extract the filter conditions from the base query
         return select(func.count()).select_from(base_query.subquery())
