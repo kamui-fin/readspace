@@ -37,10 +37,7 @@ import {
 } from "./items/RegularFeedItem"
 import { FeedModal } from "./modals/FeedModal"
 import { FolderModal } from "./modals/FolderModal"
-import {
-    SidebarFeedsSkeleton,
-    SidebarLibrarySkeleton,
-} from "./SidebarSkeleton"
+import { SidebarFeedsSkeleton, SidebarLibrarySkeleton } from "./SidebarSkeleton"
 
 // Combined feed item type for rendering
 type FeedItem = CollapsibleFeedItemData | RegularFeedItemData
@@ -151,9 +148,7 @@ export function FeedsNavigation({
         const items: FeedItem[] = []
 
         // Extract feed id from pathname if we're viewing a feed
-        const feedIdFromPath = pathname.match(
-            /\/feeds\/([^/]+)\/articles/
-        )?.[1]
+        const feedIdFromPath = pathname.match(/\/feeds\/([^/]+)\/articles/)?.[1]
 
         // Find the parent folder of the current feed if we're viewing a feed
         const currentFeedParentFolder = feedIdFromPath

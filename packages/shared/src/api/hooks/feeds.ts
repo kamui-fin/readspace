@@ -8,7 +8,7 @@ import {
   type UseMutationOptions,
   type UseQueryOptions,
 } from "@tanstack/react-query";
-import { ClientProvider } from "../client-provider";
+import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS } from "../query-keys";
 import type {
   Article,
@@ -50,7 +50,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     return useMutation({
       mutationFn: (formData: FormData) =>
-        ClientProvider.getClient().rss.importOPML(formData) as Promise<OPMLImportResponse>,
+        ApiClient.rss.importOPML(formData) as Promise<OPMLImportResponse>,
       onSuccess: () => {
         // All imports are background now - queries will be invalidated when task completes
         // No immediate invalidation needed
@@ -75,7 +75,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_STATUS, taskId],
       queryFn: () =>
-        ClientProvider.getClient().rss.getImportTaskStatus(taskId!) as Promise<ImportTaskStatus>,
+        ApiClient.rss.getImportTaskStatus(taskId!) as Promise<ImportTaskStatus>,
       enabled: !!taskId && enabled,
       refetchInterval: 3000, // Poll every 3 seconds
       retry: false, // Don't retry failed status checks
@@ -92,7 +92,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.FOLDERS],
-      queryFn: () => ClientProvider.getClient().rss.getFolders() as Promise<Folder[]>,
+      queryFn: () => ApiClient.rss.getFolders() as Promise<Folder[]>,
       ...options,
     });
   }
@@ -108,7 +108,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: (folder: { name: string }) =>
-        ClientProvider.getClient().rss.createFolder(folder),
+        ApiClient.rss.createFolder(folder),
       onMutate: async () => {
         // Cancel any outgoing refetches
         await queryClient.cancelQueries({
@@ -165,7 +165,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     const queryClient = useQueryClient();
     return useMutation({
       mutationFn: ({ folderId, name }: { folderId: string; name: string }) =>
-        ClientProvider.getClient().rss.updateFolder(folderId, { name }),
+        ApiClient.rss.updateFolder(folderId, { name }),
       onMutate: async ({ folderId, name }) => {
         // Cancel any outgoing refetches to prevent conflicts
         await queryClient.cancelQueries({
@@ -256,7 +256,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await new Promise((resolve) =>
           setTimeout(resolve, config.deletionDelay),
         );
-        const response = await ClientProvider.getClient().rss.deleteFolder(folderId);
+        const response = await ApiClient.rss.deleteFolder(folderId);
         return response;
       },
       onMutate: async (folderId) => {
@@ -420,7 +420,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.FEEDS, params],
       queryFn: () =>
-        ClientProvider.getClient().rss.getFeeds({
+        ApiClient.rss.getFeeds({
           folder_id: params?.folderId,
           tag_names: params?.tagNames,
           is_favorite: params?.isFavorite,
@@ -439,7 +439,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.FEEDS, feedId],
-      queryFn: () => ClientProvider.getClient().rss.getFeed(feedId),
+      queryFn: () => ApiClient.rss.getFeed(feedId),
       enabled: !!feedId,
       ...options,
     });
@@ -463,7 +463,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         url: string;
         folder_id?: string;
         silent?: boolean;
-      }) => ClientProvider.getClient().rss.createFeed(feed),
+      }) => ApiClient.rss.createFeed(feed),
       onMutate: async () => {
         // Cancel any outgoing refetches
         await queryClient.cancelQueries({
@@ -550,7 +550,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           title?: string;
         };
         silent?: boolean;
-      }) => ClientProvider.getClient().rss.updateFeed(feedId, data),
+      }) => ApiClient.rss.updateFeed(feedId, data),
       onMutate: async ({ feedId, data }) => {
         // Cancel any outgoing refetches to prevent conflicts
         await queryClient.cancelQueries({
@@ -669,7 +669,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         feedId: string;
         forceRefetch?: boolean;
       }) => {
-        await ClientProvider.getClient().rss.refreshFeed(feedId, forceRefetch);
+        await ApiClient.rss.refreshFeed(feedId, forceRefetch);
       },
       onSuccess: (_, { feedId }) => {
         config.showSuccess?.(
@@ -702,7 +702,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     return useMutation({
       mutationFn: (folderId: string) =>
-        ClientProvider.getClient().rss.refreshFolderFeeds(folderId),
+        ApiClient.rss.refreshFolderFeeds(folderId),
       onSuccess: (data) => {
         config.showSuccess?.(
           "Folder refresh started! Check status for progress.",
@@ -723,7 +723,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     options?: UseMutationOptions<unknown, unknown, void>,
   ) {
     return useMutation({
-      mutationFn: () => ClientProvider.getClient().rss.refreshAllFeeds(),
+      mutationFn: () => ApiClient.rss.refreshAllFeeds(),
       onSuccess: (data) => {
         config.showSuccess?.(
           "All feeds refresh started! Check status for progress.",
@@ -751,7 +751,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.REFRESH_STATUS, taskId],
       queryFn: () =>
-        ClientProvider.getClient().rss.getRefreshStatus(taskId!) as Promise<unknown>,
+        ApiClient.rss.getRefreshStatus(taskId!) as Promise<unknown>,
       enabled: enabled && !!taskId,
       refetchInterval: 2000, // Poll every 2 seconds
       refetchIntervalInBackground: false,
@@ -787,7 +787,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await new Promise((resolve) =>
           setTimeout(resolve, config.deletionDelay),
         );
-        await ClientProvider.getClient().rss.deleteFeed(feedId);
+        await ApiClient.rss.deleteFeed(feedId);
         return { feedId, silent };
       },
       onMutate: async ({ feedId }) => {
@@ -939,7 +939,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, params],
       queryFn: () =>
-        ClientProvider.getClient().rss.getArticles({
+        ApiClient.rss.getArticles({
           feed_ids: params.feedIds,
           folder_id: params.folderId,
           is_read: params.isRead,
@@ -973,7 +973,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, "recently_read", params],
       queryFn: () =>
-        ClientProvider.getClient().rss.getRecentlyReadArticles(
+        ApiClient.rss.getRecentlyReadArticles(
           params.page,
           params.size,
         ) as Promise<PaginatedResponse<Article>>,
@@ -996,7 +996,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later", params],
       queryFn: () =>
-        ClientProvider.getClient().rss.getReadLaterArticles(params.page, params.size) as Promise<
+        ApiClient.rss.getReadLaterArticles(params.page, params.size) as Promise<
           PaginatedResponse<Article>
         >,
       ...options,
@@ -1018,7 +1018,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS, folderId],
       queryFn: () =>
-        ClientProvider.getClient().rss.getUnreadCounts(folderId) as Promise<UnreadCounts>,
+        ApiClient.rss.getUnreadCounts(folderId) as Promise<UnreadCounts>,
       ...options,
     });
   }
@@ -1032,7 +1032,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
-      queryFn: () => ClientProvider.getClient().rss.getArticle(articleId) as Promise<Article>,
+      queryFn: () => ApiClient.rss.getArticle(articleId) as Promise<Article>,
       enabled: !!articleId,
       ...options,
     });
@@ -1057,7 +1057,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         feedId: string;
         folderId: string;
       }): Promise<void> => {
-        await ClientProvider.getClient().rss.subscribeToFeed(feedId, { folder_id: folderId });
+        await ApiClient.rss.subscribeToFeed(feedId, { folder_id: folderId });
       },
       onSuccess: () => {
         // Invalidate and refetch feeds and unread counts
@@ -1128,7 +1128,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         };
         articleType?: "feed" | "clipped";
       }): Promise<void> => {
-        await ClientProvider.getClient().rss.updateArticle(articleId, data, articleType);
+        await ApiClient.rss.updateArticle(articleId, data, articleType);
       },
       onSuccess: (_, { articleId }) => {
         // Only invalidate the specific article, not all articles
@@ -1176,7 +1176,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       queryFn: ({
         pageParam,
       }: QueryFunctionContext<[string, string, typeof params], number>) =>
-        ClientProvider.getClient().rss.getArticles({
+        ApiClient.rss.getArticles({
           feed_ids: params.feedIds,
           folder_id: params.folderId,
           is_read: params.isRead,
@@ -1219,7 +1219,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         [string, string, string, typeof params],
         number
       >) =>
-        ClientProvider.getClient().rss.getRecentlyReadArticles(
+        ApiClient.rss.getRecentlyReadArticles(
           pageParam,
           params.size || 25,
         ) as Promise<PaginatedResponse<Article>>,
@@ -1256,7 +1256,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         [string, string, string, typeof params],
         number
       >) =>
-        ClientProvider.getClient().rss.getReadLaterArticles(
+        ApiClient.rss.getReadLaterArticles(
           pageParam,
           params.size || 25,
         ) as Promise<PaginatedResponse<Article>>,
@@ -1293,7 +1293,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         [string, string, string, typeof params],
         number
       >) =>
-        ClientProvider.getClient().rss.getTodaysArticles({
+        ApiClient.rss.getTodaysArticles({
           page: pageParam,
           size: params?.size || 25,
         }) as Promise<PaginatedResponse<Article>>,

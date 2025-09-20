@@ -16,10 +16,28 @@ import {
     type Article,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
-import { useTheme } from "next-themes"
 import { AiSummaryCard } from "./AiSummaryCard"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleToolbar } from "./ArticleToolbar"
+
+// Type for the paginated articles data structure from TanStack Query
+interface ArticlesPageData {
+    items: Article[]
+    total: number
+    page: number
+    has_more: boolean
+}
+
+interface ArticlesInfiniteData {
+    pages: ArticlesPageData[]
+    pageParams: unknown[]
+}
+
+interface UnreadCountsData {
+    total_unread: number
+    read_later_count: number
+    [key: string]: number
+}
 
 interface ArticleContentProps {
     /** The article to display */
@@ -86,7 +104,6 @@ export function ArticleContent({
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
-    const { theme } = useTheme()
 
     // Only create AI hooks when we actually have a valid article ID to prevent unnecessary queries
     const extractFullText = useExtractFullText(article?.id || "skip")
@@ -226,10 +243,8 @@ export function ArticleContent({
         onReadTimeChange(article.estimated_read_time_minutes)
         setHasMarkedRead(false) // Reset read state for new article
         setOptimisticReadLater(article.is_read_later) // Reset optimistic read later state
-    }, [
-        article.id, // Only reset when article ID changes, not content/read time
-        // Callbacks removed from deps to prevent unnecessary re-runs
-    ])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [article.id])
 
     // Only enable scroll-based read marking on desktop
     useEffect(() => {
@@ -253,14 +268,14 @@ export function ArticleContent({
                     // Optimistically update the UI immediately
                     queryClient.setQueriesData(
                         { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                        (oldData: any) => {
+                        (oldData: ArticlesInfiniteData | undefined) => {
                             if (!oldData?.pages) return oldData
                             return {
                                 ...oldData,
-                                pages: oldData.pages.map((page: any) => ({
+                                pages: oldData.pages.map((page: ArticlesPageData) => ({
                                     ...page,
                                     items:
-                                        page.items?.map((item: any) =>
+                                        page.items?.map((item: Article) =>
                                             item.id === article.id
                                                 ? { ...item, is_read: true }
                                                 : item
@@ -289,6 +304,7 @@ export function ArticleContent({
         isReadLaterMode,
         onMarkAsRead,
         updateArticle,
+        queryClient,
     ])
 
     // Handle scroll completion for read later mode
@@ -418,62 +434,85 @@ export function ArticleContent({
                             // Optimistically update the articles cache to instantly remove from read-later list
                             queryClient.setQueriesData(
                                 { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                                (oldData: any) => {
-                                    if (!oldData?.pages) return oldData;
+                                (oldData: ArticlesInfiniteData | undefined) => {
+                                    if (!oldData?.pages) return oldData
                                     return {
                                         ...oldData,
-                                        pages: oldData.pages.map((page: any) => ({
-                                            ...page,
-                                            items: page.items?.filter((item: any) =>
-                                                // In read-later mode, remove this article entirely
-                                                isReadLaterMode ? item.id !== article.id : true
-                                            ).map((item: any) =>
-                                                item.id === article.id
-                                                    ? { ...item, is_read: true, is_read_later: false }
-                                                    : item
-                                            ) || []
-                                        }))
-                                    };
+                                        pages: oldData.pages.map(
+                                            (page: ArticlesPageData) => ({
+                                                ...page,
+                                                items:
+                                                    page.items
+                                                        ?.filter((item: Article) =>
+                                                            // In read-later mode, remove this article entirely
+                                                            isReadLaterMode
+                                                                ? item.id !==
+                                                                  article.id
+                                                                : true
+                                                        )
+                                                        .map((item: Article) =>
+                                                            item.id ===
+                                                            article.id
+                                                                ? {
+                                                                      ...item,
+                                                                      is_read: true,
+                                                                      is_read_later: false,
+                                                                  }
+                                                                : item
+                                                        ) || [],
+                                            })
+                                        ),
+                                    }
                                 }
-                            );
+                            )
 
                             // Also update unread counts optimistically
                             queryClient.setQueryData(
                                 [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                                (oldData: any) => {
-                                    if (!oldData) return oldData;
+                                (oldData: UnreadCountsData | undefined) => {
+                                    if (!oldData) return oldData
                                     return {
                                         ...oldData,
-                                        read_later_count: Math.max(0, (oldData.read_later_count || 0) - 1)
-                                    };
+                                        read_later_count: Math.max(
+                                            0,
+                                            (oldData.read_later_count || 0) - 1
+                                        ),
+                                    }
                                 }
-                            );
+                            )
 
                             // Immediately remove from list UI
                             onArticleRemoved?.()
 
-                            updateArticle.mutate({
-                                articleId: article.id,
-                                data: {
-                                    is_read: true,
-                                    is_read_later: false
+                            updateArticle.mutate(
+                                {
+                                    articleId: article.id,
+                                    data: {
+                                        is_read: true,
+                                        is_read_later: false,
+                                    },
+                                    articleType: article.article_type,
                                 },
-                                articleType: article.article_type,
-                            }, {
-                                onError: () => {
-                                    // Revert optimistic update on error
-                                    setOptimisticReadLater(true)
-                                    toast.error("Failed to mark article as read. Please try again.")
+                                {
+                                    onError: () => {
+                                        // Revert optimistic update on error
+                                        setOptimisticReadLater(true)
+                                        toast.error(
+                                            "Failed to mark article as read. Please try again."
+                                        )
 
-                                    // Revert cache optimistic updates
-                                    queryClient.invalidateQueries({
-                                        queryKey: [RSS_QUERY_KEYS.ARTICLES]
-                                    });
-                                    queryClient.invalidateQueries({
-                                        queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS]
-                                    });
-                                },
-                            })
+                                        // Revert cache optimistic updates
+                                        queryClient.invalidateQueries({
+                                            queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                                        })
+                                        queryClient.invalidateQueries({
+                                            queryKey: [
+                                                RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                            ],
+                                        })
+                                    },
+                                }
+                            )
                         }}
                         onExtractFullText={handleExtractContent}
                         onSummarize={handleSummarize}
@@ -507,16 +546,16 @@ export function ArticleContent({
                             // Optimistically update the UI immediately
                             queryClient.setQueriesData(
                                 { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                                (oldData: any) => {
+                                (oldData: ArticlesInfiniteData | undefined) => {
                                     if (!oldData?.pages) return oldData
                                     return {
                                         ...oldData,
                                         pages: oldData.pages.map(
-                                            (page: any) => ({
+                                            (page: ArticlesPageData) => ({
                                                 ...page,
                                                 items:
                                                     page.items?.map(
-                                                        (item: any) =>
+                                                        (item: Article) =>
                                                             item.id ===
                                                             article.id
                                                                 ? {
@@ -633,67 +672,120 @@ export function ArticleContent({
                                             onMarkAsRead={() => {
                                                 // Mark as read and remove from read later instantly
                                                 setOptimisticReadLater(false)
-                                                toast.success("Article marked as read")
+                                                toast.success(
+                                                    "Article marked as read"
+                                                )
 
                                                 // Optimistically update the articles cache to instantly remove from read-later list
                                                 queryClient.setQueriesData(
-                                                    { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                                                    (oldData: any) => {
-                                                        if (!oldData?.pages) return oldData;
+                                                    {
+                                                        queryKey: [
+                                                            RSS_QUERY_KEYS.ARTICLES,
+                                                        ],
+                                                    },
+                                                    (oldData: ArticlesInfiniteData | undefined) => {
+                                                        if (!oldData?.pages)
+                                                            return oldData
                                                         return {
                                                             ...oldData,
-                                                            pages: oldData.pages.map((page: any) => ({
-                                                                ...page,
-                                                                items: page.items?.filter((item: any) =>
-                                                                    // In read-later mode, remove this article entirely
-                                                                    isReadLaterMode ? item.id !== article.id : true
-                                                                ).map((item: any) =>
-                                                                    item.id === article.id
-                                                                        ? { ...item, is_read: true, is_read_later: false }
-                                                                        : item
-                                                                ) || []
-                                                            }))
-                                                        };
+                                                            pages: oldData.pages.map(
+                                                                (
+                                                                    page: ArticlesPageData
+                                                                ) => ({
+                                                                    ...page,
+                                                                    items:
+                                                                        page.items
+                                                                            ?.filter(
+                                                                                (
+                                                                                    item: Article
+                                                                                ) =>
+                                                                                    // In read-later mode, remove this article entirely
+                                                                                    isReadLaterMode
+                                                                                        ? item.id !==
+                                                                                          article.id
+                                                                                        : true
+                                                                            )
+                                                                            .map(
+                                                                                (
+                                                                                    item: Article
+                                                                                ) =>
+                                                                                    item.id ===
+                                                                                    article.id
+                                                                                        ? {
+                                                                                              ...item,
+                                                                                              is_read: true,
+                                                                                              is_read_later: false,
+                                                                                          }
+                                                                                        : item
+                                                                            ) ||
+                                                                        [],
+                                                                })
+                                                            ),
+                                                        }
                                                     }
-                                                );
+                                                )
 
                                                 // Also update unread counts optimistically
                                                 queryClient.setQueryData(
-                                                    [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                                                    (oldData: any) => {
-                                                        if (!oldData) return oldData;
+                                                    [
+                                                        RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                                    ],
+                                                    (oldData: UnreadCountsData | undefined) => {
+                                                        if (!oldData)
+                                                            return oldData
                                                         return {
                                                             ...oldData,
-                                                            read_later_count: Math.max(0, (oldData.read_later_count || 0) - 1)
-                                                        };
+                                                            read_later_count:
+                                                                Math.max(
+                                                                    0,
+                                                                    (oldData.read_later_count ||
+                                                                        0) - 1
+                                                                ),
+                                                        }
                                                     }
-                                                );
+                                                )
 
                                                 // Immediately remove from list UI
                                                 onArticleRemoved?.()
 
-                                                updateArticle.mutate({
-                                                    articleId: article.id,
-                                                    data: {
-                                                        is_read: true,
-                                                        is_read_later: false
+                                                updateArticle.mutate(
+                                                    {
+                                                        articleId: article.id,
+                                                        data: {
+                                                            is_read: true,
+                                                            is_read_later: false,
+                                                        },
+                                                        articleType:
+                                                            article.article_type,
                                                     },
-                                                    articleType: article.article_type,
-                                                }, {
-                                                    onError: () => {
-                                                        // Revert optimistic update on error
-                                                        setOptimisticReadLater(true)
-                                                        toast.error("Failed to mark article as read. Please try again.")
+                                                    {
+                                                        onError: () => {
+                                                            // Revert optimistic update on error
+                                                            setOptimisticReadLater(
+                                                                true
+                                                            )
+                                                            toast.error(
+                                                                "Failed to mark article as read. Please try again."
+                                                            )
 
-                                                        // Revert cache optimistic updates
-                                                        queryClient.invalidateQueries({
-                                                            queryKey: [RSS_QUERY_KEYS.ARTICLES]
-                                                        });
-                                                        queryClient.invalidateQueries({
-                                                            queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS]
-                                                        });
-                                                    },
-                                                })
+                                                            // Revert cache optimistic updates
+                                                            queryClient.invalidateQueries(
+                                                                {
+                                                                    queryKey: [
+                                                                        RSS_QUERY_KEYS.ARTICLES,
+                                                                    ],
+                                                                }
+                                                            )
+                                                            queryClient.invalidateQueries(
+                                                                {
+                                                                    queryKey: [
+                                                                        RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                                                    ],
+                                                                }
+                                                            )
+                                                        },
+                                                    }
+                                                )
                                             }}
                                             onExtractFullText={
                                                 handleExtractContent

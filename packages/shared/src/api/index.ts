@@ -21,12 +21,6 @@ export {
   type ApiClientConfig,
 } from "./client";
 
-// Export client provider for dependency injection
-export {
-  ClientProvider,
-  type ApiClientInterface,
-} from "./client-provider";
-
 // Note: ApiWebClient and ApiExtensionClient have been moved to their respective apps
 // - ApiWebClient is now in apps/web/lib/api-client.ts
 // - ApiExtensionClient is now in apps/extension/src/lib/api-client.ts

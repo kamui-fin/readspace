@@ -6,7 +6,6 @@ import { Search, X } from "lucide-react"
 import NextImage from "next/image"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useState } from "react"
-import { toast } from "react-hot-toast"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
@@ -24,11 +23,11 @@ import {
 import { SidebarLeftTrigger, useSidebarLeft } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
 import {
+    ApiClient,
     feedDiscoveryResultToFeed,
     type DiscoverSearchResponse,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
-import { ApiWebClient } from "@/lib/api-client"
 
 function usePersistentState(key: string, initialValue: string) {
     const [state, setState] = useState(() => {
@@ -162,7 +161,7 @@ export default function DiscoverPageClient({
             { q: activeQuery, category: activeCategory, language },
         ],
         queryFn: async () => {
-            return await ApiWebClient.rss.searchFeeds({
+            return await ApiClient.rss.searchFeeds({
                 q: activeQuery,
                 category: activeCategory,
                 language,
@@ -172,7 +171,10 @@ export default function DiscoverPageClient({
         enabled: hasSearchParams,
         retry: (failureCount, error) => {
             // Don't retry on auth errors or bad requests
-            if (error?.message?.includes("401") || error?.message?.includes("Authentication required")) {
+            if (
+                error?.message?.includes("401") ||
+                error?.message?.includes("Authentication required")
+            ) {
                 return false
             }
             // Only retry on network errors, not API errors
@@ -411,10 +413,11 @@ export default function DiscoverPageClient({
                                 }
                                 value={searchQuery}
                                 onChange={handleSearchInputChange}
-                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
+                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${
+                                    searchQuery
                                         ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
                                         : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
-                                    }`}
+                                }`}
                                 style={{
                                     color: searchQuery ? "#91998C" : "#D8E5D0",
                                 }}
@@ -479,7 +482,7 @@ export default function DiscoverPageClient({
                                     ))}
                                 </div>
                             ) : searchError ||
-                                searchData?.results.length === 0 ? (
+                              searchData?.results.length === 0 ? (
                                 <motion.div
                                     className="flex flex-col items-center justify-center py-16"
                                     initial={{ opacity: 0, scale: 0.95 }}
@@ -543,7 +546,7 @@ export default function DiscoverPageClient({
                                                     }}
                                                 >
                                                     {feed.is_preview &&
-                                                        feed.preview_url ? (
+                                                    feed.preview_url ? (
                                                         <FeedPreviewCard
                                                             feed={{
                                                                 ...feed,

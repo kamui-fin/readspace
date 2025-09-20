@@ -8,7 +8,9 @@ import {
 import {
     UserBookLibrary,
     UserBookLibraryUpdate,
-    isEpubProgress, useDeleteBookMetadata, useUpdateBook
+    isEpubProgress,
+    useDeleteBookMetadata,
+    useUpdateBook,
 } from "@readspace/shared"
 import { BookOpenCheck, MoreVertical, RotateCcw, Trash } from "lucide-react"
 import { MouseEvent, useState } from "react"

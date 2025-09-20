@@ -229,7 +229,9 @@ pre {
         padding: 0.125rem 0.375rem;
         border-radius: 0.25rem;
         font-size: 0.75rem;
-        font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+        font-family:
+            ui-monospace, SFMono-Regular, "SF Mono", Consolas,
+            "Liberation Mono", Menlo, monospace;
         word-break: break-words;
     }
 

@@ -95,10 +95,18 @@ export function FeedFiltersPanel({
             <div className="md:col-span-1 flex justify-end gap-2 items-center">
                 {selectedCount > 0 && (
                     <>
-                        <Button variant="outline" onClick={onBulkChangeFolder} className="h-10">
+                        <Button
+                            variant="outline"
+                            onClick={onBulkChangeFolder}
+                            className="h-10"
+                        >
                             Change Folder ({selectedCount})
                         </Button>
-                        <Button variant="destructive" onClick={onBulkDelete} className="h-10">
+                        <Button
+                            variant="destructive"
+                            onClick={onBulkDelete}
+                            className="h-10"
+                        >
                             Delete ({selectedCount})
                         </Button>
                     </>

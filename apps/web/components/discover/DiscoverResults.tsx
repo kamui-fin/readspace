@@ -1,15 +1,14 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { toast } from "react-hot-toast"
 import NextImage from "next/image"
+import { toast } from "react-hot-toast"
 
-import { feedDiscoveryResultToFeed } from "@readspace/shared"
-import { ApiWebClient } from "@/lib/api-client"
 import { FeedCard } from "@/components/feeds/FeedCard"
-import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
+import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import type { FeedDiscoveryResult } from "@readspace/shared"
+import { ApiClient, feedDiscoveryResultToFeed } from "@readspace/shared"
 
 interface DiscoverResultsProps {
     query?: string
@@ -34,7 +33,7 @@ export function DiscoverResults({
         queryKey: ["discover", "search", { q: query, category, language }],
         queryFn: async () => {
             try {
-                return await ApiWebClient.rss.searchFeeds({
+                return await ApiClient.rss.searchFeeds({
                     q: query,
                     category,
                     language,

@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useOnboardingStore } from "@/stores/onboarding"
-import { ApiWebClient } from "@/lib/api-client"
+import { ApiClient } from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
 import { useRouter } from "next/navigation"
@@ -49,7 +49,7 @@ const StepTwo: React.FC = () => {
         queryKey: ["onboarding-feeds", onboardingData.selectedCategories],
         queryFn: async () => {
             const promises = onboardingData.selectedCategories.map((category) =>
-                ApiWebClient.rss.searchFeeds({
+                ApiClient.rss.searchFeeds({
                     category,
                     limit: 8, // Get top 8 per category
                 })

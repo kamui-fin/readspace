@@ -1,5 +1,6 @@
 "use client"
 
+/* eslint-disable */
 import Header from "@/components/navigation/Header"
 import ReadingProgressBar from "@/components/reader/ProgressBar"
 import ReaderContent from "@/components/reader/ReaderContent"

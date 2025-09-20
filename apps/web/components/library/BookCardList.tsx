@@ -19,7 +19,7 @@ interface BookCardListProps {
  * @returns The number rounded to one decimal place.
  */
 function roundToOneDecimal(num: number): number {
-    return Math.round((num + Number.EPSILON) * 10) // 10
+    return Math.round((num + Number.EPSILON) * 10) / 10
 }
 
 export function BookCardList({ book }: BookCardListProps) {
@@ -35,13 +35,13 @@ export function BookCardList({ book }: BookCardListProps) {
               ? "/default_pdf_cover.png"
               : "/placeholder.svg"
 
-    // Calculate progress based on book type
+    // Calculate progress based on book type (0-1 ratio)
     const progress =
         book.book_metadata.format === "PDF"
-            ? (book.pdf_current_page || 0) // (book.book_metadata.num_pages || 1)
+            ? (book.pdf_current_page || 0) / Math.max(book.book_metadata.num_pages || 1, 1)
             : isEpubProgress(book.epub_progress)
               ? book.epub_progress.globalProgress.current /
-                book.epub_progress.globalProgress.total
+                Math.max(book.epub_progress.globalProgress.total, 1)
               : 0
 
     const CardContent = (
@@ -95,7 +95,7 @@ export function BookCardList({ book }: BookCardListProps) {
                             {new Date(book.date_added).toLocaleDateString()}
                         </span>
                         <span>
-                            {roundToOneDecimal((1 - progress) * 100)}% left
+                            {roundToOneDecimal(progress * 100)}% complete
                         </span>
                     </div>
                 </div>

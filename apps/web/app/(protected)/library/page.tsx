@@ -1,11 +1,9 @@
 import { getQueryClient } from "@/lib/get-query-client"
-import { ApiClient } from "@readspace/shared"
-import { BOOK_QUERY_KEYS } from "@readspace/shared"
 import { createClient } from "@/lib/supabase/server"
+import { ApiClient, BOOK_QUERY_KEYS } from "@readspace/shared"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { redirect } from "next/navigation"
 import LibraryClient from "./library-client"
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -16,9 +14,6 @@ export const metadata = {
 }
 
 export default async function LibraryPage() {
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
-
     const supabase = await createClient()
     const {
         data: { user },

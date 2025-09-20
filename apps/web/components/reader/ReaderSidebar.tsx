@@ -335,53 +335,53 @@ export function HighlightsTab() {
     const highlights =
         queryHighlights && queryHighlights.length > 0
             ? queryHighlights
-                .filter((h) => h.color) // Filter out highlights without color
-                .map((h): EpubHighlight | PdfHighlight => {
-                    if (bookMeta?.format === "PDF") {
-                        return {
-                            id: h.id,
-                            note: h.note || undefined,
-                            color: h.color || undefined,
-                            book_id: bookMeta.id,
-                            type: "text",
-                            position:
-                                h.pdf_rect_position as unknown as PdfHighlight["position"],
-                            content: { text: h.original_text },
-                            user_book_lib_id: h.user_book_lib_id,
-                            library_id: h.user_book_lib_id,
-                        } as PdfHighlight
-                    } else {
-                        return {
-                            id: h.id,
-                            user_book_lib_id: h.user_book_lib_id,
-                            original_text: h.original_text,
-                            color: h.color,
-                            note: h.note || undefined,
-                            range:
-                                h.html_range &&
-                                    isSerializedRange(h.html_range)
-                                    ? (h.html_range as SerializedRange)
-                                    : {
-                                        startContainerPath: [],
-                                        startOffset: 0,
-                                        endContainerPath: [],
-                                        endOffset: 0,
-                                    },
-                            chapter: {
-                                idx: h.chapter_idx || 0,
-                                href: h.chapter_href || "",
-                                title: h.chapter_title || undefined,
-                            },
-                            page: h.page || 0,
-                            // Add missing database fields for type compatibility
-                            chapter_href: h.chapter_href || "",
-                            chapter_idx: h.chapter_idx || 0,
-                            chapter_title: h.chapter_title || null,
-                            html_range: h.html_range,
-                            pdf_rect_position: h.pdf_rect_position,
-                        } as EpubHighlight
-                    }
-                })
+                  .filter((h) => h.color) // Filter out highlights without color
+                  .map((h): EpubHighlight | PdfHighlight => {
+                      if (bookMeta?.format === "PDF") {
+                          return {
+                              id: h.id,
+                              note: h.note || undefined,
+                              color: h.color || undefined,
+                              book_id: bookMeta.id,
+                              type: "text",
+                              position:
+                                  h.pdf_rect_position as unknown as PdfHighlight["position"],
+                              content: { text: h.original_text },
+                              user_book_lib_id: h.user_book_lib_id,
+                              library_id: h.user_book_lib_id,
+                          } as PdfHighlight
+                      } else {
+                          return {
+                              id: h.id,
+                              user_book_lib_id: h.user_book_lib_id,
+                              original_text: h.original_text,
+                              color: h.color,
+                              note: h.note || undefined,
+                              range:
+                                  h.html_range &&
+                                  isSerializedRange(h.html_range)
+                                      ? (h.html_range as SerializedRange)
+                                      : {
+                                            startContainerPath: [],
+                                            startOffset: 0,
+                                            endContainerPath: [],
+                                            endOffset: 0,
+                                        },
+                              chapter: {
+                                  idx: h.chapter_idx || 0,
+                                  href: h.chapter_href || "",
+                                  title: h.chapter_title || undefined,
+                              },
+                              page: h.page || 0,
+                              // Add missing database fields for type compatibility
+                              chapter_href: h.chapter_href || "",
+                              chapter_idx: h.chapter_idx || 0,
+                              chapter_title: h.chapter_title || null,
+                              html_range: h.html_range,
+                              pdf_rect_position: h.pdf_rect_position,
+                          } as EpubHighlight
+                      }
+                  })
             : allHighlights.map(({ highlight }) => highlight)
 
     if (!highlights.length) {
@@ -488,20 +488,20 @@ export function HighlightCard({ highlight }: HighlightProps) {
                     <p className="text-sm text-card-foreground">
                         {highlightType === "EPUB"
                             ? (highlight as EpubHighlight).original_text.slice(
-                                0,
-                                150
-                            ) + "..."
+                                  0,
+                                  150
+                              ) + "..."
                             : (highlight as PdfHighlight).content?.text?.slice(
-                                0,
-                                150
-                            ) + "..."}
+                                  0,
+                                  150
+                              ) + "..."}
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Page{" "}
                         {highlightType === "EPUB"
                             ? (highlight as EpubHighlight).page
                             : (highlight as PdfHighlight).position.boundingRect
-                                ?.pageNumber}
+                                  ?.pageNumber}
                     </p>
                 </div>
             </div>

@@ -131,7 +131,7 @@ export class ApiClient {
           },
           cache: "no-store", // Disable caching for authenticated requests
         },
-        this.config.getAuthToken
+        this.config.getAuthToken,
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -205,10 +205,8 @@ export class ApiClient {
         try {
           const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
           // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { "Content-Type": _, ...freshUploadHeaders } = freshHeaders as Record<
-            string,
-            string
-          >;
+          const { "Content-Type": _, ...freshUploadHeaders } =
+            freshHeaders as Record<string, string>;
 
           response = await fetch(`${this.config.baseUrl}${endpoint}`, {
             method: "POST",

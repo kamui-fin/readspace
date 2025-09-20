@@ -178,7 +178,15 @@ export const useReaderStore = create<ReaderState & ReaderActions>()(
         goToPage: (page: number) => {
             const { pdfRef } = get()
             if (pdfRef && pdfRef.current) {
-                pdfRef.current.currentPageNumber = page
+                // Ensure page is a valid number and within bounds
+                const pageNumber = Number(page)
+                if (pageNumber > 0 && Number.isInteger(pageNumber)) {
+                    pdfRef.current.currentPageNumber = pageNumber
+                } else {
+                    console.error(
+                        `Invalid page number: ${page}. Must be a positive integer.`
+                    )
+                }
             }
         },
 

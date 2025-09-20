@@ -1,20 +1,16 @@
-import { Json } from "@/database.types"
-import { ApiWebClient } from "@/lib/api-client"
-import {
-    useCreateHighlight,
-    useDeleteHighlightByText,
-    SerializedRange,
-    serializeRangeToJson,
-    HighlightCreateRequest,
-} from "@readspace/shared"
 import {
     deserializeRange,
-    serializeRange,
     scrollToRange,
+    serializeRange,
 } from "@/lib/reader/range-serialize"
 import { getTocItemForSection } from "@/lib/reader/reader-utils"
 import { useReaderStore } from "@/stores/reader"
-import { useMutation, useQueryClient } from "@tanstack/react-query"
+import {
+    serializeRangeToJson,
+    useCreateHighlight,
+    useDeleteHighlightByText,
+} from "@readspace/shared"
+import { useQueryClient } from "@tanstack/react-query"
 import { useEffect, useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { highlightRange } from "../../lib/reader/highlight-range"

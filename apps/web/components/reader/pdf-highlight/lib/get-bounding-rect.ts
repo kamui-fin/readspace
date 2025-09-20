@@ -1,5 +1,13 @@
 import type { LTWHP } from "react-pdf-highlighter-extended"
 
+type BoundingRect = {
+    X0: number
+    X1: number
+    Y0: number
+    Y1: number
+    pageNumber: number
+}
+
 const getBoundingRect = (clientRects: Array<LTWHP>): LTWHP => {
     const rects = Array.from(clientRects).map((rect) => {
         const { left, top, width, height, pageNumber } = rect
@@ -29,22 +37,11 @@ const getBoundingRect = (clientRects: Array<LTWHP>): LTWHP => {
     )
 
     if (rectsWithSizeOnFirstPage.length === 0) {
-        // Return a default rect if no valid rects found
-        return {
-            left: 0,
-            top: 0,
-            width: 0,
-            height: 0,
-            pageNumber: firstPageNumber,
-        }
+        throw new Error("No valid rects found for bounding calculation")
     }
 
-    const firstRect = rectsWithSizeOnFirstPage[0]
-    if (!firstRect) {
-        throw new Error("No rects found for bounding calculation")
-    }
-
-    const optimal = rectsWithSizeOnFirstPage.reduce((res, rect) => {
+    const firstRect = rectsWithSizeOnFirstPage[0]!
+    const optimal: BoundingRect = rectsWithSizeOnFirstPage.reduce((res, rect) => {
         return {
             X0: Math.min(res.X0, rect.X0),
             X1: Math.max(res.X1, rect.X1),

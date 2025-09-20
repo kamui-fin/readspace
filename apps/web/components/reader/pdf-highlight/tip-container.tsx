@@ -52,7 +52,7 @@ export const TipContainer = ({
         const { offsetHeight, offsetWidth } = containerRef.current
         setHeight(offsetHeight)
         setWidth(offsetWidth)
-    }, [setHeight, setWidth])
+    }, [containerRef])
 
     updateTipPositionRef.current = updatePosition
 
@@ -76,7 +76,7 @@ export const TipContainer = ({
     // Calculate the position and dimensions of the tip container
     const scrollTop = viewer.container.scrollTop // How much the viewer has been scrolled vertically
     const left =
-        pageNode.offsetLeft + boundingRect.left + boundingRect.width // 2 // center tip over highlight
+        pageNode.offsetLeft + boundingRect.left + boundingRect.width / 2 // center tip over highlight
     const highlightTop = boundingRect.top + pageNode.offsetTop
     const highlightBottom = highlightTop + boundingRect.height
 

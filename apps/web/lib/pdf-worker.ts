@@ -2,32 +2,32 @@
 let pdfjsConfigured = false
 
 export const configurePdfJs = async () => {
-  if (typeof window === 'undefined') {
-    // Don't configure on server-side
-    return
-  }
+    if (typeof window === "undefined") {
+        // Don't configure on server-side
+        return
+    }
 
-  if (pdfjsConfigured) {
-    // Already configured
-    return
-  }
+    if (pdfjsConfigured) {
+        // Already configured
+        return
+    }
 
-  try {
-    const { pdfjs } = await import('react-pdf')
+    try {
+        const { pdfjs } = await import("react-pdf")
 
-    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-      'pdfjs-dist/build/pdf.worker.min.mjs',
-      import.meta.url
-    ).toString()
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+            "pdfjs-dist/build/pdf.worker.min.mjs",
+            import.meta.url
+        ).toString()
 
-    pdfjsConfigured = true
-  } catch (error) {
-    console.error('Failed to configure PDF.js:', error)
-  }
+        pdfjsConfigured = true
+    } catch (error) {
+        console.error("Failed to configure PDF.js:", error)
+    }
 }
 
-export const getPdfJs = async (): Promise<any> => {
-  await configurePdfJs()
-  const { pdfjs } = await import('react-pdf')
-  return pdfjs
+export const getPdfJs = async (): Promise<typeof import("pdfjs-dist")> => {
+    await configurePdfJs()
+    const { pdfjs } = await import("react-pdf")
+    return pdfjs
 }

@@ -60,27 +60,30 @@ export function useArticlesQuery({
     }
 
     // Prepare parameters for all articles query
-    const allArticlesParams = useMemo(() => ({
-        feedIds: feedId ? [feedId] : undefined,
-        folderId: folderId || undefined,
-        publishedSince: publishedSince || undefined,
-        publishedUntil: publishedUntil || undefined,
-        sortBy: "published_at" as const,
-        sortOrder: "desc" as const,
-        size: pageSize,
-        viewType: folderId
-            ? ("folder" as const)
-            : feedId
-                ? ("feed" as const)
-                : ("all" as const),
-        viewId: folderId || feedId || "all",
-    }), [feedId, folderId, publishedSince, publishedUntil, pageSize])
+    const allArticlesParams = useMemo(
+        () => ({
+            feedIds: feedId ? [feedId] : undefined,
+            folderId: folderId || undefined,
+            publishedSince: publishedSince || undefined,
+            publishedUntil: publishedUntil || undefined,
+            sortBy: "published_at" as const,
+            sortOrder: "desc" as const,
+            size: pageSize,
+            viewType: folderId
+                ? ("folder" as const)
+                : feedId
+                  ? ("feed" as const)
+                  : ("all" as const),
+            viewId: folderId || feedId || "all",
+        }),
+        [feedId, folderId, publishedSince, publishedUntil, pageSize]
+    )
 
     // Call all hooks at the top level (Rules of Hooks)
-    const allArticlesQuery = useInfiniteArticles(
-        allArticlesParams,
-        { ...queryOptions, enabled: mode === "allArticles" }
-    )
+    const allArticlesQuery = useInfiniteArticles(allArticlesParams, {
+        ...queryOptions,
+        enabled: mode === "allArticles",
+    })
 
     const recentlyReadQuery = useInfiniteRecentlyReadArticles(
         { size: pageSize },

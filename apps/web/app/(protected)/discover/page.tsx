@@ -1,3 +1,4 @@
+import "@/lib/configure-api-client"
 import DiscoverPageClient from "./discover-client"
 
 export const metadata = {

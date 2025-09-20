@@ -27,7 +27,6 @@ import {
 import { useArticlesQuery } from "@/hooks/useArticlesQuery"
 import { useIsMobile, useIsTablet } from "@/hooks/useMobile"
 import { useClearPendingNavigation } from "@/hooks/useNavigationState"
-import { useQueryClient } from "@tanstack/react-query"
 import type { Article, Feed } from "@readspace/shared"
 import {
     useArticle,
@@ -38,17 +37,30 @@ import {
     useUpdateArticle,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
-import {
-    Eye,
-    EyeOff,
-    Globe,
-    MoreVertical,
-    RefreshCw,
-} from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
 import { ArticlesList } from "./articles/ArticlesList"
+
+// Type for the paginated articles data structure from TanStack Query
+interface ArticlesPageData {
+    items: Article[]
+    total: number
+    page: number
+    has_more: boolean
+}
+
+interface ArticlesInfiniteData {
+    pages: ArticlesPageData[]
+    pageParams: unknown[]
+}
+
+interface UnreadCountsData {
+    total_unread: number
+    [key: string]: number
+}
 
 interface ArticlesViewProps {
     /** Initial title for the sidebar */
@@ -224,7 +236,6 @@ export function ArticlesView({
         publishedUntil: publishedUntil,
     })
 
-
     // Determine if we should show preview banner for feeds
     const shouldShowPreviewBanner = !!(
         feedId &&
@@ -267,14 +278,14 @@ export function ArticlesView({
                     // Optimistically update the UI immediately
                     queryClient.setQueriesData(
                         { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                        (oldData: any) => {
+                        (oldData: ArticlesInfiniteData | undefined) => {
                             if (!oldData?.pages) return oldData
                             return {
                                 ...oldData,
-                                pages: oldData.pages.map((page: any) => ({
+                                pages: oldData.pages.map((page: ArticlesPageData) => ({
                                     ...page,
                                     items:
-                                        page.items?.map((item: any) =>
+                                        page.items?.map((item: Article) =>
                                             item.id === articleId
                                                 ? { ...item, is_read: true }
                                                 : item
@@ -287,7 +298,7 @@ export function ArticlesView({
                     // Also update unread counts optimistically
                     queryClient.setQueryData(
                         [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                        (oldData: any) => {
+                        (oldData: UnreadCountsData | undefined) => {
                             if (!oldData) return oldData
                             return {
                                 ...oldData,
@@ -457,7 +468,6 @@ export function ArticlesView({
         }
     }
 
-
     const toggleShowUnreadOnly = () => {
         setShowUnreadOnly((prev) => !prev)
     }
@@ -492,12 +502,10 @@ export function ArticlesView({
 
     // Auto-select first article when we have articles but no current selection (desktop only)
     useEffect(() => {
-        if (
-            allArticles.length > 0 &&
-            !selectedArticleId &&
-            !isMobile &&
-            !showContent
-        ) {
+        // Skip auto-selection entirely on mobile
+        if (isMobile) return
+
+        if (allArticles.length > 0 && !selectedArticleId && !showContent) {
             // Use a small timeout to ensure data has stabilized
             const timer = setTimeout(() => {
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
@@ -511,6 +519,7 @@ export function ArticlesView({
 
             return () => clearTimeout(timer)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         allArticles.length,
         selectedArticleId,
@@ -536,7 +545,9 @@ export function ArticlesView({
                     mode={mode}
                     feedId={feedId}
                     folderId={folderId}
-                    onRefresh={() => handleRefreshWithMessage("Refreshing articles...")}
+                    onRefresh={() =>
+                        handleRefreshWithMessage("Refreshing articles...")
+                    }
                 />
             </div>
         )
@@ -642,7 +653,9 @@ export function ArticlesView({
                                                     variant="ghost"
                                                     size="sm"
                                                     onClick={() =>
-                                                        handleRefreshWithMessage("Refreshing articles...")
+                                                        handleRefreshWithMessage(
+                                                            "Refreshing articles..."
+                                                        )
                                                     }
                                                     disabled={isDeepRefreshing}
                                                 >
@@ -671,7 +684,9 @@ export function ArticlesView({
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem
                                                     onClick={() =>
-                                                        handleRefreshWithMessage("Quick refresh...")
+                                                        handleRefreshWithMessage(
+                                                            "Quick refresh..."
+                                                        )
                                                     }
                                                 >
                                                     <RefreshCw className="h-4 w-4 mr-2" />
@@ -682,7 +697,9 @@ export function ArticlesView({
                                                     disabled={isDeepRefreshing}
                                                 >
                                                     <Globe className="h-4 w-4 mr-2" />
-                                                    {isDeepRefreshing ? "Checking..." : "Check for New Articles"}
+                                                    {isDeepRefreshing
+                                                        ? "Checking..."
+                                                        : "Check for New Articles"}
                                                 </DropdownMenuItem>
                                                 {onCreateFolder && (
                                                     <DropdownMenuItem
@@ -796,7 +813,9 @@ export function ArticlesView({
                                                     size="icon"
                                                     className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                     onClick={() =>
-                                                        handleRefreshWithMessage("Quick refresh...")
+                                                        handleRefreshWithMessage(
+                                                            "Quick refresh..."
+                                                        )
                                                     }
                                                     title="Quick refresh"
                                                     disabled={isDeepRefreshing}
@@ -804,13 +823,17 @@ export function ArticlesView({
                                                     <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                                 </Button>
                                                 <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                             title="More refresh options"
-                                                            disabled={isDeepRefreshing}
+                                                            disabled={
+                                                                isDeepRefreshing
+                                                            }
                                                         >
                                                             <MoreVertical className="h-3 w-3 transition-transform duration-200" />
                                                         </Button>
@@ -818,18 +841,26 @@ export function ArticlesView({
                                                     <DropdownMenuContent align="end">
                                                         <DropdownMenuItem
                                                             onClick={() =>
-                                                                handleRefreshWithMessage("Quick refresh...")
+                                                                handleRefreshWithMessage(
+                                                                    "Quick refresh..."
+                                                                )
                                                             }
                                                         >
                                                             <RefreshCw className="mr-2 h-4 w-4" />
                                                             Quick Refresh
                                                         </DropdownMenuItem>
                                                         <DropdownMenuItem
-                                                            onClick={handleDeepRefresh}
-                                                            disabled={isDeepRefreshing}
+                                                            onClick={
+                                                                handleDeepRefresh
+                                                            }
+                                                            disabled={
+                                                                isDeepRefreshing
+                                                            }
                                                         >
                                                             <Globe className="mr-2 h-4 w-4" />
-                                                            {isDeepRefreshing ? "Checking..." : "Check for New Articles"}
+                                                            {isDeepRefreshing
+                                                                ? "Checking..."
+                                                                : "Check for New Articles"}
                                                         </DropdownMenuItem>
                                                     </DropdownMenuContent>
                                                 </DropdownMenu>
@@ -841,14 +872,15 @@ export function ArticlesView({
                                                 size="icon"
                                                 className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
                                                 onClick={() =>
-                                                    handleRefreshWithMessage("Refreshing articles...")
+                                                    handleRefreshWithMessage(
+                                                        "Refreshing articles..."
+                                                    )
                                                 }
                                                 title="Refresh"
                                             >
                                                 <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
                                             </Button>
                                         )}
-
                                     </div>
                                 </div>
 

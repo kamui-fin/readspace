@@ -14,7 +14,6 @@ interface ContentExtractionResult {
   image_url?: string
 }
 
-
 // Type for page metadata response
 interface PageMetadataResponse {
   feeds?: Array<{ url: string; title?: string; type: string }>
@@ -155,7 +154,7 @@ browser.commands.onCommand.addListener((command: string) => {
           iconUrl: 'icons/icon-48.png',
           title: 'Readspace',
           message:
-            'This page type is not supported. Readspace only works on websites (http:// and https:// pages).'
+            'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
         })
         return
       }
@@ -203,7 +202,10 @@ browser.runtime.onMessage.addListener(
     switch (messageRequest.action) {
       case 'saveArticle':
         if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
-          handleSaveToReadspace(messageRequest.url || sender.tab.url, sender.tab)
+          handleSaveToReadspace(
+            messageRequest.url || sender.tab.url,
+            sender.tab
+          )
         } else {
           console.log(
             'Save article requested from unsupported page:',
@@ -267,9 +269,11 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
     const requestBody = {
       ...trimmedData,
       metadata: trimmedData.metadata
-        ? Object.fromEntries(
-            Object.entries(trimmedData.metadata).filter(([_, value]) => value !== undefined)
-          ) as Record<string, string>
+        ? (Object.fromEntries(
+            Object.entries(trimmedData.metadata).filter(
+              ([_, value]) => value !== undefined
+            )
+          ) as Record<string, string>)
         : undefined,
     }
 

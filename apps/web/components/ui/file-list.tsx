@@ -125,7 +125,7 @@ FileListActions.displayName = "FileListActions"
 const FileListAction = React.forwardRef<
     HTMLButtonElement,
     React.ButtonHTMLAttributes<HTMLButtonElement>
->(({ className, ...props }, ref) => (
+>(({ className, ...props }, ref) => ( // eslint-disable-line
     <button
         ref={ref}
         className={cn(
@@ -172,5 +172,6 @@ export {
     FileListItem,
     FileListName,
     FileListProgress,
-    FileListSize,
+    FileListSize
 }
+

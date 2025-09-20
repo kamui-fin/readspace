@@ -1,5 +1,5 @@
-import { ApiWebClient } from "@/lib/api-client"
 import { useReaderStore } from "@/stores/reader"
+import { ApiClient } from "@readspace/shared"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
 
@@ -29,7 +29,7 @@ export default function useChapterNavigation() {
 
     const updateProgressMutation = useMutation({
         mutationFn: ({ bookId, progress }: { bookId: string; progress: any }) =>
-            ApiWebClient.books.updateBookProgress(bookId, {
+            ApiClient.books.updateBookProgress(bookId, {
                 epub_progress: progress,
             }),
         onSuccess: () => {

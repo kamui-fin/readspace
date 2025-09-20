@@ -28,8 +28,8 @@ function Slider({
         Array.isArray(value)
             ? value
             : Array.isArray(defaultValue)
-                ? defaultValue
-                : [min, max]
+              ? defaultValue
+              : [min, max]
     )
 
     React.useEffect(() => {

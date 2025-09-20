@@ -21,7 +21,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useIsDesktop, useIsMobile, useIsTablet } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/useMobile"
 import { cn } from "@readspace/shared"
 
 const SIDEBAR_COOKIE_NAME = "sidebar:state"
@@ -92,8 +92,6 @@ const SidebarProvider = React.forwardRef<
         ref
     ) => {
         const isMobile = useIsMobile()
-        const isTablet = useIsTablet()
-        const isDesktop = useIsDesktop()
 
         const [openMobile, setOpenMobile] = React.useState(false)
 
@@ -179,16 +177,16 @@ const SidebarProvider = React.forwardRef<
             ]
         )
 
-        // Sync sidebar state with device type changes after hydration
-        React.useEffect(() => {
-            if (defaultOpen === undefined && typeof window !== "undefined") {
-                const width = window.innerWidth
-                const shouldBeOpen = width >= 1024 // Only open on desktop (>= 1024px)
-                if (_open !== shouldBeOpen) {
-                    _setOpen(shouldBeOpen)
-                }
-            }
-        }, [isMobile, isTablet, isDesktop, defaultOpen, _open])
+        // // Sync sidebar state with device type changes after hydration
+        // React.useEffect(() => {
+        //     if (defaultOpen === undefined && typeof window !== "undefined") {
+        //         const width = window.innerWidth
+        //         const shouldBeOpen = width >= 1024 // Only open on desktop (>= 1024px)
+        //         if (_open !== shouldBeOpen) {
+        //             _setOpen(shouldBeOpen)
+        //         }
+        //     }
+        // }, [isMobile, isTablet, isDesktop, defaultOpen, _open])
 
         return (
             <SidebarContext.Provider value={contextValue}>
@@ -821,7 +819,7 @@ const SidebarMenuAction = React.forwardRef<
                 "peer-data-[size=lg]/menu-button:top-2.5",
                 "group-data-[collapsible=icon]:hidden",
                 showOnHover &&
-                "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
+                    "peer-data-[active=true]/menu-button:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 md:opacity-0",
                 className
             )}
             data-sidebar="menu-action"
@@ -1011,6 +1009,5 @@ export {
     SidebarRightTrigger,
     SidebarSeparator,
     useSidebarLeft,
-    useSidebarRight
+    useSidebarRight,
 }
-

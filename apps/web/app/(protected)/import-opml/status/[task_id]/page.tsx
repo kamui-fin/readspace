@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
 import {
     Card,
     CardContent,
@@ -9,19 +8,19 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { ApiWebClient } from "@/lib/api-client"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import { Progress } from "@/components/ui/progress"
+import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
+    Activity,
     CheckCircle,
+    ChevronLeft,
     Clock,
     FileText,
-    Activity,
-    XCircle,
-    ChevronLeft,
     X,
+    XCircle,
 } from "lucide-react"
-import { useRouter, useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -78,11 +77,11 @@ export default function ImportStatusPage() {
 
     const handleCancelImport = async () => {
         try {
-            await ApiWebClient.rss.cancelImportTask(taskId)
+            await ApiClient.rss.cancelImportTask(taskId)
             toast.success("Import cancelled successfully")
 
             // Force refresh the task status
-            const status = await ApiWebClient.rss.getImportTaskStatus(taskId)
+            const status = await ApiClient.rss.getImportTaskStatus(taskId)
             setTaskStatus(status as ImportTaskStatus)
         } catch (error) {
             console.error("Error cancelling import task:", error)
@@ -100,7 +99,7 @@ export default function ImportStatusPage() {
 
         const pollStatus = async () => {
             try {
-                const status = (await ApiWebClient.rss.getImportTaskStatus(
+                const status = (await ApiClient.rss.getImportTaskStatus(
                     taskId
                 )) as ImportTaskStatus
                 setTaskStatus(status)

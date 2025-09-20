@@ -173,8 +173,9 @@ export default function ManageFeedsPageClient() {
                     ).length
                     const failed = results.length - successful
                     setSelectedFeedIds([])
-                    return `Deleted ${successful} feeds. ${failed > 0 ? `${failed} failed.` : ""
-                        }`
+                    return `Deleted ${successful} feeds. ${
+                        failed > 0 ? `${failed} failed.` : ""
+                    }`
                 },
                 error: "An unexpected error occurred while deleting feeds.",
             })

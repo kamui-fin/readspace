@@ -1,17 +1,17 @@
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
-import { ApiClient, ArticlesPaginatedResponse } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
-import { ensureServerApiClient } from "@/lib/server-api-client"
+import "@/lib/configure-api-client"
+import { getQueryClient } from "@/lib/get-query-client"
+import {
+    ApiClient,
+    ArticlesPaginatedResponse,
+    RSS_QUERY_KEYS,
+} from "@readspace/shared"
+import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
 
 export default async function ArticlesPage() {
-    // Ensure ApiClient is configured for server-side use
-    await ensureServerApiClient()
-
     const queryClient = getQueryClient()
 
     // Prefetch infinite query parameters to match client-side useInfiniteArticles

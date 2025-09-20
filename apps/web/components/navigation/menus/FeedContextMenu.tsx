@@ -215,7 +215,9 @@ export function FeedContextMenu({
                             onClick={handleRefresh}
                             disabled={refreshFeed.status === "pending"}
                         >
-                            <RefreshCw className={`mr-2 h-4 w-4 ${refreshFeed.status === "pending" ? "animate-spin" : ""}`} />
+                            <RefreshCw
+                                className={`mr-2 h-4 w-4 ${refreshFeed.status === "pending" ? "animate-spin" : ""}`}
+                            />
                             <span>Force check new articles</span>
                         </DropdownMenuItem>
                     )}
@@ -279,7 +281,7 @@ export function FeedContextMenu({
                                 }
                             >
                                 {updateFeed.status === "pending" ||
-                                    updateFolder.status === "pending"
+                                updateFolder.status === "pending"
                                     ? "Renaming..."
                                     : "Rename"}
                             </Button>
@@ -323,8 +325,8 @@ export function FeedContextMenu({
                             {isProcessingDelete
                                 ? "Processing..."
                                 : isFolder
-                                    ? "Delete"
-                                    : "Unfollow"}
+                                  ? "Delete"
+                                  : "Unfollow"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

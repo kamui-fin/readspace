@@ -5,7 +5,7 @@ import { PdfHighlight } from "@/types/library"
 import { Tip } from "react-pdf-highlighter-extended"
 import { useHighlightContainerContext } from "./contexts/highlight-context"
 import { usePdfHighlighterContext } from "./contexts/pdf-highlighter-context"
-import { MonitoredHighlightContainer } from "./MonitoredHighlightContainer"
+import { MonitoredHighlightContainer } from "./monitored-highlight-container"
 
 interface HighlightContainerProps {
     deleteHighlight: (text: string) => void

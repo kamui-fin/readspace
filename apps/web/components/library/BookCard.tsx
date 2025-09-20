@@ -63,7 +63,7 @@ export function BookCard({ book }: BookCardProps) {
     // Calculate progress based on book type
     const progress =
         book.book_metadata.format === "PDF"
-            ? (book.pdf_current_page || 0) // (book.book_metadata.num_pages || 1)
+            ? book.pdf_current_page || 0 // (book.book_metadata.num_pages || 1)
             : isEpubProgress(book.epub_progress)
               ? book.epub_progress.globalProgress.current /
                 book.epub_progress.globalProgress.total

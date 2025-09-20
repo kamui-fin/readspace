@@ -13,16 +13,14 @@ export const getBrowser = () => {
 export const isChrome = () => {
   const globalChrome = (globalThis as { chrome?: typeof chrome }).chrome
   return (
-    typeof globalChrome !== 'undefined' &&
-    globalChrome?.runtime !== undefined
+    typeof globalChrome !== 'undefined' && globalChrome?.runtime !== undefined
   )
 }
 
 export const isFirefox = () => {
   const globalBrowser = (globalThis as { browser?: typeof browser }).browser
   return (
-    typeof globalBrowser !== 'undefined' &&
-    globalBrowser?.runtime !== undefined
+    typeof globalBrowser !== 'undefined' && globalBrowser?.runtime !== undefined
   )
 }
 
@@ -54,7 +52,10 @@ export const storage = {
 
 // Messaging helpers
 export const messaging = {
-  async sendToTab<T>(tabId: number, message: Record<string, unknown>): Promise<T> {
+  async sendToTab<T>(
+    tabId: number,
+    message: Record<string, unknown>
+  ): Promise<T> {
     return browser.tabs.sendMessage(tabId, message) as Promise<T>
   },
 
@@ -75,7 +76,10 @@ export const tabs = {
     return browser.tabs.create(createProperties)
   },
 
-  async sendMessage<T>(tabId: number, message: Record<string, unknown>): Promise<T> {
+  async sendMessage<T>(
+    tabId: number,
+    message: Record<string, unknown>
+  ): Promise<T> {
     return browser.tabs.sendMessage(tabId, message) as Promise<T>
   },
 }

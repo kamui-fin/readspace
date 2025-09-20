@@ -10,8 +10,12 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { ActiveImportTask, opml, RSS_QUERY_KEYS } from "@readspace/shared"
-import { ApiWebClient } from "@/lib/api-client"
+import {
+    ActiveImportTask,
+    ApiClient,
+    opml,
+    RSS_QUERY_KEYS,
+} from "@readspace/shared"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
     Activity,
@@ -47,7 +51,7 @@ export default function ImportOPMLPageClient() {
     // Use the prefetched data for active imports
     const { data: activeImports = [] } = useQuery<ActiveImportTask[]>({
         queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
-        queryFn: () => ApiWebClient.rss.listImportTasks(),
+        queryFn: () => ApiClient.rss.listImportTasks(),
         refetchInterval: 5000, // Poll every 5 seconds for updates
     })
 
@@ -179,7 +183,7 @@ export default function ImportOPMLPageClient() {
             setIsUploading(true)
 
             try {
-                const data = (await ApiWebClient.rss.importOPML(
+                const data = (await ApiClient.rss.importOPML(
                     formData
                 )) as OPMLImportResponse
 
@@ -201,7 +205,7 @@ export default function ImportOPMLPageClient() {
 
     const handleCancelImport = async (taskId: string) => {
         try {
-            await ApiWebClient.rss.cancelImportTask(taskId)
+            await ApiClient.rss.cancelImportTask(taskId)
             toast.success("Import cancelled successfully")
 
             // Invalidate the import tasks query to refetch
@@ -261,7 +265,8 @@ export default function ImportOPMLPageClient() {
                                             </span>
                                         </span>
                                         <span className="text-xs sm:text-sm">
-                                            {activeImport?.estimated_feeds} feeds
+                                            {activeImport?.estimated_feeds}{" "}
+                                            feeds
                                         </span>
                                     </CardDescription>
                                 </div>
@@ -269,9 +274,11 @@ export default function ImportOPMLPageClient() {
                             <div className="text-left sm:text-right">
                                 <div className="text-xs sm:text-sm text-muted-foreground">
                                     Started:{" "}
-                                    {activeImport?.created_at ? new Date(
-                                        activeImport.created_at
-                                    ).toLocaleString() : 'Unknown'}
+                                    {activeImport?.created_at
+                                        ? new Date(
+                                              activeImport.created_at
+                                          ).toLocaleString()
+                                        : "Unknown"}
                                 </div>
                             </div>
                         </div>
@@ -282,7 +289,8 @@ export default function ImportOPMLPageClient() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    activeImport?.task_id && router.push(
+                                    activeImport?.task_id &&
+                                    router.push(
                                         `/import-opml/status/${activeImport.task_id}`
                                     )
                                 }
@@ -295,7 +303,8 @@ export default function ImportOPMLPageClient() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() =>
-                                    activeImport?.task_id && handleCancelImport(activeImport.task_id)
+                                    activeImport?.task_id &&
+                                    handleCancelImport(activeImport.task_id)
                                 }
                                 className="text-red-600 hover:text-red-700 hover:bg-red-50 sm:w-auto"
                             >
@@ -370,17 +379,18 @@ export default function ImportOPMLPageClient() {
                     </div>
 
                     {/* Active Imports Section */}
-                    {(activeImports?.length > 0) && (
+                    {activeImports?.length > 0 && (
                         <div className="mb-8">{renderActiveImports()}</div>
                     )}
 
                     {/* Upload Section - Only show if no active imports */}
                     {(!activeImports || activeImports.length === 0) && (
                         <Card
-                            className={`transition-colors duration-200 ${isDragging
+                            className={`transition-colors duration-200 ${
+                                isDragging
                                     ? "border-primary bg-primary/5"
                                     : "border-dashed border-2"
-                                }`}
+                            }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

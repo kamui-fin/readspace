@@ -1,11 +1,5 @@
 import { PDFViewer } from "pdfjs-dist/types/web/pdf_viewer"
-import React, { ReactNode } from "react"
-import {
-    HighlightContainerUtils,
-    HighlightContext,
-} from "./contexts/highlight-context"
-import { scaledPositionToViewport, viewportToScaled } from "./lib/coordinates"
-import screenshot from "./lib/screenshot"
+import { ReactNode } from "react"
 import {
     GhostHighlight,
     Highlight,
@@ -14,6 +8,12 @@ import {
     LTWHP,
     ViewportHighlight,
 } from "react-pdf-highlighter-extended"
+import {
+    HighlightContainerUtils,
+    HighlightContext,
+} from "./contexts/highlight-context"
+import { scaledPositionToViewport, viewportToScaled } from "./lib/coordinates"
+import screenshot from "./lib/screenshot"
 
 const EMPTY_ID = "empty-id"
 

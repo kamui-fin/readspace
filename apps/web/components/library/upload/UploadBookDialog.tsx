@@ -13,7 +13,6 @@ import {
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { HTTPError } from "@/lib/errors"
 import { LoaderCircle, Plus } from "lucide-react"
-import { useRouter } from "next/navigation"
 import { useState } from "react"
 import toast from "react-hot-toast"
 import { DragDropBook } from "../UploadBook"
@@ -26,7 +25,6 @@ export default function UploadBookDialog() {
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
     const { user } = useCurrentUser()
-    const router = useRouter()
     const uploadBook = useUploadBook()
 
     const handleFileUpload = async () => {

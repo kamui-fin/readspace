@@ -1,9 +1,12 @@
-import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
-import { ApiClient, ArticlesPaginatedResponse } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import "@/lib/configure-api-client" // Configure ApiClient for server-side usage
+import { getQueryClient } from "@/lib/get-query-client"
+import {
+    ApiClient,
+    ArticlesPaginatedResponse,
+    RSS_QUERY_KEYS,
+} from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -15,9 +18,6 @@ interface PageProps {
 export default async function FolderArticlesPage({ params }: PageProps) {
     const resolvedParams = await params
     const folderId = resolvedParams.id
-
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
 
     const queryClient = getQueryClient()
 

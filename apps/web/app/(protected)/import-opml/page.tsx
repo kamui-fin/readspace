@@ -1,9 +1,8 @@
+import "@/lib/configure-api-client"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ApiClient } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
-import ImportOPMLPageClient from "./import-opml-client"
+import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { ensureServerApiClient } from "@/lib/server-api-client"
+import ImportOPMLPageClient from "./import-opml-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -15,9 +14,6 @@ export const metadata = {
 }
 
 export default async function ImportOPMLPage() {
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
-
     const queryClient = getQueryClient()
 
     // Prefetch active import tasks

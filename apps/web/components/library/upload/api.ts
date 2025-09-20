@@ -1,7 +1,7 @@
-import { ApiWebClient } from "@/lib/api-client"
 import { cacheBook } from "@/lib/reader/bookstore"
 import { createClient } from "@/lib/supabase/client"
 import { UserBookLibrary } from "@/types/api"
+import { ApiClient } from "@readspace/shared"
 import { User } from "@supabase/supabase-js"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
@@ -18,7 +18,7 @@ export const uploadToCloudStorage = async (file: File, bookId: string) => {
     formData.append("file", file)
     formData.append("book_id", bookId)
 
-    return ApiWebClient.uploadFile(
+    return ApiClient.uploadFile(
         "/api/upload/",
         formData
     ) as Promise<UploadResponse>
@@ -62,7 +62,7 @@ export const useUploadBook = () => {
                           }),
                 }
 
-                const createdMetadata = await ApiWebClient.post<{ id: string }>(
+                const createdMetadata = await ApiClient.post<{ id: string }>(
                     "/api/books/metadata",
                     bookMetadata
                 )
@@ -77,7 +77,7 @@ export const useUploadBook = () => {
 
                 // Update metadata with cover_url if upload was successful
                 if (coverUrl && coverUrl !== metadata.coverUrl) {
-                    await ApiWebClient.put(
+                    await ApiClient.put(
                         `/api/books/metadata/${createdMetadata.id}`,
                         {
                             cover_url: coverUrl,
@@ -108,7 +108,7 @@ export const useUploadBook = () => {
                           }),
                 }
 
-                const libraryResult = await ApiWebClient.post<UserBookLibrary>(
+                const libraryResult = await ApiClient.post<UserBookLibrary>(
                     "/api/books/",
                     libraryData
                 )
@@ -123,7 +123,7 @@ export const useUploadBook = () => {
                 )
 
                 // Update the book metadata with the file URL
-                await ApiWebClient.put(
+                await ApiClient.put(
                     `/api/books/metadata/${createdMetadata.id}`,
                     {
                         file_url: uploadResponse.file_path,

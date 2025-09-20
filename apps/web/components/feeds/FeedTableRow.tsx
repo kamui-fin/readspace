@@ -195,7 +195,6 @@ export function FeedTableRow({
                         <SelectValue placeholder="Select folder" />
                     </SelectTrigger>
                     <SelectContent>
-                        <SelectItem value="none">No folder</SelectItem>
                         {folders.map((folder) => (
                             <SelectItem key={folder.id} value={folder.id}>
                                 {folder.name}

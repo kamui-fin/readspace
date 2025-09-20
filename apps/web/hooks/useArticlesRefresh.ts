@@ -1,6 +1,11 @@
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-import { useRefreshFeed, useRefreshFolderFeeds, useRefreshAllFeeds, useRefreshStatus } from "@readspace/shared"
+import {
+    useRefreshFeed,
+    useRefreshFolderFeeds,
+    useRefreshAllFeeds,
+    useRefreshStatus,
+} from "@readspace/shared"
 
 // Define types for refresh responses
 interface RefreshResponse {
@@ -129,7 +134,7 @@ export function useArticlesRefresh({
             refreshAllFeeds.mutate(undefined, {
                 onSuccess: (data: any) => {
                     // Extract task ID if available for progress tracking
-                    if (data && typeof data === 'object' && 'task_id' in data) {
+                    if (data && typeof data === "object" && "task_id" in data) {
                         setRefreshTaskId(data.task_id as string)
                     } else {
                         toast.success("Refresh started successfully!", {
@@ -142,12 +147,9 @@ export function useArticlesRefresh({
                 },
                 onError: (error) => {
                     console.error("Refresh failed:", error)
-                    toast.error(
-                        "Failed to start refresh. Please try again.",
-                        {
-                            id: "bulk-refresh",
-                        }
-                    )
+                    toast.error("Failed to start refresh. Please try again.", {
+                        id: "bulk-refresh",
+                    })
                     setRefreshType(null)
                     setIsDeepRefreshing(false)
                 },
@@ -157,7 +159,7 @@ export function useArticlesRefresh({
             refreshAllFeeds.mutate(undefined, {
                 onSuccess: (data: any) => {
                     // Extract task ID if available for progress tracking
-                    if (data && typeof data === 'object' && 'task_id' in data) {
+                    if (data && typeof data === "object" && "task_id" in data) {
                         setRefreshTaskId(data.task_id as string)
                     } else {
                         toast.success("Refresh started successfully!", {
@@ -170,12 +172,9 @@ export function useArticlesRefresh({
                 },
                 onError: (error) => {
                     console.error("Refresh failed:", error)
-                    toast.error(
-                        "Failed to start refresh. Please try again.",
-                        {
-                            id: "bulk-refresh",
-                        }
-                    )
+                    toast.error("Failed to start refresh. Please try again.", {
+                        id: "bulk-refresh",
+                    })
                     setRefreshType(null)
                     setIsDeepRefreshing(false)
                 },

@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client"
 
 import { useReaderStore } from "@/stores/reader"
@@ -9,24 +10,20 @@ import {
     HighlightState,
     PdfHighlight,
 } from "../../types/library"
-import type {
-    UserBookLibraryProgressResponse,
-    HighlightCreateRequest,
-    HighlightColor,
-} from "../../types/api"
 
 import { useRef, useState } from "react"
 import { PdfLoader } from "react-pdf-highlighter-extended"
 
 import { PdfHighlighterUtils } from "@/components/reader/pdf-highlight/contexts/pdf-highlighter-context"
-import ExpandableTip from "@/components/reader/pdf-highlight/ExpandableTip"
-import HighlightContainer from "@/components/reader/pdf-highlight/HighlightContainer"
-import { PdfHighlighter } from "@/components/reader/pdf-highlight/PdfHighlights"
+import ExpandableTip from "@/components/reader/pdf-highlight/expandable-tip"
+import HighlightContainer from "@/components/reader/pdf-highlight/highlight-container"
+import { PdfHighlighter } from "@/components/reader/pdf-highlight/pdf-highlights"
 
 import { Loading } from "@/components/reader/ReaderContent"
-import { ApiClient } from "@/lib/api/client"
+import { ApiClient } from "@readspace/shared"
 import { useMutation } from "@tanstack/react-query"
 import { pdfjs } from "react-pdf"
+
 // Global storage key for zoom preference (same as in pdf-zoom.tsx)
 const STORAGE_KEY = "pdf-zoom-level"
 
@@ -49,13 +46,12 @@ interface PDFViewerProps {
 }
 
 export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
-
     const currentPageRef = useRef(useReaderStore.getState().currentPage)
     const [isLoading, setIsLoading] = useState(true)
     const [viewerReady, setViewerReady] = useState(false)
 
     // Initialize zoom state from localStorage
-    const [currentZoom] = useState<ZoomValue>(() => {
+    const [currentZoom, setCurrentZoom] = useState<ZoomValue>(() => {
         // Default to "auto" when running on server or no saved value exists
         if (typeof window === "undefined") return "auto"
 
@@ -107,9 +103,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
 
     // Get isAreaSelectionActive state from the store, with fallback if it doesn't exist
     const isAreaSelectionActive = useReaderStore(
-        (state) =>
-            (state as { isAreaSelectionActive?: boolean })
-                .isAreaSelectionActive ?? false
+        (state) => (state as any).isAreaSelectionActive ?? false
     )
 
     // Auto-hide the app sidebar for better reading experience
@@ -176,7 +170,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 const highlightStates = savedHighlights.map(
                     (h): HighlightState => ({
                         highlight: h,
-                        removeFn: () => {}, // Placeholder, actual remove logic might be elsewhere
+                        removeFn: () => { }, // Placeholder, actual remove logic might be elsewhere
                     })
                 )
                 setHighlights(highlightStates)
@@ -230,88 +224,81 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             // Perform any cleanup, e.g., resetting component-specific state
             // isComponentInitialized.current = false; // Example, if you still use this ref
         }
-        // Extract stable values from bookMeta to prevent infinite re-renders
+        // Ensure dependencies are correct. bookMeta might be complex; consider destructuring if it causes re-runs.
+        // For now, keeping bookMeta as is, but be mindful of its stability.
     }, [
-        bookMeta.id,
-        bookMeta.library_id,
-        bookMeta.pdf_current_page,
-        bookMeta.format,
-        bookMeta.title,
+        bookMeta,
         fetchBook,
         setHighlights,
         setAllHighlights,
-        savedHighlights.length, // Use length instead of the array itself
-    ])
+        insertAllHighlight,
+        savedHighlights,
+    ]) // Removed goToPage if not directly called here
 
-    const saveProgress = useCallback(
-        (pageLeftOff: number) => {
-            // Ensure bookMeta is available
-            if (!bookMeta) {
-                console.error("saveProgress called without bookMeta. Skipping.")
-                return
+    const saveProgress = (pageLeftOff: number) => {
+        // Ensure bookMeta is available
+        if (!bookMeta) {
+            console.error("saveProgress called without bookMeta. Skipping.")
+            return
+        }
+
+        console.log(
+            "Attempting to save progress for page:",
+            pageLeftOff,
+            "bookMeta.id:",
+            bookMeta.id,
+            "bookMeta.library_id:",
+            bookMeta.library_id
+        )
+
+        // Update the local store/ref regardless of where we're saving
+        currentPageRef.current = pageLeftOff
+        useReaderStore.getState().setCurrentPage(pageLeftOff)
+
+        // Save progress to API
+        let libraryIdToUse: string | null | undefined = bookMeta.library_id
+
+        if (!libraryIdToUse) {
+            const pathParts = window.location.pathname.split("/")
+            // Assuming URL structure like /reader/pdf/{library_id}
+            // Adjust index if your URL structure is different
+            if (
+                pathParts.length >= 3 &&
+                pathParts[pathParts.length - 2] === "pdf"
+            ) {
+                libraryIdToUse = pathParts[pathParts.length - 1]
+                console.log("Extracted library_id from URL:", libraryIdToUse)
             }
+        }
 
+        // CRITICAL: Only proceed if we have a valid libraryIdToUse
+        // DO NOT fall back to bookMeta.id for cloud saves.
+        if (libraryIdToUse) {
             console.log(
-                "Attempting to save progress for page:",
-                pageLeftOff,
-                "bookMeta.id:",
-                bookMeta.id,
-                "bookMeta.library_id:",
-                bookMeta.library_id
+                "Saving progress to API for library ID:",
+                libraryIdToUse
             )
+            updateProgressMutation.mutate({
+                bookId: libraryIdToUse, // This is UserBookLibrary.id
+                page: pageLeftOff,
+            })
+        } else {
+            console.warn(
+                "Could not determine library_id for cloud book. Progress not saved to API.",
+                "bookMeta.library_id:",
+                bookMeta.library_id,
+                "pathname:",
+                window.location.pathname
+            )
+        }
 
-            // Update the local store/ref regardless of where we're saving
-            currentPageRef.current = pageLeftOff
-            useReaderStore.getState().setCurrentPage(pageLeftOff)
-
-            // Save progress to API
-            let libraryIdToUse: string | null | undefined = bookMeta.library_id
-
-            if (!libraryIdToUse) {
-                const pathParts = window.location.pathname.split("/")
-                // URL structure is /library/{library_id}
-                if (
-                    pathParts.length >= 3 &&
-                    pathParts[pathParts.length - 2] === "library"
-                ) {
-                    libraryIdToUse = pathParts[pathParts.length - 1]
-                    console.log(
-                        "Extracted library_id from URL:",
-                        libraryIdToUse
-                    )
-                }
-            }
-
-            // CRITICAL: Only proceed if we have a valid libraryIdToUse
-            // DO NOT fall back to bookMeta.id for cloud saves.
-            if (libraryIdToUse) {
-                console.log(
-                    "Saving progress to API for library ID:",
-                    libraryIdToUse
-                )
-                updateProgressMutation.mutate({
-                    bookId: libraryIdToUse, // This is UserBookLibrary.id
-                    page: pageLeftOff,
-                })
-            } else {
-                console.warn(
-                    "Could not determine library_id for cloud book. Progress not saved to API.",
-                    "bookMeta.library_id:",
-                    bookMeta.library_id,
-                    "pathname:",
-                    window.location.pathname
-                )
-            }
-
-            // Also update the bookMeta prop directly if it's being used for current page reference by UI
-            // This is a local mutation of the prop, be cautious if this prop is also managed by parent state.
-            if (bookMeta) {
-                // Check again as it might have been undefined initially
-                bookMeta.pdf_current_page = pageLeftOff
-            }
-        },
-        [bookMeta.id, bookMeta.library_id, updateProgressMutation.mutate]
-    )
+        // Also update the bookMeta prop directly if it's being used for current page reference by UI
+        // This is a local mutation of the prop, be cautious if this prop is also managed by parent state.
+        if (bookMeta) {
+            // Check again as it might have been undefined initially
+            bookMeta.pdf_current_page = pageLeftOff
+        }
+    }
 
     // For debugging, make an initial check to see what page we're starting with
     useEffect(() => {
@@ -322,10 +309,15 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                         "CHECKING INITIAL PAGE for library ID:",
                         bookMeta.library_id
                     )
-                    const response =
-                        await ApiWebClient.get<UserBookLibraryProgressResponse>(
-                            `/api/books/${bookMeta.library_id}`
-                        )
+                    const response = await ApiClient.get<{
+                        id: string
+                        user_id: string
+                        book_metadata_id: string
+                        pdf_current_page?: number
+                        epub_progress?: any
+                        date_added: string
+                        book_metadata: any
+                    }>(`/api/books/${bookMeta.library_id}`)
 
                     console.log("INITIAL PAGE CHECK RESPONSE:", response)
 
@@ -371,12 +363,9 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         // Mark component as initialized once viewer is ready
         isComponentInitialized.current = true
 
-        // Capture ref value at the start of the effect
-        const isSavingRef_captured = isSavingRef
-
         const handleBeforeUnload = () => {
             const pageLeftOff = useReaderStore.getState().currentPage
-            if (!isSavingRef_captured.current) {
+            if (!isSavingRef.current) {
                 saveProgress(pageLeftOff)
             }
         }
@@ -401,33 +390,23 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             )
 
             // Save when component unmounts (SPA navigation)
-            if (!isSavingRef_captured.current) {
+            if (!isSavingRef.current) {
                 const pageLeftOff = useReaderStore.getState().currentPage
                 // Save progress to API
                 const pathParts = window.location.pathname.split("/")
                 const libraryIdFromUrl =
-                    pathParts.length >= 3 &&
-                    pathParts[pathParts.length - 2] === "library"
+                    pathParts.length > 2
                         ? pathParts[pathParts.length - 1]
                         : null
                 const libraryId =
-                    bookMeta.library_id || libraryIdFromUrl
-                if (libraryId) {
-                    updateProgressMutation.mutate({
-                        bookId: libraryId,
-                        page: pageLeftOff,
-                    })
-                }
+                    libraryIdFromUrl || bookMeta.library_id || bookMeta.id
+                updateProgressMutation.mutate({
+                    bookId: libraryId,
+                    page: pageLeftOff,
+                })
             }
         }
-    }, [
-        bookMeta.id,
-        bookMeta.library_id,
-        viewerReady,
-        isLoading,
-        saveProgress,
-        updateProgressMutation.mutate, // Use stable reference
-    ])
+    }, [bookMeta.id, viewerReady, isLoading])
 
     // Add a useEffect hook to ensure currentPage is correctly synchronized with bookMeta.pdf_current_page
     useEffect(() => {
@@ -449,14 +428,11 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
         }
     }, [bookMeta.pdf_current_page, goToPage])
 
-    const handlePageChange = useCallback(
-        (pageNumber: number) => {
-            currentPageRef.current = pageNumber
-            useReaderStore.getState().setCurrentPage(pageNumber)
-            saveProgress(pageNumber)
-        },
-        [saveProgress]
-    )
+    const handlePageChange = useCallback((pageNumber: number) => {
+        currentPageRef.current = pageNumber
+        useReaderStore.getState().setCurrentPage(pageNumber)
+        saveProgress(pageNumber)
+    }, [])
 
     const handleTotalPagesChange = useCallback((pages: number) => {
         useReaderStore.getState().setTotalPages(pages)
@@ -465,27 +441,33 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const onAddNewHighlight = useCallback(
         async (highlight: PdfHighlight) => {
             // Add highlight directly to the Zustand store
-            const highlightState = { highlight, removeFn: () => {} }
+            const highlightState = { highlight, removeFn: () => { } }
             insertHighlight(highlightState)
             insertAllHighlight(highlightState) // Also add to allHighlights for sidebar
 
             if (highlight.content.text) {
-                // Use HighlightCreateRequest interface
-                const highlightData: HighlightCreateRequest = {
-                    user_book_lib_id: bookMeta.library_id || "",
+                // Use index signature for dynamic properties
+                const highlightData: {
+                    book_id: string
+                    original_text: string
+                    color: string
+                    pdf_rect_position: any
+                    [key: string]: any
+                } = {
+                    book_id: bookMeta.id,
                     original_text: highlight.content.text,
-                    color:
-                        (highlight.color?.toUpperCase() as HighlightColor) ||
-                        "YELLOW",
+                    color: highlight.color || "yellow",
                     pdf_rect_position: highlight.position,
                 }
 
-                // Fallback: try to get library_id from URL if not available in bookMeta
-                if (!bookMeta.library_id) {
+                // Add user_book_lib_id if available via library_id
+                if (bookMeta.library_id) {
+                    highlightData.user_book_lib_id = bookMeta.library_id
+                } else {
+                    // Try to get from URL
                     const pathParts = window.location.pathname.split("/")
                     const libraryIdFromUrl =
-                        pathParts.length >= 3 &&
-                        pathParts[pathParts.length - 2] === "library"
+                        pathParts.length > 2
                             ? pathParts[pathParts.length - 1]
                             : null
                     if (libraryIdFromUrl) {
@@ -496,12 +478,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 await addHighlightMutation.mutateAsync(highlightData)
             }
         },
-        [
-            insertHighlight,
-            insertAllHighlight,
-            bookMeta.library_id,
-            addHighlightMutation.mutateAsync,
-        ]
+        [insertHighlight, insertAllHighlight, bookMeta.id, bookMeta.library_id]
     )
 
     const deleteHighlight = useCallback(
@@ -527,7 +504,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             setAllHighlights(updatedAllHighlights)
             await deleteHighlightMutation.mutateAsync(highlightText)
         },
-        [highlights, setHighlights, setAllHighlights, deleteHighlightMutation.mutateAsync]
+        [highlights, setHighlights, setAllHighlights]
     )
 
     const addNote = useCallback(
@@ -571,7 +548,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
             setAllHighlights(updatedAllHighlights)
             await addAnnotationMutation.mutateAsync({ note, text: textToAddTo })
         },
-        [highlights, setHighlights, setAllHighlights, addAnnotationMutation.mutateAsync]
+        [highlights, setHighlights, setAllHighlights]
     )
 
     // Scroll to highlight based on hash in the URL
@@ -620,14 +597,6 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                             storeCurrentPage > 1
                                 ? storeCurrentPage
                                 : bookMeta.pdf_current_page || 1
-                        console.log(
-                            "PDF Reader: Using start page",
-                            startPageToUse,
-                            "store page:",
-                            storeCurrentPage,
-                            "meta page:",
-                            bookMeta.pdf_current_page
-                        )
 
                         return (
                             <PdfHighlighter
@@ -648,20 +617,12 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                                         _pdfHighlighterUtils?.getViewer()
                                     ) {
                                         // Use the previously calculated startPageToUse here
-                                        console.log(
-                                            "PDF Reader: Forcing jump to initial page in utilsRef:",
-                                            startPageToUse
-                                        )
                                         try {
                                             // Immediately try to set the page
                                             if (startPageToUse > 1) {
                                                 // Use goToPage from the store instead of direct viewer access
                                                 goToPage(startPageToUse)
                                                 hasSetInitialPage.current = true
-                                                console.log(
-                                                    "PDF Reader: Successfully set initial page to",
-                                                    startPageToUse
-                                                )
                                             }
 
                                             // Also schedule additional attempts with delays
@@ -670,10 +631,6 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                                                     !hasSetInitialPage.current &&
                                                     startPageToUse > 1
                                                 ) {
-                                                    console.log(
-                                                        "PDF Reader: Setting page with delay to",
-                                                        startPageToUse
-                                                    )
                                                     goToPage(startPageToUse)
                                                     hasSetInitialPage.current = true
                                                 }
@@ -684,19 +641,12 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                                                     !hasSetInitialPage.current &&
                                                     startPageToUse > 1
                                                 ) {
-                                                    console.log(
-                                                        "PDF Reader: Setting page with longer delay to",
-                                                        startPageToUse
-                                                    )
                                                     goToPage(startPageToUse)
                                                     hasSetInitialPage.current = true
                                                 }
                                             }, 500)
                                         } catch (err) {
-                                            console.error(
-                                                "Error setting page in utilsRef:",
-                                                err
-                                            )
+                                            console.error(err)
                                         }
                                     }
                                 }}

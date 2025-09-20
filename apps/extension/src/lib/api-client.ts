@@ -1,4 +1,8 @@
-import { ApiClient, type ApiClientConfig, type AuthTokenProvider } from "@readspace/shared"
+import {
+  ApiClient,
+  type ApiClientConfig,
+  type AuthTokenProvider,
+} from '@readspace/shared'
 
 // Add RequestInit type for extension environment
 type RequestInit = globalThis.RequestInit
@@ -64,7 +68,8 @@ class ExtensionApiClient extends ApiClient {
       const extensionSettings = await this._getExtensionSettings()
 
       // Use settings from storage or fallback defaults
-      const baseUrl = extensionSettings.readspace_url || 'https://api.readspace.ai'
+      const baseUrl =
+        extensionSettings.readspace_url || 'https://api.readspace.ai'
 
       const getAuthToken: AuthTokenProvider = async () => {
         const settings = await this._getExtensionSettings()
@@ -74,19 +79,18 @@ class ExtensionApiClient extends ApiClient {
       // Configure the base ApiClient
       const apiConfig: ApiClientConfig = {
         baseUrl,
-        getAuthToken
+        getAuthToken,
       }
 
       super.configure(apiConfig)
       this._configured = true
-
     } catch (error) {
       console.error('Failed to auto-configure ApiExtensionClient:', error)
 
       // Fallback configuration to prevent blocking
       const fallbackConfig: ApiClientConfig = {
         baseUrl: 'https://api.readspace.ai',
-        getAuthToken: async () => null
+        getAuthToken: async () => null,
       }
 
       super.configure(fallbackConfig)
@@ -105,20 +109,24 @@ class ExtensionApiClient extends ApiClient {
   }> {
     try {
       // Check if we're in a browser extension environment
-      const chromeApi = (globalThis as unknown as { chrome?: ExtensionAPI }).chrome
-      const browserApi = (globalThis as unknown as { browser?: ExtensionAPI }).browser
+      const chromeApi = (globalThis as unknown as { chrome?: ExtensionAPI })
+        .chrome
+      const browserApi = (globalThis as unknown as { browser?: ExtensionAPI })
+        .browser
 
       if (!chromeApi && !browserApi) {
-        console.debug('Not in browser extension environment, returning empty settings')
+        console.debug(
+          'Not in browser extension environment, returning empty settings'
+        )
         return {}
       }
 
       // Use browser namespace for Firefox, chrome for Chrome
-      const storageApi = (browserApi?.storage) ?
-                        browserApi.storage :
-                        (chromeApi?.storage) ?
-                        chromeApi.storage :
-                        null
+      const storageApi = browserApi?.storage
+        ? browserApi.storage
+        : chromeApi?.storage
+          ? chromeApi.storage
+          : null
 
       if (!storageApi?.local) {
         console.warn('Browser storage API not available')
@@ -127,14 +135,15 @@ class ExtensionApiClient extends ApiClient {
 
       // Read from extension storage
       const result = await storageApi.local.get([this._storageKey])
-      const storedData = result[this._storageKey] as ExtensionStorageState | undefined
+      const storedData = result[this._storageKey] as
+        | ExtensionStorageState
+        | undefined
 
       if (!storedData?.state?.settings) {
         return {}
       }
 
       return storedData.state.settings
-
     } catch (error) {
       console.error('Failed to read extension settings from storage:', error)
       return {}
@@ -144,7 +153,10 @@ class ExtensionApiClient extends ApiClient {
   /**
    * Override the base fetch method to ensure auto-configuration before requests.
    */
-  static async fetch<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  static async fetch<T>(
+    endpoint: string,
+    options: RequestInit = {}
+  ): Promise<T> {
     await this._ensureConfigured()
     return super.fetch<T>(endpoint, options)
   }
@@ -163,7 +175,7 @@ class ExtensionApiClient extends ApiClient {
   static async post<T>(
     endpoint: string,
     data?: unknown,
-    options?: RequestInit,
+    options?: RequestInit
   ): Promise<T> {
     await this._ensureConfigured()
     return super.post<T>(endpoint, data, options)
@@ -175,7 +187,7 @@ class ExtensionApiClient extends ApiClient {
   static async put<T>(
     endpoint: string,
     data?: unknown,
-    options?: RequestInit,
+    options?: RequestInit
   ): Promise<T> {
     await this._ensureConfigured()
     return super.put<T>(endpoint, data, options)
@@ -195,7 +207,7 @@ class ExtensionApiClient extends ApiClient {
   static async uploadFile(
     endpoint: string,
     formData: FormData,
-    signal?: AbortSignal,
+    signal?: AbortSignal
   ): Promise<unknown> {
     await this._ensureConfigured()
     return super.uploadFile(endpoint, formData, signal)

@@ -16,10 +16,10 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import {
+    ApiClient,
     type FeedDiscoveryResult,
     type SimilarFeedsResponse,
 } from "@readspace/shared"
-import { ApiWebClient } from "@/lib/api-client"
 
 interface SimilarFeedsClientProps {
     feedId: string
@@ -37,7 +37,7 @@ export default function SimilarFeedsClient({
         error,
     } = useQuery<SimilarFeedsResponse>({
         queryKey: ["similarFeeds", feedId],
-        queryFn: () => ApiWebClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
+        queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
         staleTime: 5 * 60 * 1000, // 5 minutes
     })
 
@@ -67,9 +67,7 @@ export default function SimilarFeedsClient({
                                         <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
-                                    Back to feed
-                                </TooltipContent>
+                                <TooltipContent>Back to feed</TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
                     </div>
@@ -142,9 +140,7 @@ export default function SimilarFeedsClient({
                                     <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                                Back to feed
-                            </TooltipContent>
+                            <TooltipContent>Back to feed</TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>

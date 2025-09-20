@@ -414,7 +414,8 @@ export function findChapterByCharLocation(
     let cumulativeCount = 0
 
     for (let i = 0; i < chapterCharCounts.length; i++) {
-        const nextCumulativeCount = cumulativeCount + (chapterCharCounts[i] ?? 0)
+        const nextCumulativeCount =
+            cumulativeCount + (chapterCharCounts[i] ?? 0)
 
         // If the location is within this chapter's range
         if (

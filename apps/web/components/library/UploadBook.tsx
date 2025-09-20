@@ -86,7 +86,7 @@ export const DragDropBook = ({
                                         </FileListDescriptionSeparator>
                                         <FileListDescriptionText>
                                             {selectedFile.type ===
-                                                "application/pdf"
+                                            "application/pdf"
                                                 ? "PDF"
                                                 : "EPUB"}
                                         </FileListDescriptionText>

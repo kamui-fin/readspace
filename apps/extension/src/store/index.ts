@@ -221,7 +221,8 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isLoading: true })
         try {
-          const folders = (await ApiExtensionClient.rss.getFolders()) as Folder[]
+          const folders =
+            (await ApiExtensionClient.rss.getFolders()) as Folder[]
 
           set({ folders })
         } catch (error) {

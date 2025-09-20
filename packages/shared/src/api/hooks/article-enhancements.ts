@@ -1,6 +1,6 @@
 import { useQuery, QueryClient } from "@tanstack/react-query";
 import { ARTICLE_ENHANCEMENT_QUERY_KEYS } from "../query-keys";
-import { ClientProvider } from "../client-provider";
+import { ApiClient } from "../client";
 
 // Re-export for convenience
 export { ARTICLE_ENHANCEMENT_QUERY_KEYS };
@@ -41,7 +41,8 @@ export type TranslateRequest = {
  */
 export function useExtractFullText(articleId: string) {
   // Validate that we have a proper article ID (not empty, skip, etc.)
-  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+  const isValidArticleId =
+    articleId && articleId !== "skip" && articleId.length > 0;
 
   return useQuery({
     queryKey: [ARTICLE_ENHANCEMENT_QUERY_KEYS.EXTRACTED_CONTENT, articleId],
@@ -49,7 +50,7 @@ export function useExtractFullText(articleId: string) {
       if (!isValidArticleId) {
         throw new Error("Invalid article ID");
       }
-      const response = await ClientProvider.getClient().post<ExtractFullTextResponse>(
+      const response = await ApiClient.post<ExtractFullTextResponse>(
         `/api/articles/${articleId}/extract-full-text`,
       );
       return response;
@@ -86,7 +87,8 @@ function createContentHash(content: string): string {
  */
 export function useSummarizeArticle(articleId: string, content?: string) {
   // Validate that we have a proper article ID (not empty, skip, etc.)
-  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+  const isValidArticleId =
+    articleId && articleId !== "skip" && articleId.length > 0;
 
   // Create a content hash for cache key
   const contentHash = content ? createContentHash(content) : "original";
@@ -98,7 +100,7 @@ export function useSummarizeArticle(articleId: string, content?: string) {
         throw new Error("Invalid article ID");
       }
       const requestBody: SummarizeRequest = content ? { content } : {};
-      const response = await ClientProvider.getClient().post<SummarizeResponse>(
+      const response = await ApiClient.post<SummarizeResponse>(
         `/api/articles/${articleId}/summarize`,
         requestBody,
       );
@@ -137,7 +139,8 @@ export async function fetchTranslation(
   content?: string,
 ): Promise<TranslateResponse> {
   // Validate that we have a proper article ID (not empty, skip, etc.)
-  const isValidArticleId = articleId && articleId !== "skip" && articleId.length > 0;
+  const isValidArticleId =
+    articleId && articleId !== "skip" && articleId.length > 0;
 
   if (!isValidArticleId) {
     throw new Error("Invalid article ID for translation");
@@ -156,7 +159,7 @@ export async function fetchTranslation(
         target_language: targetLanguage,
         ...(content && { content }),
       };
-      const response = await ClientProvider.getClient().post<TranslateResponse>(
+      const response = await ApiClient.post<TranslateResponse>(
         `/api/articles/${articleId}/translate`,
         requestBody,
       );

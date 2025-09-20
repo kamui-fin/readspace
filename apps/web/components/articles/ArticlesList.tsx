@@ -1,13 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useMemo } from "react"
-import { useIsMobile } from "@/hooks/useMobile"
 import type { Article } from "@readspace/shared"
-import { ArticleItem } from "./ArticleItem"
-import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
-import { ArticlesEmptyState } from "./ArticlesEmptyState"
 import { format, parseISO } from "date-fns"
 import { CalendarIcon } from "lucide-react"
+import { useEffect, useMemo, useRef } from "react"
+import { ArticleItem } from "./ArticleItem"
+import { ArticlesEmptyState } from "./ArticlesEmptyState"
+import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 
 interface ArticlesListProps {
     /** Array of articles to display */
@@ -58,7 +57,6 @@ export function ArticlesList({
 }: ArticlesListProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null)
     const loadMoreRef = useRef<HTMLDivElement>(null)
-    const isMobile = useIsMobile()
 
     // Filter articles based on unread toggle
     const filteredArticles = showUnreadOnly
@@ -71,7 +69,8 @@ export function ArticlesList({
             return {}
         }
 
-        const groups: Record<string, { label: string; articles: Article[] }> = {}
+        const groups: Record<string, { label: string; articles: Article[] }> =
+            {}
 
         filteredArticles.forEach((article) => {
             if (!article.published_at) return
@@ -130,16 +129,6 @@ export function ArticlesList({
         return () => observer.disconnect()
     }, [hasNextPage, isFetching, onLoadMore])
 
-    // Auto-select first article on desktop when none selected
-    useEffect(() => {
-        if (!isMobile && !selectedArticleId && filteredArticles.length > 0) {
-            const firstArticle = filteredArticles[0]
-            if (firstArticle) {
-                onArticleSelect(firstArticle.id)
-            }
-        }
-    }, [filteredArticles, selectedArticleId, isMobile, onArticleSelect])
-
     // Show loading skeleton while initial load
     if (isLoading) {
         return <ArticlesViewSkeleton />
@@ -169,7 +158,8 @@ export function ArticlesList({
             style={{ scrollbarGutter: "stable" }}
         >
             <div className="space-y-0">
-                {isRecentlyReadMode || Object.keys(groupedArticles).length === 0 ? (
+                {isRecentlyReadMode ||
+                Object.keys(groupedArticles).length === 0 ? (
                     // Simple list for recently read mode or when no grouping
                     <>
                         {filteredArticles.map((article, index) => (
@@ -177,7 +167,9 @@ export function ArticlesList({
                                 key={article.id}
                                 article={article}
                                 isActive={selectedArticleId === article.id}
-                                isLastInGroup={index === filteredArticles.length - 1}
+                                isLastInGroup={
+                                    index === filteredArticles.length - 1
+                                }
                                 isRecentlyReadMode={isRecentlyReadMode}
                                 onClick={() => onArticleSelect(article.id)}
                             />
@@ -210,10 +202,19 @@ export function ArticlesList({
                                         <ArticleItem
                                             key={article.id}
                                             article={article}
-                                            isActive={selectedArticleId === article.id}
-                                            isLastInGroup={index === group.articles.length - 1}
-                                            isRecentlyReadMode={isRecentlyReadMode}
-                                            onClick={() => onArticleSelect(article.id)}
+                                            isActive={
+                                                selectedArticleId === article.id
+                                            }
+                                            isLastInGroup={
+                                                index ===
+                                                group.articles.length - 1
+                                            }
+                                            isRecentlyReadMode={
+                                                isRecentlyReadMode
+                                            }
+                                            onClick={() =>
+                                                onArticleSelect(article.id)
+                                            }
                                         />
                                     ))}
                                 </div>

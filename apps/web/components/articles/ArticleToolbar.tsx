@@ -111,9 +111,7 @@ export function ArticleToolbar({
                                     <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
-                                Back to articles
-                            </TooltipContent>
+                            <TooltipContent>Back to articles</TooltipContent>
                         </Tooltip>
                     </TooltipProvider>
                 </div>
@@ -130,14 +128,20 @@ export function ArticleToolbar({
                                 size="sm"
                                 className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110`}
                                 style={{
-                                    backgroundColor: isReadLaterMode && isReadLater
-                                        ? colorTokens.accent.DEFAULT
-                                        : 'transparent',
-                                    color: isReadLaterMode && isReadLater
-                                        ? colorTokens.accent.foreground
-                                        : colorTokens.foreground
+                                    backgroundColor:
+                                        isReadLaterMode && isReadLater
+                                            ? colorTokens.accent.DEFAULT
+                                            : "transparent",
+                                    color:
+                                        isReadLaterMode && isReadLater
+                                            ? colorTokens.accent.foreground
+                                            : colorTokens.foreground,
                                 }}
-                                onClick={isReadLaterMode ? onMarkAsRead : onToggleReadLater}
+                                onClick={
+                                    isReadLaterMode
+                                        ? onMarkAsRead
+                                        : onToggleReadLater
+                                }
                             >
                                 {isReadLaterMode ? (
                                     <Check
@@ -145,15 +149,19 @@ export function ArticleToolbar({
                                         style={{
                                             color: isReadLater
                                                 ? colorTokens.primary.DEFAULT
-                                                : colorTokens.muted.foreground
+                                                : colorTokens.muted.foreground,
                                         }}
                                     />
                                 ) : (
                                     <BookmarkIcon
                                         className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${isReadLater ? "scale-110" : ""}`}
                                         style={{
-                                            fill: isReadLater ? colorTokens.primary.DEFAULT : 'transparent',
-                                            color: isReadLater ? colorTokens.primary.DEFAULT : colorTokens.foreground
+                                            fill: isReadLater
+                                                ? colorTokens.primary.DEFAULT
+                                                : "transparent",
+                                            color: isReadLater
+                                                ? colorTokens.primary.DEFAULT
+                                                : colorTokens.foreground,
                                         }}
                                     />
                                 )}
@@ -163,8 +171,8 @@ export function ArticleToolbar({
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
                                 : isReadLater
-                                ? "Remove from Read Later"
-                                : "Save for Later"}
+                                  ? "Remove from Read Later"
+                                  : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 

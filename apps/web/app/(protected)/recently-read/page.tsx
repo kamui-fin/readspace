@@ -1,17 +1,13 @@
-import { getQueryClient } from "@/lib/get-query-client"
 import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
-import { ApiClient } from "@readspace/shared"
-import { RSS_QUERY_KEYS } from "@readspace/shared"
+import "@/lib/configure-api-client"
+import { getQueryClient } from "@/lib/get-query-client"
+import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
 
 export default async function RecentlyReadPage() {
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
-
     const queryClient = getQueryClient()
 
     // Prefetch infinite recently read articles to match client useInfiniteRecentlyReadArticles

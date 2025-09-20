@@ -1,7 +1,12 @@
 import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
+import "@/lib/configure-api-client"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ensureServerApiClient } from "@/lib/server-api-client"
-import { ApiClient, ArticlesPaginatedResponse, Feed, RSS_QUERY_KEYS } from "@readspace/shared"
+import {
+    ApiClient,
+    ArticlesPaginatedResponse,
+    Feed,
+    RSS_QUERY_KEYS,
+} from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 
 // Force dynamic rendering since we're fetching user-specific data
@@ -20,9 +25,6 @@ export default async function FeedArticlesPage({
     const feedId = resolvedParams.id
     const resolvedSearchParams = await searchParams
     const isPreview = resolvedSearchParams.preview === "true"
-
-    // Ensure ApiClient is configured for server-side use
-    await ensureServerApiClient()
 
     const queryClient = getQueryClient()
 

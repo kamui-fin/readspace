@@ -1,16 +1,20 @@
 import { PDFViewer } from "@/components/reader/PdfReader"
 import EPUBReader from "@/components/reader/Reader"
+import "@/lib/configure-api-client"
 import { getQueryClient } from "@/lib/get-query-client"
 import { createClient } from "@/lib/supabase/server"
 import { EpubHighlight, EpubLocation, PdfHighlight } from "@/types/library"
 import {
-    ApiClient, BOOK_QUERY_KEYS, BookViewProps,
-    isEpubProgress, isSerializedRange, SerializedRange
+    ApiClient,
+    BOOK_QUERY_KEYS,
+    BookViewProps,
+    isEpubProgress,
+    isSerializedRange,
+    SerializedRange,
 } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { ensureServerApiClient } from "@/lib/server-api-client"
 
 // Force dynamic rendering since we're fetching user-specific data
 export const dynamic = "force-dynamic"
@@ -41,9 +45,6 @@ function BookNotFound({
 export async function generateMetadata({
     params,
 }: PageProps): Promise<Metadata> {
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
-
     const resolvedParams = await params
     try {
         const libraryBook = await ApiClient.books.getBook(resolvedParams.id)
@@ -71,9 +72,6 @@ export async function generateMetadata({
 }
 
 export default async function BookReaderPage({ params }: PageProps) {
-    // Ensure ApiClient is configured for server-side usage
-    await ensureServerApiClient()
-
     const resolvedParams = await params
     const supabase = await createClient()
     const {
@@ -112,9 +110,9 @@ export default async function BookReaderPage({ params }: PageProps) {
     // Convert EpubProgress to EpubLocation for the reader component
     const epubLocation: EpubLocation | null = epubProgress
         ? {
-            globalProgress: epubProgress.globalProgress,
-            loc: epubProgress.loc,
-        }
+              globalProgress: epubProgress.globalProgress,
+              loc: epubProgress.loc,
+          }
         : null
 
     const bookViewProps: BookViewProps = {
@@ -158,11 +156,11 @@ export default async function BookReaderPage({ params }: PageProps) {
                         h.html_range && isSerializedRange(h.html_range)
                             ? (h.html_range as SerializedRange)
                             : {
-                                startContainerPath: [],
-                                startOffset: 0,
-                                endContainerPath: [],
-                                endOffset: 0,
-                            },
+                                  startContainerPath: [],
+                                  startOffset: 0,
+                                  endContainerPath: [],
+                                  endOffset: 0,
+                              },
                     chapter: {
                         idx: h.chapter_idx || 0,
                         href: h.chapter_href || "",
@@ -173,8 +171,6 @@ export default async function BookReaderPage({ params }: PageProps) {
             }
         }
     )
-
-    console.log(highlights)
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>

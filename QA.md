@@ -1,1 +1,0 @@
-- Library reader for pdf completey broken: Error: The API version "4.4.168" does not match the Viewer version "5.3.93".

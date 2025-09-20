@@ -34,71 +34,79 @@ export function Popup() {
   const [readingTime, setReadingTime] = useState<number | undefined>()
   const [isUnsupportedPage, setIsUnsupportedPage] = useState(false)
 
-  const extractPageMetadata = useCallback(async (tab: chrome.tabs.Tab) => {
-    if (!tab.id) return
+  const extractPageMetadata = useCallback(
+    async (tab: chrome.tabs.Tab) => {
+      if (!tab.id) return
 
-    const sendMessage = <T,>(action: string): Promise<T> => {
-      return new Promise((resolve, reject) => {
-        chrome.tabs.sendMessage(tab.id!, { action }, (response) => {
-          if (chrome.runtime.lastError) {
-            reject(new Error(chrome.runtime.lastError.message))
-          } else {
-            resolve(response)
-          }
+      const sendMessage = <T,>(action: string): Promise<T> => {
+        return new Promise((resolve, reject) => {
+          chrome.tabs.sendMessage(tab.id!, { action }, (response) => {
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message))
+            } else {
+              resolve(response)
+            }
+          })
         })
-      })
-    }
-
-    try {
-      let metadata: PageMetadata | undefined
-      try {
-        metadata = await sendMessage<PageMetadata>('extractMetadata')
-      } catch (e: unknown) {
-        if (e instanceof Error && e.message?.includes('Receiving end does not exist')) {
-          console.log('Content script not available. This can happen when:')
-          console.log('1. The page was loaded before the extension was enabled')
-          console.log(
-            '2. The page is a special Chrome page (chrome://, chrome-extension://, etc.)'
-          )
-          console.log('3. The content script failed to load')
-
-          // Instead of trying to inject manually, we'll fall back to basic tab info
-          // The content script should automatically load on page refresh or navigation
-          throw new Error(
-            'Content script not available. Try refreshing the page.'
-          )
-        } else {
-          throw e
-        }
       }
-      setCurrentPageMetadata(metadata)
 
-      // Also try to get full content for reading time calculation
       try {
-        const contentData: { estimated_read_time?: number } =
-          await sendMessage('extractContent')
-        if (contentData && contentData.estimated_read_time) {
-          setReadingTime(contentData.estimated_read_time)
+        let metadata: PageMetadata | undefined
+        try {
+          metadata = await sendMessage<PageMetadata>('extractMetadata')
+        } catch (e: unknown) {
+          if (
+            e instanceof Error &&
+            e.message?.includes('Receiving end does not exist')
+          ) {
+            console.log('Content script not available. This can happen when:')
+            console.log(
+              '1. The page was loaded before the extension was enabled'
+            )
+            console.log(
+              '2. The page is a special Chrome page (chrome://, chrome-extension://, etc.)'
+            )
+            console.log('3. The content script failed to load')
+
+            // Instead of trying to inject manually, we'll fall back to basic tab info
+            // The content script should automatically load on page refresh or navigation
+            throw new Error(
+              'Content script not available. Try refreshing the page.'
+            )
+          } else {
+            throw e
+          }
+        }
+        setCurrentPageMetadata(metadata)
+
+        // Also try to get full content for reading time calculation
+        try {
+          const contentData: { estimated_read_time?: number } =
+            await sendMessage('extractContent')
+          if (contentData && contentData.estimated_read_time) {
+            setReadingTime(contentData.estimated_read_time)
+          }
+        } catch (error) {
+          console.error('Failed to extract content for reading time:', error)
+          // Don't show toast for reading time extraction failure as it's non-critical
         }
       } catch (error) {
-        console.error('Failed to extract content for reading time:', error)
-        // Don't show toast for reading time extraction failure as it's non-critical
-      }
-    } catch (error) {
-      console.error('Failed to extract page metadata:', error)
-      // Show user-friendly error message
-      toast.error(
-        'Failed to extract page information. Try refreshing the page.'
-      )
+        console.error('Failed to extract page metadata:', error)
+        // Show user-friendly error message
+        toast.error(
+          'Failed to extract page information. Try refreshing the page.'
+        )
 
-      // Fallback to basic tab information
-      setCurrentPageMetadata({
-        title: tab.title,
-        canonical_url: tab.url,
-        favicon: tab.favIconUrl,
-      })
-    }
-  }, [setCurrentPageMetadata])
+        // Fallback to basic tab information
+        setCurrentPageMetadata({
+          title: tab.title,
+          canonical_url: tab.url,
+          favicon: tab.favIconUrl,
+        })
+      }
+    },
+    [setCurrentPageMetadata]
+  )
 
   useEffect(() => {
     // Check for existing session on load

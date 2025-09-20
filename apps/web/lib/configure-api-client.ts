@@ -36,20 +36,17 @@ const authTokenProvider: AuthTokenProvider = async (): Promise<
     }
 }
 
-// Configure the shared ApiClient once
-ApiClient.configure({
-    baseUrl: env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8008",
-    getAuthToken: authTokenProvider,
-})
+let configured = false
 
-/**
- * Pre-configured API client for the web application.
- *
- * @example
- * ```typescript
- * import { ApiClient } from '@/lib/api-client'
- *
- * const articles = await ApiClient.rss.getArticles({ page: 1 })
- * const folders = await ApiClient.rss.getFolders()
- * ```
- */
+export function configureApiClient() {
+    if (!configured) {
+        ApiClient.configure({
+            baseUrl: env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8008",
+            getAuthToken: authTokenProvider,
+        })
+        configured = true
+    }
+}
+
+// Configure immediately for server-side usage
+configureApiClient()

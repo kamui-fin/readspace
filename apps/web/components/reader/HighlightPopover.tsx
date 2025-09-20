@@ -1,19 +1,19 @@
 "use client"
 import { Button } from "@/components/ui/button"
+import { useSidebarLeft } from "@/components/ui/sidebar"
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useSidebarLeft } from "@/components/ui/sidebar"
+import { useIsMobile } from "@/hooks/useMobile"
 import { useReaderStore } from "@/stores/reader"
 import { useEffect, useRef, useState } from "react"
 import useHighlight from "../../hooks/reader/useHighlight"
 import { EpubHighlight } from "../../types/library"
-import { useIsMobile } from "@/hooks/useMobile"
 
-import { ApiWebClient } from "@/lib/api-client"
+import { ApiClient } from "@readspace/shared"
 import { useMutation } from "@tanstack/react-query"
 import { useShallow } from "zustand/react/shallow"
 import HighlightColorOptions from "./HighlightOptions"
@@ -69,7 +69,7 @@ export default function HighlightPopover({
 
     const addAnnotationMutation = useMutation({
         mutationFn: ({ note, text }: { note: string; text: string }) =>
-            ApiWebClient.put(
+            ApiClient.put(
                 `/api/highlights/text/${encodeURIComponent(text)}/note`,
                 { note }
             ),

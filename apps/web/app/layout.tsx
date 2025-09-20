@@ -1,16 +1,16 @@
+import { QueryProvider } from "@/components/providers/QueryProvider"
 import { Metadata, Viewport } from "next"
 import {
     EB_Garamond,
     Figtree,
     Geist,
     Geist_Mono,
-    Noto_Serif_SC,
     Noto_Serif_JP,
+    Noto_Serif_SC,
     Noto_Serif_TC,
 } from "next/font/google"
-import { QueryProvider } from "@/components/providers/QueryProvider"
-import { PostHogProvider } from "./providers"
 import "./globals.css"
+import { PostHogProvider } from "./providers"
 
 const geistSans = Geist({
     variable: "--font-sans",
@@ -131,9 +131,9 @@ export default async function RootLayout({
 }>) {
     return (
         <html lang="en" suppressHydrationWarning>
-            <head>
-                {/* <script src="https://unpkg.com/react-scan/dist/auto.global.js" /> */}
-            </head>
+            {/* <head>
+                <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+            </head> */}
             <body
                 className={`${geistSans.variable} ${geistMono.variable} ${eb_garamond.variable} ${logo.variable} ${notoSerifSC.variable} ${notoSerifJP.variable} ${notoSerifTC.variable} font-sans antialiased mt-0`}
             >

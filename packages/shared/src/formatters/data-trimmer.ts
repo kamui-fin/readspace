@@ -88,9 +88,7 @@ export function trimSaveArticleRequest(data: {
       cleanMetadata.favicon = trimmed.metadata.favicon;
 
     trimmed.metadata =
-      Object.keys(cleanMetadata).length > 0
-        ? cleanMetadata
-        : undefined;
+      Object.keys(cleanMetadata).length > 0 ? cleanMetadata : undefined;
   }
 
   // Remove undefined values to keep the request clean
