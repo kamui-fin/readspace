@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="./web/public/wordmark.png" alt="Readspace Logo" width="300" />
+  <img src="./apps/web/public/wordmark.png" alt="Readspace Logo" width="300" />
 </div>
 
 
@@ -18,7 +18,7 @@
 **RSS. Newsletters. Twitter. Reddit. Articles. Books.**
 All in one beautiful, modern UI, designed for focused reading.
 
-![](./web/public/demo.png)
+![](./apps/web/public/demo.png)
 
 ---
 
