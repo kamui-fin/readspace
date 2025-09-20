@@ -132,7 +132,7 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
     response_model=OpmlImportResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Import RSS feeds from OPML file",
-    description="Upload an OPML file to import RSS feeds into the user's library. The import process runs asynchronously in the background.",
+    description="Upload an OPML file to import RSS feeds into the user's library. The import process runs asynchronously in the background.",  # noqa: E501
     responses={
         202: {
             "description": "OPML file accepted for processing",
@@ -150,13 +150,13 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
                         "encoding_error": {
                             "summary": "File encoding issues",
                             "value": {
-                                "detail": "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, or try exporting it again from your RSS reader."
+                                "detail": "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, or try exporting it again from your RSS reader."  # noqa: E501
                             },
                         },
                         "invalid_opml": {
                             "summary": "Malformed OPML content",
                             "value": {
-                                "detail": "Invalid OPML file: Invalid XML structure. Please check that you've exported a valid OPML file from your RSS reader."
+                                "detail": "Invalid OPML file: Invalid XML structure. Please check that you've exported a valid OPML file from your RSS reader."  # noqa: E501
                             },
                         },
                     }
@@ -1059,7 +1059,7 @@ async def cancel_import_task(
             "description": "OPML file generated successfully",
             "content": {
                 "application/xml": {
-                    "example": "<?xml version='1.0' encoding='UTF-8'?>\n<opml version='2.0'>\n  <head>\n    <title>Readspace Feeds Export</title>\n  </head>\n  <body>\n    <outline text='Technology' title='Technology'>\n      <outline type='rss' text='TechCrunch' title='TechCrunch' xmlUrl='https://techcrunch.com/feed/' htmlUrl='https://techcrunch.com'/>\n    </outline>\n  </body>\n</opml>"
+                    "example": "<?xml version='1.0' encoding='UTF-8'?>\n<opml version='2.0'>\n  <head>\n    <title>Readspace Feeds Export</title>\n  </head>\n  <body>\n    <outline text='Technology' title='Technology'>\n      <outline type='rss' text='TechCrunch' title='TechCrunch' xmlUrl='https://techcrunch.com/feed/' htmlUrl='https://techcrunch.com'/>\n    </outline>\n  </body>\n</opml>"  # noqa: E501
                 }
             },
         },

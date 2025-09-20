@@ -384,7 +384,8 @@ Return a JSON object with exactly these keys:
             logger.warning("Failed to check summary cache", error=str(e))
 
         try:
-            system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts. Your summaries should:
+            system_prompt = """You are an expert at creating concise, informative summaries of news articles and blog posts.
+            Your summaries should:
 
 1. Capture the most important points and key takeaways
 2. Be written in clear, engaging language
@@ -394,7 +395,7 @@ Return a JSON object with exactly these keys:
 6. Focus on actionable insights or important implications
 7. CRITICAL: Write the summary in the SAME LANGUAGE as the original content, defaulting to English if unsure
 
-Language Detection: Automatically detect the language of the original content and write your summary in that exact same language. If the content is in Spanish, summarize in Spanish. If in French, summarize in French, etc. If you cannot clearly determine the language, default to English."""
+Language Detection: Automatically detect the language of the original content and write your summary in that exact same language. If the content is in Spanish, summarize in Spanish. If in French, summarize in French, etc. If you cannot clearly determine the language, default to English."""  # noqa: E501
 
             prompt = f"""Title: {title}
 
@@ -500,7 +501,8 @@ Please provide a high-quality summary of this article that captures its main poi
 
             target_lang_name = language_names.get(target_language.lower(), target_language)
 
-            system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}. Your translations should:
+            system_prompt = f"""You are a professional translator specializing in translating articles and news content to {target_lang_name}.
+            Your translations should:
 
 1. Maintain the original meaning and tone exactly
 2. Preserve ALL HTML structure and formatting tags exactly as they appear in the original
@@ -511,7 +513,7 @@ Please provide a high-quality summary of this article that captures its main poi
 7. CRITICAL: Return ONLY the translated content without any markdown code blocks or wrapping
 8. Keep all HTML tags, attributes, and structure exactly as they appear in the source
 
-Translate the following content to {target_lang_name}. Preserve ALL HTML structure and formatting. Return ONLY the translated content:"""
+Translate the following content to {target_lang_name}. Preserve ALL HTML structure and formatting. Return ONLY the translated content:"""  # noqa: E501
 
             translation = await self.generate_text(
                 prompt=content,

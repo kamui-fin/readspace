@@ -165,7 +165,7 @@ async def save_web_article(
                         "invalid_sort": {
                             "summary": "Invalid sort parameter",
                             "value": {
-                                "detail": "Invalid sort_by parameter. Allowed values: ['published_at', 'created_at', 'read_at', 'title']"
+                                "detail": "Invalid sort_by parameter. Allowed values: ['published_at', 'created_at', 'read_at', 'title']"  # noqa: E501
                             },
                         },
                         "invalid_order": {

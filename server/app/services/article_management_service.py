@@ -38,7 +38,6 @@ class ArticleManagementService:
         self.user_id = user_id
         self.transformer = ArticleTransformer()
 
-
     async def get_articles(
         self,
         feed_ids: list[UUID] | None = None,
