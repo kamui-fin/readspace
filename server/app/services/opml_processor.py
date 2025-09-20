@@ -128,12 +128,12 @@ class OpmlProcessor:
         if xml_url:
             # This is a feed
             folder_name = parent_folder
-            if folder_name is None:
-                # Always use default folder name if no parent folder is specified
-                folder_name = default_folder_name or "Imported Feeds"
+            if folder_name is None and default_folder_name:
+                # Only use default folder name if one is explicitly provided
+                folder_name = default_folder_name
 
             feed_info = {
-                "title": title or "Untitled Feed",
+                "title": title if title is not None else "Untitled Feed",
                 "xml_url": xml_url,
                 "html_url": html_url,
                 "folder_name": folder_name,
@@ -340,10 +340,7 @@ class OpmlProcessor:
             # Check if outline elements exist directly under root (relaxed validation)
             direct_outlines = root.findall(".//outline")
             if not direct_outlines:
-                raise ValidationError(
-                    "Invalid OPML format: No body element or outline elements found. "
-                    "This doesn't appear to be a valid OPML file exported from an RSS reader."
-                )
+                raise ValidationError("Invalid OPML format: No body element found")
             logger.info("OPML file missing body element but has outline elements", outline_count=len(direct_outlines))
         else:
             # Check for at least one outline element in body
