@@ -4,6 +4,7 @@
 services:
   worker:
     build:
+      context: ../server
       dockerfile: Dockerfile.celery
     container_name: readspace_worker
     command: celery -A app.core.celery_app  worker -l info
@@ -16,6 +17,7 @@ services:
 
   beat:
     build:
+      context: ../server
       dockerfile: Dockerfile.celery
     container_name: readspace_beat
     command: celery -A app.core.celery_app beat -l info
