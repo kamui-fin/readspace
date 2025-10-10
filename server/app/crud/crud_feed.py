@@ -75,6 +75,8 @@ async def update_feed_metadata(
     etag: str | None = None,
     last_fetched_at: datetime | None = None,
     last_article_published_at: datetime | None = None,
+    content_hash: str | None = None,
+    adaptive_fetch_interval_minutes: int | None = None,
 ) -> Feed:
     """Update feed metadata after successful fetch."""
     if title is not None:
@@ -122,8 +124,12 @@ async def update_feed_metadata(
         feed_db.last_fetched_at = last_fetched_at
     if last_article_published_at is not None:
         feed_db.last_article_published_at = last_article_published_at
+    if content_hash is not None:
+        feed_db.content_hash = content_hash
+    if adaptive_fetch_interval_minutes is not None:
+        feed_db.adaptive_fetch_interval_minutes = adaptive_fetch_interval_minutes
 
-    # Reset error state on successful fetch
+    # Reset error state on successful fetch (enables exponential backoff)
     feed_db.fetch_error_count = 0
     feed_db.last_error_message = None
 
@@ -180,8 +186,26 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
     if remaining_limit > 0:
         min_interval_ago = now - timedelta(minutes=MIN_REFRESH_INTERVAL_MINUTES)
 
-        # Calculate effective delay using SQL
+        # Calculate effective delay using SQL with new priority order:
+        # 1. Error backoff (if errors > 0) - exponential backoff
+        # 2. Adaptive interval (if calculated) - learned optimal
+        # 3. TTL hint (if provided by feed publisher)
+        # 4. Default interval (fallback)
         effective_delay = case(
+            # Priority 1: Error backoff - exponential: min((2^errors * 60), 720)
+            (
+                Feed.fetch_error_count > 0,
+                func.least(
+                    func.power(2, Feed.fetch_error_count) * 60,  # 2^n hours in minutes
+                    MAX_ERROR_BACKOFF_MINUTES,  # Cap at 12 hours
+                ),
+            ),
+            # Priority 2: Use learned adaptive interval if available
+            (
+                Feed.adaptive_fetch_interval_minutes.is_not(None),
+                Feed.adaptive_fetch_interval_minutes,
+            ),
+            # Priority 3: Respect feed's TTL hint
             (
                 Feed.ttl.is_not(None),
                 func.greatest(
@@ -189,6 +213,7 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
                     func.least(Feed.ttl, MAX_REFRESH_INTERVAL_MINUTES),
                 ),
             ),
+            # Priority 4: Default interval
             else_=DEFAULT_REFRESH_INTERVAL_MINUTES,
         )
 

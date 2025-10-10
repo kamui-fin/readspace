@@ -1,5 +1,7 @@
 """Service for managing global feeds."""
 
+import hashlib
+import random
 from datetime import datetime, timezone
 from uuid import UUID
 
@@ -41,6 +43,32 @@ class FeedService:
         """Get a global feed by URL."""
         return await crud_feed.get_feed_by_url(self.db, url=url)
 
+    def _calculate_content_hash(self, entries: list) -> str:
+        """
+        Calculate SHA-256 hash of top 10 article titles + links.
+
+        This enables detecting when feed content is actually unchanged,
+        allowing us to skip expensive article processing.
+
+        Args:
+            entries: Parsed feed entries from feedparser
+
+        Returns:
+            Hex string of SHA-256 hash, or empty string if no entries
+        """
+        if not entries:
+            return ""
+
+        # Hash only top 10 articles - they're most important and stable
+        content_parts = []
+        for entry in entries[:10]:
+            title = getattr(entry, "title", "")
+            link = getattr(entry, "link", "")
+            content_parts.append(f"{title}|{link}")
+
+        combined = "||".join(content_parts)
+        return hashlib.sha256(combined.encode()).hexdigest()
+
     async def refresh_feed(self, *, feed_id: UUID, force_refetch: bool = False) -> FeedResponse | None:
         """Refresh a global feed by fetching latest content."""
         logger.info("Refreshing global feed", feed_id=feed_id, force_refetch=force_refetch)
@@ -76,6 +104,21 @@ class FeedService:
             # Parse the feed content
             parsed_feed = self.feed_parser.parse_feed_data(fetch_result["content"], str(feed_db.url))
 
+            # Check content hash to skip processing if unchanged
+            new_hash = self._calculate_content_hash(parsed_feed.entries)
+
+            if not force_refetch and feed_db.content_hash == new_hash and new_hash:
+                # Content unchanged - skip expensive article processing
+                await crud_feed.update_feed_metadata(
+                    self.db, feed_db=feed_db, last_fetched_at=datetime.now(timezone.utc)
+                )
+                logger.info(
+                    "Feed content unchanged, skipped article processing",
+                    feed_id=feed_id,
+                    content_hash=new_hash[:8],  # Log first 8 chars for debugging
+                )
+                return FeedResponse.model_validate(feed_db)
+
             # Update feed metadata
             feed_headers = fetch_result.get("headers", {})
             last_article_published_at = None
@@ -92,7 +135,24 @@ class FeedService:
 
                 last_article_published_at = latest_published
 
-            # Update feed metadata
+            # Periodically recalculate optimal interval BEFORE creating articles
+            # This avoids transaction conflicts from multiple commits
+            should_recalculate = feed_db.adaptive_fetch_interval_minutes is None or random.random() < 0.1  # noqa: S311
+            adaptive_interval_to_set = None
+
+            if should_recalculate:
+                from app.services.adaptive_feed_scheduler import calculate_optimal_interval
+
+                # Calculate before any commits to avoid db session conflicts
+                adaptive_interval_to_set = await calculate_optimal_interval(self.db, feed_db)
+                logger.info(
+                    "Calculated adaptive interval",
+                    feed_id=feed_id,
+                    new_interval=adaptive_interval_to_set,
+                )
+
+            # Update feed metadata including new content hash and adaptive interval (if calculated)
+            # This ensures only ONE commit for all feed metadata
             updated_feed = await crud_feed.update_feed_metadata(
                 self.db,
                 feed_db=feed_db,
@@ -107,6 +167,8 @@ class FeedService:
                 last_modified=feed_headers.get("last-modified"),
                 last_fetched_at=datetime.now(timezone.utc),
                 last_article_published_at=last_article_published_at,
+                content_hash=new_hash,  # Store new hash
+                adaptive_fetch_interval_minutes=adaptive_interval_to_set,  # Set if calculated
             )
 
             # Create new articles (this will be handled by article service)

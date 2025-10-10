@@ -63,6 +63,15 @@ export function ArticlesList({
     const parentRef = useRef<HTMLDivElement>(null)
     const activeStickyIndexRef = useRef(0)
 
+    // Generate a stable key based on article data to force virtualizer reset on significant changes
+    // This prevents overlapping items when new articles are inserted after refresh
+    const virtualizerKey = useMemo(() => {
+        if (articles.length === 0) return 'empty'
+        const firstId = articles[0]?.id || ''
+        const lastId = articles[articles.length - 1]?.id || ''
+        return `${firstId}-${lastId}-${articles.length}`
+    }, [articles])
+
     // Filter articles based on unread toggle
     const filteredArticles = showUnreadOnly
         ? articles.filter((article) => !article.is_read)
@@ -171,6 +180,14 @@ export function ArticlesList({
         ),
     })
 
+    // Force virtualizer to recalculate measurements when articles data changes
+    // This is needed in addition to the key-based remount for edge cases
+    useEffect(() => {
+        if (allRows.length > 0) {
+            rowVirtualizer.measure()
+        }
+    }, [allRows.length, rowVirtualizer])
+
     // Infinite scroll: automatically fetch next page when last item is visible
     // This follows the TanStack Virtual + React Query pattern
     useEffect(() => {
@@ -225,6 +242,7 @@ export function ArticlesList({
 
     return (
         <div
+            key={virtualizerKey}
             ref={parentRef}
             className="h-full w-full overflow-auto scroll-smooth"
             style={{ scrollbarGutter: "stable" }}

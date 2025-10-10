@@ -110,7 +110,11 @@ class Feed(Base):
     etag_header: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_article_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # Error tracking
+    # Adaptive scheduling optimization
+    adaptive_fetch_interval_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    content_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+    # Error tracking (consecutive errors reset to 0 on success for exponential backoff)
     fetch_error_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
 
