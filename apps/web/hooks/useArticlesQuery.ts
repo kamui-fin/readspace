@@ -30,6 +30,8 @@ interface UseArticlesQueryResult {
     isLoading: boolean
     /** Whether a fetch operation is in progress */
     isFetching: boolean
+    /** Whether the next page is being fetched */
+    isFetchingNextPage: boolean
     /** Function to fetch the next page */
     fetchNextPage: () => void
     /** Whether there are more pages to load */
@@ -118,6 +120,7 @@ export function useArticlesQuery({
         data,
         isLoading,
         isFetching,
+        isFetchingNextPage,
         fetchNextPage,
         hasNextPage,
         refetch,
@@ -185,6 +188,7 @@ export function useArticlesQuery({
         articles,
         isLoading,
         isFetching,
+        isFetchingNextPage,
         fetchNextPage,
         hasNextPage,
         refetch,

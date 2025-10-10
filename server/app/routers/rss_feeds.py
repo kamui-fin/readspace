@@ -1207,6 +1207,271 @@ async def get_refresh_status(
         ) from e
 
 
+@router.put(
+    "/{feed_id}/admin",
+    response_model=FeedResponse,
+    summary="[Admin] Update global feed properties",
+    description="Admin-only endpoint to update global feed metadata that affects all users",
+    responses={
+        200: {
+            "description": "Successfully updated global feed",
+            "model": FeedResponse,
+        },
+        403: {
+            "description": "Forbidden - Admin access required",
+            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
+        },
+        404: {
+            "description": "Feed not found",
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
+        },
+        422: {"description": "Validation error in request body or invalid feed ID format"},
+    },
+)
+async def admin_update_feed(
+    feed_id: UUID,
+    feed_in: FeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> FeedResponse:
+    """
+    Update global feed properties (admin only).
+
+    This endpoint allows administrators to modify the global feed metadata
+    that affects all users subscribed to the feed. This includes fields like
+    title, description, language, category, and image URL.
+
+    Args:
+        feed_id: UUID of the feed to update
+        feed_in: Feed update data with optional fields to modify
+        db: Database session dependency
+        current_user: Authenticated user information (must be admin)
+
+    Returns:
+        FeedResponse: Updated feed details
+
+    Updatable Fields:
+        - title: Feed title
+        - description: Feed description
+        - language: Feed language code
+        - top_level_category: Feed category classification
+        - link: Feed website URL
+        - image_url: Feed icon/logo URL
+        - url: RSS feed URL
+
+    Raises:
+        HTTPException:
+            - 403: User is not an admin
+            - 404: Feed not found
+            - 422: Invalid request format or feed ID
+
+    Note:
+        - Requires admin role
+        - Updates affect all users subscribed to the feed
+        - Changes are applied to the global feed record
+    """
+    # Check if user is admin by fetching their profile
+    from app.crud.crud_profile import crud_profile
+
+    user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    if not user_profile or user_profile.role != "admin":
+        logger.warning(
+            "Non-admin user attempted to update global feed",
+            user_id=current_user.sub,
+            user_role=user_profile.role if user_profile else None,
+            feed_id=feed_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    # Get the feed from the global feeds table
+    from app.crud import crud_feed
+
+    feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
+    if not feed:
+        logger.warning(
+            "Admin attempted to update non-existent feed",
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+
+    # Update the feed metadata
+    try:
+        updated_feed = await crud_feed.update_feed_metadata(
+            db,
+            feed_db=feed,
+            title=feed_in.title,
+            description=feed_in.description,
+            link=str(feed_in.link) if feed_in.link else None,
+            language=feed_in.language,
+            image_url=feed_in.image_url,
+            ttl=feed_in.ttl,
+            skip_hours=feed_in.skip_hours,
+            skip_days=feed_in.skip_days,
+        )
+
+        # Handle top_level_category separately since it's an enum
+        if feed_in.top_level_category is not None:
+            from app.models.rss_models import FeedCategory
+
+            # Convert string to enum value if needed
+            if isinstance(feed_in.top_level_category, str):
+                try:
+                    category_enum = FeedCategory(feed_in.top_level_category)
+                    updated_feed.top_level_category = category_enum.value
+                except ValueError:
+                    logger.warning(
+                        "Invalid category provided",
+                        category=feed_in.top_level_category,
+                        feed_id=feed_id,
+                    )
+            else:
+                updated_feed.top_level_category = feed_in.top_level_category.value
+
+            db.add(updated_feed)
+            await db.commit()
+            await db.refresh(updated_feed)
+
+        # Handle URL update if provided
+        if feed_in.url is not None:
+            updated_feed.url = str(feed_in.url)
+            db.add(updated_feed)
+            await db.commit()
+            await db.refresh(updated_feed)
+
+        logger.info(
+            "Admin updated global feed successfully",
+            feed_id=updated_feed.id,
+            user_id=current_user.sub,
+        )
+
+        # Return as FeedResponse
+        rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
+        return await rss_service.get_feed(feed_id=feed_id) or updated_feed
+
+    except Exception as e:
+        logger.error(
+            "Error updating global feed",
+            error=str(e),
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred.",
+        ) from e
+
+
+@router.delete(
+    "/{feed_id}/admin",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="[Admin] Delete global feed",
+    description="Admin-only endpoint to permanently delete a feed from the platform for all users",
+    responses={
+        204: {"description": "Successfully deleted global feed"},
+        403: {
+            "description": "Forbidden - Admin access required",
+            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
+        },
+        404: {
+            "description": "Feed not found",
+            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
+        },
+        422: {"description": "Invalid feed ID format"},
+    },
+)
+async def admin_delete_feed(
+    feed_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> JSONResponse:
+    """
+    Delete global feed (admin only).
+
+    This endpoint allows administrators to permanently delete a feed from
+    the entire platform. This will remove the feed and all its articles
+    for ALL users subscribed to it.
+
+    Args:
+        feed_id: UUID of the feed to delete
+        db: Database session dependency
+        current_user: Authenticated user information (must be admin)
+
+    Returns:
+        JSONResponse: Empty response with 204 status code on success
+
+    Raises:
+        HTTPException:
+            - 403: User is not an admin
+            - 404: Feed not found
+            - 422: Invalid feed ID format
+
+    Note:
+        - Requires admin role
+        - Permanently deletes the feed for ALL users
+        - Cascading deletion removes all associated articles and subscriptions
+        - This action cannot be undone
+    """
+    # Check if user is admin by fetching their profile
+    from app.crud.crud_profile import crud_profile
+
+    user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    if not user_profile or user_profile.role != "admin":
+        logger.warning(
+            "Non-admin user attempted to delete global feed",
+            user_id=current_user.sub,
+            user_role=user_profile.role if user_profile else None,
+            feed_id=feed_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    # Check if feed exists first
+    from sqlalchemy import select
+
+    from app.models.rss_models import Feed
+
+    result = await db.execute(select(Feed).where(Feed.id == feed_id))
+    feed = result.scalar_one_or_none()
+
+    if not feed:
+        logger.warning(
+            "Admin attempted to delete non-existent feed",
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+
+    # Use raw SQL for efficient bulk deletion leveraging database cascades
+    # This is much faster than ORM cascade which loads each related object individually
+    from sqlalchemy import delete as sql_delete
+
+    logger.info(
+        "Admin deleting global feed with bulk SQL",
+        feed_id=feed_id,
+        user_id=current_user.sub,
+    )
+
+    # Delete the feed - database CASCADE will handle related records efficiently
+    await db.execute(sql_delete(Feed).where(Feed.id == feed_id))
+    await db.commit()
+
+    logger.info(
+        "Admin deleted global feed successfully",
+        feed_id=feed_id,
+        user_id=current_user.sub,
+    )
+    # Return 204 No Content without a response body
+    from starlette.responses import Response
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.delete(
     "/{feed_id}",
     status_code=status.HTTP_204_NO_CONTENT,

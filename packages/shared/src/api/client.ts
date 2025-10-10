@@ -317,6 +317,18 @@ export class ApiClient {
         title?: string;
       },
     ) => this.put<Feed>(`/api/rss/feeds/${id}`, data),
+    adminUpdateFeed: (
+      id: string,
+      data: {
+        title?: string;
+        description?: string;
+        language?: string;
+        top_level_category?: string;
+        link?: string;
+        url?: string;
+        image_url?: string;
+      },
+    ) => this.put<Feed>(`/api/rss/feeds/${id}/admin`, data),
     refreshFeed: (
       id: string,
       forceRefetch: boolean = false,
@@ -337,6 +349,8 @@ export class ApiClient {
     getRefreshStatus: (taskId: string) =>
       this.get(`/api/rss/feeds/refresh_status/${taskId}`),
     deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
+    adminDeleteFeed: (id: string) =>
+      this.delete(`/api/rss/feeds/${id}/admin`),
     subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
       this.post(`/api/rss/feeds/${feedId}/subscribe`, data),
     getSimilarFeeds: (

@@ -1,4 +1,6 @@
+import { EditFeedDialog } from "@/components/feeds/EditFeedDialog"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
+import { useUserRole } from "@/hooks/useUserRole"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -9,12 +11,19 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+    useAdminDeleteFeed,
     useDeleteFeed,
     useFeeds,
     type Feed,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
-import { Trash2 } from "lucide-react"
+import { MoreVertical, Pencil, Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import Link from "next/link"
 import { useState } from "react"
@@ -44,13 +53,15 @@ export function FeedCard({
 
     // Check if this feed is in the user's subscription list
     const isFollowed = feedsData?.some((f) => f.id === feed.id) ?? false
-    console.log("isFollowed", isFollowed, feed)
 
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false)
     const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] =
         useState(false)
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
     const deleteFeed = useDeleteFeed()
+    const adminDeleteFeed = useAdminDeleteFeed()
+    const { isAdmin } = useUserRole()
 
     const handleFollowClick = () => {
         if (isFollowed) {
@@ -76,6 +87,11 @@ export function FeedCard({
     const handleSubscriptionSuccess = () => {
         // No need to set local state - the subscription mutation should update the feeds query data
         // which will cause useIsSubscribed to return the updated value
+    }
+
+    const handleAdminDelete = () => {
+        // Delete immediately without confirmation
+        adminDeleteFeed.mutate({ feedId: feed.id })
     }
 
     return (
@@ -187,6 +203,39 @@ export function FeedCard({
                                     {isFollowed ? "Unfollow" : "Follow"}
                                 </Button>
                             )}
+                            {isAdmin && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                        >
+                                            <MoreVertical className="h-4 w-4" />
+                                            <span className="sr-only">
+                                                Admin controls
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            onClick={() =>
+                                                setIsEditDialogOpen(true)
+                                            }
+                                        >
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleAdminDelete}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
                         </div>
                     </div>
 
@@ -237,6 +286,39 @@ export function FeedCard({
                                     {isFollowed ? "Unfollow" : "Follow"}
                                 </Button>
                             )}
+                            {isAdmin && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 w-8 p-0"
+                                        >
+                                            <MoreVertical className="h-4 w-4" />
+                                            <span className="sr-only">
+                                                Admin controls
+                                            </span>
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                            onClick={() =>
+                                                setIsEditDialogOpen(true)
+                                            }
+                                        >
+                                            <Pencil className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={handleAdminDelete}
+                                            className="text-destructive focus:text-destructive"
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -283,6 +365,13 @@ export function FeedCard({
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Edit Feed Dialog */}
+            <EditFeedDialog
+                feed={feed}
+                isOpen={isEditDialogOpen}
+                onClose={() => setIsEditDialogOpen(false)}
+            />
         </div>
     )
 }

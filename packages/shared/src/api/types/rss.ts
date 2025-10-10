@@ -1,5 +1,24 @@
 import type { ApiPaginatedResponse, PaginatedResponse } from "./api";
 
+// Feed category enum - matches backend FeedCategory
+export const FEED_CATEGORIES = {
+  TECHNOLOGY_PROGRAMMING: "Technology & Programming",
+  CULTURE_ARTS: "Culture & Arts",
+  LIFESTYLE_PERSONAL: "Lifestyle & Personal",
+  MISCELLANEOUS: "Miscellaneous",
+  DESIGN_CREATIVITY: "Design & Creativity",
+  SCIENCE_RESEARCH: "Science & Research",
+  NEWS_POLITICS: "News & Politics",
+  GAMING_ENTERTAINMENT: "Gaming & Entertainment",
+  BUSINESS_FINANCE: "Business & Finance",
+  ARTIFICIAL_INTELLIGENCE: "Artificial Intelligence",
+  SECURITY_PRIVACY: "Security & Privacy",
+  EDUCATION_LEARNING: "Education & Learning",
+} as const;
+
+export type FeedCategory =
+  (typeof FEED_CATEGORIES)[keyof typeof FEED_CATEGORIES];
+
 // Types based on API responses
 export type Folder = {
   id: string;
@@ -18,6 +37,8 @@ export type Feed = {
   folder_id: string | null;
   folder_name: string | null;
   is_favorite: boolean;
+  language: string | null;
+  top_level_category: string | null; // Feed category enum value
   last_fetched_at: string | null;
   tags: { id: string; name: string }[];
   unread_count: number;
@@ -199,6 +220,8 @@ export function feedDiscoveryResultToFeed(
     folder_id: null,
     folder_name: null,
     is_favorite: false,
+    language: discoveryResult.language,
+    top_level_category: discoveryResult.category,
     last_fetched_at: null,
     tags: [], // Convert string[] to object[] format
     unread_count: 0,

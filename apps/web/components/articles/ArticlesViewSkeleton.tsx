@@ -63,7 +63,7 @@ export function ArticlesViewSkeleton({
             {/* Desktop: Resizable panels */}
             <div className="hidden md:flex w-full">
                 <ResizablePanelGroup direction="horizontal">
-                    <ResizablePanel defaultSize={25} minSize={15} maxSize={40}>
+                    <ResizablePanel defaultSize={35} minSize={15} maxSize={60}>
                         <div className="flex h-full flex-col border-r">
                             <div className="flex h-14 items-center justify-between border-b px-4">
                                 <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function ArticlesViewSkeleton({
                     </ResizablePanel>
                     <ResizableHandle />
                     <ResizablePanel
-                        defaultSize={75}
+                        defaultSize={65}
                         className="overflow-hidden"
                     >
                         <div className="flex flex-col h-full">

@@ -4,10 +4,50 @@ import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
 import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
-import { BookOpen, RefreshCw, Rss } from "lucide-react"
+import { BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "sonner"
+
+interface GetStartedCardsProps {
+    router: ReturnType<typeof useRouter>
+}
+
+function GetStartedCards({ router }: GetStartedCardsProps) {
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg mx-auto">
+            <div
+                className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
+                onClick={() => router.push("/discover")}
+            >
+                <Rss className="mx-auto h-8 w-8 text-muted-foreground" />
+                <div className="space-y-1">
+                    <h4 className="text-sm font-medium text-foreground">
+                        Follow some feeds
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                        Discover feeds you&apos;ll love
+                    </p>
+                </div>
+            </div>
+
+            <div
+                className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
+                onClick={() => router.push("/import-opml")}
+            >
+                <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
+                <div className="space-y-1">
+                    <h4 className="text-sm font-medium text-foreground">
+                        Import OPML file
+                    </h4>
+                    <p className="text-xs text-muted-foreground">
+                        Migrating from another reader?
+                    </p>
+                </div>
+            </div>
+        </div>
+    )
+}
 
 interface ArticlesEmptyStateProps {
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
@@ -181,50 +221,20 @@ export function ArticlesEmptyState({
                         <SidebarLeftTrigger />
                     </div>
                 )}
-                <div className="w-full max-w-sm mx-auto">
-                    <div
-                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-                        onClick={() => router.push("/discover")}
-                    >
-                        <Rss className="mx-auto h-8 w-8 text-muted-foreground" />
-                        <div className="space-y-1">
-                            <h4 className="text-sm font-medium text-foreground">
-                                Follow some feeds
-                            </h4>
-                            <p className="text-xs text-muted-foreground">
-                                Discover feeds you&apos;ll love
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <GetStartedCards router={router} />
             </div>
         )
     }
 
     if (!hasNoFolders && hasNoFeeds) {
         return (
-            <div className="flex h-full w-full items-center justify-center">
+            <div className="flex h-full w-full items-center justify-center p-6">
                 {isMobile && (
                     <div className="absolute top-4 left-4">
                         <SidebarLeftTrigger />
                     </div>
                 )}
-                <div className="w-full max-w-md mx-auto px-4">
-                    <div
-                        className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-6 text-center space-y-4 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-                        onClick={() => router.push("/discover")}
-                    >
-                        <Rss className="mx-auto h-12 w-12 text-muted-foreground" />
-                        <div className="space-y-2">
-                            <h3 className="text-lg font-medium text-foreground">
-                                Add your first feed
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Discover feeds to get started with fresh content
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                <GetStartedCards router={router} />
             </div>
         )
     }

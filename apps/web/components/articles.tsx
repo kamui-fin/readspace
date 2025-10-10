@@ -163,10 +163,10 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : initialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -225,6 +225,7 @@ export function ArticlesView({
         articles: allArticles,
         isLoading: isArticlesLoading,
         isFetching,
+        isFetchingNextPage,
         fetchNextPage,
         hasNextPage,
         refetch: refetchArticles,
@@ -472,6 +473,7 @@ export function ArticlesView({
         setShowUnreadOnly((prev) => !prev)
     }
 
+
     // Clear selected article if it's no longer in the articles list
     useEffect(() => {
         if (selectedArticleId && allArticles.length > 0) {
@@ -511,7 +513,7 @@ export function ArticlesView({
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) ||
-                          allArticles[0]
+                        allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle?.id || null)
                 }
@@ -570,10 +572,10 @@ export function ArticlesView({
     }
 
     return (
-        <div className="flex h-full md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
+        <div className="flex h-[100dvh] md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
             {isMobile ? (
                 // Mobile: Single panel with navigation
-                <div className="w-full">
+                <div className="w-full h-full">
                     {showContent && selectedArticle ? (
                         <div className="flex h-full flex-col">
                             <ArticleContent
@@ -597,9 +599,9 @@ export function ArticlesView({
                             />
                         </div>
                     ) : (
-                        <div className="flex h-full flex-col">
+                        <div className="flex flex-col h-full">
                             {/* Mobile Toolbar */}
-                            <div className="flex items-center justify-between border-b px-4 py-3">
+                            <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3">
                                 <div className="flex items-center gap-2 flex-1">
                                     <SidebarLeftTrigger className="flex-shrink-0" />
                                     <h1 className="text-lg font-semibold truncate max-w-[200px]">
@@ -676,7 +678,8 @@ export function ArticlesView({
                                             <DropdownMenuTrigger asChild>
                                                 <Button
                                                     variant="ghost"
-                                                    size="sm"
+                                                    size="icon"
+                                                    className="h-8 w-8"
                                                 >
                                                     <MoreVertical className="h-4 w-4" />
                                                 </Button>
@@ -725,27 +728,33 @@ export function ArticlesView({
 
                             {/* Preview banner for unsubscribed feeds - mobile */}
                             {shouldShowPreviewBanner && (
-                                <FeedPreviewBanner
-                                    feedTitle={feedData?.title}
-                                    feedDescription={feedData?.description}
-                                    onFollow={() =>
-                                        setIsSubscriptionModalOpen(true)
-                                    }
-                                />
+                                <div className="flex-shrink-0">
+                                    <FeedPreviewBanner
+                                        feedTitle={feedData?.title}
+                                        feedDescription={feedData?.description}
+                                        onFollow={() =>
+                                            setIsSubscriptionModalOpen(true)
+                                        }
+                                    />
+                                </div>
                             )}
 
-                            <ArticlesList
-                                articles={filteredArticles}
-                                selectedArticleId={selectedArticleId}
-                                isLoading={isArticlesLoading}
-                                isFetching={isFetching}
-                                hasNextPage={hasNextPage}
-                                showUnreadOnly={showUnreadOnly}
-                                isRecentlyReadMode={isRecentlyReadMode}
-                                isReadLaterMode={isReadLaterMode}
-                                onLoadMore={fetchNextPage}
-                                onArticleSelect={handleArticleSelect}
-                            />
+                            {/* Wrapper to establish proper height for virtualizer */}
+                            <div className="flex-1 min-h-0 overflow-hidden">
+                                <ArticlesList
+                                    articles={filteredArticles}
+                                    selectedArticleId={selectedArticleId}
+                                    isLoading={isArticlesLoading}
+                                    isFetching={isFetching}
+                                    isFetchingNextPage={isFetchingNextPage}
+                                    hasNextPage={hasNextPage}
+                                    showUnreadOnly={showUnreadOnly}
+                                    isRecentlyReadMode={isRecentlyReadMode}
+                                    isReadLaterMode={isReadLaterMode}
+                                    fetchNextPage={fetchNextPage}
+                                    onArticleSelect={handleArticleSelect}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
@@ -754,7 +763,7 @@ export function ArticlesView({
                 <div className="hidden md:flex w-full">
                     <ResizablePanelGroup direction="horizontal">
                         <ResizablePanel
-                            defaultSize={35}
+                            defaultSize={25}
                             minSize={20}
                             maxSize={60}
                         >
@@ -900,11 +909,12 @@ export function ArticlesView({
                                     selectedArticleId={selectedArticleId}
                                     isLoading={isArticlesLoading}
                                     isFetching={isFetching}
+                                    isFetchingNextPage={isFetchingNextPage}
                                     hasNextPage={hasNextPage}
                                     showUnreadOnly={showUnreadOnly}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
-                                    onLoadMore={fetchNextPage}
+                                    fetchNextPage={fetchNextPage}
                                     onArticleSelect={handleArticleSelect}
                                 />
                             </div>
@@ -912,7 +922,7 @@ export function ArticlesView({
 
                         <ResizableHandle />
 
-                        <ResizablePanel defaultSize={65} minSize={50}>
+                        <ResizablePanel defaultSize={75} minSize={50}>
                             {selectedArticle ? (
                                 <ArticleContent
                                     article={selectedArticle as Article}

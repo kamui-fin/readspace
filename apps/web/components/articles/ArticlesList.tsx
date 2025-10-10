@@ -1,9 +1,11 @@
 "use client"
 
 import type { Article } from "@readspace/shared"
+import type { Range } from "@tanstack/react-virtual"
+import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual"
 import { format, parseISO } from "date-fns"
 import { CalendarIcon } from "lucide-react"
-import { useEffect, useMemo, useRef } from "react"
+import { useCallback, useEffect, useMemo, useRef } from "react"
 import { ArticleItem } from "./ArticleItem"
 import { ArticlesEmptyState } from "./ArticlesEmptyState"
 import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
@@ -17,6 +19,8 @@ interface ArticlesListProps {
     isLoading: boolean
     /** Whether more articles are being fetched */
     isFetching: boolean
+    /** Whether the next page is being fetched */
+    isFetchingNextPage: boolean
     /** Whether there are more articles to load */
     hasNextPage: boolean | undefined
     /** Whether to show only unread articles */
@@ -32,7 +36,7 @@ interface ArticlesListProps {
     /** Folder ID for empty state */
     folderId?: string
     /** Function to fetch next page of articles */
-    onLoadMore: () => void
+    fetchNextPage: () => void
     /** Function called when an article is selected */
     onArticleSelect: (articleId: string) => void
 }
@@ -46,32 +50,35 @@ export function ArticlesList({
     selectedArticleId,
     isLoading,
     isFetching,
+    isFetchingNextPage,
     hasNextPage,
     showUnreadOnly,
     isRecentlyReadMode = false,
     isReadLaterMode = false,
     feedId,
     folderId,
-    onLoadMore,
+    fetchNextPage,
     onArticleSelect,
 }: ArticlesListProps) {
-    const scrollContainerRef = useRef<HTMLDivElement>(null)
-    const loadMoreRef = useRef<HTMLDivElement>(null)
+    const parentRef = useRef<HTMLDivElement>(null)
+    const activeStickyIndexRef = useRef(0)
 
     // Filter articles based on unread toggle
     const filteredArticles = showUnreadOnly
         ? articles.filter((article) => !article.is_read)
         : articles
 
-    // Group articles by date for non-recently-read modes
-    const groupedArticles = useMemo(() => {
+    // For virtualization, we need a flat list of all items
+    const allRows = useMemo(() => {
         if (isRecentlyReadMode || filteredArticles.length === 0) {
-            return {}
+            return filteredArticles
         }
 
-        const groups: Record<string, { label: string; articles: Article[] }> =
-            {}
+        // Create flat list with date headers and articles
+        const rows: (Article | { type: 'header'; label: string; dateGroup: string })[] = []
+        const groups: Record<string, { label: string; articles: Article[] }> = {}
 
+        // Group articles by date
         filteredArticles.forEach((article) => {
             if (!article.published_at) return
 
@@ -103,31 +110,96 @@ export function ArticlesList({
             groups[dateGroup]?.articles.push(article)
         })
 
-        return groups
+        // Flatten groups into rows with headers
+        Object.entries(groups)
+            .sort(([a], [b]) => {
+                if (a === "today") return -1
+                if (b === "today") return 1
+                if (a === "yesterday") return -1
+                if (b === "yesterday") return 1
+                return b.localeCompare(a)
+            })
+            .forEach(([dateGroup, group]) => {
+                rows.push({ type: 'header', label: group.label, dateGroup })
+                rows.push(...group.articles)
+            })
+
+        return rows
     }, [filteredArticles, isRecentlyReadMode])
 
-    // Infinite scroll implementation
-    useEffect(() => {
-        if (!hasNextPage || isFetching || !loadMoreRef.current) return
-
-        const observer = new IntersectionObserver(
-            (entries) => {
-                const target = entries[0]
-                if (target?.isIntersecting) {
-                    onLoadMore()
-                }
-            },
-            {
-                root: scrollContainerRef.current,
-                rootMargin: "100px", // Load more when 100px from bottom
-                threshold: 0.1,
+    // Get sticky indexes (header positions)
+    const stickyIndexes = useMemo(() => {
+        const indexes: number[] = []
+        allRows.forEach((row, index) => {
+            if (row && 'type' in row && row.type === 'header') {
+                indexes.push(index)
             }
-        )
+        })
+        return indexes
+    }, [allRows])
 
-        observer.observe(loadMoreRef.current)
+    // Helper functions for sticky behavior
+    const isSticky = useCallback((index: number) => stickyIndexes.includes(index), [stickyIndexes])
+    const isActiveSticky = useCallback((index: number) => activeStickyIndexRef.current === index, [])
 
-        return () => observer.disconnect()
-    }, [hasNextPage, isFetching, onLoadMore])
+    // TanStack Virtual configuration with sticky support
+    const rowVirtualizer = useVirtualizer({
+        count: hasNextPage ? allRows.length + 1 : allRows.length,
+        getScrollElement: () => parentRef.current,
+        estimateSize: (index) => {
+            const item = allRows[index]
+            if (!item) return 120 // Loading indicator
+            if ('type' in item && item.type === 'header') return 36 // Reasonable header height
+            return 120 // Article item height
+        },
+        overscan: 5,
+        rangeExtractor: useCallback(
+            (range: Range) => {
+                activeStickyIndexRef.current =
+                    [...stickyIndexes]
+                        .reverse()
+                        .find((index) => range.startIndex >= index) ?? 0
+
+                const next = new Set([
+                    activeStickyIndexRef.current,
+                    ...defaultRangeExtractor(range),
+                ])
+
+                return [...next].sort((a, b) => a - b)
+            },
+            [stickyIndexes],
+        ),
+    })
+
+    // Infinite scroll: automatically fetch next page when last item is visible
+    // This follows the TanStack Virtual + React Query pattern
+    useEffect(() => {
+        // Get the last virtual item from the virtualizer
+        const virtualItems = rowVirtualizer.getVirtualItems()
+        const [lastItem] = [...virtualItems].reverse()
+
+        if (!lastItem) {
+            return
+        }
+
+        // Fetch next page when:
+        // 1. We've reached or passed the last item in allRows
+        // 2. There are more pages available
+        // 3. We're not already fetching
+        if (
+            lastItem.index >= allRows.length - 1 &&
+            hasNextPage &&
+            !isFetchingNextPage
+        ) {
+            fetchNextPage()
+        }
+    }, [
+        hasNextPage,
+        fetchNextPage,
+        allRows.length,
+        isFetchingNextPage,
+        rowVirtualizer.getVirtualItems(),
+    ])
 
     // Show loading skeleton while initial load
     if (isLoading) {
@@ -142,8 +214,8 @@ export function ArticlesList({
                     isRecentlyReadMode
                         ? "recentlyRead"
                         : isReadLaterMode
-                          ? "readLater"
-                          : "allArticles"
+                            ? "readLater"
+                            : "allArticles"
                 }
                 feedId={feedId}
                 folderId={folderId}
@@ -153,100 +225,100 @@ export function ArticlesList({
 
     return (
         <div
-            ref={scrollContainerRef}
-            className="flex-1 overflow-auto scroll-smooth"
+            ref={parentRef}
+            className="h-full w-full overflow-auto scroll-smooth"
             style={{ scrollbarGutter: "stable" }}
         >
-            <div className="space-y-0">
-                {isRecentlyReadMode ||
-                Object.keys(groupedArticles).length === 0 ? (
-                    // Simple list for recently read mode or when no grouping
-                    <>
-                        {filteredArticles.map((article, index) => (
-                            <ArticleItem
-                                key={article.id}
-                                article={article}
-                                isActive={selectedArticleId === article.id}
-                                isLastInGroup={
-                                    index === filteredArticles.length - 1
-                                }
-                                isRecentlyReadMode={isRecentlyReadMode}
-                                onClick={() => onArticleSelect(article.id)}
-                            />
-                        ))}
-                    </>
-                ) : (
-                    // Grouped articles with date headers
-                    <>
-                        {Object.entries(groupedArticles)
-                            .sort(([a], [b]) => {
-                                // Sort by date group - today first, then yesterday, then by date desc
-                                if (a === "today") return -1
-                                if (b === "today") return 1
-                                if (a === "yesterday") return -1
-                                if (b === "yesterday") return 1
-                                return b.localeCompare(a) // Latest dates first
-                            })
-                            .map(([dateGroup, group]) => (
-                                <div key={dateGroup}>
-                                    {/* Date Header */}
-                                    <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b px-4 py-2">
-                                        <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                                            <CalendarIcon className="h-4 w-4" />
-                                            {group.label}
-                                        </h3>
+            <div
+                style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                }}
+            >
+                {rowVirtualizer.getVirtualItems().map((virtualItem) => {
+                    const item = allRows[virtualItem.index]
+                    const isLoaderRow = virtualItem.index > allRows.length - 1
+                    const isStickyItem = isSticky(virtualItem.index)
+                    const isActiveStickyItem = isActiveSticky(virtualItem.index)
+
+                    // Check if this is the last article item before a header or end
+                    const nextItem = allRows[virtualItem.index + 1]
+                    const isLastArticleInGroup = item && !('type' in item) &&
+                        (!nextItem || ('type' in nextItem && nextItem.type === 'header'))
+
+                    return (
+                        <div
+                            key={virtualItem.index}
+                            style={{
+                                ...(isStickyItem && isActiveStickyItem
+                                    ? {
+                                        background: 'hsl(var(--background))',
+                                        zIndex: 10,
+                                    }
+                                    : {}),
+                                ...(isActiveStickyItem
+                                    ? {
+                                        position: 'sticky',
+                                    }
+                                    : {
+                                        position: 'absolute',
+                                        transform: `translateY(${virtualItem.start}px)`,
+                                    }),
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: `${virtualItem.size}px`,
+                            }}
+                        >
+                            {isLoaderRow ? (
+                                // Loading indicator
+                                hasNextPage && isFetchingNextPage ? (
+                                    <div className="flex justify-center py-4">
+                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            Loading more articles...
+                                        </div>
                                     </div>
-
-                                    {/* Articles in this date group */}
-                                    {group.articles.map((article, index) => (
-                                        <ArticleItem
-                                            key={article.id}
-                                            article={article}
-                                            isActive={
-                                                selectedArticleId === article.id
-                                            }
-                                            isLastInGroup={
-                                                index ===
-                                                group.articles.length - 1
-                                            }
-                                            isRecentlyReadMode={
-                                                isRecentlyReadMode
-                                            }
-                                            onClick={() =>
-                                                onArticleSelect(article.id)
-                                            }
-                                        />
-                                    ))}
-                                </div>
-                            ))}
-                    </>
-                )}
-
-                {/* Load more trigger */}
-                {hasNextPage && (
-                    <div ref={loadMoreRef} className="flex justify-center py-4">
-                        {isFetching ? (
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                Loading more articles...
-                            </div>
-                        ) : (
-                            <div className="text-xs text-muted-foreground">
-                                Scroll to load more
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* End indicator */}
-                {!hasNextPage && filteredArticles.length > 0 && (
-                    <div className="py-8 text-center">
-                        <p className="text-xs text-muted-foreground">
-                            You&apos;ve reached the end of the articles
-                        </p>
-                    </div>
-                )}
+                                ) : null
+                            ) : item ? (
+                                <>
+                                    {'type' in item && item.type === 'header' ? (
+                                        // Date Header with reasonable 48px height
+                                        <div className={`flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm ${isActiveStickyItem ? 'border-b' : ''}`}>
+                                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                                            <h3 className="text-sm font-medium text-muted-foreground">
+                                                {item.label}
+                                            </h3>
+                                        </div>
+                                    ) : (
+                                        // Article Item with consistent height
+                                        <div className="h-[120px] overflow-hidden">
+                                            <ArticleItem
+                                                key={(item as Article).id}
+                                                article={item as Article}
+                                                isActive={selectedArticleId === (item as Article).id}
+                                                isLastInGroup={isLastArticleInGroup}
+                                                isRecentlyReadMode={isRecentlyReadMode}
+                                                onClick={() => onArticleSelect((item as Article).id)}
+                                            />
+                                        </div>
+                                    )}
+                                </>
+                            ) : null}
+                        </div>
+                    )
+                })}
             </div>
+
+            {/* End indicator */}
+            {!hasNextPage && allRows.length > 0 && (
+                <div className="py-8 text-center">
+                    <p className="text-xs text-muted-foreground">
+                        You&apos;ve reached the end of the articles
+                    </p>
+                </div>
+            )}
         </div>
     )
 }

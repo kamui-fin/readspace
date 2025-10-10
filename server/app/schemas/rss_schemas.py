@@ -4,6 +4,8 @@ from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from app.models.rss_models import FeedCategory
+
 T = TypeVar("T")
 
 
@@ -65,6 +67,7 @@ class FeedUpdate(BaseModel):
     language: str | None = Field(None, max_length=50)
     image_url: str | None = None
     folder_id: UUID | None = None
+    top_level_category: FeedCategory | None = None
     ttl: int | None = Field(None, gt=0)
     skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
     skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
@@ -74,6 +77,7 @@ class FeedResponse(FeedBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    top_level_category: str | None = None  # Serialized as string from enum
     last_fetched_at: datetime | None = None
     last_modified_header: str | None = None
     etag_header: str | None = None

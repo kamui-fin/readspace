@@ -83,6 +83,158 @@ else
     echo "❌ AI support will be disabled."
 fi
 
+# --- Admin User Configuration ---
+echo ""
+echo "👤 Admin User Setup"
+echo "Create a default admin user for your Readspace instance."
+echo ""
+read -p "Admin email: " ADMIN_EMAIL
+while [[ ! "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; do
+    echo "❌ Please enter a valid email address."
+    read -p "Admin email: " ADMIN_EMAIL
+done
+
+read -s -p "Admin password: " ADMIN_PASSWORD
+echo ""
+while [ ${#ADMIN_PASSWORD} -lt 6 ]; do
+    echo "❌ Password must be at least 6 characters long."
+    read -s -p "Admin password: " ADMIN_PASSWORD
+    echo ""
+done
+
+echo "✅ Admin user configured: $ADMIN_EMAIL"
+
+# --- Create Admin User Migration ---
+echo ""
+echo "📝 Creating admin user migration..."
+
+# Create the migration file with fixed timestamp to sort after init schema
+MIGRATION_FILE="server/alembic/versions/20250829_000000_add_default_admin_user.py"
+
+# Create the server directory if it doesn't exist
+mkdir -p server/alembic/versions
+
+cat <<EOF > "$MIGRATION_FILE"
+"""add default admin user
+
+Revision ID: $(openssl rand -hex 6)
+Revises: 1fef245d6d85
+Create Date: 2025-08-29 00:00:00.000000+00:00
+
+"""
+
+from collections.abc import Sequence
+
+import sqlalchemy as sa
+
+from alembic import op
+
+# revision identifiers, used by Alembic.
+revision: str = "$(openssl rand -hex 6)"
+down_revision: str | None = "1fef245d6d85"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    """Create default admin user."""
+    op.execute("""
+    DO \$\$
+    DECLARE
+        admin_user_id UUID;
+    BEGIN
+        -- Check if admin user already exists
+        IF EXISTS (SELECT 1 FROM auth.users WHERE email = '${ADMIN_EMAIL}') THEN
+            RETURN;
+        END IF;
+
+        -- Generate user ID
+        admin_user_id := gen_random_uuid();
+
+        -- Insert into auth.users
+        INSERT INTO auth.users (
+            id, instance_id, role, aud, email,
+            raw_app_meta_data, raw_user_meta_data,
+            is_super_admin, encrypted_password,
+            created_at, updated_at, last_sign_in_at,
+            email_confirmed_at, confirmation_sent_at,
+            confirmation_token, recovery_token,
+            email_change_token_new, email_change,
+            confirmed_at
+        ) VALUES (
+            admin_user_id,
+            '00000000-0000-0000-0000-000000000000',
+            'authenticated',
+            'authenticated',
+            '${ADMIN_EMAIL}',
+            '{"provider":"email","providers":["email"]}',
+            json_build_object(
+                'sub', admin_user_id::text,
+                'email', '${ADMIN_EMAIL}',
+                'display_name', 'admin',
+                'email_verified', true,
+                'phone_verified', false
+            ),
+            NULL,
+            extensions.crypt('${ADMIN_PASSWORD}', extensions.gen_salt('bf', 12)),
+            NOW(), NOW(), NOW(),
+            NOW(), NULL,
+            '', '', '', '',
+            NOW()
+        );
+
+        -- Insert into auth.identities
+        INSERT INTO auth.identities (
+            id, provider_id, provider, user_id,
+            identity_data, last_sign_in_at,
+            created_at, updated_at
+        ) VALUES (
+            gen_random_uuid(),
+            admin_user_id::text,
+            'email',
+            admin_user_id,
+            json_build_object(
+                'sub', admin_user_id::text,
+                'email', '${ADMIN_EMAIL}',
+                'email_verified', true,
+                'provider', 'email'
+            ),
+            NOW(), NOW(), NOW()
+        );
+
+        -- Set admin role if the role column exists (will be created in next migration)
+        IF EXISTS (SELECT 1 FROM information_schema.columns
+                  WHERE table_name = 'profiles' AND column_name = 'role') THEN
+            UPDATE profiles SET role = 'admin' WHERE id = admin_user_id;
+        END IF;
+    END;
+    \$\$;
+    """)
+
+
+def downgrade() -> None:
+    """Remove default admin user."""
+    op.execute("""
+    DO \$\$
+    DECLARE
+        admin_user_id UUID;
+    BEGIN
+        -- Get admin user ID
+        SELECT id INTO admin_user_id FROM auth.users WHERE email = '${ADMIN_EMAIL}';
+
+        IF admin_user_id IS NOT NULL THEN
+            -- Delete from auth.identities first (due to foreign key)
+            DELETE FROM auth.identities WHERE user_id = admin_user_id;
+            -- Delete from auth.users
+            DELETE FROM auth.users WHERE id = admin_user_id;
+        END IF;
+    END;
+    \$\$;
+    """)
+EOF
+
+echo "✅ Migration file created: $MIGRATION_FILE"
+
 # --- Configuration & Input Validation ---
 
 # Check for required command-line tools.
@@ -286,5 +438,14 @@ echo "✅ server/.env created."
 
 echo "------------------------------------------------"
 echo "🎉 All configuration files have been generated successfully!"
+echo ""
+echo "📋 Summary:"
+echo "  • API Host: $API_HOST"
+echo "  • RSSHub URL: $RSSHUB_URL"
+echo "  • AI Support: $ENABLE_AI"
+echo "  • Admin User: $ADMIN_EMAIL"
+echo ""
 echo "Next steps:"
 echo "1. Run ./start_docker.sh to start the services."
+echo "2. The database migrations will automatically create your admin user."
+echo "3. You can login with the admin credentials you provided."
