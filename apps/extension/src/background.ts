@@ -1,8 +1,10 @@
 // Background script for Readspace extension
-import { browser, getBrowserName } from '@/lib/browser'
+import { browser, getBrowserName, identity } from '@/lib/browser'
 import { trimSaveArticleRequest } from '@readspace/shared'
-import { ApiExtensionClient } from '@/lib/api-client'
+import { ApiClient } from '@/lib/api-client'
 import type { Runtime } from 'webextension-polyfill'
+import { extractOAuthTokens } from '@/lib/oauth'
+import { getSupabaseClient } from '@/lib/supabase'
 
 // Type for content extraction result
 interface ContentExtractionResult {
@@ -84,8 +86,100 @@ async function updateFeedBadge(tabId: number, feedCount: number) {
   }
 }
 
+// Handle OAuth callback from Google login
+async function handleOAuthCallback(url: string, tabId: number) {
+  try {
+    console.log('OAuth callback detected:', url)
+
+    // Extract tokens from URL
+    const { access_token, refresh_token } = extractOAuthTokens(url)
+
+    if (!access_token || !refresh_token) {
+      throw new Error('No OAuth tokens found in callback URL')
+    }
+
+    console.log('OAuth tokens extracted successfully')
+
+    // Get Supabase configuration from storage
+    const storageData = await browser.storage.local.get('readspace-extension')
+    const storeState = storageData['readspace-extension'] as {
+      state?: { settings?: { supabase_url?: string; supabase_anon_key?: string } }
+    }
+
+    const supabaseUrl =
+      storeState?.state?.settings?.supabase_url ||
+      'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey =
+      storeState?.state?.settings?.supabase_anon_key ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
+
+    // Create Supabase client and set session
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey)
+
+    if (!supabase) {
+      throw new Error('Failed to initialize Supabase client')
+    }
+
+    // Set the session in Supabase
+    const { data, error } = await supabase.auth.setSession({
+      access_token,
+      refresh_token,
+    })
+
+    if (error) throw error
+
+    console.log('OAuth session set successfully')
+
+    // Store session in chrome.storage for persistence
+    await browser.storage.local.set({
+      'oauth-session': data.session,
+    })
+
+    // Send message to store to update with new access token
+    // This will trigger the login flow in the extension store
+    await browser.runtime.sendMessage({
+      action: 'oauth-login-success',
+      access_token,
+    })
+
+    // Close the OAuth tab
+    await browser.tabs.remove(tabId)
+
+    // Show success notification
+    await browser.notifications.create('oauth-success', {
+      type: 'basic',
+      iconUrl: 'icons/icon-48.png',
+      title: 'Readspace',
+      message: 'Successfully signed in with Google!',
+    })
+  } catch (error) {
+    console.error('OAuth callback error:', error)
+
+    // Show error notification
+    await browser.notifications.create('oauth-error', {
+      type: 'basic',
+      iconUrl: 'icons/icon-48.png',
+      title: 'Readspace',
+      message: `Failed to sign in with Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    })
+
+    // Close the OAuth tab anyway
+    try {
+      await browser.tabs.remove(tabId)
+    } catch (e) {
+      console.error('Failed to close OAuth tab:', e)
+    }
+  }
+}
+
 // Check for RSS feeds when tab is updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Check for OAuth callback first
+  if (changeInfo.url?.startsWith(identity.getRedirectURL())) {
+    await handleOAuthCallback(changeInfo.url, tabId)
+    return
+  }
+
   if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
     try {
       // Wait a bit for the page to fully load
@@ -279,8 +373,8 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
 
     console.log('Saving to Readspace API with request:', requestBody)
 
-    // Save to Readspace API using extension client
-    const responseData = await ApiExtensionClient.rss.saveArticle(requestBody)
+    // Save to Readspace API
+    const responseData = await ApiClient.rss.saveArticle(requestBody)
     console.log('Article saved successfully:', responseData)
 
     browser.notifications.create('save-success', {

@@ -1,21 +1,21 @@
-import React, { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { DiscoveredFeed } from '@readspace/shared'
-import { Rss, BellPlus, X } from 'lucide-react'
-import toast from 'react-hot-toast'
 import { useExtensionStore } from '@/store'
+import { DiscoveredFeed } from '@readspace/shared'
+import { BellPlus, ChevronDown, ChevronUp, Rss, X } from 'lucide-react'
+import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 
 interface FeedSubscriptionModalProps {
-  feed: DiscoveredFeed
+  feeds: DiscoveredFeed[]
   isOpen: boolean
   onClose: () => void
   onSuccess?: () => void
 }
 
 export function FeedSubscriptionModal({
-  feed,
+  feeds,
   isOpen,
   onClose,
   onSuccess,
@@ -24,11 +24,21 @@ export function FeedSubscriptionModal({
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(
     undefined
   )
+  const [selectedFeedIndex, setSelectedFeedIndex] = useState(0)
+  const [showAdvanced, setShowAdvanced] = useState(false)
+
+  const selectedFeed = feeds[selectedFeedIndex] || feeds[0]
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!selectedFolderId) {
       toast.error('Please select a folder to continue')
+      return
+    }
+
+    if (!selectedFeed) {
+      toast.error('No feed selected')
       return
     }
 
@@ -39,7 +49,7 @@ export function FeedSubscriptionModal({
 
     // Make the actual API call in the background
     try {
-      await subscribeToFeed(feed.url, {
+      await subscribeToFeed(selectedFeed.url, {
         folder_id: selectedFolderId,
       })
     } catch (error) {
@@ -74,24 +84,79 @@ export function FeedSubscriptionModal({
         {/* Content */}
         <div className="p-4 space-y-4 overflow-y-auto">
           {/* Feed Preview */}
-          <div className="bg-gray-50 border rounded-lg p-3">
+          <div className="bg-gray-50 dark:bg-gray-800 border rounded-lg p-3">
             <div className="flex items-center gap-2 mb-2">
               <Rss className="w-4 h-4 text-orange-500" />
               <h3 className="font-medium text-sm truncate">
-                {feed.title || 'RSS Feed'}
+                {selectedFeed?.title || 'RSS Feed'}
               </h3>
               <Badge variant="outline" className="text-xs">
-                {feed.type.toUpperCase()}
+                {selectedFeed?.type.toUpperCase()}
               </Badge>
             </div>
-            {feed.description && (
-              <p className="text-xs text-gray-600 line-clamp-2">
-                {feed.description}
+            {selectedFeed?.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2">
+                {selectedFeed.description}
               </p>
             )}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Advanced: Feed Selection (only show if multiple feeds) */}
+            {feeds.length > 1 && (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(!showAdvanced)}
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full"
+                >
+                  {showAdvanced ? (
+                    <ChevronUp className="w-4 h-4" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4" />
+                  )}
+                  <span>
+                    Advanced: Choose specific feed ({feeds.length} available)
+                  </span>
+                </button>
+
+                {showAdvanced && (
+                  <div className="space-y-1 pl-6">
+                    {feeds.map((feed, index) => (
+                      <label
+                        key={index}
+                        className="flex items-start gap-2 p-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name="feed"
+                          value={index}
+                          checked={selectedFeedIndex === index}
+                          onChange={() => setSelectedFeedIndex(index)}
+                          className="w-4 h-4 mt-0.5"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium truncate">
+                              {feed.title || 'Untitled Feed'}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {feed.type}
+                            </Badge>
+                          </div>
+                          {feed.description && (
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                              {feed.description}
+                            </p>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Folder Selection */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">
@@ -101,7 +166,7 @@ export function FeedSubscriptionModal({
                 {folders.map((folder) => (
                   <label
                     key={folder.id}
-                    className="flex items-center gap-2 p-2 rounded border hover:bg-gray-50 cursor-pointer"
+                    className="flex items-center gap-2 p-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
                   >
                     <input
                       type="radio"
@@ -115,7 +180,7 @@ export function FeedSubscriptionModal({
                   </label>
                 ))}
                 {folders.length === 0 && (
-                  <p className="text-sm text-gray-500 py-2">
+                  <p className="text-sm text-muted-foreground py-2">
                     No folders available. Create a folder first.
                   </p>
                 )}

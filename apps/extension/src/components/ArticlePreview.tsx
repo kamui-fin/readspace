@@ -1,20 +1,13 @@
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { formatRelativeDate, extractDomain } from '@readspace/shared'
-import type { PageMetadata, DiscoveredFeed } from '@readspace/shared'
+import type { PageMetadata } from '@readspace/shared'
 import {
   BookOpen,
   Clock,
   Calendar,
   Globe,
-  Rss,
   Settings,
-  BellPlus,
-  Copy,
 } from 'lucide-react'
-import { useState } from 'react'
-import toast from 'react-hot-toast'
-import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 
 interface ArticlePreviewProps {
   metadata: PageMetadata
@@ -31,34 +24,12 @@ export function ArticlePreview({
   onAdvancedSave,
   readingTime,
 }: ArticlePreviewProps) {
-  const [selectedFeed, setSelectedFeed] = useState<DiscoveredFeed | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const domain = metadata.canonical_url
     ? extractDomain(metadata.canonical_url)
     : ''
   const publishedDate = metadata.published_at
     ? new Date(metadata.published_at)
     : null
-
-  const handleSubscribeClick = (feed: DiscoveredFeed) => {
-    setSelectedFeed(feed)
-    setIsModalOpen(true)
-  }
-
-  const handleModalClose = () => {
-    setIsModalOpen(false)
-    setSelectedFeed(null)
-  }
-
-  const copyFeedUrl = async (feedUrl: string) => {
-    try {
-      await navigator.clipboard.writeText(feedUrl)
-      toast.success('Feed URL copied to clipboard!')
-    } catch (error) {
-      console.error('Failed to copy feed URL:', error)
-      toast.error('Failed to copy feed URL to clipboard')
-    }
-  }
 
   return (
     <div className="bg-card border rounded-lg overflow-hidden">
@@ -160,85 +131,6 @@ export function ArticlePreview({
             Options
           </Button>
         </div>
-
-        {/* RSS Feeds Section */}
-        {metadata.feeds && metadata.feeds.length > 0 && (
-          <div className="border-t pt-4 mt-4">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
-              RSS FEEDS DISCOVERED ({metadata.feeds.length})
-            </h4>
-
-            <div className="space-y-2">
-              {metadata.feeds.map((feed, index) => (
-                <div
-                  key={index}
-                  className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Rss className="w-3 h-3 text-orange-500 flex-shrink-0" />
-                        <h5 className="text-sm font-medium truncate">
-                          {feed.title || 'RSS Feed'}
-                        </h5>
-                      </div>
-
-                      {feed.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                          {feed.description}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-2">
-                        <Badge
-                          variant="outline"
-                          className="text-xs px-1.5 py-0.5 h-auto"
-                        >
-                          {feed.type.toUpperCase()}
-                        </Badge>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <Button
-                        onClick={() => copyFeedUrl(feed.url)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        title="Copy feed URL"
-                      >
-                        <Copy className="w-3 h-3" />
-                      </Button>
-
-                      <Button
-                        onClick={() => handleSubscribeClick(feed)}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        title="Subscribe to feed"
-                      >
-                        <BellPlus className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Feed Subscription Modal */}
-        {selectedFeed && (
-          <FeedSubscriptionModal
-            feed={selectedFeed}
-            isOpen={isModalOpen}
-            onClose={handleModalClose}
-            onSuccess={() => {
-              console.log('Feed subscription successful!')
-              // Toast is already shown in FeedSubscriptionModal
-            }}
-          />
-        )}
       </div>
     </div>
   )

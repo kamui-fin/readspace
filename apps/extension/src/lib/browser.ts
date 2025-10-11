@@ -94,4 +94,21 @@ export const notifications = {
   },
 }
 
+// Identity API helpers (not available in webextension-polyfill)
+// Must use native chrome.identity API directly
+export const identity = {
+  getRedirectURL(path?: string): string {
+    if (typeof chrome !== 'undefined' && chrome.identity) {
+      return chrome.identity.getRedirectURL(path)
+    }
+    // Fallback for Firefox (construct manually)
+    // Firefox uses a different format
+    const extensionId =
+      typeof browser !== 'undefined' && browser.runtime
+        ? browser.runtime.id
+        : ''
+    return `https://${extensionId}.extensions.allizom.org/`
+  },
+}
+
 export default browser

@@ -8,7 +8,7 @@ import {
   SaveOptions,
   User,
 } from '@readspace/shared'
-import { ApiExtensionClient } from '@/lib/api-client'
+import { ApiClient, configureExtensionApiClient } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -66,9 +66,6 @@ const defaultSettings: ExtensionSettings = {
   theme: 'system',
 }
 
-// Note: ApiExtensionClient auto-configures itself from extension storage
-// No manual configuration needed
-
 export const useExtensionStore = create<ExtensionState>()(
   persist(
     (set, get) => ({
@@ -87,9 +84,9 @@ export const useExtensionStore = create<ExtensionState>()(
         const settings = { ...get().settings, ...newSettings }
         set({ settings })
 
-        // Force reconfiguration of API client if URL or token changed
+        // Reconfigure API client if URL or token changed
         if (newSettings.readspace_url || newSettings.access_token) {
-          await ApiExtensionClient.reconfigure()
+          configureExtensionApiClient()
         }
 
         // Reset Supabase client if settings changed to force recreation with new settings
@@ -147,14 +144,18 @@ export const useExtensionStore = create<ExtensionState>()(
           const { settings } = get()
           const updatedSettings = { ...settings, access_token: accessToken }
 
-          // Force reconfiguration and test authentication by getting user profile
-          await ApiExtensionClient.reconfigure()
-          const user = (await ApiExtensionClient.users.getProfile()) as User
+          // Update settings in store first
+          set({ settings: updatedSettings })
+
+          // Reconfigure API client with the new access token
+          configureExtensionApiClient()
+
+          // Test authentication by getting user profile
+          const user = (await ApiClient.users.getProfile()) as User
 
           set({
             user,
             isAuthenticated: true,
-            settings: updatedSettings,
             isConnecting: false,
           })
 
@@ -191,20 +192,14 @@ export const useExtensionStore = create<ExtensionState>()(
           folders: [],
           settings: updatedSettings,
         })
-
-        // Force reconfiguration without token
-        await ApiExtensionClient.reconfigure()
       },
 
       updateToken: async (accessToken: string) => {
         const { settings } = get()
         const updatedSettings = { ...settings, access_token: accessToken }
 
-        // Update settings
+        // Update settings - the getAuthToken function will pick up the new token
         set({ settings: updatedSettings })
-
-        // Force reconfiguration with new token
-        await ApiExtensionClient.reconfigure()
       },
 
       // Loading states
@@ -221,8 +216,7 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isLoading: true })
         try {
-          const folders =
-            (await ApiExtensionClient.rss.getFolders()) as Folder[]
+          const folders = (await ApiClient.rss.getFolders()) as Folder[]
 
           set({ folders })
         } catch (error) {
@@ -294,7 +288,7 @@ export const useExtensionStore = create<ExtensionState>()(
               : 'no content',
           })
 
-          const article = (await ApiExtensionClient.rss.saveArticle(
+          const article = (await ApiClient.rss.saveArticle(
             saveRequest
           )) as Article
           return article
@@ -311,7 +305,7 @@ export const useExtensionStore = create<ExtensionState>()(
         }
 
         try {
-          await ApiExtensionClient.rss.createFeed({
+          await ApiClient.rss.createFeed({
             url: feedUrl,
             folder_id: options.folder_id || settings.default_folder_id,
           })
@@ -336,7 +330,7 @@ export const useExtensionStore = create<ExtensionState>()(
           // Subscribe to feeds one by one since there's no bulk endpoint in the current API
           await Promise.all(
             feeds.map((feed) =>
-              ApiExtensionClient.rss.createFeed({
+              ApiClient.rss.createFeed({
                 url: feed.url,
                 folder_id: options.folder_id || settings.default_folder_id,
               })
@@ -361,18 +355,41 @@ export const useExtensionStore = create<ExtensionState>()(
         folders: state.folders,
       }),
       onRehydrateStorage: () => (state) => {
-        if (
-          state?.isAuthenticated &&
-          state?.settings?.access_token &&
-          state?.settings?.readspace_url
-        ) {
-          // API client will auto-configure on first use
-          console.log(
-            'Extension state rehydrated with authentication token',
-            state.settings.access_token ? 'present' : 'missing'
-          )
+        if (state?.isAuthenticated && state?.settings?.access_token) {
+          console.log('Extension state rehydrated with authentication')
         }
+
+        // Configure ApiClient after store is rehydrated
+        configureExtensionApiClient()
       },
     }
   )
 )
+
+// Configure ApiClient immediately after store creation
+configureExtensionApiClient()
+
+// Listen for OAuth login success from background script
+if (typeof chrome !== 'undefined' && chrome.runtime) {
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message.action === 'oauth-login-success' && message.access_token) {
+      console.log('OAuth login success message received')
+
+      // Call the login function with the access token
+      useExtensionStore
+        .getState()
+        .login(message.access_token)
+        .then(() => {
+          console.log('OAuth login completed successfully')
+          sendResponse({ success: true })
+        })
+        .catch((error) => {
+          console.error('OAuth login failed:', error)
+          sendResponse({ success: false, error: error.message })
+        })
+
+      // Return true to indicate async response
+      return true
+    }
+  })
+}

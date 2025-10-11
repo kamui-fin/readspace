@@ -205,7 +205,11 @@ export function FeedSubscriptionModal({
                                         hyphens: "auto",
                                     }}
                                 >
-                                    {feed.title || "Untitled Feed"}
+                                    {feed.title ||
+                                        (feed.link
+                                            ? new URL(feed.link).pathname ||
+                                              "/rss"
+                                            : "Untitled Feed")}
                                 </h3>
                             </div>
                             {feed.link && (

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:firefox": "npm run build:firefox && web-ext run --source-dir dist-firefox",
+    "dev:firefox:watch": "vite build --mode firefox --watch",
     "build": "npm run build:chrome",
     "build:chrome": "tsc && vite build",
     "build:firefox": "tsc && vite build --mode firefox",
@@ -79,6 +80,8 @@
       "128": "icons/icon128.png"
     },
     "permissions": [
+      "identity",
+      "tabs",
       "activeTab",
       "storage",
       "contextMenus",

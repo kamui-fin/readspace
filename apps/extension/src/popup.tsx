@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import toast, { Toaster } from 'react-hot-toast'
 import './index.css'
 import { ArticlePreview } from './components/ArticlePreview'
+import { FeedDiscoveryCard } from './components/FeedDiscoveryCard'
 import { AdvancedSaveOptions } from './components/AdvancedSaveOptions'
 import { LoginForm } from './components/LoginForm'
 import { Settings } from './components/Settings'
@@ -313,6 +314,15 @@ export function Popup() {
         />
       ) : (
         <div className="space-y-4">
+          {/* RSS Feed Discovery Card */}
+          {currentPageMetadata?.feeds &&
+            currentPageMetadata.feeds.length > 0 && (
+              <FeedDiscoveryCard
+                feeds={currentPageMetadata.feeds}
+                websiteTitle={currentPageMetadata.title}
+              />
+            )}
+
           {/* Current Page Preview */}
           {currentPageMetadata && (
             <ArticlePreview
