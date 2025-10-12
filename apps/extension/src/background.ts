@@ -5,6 +5,8 @@ import { ApiClient } from '@/lib/api-client'
 import type { Runtime } from 'webextension-polyfill'
 import { extractOAuthTokens } from '@/lib/oauth'
 import { getSupabaseClient } from '@/lib/supabase'
+import { pageCache } from '@/lib/page-cache'
+import type { CachedPageMetadata, CachedPageContent } from '@/lib/page-cache'
 
 // Type for content extraction result
 interface ContentExtractionResult {
@@ -14,6 +16,7 @@ interface ContentExtractionResult {
   author?: string
   published_at?: string
   image_url?: string
+  estimated_read_time?: number
 }
 
 // Type for page metadata response
@@ -37,6 +40,34 @@ console.log(`Readspace background script loaded on ${getBrowserName()}`)
 // Check if URL is supported (http/https)
 function isSupportedUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://')
+}
+
+// Validate if a URL is a valid RSS/Atom feed using HEAD request
+async function validateFeedUrl(url: string): Promise<boolean> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      signal: AbortSignal.timeout(3000),
+    })
+
+    if (!response.ok) {
+      return false
+    }
+
+    const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+
+    // Check if content type indicates a feed
+    return (
+      contentType.includes('xml') ||
+      contentType.includes('rss') ||
+      contentType.includes('atom') ||
+      contentType.includes('json') ||
+      contentType.includes('application/rss') ||
+      contentType.includes('application/atom')
+    )
+  } catch {
+    return false
+  }
 }
 
 // Update badge with RSS feed count
@@ -103,7 +134,9 @@ async function handleOAuthCallback(url: string, tabId: number) {
     // Get Supabase configuration from storage
     const storageData = await browser.storage.local.get('readspace-extension')
     const storeState = storageData['readspace-extension'] as {
-      state?: { settings?: { supabase_url?: string; supabase_anon_key?: string } }
+      state?: {
+        settings?: { supabase_url?: string; supabase_anon_key?: string }
+      }
     }
 
     const supabaseUrl =
@@ -172,7 +205,87 @@ async function handleOAuthCallback(url: string, tabId: number) {
   }
 }
 
-// Check for RSS feeds when tab is updated
+// Legacy in-memory cache for tab metadata and content (keyed by tabId)
+// This is kept for backward compatibility with the existing getCachedMetadata/getCachedContent messages
+const metadataCache = new Map<number, PageMetadataResponse>()
+const contentCache = new Map<number, ContentExtractionResult>()
+
+/**
+ * Validate suggested feeds in background and update caches with only valid feeds
+ */
+async function validateAndUpdateFeeds(
+  tabId: number,
+  url: string,
+  feeds: Array<{ url: string; title?: string; type: string }>
+): Promise<void> {
+  console.log(`Validating ${feeds.length} feeds in background for ${url}`)
+
+  // Validate feeds in parallel (with concurrency limit of 3 to avoid overwhelming the browser)
+  const validFeeds: Array<{ url: string; title?: string; type: string }> = []
+
+  for (let i = 0; i < feeds.length; i += 3) {
+    const batch = feeds.slice(i, i + 3)
+    const results = await Promise.all(
+      batch.map(async (feed) => {
+        const isValid = await validateFeedUrl(feed.url)
+        return { feed, isValid }
+      })
+    )
+
+    results.forEach(({ feed, isValid }) => {
+      if (isValid) {
+        validFeeds.push(feed)
+        console.log(`✓ Feed validated: ${feed.url}`)
+      } else {
+        console.log(`✗ Feed invalid: ${feed.url}`)
+      }
+    })
+  }
+
+  // Update caches with validated feeds only if we found valid feeds
+  if (validFeeds.length > 0 && validFeeds.length !== feeds.length) {
+    console.log(
+      `Updating caches with ${validFeeds.length} validated feeds (filtered from ${feeds.length})`
+    )
+
+    // Update legacy cache
+    const legacyCached = metadataCache.get(tabId)
+    if (legacyCached) {
+      legacyCached.feeds = validFeeds
+      metadataCache.set(tabId, legacyCached)
+    }
+
+    // Update persistent cache
+    const persistentCached = await pageCache.getMetadata(url)
+    if (persistentCached) {
+      persistentCached.feeds = validFeeds
+      await pageCache.setMetadata(url, persistentCached)
+    }
+
+    // Update badge with validated count
+    await updateFeedBadge(tabId, validFeeds.length)
+  } else if (validFeeds.length === 0) {
+    console.log('No valid feeds found after validation')
+    // Clear feed list if nothing is valid
+    const legacyCached = metadataCache.get(tabId)
+    if (legacyCached) {
+      legacyCached.feeds = []
+      metadataCache.set(tabId, legacyCached)
+    }
+
+    const persistentCached = await pageCache.getMetadata(url)
+    if (persistentCached) {
+      persistentCached.feeds = []
+      await pageCache.setMetadata(url, persistentCached)
+    }
+
+    await updateFeedBadge(tabId, 0)
+  } else {
+    console.log('All feeds are valid, no cache update needed')
+  }
+}
+
+// Check for RSS feeds when tab is updated and cache metadata
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   // Check for OAuth callback first
   if (changeInfo.url?.startsWith(identity.getRedirectURL())) {
@@ -180,9 +293,15 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return
   }
 
+  // Clear legacy caches when URL changes
+  if (changeInfo.url) {
+    metadataCache.delete(tabId)
+    contentCache.delete(tabId)
+  }
+
   if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
     try {
-      // Wait a bit for the page to fully load
+      // Start metadata extraction immediately without delay for faster preloading
       setTimeout(async () => {
         try {
           // Get full metadata which includes feeds
@@ -190,13 +309,42 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             action: 'extractMetadata',
           })) as PageMetadataResponse
 
+          // Cache the metadata in both legacy cache and new persistent cache
+          metadataCache.set(tabId, metadata)
+          await pageCache.setMetadata(tab.url!, metadata as CachedPageMetadata)
+
           const feedCount = metadata?.feeds?.length || 0
           console.log(
-            `Found ${feedCount} feeds on tab ${tabId}:`,
+            `Found ${feedCount} feeds on tab ${tabId}, metadata cached for ${tab.url}`,
             metadata?.feeds
           )
 
           await updateFeedBadge(tabId, feedCount)
+
+          // Validate suggested feeds in background and update cache with only valid feeds
+          if (metadata?.feeds && metadata.feeds.length > 0) {
+            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch((error) => {
+              console.log('Failed to validate feeds in background:', error)
+            })
+          }
+
+          // Also extract and cache content for reading time (in background)
+          try {
+            const content = (await browser.tabs.sendMessage(tabId, {
+              action: 'extractContent',
+            })) as ContentExtractionResult
+
+            if (content) {
+              contentCache.set(tabId, content)
+              await pageCache.setContent(tab.url!, content as CachedPageContent)
+              console.log(
+                `Content cached for tab ${tabId} (${tab.url}), reading time: ${content.estimated_read_time || 0} min`
+              )
+            }
+          } catch (contentError) {
+            console.log('Could not extract content for caching:', contentError)
+            // Non-critical, just continue
+          }
         } catch (error) {
           // Content script might not be available yet, ignore error
           console.log(
@@ -205,7 +353,7 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
           )
           await updateFeedBadge(tabId, 0)
         }
-      }, 2000) // Increased timeout to ensure content script is ready
+      }, 500) // Reduced timeout for faster metadata extraction
     } catch (error) {
       console.error('Error checking for RSS feeds:', error)
     }
@@ -228,12 +376,38 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
 })
 
 // Context menu setup
-browser.runtime.onInstalled.addListener(() => {
-  // Extension installed
+browser.runtime.onInstalled.addListener(async () => {
+  // Create context menu for saving to Readspace
+  try {
+    await browser.contextMenus.create({
+      id: 'save-to-readspace',
+      title: 'Save to Readspace',
+      contexts: ['page', 'link', 'selection'],
+    })
+    console.log('Context menu created successfully')
+  } catch (error) {
+    console.error('Failed to create context menu:', error)
+  }
 })
 
-// Handle context menu clicks (removed)
-// Context menu functionality removed
+// Handle context menu clicks
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
+  if (info.menuItemId === 'save-to-readspace' && tab?.url) {
+    // Determine the URL to save
+    const urlToSave = info.linkUrl || info.frameUrl || tab.url
+
+    if (urlToSave && isSupportedUrl(urlToSave)) {
+      await handleSaveToReadspace(urlToSave, tab)
+    } else {
+      browser.notifications.create('unsupported-url', {
+        type: 'basic',
+        iconUrl: 'icons/icon-48.png',
+        title: 'Readspace',
+        message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
+      })
+    }
+  }
+})
 
 // Handle keyboard shortcuts
 browser.commands.onCommand.addListener((command: string) => {
@@ -279,6 +453,50 @@ browser.runtime.onMessage.addListener(
     sendResponse: (response?: unknown) => void
   ) => {
     const messageRequest = request as MessageRequest
+
+    // Handle getCachedMetadata - return cached data instantly if available (legacy tabId-based)
+    if (messageRequest.action === 'getCachedMetadata') {
+      const tabId = messageRequest.tabId as number
+      const cached = metadataCache.get(tabId)
+      sendResponse(cached || null)
+      return true // Keep channel open even for synchronous response
+    }
+
+    // Handle getCachedContent - return cached content data instantly if available (legacy tabId-based)
+    if (messageRequest.action === 'getCachedContent') {
+      const tabId = messageRequest.tabId as number
+      const cached = contentCache.get(tabId)
+      sendResponse(cached || null)
+      return true // Keep channel open even for synchronous response
+    }
+
+    // Handle getCachedMetadataByUrl - return cached metadata by URL
+    if (messageRequest.action === 'getCachedMetadataByUrl') {
+      const url = messageRequest.url as string
+      pageCache.getMetadata(url)
+        .then(sendResponse)
+        .catch(() => sendResponse(null))
+      return true // Keep channel open for async response
+    }
+
+    // Handle getCachedContentByUrl - return cached content by URL
+    if (messageRequest.action === 'getCachedContentByUrl') {
+      const url = messageRequest.url as string
+      pageCache.getContent(url)
+        .then(sendResponse)
+        .catch(() => sendResponse(null))
+      return true // Keep channel open for async response
+    }
+
+    // Handle getCachedPageByUrl - return full cached page data by URL
+    if (messageRequest.action === 'getCachedPageByUrl') {
+      const url = messageRequest.url as string
+      pageCache.get(url)
+        .then(sendResponse)
+        .catch(() => sendResponse(null))
+      return true // Keep channel open for async response
+    }
+
     // Handle the async extractContent case
     if (messageRequest.action === 'extractContent') {
       if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {

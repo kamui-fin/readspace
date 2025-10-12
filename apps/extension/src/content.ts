@@ -16,8 +16,11 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
   chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     switch (request.action) {
       case 'extractMetadata':
-        sendResponse(extractPageMetadata())
-        break
+        // Fast extraction - discover feeds in background
+        extractPageMetadataFast()
+          .then(sendResponse)
+          .catch((error) => sendResponse({ error: error.message }))
+        return true // Keep message channel open for async response
       case 'extractContent':
         extractArticleContent()
           .then(sendResponse)
@@ -32,10 +35,11 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
   })
 
   /**
-   * Extract basic metadata from the current page
+   * Extract basic metadata from the current page (FAST - no feed validation)
    */
-  async function extractPageMetadata() {
-    const feeds = await discoverRSSFeeds()
+  async function extractPageMetadataFast() {
+    // Discover feeds quickly without validation for faster response
+    const feeds = await discoverRSSFeedsFast()
 
     const metadata = {
       title: getTitle(),
@@ -49,6 +53,101 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
     }
 
     return metadata
+  }
+
+  /**
+   * Discover RSS feeds quickly without validation (for fast popup display)
+   */
+  async function discoverRSSFeedsFast() {
+    const feeds: Array<{ url: string; title?: string; type: string }> = []
+    const discoveredUrls = new Set<string>()
+
+    // Phase 1: Check link tags - ONLY proper RSS/Atom feed link tags with rel="alternate"
+    const feedLinks = document.querySelectorAll(
+      [
+        'link[rel="alternate"][type="application/rss+xml"]',
+        'link[rel="alternate"][type="application/atom+xml"]',
+        'link[rel="alternate"][type="application/json"]',
+        'link[rel="alternate"][type="application/feed+json"]',
+        'link[type="application/rss+xml"]',
+        'link[type="application/atom+xml"]',
+      ].join(', ')
+    )
+
+    for (const link of feedLinks) {
+      const href = link.getAttribute('href')
+      const title = link.getAttribute('title')
+      const type = link.getAttribute('type')
+
+      if (href) {
+        const absoluteUrl = makeAbsoluteUrl(href)
+
+        // Skip if URL looks like a static asset file
+        if (absoluteUrl.match(/\.(jpg|jpeg|png|gif|svg|webp|ico|js|css|woff|woff2|ttf|eot|mp4|webm|pdf)(\?.*)?$/i)) {
+          console.log('Skipping asset file:', absoluteUrl)
+          continue
+        }
+
+        // Skip if URL contains common asset directory patterns
+        if (absoluteUrl.match(/\/(static|assets|images?|img|media|js|css|fonts?|dist|build)\//i)) {
+          console.log('Skipping asset directory:', absoluteUrl)
+          continue
+        }
+
+        if (!discoveredUrls.has(absoluteUrl)) {
+          discoveredUrls.add(absoluteUrl)
+          const feedType = type?.includes('atom')
+            ? 'atom'
+            : type?.includes('json')
+              ? 'json'
+              : 'rss'
+
+          feeds.push({
+            url: absoluteUrl,
+            title: title || undefined,
+            type: feedType,
+          })
+        }
+      }
+    }
+
+    // Phase 2: Add common RSS URL patterns without validation (fast heuristics)
+    // Only suggest if NO feeds were found in link tags
+    if (feeds.length === 0) {
+      const baseUrl = window.location.origin
+      const currentPath = window.location.pathname
+
+      // Only suggest the most common patterns (limit to 2 suggestions)
+      const feedPatterns = [
+        '/rss',
+        '/feed',
+      ]
+
+      // Add blog-specific pattern if we're on a blog/article
+      if (currentPath.includes('/blog/') || currentPath.includes('/post/') || currentPath.includes('/article/')) {
+        const pathParts = currentPath.split('/').filter(p => p)
+        if (pathParts.length >= 1) {
+          const blogPath = '/' + pathParts[0]
+          // Prepend blog-specific pattern as first choice
+          feedPatterns.unshift(`${blogPath}/feed`)
+        }
+      }
+
+      // Add only the first 2 patterns without validation
+      for (const pattern of feedPatterns.slice(0, 2)) {
+        const testUrl = baseUrl + pattern
+        if (!discoveredUrls.has(testUrl)) {
+          discoveredUrls.add(testUrl)
+          feeds.push({
+            url: testUrl,
+            title: undefined,
+            type: 'rss',
+          })
+        }
+      }
+    }
+
+    return feeds
   }
 
   function getTitle(): string {

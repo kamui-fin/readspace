@@ -484,7 +484,7 @@ export class ApiClient {
       title?: string;
       content?: string;
       metadata?: Record<string, string>;
-    }) => this.post("/api/v1/articles/save", data),
+    }) => this.post("/api/rss/articles/save", data),
 
     // Discover endpoints
     searchFeeds: (params?: {
