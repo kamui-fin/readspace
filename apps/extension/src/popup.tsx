@@ -4,9 +4,9 @@ import toast, { Toaster } from 'react-hot-toast'
 import './index.css'
 import { ArticlePreview } from './components/ArticlePreview'
 import { FeedDiscoveryCard } from './components/FeedDiscoveryCard'
-import { AdvancedSaveOptions } from './components/AdvancedSaveOptions'
 import { LoginForm } from './components/LoginForm'
 import { Settings } from './components/Settings'
+import ThemeSwitcher from './components/ThemeSwitcher'
 import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
 import {
@@ -29,19 +29,117 @@ export function Popup() {
   } = useExtensionStore()
 
   const [currentView, setCurrentView] = useState<
-    'main' | 'settings' | 'login' | 'advanced-save'
+    'main' | 'settings' | 'login'
   >('main')
   const [currentTab, setCurrentTab] = useState<chrome.tabs.Tab | null>(null)
   const [readingTime, setReadingTime] = useState<number | undefined>()
   const [isUnsupportedPage, setIsUnsupportedPage] = useState(false)
+  const [isMetadataLoading, setIsMetadataLoading] = useState(true)
+  const [isFeedDataLoading, setIsFeedDataLoading] = useState(true)
 
   const extractPageMetadata = useCallback(
     async (tab: chrome.tabs.Tab) => {
-      if (!tab.id) return
+      if (!tab.id || !tab.url) return
 
-      const sendMessage = <T,>(action: string): Promise<T> => {
+      // Immediately show basic tab info - don't block the UI
+      setCurrentPageMetadata({
+        title: tab.title,
+        canonical_url: tab.url,
+        favicon: tab.favIconUrl,
+      })
+      setIsMetadataLoading(false)
+      setIsFeedDataLoading(false)
+
+      // Try to get cached page data by URL from persistent cache
+      let foundCacheWithFeeds = false
+      try {
+        const cachedPage = await chrome.runtime.sendMessage({
+          action: 'getCachedPageByUrl',
+          url: tab.url,
+        })
+
+        if (cachedPage) {
+          console.log('Using cached page data from persistent cache for:', tab.url)
+
+          // If we have cached metadata, use it immediately
+          if (cachedPage.metadata) {
+            setCurrentPageMetadata(cachedPage.metadata)
+            // Check if we have feeds in cache
+            if (cachedPage.metadata.feeds && cachedPage.metadata.feeds.length > 0) {
+              foundCacheWithFeeds = true
+            }
+          }
+
+          // If we have cached content with reading time, use it immediately
+          if (cachedPage.content?.estimated_read_time) {
+            console.log(
+              'Using cached reading time from persistent cache:',
+              cachedPage.content.estimated_read_time
+            )
+            setReadingTime(cachedPage.content.estimated_read_time)
+          }
+        }
+      } catch (error) {
+        console.log('No cached page data available:', error)
+      }
+
+      // Also try legacy tabId-based cache as fallback (for current tab before it's cached by URL)
+      if (!foundCacheWithFeeds) {
+        try {
+          const cachedMetadata = await chrome.runtime.sendMessage({
+            action: 'getCachedMetadata',
+            tabId: tab.id,
+          })
+
+          if (cachedMetadata) {
+            console.log('Using cached metadata from legacy cache (tabId-based)')
+            setCurrentPageMetadata(cachedMetadata)
+            // Check if we have feeds in legacy cache
+            if (cachedMetadata.feeds && cachedMetadata.feeds.length > 0) {
+              foundCacheWithFeeds = true
+            }
+          }
+        } catch (error) {
+          console.log('No legacy cached metadata available:', error)
+        }
+
+        // Also try legacy content cache for reading time
+        try {
+          const cachedContent = await chrome.runtime.sendMessage({
+            action: 'getCachedContent',
+            tabId: tab.id,
+          })
+
+          if (cachedContent?.estimated_read_time) {
+            console.log(
+              'Using cached reading time from legacy cache:',
+              cachedContent.estimated_read_time
+            )
+            setReadingTime(cachedContent.estimated_read_time)
+          }
+        } catch (error) {
+          console.log('No legacy cached content available:', error)
+        }
+      }
+
+      // If we found cache with feeds, we're done - don't extract again
+      // But if cache has no feeds, still try to discover them fresh
+      if (foundCacheWithFeeds) {
+        console.log('Using cached data with feeds, skipping fresh extraction')
+        return
+      } else {
+        console.log('No cached feeds found, will try fresh extraction')
+      }
+
+      // No cache found - extract metadata in background (non-blocking)
+      const sendMessage = <T,>(action: string, timeout = 5000): Promise<T> => {
         return new Promise((resolve, reject) => {
+          const timer = setTimeout(() => {
+            reject(new Error(`Timeout: ${action} took longer than ${timeout}ms`))
+          }, timeout)
+
           chrome.tabs.sendMessage(tab.id!, { action }, (response) => {
+            clearTimeout(timer)
             if (chrome.runtime.lastError) {
               reject(new Error(chrome.runtime.lastError.message))
             } else {
@@ -51,60 +149,31 @@ export function Popup() {
         })
       }
 
-      try {
-        let metadata: PageMetadata | undefined
-        try {
-          metadata = await sendMessage<PageMetadata>('extractMetadata')
-        } catch (e: unknown) {
-          if (
-            e instanceof Error &&
-            e.message?.includes('Receiving end does not exist')
-          ) {
-            console.log('Content script not available. This can happen when:')
-            console.log(
-              '1. The page was loaded before the extension was enabled'
-            )
-            console.log(
-              '2. The page is a special Chrome page (chrome://, chrome-extension://, etc.)'
-            )
-            console.log('3. The content script failed to load')
-
-            // Instead of trying to inject manually, we'll fall back to basic tab info
-            // The content script should automatically load on page refresh or navigation
-            throw new Error(
-              'Content script not available. Try refreshing the page.'
-            )
-          } else {
-            throw e
+      // Extract metadata in background - don't block UI
+      sendMessage<PageMetadata>('extractMetadata', 3000)
+        .then((metadata) => {
+          if (metadata) {
+            console.log('Fresh metadata extracted:', metadata)
+            setCurrentPageMetadata(metadata)
           }
-        }
-        setCurrentPageMetadata(metadata)
+        })
+        .catch((error) => {
+          console.log('Failed to extract fresh metadata (non-critical):', error)
+          // Don't show error - we already have basic tab info displayed
+        })
 
-        // Also try to get full content for reading time calculation
-        try {
-          const contentData: { estimated_read_time?: number } =
-            await sendMessage('extractContent')
-          if (contentData && contentData.estimated_read_time) {
+      // Extract content in background for reading time - don't block UI
+      sendMessage<{ estimated_read_time?: number }>('extractContent', 10000)
+        .then((contentData) => {
+          if (contentData?.estimated_read_time) {
+            console.log('Fresh reading time extracted:', contentData.estimated_read_time)
             setReadingTime(contentData.estimated_read_time)
           }
-        } catch (error) {
-          console.error('Failed to extract content for reading time:', error)
-          // Don't show toast for reading time extraction failure as it's non-critical
-        }
-      } catch (error) {
-        console.error('Failed to extract page metadata:', error)
-        // Show user-friendly error message
-        toast.error(
-          'Failed to extract page information. Try refreshing the page.'
-        )
-
-        // Fallback to basic tab information
-        setCurrentPageMetadata({
-          title: tab.title,
-          canonical_url: tab.url,
-          favicon: tab.favIconUrl,
         })
-      }
+        .catch((error) => {
+          console.log('Failed to extract reading time (non-critical):', error)
+          // Don't show error - reading time is optional
+        })
     },
     [setCurrentPageMetadata]
   )
@@ -144,10 +213,6 @@ export function Popup() {
         `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     }
-  }
-
-  const handleAdvancedSave = () => {
-    setCurrentView('advanced-save')
   }
 
   const openReadspace = () => {
@@ -283,56 +348,52 @@ export function Popup() {
           </div>
           <h1 className="font-semibold">Readspace</h1>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={openReadspace}
-            className="h-8 w-8 p-0"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setCurrentView('settings')}
-            className="h-8 w-8 p-0"
-          >
-            <SettingsIcon className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          <ThemeSwitcher />
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={openReadspace}
+              className="h-8 w-8 p-0"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setCurrentView('settings')}
+              className="h-8 w-8 p-0"
+            >
+              <SettingsIcon className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
       {currentView === 'settings' ? (
         <Settings onBack={() => setCurrentView('main')} />
-      ) : currentView === 'advanced-save' && currentPageMetadata ? (
-        <AdvancedSaveOptions
-          metadata={currentPageMetadata}
-          onSave={handleSaveArticle}
-          onCancel={() => setCurrentView('main')}
-          isLoading={isSaving}
-        />
       ) : (
         <div className="space-y-4">
-          {/* RSS Feed Discovery Card */}
-          {currentPageMetadata?.feeds &&
-            currentPageMetadata.feeds.length > 0 && (
-              <FeedDiscoveryCard
-                feeds={currentPageMetadata.feeds}
-                websiteTitle={currentPageMetadata.title}
-              />
-            )}
-
-          {/* Current Page Preview */}
-          {currentPageMetadata && (
-            <ArticlePreview
-              metadata={currentPageMetadata}
-              isLoading={isSaving}
-              onSave={() => handleSaveArticle()}
-              onAdvancedSave={handleAdvancedSave}
-              readingTime={readingTime}
+          {/* RSS Feed Discovery Card - Show skeleton while loading or if feeds exist */}
+          {(isFeedDataLoading ||
+            (currentPageMetadata?.feeds &&
+              currentPageMetadata.feeds.length > 0)) && (
+            <FeedDiscoveryCard
+              feeds={currentPageMetadata?.feeds}
+              websiteTitle={currentPageMetadata?.title}
+              isLoading={isFeedDataLoading}
             />
           )}
+
+          {/* Current Page Preview - Always show, with skeleton while loading */}
+          <ArticlePreview
+            metadata={currentPageMetadata || undefined}
+            isLoading={isSaving}
+            isMetadataLoading={isMetadataLoading}
+            onSave={handleSaveArticle}
+            readingTime={readingTime}
+          />
         </div>
       )}
     </div>

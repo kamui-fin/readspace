@@ -3,6 +3,7 @@ import {
   Article,
   DiscoveredFeed,
   ExtensionSettings,
+  Feed,
   Folder,
   PageMetadata,
   SaveOptions,
@@ -28,6 +29,7 @@ interface ExtensionState {
 
   // Data
   folders: Folder[]
+  feeds: Feed[]
 
   // Loading states
   isLoading: boolean
@@ -75,6 +77,7 @@ export const useExtensionStore = create<ExtensionState>()(
       user: null,
       isAuthenticated: false,
       folders: [],
+      feeds: [],
       isLoading: false,
       isConnecting: false,
       isSaving: false,
@@ -217,9 +220,12 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isLoading: true })
         try {
-          const folders = (await ApiClient.rss.getFolders()) as Folder[]
+          const [folders, feeds] = await Promise.all([
+            ApiClient.rss.getFolders() as Promise<Folder[]>,
+            ApiClient.rss.getFeeds() as Promise<Feed[]>,
+          ])
 
-          set({ folders })
+          set({ folders, feeds })
         } catch (error) {
           console.error('Failed to load user data:', error)
           toast.error('Failed to load user data. Please try again.')
@@ -234,25 +240,43 @@ export const useExtensionStore = create<ExtensionState>()(
 
         set({ isSaving: true })
         try {
-          // Extract content from the current page
-          console.log('Extracting content for article save...')
+          // First, try to get cached content from persistent cache
+          console.log('Checking persistent cache for article content...')
           let extractedContent = null
 
           try {
-            // Get current tab to extract content
-            const tabs = await chrome.tabs.query({
-              active: true,
-              currentWindow: true,
+            const cachedContent = await chrome.runtime.sendMessage({
+              action: 'getCachedContentByUrl',
+              url,
             })
-            if (tabs[0]?.id) {
-              extractedContent = await chrome.tabs.sendMessage(tabs[0].id, {
-                action: 'extractContent',
-                url,
-              })
-              console.log('Content extracted from page:', extractedContent)
+
+            if (cachedContent) {
+              console.log('Using cached content from persistent cache:', cachedContent)
+              extractedContent = cachedContent
             }
           } catch (error) {
-            console.error('Failed to extract content from page:', error)
+            console.log('No cached content available, will extract fresh:', error)
+          }
+
+          // If no cached content, extract from the current page
+          if (!extractedContent) {
+            console.log('Extracting content for article save...')
+            try {
+              // Get current tab to extract content
+              const tabs = await chrome.tabs.query({
+                active: true,
+                currentWindow: true,
+              })
+              if (tabs[0]?.id) {
+                extractedContent = await chrome.tabs.sendMessage(tabs[0].id, {
+                  action: 'extractContent',
+                  url,
+                })
+                console.log('Content extracted from page:', extractedContent)
+              }
+            } catch (error) {
+              console.error('Failed to extract content from page:', error)
+            }
           }
 
           // Build metadata object with only defined string values
@@ -280,6 +304,8 @@ export const useExtensionStore = create<ExtensionState>()(
               currentPageMetadata?.title,
             content: extractedContent?.content, // Include the extracted HTML content
             metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+            priority: options.priority,
+            note: options.note,
           }
 
           console.log('Saving article with request:', {
@@ -354,6 +380,7 @@ export const useExtensionStore = create<ExtensionState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
         folders: state.folders,
+        feeds: state.feeds,
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.isAuthenticated && state?.settings?.access_token) {

@@ -1,11 +1,8 @@
 import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
 import { PageMetadata, SaveOptions, Priority } from '@readspace/shared'
-import { ArrowLeft, Save } from 'lucide-react'
+import { ArrowLeft, Save, Flag, StickyNote } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface AdvancedSaveOptionsProps {
@@ -23,7 +20,7 @@ export function AdvancedSaveOptions({
 }: AdvancedSaveOptionsProps) {
   const [titleOverride, setTitleOverride] = useState('')
   const [note, setNote] = useState('')
-  const [priority, setPriority] = useState<Priority>('medium')
+  const [priority, setPriority] = useState<Priority>('low')
 
   const handleSave = async () => {
     const options: Partial<SaveOptions> = {
@@ -65,42 +62,88 @@ export function AdvancedSaveOptions({
           <Label htmlFor="title" className="text-sm font-medium">
             Custom Title (optional)
           </Label>
-          <Input
+          <input
+            type="text"
             id="title"
             value={titleOverride}
             onChange={(e) => setTitleOverride(e.target.value)}
             placeholder={metadata.title || 'Enter custom title...'}
-            className="text-sm"
+            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none transition-colors"
           />
         </div>
 
-        {/* Priority */}
+        {/* Priority - Visual buttons */}
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Priority</Label>
-          <Select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value as Priority)}
-            className="text-sm"
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </Select>
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Flag className="w-3.5 h-3.5" />
+            Priority
+          </Label>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setPriority('low')}
+              className={`
+                px-3 py-2 rounded text-sm font-medium transition-all
+                ${priority === 'low'
+                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                }
+              `}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <Flag className="w-3.5 h-3.5" />
+                Low
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPriority('medium')}
+              className={`
+                px-3 py-2 rounded text-sm font-medium transition-all
+                ${priority === 'medium'
+                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                }
+              `}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <Flag className="w-3.5 h-3.5" />
+                Medium
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPriority('high')}
+              className={`
+                px-3 py-2 rounded text-sm font-medium transition-all
+                ${priority === 'high'
+                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                }
+              `}
+            >
+              <div className="flex items-center justify-center gap-1.5">
+                <Flag className="w-3.5 h-3.5" />
+                High
+              </div>
+            </button>
+          </div>
         </div>
 
-        {/* Note */}
+        {/* Note - Enhanced design */}
         <div className="space-y-2">
-          <Label htmlFor="note" className="text-sm font-medium">
-            Note (optional)
+          <Label htmlFor="note" className="text-sm font-medium flex items-center gap-1.5">
+            <StickyNote className="w-3.5 h-3.5" />
+            Note <span className="text-muted-foreground/60 font-normal">(optional)</span>
           </Label>
-          <Textarea
+          <textarea
             id="note"
             value={note}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
               setNote(e.target.value)
             }
-            placeholder="Add a note about this article..."
-            className="text-sm min-h-[60px] resize-none"
+            placeholder="Add your thoughts, why you're saving this, or what to remember..."
+            className="w-full px-3 py-2 text-sm bg-transparent border border-primary/20 focus:border-primary/50 rounded outline-none resize-none min-h-[80px] transition-colors"
           />
         </div>
       </div>
