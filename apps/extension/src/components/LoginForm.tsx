@@ -63,7 +63,11 @@ export function LoginForm() {
 
       const response = await browser.runtime.sendMessage({
         action: 'startGoogleOAuth',
-      }) as { success: boolean; error?: string; access_token?: string }
+      }) as { success: boolean; error?: string; access_token?: string } | undefined
+
+      if (!response) {
+        throw new Error('No response from background script')
+      }
 
       if (!response.success || !response.access_token) {
         throw new Error(response.error || 'Failed to authenticate with Google')

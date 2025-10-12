@@ -454,6 +454,34 @@ browser.runtime.onMessage.addListener(
   ) => {
     const messageRequest = request as MessageRequest
 
+    // Handle async OAuth flow
+    if (messageRequest.action === 'startGoogleOAuth') {
+      handleGoogleOAuth()
+        .then((result) => sendResponse(result))
+        .catch((error) => {
+          console.error('OAuth handler error:', error)
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to complete Google sign-in'
+          })
+        })
+      return true // Keep message channel open for async response
+    }
+
+    // Handle async email/password login
+    if (messageRequest.action === 'emailPasswordLogin') {
+      handleEmailPasswordLogin(messageRequest.email as string, messageRequest.password as string)
+        .then((result) => sendResponse(result))
+        .catch((error) => {
+          console.error('Email/password login handler error:', error)
+          sendResponse({
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to sign in'
+          })
+        })
+      return true // Keep message channel open for async response
+    }
+
     // Handle getCachedMetadata - return cached data instantly if available (legacy tabId-based)
     if (messageRequest.action === 'getCachedMetadata') {
       const tabId = messageRequest.tabId as number

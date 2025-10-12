@@ -14,7 +14,8 @@
     "storage",
     "scripting",
     "notifications",
-    "identity"
+    "identity",
+    "contextMenus"
   ],
   "host_permissions": [
     "http://*/*",
