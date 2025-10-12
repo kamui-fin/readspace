@@ -9,8 +9,12 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage", "scripting", "notifications"],
+  "permissions": ["activeTab", "storage", "scripting", "notifications", "identity"],
   "host_permissions": ["http://*/*", "https://*/*"],
+  "oauth2": {
+    "client_id": "<GOOGLE_CLIENT_ID>",
+    "scopes": ["openid", "email", "profile"]
+  },
   "action": {
     "default_popup": "index.html",
     "default_title": "Save to Readspace"

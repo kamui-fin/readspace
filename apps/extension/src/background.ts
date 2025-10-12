@@ -1,10 +1,10 @@
 // Background script for Readspace extension
-import { browser, getBrowserName, identity } from '@/lib/browser'
+import { browser, getBrowserName } from '@/lib/browser'
 import { trimSaveArticleRequest } from '@readspace/shared'
 import { ApiClient } from '@/lib/api-client'
-import type { Runtime } from 'webextension-polyfill'
-import { extractOAuthTokens } from '@/lib/oauth'
 import { getSupabaseClient } from '@/lib/supabase'
+import { storage } from '@/lib/browser'
+import type { Runtime } from 'webextension-polyfill'
 
 // Type for content extraction result
 interface ContentExtractionResult {
@@ -86,100 +86,8 @@ async function updateFeedBadge(tabId: number, feedCount: number) {
   }
 }
 
-// Handle OAuth callback from Google login
-async function handleOAuthCallback(url: string, tabId: number) {
-  try {
-    console.log('OAuth callback detected:', url)
-
-    // Extract tokens from URL
-    const { access_token, refresh_token } = extractOAuthTokens(url)
-
-    if (!access_token || !refresh_token) {
-      throw new Error('No OAuth tokens found in callback URL')
-    }
-
-    console.log('OAuth tokens extracted successfully')
-
-    // Get Supabase configuration from storage
-    const storageData = await browser.storage.local.get('readspace-extension')
-    const storeState = storageData['readspace-extension'] as {
-      state?: { settings?: { supabase_url?: string; supabase_anon_key?: string } }
-    }
-
-    const supabaseUrl =
-      storeState?.state?.settings?.supabase_url ||
-      'https://hnqyngkyugiamvlhqoaf.supabase.co'
-    const supabaseAnonKey =
-      storeState?.state?.settings?.supabase_anon_key ||
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
-
-    // Create Supabase client and set session
-    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey)
-
-    if (!supabase) {
-      throw new Error('Failed to initialize Supabase client')
-    }
-
-    // Set the session in Supabase
-    const { data, error } = await supabase.auth.setSession({
-      access_token,
-      refresh_token,
-    })
-
-    if (error) throw error
-
-    console.log('OAuth session set successfully')
-
-    // Store session in chrome.storage for persistence
-    await browser.storage.local.set({
-      'oauth-session': data.session,
-    })
-
-    // Send message to store to update with new access token
-    // This will trigger the login flow in the extension store
-    await browser.runtime.sendMessage({
-      action: 'oauth-login-success',
-      access_token,
-    })
-
-    // Close the OAuth tab
-    await browser.tabs.remove(tabId)
-
-    // Show success notification
-    await browser.notifications.create('oauth-success', {
-      type: 'basic',
-      iconUrl: 'icons/icon-48.png',
-      title: 'Readspace',
-      message: 'Successfully signed in with Google!',
-    })
-  } catch (error) {
-    console.error('OAuth callback error:', error)
-
-    // Show error notification
-    await browser.notifications.create('oauth-error', {
-      type: 'basic',
-      iconUrl: 'icons/icon-48.png',
-      title: 'Readspace',
-      message: `Failed to sign in with Google: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    })
-
-    // Close the OAuth tab anyway
-    try {
-      await browser.tabs.remove(tabId)
-    } catch (e) {
-      console.error('Failed to close OAuth tab:', e)
-    }
-  }
-}
-
 // Check for RSS feeds when tab is updated
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  // Check for OAuth callback first
-  if (changeInfo.url?.startsWith(identity.getRedirectURL())) {
-    await handleOAuthCallback(changeInfo.url, tabId)
-    return
-  }
-
   if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
     try {
       // Wait a bit for the page to fully load
@@ -279,6 +187,23 @@ browser.runtime.onMessage.addListener(
     sendResponse: (response?: unknown) => void
   ) => {
     const messageRequest = request as MessageRequest
+
+    // Handle async OAuth flow
+    if (messageRequest.action === 'startGoogleOAuth') {
+      handleGoogleOAuth()
+        .then((result) => sendResponse(result))
+        .catch((error) => sendResponse({ success: false, error: error.message }))
+      return true // Keep message channel open for async response
+    }
+
+    // Handle async email/password login
+    if (messageRequest.action === 'emailPasswordLogin') {
+      handleEmailPasswordLogin(messageRequest.email as string, messageRequest.password as string)
+        .then((result) => sendResponse(result))
+        .catch((error) => sendResponse({ success: false, error: error.message }))
+      return true // Keep message channel open for async response
+    }
+
     // Handle the async extractContent case
     if (messageRequest.action === 'extractContent') {
       if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
@@ -451,4 +376,224 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
 async function handleOpenReadspace() {
   // Default to the main Readspace URL
   browser.tabs.create({ url: 'https://api.readspace.ai' })
+}
+
+async function handleEmailPasswordLogin(email: string, password: string): Promise<{ success: boolean; error?: string; access_token?: string }> {
+  console.log('🔐 Background script: Starting email/password login...')
+
+  try {
+    // Get settings from storage
+    const store = await storage.get<{
+      settings?: {
+        supabase_url?: string
+        supabase_anon_key?: string
+      }
+    }>('readspace-extension')
+
+    // Use stored settings or fall back to defaults
+    const supabaseUrl = store?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey = store?.settings?.supabase_anon_key ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        'Supabase configuration is missing. Please check settings.'
+      )
+    }
+
+    // Initialize Supabase client
+    const supabase = getSupabaseClient(
+      supabaseUrl,
+      supabaseAnonKey
+    )
+
+    if (!supabase) {
+      throw new Error('Failed to initialize Supabase client')
+    }
+
+    console.log('🔑 Signing in with email/password...')
+
+    // Sign in with email/password
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: password.trim(),
+    })
+
+    if (error) throw error
+
+    if (!data.session?.access_token) {
+      throw new Error('No access token received')
+    }
+
+    console.log('✅ Email/password sign-in successful, storing session...')
+
+    // Update the settings in storage with the access token
+    const updatedSettings = {
+      ...(store?.settings || {}),
+      supabase_url: supabaseUrl,
+      supabase_anon_key: supabaseAnonKey,
+      access_token: data.session.access_token,
+    }
+
+    await storage.set('readspace-extension', {
+      ...store,
+      settings: updatedSettings,
+      isAuthenticated: true,
+    })
+
+    console.log('✅ Login completed successfully!')
+
+    return {
+      success: true,
+      access_token: data.session.access_token,
+    }
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Failed to sign in'
+    console.error('❌ Email/password login error:', error)
+    return {
+      success: false,
+      error: errorMessage,
+    }
+  }
+}
+
+async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; access_token?: string }> {
+  console.log('🔐 Background script: Starting Google OAuth flow...')
+
+  try {
+    // Get settings from storage
+    const store = await storage.get<{
+      settings?: {
+        supabase_url?: string
+        supabase_anon_key?: string
+        google_client_id?: string
+      }
+    }>('readspace-extension')
+
+    // Use stored settings or fall back to defaults
+    const supabaseUrl = store?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey = store?.settings?.supabase_anon_key ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
+    const googleClientId = store?.settings?.google_client_id || '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com'
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error(
+        'Supabase configuration is missing. Please check settings.'
+      )
+    }
+
+    // Get manifest to check for oauth2 configuration (Chrome only)
+    const manifest = browser.runtime.getManifest() as chrome.runtime.Manifest & {
+      oauth2?: { client_id: string; scopes: string[] }
+    }
+
+    // Determine client ID - Chrome uses manifest, Firefox uses settings/defaults
+    const clientId = manifest.oauth2?.client_id || googleClientId
+
+    if (!clientId) {
+      throw new Error(
+        'Google OAuth client ID not configured. ' +
+        (manifest.oauth2 ?
+          'Please set it in the manifest.' :
+          'Please add it in Settings.')
+      )
+    }
+
+    // Get the redirect URL - works for both Chrome and Firefox
+    const redirectUri = browser.identity.getRedirectURL()
+    console.log('🔗 OAuth Redirect URI:', redirectUri)
+    const scopes = manifest.oauth2?.scopes || ['openid', 'email', 'profile']
+
+    // Construct Google OAuth URL
+    const url = new URL('https://accounts.google.com/o/oauth2/auth')
+    url.searchParams.set('client_id', clientId)
+    url.searchParams.set('response_type', 'id_token')
+    url.searchParams.set('access_type', 'offline')
+    url.searchParams.set('redirect_uri', redirectUri)
+    url.searchParams.set('scope', scopes.join(' '))
+
+    console.log('🚀 Launching OAuth flow...')
+
+    // Launch browser's native auth flow (works in both Chrome and Firefox)
+    const redirectedTo = await browser.identity.launchWebAuthFlow({
+      url: url.href,
+      interactive: true,
+    })
+
+    if (!redirectedTo) {
+      throw new Error('Authentication was cancelled or failed')
+    }
+
+    console.log('✅ OAuth flow completed, extracting token...')
+
+    // Extract ID token from redirect URL
+    const redirectUrl = new URL(redirectedTo)
+    const params = new URLSearchParams(redirectUrl.hash.substring(1))
+    const idToken = params.get('id_token')
+
+    if (!idToken) {
+      throw new Error('No ID token received from Google')
+    }
+
+    console.log('🔑 ID token received, signing in to Supabase...')
+
+    // Initialize Supabase client
+    const supabase = getSupabaseClient(
+      supabaseUrl,
+      supabaseAnonKey
+    )
+
+    if (!supabase) {
+      throw new Error('Failed to initialize Supabase client')
+    }
+
+    // Sign in with ID token
+    const { data, error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: idToken,
+    })
+
+    if (error) throw error
+
+    if (!data.session?.access_token) {
+      throw new Error('No access token received from Supabase')
+    }
+
+    console.log('✅ Supabase sign-in successful, storing session...')
+
+    // Update the settings in storage with the access token
+    const updatedSettings = {
+      ...(store?.settings || {}),
+      supabase_url: supabaseUrl,
+      supabase_anon_key: supabaseAnonKey,
+      google_client_id: googleClientId,
+      access_token: data.session.access_token,
+    }
+
+    await storage.set('readspace-extension', {
+      ...store,
+      settings: updatedSettings,
+      isAuthenticated: true,
+    })
+
+    console.log('✅ OAuth flow completed successfully!')
+
+    return {
+      success: true,
+      access_token: data.session.access_token,
+    }
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error
+        ? error.message
+        : 'Failed to complete Google sign-in'
+    console.error('❌ Google OAuth error:', error)
+    return {
+      success: false,
+      error: errorMessage,
+    }
+  }
 }

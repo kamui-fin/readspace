@@ -1,15 +1,14 @@
+import { browser } from '@/lib/browser'
+import { useExtensionStore } from '@/store'
+import { Loader2 } from 'lucide-react'
 import React, { useState } from 'react'
+import toast from 'react-hot-toast'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
-import { useExtensionStore } from '@/store'
-import { getSupabaseClient } from '@/lib/supabase'
-import { Loader2 } from 'lucide-react'
-import toast from 'react-hot-toast'
-import { browser, identity } from '@/lib/browser'
 
 export function LoginForm() {
-  const { login, isConnecting, settings } = useExtensionStore()
+  const { login, isConnecting } = useExtensionStore()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -25,42 +24,26 @@ export function LoginForm() {
       return
     }
 
-    if (!settings.supabase_url || !settings.supabase_anon_key) {
-      const errorMsg =
-        'Supabase configuration is missing. Please check settings.'
-      setError(errorMsg)
-      toast.error(errorMsg)
-      return
-    }
-
     const toastId = toast.loading('Signing in...')
 
     try {
-      const supabase = getSupabaseClient(
-        settings.supabase_url,
-        settings.supabase_anon_key
-      )
+      // Send message to background script to handle login
+      console.log('🚀 Requesting email/password login from background script...')
 
-      if (!supabase) {
-        throw new Error('Failed to initialize Supabase client')
+      const response = await browser.runtime.sendMessage({
+        action: 'emailPasswordLogin',
+        email: email.trim(),
+        password: password.trim(),
+      }) as { success: boolean; error?: string; access_token?: string }
+
+      if (!response.success || !response.access_token) {
+        throw new Error(response.error || 'Failed to sign in')
       }
 
-      const { data, error: signinError } =
-        await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim(),
-        })
-
-      if (signinError) {
-        throw new Error(signinError.message)
-      }
-
-      if (!data.session?.access_token) {
-        throw new Error('No access token received')
-      }
+      console.log('✅ Login successful, updating store...')
 
       // Login to the extension store with the access token
-      await login(data.session.access_token)
+      await login(response.access_token)
       toast.success('Successfully signed in!', { id: toastId })
     } catch (error) {
       const errorMessage =
@@ -71,56 +54,32 @@ export function LoginForm() {
   }
 
   const handleGoogleSignIn = async () => {
+    const toastId = toast.loading('Signing in with Google...')
+
     try {
-      if (!settings.supabase_url || !settings.supabase_anon_key) {
-        const errorMsg =
-          'Supabase configuration is missing. Please check settings.'
-        toast.error(errorMsg)
-        return
+      // Send message to background script to handle OAuth flow
+      // This ensures the flow completes even if the popup closes
+      console.log('🚀 Requesting OAuth from background script...')
+
+      const response = await browser.runtime.sendMessage({
+        action: 'startGoogleOAuth',
+      }) as { success: boolean; error?: string; access_token?: string }
+
+      if (!response.success || !response.access_token) {
+        throw new Error(response.error || 'Failed to authenticate with Google')
       }
 
-      const supabase = getSupabaseClient(
-        settings.supabase_url,
-        settings.supabase_anon_key
-      )
+      console.log('✅ OAuth successful, logging in...')
 
-      if (!supabase) {
-        throw new Error('Failed to initialize Supabase client')
-      }
-
-      // Get the extension's OAuth redirect URL
-      const redirectTo = identity.getRedirectURL()
-
-      // Initiate OAuth flow
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo,
-        },
-      })
-
-      if (error) throw error
-
-      // Open OAuth URL in new tab - background script will handle the callback
-      await browser.tabs.create({ url: data.url })
+      // Login to the extension store with the access token
+      await login(response.access_token)
+      toast.success('Successfully signed in with Google!', { id: toastId })
     } catch (error) {
       const errorMessage =
         error instanceof Error
           ? error.message
-          : 'Failed to login with Google. Please try again.'
-
-      // Provide specific error messages for Google OAuth
-      if (errorMessage.includes('popup_closed_by_user')) {
-        toast.error(
-          'Login cancelled. Please try again if you want to sign in with Google.'
-        )
-      } else if (errorMessage.includes('access_denied')) {
-        toast.error(
-          'Access denied. Please grant permission to continue with Google login.'
-        )
-      } else {
-        toast.error(errorMessage)
-      }
+          : 'Failed to sign in with Google'
+      toast.error(errorMessage, { id: toastId })
       console.error('Google sign-in error:', error)
     }
   }

@@ -44,6 +44,7 @@ export interface ExtensionSettings {
   readspace_url: string;
   supabase_url: string;
   supabase_anon_key: string;
+  google_client_id?: string; // For Firefox OAuth (Chrome uses manifest)
   access_token?: string;
   default_folder_id?: string;
   auto_save: boolean;
