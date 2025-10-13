@@ -44,23 +44,61 @@ export function FeedDiscoveryCard({
   }
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [followedFeedId, setFollowedFeedId] = useState<string | null>(null)
+  const [isUnfollowing, setIsUnfollowing] = useState(false)
   const userFeeds = useExtensionStore((state) => state.feeds)
+  const { unsubscribeFromFeed } = useExtensionStore()
 
   const primaryFeed = feeds[0]
 
   // Check if user is already following any of the discovered feeds
   useEffect(() => {
+    console.log('Checking follow status:', { feeds, userFeedsCount: userFeeds.length })
     if (feeds && userFeeds.length > 0) {
-      const isAlreadyFollowing = feeds.some((discoveredFeed) =>
-        userFeeds.some((userFeed) => userFeed.url === discoveredFeed.url)
+      const followedFeed = userFeeds.find((userFeed) =>
+        feeds.some((discoveredFeed) => {
+          console.log('Comparing:', { userFeedUrl: userFeed.url, discoveredFeedUrl: discoveredFeed.url })
+          return userFeed.url === discoveredFeed.url
+        })
       )
-      setIsFollowing(isAlreadyFollowing)
+      if (followedFeed) {
+        console.log('Found followed feed:', followedFeed)
+        setIsFollowing(true)
+        setFollowedFeedId(followedFeed.id)
+      } else {
+        console.log('No matching feed found')
+        setIsFollowing(false)
+        setFollowedFeedId(null)
+      }
     }
   }, [feeds, userFeeds])
 
-  const handleFollowClick = () => {
+  const handleFollowClick = async () => {
     if (!isFollowing) {
       setIsModalOpen(true)
+    } else {
+      // Unfollow
+      console.log('Attempting to unfollow, followedFeedId:', followedFeedId)
+      if (followedFeedId) {
+        setIsUnfollowing(true)
+        try {
+          console.log('Calling unsubscribeFromFeed with ID:', followedFeedId)
+          await unsubscribeFromFeed(followedFeedId)
+          console.log('Unsubscribe successful')
+          toast.success('Successfully unfollowed!')
+          setIsFollowing(false)
+          setFollowedFeedId(null)
+        } catch (error) {
+          console.error('Failed to unfollow:', error)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          toast.error(`Failed to unfollow: ${errorMessage}`)
+        } finally {
+          setIsUnfollowing(false)
+        }
+      } else {
+        console.error('Cannot unfollow: followedFeedId is null')
+        toast.error('Unable to unfollow - feed ID not found')
+      }
     }
   }
 
@@ -94,10 +132,10 @@ export function FeedDiscoveryCard({
   return (
     <>
       <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-4">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           {/* Icon */}
-          <div className="bg-primary rounded-full p-2 flex-shrink-0">
-            <Rss className="w-4 h-4 text-primary-foreground" />
+          <div className="bg-orange-500 rounded-full p-2 flex-shrink-0">
+            <Rss className="w-4 h-4 text-white" />
           </div>
 
           {/* Content */}
@@ -113,16 +151,20 @@ export function FeedDiscoveryCard({
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleFollowClick}
-              disabled={isFollowing}
+              disabled={isUnfollowing}
               size="sm"
-              variant={isFollowing ? "secondary" : "default"}
-              className="flex-shrink-0 px-7 cursor-default"
+              className={`flex-shrink-0 w-[100px] ${isFollowing ? 'bg-orange-500/80 hover:bg-orange-600/90 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
             >
-              {isFollowing ? (
-                <>
-                  <Check className="w-3 h-3 mr-1" />
-                  Following
-                </>
+              {isUnfollowing ? (
+                <div className="flex items-center justify-center px-4">
+                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                  <span>Unfollowing...</span>
+                </div>
+              ) : isFollowing ? (
+                <div className="flex items-center justify-center px-4">
+                  <Check className="w-3 h-3 mr-1.5" />
+                  <span>Following</span>
+                </div>
               ) : (
                 'Follow'
               )}

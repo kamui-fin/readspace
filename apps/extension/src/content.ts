@@ -56,7 +56,38 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
   }
 
   /**
-   * Discover RSS feeds quickly without validation (for fast popup display)
+   * Quick validation of a feed URL using HEAD request with short timeout
+   */
+  async function quickValidateFeed(url: string): Promise<boolean> {
+    try {
+      const response = await fetch(url, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(2000), // Quick 2s timeout
+        headers: {
+          'User-Agent': 'Readspace Extension Feed Validator',
+        },
+      })
+
+      if (!response.ok) return false
+
+      const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+
+      // Check if content type indicates a feed
+      return (
+        contentType.includes('xml') ||
+        contentType.includes('rss') ||
+        contentType.includes('atom') ||
+        contentType.includes('json') ||
+        contentType.includes('application/rss') ||
+        contentType.includes('application/atom')
+      )
+    } catch (error) {
+      return false
+    }
+  }
+
+  /**
+   * Discover RSS feeds quickly with validation (for fast popup display)
    */
   async function discoverRSSFeedsFast() {
     const feeds: Array<{ url: string; title?: string; type: string }> = []
@@ -111,38 +142,46 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
       }
     }
 
-    // Phase 2: Add common RSS URL patterns without validation (fast heuristics)
-    // Only suggest if NO feeds were found in link tags
+    // Phase 2: Try common feed patterns with quick validation if no feeds found in link tags
     if (feeds.length === 0) {
       const baseUrl = window.location.origin
       const currentPath = window.location.pathname
 
-      // Only suggest the most common patterns (limit to 2 suggestions)
-      const feedPatterns = [
-        '/rss',
-        '/feed',
-      ]
+      // Most common patterns to try (prioritized by likelihood of working)
+      const feedPatterns = ['/feed', '/rss', '/feed/', '/rss/', '/index.xml', '/rss.xml', '/feed.xml', '/atom.xml']
 
       // Add blog-specific pattern if we're on a blog/article
       if (currentPath.includes('/blog/') || currentPath.includes('/post/') || currentPath.includes('/article/')) {
         const pathParts = currentPath.split('/').filter(p => p)
         if (pathParts.length >= 1) {
           const blogPath = '/' + pathParts[0]
-          // Prepend blog-specific pattern as first choice
-          feedPatterns.unshift(`${blogPath}/feed`)
+          feedPatterns.unshift(`${blogPath}/feed`, `${blogPath}/rss`)
         }
       }
 
-      // Add only the first 2 patterns without validation
-      for (const pattern of feedPatterns.slice(0, 2)) {
+      // Validate patterns in parallel (test up to 5 for better coverage)
+      const validationPromises = feedPatterns.slice(0, 5).map(async (pattern) => {
         const testUrl = baseUrl + pattern
         if (!discoveredUrls.has(testUrl)) {
-          discoveredUrls.add(testUrl)
-          feeds.push({
-            url: testUrl,
-            title: undefined,
-            type: 'rss',
-          })
+          const isValid = await quickValidateFeed(testUrl)
+          if (isValid) {
+            return {
+              url: testUrl,
+              title: undefined,
+              type: 'rss' as const,
+            }
+          }
+        }
+        return null
+      })
+
+      const validatedFeeds = await Promise.all(validationPromises)
+
+      // Add all validated feeds (not just the first one)
+      for (const feed of validatedFeeds) {
+        if (feed) {
+          discoveredUrls.add(feed.url)
+          feeds.push(feed)
         }
       }
     }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { extractDomain } from '@readspace/shared'
 import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
-import { BookOpen, Pencil, ChevronDown, ChevronUp, Flag, StickyNote } from 'lucide-react'
+import { BookOpen, Pencil, Flag, StickyNote } from 'lucide-react'
 import { browser } from '@/lib/browser'
 
 interface ArticlePreviewProps {
@@ -106,17 +106,6 @@ export function ArticlePreview({
     }
   }, [isInitialized, isExpanded, metadata?.image_url])
 
-  // Save expanded state to storage whenever it changes
-  const handleToggleExpanded = async () => {
-    const newState = !isExpanded
-    setIsExpanded(newState)
-    try {
-      await browser.storage.local.set({ articlePreviewExpanded: newState })
-    } catch (error) {
-      console.error('Failed to save expanded state:', error)
-    }
-  }
-
   // Show skeleton while loading metadata
   if (isMetadataLoading || !metadata) {
     return <ArticlePreviewSkeleton />
@@ -145,7 +134,7 @@ export function ArticlePreview({
   return (
     <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-4">
       {/* Header - always visible */}
-      <div className="flex items-start gap-3">
+      <div className="flex items-center gap-3">
         {/* Icon */}
         <div className="bg-primary rounded-full p-2 flex-shrink-0">
           <BookOpen className="w-4 h-4 text-primary-foreground" />
@@ -166,7 +155,7 @@ export function ArticlePreview({
             onClick={handleSave}
             disabled={isLoading}
             size="sm"
-            className="flex-shrink-0"
+            className="flex-shrink-0 w-[100px]"
           >
             {isLoading ? (
               <>
@@ -177,7 +166,7 @@ export function ArticlePreview({
               'Save'
             )}
           </Button>
-          <button
+          {/* <button
             onClick={handleToggleExpanded}
             className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-muted flex items-center justify-center"
             title={isExpanded ? "Hide options" : "Show options"}
@@ -187,18 +176,16 @@ export function ArticlePreview({
             ) : (
               <ChevronDown className="w-4 h-4" />
             )}
-          </button>
+          </button> */}
         </div>
       </div>
 
-      {/* Expanded content - shows below header when expanded */}
+      {/* Expanded content - always shown */}
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
+        className="overflow-hidden"
       >
-        {/* Only render content if initialized and expanded - prevents loading content when closed */}
-        {isInitialized && isExpanded && (
+        {/* Always render content */}
+        {isInitialized && (
           <div className="mt-3 space-y-2 border-t border-border pt-3">
             {/* Article Image */}
             {metadata.image_url && (

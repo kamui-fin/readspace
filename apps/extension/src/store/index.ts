@@ -56,6 +56,7 @@ interface ExtensionState {
     feeds: DiscoveredFeed[],
     options?: { folder_id?: string }
   ) => Promise<void>
+  unsubscribeFromFeed: (feedId: string) => Promise<void>
 }
 
 const defaultSettings: ExtensionSettings = {
@@ -369,6 +370,27 @@ export const useExtensionStore = create<ExtensionState>()(
             error instanceof Error
               ? error.message
               : 'Failed to subscribe to feeds'
+          throw new Error(errorMessage)
+        }
+      },
+
+      unsubscribeFromFeed: async (feedId: string) => {
+        const { isAuthenticated } = get()
+        if (!isAuthenticated) {
+          toast.error('Please sign in to unsubscribe from feeds')
+          throw new Error('Not authenticated')
+        }
+
+        try {
+          await ApiClient.rss.deleteFeed(feedId)
+          // Reload user data to update the feeds list
+          await get().loadUserData()
+        } catch (error) {
+          console.error('Failed to unsubscribe from feed:', error)
+          const errorMessage =
+            error instanceof Error
+              ? error.message
+              : 'Failed to unsubscribe from feed'
           throw new Error(errorMessage)
         }
       },

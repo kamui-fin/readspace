@@ -253,9 +253,9 @@ export function FeedSubscriptionModal({
       )}
 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-semibold">Subscribe to Feed</h2>
           <Button
             variant="ghost"
@@ -268,12 +268,12 @@ export function FeedSubscriptionModal({
         </div>
 
         {/* Content */}
-        <div className="p-4 space-y-4 overflow-y-auto">
+        <div className="p-4 space-y-4 overflow-y-auto flex-1">
           {/* Feed Preview */}
           <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-3">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="bg-primary rounded-full p-1.5 flex-shrink-0">
-                <Rss className="w-3 h-3 text-primary-foreground" />
+            <div className="flex items-center gap-2">
+              <div className="bg-orange-500 rounded-full p-1.5 flex-shrink-0">
+                <Rss className="w-3 h-3 text-white" />
               </div>
               <h3 className="font-medium text-sm truncate flex-1">
                 {getFeedDisplayName(selectedFeed)}
@@ -283,7 +283,7 @@ export function FeedSubscriptionModal({
               </Badge>
             </div>
             {selectedFeed?.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 pl-7">
+              <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
                 {selectedFeed.description}
               </p>
             )}
