@@ -32,15 +32,20 @@ ENV PATH="/app/node_modules/.bin:$PATH"
 # Build Next.js (standalone output)
 RUN turbo run build
 
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
+# Create cache directories and set proper permissions
+RUN mkdir -p /app/apps/web/.next/cache/images \
+  && chown -R nextjs:nodejs /app/apps/web/.next
+
 ENV NODE_ENV=production
 ENV PORT=8042
 EXPOSE 8042
 
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs \
-  && adduser --system --uid 1001 nextjs
+# Switch to non-root user
 USER nextjs
-
 
 WORKDIR /app/apps/web
 

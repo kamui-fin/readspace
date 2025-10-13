@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     SUPABASE_DB_CONNECTION: str
 
     # CORS Configuration
-    CORS_ORIGIN: str = "http://localhost:8042"
+    CORS_ORIGIN: str = "*"
 
     REDIS_URL: str = "redis://localhost:6379/0"
 
