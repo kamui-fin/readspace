@@ -59,27 +59,36 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
 
     ```bash
     git clone https://github.com/kamui-fin/readspace.git
-    cd readspace
+    cd readspace/docker
     ```
 
 2.  **Configure `.env` files**
 
     ```bash
-    ./docker/setup.sh
+    ./setup.sh
     ```
 
 3.  **Launch services**
 
     ```bash
-    ./docker/launch.sh
+    ./launch.sh
     ```
-4.  **Access your instance**
 
-    After a bit, your Readspace instance should be accessible in your web browser.
+4.  **Create your account**
 
-    Visit `localhost:18042`. Optionally, you can configure your reverse proxy to point to it.
+    Visit `localhost:18042` and sign up for a new account.
 
-5.  **Configure Browser Extension** (Optional)
+5.  **Promote to admin** (Optional)
+
+    Grant admin privileges to your account:
+
+    ```bash
+    ./promote-admin.sh your-email@example.com
+    ```
+
+    Note: You can configure your reverse proxy to point to `localhost:18042` for external access.
+
+6.  **Configure Browser Extension** (Optional)
 
     To connect the browser extension to your self-hosted instance, configure:
     - **Server URL**: `http://your-ip-or-domain:18042`

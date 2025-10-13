@@ -24,8 +24,18 @@
 
 set -e # Exit immediately if a command exits with a non-zero status.
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # --- API Host Configuration ---
-echo "Please enter the host of the server"
+echo ""
+echo "🌐 API Host Configuration"
+echo "This configures how services bind to network interfaces."
+echo ""
+echo "For most local setups, use the default (0.0.0.0)."
+echo "For remote access, you may need to use your server's IP or domain."
+echo ""
 read -p "API Host (default: 0.0.0.0): " API_HOST
 API_HOST=${API_HOST:-"0.0.0.0"}
 
@@ -83,167 +93,6 @@ else
     echo "❌ AI support will be disabled."
 fi
 
-# --- Admin User Configuration ---
-echo ""
-echo "👤 Admin User Setup"
-echo "Create a default admin user for your Readspace instance."
-echo ""
-read -p "Admin email: " ADMIN_EMAIL
-while [[ ! "$ADMIN_EMAIL" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$ ]]; do
-    echo "❌ Please enter a valid email address."
-    read -p "Admin email: " ADMIN_EMAIL
-done
-
-read -s -p "Admin password: " ADMIN_PASSWORD
-echo ""
-while [ ${#ADMIN_PASSWORD} -lt 6 ]; do
-    echo "❌ Password must be at least 6 characters long."
-    read -s -p "Admin password: " ADMIN_PASSWORD
-    echo ""
-done
-
-echo "✅ Admin user configured: $ADMIN_EMAIL"
-
-# --- Create Admin User Migration ---
-echo ""
-echo "📝 Creating admin user migration..."
-
-# Create the migration file with fixed timestamp to sort after role column migration
-MIGRATION_FILE="server/alembic/versions/20250901_000000_add_default_admin_user.py"
-
-# Create the server directory if it doesn't exist
-mkdir -p server/alembic/versions
-
-cat <<EOF > "$MIGRATION_FILE"
-"""add default admin user
-
-Revision ID: admin_user_setup
-Revises: 644d0f774254
-Create Date: 2025-09-01 00:00:00.000000+00:00
-
-"""
-
-from collections.abc import Sequence
-
-import sqlalchemy as sa
-
-from alembic import op
-
-# revision identifiers, used by Alembic.
-revision: str = "admin_user_setup"
-down_revision: str | None = "644d0f774254"
-branch_labels: str | Sequence[str] | None = None
-depends_on: str | Sequence[str] | None = None
-
-
-def upgrade() -> None:
-    """Create default admin user."""
-    op.execute("""
-    DO \$\$
-    DECLARE
-        admin_user_id UUID;
-    BEGIN
-        -- Check if admin user already exists
-        IF EXISTS (SELECT 1 FROM auth.users WHERE email = '${ADMIN_EMAIL}') THEN
-            RETURN;
-        END IF;
-
-        -- Generate user ID
-        admin_user_id := gen_random_uuid();
-
-        -- Insert into auth.users
-        INSERT INTO auth.users (
-            id, instance_id, role, aud, email,
-            raw_app_meta_data, raw_user_meta_data,
-            is_super_admin, encrypted_password,
-            created_at, updated_at, last_sign_in_at,
-            email_confirmed_at, confirmation_sent_at,
-            confirmation_token, recovery_token,
-            email_change_token_new, email_change,
-            confirmed_at
-        ) VALUES (
-            admin_user_id,
-            '00000000-0000-0000-0000-000000000000',
-            'authenticated',
-            'authenticated',
-            '${ADMIN_EMAIL}',
-            '{"provider":"email","providers":["email"]}',
-            json_build_object(
-                'sub', admin_user_id::text,
-                'email', '${ADMIN_EMAIL}',
-                'display_name', 'admin',
-                'email_verified', true,
-                'phone_verified', false
-            ),
-            NULL,
-            extensions.crypt('${ADMIN_PASSWORD}', extensions.gen_salt('bf', 12)),
-            NOW(), NOW(), NOW(),
-            NOW(), NULL,
-            '', '', '', '',
-            NOW()
-        );
-
-        -- Insert into auth.identities
-        INSERT INTO auth.identities (
-            id, provider_id, provider, user_id,
-            identity_data, last_sign_in_at,
-            created_at, updated_at
-        ) VALUES (
-            gen_random_uuid(),
-            admin_user_id::text,
-            'email',
-            admin_user_id,
-            json_build_object(
-                'sub', admin_user_id::text,
-                'email', '${ADMIN_EMAIL}',
-                'email_verified', true,
-                'provider', 'email'
-            ),
-            NOW(), NOW(), NOW()
-        );
-
-        -- Set admin role (role column now exists from previous migration)
-        UPDATE profiles SET role = 'admin' WHERE id = admin_user_id;
-    END;
-    \$\$;
-    """)
-
-
-def downgrade() -> None:
-    """Remove default admin user."""
-    op.execute("""
-    DO \$\$
-    DECLARE
-        admin_user_id UUID;
-    BEGIN
-        -- Get admin user ID
-        SELECT id INTO admin_user_id FROM auth.users WHERE email = '${ADMIN_EMAIL}';
-
-        IF admin_user_id IS NOT NULL THEN
-            -- Delete from auth.identities first (due to foreign key)
-            DELETE FROM auth.identities WHERE user_id = admin_user_id;
-            -- Delete from auth.users
-            DELETE FROM auth.users WHERE id = admin_user_id;
-        END IF;
-    END;
-    \$\$;
-    """)
-EOF
-
-echo "✅ Migration file created: $MIGRATION_FILE"
-
-# Update the next migrations to revise from admin_user_setup instead of 644d0f774254
-echo "📝 Updating migration chain..."
-
-# Find the next migration after "add role column" and update it to revise from admin_user_setup
-# The "add rss dataset fields" migration should now come after admin user setup
-NEXT_MIGRATION=$(grep -l 'down_revision.*644d0f774254' server/alembic/versions/*.py | head -n 1)
-if [ -n "$NEXT_MIGRATION" ]; then
-    sed -i 's/down_revision: str | None = "644d0f774254"/down_revision: str | None = "admin_user_setup"/' "$NEXT_MIGRATION"
-    echo "✅ Updated $(basename $NEXT_MIGRATION) to revise from admin_user_setup"
-fi
-
-echo "✅ Migration chain updated successfully."
 
 # --- Configuration & Input Validation ---
 
@@ -383,8 +232,8 @@ VAULT_ENC_KEY=$(gen_hex 16)
 echo "✅ Secrets generated."
 
 # --- Create docker/supabase/.env ---
-if [ ! -f "docker/supabase/.env.example" ]; then
-    echo "Error: docker/supabase/.env.example not found!" >&2
+if [ ! -f "$SCRIPT_DIR/supabase/.env.example" ]; then
+    echo "Error: $SCRIPT_DIR/supabase/.env.example not found!" >&2
     echo "Please ensure you are in the correct directory and the file exists." >&2
     exit 1
 fi
@@ -401,14 +250,14 @@ sed \
   -e "s|API_EXTERNAL_URL=.*|API_EXTERNAL_URL=https://$DOMAIN|" \
   -e "s|SUPABASE_PUBLIC_URL=.*|SUPABASE_PUBLIC_URL=https://$DOMAIN|" \
   -e "s|ENABLE_EMAIL_AUTOCONFIRM=.*|ENABLE_EMAIL_AUTOCONFIRM=$AUTO_CONFIRM_EMAIL|" \
-  docker/supabase/.env.example > docker/supabase/.env
+  "$SCRIPT_DIR/supabase/.env.example" > "$SCRIPT_DIR/supabase/.env"
 echo "✅ docker/supabase/.env created."
 
 # --- Create apps/web/.env ---
 echo "📝 Creating apps/web/.env file..."
 # Create the directory if it doesn't exist
-mkdir -p apps/web
-cat <<EOF > apps/web/.env
+mkdir -p "$PROJECT_ROOT/apps/web"
+cat <<EOF > "$PROJECT_ROOT/apps/web/.env"
 # This file was auto-generated by setup.sh
 
 # Public configuration (client-side)
@@ -423,11 +272,9 @@ echo "✅ apps/web/.env created."
 # --- Create server/.env ---
 echo "📝 Creating server/.env file..."
 # Create the directory if it doesn't exist
-mkdir -p server
-cat <<EOF > server/.env
+mkdir -p "$PROJECT_ROOT/server"
+cat <<EOF > "$PROJECT_ROOT/server/.env"
 # This file was auto-generated by setup.sh
-
-CORS_ORIGIN=http://${API_HOST}:18042
 
 # Private Supabase configuration for server-side operations
 SUPABASE_URL=http://${API_HOST}:18000
@@ -455,9 +302,13 @@ echo "📋 Summary:"
 echo "  • API Host: $API_HOST"
 echo "  • RSSHub URL: $RSSHUB_URL"
 echo "  • AI Support: $ENABLE_AI"
-echo "  • Admin User: $ADMIN_EMAIL"
 echo ""
 echo "Next steps:"
-echo "1. Run ./start_docker.sh to start the services."
-echo "2. The database migrations will automatically create your admin user."
-echo "3. You can login with the admin credentials you provided."
+echo "1. Run docker/launch.sh to start the services."
+echo "2. Visit http://${API_HOST}:18042 to create your account."
+echo "3. Run docker/promote-admin.sh <email> to make your account an admin."
+echo ""
+echo "📱 Access URLs:"
+echo "  • Web App:    http://${API_HOST}:18042"
+echo "  • API Server: http://${API_HOST}:18008"
+echo "  • Supabase:   http://${API_HOST}:18000"
