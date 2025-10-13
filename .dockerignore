@@ -1,1 +1,4 @@
 node_modules
+docker/supabase/volumes/db/data
+apps/web/node_modules
+packages/shared/node_modules

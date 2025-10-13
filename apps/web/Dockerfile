@@ -1,29 +1,36 @@
-# 1. Base image with Node.js
-FROM node:22-alpine AS base
+# 1. Base image
+FROM oven/bun:latest
 WORKDIR /app
 
-# 2. Install dependencies with pnpm
-FROM base AS deps
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Copy workspace configuration and package files
+COPY bun.lock package.json turbo.json ./
 
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# Copy package.json files for all workspaces (bun needs complete workspace structure)
+COPY apps/web/package.json ./apps/web/
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
 
-# 3. Build the Next.js app
-FROM base AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Copy TypeScript and ESLint config files (needed before build)
+COPY packages/typescript-config/*.json ./packages/typescript-config/
+COPY packages/eslint-config/*.js ./packages/eslint-config/
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Install dependencies
 
-ENV NEXT_TELEMETRY_DISABLED=1
+# For canvas dependency:
+RUN apt-get update && apt-get install -y python3 make g++ pkg-config libcairo2-dev libpango1.0-dev libjpeg-dev libgif-dev librsvg2-dev
 
-ENV SUPABASE_URL=http://0.0.0.0:8000
+RUN bun install
 
-RUN pnpm build
+# Copy source files for the build (after install, so we don't invalidate cache)
+COPY apps/web ./apps/web
+COPY packages ./packages
 
-# 4. Production image
-FROM base AS runner
+# Add node_modules/.bin to PATH for CLI tools
+ENV PATH="/app/node_modules/.bin:$PATH"
+
+# Build Next.js (standalone output)
+RUN turbo run build
 
 ENV NODE_ENV=production
 ENV PORT=8042
@@ -32,14 +39,10 @@ EXPOSE 8042
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs \
   && adduser --system --uid 1001 nextjs
-
-WORKDIR /app
-
-COPY --chown=nextjs:nodejs --from=builder /app/public ./public
-COPY --chown=nextjs:nodejs --from=builder /app/.next ./.next
-COPY --chown=nextjs:nodejs --from=builder /app/node_modules ./node_modules
-COPY --chown=nextjs:nodejs --from=builder /app/package.json ./package.json
-
 USER nextjs
 
-CMD ["node_modules/.bin/next", "start", "-H", "0.0.0.0", "-p", "8042"]
+
+WORKDIR /app/apps/web
+
+# Start the app
+CMD ["bun", "run", "start"]
