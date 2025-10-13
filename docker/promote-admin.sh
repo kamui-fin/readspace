@@ -18,8 +18,8 @@ set -e # Exit immediately if a command exits with a non-zero status.
 if [ -z "$1" ]; then
     echo "❌ Error: Email address is required"
     echo ""
-    echo "Usage: ./docker/promote-admin.sh <email>"
-    echo "Example: ./docker/promote-admin.sh user@example.com"
+    echo "Usage: ./promote-admin.sh <email>"
+    echo "Example: ./promote-admin.sh user@example.com"
     exit 1
 fi
 

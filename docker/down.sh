@@ -1,6 +1,11 @@
 #!/bin/bash
 # Stop all services started by launch.sh
 
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the project root (parent of the docker directory)
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Function to print colored output
 print_info() {
     printf "\n\033[1;34m%s\033[0m\n" "$1"
@@ -16,29 +21,22 @@ print_error() {
 
 # --- Stop Services in Reverse Order ---
 
-# Check if we should stop RSShub services
-if [ -f "server/.env" ]; then
-    RSSHUB_URL=$(grep "^RSSHUB_URL=" server/.env | cut -d'=' -f2)
-fi
-
-# Stop RSShub services if they were started
-if [ -f "docker/docker-compose.rsshub.yml" ] && [[ "$RSSHUB_URL" == *":1200"* ]]; then
-    print_info "› Stopping local RSShub services..."
-    if ! docker compose -f docker/docker-compose.rsshub.yml --env-file docker/supabase/.env down; then
+# Stop RSShub services
+if [ -f "$SCRIPT_DIR/docker-compose.rsshub.yml" ]; then
+    print_info "› Stopping RSShub services..."
+    if ! docker compose -f "$SCRIPT_DIR/docker-compose.rsshub.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
         print_error "Failed to stop RSShub services."
         exit 1
     fi
     print_success "✓ RSShub services stopped."
-elif [ -f "docker/docker-compose.rsshub.yml" ]; then
-    print_info "› External RSShub was configured, no local RSShub to stop."
 else
     print_info "› No RSShub docker-compose found, skipping RSShub shutdown."
 fi
 
 # Stop custom application services
-if [ -f "docker/docker-compose.yml" ]; then
+if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
     print_info "› Stopping readspace application services..."
-    if ! docker compose -f docker/docker-compose.yml --env-file docker/supabase/.env down; then
+    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
         print_error "Failed to stop custom application services."
         exit 1
     fi
@@ -49,7 +47,7 @@ fi
 
 # Stop core Supabase stack
 print_info "› Stopping Supabase services..."
-if ! docker compose -f docker/supabase/docker-compose.yml --env-file docker/supabase/.env down; then
+if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
     print_error "Failed to stop core Supabase services."
     exit 1
 fi
