@@ -4,6 +4,7 @@ import { Rss, Check } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 import { useExtensionStore } from '@/store'
+import toast from 'react-hot-toast'
 
 interface FeedDiscoveryCardProps {
   feeds?: DiscoveredFeed[]
