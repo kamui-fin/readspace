@@ -251,7 +251,7 @@ export function FeedCard({
                                     href={
                                         isFollowed
                                             ? `/feeds/${feed.id}/articles`
-                                            : `/feeds/${feed.id}/articles?preview=true`
+                                            : `/feeds/${feed.id}/preview`
                                     }
                                 >
                                     {isFollowed ? "View" : "Preview"}
