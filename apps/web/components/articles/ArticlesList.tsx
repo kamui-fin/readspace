@@ -137,7 +137,10 @@ export function ArticlesList({
     }, [filteredArticles, isRecentlyReadMode])
 
     // Get sticky indexes (header positions)
+    // Only enable sticky headers when we actually have date headers (not in recently read mode)
     const stickyIndexes = useMemo(() => {
+        if (isRecentlyReadMode) return []
+
         const indexes: number[] = []
         allRows.forEach((row, index) => {
             if (row && 'type' in row && row.type === 'header') {
@@ -145,11 +148,14 @@ export function ArticlesList({
             }
         })
         return indexes
-    }, [allRows])
+    }, [allRows, isRecentlyReadMode])
 
     // Helper functions for sticky behavior
     const isSticky = useCallback((index: number) => stickyIndexes.includes(index), [stickyIndexes])
-    const isActiveSticky = useCallback((index: number) => activeStickyIndexRef.current === index, [])
+    const isActiveSticky = useCallback(
+        (index: number) => stickyIndexes.length > 0 && activeStickyIndexRef.current === index,
+        [stickyIndexes.length]
+    )
 
     // TanStack Virtual configuration with sticky support
     const rowVirtualizer = useVirtualizer({
@@ -242,7 +248,6 @@ export function ArticlesList({
 
     return (
         <div
-            key={virtualizerKey}
             ref={parentRef}
             className="h-full w-full overflow-auto scroll-smooth"
             style={{ scrollbarGutter: "stable" }}

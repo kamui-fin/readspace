@@ -201,7 +201,12 @@ class ArticleManagementService:
             limit=limit,
         )
 
-        articles = [self.transformer.feed_to_unified(article) for article in articles_db]
+        # Transform tuples of (FeedArticle, UserArticleState) to ArticleResponse
+        # articles_db contains Row objects, so we need to unpack them
+        articles = [
+            self.transformer.feed_to_unified((row[0], row[1]))  # row[0] = FeedArticle, row[1] = UserArticleState
+            for row in articles_db
+        ]
 
         page = skip // limit + 1
         pages = (total_count + limit - 1) // limit if limit > 0 else 0

@@ -226,8 +226,22 @@ class TestArticleManagementService:
     @pytest.mark.asyncio
     async def test_get_recently_read_articles(self):
         """Test getting recently read articles."""
+        from datetime import datetime
+
+        # Create mock article (FeedArticle part of the tuple)
         mock_article = create_mock_article(is_read=True)
-        mock_articles = [mock_article]
+
+        # Create mock UserArticleState (second part of the tuple)
+        mock_user_state = MagicMock()
+        mock_user_state.is_read = True
+        mock_user_state.is_read_later = False
+        mock_user_state.is_favorite = False
+        mock_user_state.read_at = datetime.now()
+
+        # get_recently_read_articles returns a list of Row objects (tuples)
+        # where row[0] = FeedArticle and row[1] = UserArticleState
+        mock_row_tuple = (mock_article, mock_user_state)
+        mock_articles = [mock_row_tuple]
         total_count = 1
 
         with pytest.MonkeyPatch().context() as m:

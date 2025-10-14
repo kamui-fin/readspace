@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow, parseISO } from "date-fns"
-import { FileText, Globe, Lightbulb } from "lucide-react"
+import { FileText, Globe, Lightbulb, X } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -101,6 +101,9 @@ export function ArticleContent({
     const [optimisticReadLater, setOptimisticReadLater] = useState(
         article.is_read_later
     )
+    // Track if the full article suggestion has been dismissed
+    const [showFullArticleSuggestion, setShowFullArticleSuggestion] =
+        useState(true)
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
@@ -113,6 +116,22 @@ export function ArticleContent({
     useEffect(() => {
         setOptimisticReadLater(article.is_read_later)
     }, [article.is_read_later])
+
+    // Check localStorage on mount to see if suggestion was dismissed
+    useEffect(() => {
+        const dismissed = localStorage.getItem("fullArticleSuggestionDismissed")
+        if (dismissed === "true") {
+            setShowFullArticleSuggestion(false)
+        }
+    }, [])
+
+    /**
+     * Handle dismissing the full article suggestion
+     */
+    const handleDismissFullArticleSuggestion = () => {
+        setShowFullArticleSuggestion(false)
+        localStorage.setItem("fullArticleSuggestionDismissed", "true")
+    }
 
     const publishedAtString = article.published_at
     const readAtString = article.read_at
@@ -880,11 +899,19 @@ export function ArticleContent({
                         {/* Content extraction suggestion - show when content is too short */}
                         {article.link &&
                             !shouldShowPreviewBanner &&
+                            showFullArticleSuggestion &&
                             (currentContent.length <= 500 ||
                                 (!currentContent &&
                                     (article.note || article.description))) && (
-                                <div className="mt-6 px-6 py-0 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg">
-                                    <div className="flex items-center gap-3">
+                                <div className="mt-6 px-6 py-0 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg relative group transition-all duration-200 hover:shadow-sm">
+                                    <button
+                                        onClick={handleDismissFullArticleSuggestion}
+                                        className="absolute top-2 right-2 p-1 rounded-md hover:bg-primary/10 transition-colors duration-200 opacity-60 hover:opacity-100"
+                                        aria-label="Dismiss suggestion"
+                                    >
+                                        <X className="w-3.5 h-3.5 text-foreground" />
+                                    </button>
+                                    <div className="flex items-center gap-3 pr-6">
                                         <Lightbulb className="w-4 h-4 text-primary flex-shrink-0" />
                                         <div className="flex-1 min-w-0">
                                             <p className="text-sm text-foreground">

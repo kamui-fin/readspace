@@ -9,6 +9,7 @@ import {
     CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { Skeleton } from "@/components/ui/skeleton"
 import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -69,6 +70,7 @@ export default function ImportStatusPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showErrorDetails, setShowErrorDetails] = useState(false)
+    const [devState, setDevState] = useState<string | null>(null)
 
     const params = useParams()
     const router = useRouter()
@@ -192,29 +194,154 @@ export default function ImportStatusPage() {
     }, [taskId, queryClient, error, taskStatus?.status])
 
     const renderStatus = () => {
-        if (isLoading) {
+        // Development state override
+        let displayStatus = taskStatus
+        let displayError = error
+        let displayIsLoading = isLoading
+
+        if (devState === "loading") {
+            displayIsLoading = true
+        } else if (devState === "error") {
+            displayError = "Import task not found or has expired."
+            displayIsLoading = false
+        } else if (devState === "pending") {
+            displayIsLoading = false
+            displayError = null
+            displayStatus = {
+                task_id: "test-123",
+                status: "pending",
+                metadata: {
+                    user_id: "user-123",
+                    task_id: "test-123",
+                    estimated_feeds: 42,
+                    filename: "my-feeds.opml",
+                    created_at: new Date().toISOString(),
+                    status: "pending",
+                },
+            }
+        } else if (devState === "in_progress") {
+            displayIsLoading = false
+            displayError = null
+            displayStatus = {
+                task_id: "test-123",
+                status: "in_progress",
+                progress: {
+                    completed: 25,
+                    total: 42,
+                    successful: 20,
+                    failed: 3,
+                    already_existed: 2,
+                },
+                metadata: {
+                    user_id: "user-123",
+                    task_id: "test-123",
+                    estimated_feeds: 42,
+                    filename: "my-feeds.opml",
+                    created_at: new Date().toISOString(),
+                    status: "in_progress",
+                },
+            }
+        } else if (devState === "completed") {
+            displayIsLoading = false
+            displayError = null
+            displayStatus = {
+                task_id: "test-123",
+                status: "completed",
+                result: {
+                    imported_count: 35,
+                    failed_count: 5,
+                    already_existed_count: 2,
+                    total_feeds: 42,
+                    summary: {
+                        successful: 35,
+                        failed: 5,
+                        already_existed: 2,
+                    },
+                    errors: [
+                        {
+                            url: "https://example.com/feed1.xml",
+                            title: "Example Feed 1",
+                            error: "Connection timeout",
+                            status: "failed",
+                        },
+                        {
+                            url: "https://example.com/feed2.xml",
+                            title: "Example Feed 2",
+                            error: "Invalid XML format",
+                            status: "failed",
+                        },
+                    ],
+                },
+                metadata: {
+                    user_id: "user-123",
+                    task_id: "test-123",
+                    estimated_feeds: 42,
+                    filename: "my-feeds.opml",
+                    created_at: new Date().toISOString(),
+                    status: "completed",
+                },
+            }
+        } else if (devState === "failed") {
+            displayIsLoading = false
+            displayError = null
+            displayStatus = {
+                task_id: "test-123",
+                status: "failed",
+                error: "Failed to parse OPML file: Invalid XML structure",
+                metadata: {
+                    user_id: "user-123",
+                    task_id: "test-123",
+                    estimated_feeds: 42,
+                    filename: "my-feeds.opml",
+                    created_at: new Date().toISOString(),
+                    status: "failed",
+                },
+            }
+        }
+
+        if (displayIsLoading) {
             return (
                 <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <Activity className="h-6 w-6 text-blue-600 animate-pulse" />
-                            <CardTitle>Loading Import Status...</CardTitle>
+                    <CardHeader className="pb-4">
+                        <div className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <Skeleton className="h-6 w-6 rounded-full flex-shrink-0" />
+                                <div className="min-w-0 flex-1 space-y-3">
+                                    <Skeleton className="h-6 w-48" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-32" />
+                                        <Skeleton className="h-4 w-40" />
+                                    </div>
+                                </div>
+                            </div>
+                            <Skeleton className="h-3 w-24 ml-9" />
                         </div>
                     </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-2 w-full rounded-full" />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            <Skeleton className="h-24 rounded-lg" />
+                            <Skeleton className="h-24 rounded-lg" />
+                            <Skeleton className="h-24 rounded-lg" />
+                        </div>
+                    </CardContent>
                 </Card>
             )
         }
 
-        if (error) {
+        if (displayError) {
             return (
-                <Card className="border-red-200 dark:border-red-800/30 bg-red-50/50 dark:bg-red-950/20">
+                <Card>
                     <CardHeader>
                         <div className="flex items-center gap-3">
-                            <XCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                            <XCircle className="h-6 w-6 text-destructive" />
                             <CardTitle>Task Not Found</CardTitle>
                         </div>
-                        <CardDescription className="text-red-700 dark:text-red-300">
-                            {error}
+                        <CardDescription className="text-destructive">
+                            {displayError}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -249,9 +376,9 @@ export default function ImportStatusPage() {
             )
         }
 
-        if (!taskStatus) return null
+        if (!displayStatus) return null
 
-        const { status, progress, result, metadata } = taskStatus
+        const { status, progress, result, metadata } = displayStatus
 
         return (
             <div className="space-y-6">
@@ -300,7 +427,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                                100
+                                            100
                                         )}
                                         %
                                     </span>
@@ -314,32 +441,32 @@ export default function ImportStatusPage() {
                                 />
                             </div>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-green-600 dark:text-green-400">
+                                        <div className="text-2xl font-semibold text-secondary">
                                             {progress.successful}
                                         </div>
-                                        <div className="text-sm font-medium text-green-700 dark:text-green-300">
+                                        <div className="text-sm font-medium text-secondary">
                                             Successfully Imported
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+                                        <div className="text-2xl font-semibold text-yellow-700 dark:text-yellow-400">
                                             {progress.already_existed}
                                         </div>
-                                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                        <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
                                             Already Existed
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-red-600 dark:text-red-400">
+                                        <div className="text-2xl font-semibold text-destructive">
                                             {progress.failed}
                                         </div>
-                                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                                        <div className="text-sm font-medium text-destructive">
                                             Import Failed
                                         </div>
                                     </div>
@@ -350,7 +477,7 @@ export default function ImportStatusPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={handleCancelImport}
-                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    className="text-destructive hover:text-destructive"
                                 >
                                     <X className="h-4 w-4 mr-2" />
                                     Cancel Import
@@ -399,33 +526,33 @@ export default function ImportStatusPage() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-green-600 dark:text-green-400">
+                                        <div className="text-2xl font-semibold text-secondary">
                                             {result.summary?.successful || 0}
                                         </div>
-                                        <div className="text-sm font-medium text-green-700 dark:text-green-300">
+                                        <div className="text-sm font-medium text-secondary">
                                             Successfully Imported
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-blue-600 dark:text-blue-400">
+                                        <div className="text-2xl font-semibold text-yellow-700 dark:text-yellow-400">
                                             {result.summary?.already_existed ||
                                                 0}
                                         </div>
-                                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">
+                                        <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
                                             Already Existed
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-red-600 dark:text-red-400">
+                                        <div className="text-2xl font-semibold text-destructive">
                                             {result.summary?.failed || 0}
                                         </div>
-                                        <div className="text-sm font-medium text-red-700 dark:text-red-300">
+                                        <div className="text-sm font-medium text-destructive">
                                             Import Failed
                                         </div>
                                     </div>
@@ -454,7 +581,7 @@ export default function ImportStatusPage() {
                                                 (error, index) => (
                                                     <div
                                                         key={index}
-                                                        className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800/30 rounded p-3 text-sm"
+                                                        className="bg-red-500/10 border border-red-500/20 rounded p-3 text-sm"
                                                     >
                                                         <div className="font-medium text-red-900 dark:text-red-300">
                                                             {error.title ||
@@ -495,37 +622,40 @@ export default function ImportStatusPage() {
                 {/* Pending Card */}
                 {status === "pending" && (
                     <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <Clock className="h-6 w-6 text-yellow-600" />
-                                    <div>
-                                        <CardTitle>Import Queued</CardTitle>
-                                        <CardDescription className="flex items-center gap-2">
+                        <CardHeader className="pb-4">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <Clock className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-lg mb-3">
+                                            Import Queued
+                                        </CardTitle>
+                                        <div className="space-y-2">
                                             {metadata?.filename && (
-                                                <>
-                                                    <FileText className="h-4 w-4" />
-                                                    {metadata.filename} •
-                                                </>
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                                    <span className="text-sm text-muted-foreground truncate">
+                                                        {metadata.filename}
+                                                    </span>
+                                                </div>
                                             )}
-                                            Your OPML import is queued and will
-                                            start processing shortly.
-                                            {metadata?.estimated_feeds && (
-                                                <span>
-                                                    {" "}
-                                                    Estimated{" "}
-                                                    {
-                                                        metadata.estimated_feeds
-                                                    }{" "}
-                                                    feeds to process.
-                                                </span>
-                                            )}
-                                        </CardDescription>
+                                            <p className="text-sm text-muted-foreground">
+                                                Your import will start processing shortly.
+                                                {metadata?.estimated_feeds && (
+                                                    <span>
+                                                        {" "}
+                                                        Estimated{" "}
+                                                        {metadata.estimated_feeds}{" "}
+                                                        feeds to process.
+                                                    </span>
+                                                )}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-xs sm:text-sm text-muted-foreground break-words">
-                                        Started:{" "}
+                                    <div className="text-xs text-muted-foreground pl-9">
+                                        Queued:{" "}
                                         {new Date(
                                             metadata.created_at
                                         ).toLocaleString()}
@@ -533,12 +663,12 @@ export default function ImportStatusPage() {
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="pt-0">
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={handleCancelImport}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                className="text-destructive hover:text-destructive"
                             >
                                 <X className="h-4 w-4 mr-2" />
                                 Cancel Import
@@ -550,26 +680,32 @@ export default function ImportStatusPage() {
                 {/* Failed Card */}
                 {status === "failed" && (
                     <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <XCircle className="h-6 w-6 text-red-600" />
-                                    <div>
-                                        <CardTitle>Import Failed</CardTitle>
-                                        <CardDescription className="flex items-center gap-2">
+                        <CardHeader className="pb-4">
+                            <div className="space-y-4">
+                                <div className="flex items-start gap-3">
+                                    <XCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
+                                    <div className="min-w-0 flex-1">
+                                        <CardTitle className="text-lg mb-3">
+                                            Import Failed
+                                        </CardTitle>
+                                        <div className="space-y-2">
                                             {metadata?.filename && (
-                                                <>
-                                                    <FileText className="h-4 w-4" />
-                                                    {metadata.filename} •
-                                                </>
+                                                <div className="flex items-center gap-2">
+                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                                                    <span className="text-sm text-muted-foreground truncate">
+                                                        {metadata.filename}
+                                                    </span>
+                                                </div>
                                             )}
-                                            {taskStatus.error ||
-                                                "The import process encountered an error."}
-                                        </CardDescription>
+                                            <p className="text-sm text-destructive">
+                                                {displayStatus.error ||
+                                                    "The import process encountered an error."}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                                 {metadata?.created_at && (
-                                    <div className="text-xs sm:text-sm text-muted-foreground break-words">
+                                    <div className="text-xs text-muted-foreground pl-9">
                                         Started:{" "}
                                         {new Date(
                                             metadata.created_at
@@ -578,15 +714,13 @@ export default function ImportStatusPage() {
                                 )}
                             </div>
                         </CardHeader>
-                        <CardContent>
-                            <div className="flex gap-3">
-                                <Button
-                                    variant="outline"
-                                    onClick={() => router.push("/import-opml")}
-                                >
-                                    Try Again
-                                </Button>
-                            </div>
+                        <CardContent className="pt-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => router.push("/import-opml")}
+                            >
+                                Try Again
+                            </Button>
                         </CardContent>
                     </Card>
                 )}
@@ -615,6 +749,64 @@ export default function ImportStatusPage() {
                     Track the progress of your OPML import.
                 </p>
             </div>
+
+            {/* DEV: State selector */}
+            <Card className="mb-6 bg-yellow-500/10 border-yellow-500/20">
+                <CardContent className="p-4">
+                    <div className="flex flex-wrap gap-2">
+                        <span className="text-sm font-medium">Dev Mode:</span>
+                        <Button
+                            variant={devState === null ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState(null)}
+                        >
+                            Real
+                        </Button>
+                        <Button
+                            variant={devState === "loading" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("loading")}
+                        >
+                            Loading
+                        </Button>
+                        <Button
+                            variant={devState === "error" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("error")}
+                        >
+                            Error
+                        </Button>
+                        <Button
+                            variant={devState === "pending" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("pending")}
+                        >
+                            Pending
+                        </Button>
+                        <Button
+                            variant={devState === "in_progress" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("in_progress")}
+                        >
+                            In Progress
+                        </Button>
+                        <Button
+                            variant={devState === "completed" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("completed")}
+                        >
+                            Completed
+                        </Button>
+                        <Button
+                            variant={devState === "failed" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setDevState("failed")}
+                        >
+                            Failed
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
 
             {renderStatus()}
         </div>

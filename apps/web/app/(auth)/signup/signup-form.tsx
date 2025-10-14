@@ -184,7 +184,7 @@ export function SignupForm({
                                 <Input
                                     id="password"
                                     type="password"
-                                    placeholder="at least 8 characters"
+                                    placeholder="at least 6 characters"
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
                                     value={formik.values.password}

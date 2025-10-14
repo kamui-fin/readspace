@@ -359,7 +359,18 @@ class FeedCreationService(BaseFeedService):
         skip_hours = self._extract_skip_hours(parsed_feed, db_feed.id)
         skip_days = self._extract_skip_days(parsed_feed, db_feed.id)
 
-        # Update feed with all metadata
+        # Calculate content hash from parsed feed entries (same as refresh logic)
+        from app.services.feed_service import FeedService
+
+        feed_service = FeedService(self.db)
+        content_hash = feed_service._calculate_content_hash(parsed_feed.entries)
+
+        # Calculate initial adaptive fetch interval
+        from app.services.adaptive_feed_scheduler import calculate_optimal_interval
+
+        adaptive_interval = await calculate_optimal_interval(self.db, db_feed)
+
+        # Update feed with all metadata including content_hash and adaptive_fetch_interval_minutes
         await crud_feed.update_feed_metadata(
             self.db,
             feed_db=db_feed,
@@ -375,6 +386,8 @@ class FeedCreationService(BaseFeedService):
             etag=None,  # Will be set during fetch
             last_fetched_at=datetime.now(timezone.utc),
             last_article_published_at=latest_article_date,
+            content_hash=content_hash,  # Set initial content hash
+            adaptive_fetch_interval_minutes=adaptive_interval,  # Set initial adaptive interval
         )
 
     def _extract_ttl(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> int | None:

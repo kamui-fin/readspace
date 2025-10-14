@@ -28,13 +28,18 @@ class ArticleSpecializedQueries:
         skip: int = 0,
         limit: int = 50,
         days_back: int = 30,
-    ) -> tuple[list[FeedArticle], int]:
-        """Get recently read articles for a user."""
+    ) -> tuple[list[tuple[FeedArticle, UserArticleState]], int]:
+        """Get recently read articles for a user.
+
+        Returns tuples of (FeedArticle, UserArticleState) to provide both the article
+        and its user-specific state (including read_at timestamp).
+        """
         since_date = datetime.now(timezone.utc) - timedelta(days=days_back)
 
         # Build the query for recently read articles
+        # Use contains_eager to efficiently load the joined UserArticleState
         stmt = (
-            select(FeedArticle)
+            select(FeedArticle, UserArticleState)
             .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
             .join(UserArticleState, UserArticleState.article_id == FeedArticle.id)
@@ -50,14 +55,14 @@ class ArticleSpecializedQueries:
             .options(
                 selectinload(FeedArticle.feed).selectinload(Feed.subscriptions),
                 selectinload(FeedArticle.content),
-                selectinload(FeedArticle.user_states),
             )
             .offset(skip)
             .limit(limit)
         )
 
         articles_result = await db.execute(stmt)
-        articles = list(articles_result.scalars().all())
+        # Return tuples of (FeedArticle, UserArticleState)
+        articles = list(articles_result.all())
 
         # Count query
         count_stmt = (

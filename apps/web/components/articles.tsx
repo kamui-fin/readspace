@@ -771,9 +771,7 @@ export function ArticlesView({
                                 {/* Desktop List Toolbar */}
                                 <div className="flex h-14 items-center justify-between border-b px-4">
                                     <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                        {isTablet && (
-                                            <SidebarLeftTrigger className="-ml-1" />
-                                        )}
+                                        <SidebarLeftTrigger className="-ml-1" />
                                         <TooltipProvider>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>

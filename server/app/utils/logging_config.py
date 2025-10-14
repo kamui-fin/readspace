@@ -60,24 +60,6 @@ def setup_logging(service_name: str | None = None) -> None:
                 logger_factory=structlog.stdlib.LoggerFactory(),
                 cache_logger_on_first_use=True,
             )
-        else:
-            # Production: JSON output for both console and structured logs
-            structlog.configure(
-                processors=[
-                    structlog.contextvars.merge_contextvars,
-                    add_trace_context,
-                    structlog.processors.add_log_level,
-                    structlog.processors.TimeStamper(fmt="iso"),
-                    structlog.processors.dict_tracebacks,
-                    structlog.processors.JSONRenderer(),
-                ],
-                wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-                context_class=dict,
-                logger_factory=structlog.PrintLoggerFactory(),
-                cache_logger_on_first_use=True,
-            )
-        # JSON formatter for standard library logs using python-json-logger
-        if is_celery_worker:
             # Use ProcessorFormatter for Celery to properly handle structlog messages
             console_formatter: Any = structlog.stdlib.ProcessorFormatter(
                 processor=structlog.processors.JSONRenderer(),
@@ -96,6 +78,22 @@ def setup_logging(service_name: str | None = None) -> None:
                 ],
             )
         else:
+            # Production: JSON output for both console and structured logs
+            structlog.configure(
+                processors=[
+                    structlog.contextvars.merge_contextvars,
+                    add_trace_context,
+                    structlog.processors.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.dict_tracebacks,
+                    structlog.processors.JSONRenderer(),
+                ],
+                wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+                context_class=dict,
+                logger_factory=structlog.PrintLoggerFactory(),
+                cache_logger_on_first_use=True,
+            )
+            # JSON formatter for standard library logs using python-json-logger
             console_formatter = jsonlogger.JsonFormatter(
                 "%(asctime)s %(name)s %(levelname)s %(message)s",
                 rename_fields={
