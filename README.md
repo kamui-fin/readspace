@@ -86,7 +86,15 @@ Readspace is designed for easy self-hosting, giving you complete control over yo
     ./promote-admin.sh your-email@example.com
     ```
 
-    Note: You can configure your reverse proxy to point to `localhost:18042` for external access.
+### Using a Custom Domain
+
+If you want to access Readspace via your own domain (e.g., `https://app.example.com`):
+
+1. Run `./setup.sh` and select option 2 (Custom domain)
+2. Configure your reverse proxy (Traefik, nginx, Caddy, etc.)
+3. See [docs/reverse-proxy-examples.md](docs/reverse-proxy-examples.md) for detailed configuration examples
+
+For local network or development, option 1 (IP:PORT access) works out of the box.
 
 6.  **Configure Browser Extension** (Optional)
 
