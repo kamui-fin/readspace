@@ -70,7 +70,6 @@ export default function ImportStatusPage() {
     const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [showErrorDetails, setShowErrorDetails] = useState(false)
-    const [devState, setDevState] = useState<string | null>(null)
 
     const params = useParams()
     const router = useRouter()
@@ -194,112 +193,7 @@ export default function ImportStatusPage() {
     }, [taskId, queryClient, error, taskStatus?.status])
 
     const renderStatus = () => {
-        // Development state override
-        let displayStatus = taskStatus
-        let displayError = error
-        let displayIsLoading = isLoading
-
-        if (devState === "loading") {
-            displayIsLoading = true
-        } else if (devState === "error") {
-            displayError = "Import task not found or has expired."
-            displayIsLoading = false
-        } else if (devState === "pending") {
-            displayIsLoading = false
-            displayError = null
-            displayStatus = {
-                task_id: "test-123",
-                status: "pending",
-                metadata: {
-                    user_id: "user-123",
-                    task_id: "test-123",
-                    estimated_feeds: 42,
-                    filename: "my-feeds.opml",
-                    created_at: new Date().toISOString(),
-                    status: "pending",
-                },
-            }
-        } else if (devState === "in_progress") {
-            displayIsLoading = false
-            displayError = null
-            displayStatus = {
-                task_id: "test-123",
-                status: "in_progress",
-                progress: {
-                    completed: 25,
-                    total: 42,
-                    successful: 20,
-                    failed: 3,
-                    already_existed: 2,
-                },
-                metadata: {
-                    user_id: "user-123",
-                    task_id: "test-123",
-                    estimated_feeds: 42,
-                    filename: "my-feeds.opml",
-                    created_at: new Date().toISOString(),
-                    status: "in_progress",
-                },
-            }
-        } else if (devState === "completed") {
-            displayIsLoading = false
-            displayError = null
-            displayStatus = {
-                task_id: "test-123",
-                status: "completed",
-                result: {
-                    imported_count: 35,
-                    failed_count: 5,
-                    already_existed_count: 2,
-                    total_feeds: 42,
-                    summary: {
-                        successful: 35,
-                        failed: 5,
-                        already_existed: 2,
-                    },
-                    errors: [
-                        {
-                            url: "https://example.com/feed1.xml",
-                            title: "Example Feed 1",
-                            error: "Connection timeout",
-                            status: "failed",
-                        },
-                        {
-                            url: "https://example.com/feed2.xml",
-                            title: "Example Feed 2",
-                            error: "Invalid XML format",
-                            status: "failed",
-                        },
-                    ],
-                },
-                metadata: {
-                    user_id: "user-123",
-                    task_id: "test-123",
-                    estimated_feeds: 42,
-                    filename: "my-feeds.opml",
-                    created_at: new Date().toISOString(),
-                    status: "completed",
-                },
-            }
-        } else if (devState === "failed") {
-            displayIsLoading = false
-            displayError = null
-            displayStatus = {
-                task_id: "test-123",
-                status: "failed",
-                error: "Failed to parse OPML file: Invalid XML structure",
-                metadata: {
-                    user_id: "user-123",
-                    task_id: "test-123",
-                    estimated_feeds: 42,
-                    filename: "my-feeds.opml",
-                    created_at: new Date().toISOString(),
-                    status: "failed",
-                },
-            }
-        }
-
-        if (displayIsLoading) {
+        if (isLoading) {
             return (
                 <Card>
                     <CardHeader className="pb-4">
@@ -332,7 +226,7 @@ export default function ImportStatusPage() {
             )
         }
 
-        if (displayError) {
+        if (error) {
             return (
                 <Card>
                     <CardHeader>
@@ -341,7 +235,7 @@ export default function ImportStatusPage() {
                             <CardTitle>Task Not Found</CardTitle>
                         </div>
                         <CardDescription className="text-destructive">
-                            {displayError}
+                            {error}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -376,9 +270,9 @@ export default function ImportStatusPage() {
             )
         }
 
-        if (!displayStatus) return null
+        if (!taskStatus) return null
 
-        const { status, progress, result, metadata } = displayStatus
+        const { status, progress, result, metadata } = taskStatus
 
         return (
             <div className="space-y-6">
@@ -698,7 +592,7 @@ export default function ImportStatusPage() {
                                                 </div>
                                             )}
                                             <p className="text-sm text-destructive">
-                                                {displayStatus.error ||
+                                                {taskStatus.error ||
                                                     "The import process encountered an error."}
                                             </p>
                                         </div>
@@ -750,63 +644,6 @@ export default function ImportStatusPage() {
                 </p>
             </div>
 
-            {/* DEV: State selector */}
-            <Card className="mb-6 bg-yellow-500/10 border-yellow-500/20">
-                <CardContent className="p-4">
-                    <div className="flex flex-wrap gap-2">
-                        <span className="text-sm font-medium">Dev Mode:</span>
-                        <Button
-                            variant={devState === null ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState(null)}
-                        >
-                            Real
-                        </Button>
-                        <Button
-                            variant={devState === "loading" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("loading")}
-                        >
-                            Loading
-                        </Button>
-                        <Button
-                            variant={devState === "error" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("error")}
-                        >
-                            Error
-                        </Button>
-                        <Button
-                            variant={devState === "pending" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("pending")}
-                        >
-                            Pending
-                        </Button>
-                        <Button
-                            variant={devState === "in_progress" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("in_progress")}
-                        >
-                            In Progress
-                        </Button>
-                        <Button
-                            variant={devState === "completed" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("completed")}
-                        >
-                            Completed
-                        </Button>
-                        <Button
-                            variant={devState === "failed" ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setDevState("failed")}
-                        >
-                            Failed
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
 
             {renderStatus()}
         </div>

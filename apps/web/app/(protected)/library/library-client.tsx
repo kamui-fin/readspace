@@ -9,6 +9,7 @@ import { LibraryCatalog } from "@/components/library/LibraryCatalog"
 import UploadBookDialog from "@/components/library/UploadBook"
 import Header from "@/components/navigation/Header"
 import { useIsMobile } from "@/hooks/useMobile"
+import { useUserRole } from "@/hooks/useUserRole"
 import { useBooks, UserBookLibrary } from "@readspace/shared"
 import { useEffect, useState } from "react"
 
@@ -97,14 +98,12 @@ function LibraryLoadingSkeleton() {
     )
 }
 
-interface LibraryClientProps {
-    userId: string
-}
-
-export default function LibraryClient({ userId }: LibraryClientProps) {
+export default function LibraryClient() {
+    const { profile, isLoading: isLoadingProfile } = useUserRole()
+    const userId = profile?.id || ""
     const { data: books, isLoading, error } = useBooks(userId)
 
-    if (isLoading) {
+    if (isLoading || isLoadingProfile) {
         return (
             <LibraryLayout>
                 <LibraryLoadingSkeleton />
