@@ -568,14 +568,20 @@ export function ArticlesView({
         showUnreadOnly,
     ])
 
-    // Show skeleton during initial loading or preview refresh
-    if ((isArticlesLoading && allArticles.length === 0) || isPreviewRefreshing) {
+    // Show skeleton during initial loading, preview refresh, or when loading after preview
+    const isInitialLoading =
+        ((isArticlesLoading || isFetching) && allArticles.length === 0) ||
+        isPreviewRefreshing
+
+    if (isInitialLoading) {
         return <ArticlesViewSkeleton showUnreadBadge={false} />
     }
 
-    // Show empty state when no articles
+    // Show empty state when no articles (but not when still loading)
     if (
         !isArticlesLoading &&
+        !isFetching &&
+        !isPreviewRefreshing &&
         filteredArticles.length === 0 &&
         allArticles.length === 0
     ) {
