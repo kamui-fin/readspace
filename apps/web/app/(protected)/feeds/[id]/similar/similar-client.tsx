@@ -6,7 +6,6 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
-import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import {
@@ -31,11 +30,7 @@ export default function SimilarFeedsClient({
     const router = useRouter()
 
     // Query for similar feeds data (includes source feed)
-    const {
-        data: similarData,
-        isLoading,
-        error,
-    } = useQuery<SimilarFeedsResponse>({
+    const { data: similarData, error } = useQuery<SimilarFeedsResponse>({
         queryKey: ["similarFeeds", feedId],
         queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
         staleTime: 5 * 60 * 1000, // 5 minutes
@@ -180,13 +175,7 @@ export default function SimilarFeedsClient({
 
                 {/* Similar Feeds Content */}
                 <div>
-                    {isLoading ? (
-                        <div className="space-y-4">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <FeedCardSkeleton key={i} />
-                            ))}
-                        </div>
-                    ) : similarFeeds && similarFeeds.length > 0 ? (
+                    {similarFeeds && similarFeeds.length > 0 ? (
                         <div className="space-y-4">
                             {similarFeeds.map((feed: FeedDiscoveryResult) => (
                                 <FeedCard
