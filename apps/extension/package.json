@@ -80,13 +80,12 @@
       "128": "icons/icon128.png"
     },
     "permissions": [
-      "identity",
-      "tabs",
       "activeTab",
       "storage",
-      "contextMenus",
       "scripting",
-      "notifications"
+      "notifications",
+      "identity",
+      "contextMenus"
     ],
     "host_permissions": [
       "http://*/*",

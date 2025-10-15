@@ -9,7 +9,7 @@ import {
   SaveOptions,
   User,
 } from '@readspace/shared'
-import { ApiClient, configureExtensionApiClient } from '@/lib/api-client'
+import { ApiClient, configureExtensionApiClient, setStoreGetter } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
@@ -415,6 +415,9 @@ export const useExtensionStore = create<ExtensionState>()(
     }
   )
 )
+
+// Set up the store getter to break circular dependency
+setStoreGetter(() => useExtensionStore.getState())
 
 // Configure ApiClient immediately after store creation
 configureExtensionApiClient()

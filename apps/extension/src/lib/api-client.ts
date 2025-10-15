@@ -1,14 +1,17 @@
-import { useExtensionStore } from '@/store'
 import { ApiClient, type AuthTokenProvider } from '@readspace/shared'
 
 /**
- * Get the extension store dynamically to avoid circular dependency.
- * We import it inside the function rather than at module level.
+ * Lazy-loaded reference to store to avoid circular dependency.
+ * This is set by the store after it's initialized.
  */
-function getExtensionStore() {
-  // Dynamic import to break circular dependency
+let storeGetter: (() => { settings: { access_token?: string; readspace_url?: string } }) | null = null
 
-  return useExtensionStore.getState()
+/**
+ * Set the store getter function.
+ * This should be called by the store after initialization to avoid circular dependencies.
+ */
+export function setStoreGetter(getter: () => { settings: { access_token?: string; readspace_url?: string } }) {
+  storeGetter = getter
 }
 
 /**
@@ -17,7 +20,11 @@ function getExtensionStore() {
  */
 const getAuthToken: AuthTokenProvider = async (): Promise<string | null> => {
   try {
-    const state = getExtensionStore()
+    if (!storeGetter) {
+      console.warn('Store getter not initialized yet')
+      return null
+    }
+    const state = storeGetter()
     return state.settings.access_token || null
   } catch (error) {
     console.warn('Failed to get access token from store:', error)
@@ -31,7 +38,16 @@ const getAuthToken: AuthTokenProvider = async (): Promise<string | null> => {
  */
 export function configureExtensionApiClient() {
   try {
-    const state = getExtensionStore()
+    if (!storeGetter) {
+      console.warn('Store getter not set, using default configuration')
+      ApiClient.configure({
+        baseUrl: 'https://api.readspace.ai',
+        getAuthToken,
+      })
+      return
+    }
+
+    const state = storeGetter()
     const baseUrl = state.settings.readspace_url || 'https://api.readspace.ai'
 
     ApiClient.configure({
