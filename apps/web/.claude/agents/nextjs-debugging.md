@@ -200,10 +200,6 @@ npm install [missing-package]
 // Solution: Clean and rebuild
 rm -rf .next
 npm run build
-
-// Error: Dynamic server usage
-// Solution: Add dynamic = 'force-dynamic' or use generateStaticParams
-export const dynamic = 'force-dynamic';
 ```
 
 ## Memory Leak Detection

@@ -27,12 +27,13 @@ import {
 import { useArticlesQuery } from "@/hooks/useArticlesQuery"
 import { useIsMobile, useIsTablet } from "@/hooks/useMobile"
 import { useClearPendingNavigation } from "@/hooks/useNavigationState"
-import type { Article, Feed } from "@readspace/shared"
+import type { Article, Feed, Folder } from "@readspace/shared"
 import {
     ApiClient,
     useArticle,
     useFeed,
     useFeeds,
+    useFolders,
     useRefreshFeed,
     useUnreadCounts,
     useUpdateArticle,
@@ -134,6 +135,14 @@ export function ArticlesView({
         }
     )
 
+    // Fetch folders data only when viewing a specific folder
+    const { data: allFolders } = useFolders({
+        enabled: !!folderId,
+        refetchOnMount: false,
+        refetchOnWindowFocus: false,
+        staleTime: 5 * 60 * 1000,
+    })
+
     // Fetch feed data only when viewing a specific feed to check subscription status
     // For preview mode, we'll get feed data from the refresh response instead
     const { data: fetchedFeedData } = useFeed(feedId || "", {
@@ -170,13 +179,19 @@ export function ArticlesView({
     const isReadLaterMode = mode === "readLater"
     const isTodayMode = mode === "today"
 
+    // Determine sidebar title based on view mode and available data
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
             ? "Read Later"
             : isTodayMode
                 ? "Today"
-                : initialSidebarTitle || "All Articles"
+                : feedId && feedData?.title
+                    ? feedData.title
+                    : folderId && allFolders
+                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                              ?.name || initialSidebarTitle || "All Articles"
+                        : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {

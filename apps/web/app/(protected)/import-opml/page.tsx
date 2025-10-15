@@ -4,14 +4,8 @@ import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
 import ImportOPMLPageClient from "./import-opml-client"
 
-// Force dynamic rendering since we're fetching user-specific data
+// Force dynamic rendering since we're using cookies for auth
 export const dynamic = "force-dynamic"
-
-export const metadata = {
-    title: "OPML Import | Readspace",
-    description:
-        "Import feeds from an OPML file exported from another RSS reader",
-}
 
 export default async function ImportOPMLPage() {
     const queryClient = getQueryClient()
