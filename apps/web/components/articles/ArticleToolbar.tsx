@@ -74,7 +74,7 @@ export function ArticleToolbar({
             await navigator.clipboard.writeText(article.link)
             toast.success("URL copied to clipboard")
         } catch {
-            toast.error("Failed to copy URL")
+            toast.error("Failed to copy URL. HTTPS required for clipboard access")
         }
     }
 

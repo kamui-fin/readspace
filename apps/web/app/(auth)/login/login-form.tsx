@@ -16,16 +16,12 @@ import { cn } from "@readspace/shared"
 import { useFormik } from "formik"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import z from "zod"
-import { toFormikValidationSchema } from "zod-formik-adapter"
 import { useIsCloudProd } from "@/hooks/useIsCloudProd"
 
-const signInSchema = z.object({
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-})
-
-type LoginFormBody = z.infer<typeof signInSchema>
+type LoginFormBody = {
+    email: string
+    password: string
+}
 
 export function LoginForm({
     className,
@@ -112,7 +108,6 @@ export function LoginForm({
             email: "",
             password: "",
         },
-        validationSchema: toFormikValidationSchema(signInSchema),
         onSubmit: async (values) => {
             try {
                 await signInAction(values)
@@ -181,19 +176,7 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.email}
                                         required
-                                        className={cn(
-                                            formik.touched.email &&
-                                                formik.errors.email
-                                                ? "border-red-500 focus-visible:ring-red-500"
-                                                : ""
-                                        )}
                                     />
-                                    {formik.touched.email &&
-                                        formik.errors.email && (
-                                            <p className="text-sm text-red-500">
-                                                {formik.errors.email}
-                                            </p>
-                                        )}
                                 </div>
                                 <div className="grid gap-2">
                                     <div className="flex items-center">
@@ -217,19 +200,7 @@ export function LoginForm({
                                         onBlur={formik.handleBlur}
                                         value={formik.values.password}
                                         required
-                                        className={cn(
-                                            formik.touched.password &&
-                                                formik.errors.password
-                                                ? "border-red-500 focus-visible:ring-red-500"
-                                                : ""
-                                        )}
                                     />
-                                    {formik.touched.password &&
-                                        formik.errors.password && (
-                                            <p className="text-sm text-red-500">
-                                                {formik.errors.password}
-                                            </p>
-                                        )}
                                 </div>
                                 <Button type="submit" className="w-full">
                                     Continue

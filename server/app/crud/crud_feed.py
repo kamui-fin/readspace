@@ -359,12 +359,13 @@ async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: 
         if "top_level_category" in enrichment_data:
             category_str = enrichment_data["top_level_category"]
             try:
-                # Convert string to enum value for assignment
+                # Convert string to enum - matches by value (e.g., "Technology & Programming")
                 category_enum = FeedCategory(category_str)
-                feed.top_level_category = category_enum.value
+                # Assign the enum itself, not its value - SQLAlchemy will use the enum member name
+                feed.top_level_category = category_enum
             except ValueError:
                 logger.warning("Invalid category", category=category_str, feed_id=feed.id)
-                feed.top_level_category = FeedCategory.MISCELLANEOUS.value
+                feed.top_level_category = FeedCategory.MISCELLANEOUS
 
         if "popularity_score" in enrichment_data:
             feed.popularity_score = float(enrichment_data["popularity_score"])

@@ -247,13 +247,7 @@ export function FeedCard({
                                 className="text-primary hover:text-primary/80 dark:text-secondary dark:hover:text-secondary/80 text-xs px-0 py-1 h-auto font-normal"
                                 asChild
                             >
-                                <Link
-                                    href={
-                                        isFollowed
-                                            ? `/feeds/${feed.id}/articles`
-                                            : `/feeds/${feed.id}/articles?preview=true`
-                                    }
-                                >
+                                <Link href={`/feeds/${feed.id}/articles`}>
                                     {isFollowed ? "View" : "Preview"}
                                 </Link>
                             </Button>

@@ -29,6 +29,7 @@ import { useIsMobile, useIsTablet } from "@/hooks/useMobile"
 import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import type { Article, Feed } from "@readspace/shared"
 import {
+    ApiClient,
     useArticle,
     useFeed,
     useFeeds,
@@ -39,7 +40,7 @@ import {
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
 import { Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
 import { ArticlesList } from "./articles/ArticlesList"
@@ -110,6 +111,11 @@ export function ArticlesView({
     const [isShowingSummary, setIsShowingSummary] = useState(false)
     const [isTranslating, setIsTranslating] = useState(false)
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
+    const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false)
+    const [previewFeedData, setPreviewFeedData] = useState<Feed | null>(null)
+
+    // Ref to track if preview refresh has already been triggered
+    const hasRefreshedPreview = useRef(false)
 
     // Hooks
     const isMobile = useIsMobile()
@@ -129,12 +135,16 @@ export function ArticlesView({
     )
 
     // Fetch feed data only when viewing a specific feed to check subscription status
-    const { data: feedData } = useFeed(feedId || "", {
-        enabled: !!feedId,
+    // For preview mode, we'll get feed data from the refresh response instead
+    const { data: fetchedFeedData } = useFeed(feedId || "", {
+        enabled: !!feedId && !isPreviewRefreshing,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         staleTime: 5 * 60 * 1000,
     })
+
+    // Use preview feed data if available, otherwise use fetched data
+    const feedData = previewFeedData || fetchedFeedData
 
     // Unread counts query - only when needed for badges
     const { data: unreadCounts } = useUnreadCounts(undefined, {
@@ -473,6 +483,34 @@ export function ArticlesView({
         setShowUnreadOnly((prev) => !prev)
     }
 
+    // Preview mode: refresh feed on mount to get latest articles
+    useEffect(() => {
+        if (shouldShowPreviewBanner && feedId && !hasRefreshedPreview.current) {
+            hasRefreshedPreview.current = true
+            setIsPreviewRefreshing(true)
+
+            // Call API directly with preview=true parameter
+            ApiClient.rss
+                .refreshFeed(feedId, true, true)
+                .then((feed) => {
+                    // Store the feed data from refresh response
+                    setPreviewFeedData(feed)
+                    // Invalidate articles cache to trigger refetch
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                    })
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.FEEDS],
+                    })
+                })
+                .catch((error) => {
+                    console.error("Preview refresh failed:", error)
+                })
+                .finally(() => {
+                    setIsPreviewRefreshing(false)
+                })
+        }
+    }, [shouldShowPreviewBanner, feedId, queryClient])
 
     // Clear selected article if it's no longer in the articles list
     useEffect(() => {
@@ -530,14 +568,20 @@ export function ArticlesView({
         showUnreadOnly,
     ])
 
-    // Show skeleton during initial loading
-    if (isArticlesLoading && allArticles.length === 0) {
+    // Show skeleton during initial loading, preview refresh, or when loading after preview
+    const isInitialLoading =
+        ((isArticlesLoading || isFetching) && allArticles.length === 0) ||
+        isPreviewRefreshing
+
+    if (isInitialLoading) {
         return <ArticlesViewSkeleton showUnreadBadge={false} />
     }
 
-    // Show empty state when no articles
+    // Show empty state when no articles (but not when still loading)
     if (
         !isArticlesLoading &&
+        !isFetching &&
+        !isPreviewRefreshing &&
         filteredArticles.length === 0 &&
         allArticles.length === 0
     ) {
@@ -771,9 +815,7 @@ export function ArticlesView({
                                 {/* Desktop List Toolbar */}
                                 <div className="flex h-14 items-center justify-between border-b px-4">
                                     <div className="flex items-center space-x-2 min-w-0 flex-1">
-                                        {isTablet && (
-                                            <SidebarLeftTrigger className="-ml-1" />
-                                        )}
+                                        <SidebarLeftTrigger className="-ml-1" />
                                         <TooltipProvider>
                                             <Tooltip>
                                                 <TooltipTrigger asChild>
