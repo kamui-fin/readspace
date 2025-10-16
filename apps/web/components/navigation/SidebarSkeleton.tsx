@@ -1,4 +1,5 @@
 import { SidebarGroup, SidebarGroupLabel } from "@/components/ui/sidebar"
+import { Skeleton } from "@/components/ui/skeleton"
 
 export function SidebarFeedsSkeleton() {
     return (
@@ -7,10 +8,10 @@ export function SidebarFeedsSkeleton() {
                 {/* All item skeleton */}
                 <div className="flex items-center w-full py-1 px-2">
                     <div className="flex-1">
-                        <div className="h-4 w-8 bg-muted-foreground/30 animate-pulse rounded" />
+                        <Skeleton className="h-4 w-8" />
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 bg-muted-foreground/30 animate-pulse rounded" />
+                        <Skeleton className="h-6 w-6" />
                     </div>
                 </div>
 
@@ -18,10 +19,10 @@ export function SidebarFeedsSkeleton() {
                 <div>
                     <div className="flex items-center w-full py-1 px-2">
                         <div className="flex-1 flex items-center">
-                            <div className="h-4 w-20 bg-muted-foreground/30 animate-pulse rounded ml-1" />
+                            <Skeleton className="h-4 w-20 ml-1" />
                         </div>
                         <div className="flex items-center gap-2">
-                            <div className="h-6 w-6 bg-muted-foreground/30 animate-pulse rounded" />
+                            <Skeleton className="h-6 w-6" />
                         </div>
                     </div>
 
@@ -29,18 +30,18 @@ export function SidebarFeedsSkeleton() {
                     <div className="ml-6 space-y-0.5">
                         <div className="flex items-center w-full py-0.5 px-2">
                             <div className="flex-1">
-                                <div className="h-4 w-24 bg-muted-foreground/30 animate-pulse rounded" />
+                                <Skeleton className="h-4 w-24" />
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="h-6 w-6 bg-muted-foreground/30 animate-pulse rounded" />
+                                <Skeleton className="h-6 w-6" />
                             </div>
                         </div>
                         <div className="flex items-center w-full py-0.5 px-2">
                             <div className="flex-1">
-                                <div className="h-4 w-20 bg-muted-foreground/30 animate-pulse rounded" />
+                                <Skeleton className="h-4 w-20" />
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="h-6 w-6 bg-muted-foreground/30 animate-pulse rounded" />
+                                <Skeleton className="h-6 w-6" />
                             </div>
                         </div>
                     </div>
@@ -49,10 +50,10 @@ export function SidebarFeedsSkeleton() {
                 {/* Individual feed skeletons */}
                 <div className="flex items-center w-full py-1 px-2">
                     <div className="flex-1">
-                        <div className="h-4 w-28 bg-muted-foreground/30 animate-pulse rounded" />
+                        <Skeleton className="h-4 w-28" />
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="h-6 w-6 bg-muted-foreground/30 animate-pulse rounded" />
+                        <Skeleton className="h-6 w-6" />
                     </div>
                 </div>
             </div>
@@ -67,7 +68,7 @@ export function SidebarLibrarySkeleton() {
             <div className="py-1.5 px-2">
                 <div className="flex items-center">
                     <div className="flex-1">
-                        <div className="h-4 w-12 bg-muted-foreground/30 animate-pulse rounded ml-2" />
+                        <Skeleton className="h-4 w-12 ml-2" />
                     </div>
                 </div>
             </div>

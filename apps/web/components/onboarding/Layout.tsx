@@ -25,7 +25,7 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
 
     const skipOnboarding = async () => {
         if (!user) return
-        router.push("/library")
+        router.push("/")
     }
 
     return (
