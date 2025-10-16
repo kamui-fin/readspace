@@ -17,13 +17,18 @@ export async function GET(request: Request) {
             } = await supabase.auth.getUser()
 
             if (user) {
-                const { count } = await supabase
-                    .from("feed_subscriptions")
-                    .select("*", { count: "exact", head: true })
-                    .eq("user_id", user.id)
+                // Check if user has any feed subscriptions
+                const { data: subscriptions, error: subscriptionError } =
+                    await supabase
+                        .from("feed_subscriptions")
+                        .select("id")
+                        .eq("user_id", user.id)
+                        .limit(1)
 
                 // If user has no feed subscriptions, they're new - redirect to onboarding
-                const isNewUser = count === 0
+                const isNewUser =
+                    !subscriptionError &&
+                    (!subscriptions || subscriptions.length === 0)
                 const redirectPath = isNewUser ? "/onboarding" : next
 
                 // behind a load‑balancer? trust x‑forwarded-host, else origin
@@ -33,7 +38,18 @@ export async function GET(request: Request) {
                         ? `https://${host}`
                         : origin
 
-                console.log(count, user, redirectPath, targetOrigin)
+                console.log(
+                    subscriptions,
+                    subscriptionError,
+                    "isNewUser:",
+                    isNewUser,
+                    "user:",
+                    user.id,
+                    "redirectPath:",
+                    redirectPath,
+                    "targetOrigin:",
+                    targetOrigin
+                )
 
                 return NextResponse.redirect(`${targetOrigin}${redirectPath}`)
             }
