@@ -81,7 +81,7 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
         contentType.includes('application/rss') ||
         contentType.includes('application/atom')
       )
-    } catch (error) {
+    } catch {
       return false
     }
   }

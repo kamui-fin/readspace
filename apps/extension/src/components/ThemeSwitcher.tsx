@@ -1,6 +1,6 @@
 import { Switch } from '@/components/ui/switch'
 import { MoonIcon, SunIcon } from 'lucide-react'
-import { useId, useState, useEffect } from 'react'
+import { useId, useState, useEffect, useCallback } from 'react'
 import { useExtensionStore } from '@/store'
 
 export default function ThemeSwitcher() {
@@ -8,16 +8,16 @@ export default function ThemeSwitcher() {
   const id = useId()
 
   // Determine the effective theme (resolve "system" to actual theme)
-  const getEffectiveTheme = () => {
+  const getEffectiveTheme = useCallback(() => {
     if (settings.theme === 'system') {
       return window.matchMedia('(prefers-color-scheme: dark)').matches
         ? 'dark'
         : 'light'
     }
     return settings.theme
-  }
+  }, [settings.theme])
 
-  const [isLight, setIsLight] = useState(getEffectiveTheme() === 'light')
+  const [isLight, setIsLight] = useState(() => getEffectiveTheme() === 'light')
 
   // Update theme class on document
   useEffect(() => {
@@ -31,7 +31,7 @@ export default function ThemeSwitcher() {
     }
 
     setIsLight(!isDark)
-  }, [settings.theme])
+  }, [settings.theme, getEffectiveTheme])
 
   // Listen for system theme changes
   useEffect(() => {

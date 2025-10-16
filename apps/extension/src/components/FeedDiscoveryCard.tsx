@@ -39,10 +39,7 @@ export function FeedDiscoveryCard({
   feeds,
   isLoading = false,
 }: FeedDiscoveryCardProps) {
-  // Show skeleton while loading
-  if (isLoading || !feeds) {
-    return <FeedDiscoveryCardSkeleton />
-  }
+  // Initialize all hooks first (before any conditional returns)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
   const [followedFeedId, setFollowedFeedId] = useState<string | null>(null)
@@ -50,12 +47,17 @@ export function FeedDiscoveryCard({
   const userFeeds = useExtensionStore((state) => state.feeds)
   const { unsubscribeFromFeed } = useExtensionStore()
 
-  const primaryFeed = feeds[0]
-
   // Check if user is already following any of the discovered feeds
   useEffect(() => {
+    // Skip if loading or no feeds
+    if (!feeds || feeds.length === 0) {
+      setIsFollowing(false)
+      setFollowedFeedId(null)
+      return
+    }
+
     console.log('Checking follow status:', { feeds, userFeedsCount: userFeeds.length })
-    if (feeds && userFeeds.length > 0) {
+    if (userFeeds.length > 0) {
       const followedFeed = userFeeds.find((userFeed) =>
         feeds.some((discoveredFeed) => {
           console.log('Comparing:', { userFeedUrl: userFeed.url, discoveredFeedUrl: discoveredFeed.url })
@@ -73,6 +75,13 @@ export function FeedDiscoveryCard({
       }
     }
   }, [feeds, userFeeds])
+
+  // Show skeleton while loading (after all hooks are initialized)
+  if (isLoading || !feeds || feeds.length === 0) {
+    return <FeedDiscoveryCardSkeleton />
+  }
+
+  const primaryFeed = feeds[0]
 
   const handleFollowClick = async () => {
     if (!isFollowing) {
@@ -111,8 +120,6 @@ export function FeedDiscoveryCard({
     setIsFollowing(true)
     console.log('Feed subscription successful!')
   }
-
-  if (!primaryFeed) return null
 
   // Extract domain from feed URL
   const getDomain = (url: string) => {
