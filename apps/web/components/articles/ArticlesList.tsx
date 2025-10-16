@@ -66,9 +66,9 @@ export function ArticlesList({
     // Generate a stable key based on article data to force virtualizer reset on significant changes
     // This prevents overlapping items when new articles are inserted after refresh
     const virtualizerKey = useMemo(() => {
-        if (articles.length === 0) return 'empty'
-        const firstId = articles[0]?.id || ''
-        const lastId = articles[articles.length - 1]?.id || ''
+        if (articles.length === 0) return "empty"
+        const firstId = articles[0]?.id || ""
+        const lastId = articles[articles.length - 1]?.id || ""
         return `${firstId}-${lastId}-${articles.length}`
     }, [articles])
 
@@ -84,8 +84,12 @@ export function ArticlesList({
         }
 
         // Create flat list with date headers and articles
-        const rows: (Article | { type: 'header'; label: string; dateGroup: string })[] = []
-        const groups: Record<string, { label: string; articles: Article[] }> = {}
+        const rows: (
+            | Article
+            | { type: "header"; label: string; dateGroup: string }
+        )[] = []
+        const groups: Record<string, { label: string; articles: Article[] }> =
+            {}
 
         // Group articles by date
         filteredArticles.forEach((article) => {
@@ -129,7 +133,7 @@ export function ArticlesList({
                 return b.localeCompare(a)
             })
             .forEach(([dateGroup, group]) => {
-                rows.push({ type: 'header', label: group.label, dateGroup })
+                rows.push({ type: "header", label: group.label, dateGroup })
                 rows.push(...group.articles)
             })
 
@@ -143,7 +147,7 @@ export function ArticlesList({
 
         const indexes: number[] = []
         allRows.forEach((row, index) => {
-            if (row && 'type' in row && row.type === 'header') {
+            if (row && "type" in row && row.type === "header") {
                 indexes.push(index)
             }
         })
@@ -151,9 +155,13 @@ export function ArticlesList({
     }, [allRows, isRecentlyReadMode])
 
     // Helper functions for sticky behavior
-    const isSticky = useCallback((index: number) => stickyIndexes.includes(index), [stickyIndexes])
+    const isSticky = useCallback(
+        (index: number) => stickyIndexes.includes(index),
+        [stickyIndexes]
+    )
     const isActiveSticky = useCallback(
-        (index: number) => stickyIndexes.length > 0 && activeStickyIndexRef.current === index,
+        (index: number) =>
+            stickyIndexes.length > 0 && activeStickyIndexRef.current === index,
         [stickyIndexes.length]
     )
 
@@ -164,7 +172,7 @@ export function ArticlesList({
         estimateSize: (index) => {
             const item = allRows[index]
             if (!item) return 120 // Loading indicator
-            if ('type' in item && item.type === 'header') return 36 // Reasonable header height
+            if ("type" in item && item.type === "header") return 36 // Reasonable header height
             return 120 // Article item height
         },
         overscan: 5,
@@ -182,7 +190,7 @@ export function ArticlesList({
 
                 return [...next].sort((a, b) => a - b)
             },
-            [stickyIndexes],
+            [stickyIndexes]
         ),
     })
 
@@ -237,8 +245,8 @@ export function ArticlesList({
                     isRecentlyReadMode
                         ? "recentlyRead"
                         : isReadLaterMode
-                            ? "readLater"
-                            : "allArticles"
+                          ? "readLater"
+                          : "allArticles"
                 }
                 feedId={feedId}
                 folderId={folderId}
@@ -255,8 +263,8 @@ export function ArticlesList({
             <div
                 style={{
                     height: `${rowVirtualizer.getTotalSize()}px`,
-                    width: '100%',
-                    position: 'relative',
+                    width: "100%",
+                    position: "relative",
                 }}
             >
                 {rowVirtualizer.getVirtualItems().map((virtualItem) => {
@@ -267,8 +275,11 @@ export function ArticlesList({
 
                     // Check if this is the last article item before a header or end
                     const nextItem = allRows[virtualItem.index + 1]
-                    const isLastArticleInGroup = item && !('type' in item) &&
-                        (!nextItem || ('type' in nextItem && nextItem.type === 'header'))
+                    const isLastArticleInGroup =
+                        item &&
+                        !("type" in item) &&
+                        (!nextItem ||
+                            ("type" in nextItem && nextItem.type === "header"))
 
                     return (
                         <div
@@ -276,21 +287,21 @@ export function ArticlesList({
                             style={{
                                 ...(isStickyItem && isActiveStickyItem
                                     ? {
-                                        background: 'hsl(var(--background))',
-                                        zIndex: 10,
-                                    }
+                                          background: "hsl(var(--background))",
+                                          zIndex: 10,
+                                      }
                                     : {}),
                                 ...(isActiveStickyItem
                                     ? {
-                                        position: 'sticky',
-                                    }
+                                          position: "sticky",
+                                      }
                                     : {
-                                        position: 'absolute',
-                                        transform: `translateY(${virtualItem.start}px)`,
-                                    }),
+                                          position: "absolute",
+                                          transform: `translateY(${virtualItem.start}px)`,
+                                      }),
                                 top: 0,
                                 left: 0,
-                                width: '100%',
+                                width: "100%",
                                 height: `${virtualItem.size}px`,
                             }}
                         >
@@ -306,9 +317,12 @@ export function ArticlesList({
                                 ) : null
                             ) : item ? (
                                 <>
-                                    {'type' in item && item.type === 'header' ? (
+                                    {"type" in item &&
+                                    item.type === "header" ? (
                                         // Date Header with reasonable 48px height
-                                        <div className={`flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm ${isActiveStickyItem ? 'border-b' : ''}`}>
+                                        <div
+                                            className={`flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm ${isActiveStickyItem ? "border-b" : ""}`}
+                                        >
                                             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
                                             <h3 className="text-sm font-medium text-muted-foreground">
                                                 {item.label}
@@ -320,10 +334,21 @@ export function ArticlesList({
                                             <ArticleItem
                                                 key={(item as Article).id}
                                                 article={item as Article}
-                                                isActive={selectedArticleId === (item as Article).id}
-                                                isLastInGroup={isLastArticleInGroup}
-                                                isRecentlyReadMode={isRecentlyReadMode}
-                                                onClick={() => onArticleSelect((item as Article).id)}
+                                                isActive={
+                                                    selectedArticleId ===
+                                                    (item as Article).id
+                                                }
+                                                isLastInGroup={
+                                                    isLastArticleInGroup
+                                                }
+                                                isRecentlyReadMode={
+                                                    isRecentlyReadMode
+                                                }
+                                                onClick={() =>
+                                                    onArticleSelect(
+                                                        (item as Article).id
+                                                    )
+                                                }
                                             />
                                         </div>
                                     )}

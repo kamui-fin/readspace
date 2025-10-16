@@ -413,10 +413,11 @@ export default function DiscoverPageClient({
                                 }
                                 value={searchQuery}
                                 onChange={handleSearchInputChange}
-                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
+                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${
+                                    searchQuery
                                         ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
                                         : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
-                                    }`}
+                                }`}
                                 style={{
                                     color: searchQuery ? "#91998C" : "#D8E5D0",
                                 }}
@@ -481,7 +482,7 @@ export default function DiscoverPageClient({
                                     ))}
                                 </div>
                             ) : searchError ||
-                                searchData?.results.length === 0 ? (
+                              searchData?.results.length === 0 ? (
                                 <motion.div
                                     className="flex flex-col items-center justify-center py-16"
                                     initial={{ opacity: 0, scale: 0.95 }}
@@ -545,7 +546,7 @@ export default function DiscoverPageClient({
                                                     }}
                                                 >
                                                     {feed.is_preview &&
-                                                        feed.preview_url ? (
+                                                    feed.preview_url ? (
                                                         <FeedPreviewCard
                                                             feed={{
                                                                 ...feed,

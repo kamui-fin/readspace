@@ -851,15 +851,22 @@ class RssSearchService:
                 return []
 
             # Build query for category
-            stmt = (
-                select(Feed)
-                .where(
-                    (Feed.top_level_category == category_enum)
-                    & ((Feed.language == language) | (Feed.language.is_(None)))
-                )
-                .order_by(Feed.popularity_score.desc().nulls_last())
-                .limit(limit)
+            stmt = select(Feed).where(
+                (Feed.top_level_category == category_enum) & ((Feed.language == language) | (Feed.language.is_(None)))
             )
+
+            # Conditional ordering: prioritize indie blogs for Miscellaneous category
+            if category_enum == FeedCategory.MISCELLANEOUS:
+                # For Miscellaneous: indie blogs first (where 'indieblog' is in tags array), then by popularity
+                stmt = stmt.order_by(
+                    func.array_position(Feed.tags, "indieblog").isnot(None).desc(),
+                    Feed.popularity_score.desc().nulls_last(),
+                )
+            else:
+                # For other categories: standard popularity ordering
+                stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last())
+
+            stmt = stmt.limit(limit)
 
             result = await self.db.execute(stmt)
             feeds_db = result.scalars().all()

@@ -193,7 +193,6 @@ export default function ImportOPMLPageClient() {
         [activeImports, router, validateOpmlFile]
     )
 
-
     const handleFileDrop = useCallback(
         (e: React.DragEvent) => {
             e.preventDefault()

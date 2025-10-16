@@ -41,17 +41,20 @@ const getBoundingRect = (clientRects: Array<LTWHP>): LTWHP => {
     }
 
     const firstRect = rectsWithSizeOnFirstPage[0]!
-    const optimal: BoundingRect = rectsWithSizeOnFirstPage.reduce((res, rect) => {
-        return {
-            X0: Math.min(res.X0, rect.X0),
-            X1: Math.max(res.X1, rect.X1),
+    const optimal: BoundingRect = rectsWithSizeOnFirstPage.reduce(
+        (res, rect) => {
+            return {
+                X0: Math.min(res.X0, rect.X0),
+                X1: Math.max(res.X1, rect.X1),
 
-            Y0: Math.min(res.Y0, rect.Y0),
-            Y1: Math.max(res.Y1, rect.Y1),
+                Y0: Math.min(res.Y0, rect.Y0),
+                Y1: Math.max(res.Y1, rect.Y1),
 
-            pageNumber: firstPageNumber,
-        }
-    }, firstRect)
+                pageNumber: firstPageNumber,
+            }
+        },
+        firstRect
+    )
 
     const { X0, X1, Y0, Y1, pageNumber } = optimal
 

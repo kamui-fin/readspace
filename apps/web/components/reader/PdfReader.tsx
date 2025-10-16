@@ -170,7 +170,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
                 const highlightStates = savedHighlights.map(
                     (h): HighlightState => ({
                         highlight: h,
-                        removeFn: () => { }, // Placeholder, actual remove logic might be elsewhere
+                        removeFn: () => {}, // Placeholder, actual remove logic might be elsewhere
                     })
                 )
                 setHighlights(highlightStates)
@@ -441,7 +441,7 @@ export const PDFViewer = ({ bookMeta, savedHighlights }: PDFViewerProps) => {
     const onAddNewHighlight = useCallback(
         async (highlight: PdfHighlight) => {
             // Add highlight directly to the Zustand store
-            const highlightState = { highlight, removeFn: () => { } }
+            const highlightState = { highlight, removeFn: () => {} }
             insertHighlight(highlightState)
             insertAllHighlight(highlightState) // Also add to allHighlights for sidebar
 

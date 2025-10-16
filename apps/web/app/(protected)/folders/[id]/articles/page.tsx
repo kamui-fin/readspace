@@ -8,9 +8,6 @@ export default function FolderArticlesPage() {
     const folderId = params.id as string
 
     return (
-        <ArticlesSuspenseWrapper
-            showUnreadBadge={true}
-            folderId={folderId}
-        />
+        <ArticlesSuspenseWrapper showUnreadBadge={true} folderId={folderId} />
     )
 }

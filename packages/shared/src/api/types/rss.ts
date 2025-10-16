@@ -39,6 +39,7 @@ export type Feed = {
   is_favorite: boolean;
   language: string | null;
   top_level_category: string | null; // Feed category enum value
+  popularity_score: number | null; // Popularity estimate (0-100)
   last_fetched_at: string | null;
   tags: { id: string; name: string }[];
   unread_count: number;
@@ -222,6 +223,7 @@ export function feedDiscoveryResultToFeed(
     is_favorite: false,
     language: discoveryResult.language,
     top_level_category: discoveryResult.category,
+    popularity_score: discoveryResult.popularity_score,
     last_fetched_at: null,
     tags: [], // Convert string[] to object[] format
     unread_count: 0,

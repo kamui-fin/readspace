@@ -25,7 +25,9 @@ export default function SimilarFeedsLoading() {
                     <div className="text-center space-y-4">
                         <div className="flex items-center justify-center gap-2 mb-4">
                             <Sparkles className="h-8 w-8 text-primary" />
-                            <h1 className="text-3xl font-bold">Similar Feeds</h1>
+                            <h1 className="text-3xl font-bold">
+                                Similar Feeds
+                            </h1>
                         </div>
 
                         <div className="bg-muted/50 rounded-lg p-4 max-w-2xl mx-auto">

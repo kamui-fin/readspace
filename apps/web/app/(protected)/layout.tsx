@@ -9,10 +9,10 @@ export default async function ProtectedLayout({
     children: React.ReactNode
 }) {
     return (
-            <ClientLayout>
-                <AppSidebar />
-                <SidebarInset>{children}</SidebarInset>
-                <ReaderSidebar />
-            </ClientLayout>
+        <ClientLayout>
+            <AppSidebar />
+            <SidebarInset>{children}</SidebarInset>
+            <ReaderSidebar />
+        </ClientLayout>
     )
 }

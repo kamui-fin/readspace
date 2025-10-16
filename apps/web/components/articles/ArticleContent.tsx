@@ -291,15 +291,17 @@ export function ArticleContent({
                             if (!oldData?.pages) return oldData
                             return {
                                 ...oldData,
-                                pages: oldData.pages.map((page: ArticlesPageData) => ({
-                                    ...page,
-                                    items:
-                                        page.items?.map((item: Article) =>
-                                            item.id === article.id
-                                                ? { ...item, is_read: true }
-                                                : item
-                                        ) || [],
-                                })),
+                                pages: oldData.pages.map(
+                                    (page: ArticlesPageData) => ({
+                                        ...page,
+                                        items:
+                                            page.items?.map((item: Article) =>
+                                                item.id === article.id
+                                                    ? { ...item, is_read: true }
+                                                    : item
+                                            ) || [],
+                                    })
+                                ),
                             }
                         }
                     )
@@ -462,12 +464,13 @@ export function ArticleContent({
                                                 ...page,
                                                 items:
                                                     page.items
-                                                        ?.filter((item: Article) =>
-                                                            // In read-later mode, remove this article entirely
-                                                            isReadLaterMode
-                                                                ? item.id !==
-                                                                  article.id
-                                                                : true
+                                                        ?.filter(
+                                                            (item: Article) =>
+                                                                // In read-later mode, remove this article entirely
+                                                                isReadLaterMode
+                                                                    ? item.id !==
+                                                                      article.id
+                                                                    : true
                                                         )
                                                         .map((item: Article) =>
                                                             item.id ===
@@ -702,7 +705,11 @@ export function ArticleContent({
                                                             RSS_QUERY_KEYS.ARTICLES,
                                                         ],
                                                     },
-                                                    (oldData: ArticlesInfiniteData | undefined) => {
+                                                    (
+                                                        oldData:
+                                                            | ArticlesInfiniteData
+                                                            | undefined
+                                                    ) => {
                                                         if (!oldData?.pages)
                                                             return oldData
                                                         return {
@@ -749,7 +756,11 @@ export function ArticleContent({
                                                     [
                                                         RSS_QUERY_KEYS.UNREAD_COUNTS,
                                                     ],
-                                                    (oldData: UnreadCountsData | undefined) => {
+                                                    (
+                                                        oldData:
+                                                            | UnreadCountsData
+                                                            | undefined
+                                                    ) => {
                                                         if (!oldData)
                                                             return oldData
                                                         return {
@@ -905,7 +916,9 @@ export function ArticleContent({
                                     (article.note || article.description))) && (
                                 <div className="mt-6 px-6 py-0 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg relative group transition-all duration-200 hover:shadow-sm">
                                     <button
-                                        onClick={handleDismissFullArticleSuggestion}
+                                        onClick={
+                                            handleDismissFullArticleSuggestion
+                                        }
                                         className="absolute top-2 right-2 p-1 rounded-md hover:bg-primary/10 transition-colors duration-200 opacity-60 hover:opacity-100"
                                         aria-label="Dismiss suggestion"
                                     >

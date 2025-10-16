@@ -183,15 +183,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-            ? "Read Later"
-            : isTodayMode
-                ? "Today"
-                : feedId && feedData?.title
-                    ? feedData.title
-                    : folderId && allFolders
-                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                              ?.name || initialSidebarTitle || "All Articles"
-                        : initialSidebarTitle || "All Articles"
+          ? "Read Later"
+          : isTodayMode
+            ? "Today"
+            : feedId && feedData?.title
+              ? feedData.title
+              : folderId && allFolders
+                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                      ?.name ||
+                  initialSidebarTitle ||
+                  "All Articles"
+                : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -308,15 +310,17 @@ export function ArticlesView({
                             if (!oldData?.pages) return oldData
                             return {
                                 ...oldData,
-                                pages: oldData.pages.map((page: ArticlesPageData) => ({
-                                    ...page,
-                                    items:
-                                        page.items?.map((item: Article) =>
-                                            item.id === articleId
-                                                ? { ...item, is_read: true }
-                                                : item
-                                        ) || [],
-                                })),
+                                pages: oldData.pages.map(
+                                    (page: ArticlesPageData) => ({
+                                        ...page,
+                                        items:
+                                            page.items?.map((item: Article) =>
+                                                item.id === articleId
+                                                    ? { ...item, is_read: true }
+                                                    : item
+                                            ) || [],
+                                    })
+                                ),
                             }
                         }
                     )
@@ -566,7 +570,7 @@ export function ArticlesView({
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) ||
-                        allArticles[0]
+                          allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle?.id || null)
                 }

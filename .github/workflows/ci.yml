@@ -145,8 +145,5 @@ jobs:
       - name: Build packages
         run: turbo run build --filter="./packages/*"
 
-      - name: Run TypeScript type checking
-        run: turbo run check-types
-
-      - name: Run ESLint
-        run: turbo run lint
+      - name: Run type check and lint
+        run: turbo run check-types lint

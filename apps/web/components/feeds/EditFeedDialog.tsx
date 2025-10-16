@@ -19,8 +19,8 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import {
-    FEED_CATEGORIES,
     ApiClient,
+    FEED_CATEGORIES,
     type Feed,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
@@ -34,11 +34,7 @@ interface EditFeedDialogProps {
     onClose: () => void
 }
 
-export function EditFeedDialog({
-    feed,
-    isOpen,
-    onClose,
-}: EditFeedDialogProps) {
+export function EditFeedDialog({ feed, isOpen, onClose }: EditFeedDialogProps) {
     const [title, setTitle] = useState(feed.title || "")
     const [description, setDescription] = useState(feed.description || "")
     const [language, setLanguage] = useState(
@@ -50,6 +46,9 @@ export function EditFeedDialog({
     const [url, setUrl] = useState(feed.url)
     const [link, setLink] = useState(feed.link || "")
     const [imageUrl, setImageUrl] = useState(feed.image_url || "")
+    const [popularityScore, setPopularityScore] = useState(
+        "popularity_score" in feed ? feed.popularity_score || 0 : 0
+    )
 
     const queryClient = useQueryClient()
 
@@ -62,6 +61,7 @@ export function EditFeedDialog({
             url?: string
             link?: string
             image_url?: string
+            popularity_score?: number
         }) => ApiClient.rss.adminUpdateFeed(feed.id, updates),
         onSuccess: () => {
             toast.success("Feed updated successfully")
@@ -91,6 +91,7 @@ export function EditFeedDialog({
             url?: string
             link?: string
             image_url?: string
+            popularity_score?: number
         } = {}
 
         // Only include changed fields
@@ -108,6 +109,12 @@ export function EditFeedDialog({
         if (link !== (feed.link || "")) updates.link = link || undefined
         if (imageUrl !== (feed.image_url || ""))
             updates.image_url = imageUrl || undefined
+        if (
+            popularityScore !==
+            (("popularity_score" in feed && feed.popularity_score) || 0)
+        ) {
+            updates.popularity_score = popularityScore
+        }
 
         updateFeed.mutate(updates)
     }
@@ -232,6 +239,27 @@ export function EditFeedDialog({
                         />
                     </div>
 
+                    {/* Popularity Score */}
+                    <div className="space-y-2">
+                        <Label htmlFor="popularityScore">
+                            Popularity Score
+                        </Label>
+                        <Input
+                            id="popularityScore"
+                            value={popularityScore}
+                            onChange={(e) =>
+                                setPopularityScore(
+                                    parseFloat(e.target.value) || 0
+                                )
+                            }
+                            placeholder="0.0"
+                            type="number"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Popularity estimate (0-100) for feed ranking
+                        </p>
+                    </div>
+
                     <DialogFooter>
                         <Button
                             type="button"
@@ -240,11 +268,10 @@ export function EditFeedDialog({
                         >
                             Cancel
                         </Button>
-                        <Button
-                            type="submit"
-                            disabled={updateFeed.isPending}
-                        >
-                            {updateFeed.isPending ? "Saving..." : "Save Changes"}
+                        <Button type="submit" disabled={updateFeed.isPending}>
+                            {updateFeed.isPending
+                                ? "Saving..."
+                                : "Save Changes"}
                         </Button>
                     </DialogFooter>
                 </form>

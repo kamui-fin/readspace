@@ -321,7 +321,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                            100
+                                                100
                                         )}
                                         %
                                     </span>
@@ -534,12 +534,15 @@ export default function ImportStatusPage() {
                                                 </div>
                                             )}
                                             <p className="text-sm text-muted-foreground">
-                                                Your import will start processing shortly.
+                                                Your import will start
+                                                processing shortly.
                                                 {metadata?.estimated_feeds && (
                                                     <span>
                                                         {" "}
                                                         Estimated{" "}
-                                                        {metadata.estimated_feeds}{" "}
+                                                        {
+                                                            metadata.estimated_feeds
+                                                        }{" "}
                                                         feeds to process.
                                                     </span>
                                                 )}
@@ -643,7 +646,6 @@ export default function ImportStatusPage() {
                     Track the progress of your OPML import.
                 </p>
             </div>
-
 
             {renderStatus()}
         </div>

@@ -1317,20 +1317,35 @@ async def admin_update_feed(
         if feed_in.top_level_category is not None:
             from app.models.rss_models import FeedCategory
 
-            # Convert string to enum value if needed
+            # Convert string to enum if needed
+            # The frontend sends the enum VALUE (e.g., "Design & Creativity")
+            # We need to find the matching enum and assign the enum itself (not .value)
             if isinstance(feed_in.top_level_category, str):
                 try:
                     category_enum = FeedCategory(feed_in.top_level_category)
-                    updated_feed.top_level_category = category_enum.value
-                except ValueError:
+                    # Assign the enum itself, not its value - SQLAlchemy handles conversion
+                    updated_feed.top_level_category = category_enum
+                except ValueError as e:
                     logger.warning(
                         "Invalid category provided",
                         category=feed_in.top_level_category,
                         feed_id=feed_id,
                     )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Invalid category: {feed_in.top_level_category}",
+                    ) from e
             else:
-                updated_feed.top_level_category = feed_in.top_level_category.value
+                # If it's already a FeedCategory enum, use it directly
+                updated_feed.top_level_category = feed_in.top_level_category
 
+            db.add(updated_feed)
+            await db.commit()
+            await db.refresh(updated_feed)
+
+        # Handle popularity_score update
+        if feed_in.popularity_score is not None:
+            updated_feed.popularity_score = feed_in.popularity_score
             db.add(updated_feed)
             await db.commit()
             await db.refresh(updated_feed)

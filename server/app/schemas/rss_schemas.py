@@ -68,6 +68,7 @@ class FeedUpdate(BaseModel):
     image_url: str | None = None
     folder_id: UUID | None = None
     top_level_category: FeedCategory | None = None
+    popularity_score: float | None = Field(None, ge=0.0, le=100.0)
     ttl: int | None = Field(None, gt=0)
     skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
     skip_days: list[str] | None = Field(None, min_length=0, max_length=7)

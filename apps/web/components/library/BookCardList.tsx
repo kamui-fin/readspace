@@ -38,7 +38,8 @@ export function BookCardList({ book }: BookCardListProps) {
     // Calculate progress based on book type (0-1 ratio)
     const progress =
         book.book_metadata.format === "PDF"
-            ? (book.pdf_current_page || 0) / Math.max(book.book_metadata.num_pages || 1, 1)
+            ? (book.pdf_current_page || 0) /
+              Math.max(book.book_metadata.num_pages || 1, 1)
             : isEpubProgress(book.epub_progress)
               ? book.epub_progress.globalProgress.current /
                 Math.max(book.epub_progress.globalProgress.total, 1)

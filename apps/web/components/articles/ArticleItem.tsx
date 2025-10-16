@@ -45,8 +45,8 @@ export function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     /**
@@ -151,7 +151,7 @@ export function ArticleItem({
                             {(article.feed?.image_url ||
                                 (article.article_type === "clipped" &&
                                     article.link)) &&
-                                !feedImageError ? (
+                            !feedImageError ? (
                                 <Image
                                     src={
                                         article.feed?.image_url ||
@@ -170,7 +170,7 @@ export function ArticleItem({
                             {/* Feed name or domain */}
                             <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden">
                                 {article.article_type === "clipped" &&
-                                    article.link
+                                article.link
                                     ? extractDomain(article.link)
                                     : article.feed?.title || "Unknown Feed"}
                             </span>
@@ -187,10 +187,11 @@ export function ArticleItem({
 
                     {/* Article title */}
                     <h3
-                        className={`text-sm font-medium leading-snug line-clamp-2 ${article.is_read
-                            ? "text-muted-foreground"
-                            : "text-foreground"
-                            }`}
+                        className={`text-sm font-medium leading-snug line-clamp-2 ${
+                            article.is_read
+                                ? "text-muted-foreground"
+                                : "text-foreground"
+                        }`}
                         style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
@@ -203,10 +204,11 @@ export function ArticleItem({
                     {/* Article description/content preview */}
                     {displayText && (
                         <p
-                            className={`text-xs leading-relaxed line-clamp-2 ${article.is_read
-                                ? "text-muted-foreground/70"
-                                : "text-muted-foreground"
-                                }`}
+                            className={`text-xs leading-relaxed line-clamp-2 ${
+                                article.is_read
+                                    ? "text-muted-foreground/70"
+                                    : "text-muted-foreground"
+                            }`}
                             style={{
                                 wordBreak: "break-word",
                                 overflowWrap: "break-word",

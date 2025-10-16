@@ -14,7 +14,6 @@ interface ExpandableTipProps {
 }
 
 const ExpandableTip = ({ addHighlight }: ExpandableTipProps) => {
-
     const [compact] = useState(true)
     const selectionRef = useRef<PdfSelection | null>(null)
     const [isInitialized, setIsInitialized] = useState(false)

@@ -33,6 +33,8 @@ export async function GET(request: Request) {
                         ? `https://${host}`
                         : origin
 
+                console.log(count, user, redirectPath, targetOrigin)
+
                 return NextResponse.redirect(`${targetOrigin}${redirectPath}`)
             }
         }
