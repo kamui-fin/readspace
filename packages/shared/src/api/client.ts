@@ -94,8 +94,42 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const error = await response
       .json()
       .catch(() => ({ detail: "An error occurred" }));
-    // FastAPI uses 'detail' field for error messages, fallback to 'message' for other APIs
-    const errorMessage = error.detail || error.message || "An error occurred";
+
+    let errorMessage: string;
+
+    // Handle FastAPI validation errors (array of error objects)
+    if (Array.isArray(error.detail)) {
+      const validationErrors = error.detail;
+
+      // Check for file size validation error
+      const fileSizeError = validationErrors.find(
+        (err: any) =>
+          err.type === "less_than_equal" &&
+          err.loc?.includes("file_size_bytes")
+      );
+
+      if (fileSizeError && fileSizeError.ctx?.le) {
+        const maxSizeMB = (fileSizeError.ctx.le / (1024 * 1024)).toFixed(0);
+        const actualSizeMB = fileSizeError.input
+          ? (fileSizeError.input / (1024 * 1024)).toFixed(1)
+          : "unknown";
+        errorMessage = `File is too large (${actualSizeMB} MB). Maximum file size is ${maxSizeMB} MB.`;
+      } else {
+        // Generic validation error message
+        errorMessage = validationErrors
+          .map((err: any) => err.msg || JSON.stringify(err))
+          .join(", ");
+      }
+    } else if (typeof error.detail === "string") {
+      errorMessage = error.detail;
+    } else if (error.message) {
+      errorMessage = typeof error.message === "string"
+        ? error.message
+        : JSON.stringify(error.message);
+    } else {
+      errorMessage = "An error occurred";
+    }
+
     throw new ApiError(response.status, errorMessage);
   }
   return response.json();

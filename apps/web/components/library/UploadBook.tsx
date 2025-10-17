@@ -37,6 +37,10 @@ if (typeof Promise.withResolvers === "undefined") {
 
 import { DragDropBookProps } from "./upload/types"
 import { formatFileSize } from "./upload/utils"
+import toast from "react-hot-toast"
+
+// 5 MB max file size (matching backend validation)
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024
 
 export const DragDropBook = ({
     isUploading,
@@ -49,6 +53,19 @@ export const DragDropBook = ({
         async (acceptedFiles: File[]) => {
             const file = acceptedFiles[0]
             if (!file || !user) return
+
+            // Validate file size
+            if (file.size > MAX_FILE_SIZE_BYTES) {
+                const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1)
+                const maxSizeMB = (MAX_FILE_SIZE_BYTES / (1024 * 1024)).toFixed(
+                    0
+                )
+                toast.error(
+                    `File is too large (${fileSizeMB} MB). Maximum file size is ${maxSizeMB} MB.`
+                )
+                return
+            }
+
             onFileSelect(file)
         },
         [user, onFileSelect]
