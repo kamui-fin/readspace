@@ -56,6 +56,12 @@ ARTICLE_PRIORITIES = ["low", "medium", "high"]
 RECENT_READ_CUTOFF = timedelta(days=30)
 OLD_ARTICLE_CUTOFF = timedelta(days=90)
 
+# Content Extraction
+MIN_CONTENT_LENGTH = 500  # Minimum character length to consider content complete
+AUTO_EXTRACT_ENABLED = True  # Enable automatic content extraction
+AUTO_EXTRACT_ON_FETCH = True  # Extract content automatically when fetching articles
+CONTENT_EXTRACTION_TIMEOUT = 10  # seconds - timeout for fetching and extracting content
+
 # Common Error Messages
 ERROR_FEED_NOT_FOUND = "Feed not found"
 ERROR_ARTICLE_NOT_FOUND = "Article not found"

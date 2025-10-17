@@ -6,6 +6,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import AUTO_EXTRACT_ENABLED, AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.crud_article import (
     count_read_later_articles,
     count_today_articles,
@@ -26,6 +27,8 @@ from app.schemas.rss_schemas import (
     ArticleUpdate,
     PaginatedResponse,
 )
+from app.services.content_extraction_service import ContentExtractionService
+from app.utils.content_detector import is_content_complete
 
 logger = structlog.get_logger(__name__)
 
@@ -37,6 +40,7 @@ class ArticleManagementService:
         self.db = db
         self.user_id = user_id
         self.transformer = ArticleTransformer()
+        self.extraction_service = ContentExtractionService()
 
     async def get_articles(
         self,
@@ -93,7 +97,7 @@ class ArticleManagementService:
         return result
 
     async def get_article(self, article_id: UUID, allow_preview: bool = False) -> ArticleResponse | None:
-        """Get a single article by its ID."""
+        """Get a single article by its ID with automatic content extraction."""
         logger.info(
             "Getting article",
             article_id=article_id,
@@ -112,15 +116,76 @@ class ArticleManagementService:
             # Handle both FeedArticle tuples and ClippedArticle types
             from app.models.rss_models import ClippedArticle, FeedArticle
 
+            # Transform article to unified response
+            article_response: ArticleResponse | None = None
             if isinstance(article, ClippedArticle):
-                return self.transformer.clipped_to_unified(article)
+                article_response = self.transformer.clipped_to_unified(article)
             elif isinstance(article, tuple):
                 # This is a (FeedArticle, UserArticleState) tuple
-                return self.transformer.feed_to_unified(article)
+                article_response = self.transformer.feed_to_unified(article)
             elif isinstance(article, FeedArticle):
                 # Legacy single FeedArticle (shouldn't happen with new schema but kept for safety)
-                return self.transformer.feed_to_unified(article)
+                article_response = self.transformer.feed_to_unified(article)
+
+            # Attempt automatic content extraction if enabled
+            if article_response and AUTO_EXTRACT_ENABLED and AUTO_EXTRACT_ON_FETCH:
+                await self._auto_extract_content(article_response)
+
+            return article_response
         return None
+
+    async def _auto_extract_content(self, article: ArticleResponse) -> None:
+        """
+        Automatically extract full content if article content is incomplete.
+
+        This method checks if the article's content is complete, and if not,
+        attempts to extract the full content from the article's URL.
+
+        Args:
+            article: The article response object to potentially enrich with extracted content
+        """
+        # Check if content appears incomplete
+        if not is_content_complete(article.content, threshold=MIN_CONTENT_LENGTH):
+            # Check if article has a valid link to extract from
+            if article.link:
+                try:
+                    logger.info(
+                        "Auto-extracting content for incomplete article",
+                        article_id=article.id,
+                        content_length=len(article.content or ""),
+                        link=str(article.link),
+                    )
+
+                    # Extract full content, passing title to remove duplicate headings
+                    extracted_content, extracted_read_time, error = await self.extraction_service.extract_full_content(
+                        str(article.link), article.title
+                    )
+
+                    if extracted_content and not error:
+                        # Update article response with extracted content
+                        article.extracted_content = extracted_content
+                        article.extracted_read_time = extracted_read_time
+
+                        logger.info(
+                            "Successfully auto-extracted content",
+                            article_id=article.id,
+                            extracted_length=len(extracted_content),
+                            extracted_read_time=extracted_read_time,
+                        )
+                    else:
+                        logger.warning(
+                            "Auto-extraction failed",
+                            article_id=article.id,
+                            error=error,
+                        )
+                except Exception as e:
+                    # Log error but don't fail the request - graceful degradation
+                    logger.error(
+                        "Exception during auto-extraction",
+                        article_id=article.id,
+                        error=str(e),
+                        exc_info=True,
+                    )
 
     async def get_unread_articles(
         self,

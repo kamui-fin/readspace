@@ -1,6 +1,6 @@
-import { useQuery, QueryClient } from "@tanstack/react-query";
-import { ARTICLE_ENHANCEMENT_QUERY_KEYS } from "../query-keys";
+import { QueryClient, useQuery } from "@tanstack/react-query";
 import { ApiClient } from "../client";
+import { ARTICLE_ENHANCEMENT_QUERY_KEYS } from "../query-keys";
 
 // Re-export for convenience
 export { ARTICLE_ENHANCEMENT_QUERY_KEYS };
@@ -38,14 +38,26 @@ export type TranslateRequest = {
 
 /**
  * Hook for extracting full text content from article URL
+ * 
+ * Caching Strategy:
+ * - Cache key includes articleId and optionally articleUrl hash
+ * - If URL changes, extraction will be re-triggered (ensures fresh content)
+ * - Cache is maintained for 30 minutes with 1 hour garbage collection
  */
-export function useExtractFullText(articleId: string) {
+export function useExtractFullText(articleId: string, articleUrl?: string) {
   // Validate that we have a proper article ID (not empty, skip, etc.)
   const isValidArticleId =
     articleId && articleId !== "skip" && articleId.length > 0;
 
+  // Create URL hash for cache key to ensure re-extraction if URL changes
+  const urlHash = articleUrl ? createContentHash(articleUrl) : "no-url";
+
   return useQuery({
-    queryKey: [ARTICLE_ENHANCEMENT_QUERY_KEYS.EXTRACTED_CONTENT, articleId],
+    queryKey: [
+      ARTICLE_ENHANCEMENT_QUERY_KEYS.EXTRACTED_CONTENT,
+      articleId,
+      urlHash,
+    ],
     queryFn: async (): Promise<ExtractFullTextResponse> => {
       if (!isValidArticleId) {
         throw new Error("Invalid article ID");
@@ -84,13 +96,22 @@ function createContentHash(content: string): string {
 
 /**
  * Hook for generating AI summaries of articles
+ * 
+ * Caching Strategy:
+ * - Cache key includes articleId and content hash
+ * - Same content will reuse cached summary (avoids duplicate AI calls)
+ * - Different content (original vs extracted) gets separate cache entries
+ * - Cache is maintained for 30 minutes with 1 hour garbage collection
+ * 
+ * @param articleId - The article ID
+ * @param content - The content to summarize (if not provided, uses article's original content)
  */
 export function useSummarizeArticle(articleId: string, content?: string) {
   // Validate that we have a proper article ID (not empty, skip, etc.)
   const isValidArticleId =
     articleId && articleId !== "skip" && articleId.length > 0;
 
-  // Create a content hash for cache key
+  // Create a content hash for cache key - ensures same content reuses cache
   const contentHash = content ? createContentHash(content) : "original";
 
   return useQuery({
@@ -114,6 +135,16 @@ export function useSummarizeArticle(articleId: string, content?: string) {
 
 /**
  * Helper function to create translation query key
+ * 
+ * Caching Strategy:
+ * - Cache key includes articleId, targetLanguage, and content hash
+ * - Same content + language combo reuses cached translation
+ * - Different source content (original vs extracted) gets separate cache
+ * - Different target languages get separate cache entries
+ * 
+ * @param articleId - The article ID
+ * @param targetLanguage - Target language code (e.g., 'es', 'fr', 'de')
+ * @param content - The content to translate (if not provided, uses article's original content)
  */
 export function createTranslationQueryKey(
   articleId: string,
@@ -131,6 +162,9 @@ export function createTranslationQueryKey(
 
 /**
  * Helper function to fetch translation with caching
+ * 
+ * Uses TanStack Query's fetchQuery to leverage cache-first strategy.
+ * If translation exists in cache, returns immediately without API call.
  */
 export async function fetchTranslation(
   queryClient: QueryClient,

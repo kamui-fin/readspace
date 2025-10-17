@@ -97,6 +97,7 @@ safety = "^3.3.1"
 poethepoet = "^0.33.1"
 ruff = "^0.11.5"
 types-python-jose = "^3.5.0.20250531"
+pytest-mock = "^3.15.1"
 
 [tool.ruff]
 target-version = "py310"

@@ -174,6 +174,8 @@ export function useArticlesQuery({
                             article_type: article.article_type || "feed",
                             priority: article.priority || null,
                             note: article.note || null,
+                            extracted_content: article.extracted_content || null,
+                            extracted_read_time: article.extracted_read_time || null,
                         })
                     )
                 }

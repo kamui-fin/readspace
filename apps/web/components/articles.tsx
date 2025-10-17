@@ -25,7 +25,7 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useArticlesQuery } from "@/hooks/useArticlesQuery"
-import { useIsMobile, useIsTablet } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/useMobile"
 import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import type { Article, Feed, Folder } from "@readspace/shared"
 import {
@@ -44,6 +44,7 @@ import { Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
+import { ArticleContentSkeleton } from "./articles/ArticleContentSkeleton"
 import { ArticlesList } from "./articles/ArticlesList"
 
 // Type for the paginated articles data structure from TanStack Query
@@ -120,7 +121,6 @@ export function ArticlesView({
 
     // Hooks
     const isMobile = useIsMobile()
-    const isTablet = useIsTablet()
     const { clearPending } = useClearPendingNavigation()
     const queryClient = useQueryClient()
 
@@ -183,17 +183,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : feedId && feedData?.title
-              ? feedData.title
-              : folderId && allFolders
-                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                      ?.name ||
-                  initialSidebarTitle ||
-                  "All Articles"
-                : initialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : feedId && feedData?.title
+                    ? feedData.title
+                    : folderId && allFolders
+                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                            ?.name ||
+                        initialSidebarTitle ||
+                        "All Articles"
+                        : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -271,10 +271,7 @@ export function ArticlesView({
         feedData.is_subscribed === false
     )
 
-    // Get selected article from current articles list or fetch separately
-    const selectedArticle = selectedArticleId
-        ? allArticles.find((a) => a.id === selectedArticleId) || currentArticle
-        : null
+    const selectedArticle = currentArticle
 
     // Client-side filtered articles based on unread toggle
     const filteredArticles = useMemo(() => {
@@ -570,7 +567,7 @@ export function ArticlesView({
                 if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
                     const firstArticle = showUnreadOnly
                         ? allArticles.find((a: Article) => !a.is_read) ||
-                          allArticles[0]
+                        allArticles[0]
                         : allArticles[0]
                     setSelectedArticleId(firstArticle?.id || null)
                 }
@@ -1006,17 +1003,7 @@ export function ArticlesView({
                                     onArticleRemoved={handleArticleRemoved}
                                 />
                             ) : (
-                                <div className="flex h-full items-center justify-center text-muted-foreground">
-                                    <div className="text-center">
-                                        <p className="text-lg">
-                                            Select an article to read
-                                        </p>
-                                        <p className="text-sm">
-                                            Choose from the articles list to get
-                                            started
-                                        </p>
-                                    </div>
-                                </div>
+                                <ArticleContentSkeleton />
                             )}
                         </ResizablePanel>
                     </ResizablePanelGroup>
@@ -1029,6 +1016,10 @@ export function ArticlesView({
                     isOpen={isSubscriptionModalOpen}
                     onClose={() => setIsSubscriptionModalOpen(false)}
                     feed={feedData}
+                    onSuccess={() => {
+                        // Update feed data to mark as subscribed (exit preview mode)
+                        setPreviewFeedData(prev => prev ? { ...prev, is_subscribed: true } : null)
+                    }}
                 />
             )}
         </div>

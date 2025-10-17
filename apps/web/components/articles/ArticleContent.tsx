@@ -2,7 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow, parseISO } from "date-fns"
-import { FileText, Globe, Lightbulb, X } from "lucide-react"
+import { Globe } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -78,7 +78,7 @@ interface ArticleContentProps {
  */
 export function ArticleContent({
     article,
-    currentContent,
+    currentContent, // eslint-disable-line @typescript-eslint/no-unused-vars
     currentReadTime,
     isShowingSummary,
     isTranslating,
@@ -93,6 +93,7 @@ export function ArticleContent({
     onArticleRemoved,
     onBack,
 }: ArticleContentProps) {
+    console.log(article)
     const contentRef = useRef<HTMLDivElement>(null)
     const [hasMarkedRead, setHasMarkedRead] = useState(false)
     const [aiSummary, setAiSummary] = useState<string | null>(null)
@@ -101,37 +102,41 @@ export function ArticleContent({
     const [optimisticReadLater, setOptimisticReadLater] = useState(
         article.is_read_later
     )
-    // Track if the full article suggestion has been dismissed
-    const [showFullArticleSuggestion, setShowFullArticleSuggestion] =
-        useState(true)
+    // Content source selection ('original', 'extracted', or 'translated')
+    const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
+        article.extracted_content ? 'extracted' : 'original'
+    )
+    // Store translated content and language
+    const [translatedContent, setTranslatedContent] = useState<string | null>(null)
+    const [translatedLanguage, setTranslatedLanguage] = useState<string | null>(null)
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
 
+    // For AI operations (summary, translation), always use the base content (original or extracted)
+    // This ensures proper cache key generation based on source content hash, not translated content
+    // Note: Display content is computed inline in the render section based on contentSource
+    const baseContentForAI =
+        contentSource === 'extracted' && article.extracted_content
+            ? article.extracted_content
+            : article.content || article.description || ""
+
     // Only create AI hooks when we actually have a valid article ID to prevent unnecessary queries
-    const extractFullText = useExtractFullText(article?.id || "skip")
-    const summarizeArticle = useSummarizeArticle(article?.id || "skip")
+    // Pass article URL to extraction hook for proper cache key generation
+    const extractFullText = useExtractFullText(article?.id || "skip", article?.link || undefined)
+    const summarizeArticle = useSummarizeArticle(article?.id || "skip", baseContentForAI)
 
     // Sync optimistic state when article changes
     useEffect(() => {
         setOptimisticReadLater(article.is_read_later)
     }, [article.is_read_later])
 
-    // Check localStorage on mount to see if suggestion was dismissed
+    // Reset content source when article changes
     useEffect(() => {
-        const dismissed = localStorage.getItem("fullArticleSuggestionDismissed")
-        if (dismissed === "true") {
-            setShowFullArticleSuggestion(false)
-        }
-    }, [])
-
-    /**
-     * Handle dismissing the full article suggestion
-     */
-    const handleDismissFullArticleSuggestion = () => {
-        setShowFullArticleSuggestion(false)
-        localStorage.setItem("fullArticleSuggestionDismissed", "true")
-    }
+        setContentSource(article.extracted_content ? 'extracted' : 'original')
+        setTranslatedContent(null)
+        setTranslatedLanguage(null)
+    }, [article.id, article.extracted_content])
 
     const publishedAtString = article.published_at
     const readAtString = article.read_at
@@ -140,8 +145,8 @@ export function ArticleContent({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -162,7 +167,8 @@ export function ArticleContent({
                 setContentKey(newKey)
                 onContentChange(data.content, newKey)
                 onReadTimeChange(data.estimated_read_time_minutes || null)
-                toast.success("Full content extracted successfully")
+                // Automatically switch to extracted content after successful extraction
+                setContentSource('extracted')
             } else if (data) {
                 toast.error(data.error || "Failed to extract content")
             }
@@ -198,10 +204,10 @@ export function ArticleContent({
     const handleTranslate = async (targetLanguage: string) => {
         try {
             onTranslationChange(true)
-            const contentToUse =
-                currentContent !== (article.content || "")
-                    ? currentContent
-                    : undefined
+            // Use the active content based on content source (but not translated content)
+            const contentToUse = contentSource === 'extracted' && article.extracted_content
+                ? article.extracted_content
+                : article.content || article.description || ""
 
             // Check cache first
             const queryKey = createTranslationQueryKey(
@@ -224,7 +230,12 @@ export function ArticleContent({
             ) {
                 const newKey = `translated-${targetLanguage}-${article.id}`
                 setContentKey(newKey)
+                setTranslatedContent(cachedData.translated_content)
+                setTranslatedLanguage(targetLanguage)
                 onContentChange(cachedData.translated_content, newKey)
+                // Switch to translated tab
+                setContentSource('translated')
+                toast.success(`Article translated successfully`)
                 return
             }
 
@@ -239,8 +250,12 @@ export function ArticleContent({
             if (data && data.success && data.translated_content) {
                 const newKey = `translated-${targetLanguage}-${article.id}`
                 setContentKey(newKey)
+                setTranslatedContent(data.translated_content)
+                setTranslatedLanguage(targetLanguage)
                 onContentChange(data.translated_content, newKey)
-                toast.success(`Article translated to ${targetLanguage}`)
+                // Switch to translated tab
+                setContentSource('translated')
+                toast.success(`Article translated successfully`)
             } else if (data) {
                 toast.error(data.error || "Failed to translate article")
             }
@@ -417,6 +432,10 @@ export function ArticleContent({
                     <ArticleToolbar
                         article={article}
                         isReadLater={optimisticReadLater}
+                        contentSource={contentSource}
+                        onContentSourceChange={setContentSource}
+                        hasTranslatedContent={!!translatedContent}
+                        translatedLanguage={translatedLanguage}
                         onToggleReadLater={() => {
                             const newReadLaterState = !optimisticReadLater
                             setOptimisticReadLater(newReadLaterState)
@@ -469,17 +488,17 @@ export function ArticleContent({
                                                                 // In read-later mode, remove this article entirely
                                                                 isReadLaterMode
                                                                     ? item.id !==
-                                                                      article.id
+                                                                    article.id
                                                                     : true
                                                         )
                                                         .map((item: Article) =>
                                                             item.id ===
-                                                            article.id
+                                                                article.id
                                                                 ? {
-                                                                      ...item,
-                                                                      is_read: true,
-                                                                      is_read_later: false,
-                                                                  }
+                                                                    ...item,
+                                                                    is_read: true,
+                                                                    is_read_later: false,
+                                                                }
                                                                 : item
                                                         ) || [],
                                             })
@@ -579,11 +598,11 @@ export function ArticleContent({
                                                     page.items?.map(
                                                         (item: Article) =>
                                                             item.id ===
-                                                            article.id
+                                                                article.id
                                                                 ? {
-                                                                      ...item,
-                                                                      is_read: true,
-                                                                  }
+                                                                    ...item,
+                                                                    is_read: true,
+                                                                }
                                                                 : item
                                                     ) || [],
                                             })
@@ -654,6 +673,10 @@ export function ArticleContent({
                                         <ArticleToolbar
                                             article={article}
                                             isReadLater={optimisticReadLater}
+                                            contentSource={contentSource}
+                                            onContentSourceChange={setContentSource}
+                                            hasTranslatedContent={!!translatedContent}
+                                            translatedLanguage={translatedLanguage}
                                             onToggleReadLater={() => {
                                                 const newReadLaterState =
                                                     !optimisticReadLater
@@ -728,7 +751,7 @@ export function ArticleContent({
                                                                                     // In read-later mode, remove this article entirely
                                                                                     isReadLaterMode
                                                                                         ? item.id !==
-                                                                                          article.id
+                                                                                        article.id
                                                                                         : true
                                                                             )
                                                                             .map(
@@ -736,12 +759,12 @@ export function ArticleContent({
                                                                                     item: Article
                                                                                 ) =>
                                                                                     item.id ===
-                                                                                    article.id
+                                                                                        article.id
                                                                                         ? {
-                                                                                              ...item,
-                                                                                              is_read: true,
-                                                                                              is_read_later: false,
-                                                                                          }
+                                                                                            ...item,
+                                                                                            is_read: true,
+                                                                                            is_read_later: false,
+                                                                                        }
                                                                                         : item
                                                                             ) ||
                                                                         [],
@@ -850,98 +873,71 @@ export function ArticleContent({
                                     hasValidSummary
                                 )
                             })() && (
-                                <div className="mb-8">
-                                    <AiSummaryCard
-                                        summary={aiSummary!}
-                                        onDismiss={() => {
-                                            setAiSummary(null)
-                                            onSummaryChange(null, false)
-                                        }}
-                                    />
-                                </div>
-                            )}
-
-                            {/* Article Content - Always show if available */}
-                            {currentContent ? (
-                                <AnimatedContent
-                                    contentKey={contentKey}
-                                    className="prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl prose-li:text-foreground prose-li:text-xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-sm prose-strong:text-foreground"
-                                >
-                                    <div
-                                        className="text-xl leading-relaxed"
-                                        style={{
-                                            fontFamily:
-                                                "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
-                                        }}
-                                    >
-                                        <div
-                                            dangerouslySetInnerHTML={{
-                                                __html: currentContent,
+                                    <div className="mb-8">
+                                        <AiSummaryCard
+                                            summary={aiSummary!}
+                                            onDismiss={() => {
+                                                setAiSummary(null)
+                                                onSummaryChange(null, false)
                                             }}
                                         />
                                     </div>
-                                </AnimatedContent>
-                            ) : (
-                                <div className="space-y-6">
-                                    {(article.description || article.note) && (
-                                        <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
+                                )}
+
+                            {/* Article Content - Show based on selected source */}
+                            {(() => {
+                                const displayContent =
+                                    contentSource === "translated" && translatedContent
+                                        ? translatedContent
+                                        : contentSource === "extracted" && article.extracted_content
+                                            ? article.extracted_content
+                                            : article.content || article.description || ""
+
+                                return displayContent ? (
+                                    <AnimatedContent
+                                        contentKey={contentKey}
+                                        className="prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl prose-li:text-foreground prose-li:text-xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-img:rounded-lg prose-img:shadow-sm prose-strong:text-foreground"
+                                    >
+                                        <div
+                                            className="text-xl leading-relaxed"
+                                            style={{
+                                                fontFamily:
+                                                    "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+                                            }}
+                                        >
                                             <div
                                                 dangerouslySetInnerHTML={{
-                                                    __html:
-                                                        article.note ||
-                                                        article.description ||
-                                                        "",
+                                                    __html: displayContent,
                                                 }}
                                             />
-                                        </blockquote>
-                                    )}
-                                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                                        <div className="mx-auto max-w-md">
-                                            <p className="text-sm text-muted-foreground">
-                                                This article doesn&apos;t have
-                                                any content available.
-                                            </p>
+                                        </div>
+                                    </AnimatedContent>
+                                ) : (
+                                    <div className="space-y-6">
+                                        {(article.description || article.note) && (
+                                            <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
+                                                <div
+                                                    dangerouslySetInnerHTML={{
+                                                        __html:
+                                                            article.note ||
+                                                            article.description ||
+                                                            "",
+                                                    }}
+                                                />
+                                            </blockquote>
+                                        )}
+                                        <div className="flex flex-col items-center justify-center py-8 text-center">
+                                            <div className="mx-auto max-w-md">
+                                                <p className="text-sm text-muted-foreground">
+                                                    This article doesn&apos;t have
+                                                    any content available.
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
+                                )
+                            })()}
                         </div>
-
-                        {/* Content extraction suggestion - show when content is too short */}
-                        {article.link &&
-                            !shouldShowPreviewBanner &&
-                            showFullArticleSuggestion &&
-                            (currentContent.length <= 500 ||
-                                (!currentContent &&
-                                    (article.note || article.description))) && (
-                                <div className="mt-6 px-6 py-0 bg-gradient-to-r from-primary/5 to-primary/10 border border-primary/20 rounded-lg relative group transition-all duration-200 hover:shadow-sm">
-                                    <button
-                                        onClick={
-                                            handleDismissFullArticleSuggestion
-                                        }
-                                        className="absolute top-2 right-2 p-1 rounded-md hover:bg-primary/10 transition-colors duration-200 opacity-60 hover:opacity-100"
-                                        aria-label="Dismiss suggestion"
-                                    >
-                                        <X className="w-3.5 h-3.5 text-foreground" />
-                                    </button>
-                                    <div className="flex items-center gap-3 pr-6">
-                                        <Lightbulb className="w-4 h-4 text-primary flex-shrink-0" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm text-foreground">
-                                                <span className="font-medium">
-                                                    Want the full article?
-                                                </span>{" "}
-                                                <span className="text-muted-foreground">
-                                                    Click{" "}
-                                                    <FileText className="inline w-3.5 h-3.5 mx-0.5" />{" "}
-                                                    in the toolbar to extract
-                                                    complete content.
-                                                </span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
 
                         {/* Visit Website button at the bottom */}
                         {article.link && (

@@ -6,14 +6,15 @@ import {
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { colorTokens } from "@/lib/design-tokens/colors"
 import { useIsMobile } from "@/hooks/useMobile"
+import { colorTokens } from "@/lib/design-tokens/colors"
 import type { Article } from "@readspace/shared"
 import {
     ArrowLeft,
@@ -22,6 +23,7 @@ import {
     Copy,
     ExternalLink,
     FileText,
+    Globe,
     Languages,
     Loader2,
     Sparkles,
@@ -33,6 +35,8 @@ import { LanguageSelector } from "./LanguageSelector"
 interface ArticleToolbarProps {
     article: Article
     isReadLater: boolean
+    contentSource?: 'original' | 'extracted' | 'translated'
+    onContentSourceChange?: (source: 'original' | 'extracted' | 'translated') => void
     onToggleReadLater: () => void
     onMarkAsRead?: () => void
     onExtractFullText: () => Promise<void>
@@ -44,11 +48,15 @@ interface ArticleToolbarProps {
     onBack?: () => void
     hideBackground?: boolean
     isReadLaterMode?: boolean
+    hasTranslatedContent?: boolean
+    translatedLanguage?: string | null
 }
 
 export function ArticleToolbar({
     article,
     isReadLater,
+    contentSource = 'original',
+    onContentSourceChange,
     onToggleReadLater,
     onMarkAsRead,
     onExtractFullText,
@@ -60,6 +68,8 @@ export function ArticleToolbar({
     onBack,
     hideBackground = false,
     isReadLaterMode = false,
+    hasTranslatedContent = false,
+    translatedLanguage = null,
 }: ArticleToolbarProps) {
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
@@ -93,6 +103,7 @@ export function ArticleToolbar({
         onTranslate(language)
     }
 
+
     return (
         <div
             className={`flex items-center ${isMobile && onBack ? "justify-between" : "justify-end"} ${hideBackground ? "gap-1" : "px-4 py-3 bg-background/95 backdrop-blur-sm border-b"}`}
@@ -121,6 +132,42 @@ export function ArticleToolbar({
             <div
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
+                {/* Content Source Tabs - Show when link is available */}
+                {article.link && onContentSourceChange && (
+                    <div className="mr-2">
+                        <Tabs
+                            value={contentSource}
+                            onValueChange={(value) => {
+                                const newSource = value as 'original' | 'extracted' | 'translated'
+                                // If switching to extracted and no content exists yet, trigger extraction
+                                if (newSource === 'extracted' && !article.extracted_content) {
+                                    onExtractFullText()
+                                } else {
+                                    onContentSourceChange(newSource)
+                                }
+                            }}
+                            className="w-auto inline-block"
+                        >
+                            <TabsList className="h-8">
+                                <TabsTrigger value="original" title="Original RSS content" className="h-7 px-2">
+                                    <FileText className="h-4 w-4" />
+                                </TabsTrigger>
+                                <TabsTrigger value="extracted" title="Full article content" className="h-7 px-2" disabled={isExtracting}>
+                                    {isExtracting ? (
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <Globe className="h-4 w-4" />
+                                    )}
+                                </TabsTrigger>
+                                {hasTranslatedContent && (
+                                    <TabsTrigger value="translated" title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ''}`} className="h-7 px-2">
+                                        <Languages className="h-4 w-4" />
+                                    </TabsTrigger>
+                                )}
+                            </TabsList>
+                        </Tabs>
+                    </div>
+                )}
                 <TooltipProvider>
                     {/* Bookmark/Save for Later or Mark as Read */}
                     <Tooltip>
@@ -173,8 +220,8 @@ export function ArticleToolbar({
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
                                 : isReadLater
-                                  ? "Remove from Read Later"
-                                  : "Save for Later"}
+                                    ? "Remove from Read Later"
+                                    : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 
@@ -213,30 +260,6 @@ export function ArticleToolbar({
                         </TooltipTrigger>
                         <TooltipContent>
                             {article.link ? "Copy URL" : "No URL to copy"}
-                        </TooltipContent>
-                    </Tooltip>
-
-                    {/* Extract Full Text */}
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={onExtractFullText}
-                                disabled={isExtracting || !article.link}
-                            >
-                                {isExtracting ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                    <FileText className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            {isExtracting
-                                ? "Extracting..."
-                                : "Extract Full Text"}
                         </TooltipContent>
                     </Tooltip>
 

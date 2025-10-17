@@ -2,6 +2,7 @@
 
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu"
 import { Check } from "lucide-react"
+import ReactCountryFlag from "react-country-flag"
 
 interface LanguageSelectorProps {
     onSelect: (languageCode: string) => void
@@ -9,27 +10,27 @@ interface LanguageSelectorProps {
 }
 
 const LANGUAGES = [
-    { code: "en", name: "English", flag: "🇺🇸" },
-    { code: "es", name: "Spanish", flag: "🇪🇸" },
-    { code: "fr", name: "French", flag: "🇫🇷" },
-    { code: "de", name: "German", flag: "🇩🇪" },
-    { code: "it", name: "Italian", flag: "🇮🇹" },
-    { code: "pt", name: "Portuguese", flag: "🇵🇹" },
-    { code: "ru", name: "Russian", flag: "🇷🇺" },
-    { code: "ja", name: "Japanese", flag: "🇯🇵" },
-    { code: "ko", name: "Korean", flag: "🇰🇷" },
-    { code: "zh", name: "Chinese", flag: "🇨🇳" },
-    { code: "ar", name: "Arabic", flag: "🇸🇦" },
-    { code: "hi", name: "Hindi", flag: "🇮🇳" },
-    { code: "nl", name: "Dutch", flag: "🇳🇱" },
-    { code: "sv", name: "Swedish", flag: "🇸🇪" },
-    { code: "no", name: "Norwegian", flag: "🇳🇴" },
-    { code: "da", name: "Danish", flag: "🇩🇰" },
-    { code: "fi", name: "Finnish", flag: "🇫🇮" },
-    { code: "pl", name: "Polish", flag: "🇵🇱" },
-    { code: "tr", name: "Turkish", flag: "🇹🇷" },
-    { code: "th", name: "Thai", flag: "🇹🇭" },
-    { code: "vi", name: "Vietnamese", flag: "🇻🇳" },
+    { code: "en", name: "English", countryCode: "GB" },
+    { code: "es", name: "Spanish", countryCode: "ES" },
+    { code: "fr", name: "French", countryCode: "FR" },
+    { code: "de", name: "German", countryCode: "DE" },
+    { code: "it", name: "Italian", countryCode: "IT" },
+    { code: "pt", name: "Portuguese", countryCode: "BR" },
+    { code: "ru", name: "Russian", countryCode: "RU" },
+    { code: "ja", name: "Japanese", countryCode: "JP" },
+    { code: "ko", name: "Korean", countryCode: "KR" },
+    { code: "zh", name: "Chinese (Simplified)", countryCode: "CN" },
+    { code: "ar", name: "Arabic", countryCode: "SA" },
+    { code: "hi", name: "Hindi", countryCode: "IN" },
+    { code: "nl", name: "Dutch", countryCode: "NL" },
+    { code: "sv", name: "Swedish", countryCode: "SE" },
+    { code: "no", name: "Norwegian", countryCode: "NO" },
+    { code: "da", name: "Danish", countryCode: "DK" },
+    { code: "fi", name: "Finnish", countryCode: "FI" },
+    { code: "pl", name: "Polish", countryCode: "PL" },
+    { code: "tr", name: "Turkish", countryCode: "TR" },
+    { code: "th", name: "Thai", countryCode: "TH" },
+    { code: "vi", name: "Vietnamese", countryCode: "VN" },
 ]
 
 export function LanguageSelector({
@@ -49,7 +50,15 @@ export function LanguageSelector({
                         className="flex items-center justify-between gap-2 cursor-pointer"
                     >
                         <div className="flex items-center gap-2">
-                            <span className="text-base">{language.flag}</span>
+                            <ReactCountryFlag
+                                countryCode={language.countryCode}
+                                svg
+                                style={{
+                                    width: '1.2em',
+                                    height: '1.2em',
+                                }}
+                                title={language.name}
+                            />
                             <span>{language.name}</span>
                         </div>
                         {selectedLanguage === language.code && (

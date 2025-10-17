@@ -3,7 +3,6 @@
 from uuid import UUID
 
 import structlog
-import trafilatura  # type: ignore[import-untyped]
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,20 +12,11 @@ from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.services.ai_service import get_ai_service
 from app.services.auth import get_current_user
+from app.services.content_extraction_service import ContentExtractionService
 from app.services.rss_service import RssOrchestrationService
-from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])
-
-
-def _calculate_read_time(content: str) -> int:
-    """Calculate estimated reading time in minutes with CJK support."""
-    if not content:
-        return 1
-
-    read_time = calculate_reading_time(content, default_wpm=200)
-    return min(read_time, 60)  # Cap at 60 minutes
 
 
 class ExtractFullTextResponse(BaseModel):
@@ -84,6 +74,8 @@ async def extract_full_text(
 
     This endpoint fetches the complete article content from the source URL,
     which is useful when the RSS feed only provides a summary or excerpt.
+    This is the manual extraction endpoint - automatic extraction happens
+    during article fetch if content is detected as incomplete.
     """
     try:
         logger.info(
@@ -92,44 +84,46 @@ async def extract_full_text(
             user_id=user.sub,
         )
 
-        rss_service = RssOrchestrationService(db, UUID(user.sub))
+        from app.crud.crud_article import get_article as crud_get_article
 
-        # Get the article to verify ownership and get URL
-        article = await rss_service.get_article(article_id=article_id, allow_preview=False)
-        if not article:
+        extraction_service = ContentExtractionService()
+
+        # Get the article directly from DB to verify ownership and get URL
+        # Don't use rss_service.get_article() as it triggers auto-extraction
+        article_db = await crud_get_article(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
+        if not article_db:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
-        if not article.link:
+        # Handle both tuple (FeedArticle, UserArticleState) and ClippedArticle types
+        from app.models.rss_models import ClippedArticle
+
+        if isinstance(article_db, ClippedArticle):
+            article_link = article_db.content.link if article_db.content else None
+            article_title = article_db.content.title if article_db.content else None
+        elif isinstance(article_db, tuple):
+            # FeedArticle tuple
+            article_link = article_db[0].content.link if article_db[0].content else None
+            article_title = article_db[0].content.title if article_db[0].content else None
+        else:
+            # Legacy single FeedArticle
+            article_link = article_db.content.link if hasattr(article_db, "content") and article_db.content else None
+            article_title = article_db.content.title if hasattr(article_db, "content") and article_db.content else None
+
+        if not article_link:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Article has no source URL available",
             )
 
-        url = str(article.link)
-        logger.debug("Fetching content from URL", url=url)
+        url = str(article_link)
 
-        # Fetch and extract content using trafilatura
-        downloaded = trafilatura.fetch_url(url)
-        if not downloaded:
-            logger.warning("Failed to fetch URL", url=url)
-            return ExtractFullTextResponse(success=False, error="Failed to fetch content from URL")
+        # Extract content using the shared extraction service, passing title to remove duplicates
+        content, read_time, error = await extraction_service.extract_full_content(url, article_title)
 
-        extracted = trafilatura.extract(downloaded, output_format="html")
-        if not extracted:
-            logger.warning("Could not extract content from URL", url=url)
-            return ExtractFullTextResponse(success=False, error="Could not extract readable content from the page")
-
-        # Calculate read time for the extracted content
-        read_time = _calculate_read_time(extracted)
-
-        logger.info(
-            "Successfully extracted full text",
-            article_id=str(article_id),
-            content_length=len(extracted),
-            read_time=read_time,
-        )
-
-        return ExtractFullTextResponse(success=True, content=extracted, estimated_read_time_minutes=read_time)
+        if content and not error:
+            return ExtractFullTextResponse(success=True, content=content, estimated_read_time_minutes=read_time)
+        else:
+            return ExtractFullTextResponse(success=False, error=error)
 
     except HTTPException:
         raise
@@ -171,19 +165,35 @@ async def summarize_article(
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
-        # Use provided content if available, otherwise fall back to article content/description
-        content_to_summarize = request.content or article.content or article.description
+        # Use provided content if available, otherwise fall back to extracted content, article content, or description
+        content_to_summarize = (
+            request.content 
+            or article.extracted_content 
+            or article.content 
+            or article.description
+        )
         if not content_to_summarize:
             return SummarizeResponse(success=False, error="No content available to summarize")
+
+        # Determine the content source for logging
+        if request.content:
+            content_source = "request"
+        elif article.extracted_content:
+            content_source = "extracted_content"
+        elif article.content:
+            content_source = "article_content"
+        else:
+            content_source = "description"
 
         logger.info(
             "Content sources for summarization",
             article_id=str(article_id),
             has_request_content=bool(request.content),
+            has_extracted_content=bool(article.extracted_content),
             has_article_content=bool(article.content),
             has_article_description=bool(article.description),
             content_length=len(content_to_summarize),
-            content_source="request" if request.content else ("article_content" if article.content else "description"),
+            content_source=content_source,
         )
 
         # Generate summary using AI service
@@ -248,8 +258,13 @@ async def translate_article(
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
-        # Use provided content if available, otherwise fall back to article content/description
-        content_to_translate = request.content or article.content or article.description
+        # Use provided content if available, otherwise fall back to extracted content, article content, or description
+        content_to_translate = (
+            request.content 
+            or article.extracted_content 
+            or article.content 
+            or article.description
+        )
         if not content_to_translate:
             return TranslateResponse(success=False, error="No content available to translate")
 

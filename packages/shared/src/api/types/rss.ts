@@ -152,6 +152,9 @@ export type Article = {
   article_type: "feed" | "clipped";
   priority?: string | null; // Added for clipped articles
   note?: string | null; // Added for clipped articles
+  // Auto-extracted content fields
+  extracted_content?: string | null; // Full content extracted from article URL
+  extracted_read_time?: number | null; // Read time for extracted content
 };
 
 // Articles pagination response type - matches backend PaginatedResponse[ArticleResponse]

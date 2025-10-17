@@ -273,6 +273,10 @@ class ArticleResponse(ArticleBase):
     article_type: str  # "feed" or "clipped"
     feed: dict[str, Any] | None = None  # Nested feed info for both RSS and clipped articles
 
+    # Auto-extracted content fields
+    extracted_content: str | None = None  # Full content extracted from article URL
+    extracted_read_time: int | None = Field(None, ge=0)  # Read time for extracted content
+
 
 # Legacy schemas (kept for backward compatibility)
 Article = FeedArticleResponse
