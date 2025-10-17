@@ -58,6 +58,7 @@
     body {
         @apply bg-background text-foreground;
     }
+
 }
 
 .perspective-1000 {
@@ -93,6 +94,10 @@ pre {
     word-wrap: break-word;
     hyphens: auto;
     overflow-x: hidden;
+}
+
+.article-content a {
+    @apply text-secondary;
 }
 
 /* Fix title and text overflow issues - only in article content */
