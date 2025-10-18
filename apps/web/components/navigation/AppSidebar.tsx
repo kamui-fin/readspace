@@ -49,7 +49,7 @@ const data = {
         },
         {
             title: "Join the Discord",
-            url: "https://discord.gg/vmfafzqdX5",
+            url: "https://discord.com/invite/2Q5PtYwUQZ",
             icon: function Discord() {
                 return (
                     <Image
