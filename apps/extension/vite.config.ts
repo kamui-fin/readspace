@@ -17,7 +17,7 @@ function getManifest(mode: string) {
 export default defineConfig(({ mode }) => {
   const isFirefox = mode === 'firefox'
   const manifest = getManifest(mode)
-  
+
   return {
     plugins: [
       react(),
@@ -30,6 +30,7 @@ export default defineConfig(({ mode }) => {
         '@': resolve('./src'),
       },
     },
+    publicDir: 'public',
     build: {
       outDir: isFirefox ? 'dist-firefox' : 'dist',
       rollupOptions: {

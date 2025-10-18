@@ -237,7 +237,7 @@ export function Popup() {
               <div className="flex items-center justify-center mb-4">
                 <div className="w-12 h-12">
                   <img
-                    src={browser.runtime.getURL('src/assets/readspace.svg')}
+                    src={browser.runtime.getURL('assets/readspace.svg')}
                     alt="Readspace"
                     className="w-full h-full rounded"
                   />
@@ -341,7 +341,7 @@ export function Popup() {
         <div className="flex items-center gap-2">
           <div className="w-5 h-5">
             <img
-              src={browser.runtime.getURL('src/assets/readspace.svg')}
+              src={browser.runtime.getURL('assets/readspace.svg')}
               alt="Readspace"
               className="w-full h-full"
             />

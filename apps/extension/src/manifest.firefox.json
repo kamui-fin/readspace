@@ -62,7 +62,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/assets/readspace.svg"
+        "assets/readspace.svg"
       ],
       "matches": [
         "*://*/*"
