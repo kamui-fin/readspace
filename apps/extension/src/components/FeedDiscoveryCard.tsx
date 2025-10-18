@@ -46,6 +46,9 @@ export function FeedDiscoveryCard({
   const [isUnfollowing, setIsUnfollowing] = useState(false)
   const userFeeds = useExtensionStore((state) => state.feeds)
   const { unsubscribeFromFeed } = useExtensionStore()
+  const isFeedPendingFollow = useExtensionStore((state) => state.isFeedPendingFollow)
+  const cancelFollow = useExtensionStore((state) => state.cancelFollow)
+  const isPendingFollow = feeds && feeds.length > 0 ? isFeedPendingFollow(feeds[0].url) : false
 
   // Check if user is already following any of the discovered feeds
   useEffect(() => {
@@ -87,6 +90,16 @@ export function FeedDiscoveryCard({
     if (!isFollowing) {
       setIsModalOpen(true)
     } else {
+      // Check if follow is still pending
+      if (isPendingFollow && primaryFeed) {
+        // Cancel the pending follow
+        console.log('Cancelling pending follow for:', primaryFeed.url)
+        cancelFollow(primaryFeed.url)
+        setIsFollowing(false)
+        toast.success('Unfollowed')
+        return
+      }
+
       // Unfollow
       console.log('Attempting to unfollow, followedFeedId:', followedFeedId)
       if (followedFeedId) {
@@ -95,7 +108,7 @@ export function FeedDiscoveryCard({
           console.log('Calling unsubscribeFromFeed with ID:', followedFeedId)
           await unsubscribeFromFeed(followedFeedId)
           console.log('Unsubscribe successful')
-          toast.success('Successfully unfollowed!')
+          toast.success('Unfollowed')
           setIsFollowing(false)
           setFollowedFeedId(null)
         } catch (error) {
@@ -147,8 +160,8 @@ export function FeedDiscoveryCard({
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-sm mb-1">Follow this site</h3>
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <h3 className="font-semibold text-sm">Follow this site</h3>
             <p className="text-xs text-muted-foreground line-clamp-2">
               {domain}
               {displayDescription && ` • ${displayDescription}`}

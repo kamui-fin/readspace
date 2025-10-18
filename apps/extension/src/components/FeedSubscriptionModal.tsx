@@ -205,7 +205,7 @@ export function FeedSubscriptionModal({
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!selectedFolderId) {
@@ -223,20 +223,25 @@ export function FeedSubscriptionModal({
     onSuccess?.()
     onClose()
 
-    // Make the actual API call in the background
-    try {
-      await subscribeToFeed(selectedFeed.url, {
-        folder_id: selectedFolderId,
+    // Start the API call synchronously (don't await) so AbortController is created immediately
+    // This allows the follow to be cancelled if user clicks "Following" quickly
+    subscribeToFeed(selectedFeed.url, {
+      folder_id: selectedFolderId,
+    })
+      .then(async () => {
+        // Reload user data to get the feed ID
+        await loadUserData()
+        console.log('User data reloaded after feed subscription')
       })
-    } catch (error) {
-      console.error('Failed to subscribe to RSS feed:', error)
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error'
-      // Show error toast, but modal is already closed
-      toast.error(`Feed subscription failed: ${errorMessage}`, {
-        duration: 5000, // Show longer since user might miss it
+      .catch((error) => {
+        console.error('Failed to subscribe to RSS feed:', error)
+        const errorMessage =
+          error instanceof Error ? error.message : 'Unknown error'
+        // Show error toast, but modal is already closed
+        toast.error(`Feed subscription failed: ${errorMessage}`, {
+          duration: 5000, // Show longer since user might miss it
+        })
       })
-    }
   }
 
   if (!isOpen) return null

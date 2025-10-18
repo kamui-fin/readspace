@@ -22,7 +22,6 @@ export function Popup() {
     isAuthenticated,
     settings,
     currentPageMetadata,
-    isSaving,
     setCurrentPageMetadata,
     saveArticle,
     checkExistingSession,
@@ -204,15 +203,17 @@ export function Popup() {
   const handleSaveArticle = async (options?: Partial<SaveOptions>) => {
     if (!currentTab?.url) return
 
-    try {
-      await saveArticle(currentTab.url, options)
-      toast.success('Article saved successfully!')
-    } catch (error) {
+    // Show instant success feedback
+    toast.success('Article saved!')
+
+    // Save in background without blocking
+    saveArticle(currentTab.url, options).catch((error) => {
       console.error('Failed to save article:', error)
+      // Only show error if the background save fails
       toast.error(
         `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
-    }
+    })
   }
 
   const openReadspace = () => {
@@ -389,10 +390,10 @@ export function Popup() {
           {/* Current Page Preview - Always show, with skeleton while loading */}
           <ArticlePreview
             metadata={currentPageMetadata || undefined}
-            isLoading={isSaving}
             isMetadataLoading={isMetadataLoading}
             onSave={handleSaveArticle}
             readingTime={readingTime}
+            currentUrl={currentTab?.url}
           />
         </div>
       )}

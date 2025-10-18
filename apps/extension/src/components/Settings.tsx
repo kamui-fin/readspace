@@ -236,8 +236,8 @@ export function Settings({ onBack }: SettingsProps) {
           <h3 className="text-lg font-semibold">Self-Hosted Configuration</h3>
         </div>
 
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800">
+        <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             Leave empty to use official Readspace. Don't modify unless you know
             what you're doing.
           </p>

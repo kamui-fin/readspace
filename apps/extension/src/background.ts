@@ -301,6 +301,15 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
     try {
+      // Try to use cached metadata first to update badge immediately
+      const cachedMetadata = await pageCache.getMetadata(tab.url)
+      if (cachedMetadata?.feeds) {
+        console.log(
+          `Using cached metadata for badge, found ${cachedMetadata.feeds.length} feeds`
+        )
+        await updateFeedBadge(tabId, cachedMetadata.feeds.length)
+      }
+
       // Start metadata extraction immediately without delay for faster preloading
       setTimeout(async () => {
         try {

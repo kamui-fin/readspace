@@ -341,8 +341,8 @@ export class ApiClient {
       );
     },
     getFeed: (id: string) => this.get<Feed>(`/api/rss/feeds/${id}`),
-    createFeed: (data: { url: string; folder_id?: string }) =>
-      this.post<Feed>("/api/rss/feeds/", data),
+    createFeed: (data: { url: string; folder_id?: string }, signal?: AbortSignal) =>
+      this.post<Feed>("/api/rss/feeds/", data, signal ? { signal } : undefined),
     updateFeed: (
       id: string,
       data: {

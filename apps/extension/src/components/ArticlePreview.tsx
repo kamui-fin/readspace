@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { extractDomain } from '@readspace/shared'
 import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
-import { BookOpen, Pencil, Flag, StickyNote } from 'lucide-react'
+import { BookOpen, Pencil, Flag, StickyNote, Check } from 'lucide-react'
 import { browser } from '@/lib/browser'
+import { useExtensionStore } from '@/store'
+import toast from 'react-hot-toast'
 
 interface ArticlePreviewProps {
   metadata?: PageMetadata
-  isLoading?: boolean
   isMetadataLoading?: boolean
   onSave: (options?: Partial<SaveOptions>) => void
   readingTime?: number
+  currentUrl?: string
 }
 
 // Skeleton loading component
@@ -66,10 +68,10 @@ function ArticlePreviewSkeleton() {
 
 export function ArticlePreview({
   metadata,
-  isLoading = false,
   isMetadataLoading = false,
   onSave,
   readingTime,
+  currentUrl,
 }: ArticlePreviewProps) {
   const [isExpanded, setIsExpanded] = useState(true) // Default to expanded
   const [isInitialized, setIsInitialized] = useState(false)
@@ -78,6 +80,14 @@ export function ArticlePreview({
   const [customTitle, setCustomTitle] = useState('')
   const [note, setNote] = useState('')
   const [priority, setPriority] = useState<Priority>('low')
+
+  const isArticleSaved = useExtensionStore((state) => state.isArticleSaved)
+  const isArticlePendingSave = useExtensionStore((state) => state.isArticlePendingSave)
+  const unsaveArticle = useExtensionStore((state) => state.unsaveArticle)
+  const cancelSave = useExtensionStore((state) => state.cancelSave)
+  const isSaved = currentUrl ? isArticleSaved(currentUrl) : false
+  const isPending = currentUrl ? isArticlePendingSave(currentUrl) : false
+  const [isUnsaving, setIsUnsaving] = useState(false)
 
   // Load expanded state from storage on mount
   useEffect(() => {
@@ -114,13 +124,42 @@ export function ArticlePreview({
     ? extractDomain(metadata.canonical_url)
     : ''
 
-  const handleSave = () => {
-    const options: Partial<SaveOptions> = {
-      title: customTitle || undefined,
-      note: note || undefined,
-      priority, // Always include priority (defaults to 'low')
+  const handleSave = async () => {
+    if (isSaved && currentUrl) {
+      // Check if save is still pending
+      if (isPending) {
+        // Cancel the pending save
+        console.log('Cancelling pending save for:', currentUrl)
+        cancelSave(currentUrl)
+        toast.success('Article removed')
+        return
+      }
+
+      // Unsave article
+      console.log('Attempting to unsave article:', currentUrl)
+      setIsUnsaving(true)
+      try {
+        await unsaveArticle(currentUrl)
+        console.log('Article unsaved successfully')
+        toast.success('Article removed')
+      } catch (error) {
+        console.error('Failed to unsave article:', error)
+        toast.error(
+          `Failed to remove article: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      } finally {
+        setIsUnsaving(false)
+      }
+    } else {
+      // Save article
+      console.log('Saving article:', currentUrl)
+      const options: Partial<SaveOptions> = {
+        title: customTitle || undefined,
+        note: note || undefined,
+        priority, // Always include priority (defaults to 'low')
+      }
+      onSave(options)
     }
-    onSave(options)
   }
 
   const handleEditTitle = () => {
@@ -141,8 +180,8 @@ export function ArticlePreview({
         </div>
 
         {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm mb-1">Save article for later</h3>
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
+          <h3 className="font-semibold text-sm">Save article for later</h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
             {domain}
             {readingTime && ` • ${readingTime} min read`}
@@ -153,15 +192,20 @@ export function ArticlePreview({
         <div className="flex items-center gap-1 flex-shrink-0">
           <Button
             onClick={handleSave}
-            disabled={isLoading}
+            disabled={isUnsaving}
             size="sm"
-            className="flex-shrink-0 w-[100px]"
+            className={`flex-shrink-0 w-[100px] ${isSaved ? 'bg-primary/80 hover:bg-primary/90' : ''}`}
           >
-            {isLoading ? (
-              <>
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1" />
-                Saving...
-              </>
+            {isUnsaving ? (
+              <div className="flex items-center justify-center">
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                <span>Removing...</span>
+              </div>
+            ) : isSaved ? (
+              <div className="flex items-center justify-center">
+                <Check className="w-3 h-3 mr-1.5" />
+                <span>Saved</span>
+              </div>
             ) : (
               'Save'
             )}

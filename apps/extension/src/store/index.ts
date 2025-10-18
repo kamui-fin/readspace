@@ -30,6 +30,11 @@ interface ExtensionState {
   // Data
   folders: Folder[]
   feeds: Feed[]
+  savedArticleUrls: Set<string>
+  savedArticleIds: Map<string, string> // Map URL to article ID
+  pendingSaveUrls: Set<string> // Track articles currently being saved
+  pendingFollowUrls: Set<string> // Track feeds currently being followed
+  followAbortControllers: Map<string, AbortController> // Track abort controllers for feed subscriptions
 
   // Loading states
   isLoading: boolean
@@ -57,6 +62,12 @@ interface ExtensionState {
     options?: { folder_id?: string }
   ) => Promise<void>
   unsubscribeFromFeed: (feedId: string) => Promise<void>
+  isArticleSaved: (url: string) => boolean
+  isArticlePendingSave: (url: string) => boolean
+  unsaveArticle: (url: string) => Promise<void>
+  cancelSave: (url: string) => void
+  isFeedPendingFollow: (url: string) => boolean
+  cancelFollow: (url: string) => void
 }
 
 const defaultSettings: ExtensionSettings = {
@@ -79,6 +90,11 @@ export const useExtensionStore = create<ExtensionState>()(
       isAuthenticated: false,
       folders: [],
       feeds: [],
+      savedArticleUrls: new Set<string>(),
+      savedArticleIds: new Map<string, string>(),
+      pendingSaveUrls: new Set<string>(),
+      pendingFollowUrls: new Set<string>(),
+      followAbortControllers: new Map<string, AbortController>(),
       isLoading: false,
       isConnecting: false,
       isSaving: false,
@@ -236,10 +252,18 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       saveArticle: async (url: string, options = {}) => {
-        const { isAuthenticated, currentPageMetadata } = get()
+        const { isAuthenticated, currentPageMetadata, savedArticleUrls, pendingSaveUrls } = get()
         if (!isAuthenticated) throw new Error('Not authenticated')
 
-        set({ isSaving: true })
+        // Mark as pending save
+        const newPendingSaveUrls = new Set(pendingSaveUrls)
+        newPendingSaveUrls.add(url)
+
+        // Immediately mark as saved optimistically
+        const newSavedUrls = new Set(savedArticleUrls)
+        newSavedUrls.add(url)
+        set({ savedArticleUrls: newSavedUrls, pendingSaveUrls: newPendingSaveUrls, isSaving: true })
+
         try {
           // First, try to get cached content from persistent cache
           console.log('Checking persistent cache for article content...')
@@ -319,25 +343,122 @@ export const useExtensionStore = create<ExtensionState>()(
           const article = (await ApiClient.rss.saveArticle(
             saveRequest
           )) as Article
+
+          // Store the article ID for potential unsave later and remove from pending
+          const newSavedIds = new Map(get().savedArticleIds)
+          newSavedIds.set(url, article.id)
+          const newPendingSaveUrls = new Set(get().pendingSaveUrls)
+          newPendingSaveUrls.delete(url)
+          set({ savedArticleIds: newSavedIds, pendingSaveUrls: newPendingSaveUrls })
+
           return article
+        } catch (error) {
+          // Remove from both savedArticleUrls and pendingSaveUrls if save failed
+          const rollbackUrls = new Set(get().savedArticleUrls)
+          rollbackUrls.delete(url)
+          const newPendingSaveUrls = new Set(get().pendingSaveUrls)
+          newPendingSaveUrls.delete(url)
+          set({ savedArticleUrls: rollbackUrls, pendingSaveUrls: newPendingSaveUrls })
+          throw error
         } finally {
           set({ isSaving: false })
         }
       },
 
+      isArticleSaved: (url: string) => {
+        return get().savedArticleUrls.has(url)
+      },
+
+      isArticlePendingSave: (url: string) => {
+        return get().pendingSaveUrls.has(url)
+      },
+
+      cancelSave: (url: string) => {
+        // Cancel the pending save by removing from both sets
+        const newSavedUrls = new Set(get().savedArticleUrls)
+        newSavedUrls.delete(url)
+        const newPendingSaveUrls = new Set(get().pendingSaveUrls)
+        newPendingSaveUrls.delete(url)
+        set({ savedArticleUrls: newSavedUrls, pendingSaveUrls: newPendingSaveUrls })
+        console.log('Cancelled pending save for:', url)
+      },
+
+      unsaveArticle: async (url: string) => {
+        const { isAuthenticated, savedArticleIds, savedArticleUrls } = get()
+        if (!isAuthenticated) throw new Error('Not authenticated')
+
+        const articleId = savedArticleIds.get(url)
+        if (!articleId) {
+          console.warn('Cannot unsave article: no article ID found for URL', url)
+          return
+        }
+
+        // Optimistically remove from saved state
+        const newSavedUrls = new Set(savedArticleUrls)
+        newSavedUrls.delete(url)
+        const newSavedIds = new Map(savedArticleIds)
+        newSavedIds.delete(url)
+        set({ savedArticleUrls: newSavedUrls, savedArticleIds: newSavedIds })
+
+        try {
+          // Mark article as not read later to remove from read-later list
+          await ApiClient.rss.updateArticle(articleId, { is_read_later: false }, 'clipped')
+          console.log('Article removed from read-later successfully')
+        } catch (error) {
+          // Rollback on error
+          console.error('Failed to unsave article:', error)
+          const rollbackUrls = new Set(get().savedArticleUrls)
+          rollbackUrls.add(url)
+          const rollbackIds = new Map(get().savedArticleIds)
+          rollbackIds.set(url, articleId)
+          set({ savedArticleUrls: rollbackUrls, savedArticleIds: rollbackIds })
+          throw error
+        }
+      },
+
       subscribeToFeed: async (feedUrl: string, options = {}) => {
-        const { isAuthenticated, settings } = get()
+        const { isAuthenticated, settings, pendingFollowUrls, followAbortControllers } = get()
         if (!isAuthenticated) {
           toast.error('Please sign in to subscribe to feeds')
           throw new Error('Not authenticated')
         }
 
+        // Create abort controller for this request
+        const abortController = new AbortController()
+        const newFollowAbortControllers = new Map(followAbortControllers)
+        newFollowAbortControllers.set(feedUrl, abortController)
+
+        // Mark as pending follow (if not already)
+        const newPendingFollowUrls = new Set(pendingFollowUrls)
+        newPendingFollowUrls.add(feedUrl)
+        set({ followAbortControllers: newFollowAbortControllers, pendingFollowUrls: newPendingFollowUrls })
+
         try {
           await ApiClient.rss.createFeed({
             url: feedUrl,
             folder_id: options.folder_id || settings.default_folder_id,
-          })
+          }, abortController.signal)
+
+          // Remove from pending on success
+          const updatedPendingFollowUrls = new Set(get().pendingFollowUrls)
+          updatedPendingFollowUrls.delete(feedUrl)
+          const updatedFollowAbortControllers = new Map(get().followAbortControllers)
+          updatedFollowAbortControllers.delete(feedUrl)
+          set({ pendingFollowUrls: updatedPendingFollowUrls, followAbortControllers: updatedFollowAbortControllers })
         } catch (error) {
+          // Remove from pending on error (including aborted requests)
+          const rollbackPendingFollowUrls = new Set(get().pendingFollowUrls)
+          rollbackPendingFollowUrls.delete(feedUrl)
+          const rollbackFollowAbortControllers = new Map(get().followAbortControllers)
+          rollbackFollowAbortControllers.delete(feedUrl)
+          set({ pendingFollowUrls: rollbackPendingFollowUrls, followAbortControllers: rollbackFollowAbortControllers })
+
+          // Don't throw error if it was aborted (user cancelled)
+          if (error instanceof Error && error.name === 'AbortError') {
+            console.log('Feed subscription cancelled by user')
+            return
+          }
+
           console.error('Failed to subscribe to feed:', error)
           const errorMessage =
             error instanceof Error
@@ -345,6 +466,27 @@ export const useExtensionStore = create<ExtensionState>()(
               : 'Failed to subscribe to feed'
           throw new Error(errorMessage)
         }
+      },
+
+      isFeedPendingFollow: (url: string) => {
+        return get().pendingFollowUrls.has(url)
+      },
+
+      cancelFollow: (url: string) => {
+        // Abort the request if it's still in progress
+        const abortController = get().followAbortControllers.get(url)
+        if (abortController) {
+          abortController.abort()
+          console.log('Aborted follow request for:', url)
+        }
+
+        // Cancel the pending follow by removing from sets
+        const newPendingFollowUrls = new Set(get().pendingFollowUrls)
+        newPendingFollowUrls.delete(url)
+        const newFollowAbortControllers = new Map(get().followAbortControllers)
+        newFollowAbortControllers.delete(url)
+        set({ pendingFollowUrls: newPendingFollowUrls, followAbortControllers: newFollowAbortControllers })
+        console.log('Cancelled pending follow for:', url)
       },
 
       subscribeToFeeds: async (feeds: DiscoveredFeed[], options = {}) => {
@@ -403,10 +545,26 @@ export const useExtensionStore = create<ExtensionState>()(
         isAuthenticated: state.isAuthenticated,
         folders: state.folders,
         feeds: state.feeds,
+        savedArticleUrls: Array.from(state.savedArticleUrls), // Convert Set to Array for storage
+        savedArticleIds: Array.from(state.savedArticleIds.entries()), // Convert Map to Array of entries
       }),
       onRehydrateStorage: () => (state) => {
         if (state?.isAuthenticated && state?.settings?.access_token) {
           console.log('Extension state rehydrated with authentication')
+        }
+
+        // Convert savedArticleUrls array back to Set after rehydration
+        if (state && Array.isArray(state.savedArticleUrls)) {
+          state.savedArticleUrls = new Set(state.savedArticleUrls) as any
+        } else if (state) {
+          state.savedArticleUrls = new Set<string>() as any
+        }
+
+        // Convert savedArticleIds array back to Map after rehydration
+        if (state && Array.isArray(state.savedArticleIds)) {
+          state.savedArticleIds = new Map(state.savedArticleIds) as any
+        } else if (state) {
+          state.savedArticleIds = new Map<string, string>() as any
         }
 
         // Configure ApiClient after store is rehydrated
