@@ -19,7 +19,7 @@
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "oauth2": {
-    "client_id": "<GOOGLE_CLIENT_ID>",
+    "client_id": "618963664803-1lje5c1pegivgnktc3ecu67t1ld77hq3.apps.googleusercontent.com",
     "scopes": ["openid", "email", "profile"]
   },
   "action": {
