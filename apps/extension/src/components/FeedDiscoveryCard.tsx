@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import type { DiscoveredFeed } from '@readspace/shared'
-import { Rss, Check } from 'lucide-react'
+import { Rss } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 import { useExtensionStore } from '@/store'
@@ -46,9 +46,12 @@ export function FeedDiscoveryCard({
   const [isUnfollowing, setIsUnfollowing] = useState(false)
   const userFeeds = useExtensionStore((state) => state.feeds)
   const { unsubscribeFromFeed } = useExtensionStore()
-  const isFeedPendingFollow = useExtensionStore((state) => state.isFeedPendingFollow)
+  const isFeedPendingFollow = useExtensionStore(
+    (state) => state.isFeedPendingFollow
+  )
   const cancelFollow = useExtensionStore((state) => state.cancelFollow)
-  const isPendingFollow = feeds && feeds.length > 0 ? isFeedPendingFollow(feeds[0].url) : false
+  const isPendingFollow =
+    feeds && feeds.length > 0 ? isFeedPendingFollow(feeds[0].url) : false
 
   // Check if user is already following any of the discovered feeds
   useEffect(() => {
@@ -83,9 +86,7 @@ export function FeedDiscoveryCard({
   const primaryFeed = feeds[0]
 
   const handleFollowClick = async () => {
-    if (!isFollowing) {
-      setIsModalOpen(true)
-    } else {
+    if (isFollowing) {
       // Check if follow is still pending
       if (isPendingFollow && primaryFeed) {
         // Cancel the pending follow
@@ -105,7 +106,8 @@ export function FeedDiscoveryCard({
           setFollowedFeedId(null)
         } catch (error) {
           console.error('Failed to unfollow:', error)
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          const errorMessage =
+            error instanceof Error ? error.message : 'Unknown error'
           toast.error(`Failed to unfollow: ${errorMessage}`)
         } finally {
           setIsUnfollowing(false)
@@ -114,6 +116,8 @@ export function FeedDiscoveryCard({
         console.error('Cannot unfollow: followedFeedId is null')
         toast.error('Unable to unfollow - feed ID not found')
       }
+    } else {
+      setIsModalOpen(true)
     }
   }
 
@@ -167,7 +171,11 @@ export function FeedDiscoveryCard({
               size="sm"
               variant={isFollowing && !isUnfollowing ? 'outline' : 'default'}
               className={`flex-shrink-0 w-[100px] ${
-                isFollowing && !isUnfollowing ? 'hover:bg-primary/10 dark:hover:bg-primary/20' : 'bg-orange-500 hover:bg-orange-600 text-white'
+                isFollowing && !isUnfollowing
+                  ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                  : !isFollowing && !isUnfollowing
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                    : ''
               }`}
             >
               {isUnfollowing ? (
@@ -176,10 +184,7 @@ export function FeedDiscoveryCard({
                   <span>Unfollowing...</span>
                 </div>
               ) : isFollowing ? (
-                <div className="flex items-center justify-center">
-                  <Check className="w-3 h-3 mr-1.5" />
-                  <span>Following</span>
-                </div>
+                'Unfollow'
               ) : (
                 'Follow'
               )}

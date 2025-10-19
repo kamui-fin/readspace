@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { extractDomain } from '@readspace/shared'
 import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
-import { BookOpen, Pencil, Flag, StickyNote, Check } from 'lucide-react'
+import { BookOpen, Pencil, Flag, StickyNote, Check, Trash2 } from 'lucide-react'
 import { browser } from '@/lib/browser'
 import { useExtensionStore } from '@/store'
 import { ApiClient } from '@/lib/api-client'
@@ -82,14 +82,20 @@ export function ArticlePreview({
   const [note, setNote] = useState('')
   const [priority, setPriority] = useState<Priority>('low')
 
-  const checkArticleSaved = useExtensionStore((state) => state.checkArticleSaved)
-  const isArticlePendingSave = useExtensionStore((state) => state.isArticlePendingSave)
+  const checkArticleSaved = useExtensionStore(
+    (state) => state.checkArticleSaved
+  )
+  const isArticlePendingSave = useExtensionStore(
+    (state) => state.isArticlePendingSave
+  )
   const unsaveArticle = useExtensionStore((state) => state.unsaveArticle)
   const cancelSave = useExtensionStore((state) => state.cancelSave)
 
   const [savedArticle, setSavedArticle] = useState<any | null>(null)
   const [optimisticallySaved, setOptimisticallySaved] = useState(false)
-  const isSaved = !!savedArticle || optimisticallySaved
+  const isSaved =
+    (!!savedArticle && savedArticle.is_read_later !== false) ||
+    optimisticallySaved
   const isPending = currentUrl ? isArticlePendingSave(currentUrl) : false
   const [isUnsaving, setIsUnsaving] = useState(false)
 
@@ -98,10 +104,8 @@ export function ArticlePreview({
   const [originalPriority, setOriginalPriority] = useState<Priority>('low')
 
   // Check if user has made changes to note or priority
-  const hasUnsavedChanges = savedArticle && (
-    note !== originalNote ||
-    priority !== originalPriority
-  )
+  const hasUnsavedChanges =
+    savedArticle && (note !== originalNote || priority !== originalPriority)
 
   // Check if article is already saved when URL changes
   useEffect(() => {
@@ -214,26 +218,25 @@ export function ArticlePreview({
         return
       }
 
-      // If saved but no changes, just show a message
+      // If saved but no changes, unsave the article
       if (savedArticle && !hasUnsavedChanges) {
-        toast('Article already saved', { icon: '✓' })
+        setIsUnsaving(true)
+        try {
+          await unsaveArticle(currentUrl)
+          // Update saved article to reflect is_read_later = false
+          // This keeps the article data but marks it as not in read-later list
+          setSavedArticle({ ...savedArticle, is_read_later: false })
+          setOptimisticallySaved(false) // Clear optimistic state
+          toast.success('Article removed')
+        } catch (error) {
+          console.error('Failed to unsave article:', error)
+          toast.error(
+            `Failed to remove article: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        } finally {
+          setIsUnsaving(false)
+        }
         return
-      }
-
-      // Unsave article (this case shouldn't happen now, but keep for safety)
-      setIsUnsaving(true)
-      try {
-        await unsaveArticle(currentUrl)
-        setSavedArticle(null) // Clear saved article state
-        setOptimisticallySaved(false) // Clear optimistic state
-        toast.success('Article removed')
-      } catch (error) {
-        console.error('Failed to unsave article:', error)
-        toast.error(
-          `Failed to remove article: ${error instanceof Error ? error.message : 'Unknown error'}`
-        )
-      } finally {
-        setIsUnsaving(false)
       }
     } else {
       // Save article - set optimistic state immediately
@@ -244,6 +247,24 @@ export function ArticlePreview({
         priority, // Always include priority (defaults to 'low')
       }
       onSave(options)
+
+      // Refresh saved article state after save to get updated is_read_later status
+      // This handles the re-save case where article exists with is_read_later=false
+      if (currentUrl) {
+        setTimeout(async () => {
+          try {
+            const updated = await checkArticleSaved(currentUrl)
+            if (updated) {
+              setSavedArticle(updated)
+              setOriginalNote(updated.note || '')
+              setOriginalPriority((updated.priority || 'low') as Priority)
+              setOptimisticallySaved(false)
+            }
+          } catch (error) {
+            console.error('Failed to refresh article state after save:', error)
+          }
+        }, 1000) // Give the backend time to process the save
+      }
     }
   }
 
@@ -326,7 +347,9 @@ export function ArticlePreview({
             size="sm"
             variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
             className={`flex-shrink-0 w-[100px] ${
-              isSaved && !hasUnsavedChanges ? 'hover:bg-primary/10 dark:hover:bg-primary/20' : ''
+              isSaved && !hasUnsavedChanges
+                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                : ''
             }`}
           >
             {isUnsaving ? (
@@ -336,8 +359,8 @@ export function ArticlePreview({
               </div>
             ) : isSaved && !hasUnsavedChanges ? (
               <div className="flex items-center justify-center">
-                <Check className="w-3 h-3 mr-1.5" />
-                <span>Saved</span>
+                <Trash2 className="w-3 h-3 mr-1.5" />
+                <span>Unsave</span>
               </div>
             ) : isSaved && hasUnsavedChanges ? (
               'Update'
@@ -360,9 +383,7 @@ export function ArticlePreview({
       </div>
 
       {/* Expanded content - always shown */}
-      <div
-        className="overflow-hidden"
-      >
+      <div className="overflow-hidden">
         {/* Always render content */}
         {isInitialized && (
           <div className="mt-3 space-y-2 border-t border-border pt-3">
@@ -423,9 +444,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('low')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'low'
-                      ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'low'
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -438,9 +460,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('medium')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'medium'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'medium'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -453,9 +476,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('high')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'high'
-                      ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'high'
+                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -471,7 +495,10 @@ export function ArticlePreview({
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
                 <StickyNote className="w-3 h-3" />
-                Note {!note && <span className="text-muted-foreground/60">(optional)</span>}
+                Note{' '}
+                {!note && (
+                  <span className="text-muted-foreground/60">(optional)</span>
+                )}
               </label>
               {isEditingNote || note ? (
                 <textarea

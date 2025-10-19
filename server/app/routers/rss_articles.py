@@ -619,9 +619,7 @@ async def get_unread_article_counts(
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": [
-                            {"loc": ["query", "url"], "msg": "invalid url format", "type": "value_error.url"}
-                        ]
+                        "detail": [{"loc": ["query", "url"], "msg": "invalid url format", "type": "value_error.url"}]
                     }
                 }
             },

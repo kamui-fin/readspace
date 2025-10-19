@@ -9,7 +9,14 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage", "scripting", "notifications", "identity", "contextMenus"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "notifications",
+    "identity",
+    "contextMenus"
+  ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "oauth2": {
     "client_id": "<GOOGLE_CLIENT_ID>",

@@ -29,16 +29,15 @@ export function LoginForm() {
     try {
       // Send message to background script to handle login
 
-      const response = await browser.runtime.sendMessage({
+      const response = (await browser.runtime.sendMessage({
         action: 'emailPasswordLogin',
         email: email.trim(),
         password: password.trim(),
-      }) as { success: boolean; error?: string; access_token?: string }
+      })) as { success: boolean; error?: string; access_token?: string }
 
       if (!response.success || !response.access_token) {
         throw new Error(response.error || 'Failed to sign in')
       }
-
 
       // Login to the extension store with the access token
       await login(response.access_token)
@@ -58,9 +57,11 @@ export function LoginForm() {
       // Send message to background script to handle OAuth flow
       // This ensures the flow completes even if the popup closes
 
-      const response = await browser.runtime.sendMessage({
+      const response = (await browser.runtime.sendMessage({
         action: 'startGoogleOAuth',
-      }) as { success: boolean; error?: string; access_token?: string } | undefined
+      })) as
+        | { success: boolean; error?: string; access_token?: string }
+        | undefined
 
       if (!response) {
         throw new Error('No response from background script')
@@ -70,15 +71,12 @@ export function LoginForm() {
         throw new Error(response.error || 'Failed to authenticate with Google')
       }
 
-
       // Login to the extension store with the access token
       await login(response.access_token)
       toast.success('Successfully signed in with Google!', { id: toastId })
     } catch (error) {
       const errorMessage =
-        error instanceof Error
-          ? error.message
-          : 'Failed to sign in with Google'
+        error instanceof Error ? error.message : 'Failed to sign in with Google'
       toast.error(errorMessage, { id: toastId })
       console.error('Google sign-in error:', error)
     }

@@ -106,13 +106,44 @@ class WebArticleService:
             content_id=content_record.id,  # type: ignore[arg-type]
         )
         if existing_clipped:
-            logger.info(
-                "Article already clipped by user, returning existing",
-                article_id=existing_clipped.id,
-                user_id=self.user_id,
-                url=url,
-            )
-            # Return the existing clipped article instead of raising an error
+            # If article exists but is_read_later is false, update it to true (re-save)
+            needs_update = False
+            if not existing_clipped.is_read_later:
+                existing_clipped.is_read_later = True
+                needs_update = True
+                logger.info(
+                    "Re-saving article by setting is_read_later=True",
+                    article_id=existing_clipped.id,
+                    user_id=self.user_id,
+                    url=url,
+                )
+
+            # Also update priority and note if provided
+            if priority and existing_clipped.priority != priority:
+                existing_clipped.priority = priority
+                needs_update = True
+            if note is not None and existing_clipped.note != note:
+                existing_clipped.note = note
+                needs_update = True
+
+            if needs_update:
+                await self.db.commit()
+                await self.db.refresh(existing_clipped)
+                logger.info(
+                    "Article updated successfully",
+                    article_id=existing_clipped.id,
+                    is_read_later=existing_clipped.is_read_later,
+                    priority=existing_clipped.priority,
+                )
+            else:
+                logger.info(
+                    "Article already clipped by user with no changes, returning existing",
+                    article_id=existing_clipped.id,
+                    user_id=self.user_id,
+                    url=url,
+                )
+
+            # Return the existing (potentially updated) clipped article
             return ClippedArticleResponse.model_validate(existing_clipped)
 
         # Create clipped article with the extension-extracted content
@@ -161,9 +192,7 @@ class WebArticleService:
         Returns:
             ClippedArticleResponse with full metadata if found, None otherwise
         """
-        clipped_article = await crud_clipped_article.get_by_user_and_url(
-            self.db, user_id=self.user_id, url=url
-        )
+        clipped_article = await crud_clipped_article.get_by_user_and_url(self.db, user_id=self.user_id, url=url)
 
         if not clipped_article:
             return None

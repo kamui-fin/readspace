@@ -4,13 +4,17 @@ import { ApiClient, type AuthTokenProvider } from '@readspace/shared'
  * Lazy-loaded reference to store to avoid circular dependency.
  * This is set by the store after it's initialized.
  */
-let storeGetter: (() => { settings: { access_token?: string; readspace_url?: string } }) | null = null
+let storeGetter:
+  | (() => { settings: { access_token?: string; readspace_url?: string } })
+  | null = null
 
 /**
  * Set the store getter function.
  * This should be called by the store after initialization to avoid circular dependencies.
  */
-export function setStoreGetter(getter: () => { settings: { access_token?: string; readspace_url?: string } }) {
+export function setStoreGetter(
+  getter: () => { settings: { access_token?: string; readspace_url?: string } }
+) {
   storeGetter = getter
 }
 
@@ -54,7 +58,6 @@ export function configureExtensionApiClient() {
       baseUrl,
       getAuthToken,
     })
-
   } catch (error) {
     console.error('Failed to configure ApiClient:', error)
 

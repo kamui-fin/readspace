@@ -83,9 +83,9 @@ export function Popup() {
     checkExistingSession,
   } = useExtensionStore()
 
-  const [currentView, setCurrentView] = useState<
-    'main' | 'settings' | 'login'
-  >('main')
+  const [currentView, setCurrentView] = useState<'main' | 'settings' | 'login'>(
+    'main'
+  )
   const [currentTab, setCurrentTab] = useState<chrome.tabs.Tab | null>(null)
   const [readingTime, setReadingTime] = useState<number | undefined>()
   const [isUnsupportedPage, setIsUnsupportedPage] = useState(false)
@@ -118,7 +118,10 @@ export function Popup() {
           if (cachedPage.metadata) {
             setCurrentPageMetadata(cachedPage.metadata)
             // Check if we have feeds in cache
-            if (cachedPage.metadata.feeds && cachedPage.metadata.feeds.length > 0) {
+            if (
+              cachedPage.metadata.feeds &&
+              cachedPage.metadata.feeds.length > 0
+            ) {
               foundCacheWithFeeds = true
             }
           }
@@ -176,7 +179,9 @@ export function Popup() {
       const sendMessage = <T,>(action: string, timeout = 5000): Promise<T> => {
         return new Promise((resolve, reject) => {
           const timer = setTimeout(() => {
-            reject(new Error(`Timeout: ${action} took longer than ${timeout}ms`))
+            reject(
+              new Error(`Timeout: ${action} took longer than ${timeout}ms`)
+            )
           }, timeout)
 
           chrome.tabs.sendMessage(tab.id!, { action }, (response) => {

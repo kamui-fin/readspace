@@ -274,12 +274,13 @@ export function ArticlesView({
     const selectedArticle = currentArticle
 
     // Client-side filtered articles based on unread toggle
+    // Note: Don't filter in Read Later mode - users want to see ALL read-later articles
     const filteredArticles = useMemo(() => {
-        if (showUnreadOnly) {
+        if (showUnreadOnly && !isReadLaterMode) {
             return allArticles.filter((article: Article) => !article.is_read)
         }
         return allArticles
-    }, [allArticles, showUnreadOnly])
+    }, [allArticles, showUnreadOnly, isReadLaterMode])
 
     /**
      * Handle article selection with automatic mark as read
@@ -677,35 +678,37 @@ export function ArticlesView({
                                     )}
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {/* Unread filter toggle */}
-                                    <TooltipProvider>
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <Button
-                                                    variant={
-                                                        showUnreadOnly
-                                                            ? "default"
-                                                            : "ghost"
-                                                    }
-                                                    size="sm"
-                                                    onClick={
-                                                        toggleShowUnreadOnly
-                                                    }
-                                                >
-                                                    {showUnreadOnly ? (
-                                                        <Eye className="h-4 w-4" />
-                                                    ) : (
-                                                        <EyeOff className="h-4 w-4" />
-                                                    )}
-                                                </Button>
-                                            </TooltipTrigger>
-                                            <TooltipContent>
-                                                {showUnreadOnly
-                                                    ? "Show all articles"
-                                                    : "Show unread only"}
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </TooltipProvider>
+                                    {/* Unread filter toggle - hidden in Read Later mode */}
+                                    {!isReadLaterMode && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant={
+                                                            showUnreadOnly
+                                                                ? "default"
+                                                                : "ghost"
+                                                        }
+                                                        size="sm"
+                                                        onClick={
+                                                            toggleShowUnreadOnly
+                                                        }
+                                                    >
+                                                        {showUnreadOnly ? (
+                                                            <Eye className="h-4 w-4" />
+                                                        ) : (
+                                                            <EyeOff className="h-4 w-4" />
+                                                        )}
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    {showUnreadOnly
+                                                        ? "Show all articles"
+                                                        : "Show unread only"}
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
 
                                     {/* Direct refresh button */}
                                     <TooltipProvider>
@@ -854,23 +857,26 @@ export function ArticlesView({
                                         )}
                                     </div>
                                     <div className="flex items-center gap-1">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                            onClick={toggleShowUnreadOnly}
-                                            title={
-                                                showUnreadOnly
-                                                    ? "Show all articles"
-                                                    : "Show unread only"
-                                            }
-                                        >
-                                            {showUnreadOnly ? (
-                                                <Eye className="h-4 w-4 transition-transform duration-200" />
-                                            ) : (
-                                                <EyeOff className="h-4 w-4 transition-transform duration-200" />
-                                            )}
-                                        </Button>
+                                        {/* Unread filter toggle - hidden in Read Later mode */}
+                                        {!isReadLaterMode && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                onClick={toggleShowUnreadOnly}
+                                                title={
+                                                    showUnreadOnly
+                                                        ? "Show all articles"
+                                                        : "Show unread only"
+                                                }
+                                            >
+                                                {showUnreadOnly ? (
+                                                    <Eye className="h-4 w-4 transition-transform duration-200" />
+                                                ) : (
+                                                    <EyeOff className="h-4 w-4 transition-transform duration-200" />
+                                                )}
+                                            </Button>
+                                        )}
 
                                         {/* Individual feeds: refresh and more actions */}
                                         {feedId ? (

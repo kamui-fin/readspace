@@ -52,7 +52,8 @@ async function validateFeedUrl(url: string): Promise<boolean> {
       return false
     }
 
-    const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+    const contentType =
+      response.headers.get('content-type')?.toLowerCase() || ''
 
     // Check if content type indicates a feed
     return (
@@ -304,9 +305,11 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
           // Validate suggested feeds in background and update cache with only valid feeds
           if (metadata?.feeds && metadata.feeds.length > 0) {
-            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch(() => {
-              // Silently fail - feed validation is not critical
-            })
+            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch(
+              () => {
+                // Silently fail - feed validation is not critical
+              }
+            )
           }
 
           // Also extract and cache content for reading time (in background)
@@ -375,7 +378,8 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
         type: 'basic',
         iconUrl: 'icons/icon-48.png',
         title: 'Readspace',
-        message: 'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
+        message:
+          'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
       })
     }
   }
@@ -433,7 +437,10 @@ browser.runtime.onMessage.addListener(
           console.error('OAuth handler error:', error)
           sendResponse({
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to complete Google sign-in'
+            error:
+              error instanceof Error
+                ? error.message
+                : 'Failed to complete Google sign-in',
           })
         })
       return true // Keep message channel open for async response
@@ -441,13 +448,16 @@ browser.runtime.onMessage.addListener(
 
     // Handle async email/password login
     if (messageRequest.action === 'emailPasswordLogin') {
-      handleEmailPasswordLogin(messageRequest.email as string, messageRequest.password as string)
+      handleEmailPasswordLogin(
+        messageRequest.email as string,
+        messageRequest.password as string
+      )
         .then((result) => sendResponse(result))
         .catch((error) => {
           console.error('Email/password login handler error:', error)
           sendResponse({
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to sign in'
+            error: error instanceof Error ? error.message : 'Failed to sign in',
           })
         })
       return true // Keep message channel open for async response
@@ -472,7 +482,8 @@ browser.runtime.onMessage.addListener(
     // Handle getCachedMetadataByUrl - return cached metadata by URL
     if (messageRequest.action === 'getCachedMetadataByUrl') {
       const url = messageRequest.url as string
-      pageCache.getMetadata(url)
+      pageCache
+        .getMetadata(url)
         .then(sendResponse)
         .catch(() => sendResponse(null))
       return true // Keep channel open for async response
@@ -481,7 +492,8 @@ browser.runtime.onMessage.addListener(
     // Handle getCachedContentByUrl - return cached content by URL
     if (messageRequest.action === 'getCachedContentByUrl') {
       const url = messageRequest.url as string
-      pageCache.getContent(url)
+      pageCache
+        .getContent(url)
         .then(sendResponse)
         .catch(() => sendResponse(null))
       return true // Keep channel open for async response
@@ -490,7 +502,8 @@ browser.runtime.onMessage.addListener(
     // Handle getCachedPageByUrl - return full cached page data by URL
     if (messageRequest.action === 'getCachedPageByUrl') {
       const url = messageRequest.url as string
-      pageCache.get(url)
+      pageCache
+        .get(url)
         .then(sendResponse)
         .catch(() => sendResponse(null))
       return true // Keep channel open for async response
@@ -553,10 +566,10 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       ...trimmedData,
       metadata: trimmedData.metadata
         ? (Object.fromEntries(
-          Object.entries(trimmedData.metadata).filter(
-            ([_, value]) => value !== undefined
-          )
-        ) as Record<string, string>)
+            Object.entries(trimmedData.metadata).filter(
+              ([_, value]) => value !== undefined
+            )
+          ) as Record<string, string>)
         : undefined,
     }
 
@@ -629,7 +642,10 @@ async function handleOpenReadspace() {
   browser.tabs.create({ url: 'https://api.readspace.ai' })
 }
 
-async function handleEmailPasswordLogin(email: string, password: string): Promise<{ success: boolean; error?: string; access_token?: string }> {
+async function handleEmailPasswordLogin(
+  email: string,
+  password: string
+): Promise<{ success: boolean; error?: string; access_token?: string }> {
   try {
     // Get settings from storage (Zustand stores as JSON string)
     const rawStore = await storage.get('readspace-extension')
@@ -641,8 +657,11 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
     }
 
     // Use stored settings or fall back to defaults
-    const supabaseUrl = store?.state?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
-    const supabaseAnonKey = store?.state?.settings?.supabase_anon_key ||
+    const supabaseUrl =
+      store?.state?.settings?.supabase_url ||
+      'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey =
+      store?.state?.settings?.supabase_anon_key ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -652,10 +671,7 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
     }
 
     // Initialize Supabase client
-    const supabase = getSupabaseClient(
-      supabaseUrl,
-      supabaseAnonKey
-    )
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey)
 
     if (!supabase) {
       throw new Error('Failed to initialize Supabase client')
@@ -693,9 +709,7 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
     }
   } catch (error) {
     const errorMessage =
-      error instanceof Error
-        ? error.message
-        : 'Failed to sign in'
+      error instanceof Error ? error.message : 'Failed to sign in'
     console.error('❌ Email/password login error:', error)
     return {
       success: false,
@@ -704,8 +718,12 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
   }
 }
 
-async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; access_token?: string }> {
-  try{
+async function handleGoogleOAuth(): Promise<{
+  success: boolean
+  error?: string
+  access_token?: string
+}> {
+  try {
     // Get settings from storage (Zustand stores as JSON string)
     const rawStore = await storage.get('readspace-extension')
 
@@ -716,10 +734,15 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     }
 
     // Use stored settings or fall back to defaults
-    const supabaseUrl = store?.state?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
-    const supabaseAnonKey = store?.state?.settings?.supabase_anon_key ||
+    const supabaseUrl =
+      store?.state?.settings?.supabase_url ||
+      'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey =
+      store?.state?.settings?.supabase_anon_key ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
-    const googleClientId = store?.state?.settings?.google_client_id || '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com'
+    const googleClientId =
+      store?.state?.settings?.google_client_id ||
+      '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com'
 
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(
@@ -728,9 +751,10 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     }
 
     // Get manifest to check for oauth2 configuration (Chrome only)
-    const manifest = browser.runtime.getManifest() as chrome.runtime.Manifest & {
-      oauth2?: { client_id: string; scopes: string[] }
-    }
+    const manifest =
+      browser.runtime.getManifest() as chrome.runtime.Manifest & {
+        oauth2?: { client_id: string; scopes: string[] }
+      }
 
     // Determine client ID - Chrome uses manifest, Firefox uses settings/defaults
     const clientId = manifest.oauth2?.client_id || googleClientId
@@ -738,9 +762,9 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     if (!clientId) {
       throw new Error(
         'Google OAuth client ID not configured. ' +
-        (manifest.oauth2 ?
-          'Please set it in the manifest.' :
-          'Please add it in Settings.')
+          (manifest.oauth2
+            ? 'Please set it in the manifest.'
+            : 'Please add it in Settings.')
       )
     }
 
@@ -776,10 +800,7 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     }
 
     // Initialize Supabase client
-    const supabase = getSupabaseClient(
-      supabaseUrl,
-      supabaseAnonKey
-    )
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey)
 
     if (!supabase) {
       throw new Error('Failed to initialize Supabase client')

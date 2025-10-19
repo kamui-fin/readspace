@@ -48,7 +48,9 @@ class PageCache {
 
     try {
       const result = await chrome.storage.local.get(CACHE_STORAGE_KEY)
-      const storedCache = result[CACHE_STORAGE_KEY] as Array<[string, CachedPageData]> | undefined
+      const storedCache = result[CACHE_STORAGE_KEY] as
+        | Array<[string, CachedPageData]>
+        | undefined
 
       if (storedCache && Array.isArray(storedCache)) {
         this.cache = new Map(storedCache)
@@ -81,8 +83,16 @@ class PageCache {
       // Remove hash fragment
       urlObj.hash = ''
       // Remove common tracking parameters but keep important ones
-      const paramsToRemove = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'fbclid', 'gclid']
-      paramsToRemove.forEach(param => urlObj.searchParams.delete(param))
+      const paramsToRemove = [
+        'utm_source',
+        'utm_medium',
+        'utm_campaign',
+        'utm_content',
+        'utm_term',
+        'fbclid',
+        'gclid',
+      ]
+      paramsToRemove.forEach((param) => urlObj.searchParams.delete(param))
       return urlObj.href
     } catch {
       return url
@@ -200,7 +210,11 @@ class PageCache {
   /**
    * Set both metadata and content for a URL
    */
-  async set(url: string, metadata: CachedPageMetadata | null, content: CachedPageContent | null): Promise<void> {
+  async set(
+    url: string,
+    metadata: CachedPageMetadata | null,
+    content: CachedPageContent | null
+  ): Promise<void> {
     await this.init()
     const normalizedUrl = this.normalizeUrl(url)
 

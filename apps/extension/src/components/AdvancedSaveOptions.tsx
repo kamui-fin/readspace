@@ -84,9 +84,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority('low')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'low'
-                  ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === 'low'
+                    ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -100,9 +101,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority('medium')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'medium'
-                  ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === 'medium'
+                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -116,9 +118,10 @@ export function AdvancedSaveOptions({
               onClick={() => setPriority('high')}
               className={`
                 px-3 py-2 rounded text-sm font-medium transition-all
-                ${priority === 'high'
-                  ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                  : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                ${
+                  priority === 'high'
+                    ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                    : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                 }
               `}
             >
@@ -132,9 +135,15 @@ export function AdvancedSaveOptions({
 
         {/* Note - Enhanced design */}
         <div className="space-y-2">
-          <Label htmlFor="note" className="text-sm font-medium flex items-center gap-1.5">
+          <Label
+            htmlFor="note"
+            className="text-sm font-medium flex items-center gap-1.5"
+          >
             <StickyNote className="w-3.5 h-3.5" />
-            Note <span className="text-muted-foreground/60 font-normal">(optional)</span>
+            Note{' '}
+            <span className="text-muted-foreground/60 font-normal">
+              (optional)
+            </span>
           </Label>
           <textarea
             id="note"

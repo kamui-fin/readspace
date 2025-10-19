@@ -166,12 +166,7 @@ async def summarize_article(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
         # Use provided content if available, otherwise fall back to extracted content, article content, or description
-        content_to_summarize = (
-            request.content
-            or article.extracted_content
-            or article.content
-            or article.description
-        )
+        content_to_summarize = request.content or article.extracted_content or article.content or article.description
         if not content_to_summarize:
             return SummarizeResponse(success=False, error="No content available to summarize")
 
@@ -259,12 +254,7 @@ async def translate_article(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
         # Use provided content if available, otherwise fall back to extracted content, article content, or description
-        content_to_translate = (
-            request.content
-            or article.extracted_content
-            or article.content
-            or article.description
-        )
+        content_to_translate = request.content or article.extracted_content or article.content or article.description
         if not content_to_translate:
             return TranslateResponse(success=False, error="No content available to translate")
 

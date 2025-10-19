@@ -9,7 +9,11 @@ import {
   SaveOptions,
   User,
 } from '@readspace/shared'
-import { ApiClient, configureExtensionApiClient, setStoreGetter } from '@/lib/api-client'
+import {
+  ApiClient,
+  configureExtensionApiClient,
+  setStoreGetter,
+} from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
@@ -77,7 +81,8 @@ const defaultSettings: ExtensionSettings = {
   supabase_url: 'https://hnqyngkyugiamvlhqoaf.supabase.co',
   supabase_anon_key:
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs',
-  google_client_id: '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com', // Firefox OAuth client ID
+  google_client_id:
+    '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com', // Firefox OAuth client ID
   auto_save: false,
   show_reading_time: true,
   theme: 'system',
@@ -278,7 +283,12 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       saveArticle: async (url: string, options = {}) => {
-        const { isAuthenticated, currentPageMetadata, savedArticleUrls, pendingSaveUrls } = get()
+        const {
+          isAuthenticated,
+          currentPageMetadata,
+          savedArticleUrls,
+          pendingSaveUrls,
+        } = get()
         if (!isAuthenticated) throw new Error('Not authenticated')
 
         // Mark as pending save
@@ -288,7 +298,11 @@ export const useExtensionStore = create<ExtensionState>()(
         // Immediately mark as saved optimistically
         const newSavedUrls = new Set(savedArticleUrls)
         newSavedUrls.add(url)
-        set({ savedArticleUrls: newSavedUrls, pendingSaveUrls: newPendingSaveUrls, isSaving: true })
+        set({
+          savedArticleUrls: newSavedUrls,
+          pendingSaveUrls: newPendingSaveUrls,
+          isSaving: true,
+        })
 
         try {
           // First, try to get cached content from persistent cache
@@ -364,7 +378,10 @@ export const useExtensionStore = create<ExtensionState>()(
           newSavedIds.set(url, article.id)
           const newPendingSaveUrls = new Set(get().pendingSaveUrls)
           newPendingSaveUrls.delete(url)
-          set({ savedArticleIds: newSavedIds, pendingSaveUrls: newPendingSaveUrls })
+          set({
+            savedArticleIds: newSavedIds,
+            pendingSaveUrls: newPendingSaveUrls,
+          })
 
           return article
         } catch (error) {
@@ -373,7 +390,10 @@ export const useExtensionStore = create<ExtensionState>()(
           rollbackUrls.delete(url)
           const newPendingSaveUrls = new Set(get().pendingSaveUrls)
           newPendingSaveUrls.delete(url)
-          set({ savedArticleUrls: rollbackUrls, pendingSaveUrls: newPendingSaveUrls })
+          set({
+            savedArticleUrls: rollbackUrls,
+            pendingSaveUrls: newPendingSaveUrls,
+          })
           throw error
         } finally {
           set({ isSaving: false })
@@ -385,7 +405,9 @@ export const useExtensionStore = create<ExtensionState>()(
         if (!isAuthenticated) return null
 
         try {
-          const article = (await ApiClient.rss.checkArticleSaved(url)) as Article | null
+          const article = (await ApiClient.rss.checkArticleSaved(
+            url
+          )) as Article | null
 
           // Update local state if article is saved
           if (article) {
@@ -393,7 +415,10 @@ export const useExtensionStore = create<ExtensionState>()(
             newSavedUrls.add(url)
             const newSavedIds = new Map(get().savedArticleIds)
             newSavedIds.set(url, article.id)
-            set({ savedArticleUrls: newSavedUrls, savedArticleIds: newSavedIds })
+            set({
+              savedArticleUrls: newSavedUrls,
+              savedArticleIds: newSavedIds,
+            })
           }
 
           return article
@@ -417,7 +442,10 @@ export const useExtensionStore = create<ExtensionState>()(
         newSavedUrls.delete(url)
         const newPendingSaveUrls = new Set(get().pendingSaveUrls)
         newPendingSaveUrls.delete(url)
-        set({ savedArticleUrls: newSavedUrls, pendingSaveUrls: newPendingSaveUrls })
+        set({
+          savedArticleUrls: newSavedUrls,
+          pendingSaveUrls: newPendingSaveUrls,
+        })
       },
 
       unsaveArticle: async (url: string) => {
@@ -426,7 +454,10 @@ export const useExtensionStore = create<ExtensionState>()(
 
         const articleId = savedArticleIds.get(url)
         if (!articleId) {
-          console.warn('Cannot unsave article: no article ID found for URL', url)
+          console.warn(
+            'Cannot unsave article: no article ID found for URL',
+            url
+          )
           return
         }
 
@@ -439,7 +470,11 @@ export const useExtensionStore = create<ExtensionState>()(
 
         try {
           // Mark article as not read later to remove from read-later list
-          await ApiClient.rss.updateArticle(articleId, { is_read_later: false }, 'clipped')
+          await ApiClient.rss.updateArticle(
+            articleId,
+            { is_read_later: false },
+            'clipped'
+          )
         } catch (error) {
           // Rollback on error
           console.error('Failed to unsave article:', error)
@@ -453,7 +488,12 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       subscribeToFeed: async (feedUrl: string, options = {}) => {
-        const { isAuthenticated, settings, pendingFollowUrls, followAbortControllers } = get()
+        const {
+          isAuthenticated,
+          settings,
+          pendingFollowUrls,
+          followAbortControllers,
+        } = get()
         if (!isAuthenticated) {
           toast.error('Please sign in to subscribe to feeds')
           throw new Error('Not authenticated')
@@ -467,27 +507,43 @@ export const useExtensionStore = create<ExtensionState>()(
         // Mark as pending follow (if not already)
         const newPendingFollowUrls = new Set(pendingFollowUrls)
         newPendingFollowUrls.add(feedUrl)
-        set({ followAbortControllers: newFollowAbortControllers, pendingFollowUrls: newPendingFollowUrls })
+        set({
+          followAbortControllers: newFollowAbortControllers,
+          pendingFollowUrls: newPendingFollowUrls,
+        })
 
         try {
-          await ApiClient.rss.createFeed({
-            url: feedUrl,
-            folder_id: options.folder_id || settings.default_folder_id,
-          }, abortController.signal)
+          await ApiClient.rss.createFeed(
+            {
+              url: feedUrl,
+              folder_id: options.folder_id || settings.default_folder_id,
+            },
+            abortController.signal
+          )
 
           // Remove from pending on success
           const updatedPendingFollowUrls = new Set(get().pendingFollowUrls)
           updatedPendingFollowUrls.delete(feedUrl)
-          const updatedFollowAbortControllers = new Map(get().followAbortControllers)
+          const updatedFollowAbortControllers = new Map(
+            get().followAbortControllers
+          )
           updatedFollowAbortControllers.delete(feedUrl)
-          set({ pendingFollowUrls: updatedPendingFollowUrls, followAbortControllers: updatedFollowAbortControllers })
+          set({
+            pendingFollowUrls: updatedPendingFollowUrls,
+            followAbortControllers: updatedFollowAbortControllers,
+          })
         } catch (error) {
           // Remove from pending on error (including aborted requests)
           const rollbackPendingFollowUrls = new Set(get().pendingFollowUrls)
           rollbackPendingFollowUrls.delete(feedUrl)
-          const rollbackFollowAbortControllers = new Map(get().followAbortControllers)
+          const rollbackFollowAbortControllers = new Map(
+            get().followAbortControllers
+          )
           rollbackFollowAbortControllers.delete(feedUrl)
-          set({ pendingFollowUrls: rollbackPendingFollowUrls, followAbortControllers: rollbackFollowAbortControllers })
+          set({
+            pendingFollowUrls: rollbackPendingFollowUrls,
+            followAbortControllers: rollbackFollowAbortControllers,
+          })
 
           // Don't throw error if it was aborted (user cancelled)
           if (error instanceof Error && error.name === 'AbortError') {
@@ -519,7 +575,10 @@ export const useExtensionStore = create<ExtensionState>()(
         newPendingFollowUrls.delete(url)
         const newFollowAbortControllers = new Map(get().followAbortControllers)
         newFollowAbortControllers.delete(url)
-        set({ pendingFollowUrls: newPendingFollowUrls, followAbortControllers: newFollowAbortControllers })
+        set({
+          pendingFollowUrls: newPendingFollowUrls,
+          followAbortControllers: newFollowAbortControllers,
+        })
       },
 
       subscribeToFeeds: async (feeds: DiscoveredFeed[], options = {}) => {

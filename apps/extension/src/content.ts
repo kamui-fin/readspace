@@ -68,7 +68,8 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
 
       if (!response.ok) return false
 
-      const contentType = response.headers.get('content-type')?.toLowerCase() || ''
+      const contentType =
+        response.headers.get('content-type')?.toLowerCase() || ''
 
       // Check if content type indicates a feed
       return (
@@ -112,12 +113,20 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
         const absoluteUrl = makeAbsoluteUrl(href)
 
         // Skip if URL looks like a static asset file
-        if (absoluteUrl.match(/\.(jpg|jpeg|png|gif|svg|webp|ico|js|css|woff|woff2|ttf|eot|mp4|webm|pdf)(\?.*)?$/i)) {
+        if (
+          absoluteUrl.match(
+            /\.(jpg|jpeg|png|gif|svg|webp|ico|js|css|woff|woff2|ttf|eot|mp4|webm|pdf)(\?.*)?$/i
+          )
+        ) {
           continue
         }
 
         // Skip if URL contains common asset directory patterns
-        if (absoluteUrl.match(/\/(static|assets|images?|img|media|js|css|fonts?|dist|build)\//i)) {
+        if (
+          absoluteUrl.match(
+            /\/(static|assets|images?|img|media|js|css|fonts?|dist|build)\//i
+          )
+        ) {
           continue
         }
 
@@ -144,11 +153,24 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
       const currentPath = window.location.pathname
 
       // Most common patterns to try (prioritized by likelihood of working)
-      const feedPatterns = ['/feed', '/rss', '/feed/', '/rss/', '/index.xml', '/rss.xml', '/feed.xml', '/atom.xml']
+      const feedPatterns = [
+        '/feed',
+        '/rss',
+        '/feed/',
+        '/rss/',
+        '/index.xml',
+        '/rss.xml',
+        '/feed.xml',
+        '/atom.xml',
+      ]
 
       // Add blog-specific pattern if we're on a blog/article
-      if (currentPath.includes('/blog/') || currentPath.includes('/post/') || currentPath.includes('/article/')) {
-        const pathParts = currentPath.split('/').filter(p => p)
+      if (
+        currentPath.includes('/blog/') ||
+        currentPath.includes('/post/') ||
+        currentPath.includes('/article/')
+      ) {
+        const pathParts = currentPath.split('/').filter((p) => p)
         if (pathParts.length >= 1) {
           const blogPath = '/' + pathParts[0]
           feedPatterns.unshift(`${blogPath}/feed`, `${blogPath}/rss`)
@@ -156,20 +178,22 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
       }
 
       // Validate patterns in parallel (test up to 5 for better coverage)
-      const validationPromises = feedPatterns.slice(0, 5).map(async (pattern) => {
-        const testUrl = baseUrl + pattern
-        if (!discoveredUrls.has(testUrl)) {
-          const isValid = await quickValidateFeed(testUrl)
-          if (isValid) {
-            return {
-              url: testUrl,
-              title: undefined,
-              type: 'rss' as const,
+      const validationPromises = feedPatterns
+        .slice(0, 5)
+        .map(async (pattern) => {
+          const testUrl = baseUrl + pattern
+          if (!discoveredUrls.has(testUrl)) {
+            const isValid = await quickValidateFeed(testUrl)
+            if (isValid) {
+              return {
+                url: testUrl,
+                title: undefined,
+                type: 'rss' as const,
+              }
             }
           }
-        }
-        return null
-      })
+          return null
+        })
 
       const validatedFeeds = await Promise.all(validationPromises)
 
@@ -451,7 +475,6 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
 
     // Phase 2: Heuristic URL pattern discovery (only if we found few feeds)
     if (feeds.length < 3) {
-
       const baseUrl = window.location.origin
       const currentPath = window.location.pathname
 
@@ -484,7 +507,6 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
 
     // Phase 3: Content-based feed link discovery (limited)
     if (feeds.length < 2) {
-
       const contentFeedLinks = document.querySelectorAll(
         [
           'a[href*="/feed"]',
@@ -556,7 +578,6 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
   }
 
   function basicContentExtraction() {
-
     // Basic content extraction as fallback
     const contentSelectors = [
       'article',

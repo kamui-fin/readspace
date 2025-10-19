@@ -4,7 +4,18 @@ import { Label } from '@/components/ui/label'
 import { ApiClient } from '@/lib/api-client'
 import { useExtensionStore } from '@/store'
 import { DiscoveredFeed, Folder } from '@readspace/shared'
-import { BellPlus, Check, ChevronDown, ChevronUp, Folder as FolderIcon, FolderPlus, Pencil, Rss, Trash2, X } from 'lucide-react'
+import {
+  BellPlus,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Folder as FolderIcon,
+  FolderPlus,
+  Pencil,
+  Rss,
+  Trash2,
+  X,
+} from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
 
@@ -21,19 +32,29 @@ interface DeleteConfirmationDialogProps {
   onCancel: () => void
 }
 
-function DeleteConfirmationDialog({ folderName, onConfirm, onCancel }: DeleteConfirmationDialogProps) {
+function DeleteConfirmationDialog({
+  folderName,
+  onConfirm,
+  onCancel,
+}: DeleteConfirmationDialogProps) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
       <div className="bg-background rounded-lg shadow-xl max-w-sm w-full border border-border">
         {/* Header */}
         <div className="p-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">Delete Folder</h3>
+          <h3 className="text-lg font-semibold text-foreground">
+            Delete Folder
+          </h3>
         </div>
 
         {/* Content */}
         <div className="p-4 space-y-3">
           <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete <span className="font-semibold text-foreground">"{folderName}"</span>?
+            Are you sure you want to delete{' '}
+            <span className="font-semibold text-foreground">
+              "{folderName}"
+            </span>
+            ?
           </p>
           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
             <p className="text-sm text-destructive font-medium">
@@ -44,18 +65,10 @@ function DeleteConfirmationDialog({ folderName, onConfirm, onCancel }: DeleteCon
 
         {/* Actions */}
         <div className="p-4 border-t border-border flex gap-2">
-          <Button
-            variant="outline"
-            onClick={onCancel}
-            className="flex-1"
-          >
+          <Button variant="outline" onClick={onCancel} className="flex-1">
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            onClick={onConfirm}
-            className="flex-1"
-          >
+          <Button variant="destructive" onClick={onConfirm} className="flex-1">
             <Trash2 className="w-3.5 h-3.5 mr-2" />
             Delete
           </Button>
@@ -71,7 +84,11 @@ export function FeedSubscriptionModal({
   onClose,
   onSuccess,
 }: FeedSubscriptionModalProps) {
-  const { subscribeToFeed, folders: storeFolders, loadUserData } = useExtensionStore()
+  const {
+    subscribeToFeed,
+    folders: storeFolders,
+    loadUserData,
+  } = useExtensionStore()
   const [folders, setFolders] = useState<Folder[]>(storeFolders)
   const [selectedFolderId, setSelectedFolderId] = useState<string | undefined>(
     undefined
@@ -98,7 +115,9 @@ export function FeedSubscriptionModal({
     }
 
     try {
-      const newFolder = await ApiClient.rss.createFolder({ name: newFolderName.trim() }) as Folder
+      const newFolder = (await ApiClient.rss.createFolder({
+        name: newFolderName.trim(),
+      })) as Folder
       setFolders([...folders, newFolder])
       setNewFolderName('')
       setIsCreatingFolder(false)
@@ -118,8 +137,10 @@ export function FeedSubscriptionModal({
     }
 
     try {
-      const updatedFolder = await ApiClient.rss.updateFolder(folderId, { name: editingFolderName.trim() }) as Folder
-      setFolders(folders.map(f => f.id === folderId ? updatedFolder : f))
+      const updatedFolder = (await ApiClient.rss.updateFolder(folderId, {
+        name: editingFolderName.trim(),
+      })) as Folder
+      setFolders(folders.map((f) => (f.id === folderId ? updatedFolder : f)))
       setEditingFolderId(null)
       setEditingFolderName('')
       toast.success('Folder renamed successfully')
@@ -150,7 +171,7 @@ export function FeedSubscriptionModal({
 
     try {
       await ApiClient.rss.deleteFolder(deletingFolder.id)
-      setFolders(folders.filter(f => f.id !== deletingFolder.id))
+      setFolders(folders.filter((f) => f.id !== deletingFolder.id))
 
       // If we were editing or had this folder selected, clear that state
       if (selectedFolderId === deletingFolder.id) {
@@ -186,13 +207,15 @@ export function FeedSubscriptionModal({
 
       // Extract meaningful name from path
       // E.g., /rss → "RSS Feed", /blog/feed → "Blog Feed", /news/rss → "News Feed"
-      const parts = path.split('/').filter(p => p && p !== 'feed' && p !== 'rss' && p !== 'atom')
+      const parts = path
+        .split('/')
+        .filter((p) => p && p !== 'feed' && p !== 'rss' && p !== 'atom')
 
       if (parts.length > 0) {
         // Capitalize first letter of each part
         const name = parts[parts.length - 1]
           .split(/[-_]/)
-          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
           .join(' ')
         return `${name} Feed`
       }
@@ -376,11 +399,14 @@ export function FeedSubscriptionModal({
                   {folders.map((folder) => (
                     <div
                       key={folder.id}
-                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${selectedFolderId === folder.id
-                        ? 'bg-primary/10 border-primary/40 shadow-sm'
-                        : 'hover:bg-accent/50 border-border hover:border-border/60'
-                        }`}
-                      onClick={() => !editingFolderId && setSelectedFolderId(folder.id)}
+                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                        selectedFolderId === folder.id
+                          ? 'bg-primary/10 border-primary/40 shadow-sm'
+                          : 'hover:bg-accent/50 border-border hover:border-border/60'
+                      }`}
+                      onClick={() =>
+                        !editingFolderId && setSelectedFolderId(folder.id)
+                      }
                     >
                       {editingFolderId === folder.id ? (
                         <>
@@ -390,10 +416,13 @@ export function FeedSubscriptionModal({
                           <input
                             type="text"
                             value={editingFolderName}
-                            onChange={(e) => setEditingFolderName(e.target.value)}
+                            onChange={(e) =>
+                              setEditingFolderName(e.target.value)
+                            }
                             onClick={(e) => e.stopPropagation()}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter') handleRenameFolder(folder.id)
+                              if (e.key === 'Enter')
+                                handleRenameFolder(folder.id)
                               if (e.key === 'Escape') cancelEditing()
                             }}
                             className="flex-1 px-2 py-1 text-sm bg-transparent border-b border-primary/30 focus:border-primary outline-none"
@@ -422,13 +451,18 @@ export function FeedSubscriptionModal({
                         </>
                       ) : (
                         <>
-                          <div className={`rounded p-1 flex-shrink-0 transition-colors ${selectedFolderId === folder.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                            }`}>
+                          <div
+                            className={`rounded p-1 flex-shrink-0 transition-colors ${
+                              selectedFolderId === folder.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted text-muted-foreground'
+                            }`}
+                          >
                             <FolderIcon className="w-3.5 h-3.5" />
                           </div>
-                          <span className="flex-1 text-sm font-medium">{folder.name}</span>
+                          <span className="flex-1 text-sm font-medium">
+                            {folder.name}
+                          </span>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button
                               type="button"
