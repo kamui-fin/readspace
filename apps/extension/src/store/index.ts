@@ -1,4 +1,4 @@
-import { getSupabaseClient, resetSupabaseClient } from '@/lib/supabase'
+import { resetSupabaseClient } from '@/lib/supabase'
 import {
   Article,
   DiscoveredFeed,
@@ -163,27 +163,32 @@ export const useExtensionStore = create<ExtensionState>()(
         }
 
         try {
-          const supabase = getSupabaseClient(
-            settings.supabase_url,
-            settings.supabase_anon_key
-          )
+          // Read the Supabase session directly from chrome.storage
+          // The background script manages the session, we just read it
+          const sessionData = await browser.storage.local.get('supabase-auth-token')
+          const sessionJson = sessionData['supabase-auth-token']
 
-          if (!supabase) {
+          if (!sessionJson || typeof sessionJson !== 'string') {
+            console.log('No existing Supabase session found')
             return
           }
 
-          const {
-            data: { session },
-            error,
-          } = await supabase.auth.getSession()
+          // Parse the session
+          const session = JSON.parse(sessionJson)
+          const accessToken = session?.access_token
 
-          if (error) {
-            console.error('Session check failed:', error)
-            return
-          }
+          if (accessToken) {
+            // Update the token in the store if it's different from what we have
+            const currentToken = settings.access_token
+            if (currentToken !== accessToken) {
+              console.log('🔄 Found refreshed token from Supabase session, updating store')
+              await get().updateToken(accessToken)
+            }
 
-          if (session?.access_token) {
-            await get().login(session.access_token)
+            // If not authenticated yet, perform full login
+            if (!get().isAuthenticated) {
+              await get().login(accessToken)
+            }
           }
         } catch (error) {
           console.error('Failed to check existing session:', error)
@@ -223,17 +228,12 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       logout: async () => {
-        const { settings } = get()
-
-        // Sign out from Supabase with local scope to avoid affecting other apps
-        const supabase = getSupabaseClient(
-          settings.supabase_url,
-          settings.supabase_anon_key
-        )
-        if (supabase) {
-          supabase.auth.signOut({ scope: 'local' }).catch((error) => {
-            console.error('Failed to sign out from Supabase:', error)
-          })
+        // Clear the Supabase session from chrome.storage
+        // The background script's Supabase client will handle the actual sign out
+        try {
+          await browser.storage.local.remove('supabase-auth-token')
+        } catch (error) {
+          console.error('Failed to clear Supabase session:', error)
         }
 
         const updatedSettings = { ...get().settings, access_token: undefined }
@@ -658,6 +658,12 @@ export const useExtensionStore = create<ExtensionState>()(
 
         // Configure ApiClient after store is rehydrated
         configureExtensionApiClient()
+
+        // Check for existing Supabase session on startup
+        // This ensures we pick up any token refreshes that happened while the extension was idle
+        if (state) {
+          state.checkExistingSession()
+        }
       },
     }
   )

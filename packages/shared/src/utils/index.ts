@@ -2,3 +2,4 @@
 export * from "./cn";
 export * from "./opml-parser";
 export * from "./reading-time";
+export * from "./url";

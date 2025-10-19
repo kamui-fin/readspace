@@ -1,7 +1,8 @@
 import { Button } from '@/components/ui/button'
 import type { DiscoveredFeed } from '@readspace/shared'
+import { areUrlsEqual } from '@readspace/shared'
 import { Rss } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useMemo } from 'react'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 import { useExtensionStore } from '@/store'
 import toast from 'react-hot-toast'
@@ -41,8 +42,6 @@ export function FeedDiscoveryCard({
 }: FeedDiscoveryCardProps) {
   // Initialize all hooks first (before any conditional returns)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [isFollowing, setIsFollowing] = useState(false)
-  const [followedFeedId, setFollowedFeedId] = useState<string | null>(null)
   const [isUnfollowing, setIsUnfollowing] = useState(false)
   const userFeeds = useExtensionStore((state) => state.feeds)
   const { unsubscribeFromFeed } = useExtensionStore()
@@ -50,33 +49,36 @@ export function FeedDiscoveryCard({
     (state) => state.isFeedPendingFollow
   )
   const cancelFollow = useExtensionStore((state) => state.cancelFollow)
-  const isPendingFollow =
-    feeds && feeds.length > 0 ? isFeedPendingFollow(feeds[0].url) : false
 
-  // Check if user is already following any of the discovered feeds
-  useEffect(() => {
-    // Skip if loading or no feeds
+  // Compute following state using useMemo for immediate, accurate state
+  // Check ALL discovered feeds against user's subscriptions with normalized URL comparison
+  const { isFollowing, followedFeedId, isPendingFollow } = useMemo(() => {
+    // Default state when no feeds available
     if (!feeds || feeds.length === 0) {
-      setIsFollowing(false)
-      setFollowedFeedId(null)
-      return
-    }
-
-    if (userFeeds.length > 0) {
-      const followedFeed = userFeeds.find((userFeed) =>
-        feeds.some((discoveredFeed) => {
-          return userFeed.url === discoveredFeed.url
-        })
-      )
-      if (followedFeed) {
-        setIsFollowing(true)
-        setFollowedFeedId(followedFeed.id)
-      } else {
-        setIsFollowing(false)
-        setFollowedFeedId(null)
+      return {
+        isFollowing: false,
+        followedFeedId: null,
+        isPendingFollow: false,
       }
     }
-  }, [feeds, userFeeds])
+
+    // Check if any discovered feed is already in user's subscriptions
+    // Use normalized URL comparison to catch variations (http/https, www, trailing slash, etc.)
+    const followedFeed = userFeeds.find((userFeed) =>
+      feeds.some((discoveredFeed) =>
+        areUrlsEqual(userFeed.url, discoveredFeed.url)
+      )
+    )
+
+    // Check if any discovered feed has a pending follow request
+    const hasPendingFollow = feeds.some((feed) => isFeedPendingFollow(feed.url))
+
+    return {
+      isFollowing: !!followedFeed,
+      followedFeedId: followedFeed?.id || null,
+      isPendingFollow: hasPendingFollow,
+    }
+  }, [feeds, userFeeds, isFeedPendingFollow])
 
   // Show skeleton while loading (after all hooks are initialized)
   if (isLoading || !feeds || feeds.length === 0) {
@@ -91,7 +93,6 @@ export function FeedDiscoveryCard({
       if (isPendingFollow && primaryFeed) {
         // Cancel the pending follow
         cancelFollow(primaryFeed.url)
-        setIsFollowing(false)
         toast.success('Unfollowed')
         return
       }
@@ -102,8 +103,7 @@ export function FeedDiscoveryCard({
         try {
           await unsubscribeFromFeed(followedFeedId)
           toast.success('Unfollowed')
-          setIsFollowing(false)
-          setFollowedFeedId(null)
+          // State will update automatically via useMemo when userFeeds changes
         } catch (error) {
           console.error('Failed to unfollow:', error)
           const errorMessage =
@@ -126,7 +126,8 @@ export function FeedDiscoveryCard({
   }
 
   const handleSuccess = () => {
-    setIsFollowing(true)
+    // No need to manually set isFollowing - it will be computed from userFeeds
+    // which gets updated when loadUserData is called after subscription
   }
 
   // Extract domain from feed URL

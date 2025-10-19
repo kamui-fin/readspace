@@ -365,6 +365,88 @@ browser.runtime.onInstalled.addListener(async () => {
   }
 })
 
+// Set up Supabase auth state listener to handle token refresh
+// This runs in the background script (persistent service worker)
+async function initializeAuthListener() {
+  try {
+    // Get Supabase configuration from storage
+    const storageData = await browser.storage.local.get('readspace-extension')
+
+    // Parse the Zustand store
+    let storeState: any = storageData['readspace-extension']
+    if (typeof storeState === 'string') {
+      storeState = JSON.parse(storeState)
+    }
+
+    const supabaseUrl =
+      storeState?.state?.settings?.supabase_url ||
+      'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey =
+      storeState?.state?.settings?.supabase_anon_key ||
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.log('Supabase not configured, skipping auth listener setup')
+      return
+    }
+
+    // Initialize Supabase client with proper configuration
+    const supabase = getSupabaseClient(supabaseUrl, supabaseAnonKey)
+
+    if (!supabase) {
+      console.error('Failed to initialize Supabase client for auth listener')
+      return
+    }
+
+    // Listen for auth state changes, especially TOKEN_REFRESHED
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('🔐 Auth event in background:', event, session?.user?.email)
+
+      if (event === 'TOKEN_REFRESHED' && session?.access_token) {
+        console.log('✅ Token refreshed, updating extension store')
+
+        try {
+          // Read current store state
+          const currentStore = await browser.storage.local.get(
+            'readspace-extension'
+          )
+          let store: any = currentStore['readspace-extension']
+
+          if (typeof store === 'string') {
+            store = JSON.parse(store)
+          }
+
+          // Update the access token in settings
+          if (store?.state?.settings) {
+            store.state.settings.access_token = session.access_token
+
+            // Write back to storage
+            await browser.storage.local.set({
+              'readspace-extension': JSON.stringify(store),
+            })
+
+            console.log('✅ Extension store updated with fresh token')
+          }
+        } catch (error) {
+          console.error('❌ Failed to update store with refreshed token:', error)
+        }
+      }
+
+      if (event === 'SIGNED_OUT') {
+        console.log('🚪 User signed out, clearing token from store')
+        // The logout function in the store will handle this
+      }
+    })
+
+    console.log('✅ Auth state listener initialized in background script')
+  } catch (error) {
+    console.error('❌ Failed to initialize auth listener:', error)
+  }
+}
+
+// Initialize the auth listener when the background script loads
+initializeAuthListener()
+
 // Handle context menu clicks
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'save-to-readspace' && tab?.url) {
