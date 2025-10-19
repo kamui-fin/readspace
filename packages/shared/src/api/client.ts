@@ -496,6 +496,8 @@ export class ApiClient {
         read_at?: string;
         is_read_later?: boolean;
         is_favorite?: boolean;
+        priority?: string;
+        note?: string | null;
       },
       articleType: "feed" | "clipped" = "feed",
     ) => this.put(`/api/rss/articles/${id}?article_type=${articleType}`, data),
@@ -519,6 +521,12 @@ export class ApiClient {
       content?: string;
       metadata?: Record<string, string>;
     }) => this.post("/api/rss/articles/save", data),
+
+    checkArticleSaved: (url: string) => {
+      const queryParams = new URLSearchParams();
+      queryParams.append("url", url);
+      return this.get(`/api/rss/articles/check-saved?${queryParams.toString()}`);
+    },
 
     // Discover endpoints
     searchFeeds: (params?: {

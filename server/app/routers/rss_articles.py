@@ -13,6 +13,7 @@ from app.schemas.rss_schemas import (
     ArticleResponse,
     ArticleUpdate,
     ClippedArticleResponse,
+    ClippedArticleUpdate,
     PaginatedResponse,
     SaveArticleRequest,
 )
@@ -603,6 +604,76 @@ async def get_unread_article_counts(
 
 
 @router.get(
+    "/check-saved",
+    response_model=ClippedArticleResponse | None,
+    status_code=status.HTTP_200_OK,
+    summary="Check if article is saved by URL",
+    description="Check if an article URL has been saved and retrieve its metadata",
+    responses={
+        200: {
+            "description": "Article check result (null if not saved, article data if saved)",
+            "model": ClippedArticleResponse,
+        },
+        422: {
+            "description": "Validation error in query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": [
+                            {"loc": ["query", "url"], "msg": "invalid url format", "type": "value_error.url"}
+                        ]
+                    }
+                }
+            },
+        },
+    },
+)
+async def check_article_saved(
+    url: str = Query(..., description="URL of the article to check"),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> ClippedArticleResponse | None:
+    """
+    Check if an article URL has been saved and retrieve its metadata.
+
+    This endpoint allows the extension to check if a user has already saved
+    an article by its URL, and retrieve existing metadata like priority, note,
+    read status, and read timestamp.
+
+    Args:
+        url: The URL of the article to check
+        db: Database session dependency
+        current_user: Authenticated user token data
+
+    Returns:
+        ClippedArticleResponse | None: The saved article with metadata if it exists, None otherwise
+
+    Raises:
+        HTTPException:
+            - 422: Validation error in URL parameter
+
+    Note:
+        - Queries both clipped_articles and article_contents tables
+        - Joins on content_id to find article by URL
+        - Returns full article metadata including priority, note, read status, and timestamps
+        - Returns None if the article has never been saved by this user
+    """
+    web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
+
+    try:
+        article = await web_service.get_article_by_url(url)
+        return article
+    except Exception as e:
+        logger.error(
+            "Error checking if article is saved",
+            error=str(e),
+            user_id=current_user.sub,
+            url=url,
+        )
+        return None
+
+
+@router.get(
     "/{article_id}",
     response_model=ArticleResponse,
     status_code=status.HTTP_200_OK,
@@ -737,8 +808,8 @@ async def get_article(
 )
 async def update_article(
     article_id: UUID,
-    article_in: ArticleUpdate = Body(...),
     article_type: str = Query("feed", pattern="^(feed|clipped)$", description="Article type: feed or clipped"),
+    article_in: ArticleUpdate | ClippedArticleUpdate = Body(...),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> ArticleResponse:
@@ -776,6 +847,13 @@ async def update_article(
         - article_type parameter helps optimize database queries
         - Automatically logs update activity for audit purposes
     """
+    logger.info(
+        "Received article update request",
+        article_id=article_id,
+        article_type=article_type,
+        update_data=article_in.model_dump(exclude_unset=True),
+        user_id=current_user.sub,
+    )
     rss_service = RssOrchestrationService(db=db, user_id=UUID(current_user.sub))
     updated_article = await rss_service.update_article(
         article_id=article_id, article_in=article_in, article_type=article_type

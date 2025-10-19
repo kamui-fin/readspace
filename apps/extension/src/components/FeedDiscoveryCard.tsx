@@ -59,20 +59,16 @@ export function FeedDiscoveryCard({
       return
     }
 
-    console.log('Checking follow status:', { feeds, userFeedsCount: userFeeds.length })
     if (userFeeds.length > 0) {
       const followedFeed = userFeeds.find((userFeed) =>
         feeds.some((discoveredFeed) => {
-          console.log('Comparing:', { userFeedUrl: userFeed.url, discoveredFeedUrl: discoveredFeed.url })
           return userFeed.url === discoveredFeed.url
         })
       )
       if (followedFeed) {
-        console.log('Found followed feed:', followedFeed)
         setIsFollowing(true)
         setFollowedFeedId(followedFeed.id)
       } else {
-        console.log('No matching feed found')
         setIsFollowing(false)
         setFollowedFeedId(null)
       }
@@ -93,7 +89,6 @@ export function FeedDiscoveryCard({
       // Check if follow is still pending
       if (isPendingFollow && primaryFeed) {
         // Cancel the pending follow
-        console.log('Cancelling pending follow for:', primaryFeed.url)
         cancelFollow(primaryFeed.url)
         setIsFollowing(false)
         toast.success('Unfollowed')
@@ -101,13 +96,10 @@ export function FeedDiscoveryCard({
       }
 
       // Unfollow
-      console.log('Attempting to unfollow, followedFeedId:', followedFeedId)
       if (followedFeedId) {
         setIsUnfollowing(true)
         try {
-          console.log('Calling unsubscribeFromFeed with ID:', followedFeedId)
           await unsubscribeFromFeed(followedFeedId)
-          console.log('Unsubscribe successful')
           toast.success('Unfollowed')
           setIsFollowing(false)
           setFollowedFeedId(null)
@@ -131,7 +123,6 @@ export function FeedDiscoveryCard({
 
   const handleSuccess = () => {
     setIsFollowing(true)
-    console.log('Feed subscription successful!')
   }
 
   // Extract domain from feed URL

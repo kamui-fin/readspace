@@ -95,7 +95,6 @@ export function Settings({ onBack }: SettingsProps) {
 
       // If user is authenticated and switching configurations, log them out first
       if (user && (switchingToSelfHosted || switchingToCloud)) {
-        console.log('Configuration change detected, signing out user...')
         logout()
       }
 
@@ -133,7 +132,6 @@ export function Settings({ onBack }: SettingsProps) {
     try {
       // If user is authenticated with self-hosted, log them out first
       if (user && !isUsingProduction) {
-        console.log('Switching to cloud config, signing out user...')
         logout()
       }
 

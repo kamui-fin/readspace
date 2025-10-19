@@ -147,6 +147,29 @@ class WebArticleService:
 
         return ClippedArticleResponse.model_validate(clipped_with_content)
 
+    async def get_article_by_url(self, url: str) -> ClippedArticleResponse | None:
+        """
+        Get clipped article by URL for the current user.
+
+        This method queries the database to check if a user has already saved
+        an article with the given URL. It joins clipped_articles and article_contents
+        tables to find the article by its link.
+
+        Args:
+            url: The URL of the article to check
+
+        Returns:
+            ClippedArticleResponse with full metadata if found, None otherwise
+        """
+        clipped_article = await crud_clipped_article.get_by_user_and_url(
+            self.db, user_id=self.user_id, url=url
+        )
+
+        if not clipped_article:
+            return None
+
+        return ClippedArticleResponse.model_validate(clipped_article)
+
     def _parse_datetime_string(self, date_str: str) -> datetime | None:
         """Parse datetime string with various formats."""
         if not date_str:

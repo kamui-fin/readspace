@@ -167,9 +167,9 @@ async def summarize_article(
 
         # Use provided content if available, otherwise fall back to extracted content, article content, or description
         content_to_summarize = (
-            request.content 
-            or article.extracted_content 
-            or article.content 
+            request.content
+            or article.extracted_content
+            or article.content
             or article.description
         )
         if not content_to_summarize:
@@ -260,9 +260,9 @@ async def translate_article(
 
         # Use provided content if available, otherwise fall back to extracted content, article content, or description
         content_to_translate = (
-            request.content 
-            or article.extracted_content 
-            or article.content 
+            request.content
+            or article.extracted_content
+            or article.content
             or article.description
         )
         if not content_to_translate:

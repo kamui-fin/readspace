@@ -231,7 +231,6 @@ export function FeedSubscriptionModal({
       .then(async () => {
         // Reload user data to get the feed ID
         await loadUserData()
-        console.log('User data reloaded after feed subscription')
       })
       .catch((error) => {
         console.error('Failed to subscribe to RSS feed:', error)

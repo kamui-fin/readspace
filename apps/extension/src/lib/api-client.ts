@@ -55,7 +55,6 @@ export function configureExtensionApiClient() {
       getAuthToken,
     })
 
-    console.log('ApiClient configured for extension with baseUrl:', baseUrl)
   } catch (error) {
     console.error('Failed to configure ApiClient:', error)
 

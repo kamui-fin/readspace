@@ -28,7 +28,6 @@ export function LoginForm() {
 
     try {
       // Send message to background script to handle login
-      console.log('🚀 Requesting email/password login from background script...')
 
       const response = await browser.runtime.sendMessage({
         action: 'emailPasswordLogin',
@@ -40,7 +39,6 @@ export function LoginForm() {
         throw new Error(response.error || 'Failed to sign in')
       }
 
-      console.log('✅ Login successful, updating store...')
 
       // Login to the extension store with the access token
       await login(response.access_token)
@@ -59,7 +57,6 @@ export function LoginForm() {
     try {
       // Send message to background script to handle OAuth flow
       // This ensures the flow completes even if the popup closes
-      console.log('🚀 Requesting OAuth from background script...')
 
       const response = await browser.runtime.sendMessage({
         action: 'startGoogleOAuth',
@@ -73,7 +70,6 @@ export function LoginForm() {
         throw new Error(response.error || 'Failed to authenticate with Google')
       }
 
-      console.log('✅ OAuth successful, logging in...')
 
       // Login to the extension store with the access token
       await login(response.access_token)

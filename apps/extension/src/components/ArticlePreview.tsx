@@ -5,6 +5,7 @@ import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
 import { BookOpen, Pencil, Flag, StickyNote, Check } from 'lucide-react'
 import { browser } from '@/lib/browser'
 import { useExtensionStore } from '@/store'
+import { ApiClient } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 
 interface ArticlePreviewProps {
@@ -81,13 +82,65 @@ export function ArticlePreview({
   const [note, setNote] = useState('')
   const [priority, setPriority] = useState<Priority>('low')
 
-  const isArticleSaved = useExtensionStore((state) => state.isArticleSaved)
+  const checkArticleSaved = useExtensionStore((state) => state.checkArticleSaved)
   const isArticlePendingSave = useExtensionStore((state) => state.isArticlePendingSave)
   const unsaveArticle = useExtensionStore((state) => state.unsaveArticle)
   const cancelSave = useExtensionStore((state) => state.cancelSave)
-  const isSaved = currentUrl ? isArticleSaved(currentUrl) : false
+
+  const [savedArticle, setSavedArticle] = useState<any | null>(null)
+  const [optimisticallySaved, setOptimisticallySaved] = useState(false)
+  const isSaved = !!savedArticle || optimisticallySaved
   const isPending = currentUrl ? isArticlePendingSave(currentUrl) : false
   const [isUnsaving, setIsUnsaving] = useState(false)
+
+  // Track original saved values to detect changes
+  const [originalNote, setOriginalNote] = useState('')
+  const [originalPriority, setOriginalPriority] = useState<Priority>('low')
+
+  // Check if user has made changes to note or priority
+  const hasUnsavedChanges = savedArticle && (
+    note !== originalNote ||
+    priority !== originalPriority
+  )
+
+  // Check if article is already saved when URL changes
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      if (!currentUrl) {
+        setSavedArticle(null)
+        setOptimisticallySaved(false)
+        return
+      }
+
+      try {
+        const result = await checkArticleSaved(currentUrl)
+        setSavedArticle(result)
+        // Clear optimistic state if we have real data
+        if (result) {
+          setOptimisticallySaved(false)
+        }
+
+        // Prefill form fields if article is already saved
+        if (result) {
+          if (result.content?.title && !customTitle) {
+            setCustomTitle(result.content.title)
+          }
+          const savedNote = result.note || ''
+          const savedPriority = result.priority || 'low'
+
+          setNote(savedNote)
+          setPriority(savedPriority)
+
+          // Store original values to track changes
+          setOriginalNote(savedNote)
+          setOriginalPriority(savedPriority)
+        }
+      } catch (error) {
+        console.error('Failed to check if article is saved:', error)
+      }
+    }
+    checkIfSaved()
+  }, [currentUrl, checkArticleSaved])
 
   // Load expanded state from storage on mount
   useEffect(() => {
@@ -131,16 +184,53 @@ export function ArticlePreview({
         // Cancel the pending save
         console.log('Cancelling pending save for:', currentUrl)
         cancelSave(currentUrl)
+        setOptimisticallySaved(false)
         toast.success('Article removed')
         return
       }
 
-      // Unsave article
+      // If article is already saved, update it if there are changes
+      if (savedArticle && hasUnsavedChanges) {
+        console.log('Updating saved article with new note/priority:', currentUrl)
+        console.log('Update data:', { priority, note })
+        try {
+          await ApiClient.rss.updateArticle(
+            savedArticle.id,
+            {
+              priority,
+              note, // Send the note as-is (empty string or text)
+            },
+            'clipped'
+          )
+          toast.success('Article updated')
+          // Refresh the saved article data and update original values
+          const updated = await checkArticleSaved(currentUrl)
+          setSavedArticle(updated)
+          setOriginalNote(note)
+          setOriginalPriority(priority)
+        } catch (error) {
+          console.error('Failed to update article:', error)
+          toast.error(
+            `Failed to update article: ${error instanceof Error ? error.message : 'Unknown error'}`
+          )
+        }
+        return
+      }
+
+      // If saved but no changes, just show a message
+      if (savedArticle && !hasUnsavedChanges) {
+        toast('Article already saved', { icon: '✓' })
+        return
+      }
+
+      // Unsave article (this case shouldn't happen now, but keep for safety)
       console.log('Attempting to unsave article:', currentUrl)
       setIsUnsaving(true)
       try {
         await unsaveArticle(currentUrl)
         console.log('Article unsaved successfully')
+        setSavedArticle(null) // Clear saved article state
+        setOptimisticallySaved(false) // Clear optimistic state
         toast.success('Article removed')
       } catch (error) {
         console.error('Failed to unsave article:', error)
@@ -151,8 +241,9 @@ export function ArticlePreview({
         setIsUnsaving(false)
       }
     } else {
-      // Save article
+      // Save article - set optimistic state immediately
       console.log('Saving article:', currentUrl)
+      setOptimisticallySaved(true)
       const options: Partial<SaveOptions> = {
         title: customTitle || undefined,
         note: note || undefined,
@@ -181,10 +272,18 @@ export function ArticlePreview({
 
         {/* Content */}
         <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <h3 className="font-semibold text-sm">Save article for later</h3>
+          <h3 className="font-semibold text-sm">
+            {isSaved ? 'Saved article' : 'Save article for later'}
+          </h3>
           <p className="text-xs text-muted-foreground line-clamp-2">
             {domain}
             {readingTime && ` • ${readingTime} min read`}
+            {savedArticle?.is_read && (
+              <span className="text-green-600 dark:text-green-400"> • Read</span>
+            )}
+            {savedArticle?.read_at && (
+              <span> • {new Date(savedArticle.read_at).toLocaleDateString()}</span>
+            )}
           </p>
         </div>
 
@@ -194,18 +293,23 @@ export function ArticlePreview({
             onClick={handleSave}
             disabled={isUnsaving}
             size="sm"
-            className={`flex-shrink-0 w-[100px] ${isSaved ? 'bg-primary/80 hover:bg-primary/90' : ''}`}
+            variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
+            className={`flex-shrink-0 w-[100px] ${
+              isSaved && !hasUnsavedChanges ? 'hover:bg-primary/10 dark:hover:bg-primary/20' : ''
+            }`}
           >
             {isUnsaving ? (
               <div className="flex items-center justify-center">
-                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                 <span>Removing...</span>
               </div>
-            ) : isSaved ? (
+            ) : isSaved && !hasUnsavedChanges ? (
               <div className="flex items-center justify-center">
                 <Check className="w-3 h-3 mr-1.5" />
                 <span>Saved</span>
               </div>
+            ) : isSaved && hasUnsavedChanges ? (
+              'Update'
             ) : (
               'Save'
             )}
