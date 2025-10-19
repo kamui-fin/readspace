@@ -58,8 +58,6 @@ export function Popup() {
         })
 
         if (cachedPage) {
-          console.log('Using cached page data from persistent cache for:', tab.url)
-
           // If we have cached metadata, use it immediately
           if (cachedPage.metadata) {
             setCurrentPageMetadata(cachedPage.metadata)
@@ -71,15 +69,11 @@ export function Popup() {
 
           // If we have cached content with reading time, use it immediately
           if (cachedPage.content?.estimated_read_time) {
-            console.log(
-              'Using cached reading time from persistent cache:',
-              cachedPage.content.estimated_read_time
-            )
             setReadingTime(cachedPage.content.estimated_read_time)
           }
         }
-      } catch (error) {
-        console.log('No cached page data available:', error)
+      } catch {
+        // No cached page data available
       }
 
       // Also try legacy tabId-based cache as fallback (for current tab before it's cached by URL)
@@ -91,15 +85,14 @@ export function Popup() {
           })
 
           if (cachedMetadata) {
-            console.log('Using cached metadata from legacy cache (tabId-based)')
             setCurrentPageMetadata(cachedMetadata)
             // Check if we have feeds in legacy cache
             if (cachedMetadata.feeds && cachedMetadata.feeds.length > 0) {
               foundCacheWithFeeds = true
             }
           }
-        } catch (error) {
-          console.log('No legacy cached metadata available:', error)
+        } catch {
+          // No legacy cached metadata available
         }
 
         // Also try legacy content cache for reading time
@@ -110,24 +103,17 @@ export function Popup() {
           })
 
           if (cachedContent?.estimated_read_time) {
-            console.log(
-              'Using cached reading time from legacy cache:',
-              cachedContent.estimated_read_time
-            )
             setReadingTime(cachedContent.estimated_read_time)
           }
-        } catch (error) {
-          console.log('No legacy cached content available:', error)
+        } catch {
+          // No legacy cached content available
         }
       }
 
       // If we found cache with feeds, we're done - don't extract again
       // But if cache has no feeds, still try to discover them fresh
       if (foundCacheWithFeeds) {
-        console.log('Using cached data with feeds, skipping fresh extraction')
         return
-      } else {
-        console.log('No cached feeds found, will try fresh extraction')
       }
 
       // No cache found - extract metadata in background (non-blocking)
@@ -152,12 +138,10 @@ export function Popup() {
       sendMessage<PageMetadata>('extractMetadata', 3000)
         .then((metadata) => {
           if (metadata) {
-            console.log('Fresh metadata extracted:', metadata)
             setCurrentPageMetadata(metadata)
           }
         })
-        .catch((error) => {
-          console.log('Failed to extract fresh metadata (non-critical):', error)
+        .catch(() => {
           // Don't show error - we already have basic tab info displayed
         })
 
@@ -165,12 +149,10 @@ export function Popup() {
       sendMessage<{ estimated_read_time?: number }>('extractContent', 10000)
         .then((contentData) => {
           if (contentData?.estimated_read_time) {
-            console.log('Fresh reading time extracted:', contentData.estimated_read_time)
             setReadingTime(contentData.estimated_read_time)
           }
         })
-        .catch((error) => {
-          console.log('Failed to extract reading time (non-critical):', error)
+        .catch(() => {
           // Don't show error - reading time is optional
         })
     },

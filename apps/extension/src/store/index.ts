@@ -113,7 +113,6 @@ export const useExtensionStore = create<ExtensionState>()(
         // Reset Supabase client if settings changed to force recreation with new settings
         if (newSettings.supabase_url || newSettings.supabase_anon_key) {
           resetSupabaseClient()
-          console.log('Supabase client reset for new settings')
         }
       },
 
@@ -127,14 +126,12 @@ export const useExtensionStore = create<ExtensionState>()(
         }
 
         try {
-          console.log('Checking existing session...')
           const supabase = getSupabaseClient(
             settings.supabase_url,
             settings.supabase_anon_key
           )
 
           if (!supabase) {
-            console.log('Failed to create Supabase client')
             return
           }
 
@@ -149,10 +146,7 @@ export const useExtensionStore = create<ExtensionState>()(
           }
 
           if (session?.access_token) {
-            console.log('Found existing session, logging in...')
             await get().login(session.access_token)
-          } else {
-            console.log('No existing session found')
           }
         } catch (error) {
           console.error('Failed to check existing session:', error)
@@ -266,7 +260,6 @@ export const useExtensionStore = create<ExtensionState>()(
 
         try {
           // First, try to get cached content from persistent cache
-          console.log('Checking persistent cache for article content...')
           let extractedContent = null
 
           try {
@@ -276,16 +269,14 @@ export const useExtensionStore = create<ExtensionState>()(
             })
 
             if (cachedContent) {
-              console.log('Using cached content from persistent cache:', cachedContent)
               extractedContent = cachedContent
             }
-          } catch (error) {
-            console.log('No cached content available, will extract fresh:', error)
+          } catch {
+            // No cached content available, will extract fresh
           }
 
           // If no cached content, extract from the current page
           if (!extractedContent) {
-            console.log('Extracting content for article save...')
             try {
               // Get current tab to extract content
               const tabs = await chrome.tabs.query({
@@ -297,7 +288,6 @@ export const useExtensionStore = create<ExtensionState>()(
                   action: 'extractContent',
                   url,
                 })
-                console.log('Content extracted from page:', extractedContent)
               }
             } catch (error) {
               console.error('Failed to extract content from page:', error)
@@ -332,13 +322,6 @@ export const useExtensionStore = create<ExtensionState>()(
             priority: options.priority,
             note: options.note,
           }
-
-          console.log('Saving article with request:', {
-            ...saveRequest,
-            content: saveRequest.content
-              ? `${saveRequest.content.length} chars`
-              : 'no content',
-          })
 
           const article = (await ApiClient.rss.saveArticle(
             saveRequest
@@ -380,7 +363,6 @@ export const useExtensionStore = create<ExtensionState>()(
         const newPendingSaveUrls = new Set(get().pendingSaveUrls)
         newPendingSaveUrls.delete(url)
         set({ savedArticleUrls: newSavedUrls, pendingSaveUrls: newPendingSaveUrls })
-        console.log('Cancelled pending save for:', url)
       },
 
       unsaveArticle: async (url: string) => {
@@ -403,7 +385,6 @@ export const useExtensionStore = create<ExtensionState>()(
         try {
           // Mark article as not read later to remove from read-later list
           await ApiClient.rss.updateArticle(articleId, { is_read_later: false }, 'clipped')
-          console.log('Article removed from read-later successfully')
         } catch (error) {
           // Rollback on error
           console.error('Failed to unsave article:', error)
@@ -455,7 +436,6 @@ export const useExtensionStore = create<ExtensionState>()(
 
           // Don't throw error if it was aborted (user cancelled)
           if (error instanceof Error && error.name === 'AbortError') {
-            console.log('Feed subscription cancelled by user')
             return
           }
 
@@ -477,7 +457,6 @@ export const useExtensionStore = create<ExtensionState>()(
         const abortController = get().followAbortControllers.get(url)
         if (abortController) {
           abortController.abort()
-          console.log('Aborted follow request for:', url)
         }
 
         // Cancel the pending follow by removing from sets
@@ -486,7 +465,6 @@ export const useExtensionStore = create<ExtensionState>()(
         const newFollowAbortControllers = new Map(get().followAbortControllers)
         newFollowAbortControllers.delete(url)
         set({ pendingFollowUrls: newPendingFollowUrls, followAbortControllers: newFollowAbortControllers })
-        console.log('Cancelled pending follow for:', url)
       },
 
       subscribeToFeeds: async (feeds: DiscoveredFeed[], options = {}) => {
@@ -549,10 +527,6 @@ export const useExtensionStore = create<ExtensionState>()(
         savedArticleIds: Array.from(state.savedArticleIds.entries()), // Convert Map to Array of entries
       }),
       onRehydrateStorage: () => (state) => {
-        if (state?.isAuthenticated && state?.settings?.access_token) {
-          console.log('Extension state rehydrated with authentication')
-        }
-
         // Convert savedArticleUrls array back to Set after rehydration
         if (state && Array.isArray(state.savedArticleUrls)) {
           state.savedArticleUrls = new Set(state.savedArticleUrls) as any
@@ -584,14 +558,11 @@ configureExtensionApiClient()
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     if (message.action === 'oauth-login-success' && message.access_token) {
-      console.log('OAuth login success message received')
-
       // Call the login function with the access token
       useExtensionStore
         .getState()
         .login(message.access_token)
         .then(() => {
-          console.log('OAuth login completed successfully')
           sendResponse({ success: true })
         })
         .catch((error) => {

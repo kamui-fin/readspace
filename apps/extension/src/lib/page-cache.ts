@@ -52,7 +52,6 @@ class PageCache {
 
       if (storedCache && Array.isArray(storedCache)) {
         this.cache = new Map(storedCache)
-        console.log(`Page cache initialized with ${this.cache.size} entries`)
       }
     } catch (error) {
       console.error('Failed to initialize page cache from storage:', error)
@@ -151,7 +150,6 @@ class PageCache {
       const firstKey = this.cache.keys().next().value
       if (firstKey) {
         this.cache.delete(firstKey)
-        console.log(`Page cache evicted oldest entry: ${firstKey}`)
       }
     }
 
@@ -159,7 +157,6 @@ class PageCache {
     this.cache.delete(normalizedUrl)
     this.cache.set(normalizedUrl, cached)
 
-    console.log(`Page cache updated metadata for: ${normalizedUrl}`)
     await this.persist()
   }
 
@@ -190,7 +187,6 @@ class PageCache {
       const firstKey = this.cache.keys().next().value
       if (firstKey) {
         this.cache.delete(firstKey)
-        console.log(`Page cache evicted oldest entry: ${firstKey}`)
       }
     }
 
@@ -198,7 +194,6 @@ class PageCache {
     this.cache.delete(normalizedUrl)
     this.cache.set(normalizedUrl, cached)
 
-    console.log(`Page cache updated content for: ${normalizedUrl}`)
     await this.persist()
   }
 
@@ -221,7 +216,6 @@ class PageCache {
       const firstKey = this.cache.keys().next().value
       if (firstKey) {
         this.cache.delete(firstKey)
-        console.log(`Page cache evicted oldest entry: ${firstKey}`)
       }
     }
 
@@ -229,7 +223,6 @@ class PageCache {
     this.cache.delete(normalizedUrl)
     this.cache.set(normalizedUrl, cached)
 
-    console.log(`Page cache updated for: ${normalizedUrl}`)
     await this.persist()
   }
 
@@ -240,7 +233,6 @@ class PageCache {
     await this.init()
     this.cache.clear()
     await this.persist()
-    console.log('Page cache cleared')
   }
 
   /**

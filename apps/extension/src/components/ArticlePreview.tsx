@@ -182,7 +182,6 @@ export function ArticlePreview({
       // Check if save is still pending
       if (isPending) {
         // Cancel the pending save
-        console.log('Cancelling pending save for:', currentUrl)
         cancelSave(currentUrl)
         setOptimisticallySaved(false)
         toast.success('Article removed')
@@ -191,8 +190,6 @@ export function ArticlePreview({
 
       // If article is already saved, update it if there are changes
       if (savedArticle && hasUnsavedChanges) {
-        console.log('Updating saved article with new note/priority:', currentUrl)
-        console.log('Update data:', { priority, note })
         try {
           await ApiClient.rss.updateArticle(
             savedArticle.id,
@@ -224,11 +221,9 @@ export function ArticlePreview({
       }
 
       // Unsave article (this case shouldn't happen now, but keep for safety)
-      console.log('Attempting to unsave article:', currentUrl)
       setIsUnsaving(true)
       try {
         await unsaveArticle(currentUrl)
-        console.log('Article unsaved successfully')
         setSavedArticle(null) // Clear saved article state
         setOptimisticallySaved(false) // Clear optimistic state
         toast.success('Article removed')
@@ -242,7 +237,6 @@ export function ArticlePreview({
       }
     } else {
       // Save article - set optimistic state immediately
-      console.log('Saving article:', currentUrl)
       setOptimisticallySaved(true)
       const options: Partial<SaveOptions> = {
         title: customTitle || undefined,

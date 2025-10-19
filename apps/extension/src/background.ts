@@ -33,8 +33,6 @@ interface PageMetadataResponse {
 
 // Note: ApiExtensionClient auto-configures itself from extension storage
 
-console.log(`Readspace background script loaded on ${getBrowserName()}`)
-
 // ApiExtensionClient will auto-configure on first use
 
 // Check if URL is supported (http/https)
@@ -120,16 +118,12 @@ async function updateFeedBadge(tabId: number, feedCount: number) {
 // Handle OAuth callback from Google login
 async function handleOAuthCallback(url: string, tabId: number) {
   try {
-    console.log('OAuth callback detected:', url)
-
     // Extract tokens from URL
     const { access_token, refresh_token } = extractOAuthTokens(url)
 
     if (!access_token || !refresh_token) {
       throw new Error('No OAuth tokens found in callback URL')
     }
-
-    console.log('OAuth tokens extracted successfully')
 
     // Get Supabase configuration from storage
     const storageData = await browser.storage.local.get('readspace-extension')
@@ -160,8 +154,6 @@ async function handleOAuthCallback(url: string, tabId: number) {
     })
 
     if (error) throw error
-
-    console.log('OAuth session set successfully')
 
     // Store session in chrome.storage for persistence
     await browser.storage.local.set({
@@ -218,8 +210,6 @@ async function validateAndUpdateFeeds(
   url: string,
   feeds: Array<{ url: string; title?: string; type: string }>
 ): Promise<void> {
-  console.log(`Validating ${feeds.length} feeds in background for ${url}`)
-
   // Validate feeds in parallel (with concurrency limit of 3 to avoid overwhelming the browser)
   const validFeeds: Array<{ url: string; title?: string; type: string }> = []
 
@@ -235,19 +225,12 @@ async function validateAndUpdateFeeds(
     results.forEach(({ feed, isValid }) => {
       if (isValid) {
         validFeeds.push(feed)
-        console.log(`✓ Feed validated: ${feed.url}`)
-      } else {
-        console.log(`✗ Feed invalid: ${feed.url}`)
       }
     })
   }
 
   // Update caches with validated feeds only if we found valid feeds
   if (validFeeds.length > 0 && validFeeds.length !== feeds.length) {
-    console.log(
-      `Updating caches with ${validFeeds.length} validated feeds (filtered from ${feeds.length})`
-    )
-
     // Update legacy cache
     const legacyCached = metadataCache.get(tabId)
     if (legacyCached) {
@@ -265,7 +248,6 @@ async function validateAndUpdateFeeds(
     // Update badge with validated count
     await updateFeedBadge(tabId, validFeeds.length)
   } else if (validFeeds.length === 0) {
-    console.log('No valid feeds found after validation')
     // Clear feed list if nothing is valid
     const legacyCached = metadataCache.get(tabId)
     if (legacyCached) {
@@ -280,8 +262,6 @@ async function validateAndUpdateFeeds(
     }
 
     await updateFeedBadge(tabId, 0)
-  } else {
-    console.log('All feeds are valid, no cache update needed')
   }
 }
 
@@ -304,9 +284,6 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       // Try to use cached metadata first to update badge immediately
       const cachedMetadata = await pageCache.getMetadata(tab.url)
       if (cachedMetadata?.feeds) {
-        console.log(
-          `Using cached metadata for badge, found ${cachedMetadata.feeds.length} feeds`
-        )
         await updateFeedBadge(tabId, cachedMetadata.feeds.length)
       }
 
@@ -323,17 +300,12 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
           await pageCache.setMetadata(tab.url!, metadata as CachedPageMetadata)
 
           const feedCount = metadata?.feeds?.length || 0
-          console.log(
-            `Found ${feedCount} feeds on tab ${tabId}, metadata cached for ${tab.url}`,
-            metadata?.feeds
-          )
-
           await updateFeedBadge(tabId, feedCount)
 
           // Validate suggested feeds in background and update cache with only valid feeds
           if (metadata?.feeds && metadata.feeds.length > 0) {
-            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch((error) => {
-              console.log('Failed to validate feeds in background:', error)
+            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch(() => {
+              // Silently fail - feed validation is not critical
             })
           }
 
@@ -346,20 +318,12 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
             if (content) {
               contentCache.set(tabId, content)
               await pageCache.setContent(tab.url!, content as CachedPageContent)
-              console.log(
-                `Content cached for tab ${tabId} (${tab.url}), reading time: ${content.estimated_read_time || 0} min`
-              )
             }
-          } catch (contentError) {
-            console.log('Could not extract content for caching:', contentError)
+          } catch {
             // Non-critical, just continue
           }
-        } catch (error) {
+        } catch {
           // Content script might not be available yet, ignore error
-          console.log(
-            'Could not check for feeds, content script not available:',
-            error
-          )
           await updateFeedBadge(tabId, 0)
         }
       }, 500) // Reduced timeout for faster metadata extraction
@@ -393,7 +357,6 @@ browser.runtime.onInstalled.addListener(async () => {
       title: 'Save to Readspace',
       contexts: ['page', 'link', 'selection'],
     })
-    console.log('Context menu created successfully')
   } catch (error) {
     console.error('Failed to create context menu:', error)
   }
@@ -425,7 +388,6 @@ browser.commands.onCommand.addListener((command: string) => {
     .then((tabs: browser.Tabs.Tab[]) => {
       const tab = tabs[0]
       if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
-        console.log('Keyboard shortcut used on unsupported page:', tab?.url)
         browser.notifications.create('unsupported-shortcut', {
           type: 'basic',
           iconUrl: 'icons/icon-48.png',
@@ -555,21 +517,11 @@ browser.runtime.onMessage.addListener(
             messageRequest.url || sender.tab.url,
             sender.tab
           )
-        } else {
-          console.log(
-            'Save article requested from unsupported page:',
-            sender.tab?.url
-          )
         }
         break
       case 'discoverFeeds':
         if (sender.tab?.url && isSupportedUrl(sender.tab.url)) {
           handleDiscoverFeeds(sender.tab)
-        } else {
-          console.log(
-            'Feed discovery requested from unsupported page:',
-            sender.tab?.url
-          )
         }
         break
     }
@@ -580,26 +532,8 @@ browser.runtime.onMessage.addListener(
 
 async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
   try {
-    console.log('handleSaveToReadspace called with:', {
-      url,
-      tabId: tab?.id,
-      tabTitle: tab?.title,
-    })
-
-    console.log('Saving article to Readspace...')
-
-    console.log('Extracting content from page...')
     // Extract content from the page
     const content = await handleExtractContent(tab?.id, url)
-    console.log('Content extraction result:', {
-      hasContent: !!content,
-      contentLength: content?.content?.length || 0,
-      contentPreview: content?.content?.substring(0, 100) + '...',
-      title: content?.title,
-      description: content?.description,
-      author: content?.author,
-      fullContent: content,
-    })
 
     const trimmedData = trimSaveArticleRequest({
       url,
@@ -626,11 +560,8 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
         : undefined,
     }
 
-    console.log('Saving to Readspace API with request:', requestBody)
-
     // Save to Readspace API
-    const responseData = await ApiClient.rss.saveArticle(requestBody)
-    console.log('Article saved successfully:', responseData)
+    await ApiClient.rss.saveArticle(requestBody)
 
     browser.notifications.create('save-success', {
       type: 'basic',
@@ -654,24 +585,15 @@ async function handleExtractContent(
   url?: string
 ): Promise<ContentExtractionResult | null> {
   if (!tabId) {
-    console.log('handleExtractContent: no tabId provided')
     return null
   }
 
   try {
-    console.log('handleExtractContent: sending message to content script', {
-      tabId,
-      url,
-    })
     // Send message to content script to extract content
     const content = (await browser.tabs.sendMessage(tabId, {
       action: 'extractContent',
       url,
     })) as ContentExtractionResult
-    console.log(
-      'handleExtractContent: received response from content script:',
-      content
-    )
     return content
   } catch (error) {
     console.error('Failed to extract content:', error)
@@ -689,7 +611,6 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
 
     if (feeds?.length > 0) {
       // TODO: Show feed subscription interface
-      console.log('Discovered feeds:', feeds)
     } else {
       browser.notifications.create('no-feeds', {
         type: 'basic',
@@ -709,8 +630,6 @@ async function handleOpenReadspace() {
 }
 
 async function handleEmailPasswordLogin(email: string, password: string): Promise<{ success: boolean; error?: string; access_token?: string }> {
-  console.log('🔐 Background script: Starting email/password login...')
-
   try {
     // Get settings from storage
     const store = await storage.get<{
@@ -741,8 +660,6 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
       throw new Error('Failed to initialize Supabase client')
     }
 
-    console.log('🔑 Signing in with email/password...')
-
     // Sign in with email/password
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -754,8 +671,6 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
     if (!data.session?.access_token) {
       throw new Error('No access token received')
     }
-
-    console.log('✅ Email/password sign-in successful, storing session...')
 
     // Update the settings in storage with the access token
     const updatedSettings = {
@@ -770,8 +685,6 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
       settings: updatedSettings,
       isAuthenticated: true,
     })
-
-    console.log('✅ Login completed successfully!')
 
     return {
       success: true,
@@ -791,9 +704,7 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
 }
 
 async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; access_token?: string }> {
-  console.log('🔐 Background script: Starting Google OAuth flow...')
-
-  try {
+  try{
     // Get settings from storage
     const store = await storage.get<{
       settings?: {
@@ -834,7 +745,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
 
     // Get the redirect URL - works for both Chrome and Firefox
     const redirectUri = browser.identity.getRedirectURL()
-    console.log('🔗 OAuth Redirect URI:', redirectUri)
     const scopes = manifest.oauth2?.scopes || ['openid', 'email', 'profile']
 
     // Construct Google OAuth URL
@@ -844,8 +754,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     url.searchParams.set('access_type', 'offline')
     url.searchParams.set('redirect_uri', redirectUri)
     url.searchParams.set('scope', scopes.join(' '))
-
-    console.log('🚀 Launching OAuth flow...')
 
     // Launch browser's native auth flow (works in both Chrome and Firefox)
     const redirectedTo = await browser.identity.launchWebAuthFlow({
@@ -857,8 +765,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
       throw new Error('Authentication was cancelled or failed')
     }
 
-    console.log('✅ OAuth flow completed, extracting token...')
-
     // Extract ID token from redirect URL
     const redirectUrl = new URL(redirectedTo)
     const params = new URLSearchParams(redirectUrl.hash.substring(1))
@@ -867,8 +773,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
     if (!idToken) {
       throw new Error('No ID token received from Google')
     }
-
-    console.log('🔑 ID token received, signing in to Supabase...')
 
     // Initialize Supabase client
     const supabase = getSupabaseClient(
@@ -892,8 +796,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
       throw new Error('No access token received from Supabase')
     }
 
-    console.log('✅ Supabase sign-in successful, storing session...')
-
     // Update the settings in storage with the access token
     const updatedSettings = {
       ...(store?.settings || {}),
@@ -908,8 +810,6 @@ async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; 
       settings: updatedSettings,
       isAuthenticated: true,
     })
-
-    console.log('✅ OAuth flow completed successfully!')
 
     return {
       success: true,
