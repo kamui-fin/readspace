@@ -1,7 +1,7 @@
 import { Button } from '@/components/ui/button'
 import type { DiscoveredFeed } from '@readspace/shared'
 import { areUrlsEqual } from '@readspace/shared'
-import { Rss } from 'lucide-react'
+import { Rss, Trash2 } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { FeedSubscriptionModal } from './FeedSubscriptionModal'
 import { useExtensionStore } from '@/store'
@@ -168,24 +168,32 @@ export function FeedDiscoveryCard({
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleFollowClick}
-              disabled={isUnfollowing}
+              disabled={isUnfollowing || isPendingFollow}
               size="sm"
-              variant={isFollowing && !isUnfollowing ? 'outline' : 'default'}
+              variant={isFollowing && !isUnfollowing && !isPendingFollow ? 'outline' : 'default'}
               className={`flex-shrink-0 w-[100px] ${
-                isFollowing && !isUnfollowing
+                isFollowing && !isUnfollowing && !isPendingFollow
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                  : !isFollowing && !isUnfollowing
+                  : !isFollowing && !isUnfollowing && !isPendingFollow
                     ? 'bg-orange-500 hover:bg-orange-600 text-white'
                     : ''
               }`}
             >
-              {isUnfollowing ? (
+              {isPendingFollow ? (
+                <div className="flex items-center justify-center">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
+                  <span>Following...</span>
+                </div>
+              ) : isUnfollowing ? (
                 <div className="flex items-center justify-center">
                   <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                   <span>Unfollowing...</span>
                 </div>
               ) : isFollowing ? (
-                'Unfollow'
+                <div className="flex items-center justify-center">
+                  <Trash2 className="w-3 h-3 mr-1.5" />
+                  <span>Unfollow</span>
+                </div>
               ) : (
                 'Follow'
               )}
