@@ -165,15 +165,18 @@ export function FeedDiscoveryCard({
               onClick={handleFollowClick}
               disabled={isUnfollowing}
               size="sm"
-              className={`flex-shrink-0 w-[100px] ${isFollowing ? 'bg-orange-500/80 hover:bg-orange-600/90 text-white' : 'bg-orange-500 hover:bg-orange-600 text-white'}`}
+              variant={isFollowing && !isUnfollowing ? 'outline' : 'default'}
+              className={`flex-shrink-0 w-[100px] ${
+                isFollowing && !isUnfollowing ? 'hover:bg-primary/10 dark:hover:bg-primary/20' : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
             >
               {isUnfollowing ? (
-                <div className="flex items-center justify-center px-4">
-                  <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin mr-1.5" />
+                <div className="flex items-center justify-center">
+                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                   <span>Unfollowing...</span>
                 </div>
               ) : isFollowing ? (
-                <div className="flex items-center justify-center px-4">
+                <div className="flex items-center justify-center">
                   <Check className="w-3 h-3 mr-1.5" />
                   <span>Following</span>
                 </div>

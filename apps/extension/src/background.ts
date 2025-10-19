@@ -1,6 +1,6 @@
 // Background script for Readspace extension
 import { ApiClient } from '@/lib/api-client'
-import { browser, getBrowserName, identity, storage } from '@/lib/browser'
+import { browser, identity, storage } from '@/lib/browser'
 import type { CachedPageContent, CachedPageMetadata } from '@/lib/page-cache'
 import { pageCache } from '@/lib/page-cache'
 import { getSupabaseClient } from '@/lib/supabase'
@@ -631,17 +631,18 @@ async function handleOpenReadspace() {
 
 async function handleEmailPasswordLogin(email: string, password: string): Promise<{ success: boolean; error?: string; access_token?: string }> {
   try {
-    // Get settings from storage
-    const store = await storage.get<{
-      settings?: {
-        supabase_url?: string
-        supabase_anon_key?: string
-      }
-    }>('readspace-extension')
+    // Get settings from storage (Zustand stores as JSON string)
+    const rawStore = await storage.get('readspace-extension')
+
+    // Parse the JSON string to get the actual store object
+    let store: any = rawStore
+    if (typeof rawStore === 'string') {
+      store = JSON.parse(rawStore)
+    }
 
     // Use stored settings or fall back to defaults
-    const supabaseUrl = store?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
-    const supabaseAnonKey = store?.settings?.supabase_anon_key ||
+    const supabaseUrl = store?.state?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey = store?.state?.settings?.supabase_anon_key ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
 
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -705,20 +706,20 @@ async function handleEmailPasswordLogin(email: string, password: string): Promis
 
 async function handleGoogleOAuth(): Promise<{ success: boolean; error?: string; access_token?: string }> {
   try{
-    // Get settings from storage
-    const store = await storage.get<{
-      settings?: {
-        supabase_url?: string
-        supabase_anon_key?: string
-        google_client_id?: string
-      }
-    }>('readspace-extension')
+    // Get settings from storage (Zustand stores as JSON string)
+    const rawStore = await storage.get('readspace-extension')
+
+    // Parse the JSON string to get the actual store object
+    let store: any = rawStore
+    if (typeof rawStore === 'string') {
+      store = JSON.parse(rawStore)
+    }
 
     // Use stored settings or fall back to defaults
-    const supabaseUrl = store?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
-    const supabaseAnonKey = store?.settings?.supabase_anon_key ||
+    const supabaseUrl = store?.state?.settings?.supabase_url || 'https://hnqyngkyugiamvlhqoaf.supabase.co'
+    const supabaseAnonKey = store?.state?.settings?.supabase_anon_key ||
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhucXluZ2t5dWdpYW12bGhxb2FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAzODIwNDMsImV4cCI6MjA2NTk1ODA0M30.iu6pCWAX5ofuSumz6V0VwKNSEh88XDJ2RCC_iTln0xs'
-    const googleClientId = store?.settings?.google_client_id || '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com'
+    const googleClientId = store?.state?.settings?.google_client_id || '618963664803-spg7g7mmlqj1lm47nph2ct16m7318u1e.apps.googleusercontent.com'
 
     if (!supabaseUrl || !supabaseAnonKey) {
       throw new Error(

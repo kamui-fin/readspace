@@ -1,12 +1,12 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { ApiClient } from '@/lib/api-client'
 import { useExtensionStore } from '@/store'
 import { DiscoveredFeed, Folder } from '@readspace/shared'
-import { BellPlus, ChevronDown, ChevronUp, Rss, X, FolderPlus, Pencil, Check, Folder as FolderIcon, Trash2 } from 'lucide-react'
+import { BellPlus, Check, ChevronDown, ChevronUp, Folder as FolderIcon, FolderPlus, Pencil, Rss, Trash2, X } from 'lucide-react'
 import React, { useState } from 'react'
 import toast from 'react-hot-toast'
-import { ApiClient } from '@/lib/api-client'
 
 interface FeedSubscriptionModalProps {
   feeds: DiscoveredFeed[]
@@ -218,6 +218,9 @@ export function FeedSubscriptionModal({
       return
     }
 
+    // Capture the feed URL before closing modal to prevent stale closure
+    const feedUrlToSubscribe = selectedFeed.url
+
     // Optimistic update - show success immediately and close modal
     toast.success('Successfully subscribed to RSS feed!')
     onSuccess?.()
@@ -225,7 +228,8 @@ export function FeedSubscriptionModal({
 
     // Start the API call synchronously (don't await) so AbortController is created immediately
     // This allows the follow to be cancelled if user clicks "Following" quickly
-    subscribeToFeed(selectedFeed.url, {
+    // Use captured feed URL instead of selectedFeed.url
+    subscribeToFeed(feedUrlToSubscribe, {
       folder_id: selectedFolderId,
     })
       .then(async () => {
@@ -257,277 +261,275 @@ export function FeedSubscriptionModal({
       )}
 
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-          <h2 className="text-lg font-semibold">Subscribe to Feed</h2>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onClose}
-            className="h-8 w-8 p-0"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-4 overflow-y-auto flex-1">
-          {/* Feed Preview */}
-          <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-3">
-            <div className="flex items-center gap-2">
-              <div className="bg-orange-500 rounded-full p-1.5 flex-shrink-0">
-                <Rss className="w-3 h-3 text-white" />
-              </div>
-              <h3 className="font-medium text-sm truncate flex-1">
-                {getFeedDisplayName(selectedFeed)}
-              </h3>
-              <Badge variant="outline" className="text-xs">
-                {selectedFeed?.type.toUpperCase()}
-              </Badge>
-            </div>
-            {selectedFeed?.description && (
-              <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
-                {selectedFeed.description}
-              </p>
-            )}
+        <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+            <h2 className="text-lg font-semibold">Subscribe to Feed</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0"
+            >
+              <X className="w-4 h-4" />
+            </Button>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Advanced: Feed Selection (only show if multiple feeds) */}
-            {feeds.length > 1 && (
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowAdvanced(!showAdvanced)}
-                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full"
-                >
-                  {showAdvanced ? (
-                    <ChevronUp className="w-4 h-4" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4" />
-                  )}
-                  <span>
-                    Advanced: Choose specific feed ({feeds.length} available)
-                  </span>
-                </button>
+          {/* Content */}
+          <div className="p-4 space-y-4 overflow-y-auto flex-1">
+            {/* Feed Preview */}
+            <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <div className="bg-orange-500 rounded-full p-1.5 flex-shrink-0">
+                  <Rss className="w-3 h-3 text-white" />
+                </div>
+                <h3 className="font-medium text-sm truncate flex-1">
+                  {getFeedDisplayName(selectedFeed)}
+                </h3>
+                <Badge variant="outline" className="text-xs">
+                  {selectedFeed?.type.toUpperCase()}
+                </Badge>
+              </div>
+              {selectedFeed?.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2 mt-2">
+                  {selectedFeed.description}
+                </p>
+              )}
+            </div>
 
-                {showAdvanced && (
-                  <div className="space-y-1 pl-6">
-                    {feeds.map((feed, index) => (
-                      <label
-                        key={index}
-                        className="flex items-start gap-2 p-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="feed"
-                          value={index}
-                          checked={selectedFeedIndex === index}
-                          onChange={() => setSelectedFeedIndex(index)}
-                          className="w-4 h-4 mt-0.5"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium truncate">
-                              {getFeedDisplayName(feed)}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {feed.type}
-                            </Badge>
-                          </div>
-                          {feed.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
-                              {feed.description}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Advanced: Feed Selection (only show if multiple feeds) */}
+              {feeds.length > 1 && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full"
+                  >
+                    {showAdvanced ? (
+                      <ChevronUp className="w-4 h-4" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4" />
+                    )}
+                    <span>
+                      Advanced: Choose specific feed ({feeds.length} available)
+                    </span>
+                  </button>
+
+                  {showAdvanced && (
+                    <div className="space-y-1 pl-6">
+                      {feeds.map((feed, index) => (
+                        <label
+                          key={index}
+                          className="flex items-start gap-2 p-2 rounded border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            name="feed"
+                            value={index}
+                            checked={selectedFeedIndex === index}
+                            onChange={() => setSelectedFeedIndex(index)}
+                            className="w-4 h-4 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium truncate">
+                                {getFeedDisplayName(feed)}
+                              </span>
+                              <Badge variant="outline" className="text-xs">
+                                {feed.type}
+                              </Badge>
+                            </div>
+                            {feed.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
+                                {feed.description}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground/70 line-clamp-1 mt-0.5 font-mono">
+                              {feed.url}
                             </p>
-                          )}
-                          <p className="text-xs text-muted-foreground/70 line-clamp-1 mt-0.5 font-mono">
-                            {feed.url}
-                          </p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {/* Folder Selection */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium">
-                  Folder <span className="text-red-500">*</span>
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingFolder(true)}
-                  className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
-                >
-                  <FolderPlus className="w-3.5 h-3.5" />
-                  New Folder
-                </button>
-              </div>
+              {/* Folder Selection */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium">
+                    Folder <span className="text-red-500">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreatingFolder(true)}
+                    className="text-xs text-primary hover:text-primary/80 flex items-center gap-1 transition-colors"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    New Folder
+                  </button>
+                </div>
 
-              <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                {folders.map((folder) => (
-                  <div
-                    key={folder.id}
-                    className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
-                      selectedFolderId === folder.id
+                <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                  {folders.map((folder) => (
+                    <div
+                      key={folder.id}
+                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${selectedFolderId === folder.id
                         ? 'bg-primary/10 border-primary/40 shadow-sm'
                         : 'hover:bg-accent/50 border-border hover:border-border/60'
-                    }`}
-                    onClick={() => !editingFolderId && setSelectedFolderId(folder.id)}
-                  >
-                    {editingFolderId === folder.id ? (
-                      <>
-                        <div className="bg-muted rounded p-1 flex-shrink-0">
-                          <FolderIcon className="w-3.5 h-3.5 text-muted-foreground" />
-                        </div>
-                        <input
-                          type="text"
-                          value={editingFolderName}
-                          onChange={(e) => setEditingFolderName(e.target.value)}
-                          onClick={(e) => e.stopPropagation()}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRenameFolder(folder.id)
-                            if (e.key === 'Escape') cancelEditing()
-                          }}
-                          className="flex-1 px-2 py-1 text-sm bg-transparent border-b border-primary/30 focus:border-primary outline-none"
-                          autoFocus
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRenameFolder(folder.id)
-                          }}
-                          className="text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10 transition-colors flex-shrink-0"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            cancelEditing()
-                          }}
-                          className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className={`rounded p-1 flex-shrink-0 transition-colors ${
-                          selectedFolderId === folder.id
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          <FolderIcon className="w-3.5 h-3.5" />
-                        </div>
-                        <span className="flex-1 text-sm font-medium">{folder.name}</span>
-                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        }`}
+                      onClick={() => !editingFolderId && setSelectedFolderId(folder.id)}
+                    >
+                      {editingFolderId === folder.id ? (
+                        <>
+                          <div className="bg-muted rounded p-1 flex-shrink-0">
+                            <FolderIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                          </div>
+                          <input
+                            type="text"
+                            value={editingFolderName}
+                            onChange={(e) => setEditingFolderName(e.target.value)}
+                            onClick={(e) => e.stopPropagation()}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleRenameFolder(folder.id)
+                              if (e.key === 'Escape') cancelEditing()
+                            }}
+                            className="flex-1 px-2 py-1 text-sm bg-transparent border-b border-primary/30 focus:border-primary outline-none"
+                            autoFocus
+                          />
                           <button
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation()
-                              startEditingFolder(folder)
+                              handleRenameFolder(folder.id)
+                            }}
+                            className="text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10 transition-colors flex-shrink-0"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              cancelEditing()
                             }}
                             className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
-                            title="Rename folder"
                           >
-                            <Pencil className="w-3 h-3" />
+                            <X className="w-3.5 h-3.5" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleDeleteFolder(folder)
-                            }}
-                            className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-destructive/10 transition-colors flex-shrink-0"
-                            title="Delete folder"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                ))}
-
-                {/* Create New Folder Input */}
-                {isCreatingFolder && (
-                  <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-primary/40 bg-primary/10 shadow-sm">
-                    <div className="bg-primary rounded p-1 flex-shrink-0">
-                      <FolderIcon className="w-3.5 h-3.5 text-primary-foreground" />
+                        </>
+                      ) : (
+                        <>
+                          <div className={`rounded p-1 flex-shrink-0 transition-colors ${selectedFolderId === folder.id
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted text-muted-foreground'
+                            }`}>
+                            <FolderIcon className="w-3.5 h-3.5" />
+                          </div>
+                          <span className="flex-1 text-sm font-medium">{folder.name}</span>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                startEditingFolder(folder)
+                              }}
+                              className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
+                              title="Rename folder"
+                            >
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteFolder(folder)
+                              }}
+                              className="text-muted-foreground hover:text-destructive p-1 rounded hover:bg-destructive/10 transition-colors flex-shrink-0"
+                              title="Delete folder"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                    <input
-                      type="text"
-                      value={newFolderName}
-                      onChange={(e) => setNewFolderName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleCreateFolder()
-                        if (e.key === 'Escape') {
+                  ))}
+
+                  {/* Create New Folder Input */}
+                  {isCreatingFolder && (
+                    <div className="flex items-center gap-2.5 p-2.5 rounded-lg border border-primary/40 bg-primary/10 shadow-sm">
+                      <div className="bg-primary rounded p-1 flex-shrink-0">
+                        <FolderIcon className="w-3.5 h-3.5 text-primary-foreground" />
+                      </div>
+                      <input
+                        type="text"
+                        value={newFolderName}
+                        onChange={(e) => setNewFolderName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleCreateFolder()
+                          if (e.key === 'Escape') {
+                            setIsCreatingFolder(false)
+                            setNewFolderName('')
+                          }
+                        }}
+                        placeholder="Enter folder name..."
+                        className="flex-1 px-2 py-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleCreateFolder}
+                        className="text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10 transition-colors flex-shrink-0"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
                           setIsCreatingFolder(false)
                           setNewFolderName('')
-                        }
-                      }}
-                      placeholder="Enter folder name..."
-                      className="flex-1 px-2 py-1 text-sm bg-transparent outline-none placeholder:text-muted-foreground/60"
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCreateFolder}
-                      className="text-primary hover:text-primary/80 p-1 rounded hover:bg-primary/10 transition-colors flex-shrink-0"
-                    >
-                      <Check className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsCreatingFolder(false)
-                        setNewFolderName('')
-                      }}
-                      className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                )}
+                        }}
+                        className="text-muted-foreground hover:text-foreground p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
 
-                {folders.length === 0 && !isCreatingFolder && (
-                  <p className="text-sm text-muted-foreground py-2 text-center">
-                    No folders yet. Click "New Folder" to create one.
-                  </p>
-                )}
+                  {folders.length === 0 && !isCreatingFolder && (
+                    <p className="text-sm text-muted-foreground py-2 text-center">
+                      No folders yet. Click "New Folder" to create one.
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Actions */}
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={!selectedFolderId}
-                className="flex-1"
-              >
-                <BellPlus className="w-3 h-3 mr-2" />
-                Subscribe
-              </Button>
-            </div>
-          </form>
+              {/* Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={!selectedFolderId}
+                  className="flex-1"
+                >
+                  <BellPlus className="w-3 h-3 mr-2" />
+                  Subscribe
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       </div>
-    </div>
     </>
   )
 }

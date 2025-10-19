@@ -12,7 +12,8 @@ import {
 import { ApiClient, configureExtensionApiClient, setStoreGetter } from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
+import { browser } from '@/lib/browser'
 
 interface ExtensionState {
   // Settings
@@ -62,6 +63,7 @@ interface ExtensionState {
     options?: { folder_id?: string }
   ) => Promise<void>
   unsubscribeFromFeed: (feedId: string) => Promise<void>
+  checkArticleSaved: (url: string) => Promise<Article | null>
   isArticleSaved: (url: string) => boolean
   isArticlePendingSave: (url: string) => boolean
   unsaveArticle: (url: string) => Promise<void>
@@ -79,6 +81,36 @@ const defaultSettings: ExtensionSettings = {
   auto_save: false,
   show_reading_time: true,
   theme: 'system',
+}
+
+// Custom storage adapter for browser extensions
+// Zustand persist uses localStorage by default, which doesn't work in extension service workers
+const extensionStorage: StateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      const result = await browser.storage.local.get(name)
+      const value = result[name]
+      // Zustand createJSONStorage expects a string or null
+      return typeof value === 'string' ? value : null
+    } catch (error) {
+      console.error('Error reading from extension storage:', error)
+      return null
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      await browser.storage.local.set({ [name]: value })
+    } catch (error) {
+      console.error('Error writing to extension storage:', error)
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await browser.storage.local.remove(name)
+    } catch (error) {
+      console.error('Error removing from extension storage:', error)
+    }
+  },
 }
 
 export const useExtensionStore = create<ExtensionState>()(
@@ -348,6 +380,29 @@ export const useExtensionStore = create<ExtensionState>()(
         }
       },
 
+      checkArticleSaved: async (url: string) => {
+        const { isAuthenticated } = get()
+        if (!isAuthenticated) return null
+
+        try {
+          const article = (await ApiClient.rss.checkArticleSaved(url)) as Article | null
+
+          // Update local state if article is saved
+          if (article) {
+            const newSavedUrls = new Set(get().savedArticleUrls)
+            newSavedUrls.add(url)
+            const newSavedIds = new Map(get().savedArticleIds)
+            newSavedIds.set(url, article.id)
+            set({ savedArticleUrls: newSavedUrls, savedArticleIds: newSavedIds })
+          }
+
+          return article
+        } catch (error) {
+          console.error('Failed to check if article is saved:', error)
+          return null
+        }
+      },
+
       isArticleSaved: (url: string) => {
         return get().savedArticleUrls.has(url)
       },
@@ -517,6 +572,7 @@ export const useExtensionStore = create<ExtensionState>()(
     }),
     {
       name: 'readspace-extension',
+      storage: createJSONStorage(() => extensionStorage),
       partialize: (state) => ({
         settings: state.settings,
         user: state.user,

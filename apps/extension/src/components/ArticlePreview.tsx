@@ -122,11 +122,11 @@ export function ArticlePreview({
 
         // Prefill form fields if article is already saved
         if (result) {
-          if (result.content?.title && !customTitle) {
-            setCustomTitle(result.content.title)
+          if (result.title && !customTitle) {
+            setCustomTitle(result.title)
           }
           const savedNote = result.note || ''
-          const savedPriority = result.priority || 'low'
+          const savedPriority = (result.priority || 'low') as Priority
 
           setNote(savedNote)
           setPriority(savedPriority)
@@ -255,6 +255,49 @@ export function ArticlePreview({
     setIsEditingTitle(true)
   }
 
+  // Show minimal card for read articles
+  if (savedArticle?.is_read && savedArticle?.read_at) {
+    const readDate = new Date(savedArticle.read_at)
+    const formattedDate = readDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    })
+    const formattedTime = readDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })
+
+    return (
+      <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-4">
+        <div className="flex items-center gap-3">
+          {/* Icon with checkmark indicator */}
+          <div className="bg-secondary/10 border border-secondary/30 rounded-full p-2 flex-shrink-0 relative">
+            <BookOpen className="w-4 h-4 text-secondary" />
+            <div className="absolute -top-0.5 -right-0.5 bg-secondary rounded-full p-0.5">
+              <Check className="w-2 h-2 text-secondary-foreground" />
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center">
+            <h3 className="font-semibold text-sm text-secondary">
+              Article read
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {domain}
+              {readingTime && ` • ${readingTime} min read`}
+            </p>
+            <p className="text-xs text-secondary/80 font-medium mt-0.5">
+              Read on {formattedDate} at {formattedTime}
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-4">
       {/* Header - always visible */}
@@ -272,12 +315,6 @@ export function ArticlePreview({
           <p className="text-xs text-muted-foreground line-clamp-2">
             {domain}
             {readingTime && ` • ${readingTime} min read`}
-            {savedArticle?.is_read && (
-              <span className="text-green-600 dark:text-green-400"> • Read</span>
-            )}
-            {savedArticle?.read_at && (
-              <span> • {new Date(savedArticle.read_at).toLocaleDateString()}</span>
-            )}
           </p>
         </div>
 
