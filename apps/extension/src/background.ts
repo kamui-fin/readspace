@@ -40,35 +40,6 @@ function isSupportedUrl(url: string): boolean {
   return url.startsWith('http://') || url.startsWith('https://')
 }
 
-// Validate if a URL is a valid RSS/Atom feed using HEAD request
-async function validateFeedUrl(url: string): Promise<boolean> {
-  try {
-    const response = await fetch(url, {
-      method: 'HEAD',
-      signal: AbortSignal.timeout(3000),
-    })
-
-    if (!response.ok) {
-      return false
-    }
-
-    const contentType =
-      response.headers.get('content-type')?.toLowerCase() || ''
-
-    // Check if content type indicates a feed
-    return (
-      contentType.includes('xml') ||
-      contentType.includes('rss') ||
-      contentType.includes('atom') ||
-      contentType.includes('json') ||
-      contentType.includes('application/rss') ||
-      contentType.includes('application/atom')
-    )
-  } catch {
-    return false
-  }
-}
-
 // Update badge with RSS feed count
 async function updateFeedBadge(tabId: number, feedCount: number) {
   try {
@@ -203,69 +174,6 @@ async function handleOAuthCallback(url: string, tabId: number) {
 const metadataCache = new Map<number, PageMetadataResponse>()
 const contentCache = new Map<number, ContentExtractionResult>()
 
-/**
- * Validate suggested feeds in background and update caches with only valid feeds
- */
-async function validateAndUpdateFeeds(
-  tabId: number,
-  url: string,
-  feeds: Array<{ url: string; title?: string; type: string }>
-): Promise<void> {
-  // Validate feeds in parallel (with concurrency limit of 3 to avoid overwhelming the browser)
-  const validFeeds: Array<{ url: string; title?: string; type: string }> = []
-
-  for (let i = 0; i < feeds.length; i += 3) {
-    const batch = feeds.slice(i, i + 3)
-    const results = await Promise.all(
-      batch.map(async (feed) => {
-        const isValid = await validateFeedUrl(feed.url)
-        return { feed, isValid }
-      })
-    )
-
-    results.forEach(({ feed, isValid }) => {
-      if (isValid) {
-        validFeeds.push(feed)
-      }
-    })
-  }
-
-  // Update caches with validated feeds only if we found valid feeds
-  if (validFeeds.length > 0 && validFeeds.length !== feeds.length) {
-    // Update legacy cache
-    const legacyCached = metadataCache.get(tabId)
-    if (legacyCached) {
-      legacyCached.feeds = validFeeds
-      metadataCache.set(tabId, legacyCached)
-    }
-
-    // Update persistent cache
-    const persistentCached = await pageCache.getMetadata(url)
-    if (persistentCached) {
-      persistentCached.feeds = validFeeds
-      await pageCache.setMetadata(url, persistentCached)
-    }
-
-    // Update badge with validated count
-    await updateFeedBadge(tabId, validFeeds.length)
-  } else if (validFeeds.length === 0) {
-    // Clear feed list if nothing is valid
-    const legacyCached = metadataCache.get(tabId)
-    if (legacyCached) {
-      legacyCached.feeds = []
-      metadataCache.set(tabId, legacyCached)
-    }
-
-    const persistentCached = await pageCache.getMetadata(url)
-    if (persistentCached) {
-      persistentCached.feeds = []
-      await pageCache.setMetadata(url, persistentCached)
-    }
-
-    await updateFeedBadge(tabId, 0)
-  }
-}
-
 // Check for RSS feeds when tab is updated and cache metadata
 browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   // Check for OAuth callback first
@@ -282,12 +190,6 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
   if (changeInfo.status === 'complete' && tab.url && isSupportedUrl(tab.url)) {
     try {
-      // Try to use cached metadata first to update badge immediately
-      const cachedMetadata = await pageCache.getMetadata(tab.url)
-      if (cachedMetadata?.feeds) {
-        await updateFeedBadge(tabId, cachedMetadata.feeds.length)
-      }
-
       // Start metadata extraction immediately without delay for faster preloading
       setTimeout(async () => {
         try {
@@ -301,16 +203,10 @@ browser.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
           await pageCache.setMetadata(tab.url!, metadata as CachedPageMetadata)
 
           const feedCount = metadata?.feeds?.length || 0
-          await updateFeedBadge(tabId, feedCount)
 
-          // Validate suggested feeds in background and update cache with only valid feeds
-          if (metadata?.feeds && metadata.feeds.length > 0) {
-            validateAndUpdateFeeds(tabId, tab.url!, metadata.feeds).catch(
-              () => {
-                // Silently fail - feed validation is not critical
-              }
-            )
-          }
+          // Show badge with detected feed count
+          // Feeds are already validated in content script during discovery
+          await updateFeedBadge(tabId, feedCount)
 
           // Also extract and cache content for reading time (in background)
           try {

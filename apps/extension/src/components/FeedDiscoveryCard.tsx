@@ -171,7 +171,7 @@ export function FeedDiscoveryCard({
               disabled={isUnfollowing || isPendingFollow}
               size="sm"
               variant={isFollowing && !isUnfollowing && !isPendingFollow ? 'outline' : 'default'}
-              className={`flex-shrink-0 w-[100px] ${
+              className={`flex-shrink-0 min-w-[100px] ${
                 isFollowing && !isUnfollowing && !isPendingFollow
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
                   : !isFollowing && !isUnfollowing && !isPendingFollow
@@ -180,19 +180,19 @@ export function FeedDiscoveryCard({
               }`}
             >
               {isPendingFollow ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-                  <span>Following...</span>
+                <div className="flex items-center justify-center overflow-hidden">
+                  <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
+                  <span className="truncate">Following...</span>
                 </div>
               ) : isUnfollowing ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-                  <span>Unfollowing...</span>
+                <div className="flex items-center justify-center overflow-hidden">
+                  <div className="w-2.5 h-2.5 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5 flex-shrink-0" />
+                  <span className="truncate">Unfollowing...</span>
                 </div>
               ) : isFollowing ? (
-                <div className="flex items-center justify-center">
-                  <Trash2 className="w-3 h-3 mr-1.5" />
-                  <span>Unfollow</span>
+                <div className="flex items-center justify-center overflow-hidden">
+                  <Trash2 className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                  <span className="truncate">Unfollow</span>
                 </div>
               ) : (
                 'Follow'

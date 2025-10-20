@@ -81,6 +81,7 @@ export function Popup() {
     setCurrentPageMetadata,
     saveArticle,
     checkExistingSession,
+    loadUserData,
   } = useExtensionStore()
 
   const [currentView, setCurrentView] = useState<'main' | 'settings' | 'login'>(
@@ -224,6 +225,12 @@ export function Popup() {
     // Check for existing session on load
     checkExistingSession()
 
+    // Refresh user data (feeds, folders) to sync with webapp changes
+    // This ensures that if a feed was unfollowed in the webapp, it reflects here
+    if (isAuthenticated) {
+      loadUserData()
+    }
+
     // Get current tab information
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
@@ -241,7 +248,7 @@ export function Popup() {
         extractPageMetadata(tabs[0])
       }
     })
-  }, [checkExistingSession, extractPageMetadata])
+  }, [checkExistingSession, extractPageMetadata, isAuthenticated, loadUserData])
 
   const handleSaveArticle = async (options?: Partial<SaveOptions>) => {
     if (!currentTab?.url) return
