@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-primary: #386641;
+    --color-secondary: #6a994e;
+    --color-mid-grey: #f3f3f3;
+    --color-grey: #90988b;
+    --color-red: #ea4335;
+    --color-green-grey: #d1dbcd;
+    --color-light-grey: #f9f9f9;
+    --color-white: #ffffff;
+    --color-black: #232222;
+  }
+
+  .dark {
+    /* Dark mode color overrides can go here if needed */
+    --color-mid-grey: #2a2a2a;
+    --color-light-grey: #1a1a1a;
+    --color-white: #232222;
+    --color-black: #ffffff;
+    --color-grey: #b0b0b0;
+  }
+
+  /* Font family utilities */
+  .font-geist-mono {
+    font-family: 'GeistMono_400Regular';
+  }
+
+  .font-geist-mono-medium {
+    font-family: 'GeistMono_500Medium';
+  }
+
+  .font-geist-mono-semibold {
+    font-family: 'GeistMono_600SemiBold';
+  }
+
+  .font-geist-mono-bold {
+    font-family: 'GeistMono_700Bold';
+  }
+}
