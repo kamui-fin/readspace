@@ -1,12 +1,13 @@
 import { FeedListItem } from '@/components/FeedListItem';
 import { FolderPicker } from '@/components/FolderPicker';
+import { FeedListSkeleton } from '@/components/skeletons';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import { ApiClient, useCreateFeed, type SimilarFeedsResponse } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
@@ -18,13 +19,13 @@ export default function SimilarFeedsScreen() {
 
     const createFeed = useCreateFeed();
 
-    // Fetch similar feeds data
+    // Fetch similar feeds data (full list)
     const {
         data: similarData,
         isLoading,
         error,
     } = useQuery<SimilarFeedsResponse>({
-        queryKey: ['similar-feeds', id],
+        queryKey: ['similar-feeds-full', id, 20],
         queryFn: () => ApiClient.rss.getSimilarFeeds(id, { limit: 20 }),
         enabled: !!id,
     });
@@ -68,15 +69,29 @@ export default function SimilarFeedsScreen() {
     if (isLoading) {
         return (
             <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-                <View className="px-6 pt-2">
+                <View className="px-6 pb-4 pt-2">
                     <Pressable
                         onPress={handleBack}
                         className="mb-6 h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey">
                         <Monicon name="solar:alt-arrow-left-linear" size={24} color="#232222" />
                     </Pressable>
+
+                    {/* Title */}
+                    <View className="mb-2 h-8 w-48 rounded-md bg-mid-grey" />
+
+                    {/* Source Feed Info Skeleton */}
+                    <View className="mt-4 rounded-2xl bg-light-grey p-4">
+                        <View className="mb-2 h-4 w-32 rounded bg-mid-grey" />
+                        <View className="flex-row items-center gap-3">
+                            <View className="h-10 w-10 rounded-lg bg-mid-grey" />
+                            <View className="h-5 flex-1 rounded bg-mid-grey" />
+                        </View>
+                    </View>
                 </View>
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#6A994E" />
+
+                {/* Feed List Skeleton */}
+                <View className="flex-1 px-6">
+                    <FeedListSkeleton count={6} />
                 </View>
             </SafeAreaView>
         );

@@ -1,5 +1,6 @@
 import { ArticleListItem } from '@/components/ArticleListItem';
 import { Header } from '@/components/Header';
+import { ArticleListSkeleton } from '@/components/skeletons';
 import { useFeedViewStore } from '@/stores/feed-view';
 import { groupArticlesByDate } from '@/utils/dateUtils';
 import { LegendList } from '@legendapp/list';
@@ -325,9 +326,7 @@ export default function FollowingScreen() {
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
                 />
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#6A994E" />
-                </View>
+                <ArticleListSkeleton count={5} className="mt-28" />
             </SafeAreaView>
         );
     }

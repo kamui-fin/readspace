@@ -1,5 +1,6 @@
 import { ArticleMenuModal } from '@/components/ArticleMenuModal';
 import { ArticleReader } from '@/components/ArticleReader';
+import { ArticleReaderSkeleton } from '@/components/skeletons';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
@@ -13,7 +14,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, Share, Text, View } from 'react-native';
+import { Linking, Pressable, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
@@ -229,9 +230,16 @@ export default function ArticleScreen() {
     if (isArticleLoading) {
         return (
             <SafeAreaView edges={['top']} className="flex-1 bg-white">
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#6A994E" />
+                {/* Top Action Bar Skeleton */}
+                <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3">
+                    <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                    <View className="flex-row items-center gap-3">
+                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                    </View>
                 </View>
+                <ArticleReaderSkeleton />
             </SafeAreaView>
         );
     }

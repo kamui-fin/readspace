@@ -2,6 +2,7 @@ import { FeedListItem } from '@/components/FeedListItem';
 import { FolderPicker } from '@/components/FolderPicker';
 import { LanguagePicker, type Language } from '@/components/LanguagePicker';
 import { SearchBar } from '@/components/SearchBar';
+import { FeedListSkeleton } from '@/components/skeletons';
 import { Chip } from '@/components/ui/Chip';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
@@ -15,7 +16,6 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
     FlatList,
     Keyboard,
     Pressable,
@@ -168,6 +168,10 @@ export default function DiscoverScreen() {
 
     const handleLanguagePress = () => {
         languagePickerRef.current?.expand();
+    };
+
+    const handleLanguageChange = (language: string) => {
+        setSelectedLanguage(language as Language);
     };
 
     const handleRecentSearchPress = (query: string) => {
@@ -329,9 +333,7 @@ export default function DiscoverScreen() {
                                     Trending
                                 </Text>
                                 {isTrendingLoading ? (
-                                    <View className="items-center py-8">
-                                        <ActivityIndicator size="large" color="#6A994E" />
-                                    </View>
+                                    <FeedListSkeleton count={5} />
                                 ) : trendingError ? (
                                     <View className="py-8">
                                         <Text className="text-center text-base text-red-600 mb-2">
@@ -422,8 +424,8 @@ export default function DiscoverScreen() {
                             )}
 
                             {isSearchLoading || isFetching ? (
-                                <View className="flex-1 items-center justify-center py-12">
-                                    <ActivityIndicator size="large" color="#6A994E" />
+                                <View className="flex-1 px-6 py-4">
+                                    <FeedListSkeleton count={8} />
                                 </View>
                             ) : searchData?.results && searchData.results.length > 0 ? (
                                 <FlatList
@@ -460,7 +462,7 @@ export default function DiscoverScreen() {
             <LanguagePicker
                 ref={languagePickerRef}
                 initialLanguage={selectedLanguage}
-                onLanguageChange={setSelectedLanguage}
+                onLanguageChange={handleLanguageChange}
             />
 
             {/* Folder Picker Bottom Sheet - Shared across all feed items */}

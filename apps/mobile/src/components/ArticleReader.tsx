@@ -6,6 +6,7 @@ import { useMemo } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 import { AISummaryCard } from './AISummaryCard';
+import { ArticleReaderSkeleton } from './skeletons';
 
 export interface ArticleReaderProps {
     article: Article;

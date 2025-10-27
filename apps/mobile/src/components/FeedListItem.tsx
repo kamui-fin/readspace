@@ -1,7 +1,7 @@
 import { FolderPicker } from '@/components/FolderPicker';
 import { cn } from '@/utils/cn';
 import BottomSheet from '@gorhom/bottom-sheet';
-import { useCreateFeed, useDeleteFeed } from '@readspace/shared';
+import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
 import { useRouter } from 'expo-router';
 import { forwardRef, useRef } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
@@ -40,6 +40,13 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
 
         const createFeed = useCreateFeed();
         const deleteFeed = useDeleteFeed();
+        const { data: userFeeds } = useFeeds();
+
+        // Derive actual follow state from user's subscribed feeds
+        // Compare by URL since discover feeds may have different IDs than user's subscribed feeds
+        // The URL is the canonical identifier for an RSS feed
+        const isActuallyFollowing =
+            userFeeds?.some((feed) => feedUrl && feed.url === feedUrl) ?? isFollowing;
 
         const handlePress = () => {
             // Navigate to feed preview
@@ -51,7 +58,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
         const handleFollowPress = (e: any) => {
             e.stopPropagation();
 
-            if (isFollowing && feedId) {
+            if (isActuallyFollowing && feedId) {
                 // Unfollow: delete the feed
                 deleteFeed.mutate(
                     { feedId, silent: false },
@@ -137,17 +144,17 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                         disabled={createFeed.isPending || deleteFeed.isPending}
                         className={cn(
                             'rounded-full border px-4 py-2',
-                            isFollowing ? 'border-mid-grey' : 'border-primary bg-primary',
+                            isActuallyFollowing ? 'border-mid-grey' : 'border-primary bg-primary',
                             (createFeed.isPending || deleteFeed.isPending) && 'opacity-50'
                         )}>
                         <Text
                             className={cn(
                                 'font-geist-semibold text-sm',
-                                isFollowing ? 'text-grey' : 'text-white'
+                                isActuallyFollowing ? 'text-grey' : 'text-white'
                             )}>
                             {createFeed.isPending || deleteFeed.isPending
                                 ? '...'
-                                : isFollowing
+                                : isActuallyFollowing
                                     ? 'Following'
                                     : 'Follow'}
                         </Text>

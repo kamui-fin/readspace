@@ -1,5 +1,6 @@
 import { FeedListItem } from '@/components/FeedListItem';
 import { FolderPicker } from '@/components/FolderPicker';
+import { FeedPreviewSkeleton } from '@/components/skeletons';
 import { Button } from '@/components/ui/Button';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
@@ -16,7 +17,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -59,9 +59,9 @@ export default function FeedPreviewScreen() {
         enabled: !!id,
     });
 
-    // Fetch similar feeds
+    // Fetch similar feeds (top 4 for preview)
     const { data: similarData, isLoading: isSimilarLoading } = useQuery<SimilarFeedsResponse>({
-        queryKey: ['similar-feeds', id],
+        queryKey: ['similar-feeds-preview', id, 4],
         queryFn: () => ApiClient.rss.getSimilarFeeds(id, { limit: 4 }),
         enabled: !!id,
     });
@@ -163,9 +163,7 @@ export default function FeedPreviewScreen() {
     if (isFeedLoading) {
         return (
             <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#6A994E" />
-                </View>
+                <FeedPreviewSkeleton />
             </SafeAreaView>
         );
     }
@@ -310,8 +308,8 @@ export default function FeedPreviewScreen() {
                         </View>
 
                         {isArticlesLoading ? (
-                            <View className="items-center py-8">
-                                <ActivityIndicator size="small" color="#6A994E" />
+                            <View className="px-6 py-4">
+                                <View className="h-48 w-full rounded-2xl bg-mid-grey" />
                             </View>
                         ) : articles.length > 0 ? (
                             <FlatList
@@ -408,8 +406,16 @@ export default function FeedPreviewScreen() {
                             </View>
 
                             {isSimilarLoading ? (
-                                <View className="items-center py-8">
-                                    <ActivityIndicator size="small" color="#6A994E" />
+                                <View className="space-y-4">
+                                    {Array.from({ length: 3 }).map((_, index) => (
+                                        <View key={index} className="flex-row gap-3 py-3">
+                                            <View className="h-14 w-14 rounded-lg bg-mid-grey" />
+                                            <View className="flex-1 gap-2">
+                                                <View className="h-4 w-3/4 rounded bg-mid-grey" />
+                                                <View className="h-3 w-full rounded bg-mid-grey" />
+                                            </View>
+                                        </View>
+                                    ))}
                                 </View>
                             ) : (
                                 <View>

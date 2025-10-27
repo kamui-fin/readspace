@@ -1,6 +1,7 @@
 import { BookCard } from '@/components/BookCard';
 import { FilterPicker, type BookFilter } from '@/components/FilterPicker';
 import { SortPicker, type SortBy, type SortOrder } from '@/components/SortPicker';
+import { BookCardSkeleton } from '@/components/skeletons';
 import { FAB } from '@/components/ui/FAB';
 import { useAuth } from '@/contexts/AuthProvider';
 import BottomSheet from '@gorhom/bottom-sheet';
@@ -8,7 +9,7 @@ import { Monicon } from '@monicon/native';
 import { useBooks, type UserBookLibrary } from '@readspace/shared';
 import * as DocumentPicker from 'expo-document-picker';
 import { useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
@@ -137,9 +138,25 @@ export default function Library() {
     if (isLoading) {
         return (
             <SafeAreaView className="flex-1 bg-white" edges={['top']}>
-                <View className="flex-1 items-center justify-center">
-                    <ActivityIndicator size="large" color="#6A994E" />
-                </View>
+                <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
+                    <View className="mb-2 flex-row items-center justify-between">
+                        <Text className="font-geist-bold text-3xl tracking-heading text-black">
+                            My Bookshelf
+                        </Text>
+                        <View className="flex-row gap-3">
+                            <View className="h-10 w-10" />
+                            <View className="h-10 w-10" />
+                        </View>
+                    </View>
+                    <View className="mb-6 h-6 w-20 rounded-md bg-mid-grey" />
+                    <View className="flex-row flex-wrap justify-between pb-24">
+                        {Array.from({ length: 6 }).map((_, index) => (
+                            <View key={index} className="mb-6 w-[48%]">
+                                <BookCardSkeleton />
+                            </View>
+                        ))}
+                    </View>
+                </ScrollView>
             </SafeAreaView>
         );
     }
