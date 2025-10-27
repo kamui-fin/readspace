@@ -14,11 +14,7 @@ export const Avatar = ({ name, imageUrl, size = 64, className }: AvatarProps) =>
             className={cn('items-center justify-center overflow-hidden rounded-full', className)}
             style={{ width: size, height: size }}>
             {imageUrl ? (
-                <Image
-                    source={{ uri: imageUrl }}
-                    className="h-full w-full"
-                    resizeMode="cover"
-                />
+                <Image source={{ uri: imageUrl }} className="h-full w-full" resizeMode="cover" />
             ) : (
                 <View className="h-full w-full items-center justify-center bg-gradient-to-br from-primary to-secondary">
                     <Text className="font-geist-bold text-white" style={{ fontSize: size * 0.4 }}>
@@ -29,4 +25,3 @@ export const Avatar = ({ name, imageUrl, size = 64, className }: AvatarProps) =>
         </View>
     );
 };
-

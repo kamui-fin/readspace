@@ -15,7 +15,9 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
     ({ checked = false, className, ...props }, ref) => {
         const animatedStyle = useAnimatedStyle(() => {
             return {
-                transform: [{ scale: withSpring(checked ? 1 : 0.8, { damping: 15, stiffness: 150 }) }],
+                transform: [
+                    { scale: withSpring(checked ? 1 : 0.8, { damping: 15, stiffness: 150 }) },
+                ],
                 opacity: withSpring(checked ? 1 : 0, { damping: 15, stiffness: 150 }),
             };
         });
@@ -29,11 +31,10 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
                     className
                 )}
                 {...props}>
-                <AnimatedMonicon name="lucide:check" size={14} color="#FFFFFF" style={animatedStyle} />
+                <Monicon name="lucide:check" size={14} color="#FFFFFF" />
             </Pressable>
         );
     }
 );
 
 Checkbox.displayName = 'Checkbox';
-

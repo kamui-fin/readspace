@@ -18,7 +18,7 @@ import type {
   OPMLImportResponse,
   PaginatedResponse,
   SidebarData,
-  UnreadCounts,
+  UnreadCounts
 } from "../types";
 
 // Configuration interface for platform-specific callbacks
@@ -34,8 +34,8 @@ export interface FeedHooksConfig {
 
 // Default configuration
 const defaultConfig: FeedHooksConfig = {
-  showSuccess: () => {}, // No-op by default
-  showError: () => {}, // No-op by default
+  showSuccess: () => { }, // No-op by default
+  showError: () => { }, // No-op by default
   deletionDelay: 150,
   refreshDelay: 200,
 };
@@ -203,8 +203,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
               ...old,
               folders: old.folders
                 ? old.folders.map((folder: Folder) =>
-                    folder.id === folderId ? { ...folder, name } : folder,
-                  )
+                  folder.id === folderId ? { ...folder, name } : folder,
+                )
                 : [],
             };
           },
@@ -1460,6 +1460,31 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
+  // Trending feeds hook
+  function useTrendingFeeds(
+    params?: {
+      language?: string;
+      limit?: number;
+      category?: string;
+    },
+    options?: Omit<
+      UseQueryOptions<
+        Feed[],
+        Error,
+        Feed[],
+        [string, typeof params]
+      >,
+      "queryKey" | "queryFn"
+    >,
+  ) {
+    return useQuery({
+      queryKey: [RSS_QUERY_KEYS.TRENDING_FEEDS, params],
+      queryFn: () =>
+        ApiClient.rss.getTrendingFeeds(params) as Promise<Feed[]>,
+      ...options,
+    });
+  }
+
   // Return all hooks as an object
   return {
     // OPML hooks
@@ -1498,6 +1523,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useInfiniteRecentlyReadArticles,
     useInfiniteReadLaterArticles,
     useInfiniteTodayArticles,
+
+    // Discovery hooks
+    useTrendingFeeds,
   };
 }
 
@@ -1540,6 +1568,9 @@ export const {
   useInfiniteRecentlyReadArticles,
   useInfiniteReadLaterArticles,
   useInfiniteTodayArticles,
+
+  // Discovery hooks
+  useTrendingFeeds,
 } = defaultHooks;
 
 // Export the factory function for custom configurations

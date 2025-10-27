@@ -77,7 +77,12 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 
         const renderBackdrop = useCallback(
             (props: any) => (
-                <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+                <BottomSheetBackdrop
+                    {...props}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={0.5}
+                />
             ),
             []
         );
@@ -119,7 +124,9 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 
                     <View style={{ gap: 16 }}>
                         <View>
-                            <Text className="mb-2 font-geist-medium text-sm text-black">API Url</Text>
+                            <Text className="mb-2 font-geist-medium text-sm text-black">
+                                API Url
+                            </Text>
                             <BottomSheetTextInput
                                 value={apiUrl}
                                 onChangeText={setApiUrl}
@@ -142,12 +149,16 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                 }}
                             />
                             {errors.apiUrl && (
-                                <Text className="mt-1 font-geist text-xs text-red">{errors.apiUrl}</Text>
+                                <Text className="mt-1 font-geist text-xs text-red">
+                                    {errors.apiUrl}
+                                </Text>
                             )}
                         </View>
 
                         <View>
-                            <Text className="mb-2 font-geist-medium text-sm text-black">Supabase Url</Text>
+                            <Text className="mb-2 font-geist-medium text-sm text-black">
+                                Supabase Url
+                            </Text>
                             <BottomSheetTextInput
                                 value={supabaseUrl}
                                 onChangeText={setSupabaseUrl}
@@ -226,4 +237,3 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 );
 
 SelfHostSettings.displayName = 'SelfHostSettings';
-

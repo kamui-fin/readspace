@@ -62,7 +62,9 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
                         </View>
                     );
                 case 'button':
-                    return <Monicon name="solar:alt-arrow-right-linear" size={20} color="#90988B" />;
+                    return (
+                        <Monicon name="solar:alt-arrow-right-linear" size={20} color="#90988B" />
+                    );
                 case 'link':
                     return icon;
                 default:
@@ -87,4 +89,3 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
 );
 
 SettingsItem.displayName = 'SettingsItem';
-

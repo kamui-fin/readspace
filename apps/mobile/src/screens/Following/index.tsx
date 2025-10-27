@@ -2,19 +2,30 @@ import { ArticleListItem } from '@/components/ArticleListItem';
 import { Header } from '@/components/Header';
 import { useFeedViewStore } from '@/stores/feed-view';
 import { groupArticlesByDate } from '@/utils/dateUtils';
-import { generateMockArticles, type MockArticle } from '@/utils/mockArticles';
 import { LegendList } from '@legendapp/list';
+import {
+    type Article,
+    formatRelativeDate,
+    useFeeds,
+    useInfiniteArticles,
+    useInfiniteReadLaterArticles,
+    useInfiniteRecentlyReadArticles,
+    useInfiniteTodayArticles,
+    useUnreadCounts,
+    useUpdateArticle,
+} from '@readspace/shared';
 import { useRouter } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { toast } from 'sonner-native';
 
 interface ListItem {
     type: 'section' | 'article' | 'divider';
     id: string;
-    data?: MockArticle;
+    data?: Article;
     sectionTitle?: string;
 }
 
@@ -34,10 +45,109 @@ export default function FollowingScreen() {
     const selectTab = useFeedViewStore((state) => state.selectTab);
 
     const [headerHeight, setHeaderHeight] = useState(0);
+    const [refreshing, setRefreshing] = useState(false);
     const scrollY = useSharedValue(0);
 
-    // Generate mock data
-    const allArticles = useMemo(() => generateMockArticles(), []);
+    // Determine query parameters based on view type and active tab
+    const queryParams = useMemo(() => {
+        // If viewing a specific feed
+        if (viewType === 'feed' && selectedId) {
+            return { feedIds: [selectedId] };
+        }
+        // If viewing a folder
+        if (viewType === 'folder' && selectedId) {
+            return { folderId: selectedId };
+        }
+        // Default: all articles
+        return {};
+    }, [viewType, selectedId]);
+
+    // When a feed or folder is selected, activeTab is -1, so we should use the "All" query with specific filters
+    const isViewingFeedOrFolder = activeTab === -1 && (viewType === 'feed' || viewType === 'folder');
+
+    // Select the appropriate query hook based on active tab
+    const todayQuery = useInfiniteTodayArticles({ size: 25 }, { enabled: activeTab === 0 } as any);
+    const savedQuery = useInfiniteReadLaterArticles({ size: 25 }, {
+        enabled: activeTab === 1,
+    } as any);
+    const allQuery = useInfiniteArticles({ ...queryParams, size: 25 }, {
+        enabled: activeTab === 2 || isViewingFeedOrFolder,
+    } as any);
+    const recentQuery = useInfiniteRecentlyReadArticles({ size: 25 }, {
+        enabled: activeTab === 3,
+    } as any);
+
+    // Select active query based on tab
+    const activeQuery = useMemo(() => {
+        if (isViewingFeedOrFolder) {
+            return allQuery;
+        }
+        switch (activeTab) {
+            case 0:
+                return todayQuery;
+            case 1:
+                return savedQuery;
+            case 2:
+                return allQuery;
+            case 3:
+                return recentQuery;
+            default:
+                return allQuery;
+        }
+    }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
+
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = activeQuery;
+
+    // Flatten paginated articles
+    const allArticles = useMemo(() => {
+        if (!data?.pages || !Array.isArray(data.pages)) return [];
+        return data.pages.flatMap((page: any) => page.items || []);
+    }, [data]);
+
+    // Get unread counts - for feed/folder specific counts
+    const { data: unreadCounts } = useUnreadCounts();
+    const { data: feedsData } = useFeeds();
+
+    // Calculate count based on active view
+    const unreadCount = useMemo(() => {
+        const feeds = (feedsData as { id: string; unread_count?: number; folder_id?: string }[]) || [];
+        const counts = unreadCounts as {
+            total_unread?: number;
+            unread_by_folder?: { folder_id: string; unread_count: number }[]
+        };
+
+        // For feed-specific view
+        if (viewType === 'feed' && selectedId) {
+            const feed = feeds.find(f => f.id === selectedId);
+            return feed?.unread_count || 0;
+        }
+
+        // For folder-specific view
+        if (viewType === 'folder' && selectedId) {
+            const folderUnread = counts?.unread_by_folder?.find(
+                (item) => item.folder_id === selectedId
+            );
+            return folderUnread?.unread_count || 0;
+        }
+
+        // For tab-based views
+        switch (activeTab) {
+            case 0: // Today
+                // Count articles from today's data
+                return allArticles.filter(a => !a.is_read).length;
+            case 1: // Saved (count all saved, not unread)
+                return allArticles.length;
+            case 2: // All
+                return counts?.total_unread || 0;
+            case 3: // Recent (count all recent, not unread)
+                return allArticles.length;
+            default:
+                return counts?.total_unread || 0;
+        }
+    }, [unreadCounts, feedsData, viewType, selectedId, activeTab, allArticles]);
+
+    // Article mutations
+    const updateArticle = useUpdateArticle();
 
     // Determine the title based on view state
     const title = useMemo(() => {
@@ -49,47 +159,14 @@ export default function FollowingScreen() {
         return 'Following';
     }, [viewType, selectedName]);
 
-    // Filter articles based on view type and active tab
-    const filteredArticles = useMemo(() => {
-        let articles = allArticles;
-
-        // First, filter by feed or folder if selected
-        if (viewType === 'feed' && selectedId) {
-            // In a real app, filter articles by feed ID
-            // For now, just return all articles as mock implementation
-            articles = allArticles;
-        } else if (viewType === 'folder' && selectedId) {
-            // In a real app, filter articles by folder ID (all feeds in folder)
-            // For now, just return all articles as mock implementation
-            articles = allArticles;
-        } else {
-            // Filter by tab when in "following" view
-            switch (activeTab) {
-                case 0: // Today
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    return allArticles.filter((article) => {
-                        const articleDate = new Date(article.date);
-                        articleDate.setHours(0, 0, 0, 0);
-                        return articleDate.getTime() === today.getTime();
-                    });
-                case 1: // Saved
-                    return allArticles.filter((article) => article.isSaved);
-                case 2: // All
-                    return allArticles;
-                case 3: // Recent (unread)
-                    return allArticles.filter((article) => !article.isRead);
-                default:
-                    return allArticles;
-            }
-        }
-
-        return articles;
-    }, [allArticles, activeTab, viewType, selectedId]);
-
     // Group articles by date and create flat list with sections and dividers
     const listItems = useMemo(() => {
-        const grouped = groupArticlesByDate(filteredArticles);
+        type ArticleWithDate = Article & { date: Date };
+        const articlesWithDates: ArticleWithDate[] = allArticles.map((article: Article) => ({
+            ...article,
+            date: article.published_at ? new Date(article.published_at) : new Date(),
+        }));
+        const grouped = groupArticlesByDate(articlesWithDates);
         const items: ListItem[] = [];
 
         // Sort section headers chronologically
@@ -133,21 +210,58 @@ export default function FollowingScreen() {
         }
 
         return items;
-    }, [filteredArticles]);
-
-    const unreadCount = useMemo(() => {
-        return allArticles.filter((article) => !article.isRead).length;
     }, [allArticles]);
 
     const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         scrollY.value = event.nativeEvent.contentOffset.y;
     };
 
+    const handleEndReached = useCallback(() => {
+        if (hasNextPage && !isFetchingNextPage) {
+            fetchNextPage();
+        }
+    }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+    const handleBookmark = useCallback(
+        (articleId: string, currentlySaved: boolean) => {
+            updateArticle.mutate({
+                articleId,
+                data: { is_read_later: !currentlySaved },
+                articleType: 'feed',
+            });
+            toast.success(currentlySaved ? 'Removed from saved' : 'Saved for later');
+        },
+        [updateArticle]
+    );
+
+    const handleToggleRead = useCallback(
+        (articleId: string, currentlyRead: boolean) => {
+            updateArticle.mutate({
+                articleId,
+                data: { is_read: !currentlyRead },
+                articleType: 'feed',
+            });
+            toast.success(currentlyRead ? 'Marked as unread' : 'Marked as read');
+        },
+        [updateArticle]
+    );
+
+    const handleRefresh = useCallback(async () => {
+        setRefreshing(true);
+        try {
+            await activeQuery.refetch();
+        } finally {
+            setRefreshing(false);
+        }
+    }, [activeQuery]);
+
     const renderItem = ({ item }: { item: ListItem }) => {
         if (item.type === 'section') {
             return (
                 <View className="px-4 pb-2 pt-4">
-                    <Text className="font-geist-semibold text-sm text-secondary">{item.sectionTitle}</Text>
+                    <Text className="font-geist-semibold text-sm text-secondary">
+                        {item.sectionTitle}
+                    </Text>
                 </View>
             );
         }
@@ -157,24 +271,66 @@ export default function FollowingScreen() {
         }
 
         if (item.type === 'article' && item.data) {
+            const article = item.data;
+            const feedTitle =
+                typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
+            const feedImageUrl =
+                typeof article.feed === 'object' && article.feed
+                    ? article.feed.image_url
+                    : undefined;
             return (
                 <ArticleListItem
                     className="px-4"
-                    source={item.data.source}
-                    timestamp={item.data.timestamp}
-                    title={item.data.title}
-                    description={item.data.description}
-                    imageUrl={item.data.imageUrl}
-                    faviconUrl={item.data.faviconUrl}
-                    isRead={item.data.isRead}
-                    isSaved={item.data.isSaved}
-                    onPress={() => router.push(`/articles/${item.data?.id}`)}
+                    source={feedTitle || 'Unknown'}
+                    timestamp={
+                        article.published_at
+                            ? formatRelativeDate(new Date(article.published_at))
+                            : 'Unknown'
+                    }
+                    title={article.title}
+                    description={article.description || undefined}
+                    imageUrl={article.image_url || undefined}
+                    faviconUrl={feedImageUrl || undefined}
+                    isRead={article.is_read || false}
+                    isSaved={article.is_read_later || false}
+                    onPress={() => router.push(`/articles/${article.id}`)}
+                    onBookmark={() => handleBookmark(article.id, article.is_read_later || false)}
+                    onToggleRead={() => handleToggleRead(article.id, article.is_read || false)}
                 />
             );
         }
 
         return null;
     };
+
+    const renderFooter = () => {
+        if (!isFetchingNextPage) return null;
+        return (
+            <View className="py-4">
+                <ActivityIndicator size="small" color="#6A994E" />
+            </View>
+        );
+    };
+
+    if (isLoading) {
+        return (
+            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+                <Header
+                    variant="tabbed"
+                    title={title}
+                    tabs={TAB_CONFIGS}
+                    activeTab={activeTab}
+                    onTabChange={selectTab}
+                    unreadCount={unreadCount}
+                    scrollY={scrollY}
+                    onHeaderHeightChange={setHeaderHeight}
+                />
+                <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="large" color="#6A994E" />
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView className="flex-1 bg-white" edges={['top']}>
@@ -196,8 +352,19 @@ export default function FollowingScreen() {
                 onScroll={scrollHandler}
                 scrollEventThrottle={16}
                 keyExtractor={(item) => item.id}
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={renderFooter}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        tintColor="#6A994E"
+                        colors={['#6A994E']}
+                        progressViewOffset={headerHeight}
+                    />
+                }
             />
         </SafeAreaView>
     );
 }
-

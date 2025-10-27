@@ -6,23 +6,41 @@ import { UserProfile } from '@/components/UserProfile';
 import { Button } from '@/components/ui/Button';
 import { DiscordIcon } from '@/components/ui/icons/DiscordIcon';
 import { GitHubIcon } from '@/components/ui/icons/GitHubIcon';
+import { useAuth } from '@/contexts/AuthProvider';
 import BottomSheet, { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
+import {
+  exportFeedsToOPML,
+  useFeeds,
+  useFolders,
+  useImportOPML,
+  useImportTaskStatus,
+} from '@readspace/shared';
+import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useEffect, useRef, useState } from 'react';
-import { Linking, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const { user, signOut } = useAuth();
   const { colorScheme, setColorScheme } = useColorScheme();
   const themePickerRef = useRef<BottomSheet>(null);
   const instancePickerRef = useRef<BottomSheet>(null);
   const selfHostSettingsRef = useRef<BottomSheetModal>(null);
   const [theme, setTheme] = useState<Theme>('system');
   const [instance, setInstance] = useState<Instance>('custom');
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [importTaskId, setImportTaskId] = useState<string | null>(null);
+
+  // Hooks for OPML
+  const importOPML = useImportOPML();
+  const { data: feeds } = useFeeds();
+  const { data: folders } = useFolders();
+  const { data: importStatus } = useImportTaskStatus(importTaskId, !!importTaskId);
 
   // Initialize theme from colorScheme
   useEffect(() => {
@@ -35,8 +53,18 @@ export default function SettingsScreen() {
     }
   }, [colorScheme]);
 
-  const handleLogout = () => {
-    router.push('/welcome');
+  const handleLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await signOut();
+      toast.success('Logged out successfully');
+      router.replace('/welcome');
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error('Failed to log out');
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   const handleThemePress = () => {
@@ -77,9 +105,79 @@ export default function SettingsScreen() {
     console.log('Self-hosting configuration saved:', data);
   };
 
-  const handleOPMLPress = () => {
-    router.push('/settings/opml');
+  const handleOPMLImport = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'text/xml',
+        copyToCacheDirectory: true,
+        multiple: false,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const file = result.assets[0];
+      if (file) {
+        toast.loading('Importing OPML...', { id: 'opml-import' });
+
+        // Create FormData
+        const formData = new FormData();
+        formData.append('file', {
+          uri: file.uri,
+          type: 'text/xml',
+          name: file.name || 'feeds.opml',
+        } as any);
+
+        importOPML.mutate(formData, {
+          onSuccess: (data) => {
+            setImportTaskId(data.task_id);
+            toast.success('OPML import started!', {
+              id: 'opml-import',
+              description: `Processing ${data.estimated_feeds} feeds...`,
+            });
+          },
+          onError: (error: any) => {
+            toast.error('Failed to import OPML', {
+              id: 'opml-import',
+              description: error?.message || 'Please try again',
+            });
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+      toast.error('Failed to select file', {
+        description: 'Please try again',
+      });
+    }
   };
+
+  const handleOPMLExport = () => {
+    try {
+      const typedFolders = (folders as { id: string; name: string }[]) || [];
+      exportFeedsToOPML(feeds || [], typedFolders);
+      toast.success('OPML exported successfully!');
+    } catch (error) {
+      console.error('OPML export error:', error);
+      toast.error('Failed to export OPML');
+    }
+  };
+
+  // Monitor import status
+  useEffect(() => {
+    if (importStatus?.status === 'completed') {
+      toast.success('OPML import completed!', {
+        description: `Imported ${importStatus.result?.imported_count || 0} feeds`,
+      });
+      setImportTaskId(null);
+    } else if (importStatus?.status === 'failed') {
+      toast.error('OPML import failed', {
+        description: importStatus.error || 'Unknown error',
+      });
+      setImportTaskId(null);
+    }
+  }, [importStatus]);
 
   const handleGithubPress = () => {
     const url = 'https://github.com/kamui-fin/readspace';
@@ -107,9 +205,11 @@ export default function SettingsScreen() {
 
             {/* User Profile */}
             <UserProfile
-              name="John Doe"
-              email="johndoe@gmail.com"
-              avatarUrl="https://i.pravatar.cc/150"
+              name={user?.user_metadata?.full_name || 'User'}
+              email={user?.email || ''}
+              avatarUrl={
+                user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150'
+              }
               className="mb-8"
             />
 
@@ -132,8 +232,40 @@ export default function SettingsScreen() {
                 variant="button"
                 onPress={handleSelfHostingPress}
               />
-              <SettingsItem label="OPML" variant="button" onPress={handleOPMLPress} isLast />
+              <SettingsItem
+                label="Import OPML"
+                variant="button"
+                onPress={handleOPMLImport}
+                disabled={importOPML.isPending || !!importTaskId}
+              />
+              <SettingsItem
+                label="Export OPML"
+                variant="button"
+                onPress={handleOPMLExport}
+                isLast
+              />
             </SettingsGroup>
+
+            {/* OPML Import Status */}
+            {importTaskId && importStatus && (
+              <View className="mb-8 rounded-2xl bg-light-grey p-4">
+                <View className="mb-2 flex-row items-center gap-3">
+                  {importStatus.status === 'in_progress' && (
+                    <ActivityIndicator size="small" color="#6A994E" />
+                  )}
+                  <Text className="font-geist-semibold text-base text-black">
+                    {importStatus.status === 'in_progress'
+                      ? 'Importing feeds...'
+                      : importStatus.status === 'completed'
+                        ? 'Import completed!'
+                        : 'Import pending...'}
+                  </Text>
+                </View>
+                <Text className="font-geist text-sm text-grey">
+                  {importStatus.message}
+                </Text>
+              </View>
+            )}
 
             {/* Other Section */}
             <SettingsGroup title="Other" className="mb-6">
@@ -160,19 +292,25 @@ export default function SettingsScreen() {
             variant="neutral"
             fullWidth
             onPress={handleLogout}
+            disabled={loggingOut}
             className="flex-row gap-2 rounded-2xl bg-light-grey py-4"
-            textClassName="font-geist-semibold text-base"
-          >
+            textClassName="font-geist-semibold text-base">
             <Monicon name="solar:logout-2-linear" size={24} color="#EA4335" />
-            <Text className="font-geist-semibold text-base" style={{ color: '#EA4335' }}>
-              Logout
+            <Text
+              className="font-geist-semibold text-base"
+              style={{ color: '#EA4335' }}>
+              {loggingOut ? 'Logging out...' : 'Logout'}
             </Text>
           </Button>
         </View>
       </View>
 
       {/* Bottom Sheets */}
-      <ThemePicker ref={themePickerRef} onThemeChange={handleThemeChange} initialTheme={theme} />
+      <ThemePicker
+        ref={themePickerRef}
+        onThemeChange={handleThemeChange}
+        initialTheme={theme}
+      />
       <InstancePicker
         ref={instancePickerRef}
         onInstanceChange={handleInstanceChange}

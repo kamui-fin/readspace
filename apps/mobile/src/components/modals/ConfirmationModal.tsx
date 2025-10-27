@@ -12,7 +12,10 @@ export interface ConfirmationModalProps {
 }
 
 export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalProps>(
-    ({ title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel }, ref) => {
+    (
+        { title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel },
+        ref
+    ) => {
         const snapPoints = useMemo(() => ['35%'], []);
 
         const handleConfirm = useCallback(() => {
@@ -31,7 +34,12 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
 
         const renderBackdrop = useCallback(
             (props: any) => (
-                <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+                <BottomSheetBackdrop
+                    {...props}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={0.5}
+                />
             ),
             []
         );
@@ -56,13 +64,17 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                         <Pressable
                             onPress={handleCancel}
                             className="flex-1 items-center justify-center rounded-2xl bg-mid-grey py-4 transition-opacity active:opacity-70">
-                            <Text className="font-geist-semibold text-base text-grey">{cancelText}</Text>
+                            <Text className="font-geist-semibold text-base text-grey">
+                                {cancelText}
+                            </Text>
                         </Pressable>
 
                         <Pressable
                             onPress={handleConfirm}
                             className="flex-1 items-center justify-center rounded-2xl bg-primary py-4 transition-opacity active:opacity-70">
-                            <Text className="font-geist-semibold text-base text-white">{confirmText}</Text>
+                            <Text className="font-geist-semibold text-base text-white">
+                                {confirmText}
+                            </Text>
                         </Pressable>
                     </View>
                 </BottomSheetView>
@@ -72,4 +84,3 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
 );
 
 ConfirmationModal.displayName = 'ConfirmationModal';
-

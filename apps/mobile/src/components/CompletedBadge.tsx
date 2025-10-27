@@ -1,5 +1,16 @@
 import { View } from 'react-native';
-import Svg, { Defs, FeBlend, FeColorMatrix, FeComposite, FeFlood, FeGaussianBlur, FeOffset, Filter, G, Path } from 'react-native-svg';
+import Svg, {
+    Defs,
+    FeBlend,
+    FeColorMatrix,
+    FeComposite,
+    FeFlood,
+    FeGaussianBlur,
+    FeOffset,
+    Filter,
+    G,
+    Path,
+} from 'react-native-svg';
 
 export function CompletedBadge() {
     return (
@@ -23,9 +34,21 @@ export function CompletedBadge() {
                         <FeOffset dy="4" />
                         <FeGaussianBlur stdDeviation="2" />
                         <FeComposite in2="hardAlpha" operator="out" />
-                        <FeColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
-                        <FeBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_290_178" />
-                        <FeBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_290_178" result="shape" />
+                        <FeColorMatrix
+                            type="matrix"
+                            values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0"
+                        />
+                        <FeBlend
+                            mode="normal"
+                            in2="BackgroundImageFix"
+                            result="effect1_dropShadow_290_178"
+                        />
+                        <FeBlend
+                            mode="normal"
+                            in="SourceGraphic"
+                            in2="effect1_dropShadow_290_178"
+                            result="shape"
+                        />
                     </Filter>
                 </Defs>
                 <G filter="url(#filter0_d_290_178)">
@@ -45,4 +68,3 @@ export function CompletedBadge() {
         </View>
     );
 }
-

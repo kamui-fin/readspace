@@ -18,4 +18,3 @@ export const DiscordIcon = ({ size = 24, color = '#5865F2' }: DiscordIconProps) 
         </Svg>
     );
 };
-

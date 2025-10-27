@@ -30,4 +30,3 @@ export const FAB = forwardRef<React.ElementRef<typeof Pressable>, FABProps>(
 );
 
 FAB.displayName = 'FAB';
-

@@ -53,7 +53,9 @@ export default function DesignSystem() {
 
                     {/* Geist Sans */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">GEIST SANS</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            GEIST SANS
+                        </Text>
                         <Text className="mb-2 font-geist text-base text-black">
                             Geist Regular - The quick brown fox jumps over the lazy dog
                         </Text>
@@ -70,8 +72,12 @@ export default function DesignSystem() {
 
                     {/* Figtree */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">FIGTREE (LOGO)</Text>
-                        <Text className="font-figtree text-2xl tracking-heading text-black">Readspace</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            FIGTREE (LOGO)
+                        </Text>
+                        <Text className="font-figtree text-2xl tracking-heading text-black">
+                            Readspace
+                        </Text>
                     </View>
 
                     {/* EB Garamond */}
@@ -80,8 +86,8 @@ export default function DesignSystem() {
                             EB GARAMOND (READING)
                         </Text>
                         <Text className="mb-2 font-garamond text-lg leading-7 text-black">
-                            EB Garamond Regular - In the beginning was the Word, and the Word was with God, and
-                            the Word was God.
+                            EB Garamond Regular - In the beginning was the Word, and the Word was
+                            with God, and the Word was God.
                         </Text>
                         <Text className="mb-2 font-garamond-medium text-lg leading-7 text-black">
                             EB Garamond Medium - He was in the beginning with God.
@@ -162,7 +168,9 @@ export default function DesignSystem() {
 
                 {/* Buttons Section */}
                 <View className="mb-10">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">Buttons</Text>
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                        Buttons
+                    </Text>
 
                     {/* Primary Variant */}
                     <View className="mb-6">
@@ -174,8 +182,12 @@ export default function DesignSystem() {
 
                     {/* Secondary Variant */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">SECONDARY</Text>
-                        <Button variant="secondary" onPress={() => toast('Secondary button pressed')}>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            SECONDARY
+                        </Text>
+                        <Button
+                            variant="secondary"
+                            onPress={() => toast('Secondary button pressed')}>
                             Secondary Button
                         </Button>
                     </View>
@@ -208,13 +220,13 @@ export default function DesignSystem() {
                     <View className="mb-6">
                         <Text className="mb-3 font-geist-semibold text-sm text-grey">SIZES</Text>
                         <View className="gap-3">
-                            <Button variant="primary" size="sm" onPress={() => { }}>
+                            <Button variant="primary" size="sm" onPress={() => {}}>
                                 Small Button
                             </Button>
-                            <Button variant="primary" size="default" onPress={() => { }}>
+                            <Button variant="primary" size="default" onPress={() => {}}>
                                 Default Button
                             </Button>
-                            <Button variant="primary" size="lg" onPress={() => { }}>
+                            <Button variant="primary" size="lg" onPress={() => {}}>
                                 Large Button
                             </Button>
                         </View>
@@ -224,10 +236,10 @@ export default function DesignSystem() {
                     <View className="mb-6">
                         <Text className="mb-3 font-geist-semibold text-sm text-grey">STATES</Text>
                         <View className="gap-3">
-                            <Button variant="primary" disabled onPress={() => { }}>
+                            <Button variant="primary" disabled onPress={() => {}}>
                                 Disabled Button
                             </Button>
-                            <Button variant="primary" loading onPress={() => { }}>
+                            <Button variant="primary" loading onPress={() => {}}>
                                 Loading Button
                             </Button>
                         </View>
@@ -235,8 +247,10 @@ export default function DesignSystem() {
 
                     {/* Full Width */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">FULL WIDTH</Text>
-                        <Button variant="primary" fullWidth onPress={() => { }}>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            FULL WIDTH
+                        </Text>
+                        <Button variant="primary" fullWidth onPress={() => {}}>
                             Full Width Button
                         </Button>
                     </View>
@@ -250,13 +264,21 @@ export default function DesignSystem() {
 
                     {/* Basic Input */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">BASIC INPUT</Text>
-                        <Input placeholder="Enter text..." value={inputValue} onChangeText={setInputValue} />
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            BASIC INPUT
+                        </Text>
+                        <Input
+                            placeholder="Enter text..."
+                            value={inputValue}
+                            onChangeText={setInputValue}
+                        />
                     </View>
 
                     {/* Input with Label */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">WITH LABEL</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            WITH LABEL
+                        </Text>
                         <Input
                             label="Email"
                             placeholder="example@gmail.com"
@@ -269,7 +291,9 @@ export default function DesignSystem() {
 
                     {/* Input with Error */}
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">WITH ERROR</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            WITH ERROR
+                        </Text>
                         <Input
                             label="API URL"
                             placeholder="http://localhost:18008"
@@ -300,10 +324,14 @@ export default function DesignSystem() {
 
                 {/* Chip Section */}
                 <View className="mb-10">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">Chips</Text>
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                        Chips
+                    </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">MULTI-SELECT FILTERS</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            MULTI-SELECT FILTERS
+                        </Text>
                         <View className="flex-row flex-wrap gap-3">
                             <Chip
                                 label="Lifestyle"
@@ -336,7 +364,9 @@ export default function DesignSystem() {
                     </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">LANGUAGE SELECTION</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            LANGUAGE SELECTION
+                        </Text>
                         <View className="gap-4">
                             <Radio
                                 label="English"
@@ -359,7 +389,9 @@ export default function DesignSystem() {
                     </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">PERCENTAGE PROGRESS</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            PERCENTAGE PROGRESS
+                        </Text>
                         <View className="gap-4">
                             <ProgressBar percentage={progressStep * 20} />
                             <View className="flex-row gap-2">
@@ -407,10 +439,14 @@ export default function DesignSystem() {
 
                 {/* Switch Section */}
                 <View className="mb-10">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">Switch</Text>
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                        Switch
+                    </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">TOGGLE SWITCH</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            TOGGLE SWITCH
+                        </Text>
                         <View className="flex-row items-center gap-4">
                             <Switch value={switchValue} onValueChange={setSwitchValue} />
                             <Text className="font-geist text-base text-grey">
@@ -442,12 +478,16 @@ export default function DesignSystem() {
                     </View>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">CLICKABLE</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            CLICKABLE
+                        </Text>
                         <View className="flex-row gap-4">
                             <CircleIcon variant="clickable" onPress={() => toast('Icon pressed!')}>
                                 <Monicon name="lucide:bookmark" size={24} color="#90988B" />
                             </CircleIcon>
-                            <CircleIcon variant="clickable" onPress={() => toast('Search pressed!')}>
+                            <CircleIcon
+                                variant="clickable"
+                                onPress={() => toast('Search pressed!')}>
                                 <Monicon name="lucide:search" size={24} color="#90988B" />
                             </CircleIcon>
                         </View>
@@ -461,21 +501,21 @@ export default function DesignSystem() {
                     </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">FEED ITEMS</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            FEED ITEMS
+                        </Text>
                         <View className="gap-3">
                             <FeedListItem
                                 title="Hacker News - Tech Discussions"
                                 description="A source for discussions on programming, startups, technology, and related topics..."
                                 isFollowing={false}
                                 onPress={() => toast('Feed pressed')}
-                                onFollowPress={() => toast('Follow pressed')}
                             />
                             <FeedListItem
                                 title="WIRED"
                                 description="WIRED is where tomorrow is realized. It is the essential source of information and ideas..."
                                 isFollowing={true}
                                 onPress={() => toast('Feed pressed')}
-                                onFollowPress={() => toast('Unfollow pressed')}
                             />
                         </View>
                     </View>
@@ -488,7 +528,9 @@ export default function DesignSystem() {
                     </Text>
 
                     <View className="mb-6">
-                        <Text className="mb-3 font-geist-semibold text-sm text-grey">ARTICLE LIST ITEMS</Text>
+                        <Text className="mb-3 font-geist-semibold text-sm text-grey">
+                            ARTICLE LIST ITEMS
+                        </Text>
                         <View className="gap-3">
                             <ArticleListItem
                                 source="TECH CRUNCH"
@@ -549,4 +591,3 @@ export default function DesignSystem() {
         </SafeAreaView>
     );
 }
-

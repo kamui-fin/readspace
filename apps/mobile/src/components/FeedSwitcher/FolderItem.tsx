@@ -1,15 +1,11 @@
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/utils/cn';
-import type { Folder } from '@/utils/mockFeeds';
 import { Monicon } from '@monicon/native';
+import type { Folder } from '@readspace/shared';
 import { forwardRef, useEffect } from 'react';
 import { Pressable, Text, type PressableProps } from 'react-native';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 const AnimatedMonicon = Animated.createAnimatedComponent(Monicon);
 
@@ -101,11 +97,7 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                 {isEditMode ? (
                     <Checkbox checked={isSelected} />
                 ) : (
-                    <Monicon
-                        name={getFolderIcon()}
-                        size={24}
-                        color="#6A994E"
-                    />
+                    <Monicon name={getFolderIcon()} size={24} color="#6A994E" />
                 )}
 
                 {/* Folder Name */}
@@ -122,12 +114,7 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                         onPress={handleChevronPress}
                         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                         className="p-2 transition-opacity active:opacity-70">
-                        <AnimatedMonicon
-                            name="solar:alt-arrow-right-linear"
-                            size={20}
-                            color="#90988B"
-                            style={animatedIconStyle}
-                        />
+                        <Monicon name="solar:alt-arrow-right-linear" size={20} color="#90988B" />
                     </Pressable>
                 )}
             </Pressable>
@@ -136,4 +123,3 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
 );
 
 FolderItem.displayName = 'FolderItem';
-

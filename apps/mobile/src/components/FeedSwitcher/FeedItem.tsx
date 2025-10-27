@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/utils/cn';
-import type { Feed } from '@/utils/mockFeeds';
+import type { Feed } from '@readspace/shared';
 import { forwardRef } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
 
@@ -29,11 +29,15 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                     <Checkbox checked={isSelected} />
                 ) : (
                     <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey">
-                        {feed.iconUrl ? (
-                            <Image source={{ uri: feed.iconUrl }} className="h-full w-full" resizeMode="cover" />
+                        {feed.image_url ? (
+                            <Image
+                                source={{ uri: feed.image_url }}
+                                className="h-full w-full"
+                                resizeMode="cover"
+                            />
                         ) : (
                             <Text className="font-geist-bold text-sm text-grey">
-                                {feed.name.charAt(0).toUpperCase()}
+                                {feed.title.charAt(0).toUpperCase()}
                             </Text>
                         )}
                     </View>
@@ -41,15 +45,14 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
 
                 {/* Feed Name */}
                 <Text className="flex-1 font-geist-medium text-base text-black" numberOfLines={1}>
-                    {feed.name}
+                    {feed.title}
                 </Text>
 
                 {/* Unread Badge */}
-                {feed.unreadCount > 0 && <Badge label={feed.unreadCount.toString()} />}
+                {feed.unread_count > 0 && <Badge label={feed.unread_count.toString()} />}
             </Pressable>
         );
     }
 );
 
 FeedItem.displayName = 'FeedItem';
-

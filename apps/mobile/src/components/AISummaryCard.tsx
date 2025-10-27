@@ -16,47 +16,55 @@ export function AISummaryCard({ summary, isLoading = false, onClose }: AISummary
 
     return (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
-            <View className="mx-6 mb-6 overflow-hidden rounded-2xl border border-green-grey bg-white">
+            <View className="mx-6 mb-6 overflow-hidden rounded-xl border border-light-grey bg-white shadow-sm">
                 {/* Header */}
-                <View className="flex-row items-center justify-between border-b border-green-grey bg-light-grey px-4 py-3">
-                    <View className="flex-1 flex-row items-center gap-2">
-                        <Monicon name="solar:magic-stick-3-bold" size={18} color="#6A994E" />
-                        <Text className="font-geist-semibold text-sm text-primary">AI Summary</Text>
+                <View className="flex-row items-center justify-between px-5 py-4">
+                    <View className="flex-1 flex-row items-center gap-3">
+                        <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                            <Monicon name="solar:magic-stick-3-bold" size={16} color="#6A994E" />
+                        </View>
+                        <Text className="font-geist-semibold text-base text-black">
+                            AI Summary
+                        </Text>
                     </View>
-                    <View className="flex-row items-center gap-2">
+                    <View className="flex-row items-center gap-1">
                         {/* Collapse/Expand Button */}
                         <Pressable
                             onPress={() => setIsExpanded(!isExpanded)}
-                            className="h-7 w-7 items-center justify-center rounded-full"
+                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey"
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                             <Monicon
-                                name={isExpanded ? 'solar:alt-arrow-up-linear' : 'solar:alt-arrow-down-linear'}
-                                size={16}
-                                color="#6A994E"
+                                name={
+                                    isExpanded
+                                        ? 'solar:alt-arrow-up-linear'
+                                        : 'solar:alt-arrow-down-linear'
+                                }
+                                size={18}
+                                color="#90988B"
                             />
                         </Pressable>
                         {/* Close Button */}
                         <Pressable
                             onPress={onClose}
-                            className="h-7 w-7 items-center justify-center rounded-full"
+                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey"
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                            <Monicon name="lucide:x" size={16} color="#6A994E" />
+                            <Monicon name="lucide:x" size={18} color="#90988B" />
                         </Pressable>
                     </View>
                 </View>
 
                 {/* Content */}
                 {isExpanded && (
-                    <View className="px-4 py-4">
+                    <View className="border-t border-light-grey px-5 pb-5 pt-4">
                         {isLoading ? (
-                            <View className="flex-row items-center gap-3 py-4">
+                            <View className="flex-row items-center gap-3 py-2">
                                 <ActivityIndicator size="small" color="#6A994E" />
                                 <Text className="font-geist text-sm text-grey">
-                                    Generating AI summary...
+                                    Generating summary...
                                 </Text>
                             </View>
                         ) : (
-                            <Text className="font-geist text-base leading-relaxed text-black">
+                            <Text className="font-geist text-[15px] leading-relaxed text-grey">
                                 {summary}
                             </Text>
                         )}

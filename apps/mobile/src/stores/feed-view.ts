@@ -54,4 +54,3 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
 
     reset: () => set(initialState),
 }));
-

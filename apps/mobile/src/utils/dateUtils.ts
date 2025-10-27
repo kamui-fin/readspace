@@ -71,4 +71,3 @@ export function groupArticlesByDate<T extends { date: Date }>(articles: T[]): Re
 
     return grouped;
 }
-

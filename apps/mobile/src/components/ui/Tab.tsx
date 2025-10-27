@@ -42,4 +42,3 @@ export const Tab = forwardRef<React.ElementRef<typeof Pressable>, TabProps>(
 );
 
 Tab.displayName = 'Tab';
-

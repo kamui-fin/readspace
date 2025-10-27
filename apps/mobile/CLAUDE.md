@@ -2,81 +2,6 @@
 
 Ok so we are building the readspace mobile app in expo react native that accompanies the web version. All API hooks are in the packages/shared directory so use that rather than build your own hooks. 
 
-But first we shouldn't even connect to the backend. We want to get all the possible screens implemented from figma with mock data.
-
-# Components
-
-We wish to start with implementing the most primitive, re-usable components in isolation with the variants we need at the end.
-
-This includes things like:
-- LogoIcon
-- RoundedIcon
-- Button:
-    - primary
-    - black
-    - neutral
-    - outline
-- FloatingActionButton
-- Input
-- OtpInput
-- Label
-    - IconLabel
-    - ExpandableLabel (..more)
-- Chip
-    - ButtonChip
-    - Badge
-- Slider
-- BottomSheet
-- FormDialog
-- InputDialog
-- ConfirmationDialog
-- RadioPicker
-    - RadioGroup
-        - RadioItem
-- Dropdown
-- Stepper
-- SectionLabel
-- SegmentedControl
-
-Stuff like these should go in components/ui
-
-And after that we can tackle compound components like:
-- BottomNav
-- SettingsGroup
-    - GroupItem
-        - select
-        - button (chevron)
-        - icon
-- SearchBar
-- OnboardingStep
-- FeedList
-    - FeedItem
-- ArticleList
-    - ArticleListItem
-    - ArticleCard
-    - ArticlePreviewCard
-- LibraryGrid
-    - LibraryBookCard
-- HighlightList
-    - HighlightItem
-- TableOfContents
-- ReaderSettings
-- FeedSwitcher
-- SummaryCard
-- FeedMetadata
-- ArticleMetadata
-- ArticlesCarousel
-
-Ofc, for each I will provide example figma screenshots.
-
-No storybook or unit tests for these, I'd like to manually verify them so just throw these components on the default home screen and i'll give them a check. 
-
-# Heavy Inspiration for design system
-
-Another company built their design system with similar principles called Showtime Universal UI, however js keep in mind its 3 yrs old. It's in the apps/mobile/showtime-inspo/ directory. Maybe to get ideas on how to keep things clean it could be useful. 
-
-Actually for some components we might want to directly take and modify according to our standards like button, dropdown/popover, input, 
-
 # Web
 
 So the full readspace web product is already built out (next.js tailwind shadcn typescript) in apps/web so you may look at that if you ever need some inspiration on functionality stuff.
@@ -100,28 +25,6 @@ Use monicons (https://github.com/mikaeljorhult/monicons) with lucide for icons.
 # Routing
 
 Expo router.
-
-## Potential routes
-
-After quick brainstorm:
-/ - welcome screen
-/onboarding
-/discover - discord feeds
-/discover/search?q={} - search results
-/discover/search?category={} - filter by category
-/settings - settings
-/settings/opml - import / export related stuff
-/articles/today 
-/articles/all
-/articles/saved 
-/articles/{id} - read an article
-/feeds/{id} - preview a feed
-/library - bookshelf
-/library/{id}
-
-As I show you the actual figma screens and describe more requirements/functionality you might come up with a better routing system.
-
-There are a lot of bottom sheets (that's sort of part of the readspace design standards) for things like feed switcher, input modals, confirmations, etc. 
 
 # Code Quality
 

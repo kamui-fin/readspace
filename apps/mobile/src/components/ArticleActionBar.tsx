@@ -1,10 +1,6 @@
 import { Monicon } from '@monicon/native';
 import { Pressable, View } from 'react-native';
-import Animated, {
-    interpolate,
-    useAnimatedStyle,
-    type SharedValue,
-} from 'react-native-reanimated';
+import Animated, { interpolate, useAnimatedStyle, type SharedValue } from 'react-native-reanimated';
 
 export interface ArticleActionBarProps {
     onClose?: () => void;
@@ -105,4 +101,3 @@ export function ArticleActionBar({
         </Animated.View>
     );
 }
-

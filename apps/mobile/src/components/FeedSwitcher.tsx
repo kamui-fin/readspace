@@ -6,12 +6,6 @@ import { FolderNameModal } from '@/components/modals/FolderNameModal';
 import { Button } from '@/components/ui/Button';
 import { useFeedViewStore } from '@/stores/feed-view';
 import {
-    MOCK_FEEDS,
-    MOCK_FOLDERS,
-    type Feed,
-    type Folder,
-} from '@/utils/mockFeeds';
-import {
     BottomSheetBackdrop,
     BottomSheetFlashList,
     BottomSheetFooter,
@@ -19,9 +13,19 @@ import {
     BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
+import {
+    useCreateFolder,
+    useDeleteFeed,
+    useDeleteFolder,
+    useFeeds,
+    useFolders,
+    useUpdateFeed,
+    type Feed,
+    type Folder,
+} from '@readspace/shared';
 import { usePathname, useRouter } from 'expo-router';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 
 export interface FeedSwitcherRef {
@@ -57,14 +61,24 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const folderPickerRef = useRef<BottomSheetModal>(null);
         const confirmDeleteRef = useRef<BottomSheetModal>(null);
 
-        const [feeds, setFeeds] = useState<Feed[]>(MOCK_FEEDS);
-        const [folders, setFolders] = useState<Folder[]>(MOCK_FOLDERS);
         const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
         const [isEditMode, setIsEditMode] = useState(false);
         const [selectedFeedIds, setSelectedFeedIds] = useState<Set<string>>(new Set());
         const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
 
         const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
+
+        // Fetch feeds and folders using TanStack Query
+        const { data: feedsData, isLoading: isFeedsLoading } = useFeeds();
+        const { data: foldersData, isLoading: isFoldersLoading } = useFolders();
+        const createFolderMutation = useCreateFolder();
+        const deleteFeedMutation = useDeleteFeed();
+        const deleteFolderMutation = useDeleteFolder();
+        const updateFeedMutation = useUpdateFeed();
+
+        const feeds = (feedsData as Feed[]) || [];
+        const folders = (foldersData as Folder[]) || [];
+        const isLoading = isFeedsLoading || isFoldersLoading;
 
         // Expose methods to parent
         useImperativeHandle(ref, () => ({
@@ -76,7 +90,12 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 
         const renderBackdrop = useCallback(
             (props: any) => (
-                <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+                <BottomSheetBackdrop
+                    {...props}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={0.5}
+                />
             ),
             []
         );
@@ -86,8 +105,11 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             const items: ListItem[] = [];
 
             folders.forEach((folder) => {
-                const folderFeeds = feeds.filter((feed) => feed.folderId === folder.id);
-                const unreadCount = folderFeeds.reduce((sum, feed) => sum + feed.unreadCount, 0);
+                const folderFeeds = feeds.filter((feed) => feed.folder_id === folder.id);
+                const unreadCount = folderFeeds.reduce(
+                    (sum, feed) => sum + (feed.unread_count || 0),
+                    0
+                );
                 const isExpanded = expandedFolders.has(folder.id);
                 const isSelected = selectedFolderIds.has(folder.id);
                 const isEmpty = folderFeeds.length === 0;
@@ -148,7 +170,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     // Update view state and dismiss sheet
                     const feed = feeds.find((f) => f.id === feedId);
                     if (feed) {
-                        selectFeed(feedId, feed.name);
+                        selectFeed(feedId, feed.title);
                         bottomSheetRef.current?.dismiss();
 
                         // Navigate to home page if not already there
@@ -166,7 +188,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const handleFolderPress = useCallback(
             (folderId: string) => {
                 if (isEditMode) {
-                    const folderFeedIds = feeds.filter((f) => f.folderId === folderId).map((f) => f.id);
+                    const folderFeedIds = feeds
+                        .filter((f) => f.folder_id === folderId)
+                        .map((f) => f.id);
                     setSelectedFolderIds((prev) => {
                         const next = new Set(prev);
                         if (next.has(folderId)) {
@@ -214,13 +238,8 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         }, []);
 
         const handleMarkAllAsRead = useCallback(() => {
-            // Mock implementation
+            // TODO: Implement mark all as read API
             const feedsToUpdate = Array.from(selectedFeedIds);
-            setFeeds((prev) =>
-                prev.map((feed) =>
-                    feedsToUpdate.includes(feed.id) ? { ...feed, unreadCount: 0 } : feed
-                )
-            );
             toast.success(`Marked ${feedsToUpdate.length} feeds as read`);
             setIsEditMode(false);
             setSelectedFeedIds(new Set());
@@ -232,64 +251,72 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         }, []);
 
         const handleFolderSelect = useCallback(
-            (folderId: string) => {
+            async (folderId: string) => {
                 const feedsToMove = Array.from(selectedFeedIds);
-                setFeeds((prev) =>
-                    prev.map((feed) =>
-                        feedsToMove.includes(feed.id) ? { ...feed, folderId } : feed
-                    )
-                );
-                toast.success(`Moved ${feedsToMove.length} feeds to folder`);
-                setIsEditMode(false);
-                setSelectedFeedIds(new Set());
-                setSelectedFolderIds(new Set());
+                try {
+                    // Move each feed to the new folder
+                    await Promise.all(
+                        feedsToMove.map((feedId) =>
+                            updateFeedMutation.mutateAsync({
+                                feedId,
+                                data: { folder_id: folderId },
+                            })
+                        )
+                    );
+                    toast.success(`Moved ${feedsToMove.length} feed${feedsToMove.length > 1 ? 's' : ''} to folder`);
+                    setIsEditMode(false);
+                    setSelectedFeedIds(new Set());
+                    setSelectedFolderIds(new Set());
+                } catch (error) {
+                    toast.error('Failed to move feeds');
+                    console.error('Error moving feeds:', error);
+                }
             },
-            [selectedFeedIds]
+            [selectedFeedIds, updateFeedMutation]
         );
 
         const handleDeletePress = useCallback(() => {
             confirmDeleteRef.current?.present();
         }, []);
 
-        const handleConfirmDelete = useCallback(() => {
+        const handleConfirmDelete = useCallback(async () => {
             const feedsToDelete = Array.from(selectedFeedIds);
             const foldersToDelete = Array.from(selectedFolderIds);
 
-            // Delete folders and their feeds
-            const feedsInDeletedFolders = feeds
-                .filter((feed) => foldersToDelete.includes(feed.folderId || ''))
-                .map((f) => f.id);
+            try {
+                // Delete feeds first
+                await Promise.all(
+                    feedsToDelete.map((feedId) => deleteFeedMutation.mutateAsync({ feedId }))
+                );
 
-            // Delete feeds and feeds in deleted folders
-            setFeeds((prev) =>
-                prev.filter(
-                    (feed) =>
-                        !feedsToDelete.includes(feed.id) &&
-                        !feedsInDeletedFolders.includes(feed.id)
-                )
-            );
+                // Then delete folders
+                await Promise.all(
+                    foldersToDelete.map((folderId) => deleteFolderMutation.mutateAsync(folderId))
+                );
 
-            setFolders((prev) => prev.filter((folder) => !foldersToDelete.includes(folder.id)));
+                const totalDeleted = feedsToDelete.length + foldersToDelete.length;
+                toast.success(`Deleted ${totalDeleted} item${totalDeleted > 1 ? 's' : ''}`);
 
-            const totalDeleted = feedsToDelete.length + foldersToDelete.length;
-            toast.success(`Deleted ${totalDeleted} item${totalDeleted > 1 ? 's' : ''}`);
-
-            setIsEditMode(false);
-            setSelectedFeedIds(new Set());
-            setSelectedFolderIds(new Set());
-        }, [selectedFeedIds, selectedFolderIds, feeds]);
+                setIsEditMode(false);
+                setSelectedFeedIds(new Set());
+                setSelectedFolderIds(new Set());
+            } catch (error) {
+                toast.error('Failed to delete items');
+                console.error('Error deleting items:', error);
+            }
+        }, [selectedFeedIds, selectedFolderIds, deleteFeedMutation, deleteFolderMutation]);
 
         const handleCreateFolder = useCallback(
-            (name: string) => {
-                const newFolder: Folder = {
-                    id: `folder-${Date.now()}`,
-                    name,
-                    feedIds: [],
-                };
-                setFolders((prev) => [...prev, newFolder]);
-                toast.success(`Created folder "${name}"`);
+            async (name: string) => {
+                try {
+                    await createFolderMutation.mutateAsync({ name });
+                    toast.success(`Created folder "${name}"`);
+                } catch (error) {
+                    toast.error('Failed to create folder');
+                    console.error('Error creating folder:', error);
+                }
             },
-            []
+            [createFolderMutation]
         );
 
         const handleNewFolderPress = useCallback(() => {
@@ -348,7 +375,11 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                         onPress={handleNewFolderPress}
                                         className="rounded-2xl">
                                         <View className="flex-row items-center gap-2">
-                                            <Monicon name="solar:add-folder-linear" size={20} color="#90988B" />
+                                            <Monicon
+                                                name="solar:add-folder-linear"
+                                                size={20}
+                                                color="#90988B"
+                                            />
                                             <Text className="font-geist-semibold text-base text-grey">
                                                 New Folder
                                             </Text>
@@ -363,8 +394,14 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                         onPress={toggleEditMode}
                                         className="rounded-2xl">
                                         <View className="flex-row items-center gap-2">
-                                            <Monicon name="solar:tuning-2-linear" size={20} color="#FFFFFF" />
-                                            <Text className="font-geist-semibold text-base text-white">Edit</Text>
+                                            <Monicon
+                                                name="solar:tuning-2-linear"
+                                                size={20}
+                                                color="#FFFFFF"
+                                            />
+                                            <Text className="font-geist-semibold text-base text-white">
+                                                Edit
+                                            </Text>
                                         </View>
                                     </Button>
                                 </View>
@@ -393,18 +430,31 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                 {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
                             </Text>
 
+                            {/* Loading indicator */}
+                            {isLoading && !isEditMode && (
+                                <ActivityIndicator size="small" color="#6A994E" />
+                            )}
+
                             {/* Edit Mode Actions */}
                             {isEditMode && selectedCount > 0 && (
                                 <View className="flex-row gap-4">
                                     <Pressable
                                         onPress={handleMarkAllAsRead}
                                         className="transition-opacity active:opacity-70">
-                                        <Monicon name="solar:check-read-linear" size={24} color="#232222" />
+                                        <Monicon
+                                            name="solar:check-read-linear"
+                                            size={24}
+                                            color="#232222"
+                                        />
                                     </Pressable>
                                     <Pressable
                                         onPress={handleMoveToFolder}
                                         className="transition-opacity active:opacity-70">
-                                        <Monicon name="solar:move-to-folder-linear" size={24} color="#232222" />
+                                        <Monicon
+                                            name="solar:move-to-folder-linear"
+                                            size={24}
+                                            color="#232222"
+                                        />
                                     </Pressable>
                                     <Pressable
                                         onPress={handleDeletePress}
@@ -420,25 +470,32 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                         </View>
 
                         {/* Feed List */}
-                        <BottomSheetFlashList
-                            data={listData}
-                            renderItem={renderItem}
-                            keyExtractor={keyExtractor}
-                            estimatedItemSize={50}
-                            contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
-                            showsVerticalScrollIndicator={false}
-                        />
-
+                        {isLoading && listData.length === 0 ? (
+                            <View className="flex-1 items-center justify-center py-12">
+                                <ActivityIndicator size="large" color="#6A994E" />
+                            </View>
+                        ) : listData.length === 0 ? (
+                            <View className="flex-1 items-center justify-center px-6 py-12">
+                                <Text className="text-center text-base text-grey">
+                                    No feeds yet. Add some feeds to get started!
+                                </Text>
+                            </View>
+                        ) : (
+                            <BottomSheetFlashList
+                                data={listData}
+                                renderItem={renderItem}
+                                keyExtractor={keyExtractor}
+                                estimatedItemSize={50}
+                                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+                                showsVerticalScrollIndicator={false}
+                            />
+                        )}
                     </BottomSheetView>
                 </BottomSheetModal>
 
                 {/* Modals */}
                 <FolderNameModal ref={folderNameModalRef} onCreateFolder={handleCreateFolder} />
-                <FolderPicker
-                    ref={folderPickerRef}
-                    folders={folders}
-                    onFolderSelect={handleFolderSelect}
-                />
+                <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
                 <ConfirmationModal
                     ref={confirmDeleteRef}
                     title={`Delete ${selectedCount} feed${selectedCount > 1 ? 's' : ''}?`}
@@ -452,4 +509,3 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 );
 
 FeedSwitcher.displayName = 'FeedSwitcher';
-

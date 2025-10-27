@@ -1,3 +1,7 @@
+.expo
+.cursor/
+.vscode/
+.DS_Store
 # Dependencies
 node_modules/
 .pnp
@@ -32,8 +36,6 @@ pids
 # Docker volumes and data
 docker/supabase/volumes/db/data
 docker/supabase/volumes/storage/stub
-supabase/volumes/db/data
-supabase/volumes/storage/stub
 
 # OS generated files
 .DS_Store
@@ -76,7 +78,6 @@ server/.venv/
 # Temporary files
 tmp/
 temp/
-.enk
 .playwright-mcp/
 
 # Package manager locks (keep bun.lock)

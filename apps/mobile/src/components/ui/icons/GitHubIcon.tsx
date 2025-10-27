@@ -17,4 +17,3 @@ export const GitHubIcon = ({ size = 24, color = '#24292f' }: GitHubIconProps) =>
         </Svg>
     );
 };
-

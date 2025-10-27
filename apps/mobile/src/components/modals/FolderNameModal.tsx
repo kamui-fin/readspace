@@ -29,7 +29,12 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
 
         const renderBackdrop = useCallback(
             (props: any) => (
-                <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+                <BottomSheetBackdrop
+                    {...props}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={0.5}
+                />
             ),
             []
         );
@@ -82,11 +87,15 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                     <Pressable
                         onPress={handleCreate}
                         disabled={!folderName.trim()}
-                        className={`items-center justify-center rounded-2xl py-4 transition-opacity ${folderName.trim() ? 'bg-primary active:opacity-70' : 'bg-mid-grey opacity-50'
-                            }`}>
+                        className={`items-center justify-center rounded-2xl py-4 transition-opacity ${
+                            folderName.trim()
+                                ? 'bg-primary active:opacity-70'
+                                : 'bg-mid-grey opacity-50'
+                        }`}>
                         <Text
-                            className={`font-geist-semibold text-base ${folderName.trim() ? 'text-white' : 'text-grey'
-                                }`}>
+                            className={`font-geist-semibold text-base ${
+                                folderName.trim() ? 'text-white' : 'text-grey'
+                            }`}>
                             Create
                         </Text>
                     </Pressable>
@@ -97,4 +106,3 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
 );
 
 FolderNameModal.displayName = 'FolderNameModal';
-

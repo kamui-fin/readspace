@@ -45,7 +45,12 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
 
         const renderBackdrop = useCallback(
             (props: any) => (
-                <BottomSheetBackdrop {...props} appearsOnIndex={0} disappearsOnIndex={-1} opacity={0.5} />
+                <BottomSheetBackdrop
+                    {...props}
+                    appearsOnIndex={0}
+                    disappearsOnIndex={-1}
+                    opacity={0.5}
+                />
             ),
             []
         );
@@ -102,4 +107,3 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
 );
 
 SortPicker.displayName = 'SortPicker';
-

@@ -155,8 +155,12 @@ export class ApiClient {
     try {
       const headers = await getAuthHeaders(this.config.getAuthToken);
 
+      // Normalize URL to prevent double slashes
+      const baseUrl = this.config.baseUrl.replace(/\/$/, '');
+      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
       return await fetchWithRetry<T>(
-        `${this.config.baseUrl}${endpoint}`,
+        `${baseUrl}${normalizedEndpoint}`,
         {
           ...options,
           headers: {
@@ -225,7 +229,12 @@ export class ApiClient {
     >;
 
     try {
-      let response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+      // Normalize URL to prevent double slashes
+      const baseUrl = this.config.baseUrl.replace(/\/$/, '');
+      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      const url = `${baseUrl}${normalizedEndpoint}`;
+
+      let response = await fetch(url, {
         method: "POST",
         body: formData,
         signal,
@@ -242,7 +251,7 @@ export class ApiClient {
           const { "Content-Type": _, ...freshUploadHeaders } =
             freshHeaders as Record<string, string>;
 
-          response = await fetch(`${this.config.baseUrl}${endpoint}`, {
+          response = await fetch(url, {
             method: "POST",
             body: formData,
             signal,
@@ -582,6 +591,22 @@ export class ApiClient {
       const queryString = queryParams.toString();
       return this.get(
         `/api/rss/discover/preview/articles${queryString ? `?${queryString}` : ""}`,
+      );
+    },
+
+    getTrendingFeeds: (params?: {
+      language?: string;
+      limit?: number;
+      category?: string;
+    }) => {
+      const queryParams = new URLSearchParams();
+      if (params?.language) queryParams.append("language", params.language);
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
+      if (params?.category) queryParams.append("category", params.category);
+
+      const queryString = queryParams.toString();
+      return this.get<Feed[]>(
+        `/api/rss/feeds/trending${queryString ? `?${queryString}` : ""}`,
       );
     },
   };

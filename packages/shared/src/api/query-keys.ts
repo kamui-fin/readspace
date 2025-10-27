@@ -9,6 +9,7 @@ export const RSS_QUERY_KEYS = {
   OPML_IMPORT_STATUS: "opml-import-status",
   OPML_IMPORT_TASKS: "opml-import-tasks",
   REFRESH_STATUS: "refresh-status",
+  TRENDING_FEEDS: "rss-trending-feeds",
 } as const;
 
 export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {

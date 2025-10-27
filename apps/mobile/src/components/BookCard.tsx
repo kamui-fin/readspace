@@ -31,7 +31,7 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
                     {!isCompleted && pagesLeft !== undefined && (
                         <View className="absolute bottom-0 left-0 right-0 h-2 bg-mid-grey">
                             <View
-                                className="h-full bg-secondary rounded"
+                                className="h-full rounded bg-secondary"
                                 style={{
                                     width: `${Math.max(5, 100 - (pagesLeft / 500) * 100)}%`,
                                 }}
@@ -56,4 +56,3 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
 );
 
 BookCard.displayName = 'BookCard';
-

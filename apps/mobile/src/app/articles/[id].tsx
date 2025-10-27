@@ -1,15 +1,19 @@
 import { ArticleMenuModal } from '@/components/ArticleMenuModal';
 import { ArticleReader } from '@/components/ArticleReader';
-import { getMockArticle } from '@/utils/mockArticle';
-import { generateMockSummary } from '@/utils/mockSummary';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { Galeria } from '@nandorojo/galeria';
-import * as Clipboard from 'expo-clipboard';
-import { Image } from 'expo-image';
 import { Monicon } from '@monicon/native';
+import {
+    fetchTranslation,
+    useArticle,
+    useExtractFullText,
+    useSummarizeArticle,
+    useUpdateArticle,
+} from '@readspace/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, Share, StatusBar, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Linking, Pressable, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
@@ -17,14 +21,61 @@ export default function ArticleScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const menuModalRef = useRef<BottomSheetModal>(null);
+    const queryClient = useQueryClient();
 
     // State
-    const [isBookmarked, setIsBookmarked] = useState(false);
+    const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
+        'original'
+    );
+    const [translatedContent, setTranslatedContent] = useState<string | null>(null);
     const [aiSummary, setAiSummary] = useState<string | undefined>(undefined);
-    const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+    const [isTranslating, setIsTranslating] = useState(false);
 
-    // Get article data
-    const article = useMemo(() => getMockArticle(id || '1'), [id]);
+    // Fetch article data
+    const { data: article, isLoading: isArticleLoading } = useArticle(id || '', {
+        enabled: !!id,
+    });
+
+    // Auto-detect extracted content from API
+    useEffect(() => {
+        if (article?.extracted_content) {
+            setContentSource('extracted');
+        }
+    }, [article?.extracted_content]);
+
+    const updateArticle = useUpdateArticle();
+
+    // Extract full text hook (manual trigger)
+    const {
+        refetch: extractFullText,
+        data: extractedData,
+        isFetching: isExtracting,
+    } = useExtractFullText(id || '', article?.link || '');
+
+    // Summarize hook (manual trigger)
+    const {
+        refetch: generateSummary,
+        data: summaryData,
+        isFetching: isSummarizing,
+    } = useSummarizeArticle(
+        id || '',
+        contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
+            ? (article?.extracted_content || extractedData?.content) || undefined
+            : contentSource === 'translated' && translatedContent
+                ? translatedContent
+                : article?.content || undefined
+    );
+
+    // Mark as read on mount
+    useEffect(() => {
+        if (article && !article.is_read) {
+            updateArticle.mutate({
+                articleId: article.id,
+                data: { is_read: true },
+                articleType: 'feed',
+            });
+        }
+    }, [article?.id]);
 
     // Handlers
     const handleClose = useCallback(() => {
@@ -32,81 +83,171 @@ export default function ArticleScreen() {
     }, [router]);
 
     const handleBookmark = useCallback(() => {
-        setIsBookmarked((prev) => {
-            const newValue = !prev;
-            toast(newValue ? 'Article bookmarked' : 'Bookmark removed');
-            return newValue;
+        if (!article) return;
+
+        const newValue = !article.is_read_later;
+        updateArticle.mutate({
+            articleId: article.id,
+            data: { is_read_later: newValue },
+            articleType: 'feed',
         });
-    }, []);
+        toast(newValue ? 'Saved for later' : 'Removed from saved');
+    }, [article, updateArticle]);
 
     const handleMenuPress = useCallback(() => {
         menuModalRef.current?.present();
     }, []);
 
     const handleCopyLink = useCallback(async () => {
-        await Clipboard.setStringAsync(article.url);
+        if (!article) return;
+        await Clipboard.setStringAsync(article.link);
         toast('Link copied to clipboard');
-    }, [article.url]);
+    }, [article]);
 
     const handleOpenInBrowser = useCallback(async () => {
-        const supported = await Linking.canOpenURL(article.url);
+        if (!article) return;
+        const supported = await Linking.canOpenURL(article.link);
         if (supported) {
-            await Linking.openURL(article.url);
+            await Linking.openURL(article.link);
         } else {
             toast.error('Cannot open this URL');
         }
-    }, [article.url]);
+    }, [article]);
 
     const handleShare = useCallback(async () => {
+        if (!article) return;
         try {
             await Share.share({
-                message: `${article.title}\n\n${article.url}`,
-                url: article.url,
+                message: `${article.title}\n\n${article.link}`,
+                url: article.link,
                 title: article.title,
             });
         } catch (error) {
             toast.error('Failed to share article');
         }
-    }, [article.title, article.url]);
+    }, [article]);
 
     const handleSummarize = useCallback(async () => {
         if (aiSummary) {
-            // If summary already exists, just scroll to it or show a toast
             toast('Summary already generated');
             return;
         }
 
-        setIsLoadingSummary(true);
         menuModalRef.current?.dismiss();
+        toast.loading('Generating summary...', { id: 'summary' });
 
         try {
-            const summary = await generateMockSummary(article.title);
-            setAiSummary(summary);
-            toast.success('Summary generated');
+            const result = await generateSummary();
+            if (result.data?.summary) {
+                setAiSummary(result.data.summary);
+                toast.success('Summary generated!', { id: 'summary' });
+            } else {
+                toast.error('Failed to generate summary', { id: 'summary' });
+            }
         } catch (error) {
-            toast.error('Failed to generate summary');
-            setIsLoadingSummary(false);
-        } finally {
-            setIsLoadingSummary(false);
+            toast.error('Failed to generate summary', { id: 'summary' });
         }
-    }, [article.title, aiSummary]);
+    }, [aiSummary, generateSummary]);
 
     const handleCloseSummary = useCallback(() => {
         setAiSummary(undefined);
     }, []);
 
-    const handleTranslate = useCallback(() => {
-        toast('Translate feature coming soon');
-    }, []);
+    const handleTranslate = useCallback(async (languageCode: string) => {
+        if (!article) return;
 
-    const handleWebModeChange = useCallback((enabled: boolean) => {
-        toast(enabled ? 'Web Mode enabled' : 'Web Mode disabled');
-    }, []);
+        menuModalRef.current?.dismiss();
+        setIsTranslating(true);
+        toast.loading('Translating article...', { id: 'translate' });
+
+        try {
+            const currentContent =
+                contentSource === 'extracted' && (article.extracted_content || extractedData?.content)
+                    ? (article.extracted_content || extractedData?.content)
+                    : article.content;
+
+            const result = await fetchTranslation(
+                queryClient,
+                article.id,
+                languageCode,
+                currentContent || undefined
+            );
+
+            if (result.translated_content) {
+                setTranslatedContent(result.translated_content);
+                setContentSource('translated');
+                toast.success('Article translated!', { id: 'translate' });
+            } else {
+                toast.error('Translation failed', { id: 'translate' });
+            }
+        } catch (error) {
+            toast.error('Failed to translate article', { id: 'translate' });
+        } finally {
+            setIsTranslating(false);
+        }
+    }, [article, contentSource, extractedData, queryClient]);
+
+    const handleWebModeChange = useCallback(
+        async (enabled: boolean) => {
+            if (enabled) {
+                // Check if we already have extracted content from API
+                if (article?.extracted_content) {
+                    setContentSource('extracted');
+                    toast('Showing extracted content');
+                    return;
+                }
+
+                // Otherwise, manually extract full text
+                toast.loading('Extracting full text...', { id: 'extract' });
+                try {
+                    const result = await extractFullText();
+                    if (result.data?.content) {
+                        setContentSource('extracted');
+                        toast.success('Full text extracted!', { id: 'extract' });
+                    } else {
+                        toast.error('Failed to extract full text', { id: 'extract' });
+                    }
+                } catch (error) {
+                    toast.error('Failed to extract full text', { id: 'extract' });
+                }
+            } else {
+                setContentSource('original');
+                toast('Showing original content');
+            }
+        },
+        [article?.extracted_content, extractFullText]
+    );
+
+    // Get the current content to display
+    const displayContent =
+        contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
+            ? (article?.extracted_content || extractedData?.content) || ''
+            : contentSource === 'translated' && translatedContent
+                ? translatedContent
+                : article?.content || '';
+
+    if (isArticleLoading) {
+        return (
+            <SafeAreaView edges={['top']} className="flex-1 bg-white">
+                <View className="flex-1 items-center justify-center">
+                    <ActivityIndicator size="large" color="#6A994E" />
+                </View>
+            </SafeAreaView>
+        );
+    }
+
+    if (!article) {
+        return (
+            <SafeAreaView edges={['top']} className="flex-1 bg-white">
+                <View className="flex-1 items-center justify-center px-6">
+                    <Text className="text-center text-base text-grey">Article not found</Text>
+                </View>
+            </SafeAreaView>
+        );
+    }
 
     return (
         <SafeAreaView edges={['top']} className="flex-1 bg-white">
-            <StatusBar barStyle="dark-content" />
-
             {/* Top Action Bar */}
             <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3">
                 {/* Close Button */}
@@ -130,9 +271,13 @@ export default function ArticleScreen() {
                         onPress={handleBookmark}
                         className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey">
                         <Monicon
-                            name={isBookmarked ? 'solar:bookmark-bold' : 'solar:bookmark-linear'}
+                            name={
+                                article.is_read_later
+                                    ? 'solar:bookmark-bold'
+                                    : 'solar:bookmark-linear'
+                            }
                             size={20}
-                            color={isBookmarked ? '#FBBC04' : '#232222'}
+                            color={article.is_read_later ? '#FBBC04' : '#232222'}
                         />
                     </Pressable>
 
@@ -147,11 +292,14 @@ export default function ArticleScreen() {
                 </View>
             </View>
 
-            {/* Article Content with Featured Image */}
+            {/* Article Content with AI Features */}
             <ArticleReader
-                article={article}
+                article={{
+                    ...article,
+                    content: displayContent,
+                }}
                 aiSummary={aiSummary}
-                isLoadingSummary={isLoadingSummary}
+                isLoadingSummary={isSummarizing}
                 onCloseSummary={handleCloseSummary}
             />
 
@@ -163,6 +311,7 @@ export default function ArticleScreen() {
                 onSummarize={handleSummarize}
                 onTranslate={handleTranslate}
                 onWebModeChange={handleWebModeChange}
+                webModeEnabled={contentSource === 'extracted'}
             />
         </SafeAreaView>
     );

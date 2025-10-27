@@ -72,7 +72,9 @@ export const Header = (props: HeaderProps) => {
             <View
                 className="flex-row items-center gap-2 px-4 pb-3"
                 onLayout={(e) => setForegroundHeight(e.nativeEvent.layout.height)}>
-                <Text className="font-geist-bold text-3xl tracking-heading text-black">{title}</Text>
+                <Text className="font-geist-bold text-3xl tracking-heading text-black">
+                    {title}
+                </Text>
                 {unreadCount !== undefined && unreadCount > 0 && (
                     <Badge label={unreadCount.toString()} />
                 )}
@@ -134,9 +136,7 @@ export const Header = (props: HeaderProps) => {
     // Render sticky variant
     if (variant === 'sticky') {
         return (
-            <View
-                className={cn('w-full bg-white', className)}
-                style={{ paddingTop: insets.top }}>
+            <View className={cn('w-full bg-white', className)} style={{ paddingTop: insets.top }}>
                 {renderForeground()}
             </View>
         );
@@ -152,4 +152,3 @@ export const Header = (props: HeaderProps) => {
         </Animated.View>
     );
 };
-
