@@ -38,6 +38,7 @@ export interface ArticleMenuModalProps {
     onTranslate?: (languageCode: string) => void;
     onWebModeChange?: (enabled: boolean) => void;
     webModeEnabled?: boolean;
+    isSubscribed?: boolean; // Whether the user is subscribed to the article's feed
 }
 
 export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalProps>(
@@ -49,6 +50,7 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
             onTranslate,
             onWebModeChange,
             webModeEnabled = false,
+            isSubscribed = true, // Default to true for backward compatibility
         },
         ref
     ) => {
@@ -102,16 +104,21 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                 label: 'Open in Browser',
                 onPress: onOpenInBrowser,
             },
-            {
-                icon: 'solar:document-text-bold',
-                label: 'Generate Summary',
-                onPress: onSummarize,
-            },
-            {
-                icon: 'lucide:languages',
-                label: 'Translate',
-                onPress: handleTranslatePress,
-            },
+            // Only show AI features for subscribed feeds
+            ...(isSubscribed
+                ? [
+                      {
+                          icon: 'solar:document-text-bold',
+                          label: 'Generate Summary',
+                          onPress: onSummarize,
+                      },
+                      {
+                          icon: 'lucide:languages',
+                          label: 'Translate',
+                          onPress: handleTranslatePress,
+                      },
+                  ]
+                : []),
         ];
 
         return (
@@ -153,16 +160,18 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                             </Pressable>
                         ))}
 
-                        {/* Web Mode Toggle */}
-                        <View
-                            className="flex-row items-center justify-between py-4"
-                            style={{ borderTopWidth: 0.5, borderTopColor: '#F0F0F0' }}>
-                            <View className="flex-row items-center gap-4">
-                                <Monicon name="solar:global-bold" size={24} color="#232222" />
-                                <Text className="font-geist text-base text-black">Web Mode</Text>
+                        {/* Web Mode Toggle - Only show for subscribed feeds */}
+                        {isSubscribed && (
+                            <View
+                                className="flex-row items-center justify-between py-4"
+                                style={{ borderTopWidth: 0.5, borderTopColor: '#F0F0F0' }}>
+                                <View className="flex-row items-center gap-4">
+                                    <Monicon name="solar:global-bold" size={24} color="#232222" />
+                                    <Text className="font-geist text-base text-black">Web Mode</Text>
+                                </View>
+                                <Switch value={webModeEnabled} onValueChange={handleWebModeToggle} />
                             </View>
-                            <Switch value={webModeEnabled} onValueChange={handleWebModeToggle} />
-                        </View>
+                        )}
                     </BottomSheetView>
                 </BottomSheetModal>
 

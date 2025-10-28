@@ -189,9 +189,11 @@ export default function FeedPreviewScreen() {
 
     const handleArticlePress = useCallback(
         (articleId: string) => {
-            router.push(`/articles/${articleId}`);
+            // Pass subscription status to article screen
+            const isSubscribed = feed?.is_subscribed ?? false;
+            router.push(`/articles/${articleId}?isSubscribed=${isSubscribed}`);
         },
-        [router]
+        [router, feed?.is_subscribed]
     );
 
     const handleSeeAllSimilar = useCallback(() => {

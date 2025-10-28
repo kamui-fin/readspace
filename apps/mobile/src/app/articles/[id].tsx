@@ -20,14 +20,17 @@ import { toast } from 'sonner-native';
 
 export default function ArticleScreen() {
     const router = useRouter();
-    const { id } = useLocalSearchParams<{ id: string }>();
+    const { id, isSubscribed: isSubscribedParam } = useLocalSearchParams<{
+        id: string;
+        isSubscribed?: string;
+    }>();
+
+    // Parse subscription status from URL param (default to true if not provided)
+    const isSubscribed = isSubscribedParam === 'false' ? false : true;
     const menuModalRef = useRef<BottomSheetModal>(null);
     const queryClient = useQueryClient();
 
     // State
-    const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
-        'original'
-    );
     const [translatedContent, setTranslatedContent] = useState<string | null>(null);
     const [aiSummary, setAiSummary] = useState<string | undefined>(undefined);
     const [isTranslating, setIsTranslating] = useState(false);
@@ -37,12 +40,9 @@ export default function ArticleScreen() {
         enabled: !!id,
     });
 
-    // Auto-detect extracted content from API
-    useEffect(() => {
-        if (article?.extracted_content) {
-            setContentSource('extracted');
-        }
-    }, [article?.extracted_content]);
+    const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
+        article?.extracted_content ? 'extracted' : 'original'
+    );
 
     const updateArticle = useUpdateArticle();
 
@@ -320,6 +320,7 @@ export default function ArticleScreen() {
                 onTranslate={handleTranslate}
                 onWebModeChange={handleWebModeChange}
                 webModeEnabled={contentSource === 'extracted'}
+                isSubscribed={isSubscribed}
             />
         </SafeAreaView>
     );
