@@ -1,5 +1,3 @@
-import { InstancePicker, type Instance } from '@/components/InstancePicker';
-import { SelfHostSettings } from '@/components/SelfHostSettings';
 import { SettingsGroup, SettingsItem } from '@/components/SettingsGroup';
 import { ThemePicker, type Theme } from '@/components/ThemePicker';
 import { UserProfile } from '@/components/UserProfile';
@@ -7,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { DiscordIcon } from '@/components/ui/icons/DiscordIcon';
 import { GitHubIcon } from '@/components/ui/icons/GitHubIcon';
 import { useAuth } from '@/contexts/AuthProvider';
-import BottomSheet, { BottomSheetModal } from '@gorhom/bottom-sheet';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
   exportFeedsToOPML,
@@ -23,18 +21,17 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+import { useSettingsStore } from '@/stores/settings';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colorScheme, setColorScheme } = useColorScheme();
   const themePickerRef = useRef<BottomSheet>(null);
-  const instancePickerRef = useRef<BottomSheet>(null);
-  const selfHostSettingsRef = useRef<BottomSheetModal>(null);
   const [theme, setTheme] = useState<Theme>('system');
-  const [instance, setInstance] = useState<Instance>('custom');
   const [loggingOut, setLoggingOut] = useState(false);
   const [importTaskId, setImportTaskId] = useState<string | null>(null);
+  const { settings } = useSettingsStore();
 
   // Hooks for OPML
   const importOPML = useImportOPML();
@@ -83,27 +80,6 @@ export default function SettingsScreen() {
     toast(`Theme changed to ${newTheme}`);
   };
 
-  const handleInstancePress = () => {
-    instancePickerRef.current?.expand();
-  };
-
-  const handleInstanceChange = (newInstance: Instance) => {
-    setInstance(newInstance);
-    toast(`Instance changed to ${newInstance}`);
-  };
-
-  const handleSelfHostingPress = () => {
-    selfHostSettingsRef.current?.present();
-  };
-
-  const handleSelfHostSave = (data: {
-    apiUrl: string;
-    supabaseUrl: string;
-    supabaseAnonKey: string;
-  }) => {
-    // TODO: Save self-hosting configuration
-    console.log('Self-hosting configuration saved:', data);
-  };
 
   const handleOPMLImport = async () => {
     try {
@@ -222,17 +198,6 @@ export default function SettingsScreen() {
                 onPress={handleThemePress}
               />
               <SettingsItem
-                label="Instance"
-                variant="select"
-                value={instance.charAt(0).toUpperCase() + instance.slice(1)}
-                onPress={handleInstancePress}
-              />
-              <SettingsItem
-                label="Self-hosting"
-                variant="button"
-                onPress={handleSelfHostingPress}
-              />
-              <SettingsItem
                 label="Import OPML"
                 variant="button"
                 onPress={handleOPMLImport}
@@ -244,6 +209,26 @@ export default function SettingsScreen() {
                 onPress={handleOPMLExport}
                 isLast
               />
+            </SettingsGroup>
+
+            {/* Instance Information */}
+            <SettingsGroup title="Instance" className="mb-8">
+              <View className="rounded-2xl bg-light-grey p-4">
+                <Text className="mb-1 font-geist-medium text-sm text-grey">
+                  Current Instance
+                </Text>
+                <Text className="font-geist-semibold text-base text-black">
+                  {settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
+                </Text>
+                {settings.instance_type === 'self-hosted' && (
+                  <Text className="mt-1 font-geist-mono-regular text-xs text-grey">
+                    {settings.readspace_url}
+                  </Text>
+                )}
+                <Text className="mt-3 font-geist text-sm text-grey">
+                  To switch instances, log out and reconfigure during sign in.
+                </Text>
+              </View>
             </SettingsGroup>
 
             {/* OPML Import Status */}
@@ -311,12 +296,6 @@ export default function SettingsScreen() {
         onThemeChange={handleThemeChange}
         initialTheme={theme}
       />
-      <InstancePicker
-        ref={instancePickerRef}
-        onInstanceChange={handleInstanceChange}
-        initialInstance={instance}
-      />
-      <SelfHostSettings ref={selfHostSettingsRef} onSave={handleSelfHostSave} />
     </SafeAreaView>
   );
 }

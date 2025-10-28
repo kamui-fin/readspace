@@ -30,19 +30,30 @@ function RootLayoutNav() {
     const router = useRouter();
 
     useEffect(() => {
-        if (loading) return;
+        console.log('[RootLayoutNav] Auth state:', { isAuthenticated, loading, segments });
+
+        if (loading) {
+            console.log('[RootLayoutNav] Still loading, waiting...');
+            return;
+        }
 
         const inAuthGroup = segments[0] === '(tabs)';
         const inOnboarding = segments[0] === 'onboarding';
 
+        console.log('[RootLayoutNav] Route check:', { inAuthGroup, inOnboarding, currentSegment: segments[0] });
+
         if (!isAuthenticated && inAuthGroup) {
             // Redirect to welcome if trying to access protected routes
+            console.log('[RootLayoutNav] Not authenticated, redirecting to welcome');
             router.replace('/welcome');
         } else if (isAuthenticated && (segments[0] === 'welcome' || inOnboarding)) {
             // Redirect to tabs if authenticated and on welcome/onboarding
+            console.log('[RootLayoutNav] Authenticated, redirecting to tabs');
             router.replace('/(tabs)');
+        } else {
+            console.log('[RootLayoutNav] No redirect needed');
         }
-    }, [isAuthenticated, segments, loading]);
+    }, [isAuthenticated, segments, loading, router]);
 
     return (
         <BottomSheetModalProvider>

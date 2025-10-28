@@ -1,7 +1,8 @@
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
+import { getSettings } from '@/stores/settings';
 
 // Create an adapter for expo-secure-store that implements AsyncStorage interface
 const SecureStoreAdapter = {
@@ -32,8 +33,7 @@ const SecureStoreAdapter = {
 };
 
 // Helper to resolve hostname for Android emulator
-const resolveHostname = (url: string | undefined) => {
-    if (!url) return undefined;
+const resolveHostname = (url: string) => {
     const _url = new URL(url);
     if (_url.hostname === 'localhost' && Platform.OS === 'android') {
         _url.hostname = '10.0.2.2';
@@ -41,41 +41,115 @@ const resolveHostname = (url: string | undefined) => {
     return _url.toString();
 };
 
-const supabaseUrl = resolveHostname(process.env.EXPO_PUBLIC_SUPABASE_URL);
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Singleton Supabase client
+let supabaseClient: SupabaseClient | null = null;
 
-console.log('Supabase config check:', {
-    hasUrl: !!supabaseUrl,
-    hasKey: !!supabaseAnonKey,
-    url: supabaseUrl ? `${supabaseUrl.substring(0, 20)}...` : 'undefined',
-    key: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined',
-});
+/**
+ * Get or create the Supabase client.
+ * The client is created lazily based on current settings from the store.
+ * If url and key are provided, they override the settings store (useful for validation).
+ */
+export function getSupabaseClient(
+    supabaseUrl?: string,
+    supabaseAnonKey?: string
+): SupabaseClient {
+    // If client exists and no override params provided, return existing client
+    if (supabaseClient && !supabaseUrl && !supabaseAnonKey) {
+        return supabaseClient;
+    }
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    console.error('Missing Supabase environment variables!');
-    console.error('EXPO_PUBLIC_SUPABASE_URL:', supabaseUrl);
-    console.error('EXPO_PUBLIC_SUPABASE_ANON_KEY:', supabaseAnonKey);
-    throw new Error(
-        'Missing required Supabase environment variables. Please check your .env file.'
-    );
+    // Get settings from store if not provided
+    const settings = getSettings();
+    const url = supabaseUrl || settings.supabase_url;
+    const key = supabaseAnonKey || settings.supabase_anon_key;
+
+    if (!url || !key) {
+        throw new Error(
+            'Missing Supabase configuration. Please configure your instance settings.'
+        );
+    }
+
+    const resolvedUrl = resolveHostname(url);
+
+    console.log('[Supabase] Creating client with URL:', resolvedUrl.substring(0, 30) + '...');
+    console.log('[Supabase] Using anon key:', key.substring(0, 50) + '...');
+
+    // Create new client (or override existing one if params provided)
+    const client = createClient(resolvedUrl, key, {
+        auth: {
+            storage: SecureStoreAdapter,
+            autoRefreshToken: true,
+            persistSession: true,
+            detectSessionInUrl: false,
+            // Use instance-specific storage key to prevent session leakage
+            storageKey: `supabase-auth-${settings.instance_type}`,
+        },
+    });
+
+    // Only set as singleton if using settings (not overriding)
+    if (!supabaseUrl && !supabaseAnonKey) {
+        supabaseClient = client;
+    }
+
+    return client;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-        storage: SecureStoreAdapter,
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false,
-    },
-});
+/**
+ * Reset the Supabase client singleton.
+ * This should be called when switching instances to force recreation with new settings.
+ * Note: This will invalidate any active subscriptions!
+ */
+export function resetSupabaseClient() {
+    console.log('[Supabase] Resetting client (this will invalidate subscriptions)');
+    if (supabaseClient) {
+        // Don't stop auto-refresh if there's an active session
+        // as it will be picked up by the new client
+        supabaseClient = null;
+    }
+}
 
-console.log('Supabase client initialized successfully');
+/**
+ * Validate Supabase connection with given credentials.
+ * Returns true if connection is successful, false otherwise.
+ */
+export async function validateSupabaseConnection(
+    supabaseUrl: string,
+    supabaseAnonKey: string
+): Promise<{ valid: boolean; error?: string }> {
+    try {
+        const testClient = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+
+        // Test connection with a simple query
+        const { error } = await testClient.auth.getSession();
+
+        if (error) {
+            return { valid: false, error: error.message };
+        }
+
+        return { valid: true };
+    } catch (error) {
+        return {
+            valid: false,
+            error: error instanceof Error ? error.message : 'Connection failed',
+        };
+    }
+}
+
+// Initialize default client on module load
+// This will use cloud config until settings store is rehydrated
+getSupabaseClient();
 
 // Auto-refresh session when app becomes active
 AppState.addEventListener('change', (state) => {
+    const client = supabaseClient;
+    if (!client) return;
+
     if (state === 'active') {
-        supabase.auth.startAutoRefresh();
+        client.auth.startAutoRefresh();
     } else {
-        supabase.auth.stopAutoRefresh();
+        client.auth.stopAutoRefresh();
     }
 });
+
+// Backward compatibility export
+export const supabase = getSupabaseClient();

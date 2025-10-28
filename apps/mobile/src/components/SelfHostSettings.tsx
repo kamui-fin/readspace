@@ -6,9 +6,10 @@ import {
     BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
-import { Text, View } from 'react-native';
+import { ActivityIndicator, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 import { z } from 'zod';
+import { validateSupabaseConnection } from '@/lib/supabase/client';
 
 const selfHostSchema = z.object({
     apiUrl: z.string().url('Invalid API URL'),
@@ -31,6 +32,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
         const [supabaseUrl, setSupabaseUrl] = useState(initialData?.supabaseUrl || '');
         const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
         const [errors, setErrors] = useState<Record<string, string>>({});
+        const [isValidating, setIsValidating] = useState(false);
 
         const snapPoints = useMemo(() => ['90%'], []);
 
@@ -48,21 +50,66 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
             }
         }, [apiUrl, supabaseUrl, supabaseAnonKey]);
 
-        const handleSave = useCallback(() => {
+        const handleSave = useCallback(async () => {
+            setIsValidating(true);
+            setErrors({});
+
             try {
+                // Validate form schema first
                 const data = selfHostSchema.parse({
                     apiUrl,
                     supabaseUrl,
                     supabaseAnonKey,
                 });
 
+                // Test API endpoint
+                toast.loading('Validating API endpoint...', { id: 'validation' });
+                try {
+                    const apiResponse = await fetch(data.apiUrl + '/health', {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                    });
+
+                    if (!apiResponse.ok) {
+                        throw new Error(
+                            `API endpoint returned ${apiResponse.status}: ${apiResponse.statusText}`
+                        );
+                    }
+                } catch (error) {
+                    toast.dismiss('validation');
+                    const errorMsg =
+                        error instanceof Error ? error.message : 'Failed to connect to API';
+                    setErrors((prev) => ({ ...prev, apiUrl: errorMsg }));
+                    setIsValidating(false);
+                    return;
+                }
+
+                // Test Supabase connection
+                toast.loading('Validating Supabase connection...', { id: 'validation' });
+                const supabaseValidation = await validateSupabaseConnection(
+                    data.supabaseUrl,
+                    data.supabaseAnonKey
+                );
+
+                if (!supabaseValidation.valid) {
+                    toast.dismiss('validation');
+                    setErrors((prev) => ({
+                        ...prev,
+                        supabaseUrl: supabaseValidation.error || 'Connection failed',
+                    }));
+                    setIsValidating(false);
+                    return;
+                }
+
+                // All validations passed
+                toast.success('Configuration validated successfully', { id: 'validation' });
                 onSave?.(data);
-                toast.success('Self-hosting configuration saved');
 
                 if (ref && typeof ref !== 'function' && ref.current) {
                     ref.current.dismiss();
                 }
             } catch (error) {
+                toast.dismiss('validation');
                 if (error instanceof z.ZodError) {
                     const newErrors: Record<string, string> = {};
                     error.issues.forEach((err: z.ZodIssue) => {
@@ -72,6 +119,8 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                     });
                     setErrors(newErrors);
                 }
+            } finally {
+                setIsValidating(false);
             }
         }, [apiUrl, supabaseUrl, supabaseAnonKey, onSave, ref]);
 
@@ -226,9 +275,18 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                         size="lg"
                         fullWidth
                         onPress={handleSave}
-                        disabled={!isValid}
+                        disabled={!isValid || isValidating}
                         className="mt-6">
-                        Save
+                        {isValidating ? (
+                            <View className="flex-row items-center gap-2">
+                                <ActivityIndicator size="small" color="#FFFFFF" />
+                                <Text className="font-geist-semibold text-base text-white">
+                                    Validating...
+                                </Text>
+                            </View>
+                        ) : (
+                            'Save'
+                        )}
                     </Button>
                 </BottomSheetView>
             </BottomSheetModal>

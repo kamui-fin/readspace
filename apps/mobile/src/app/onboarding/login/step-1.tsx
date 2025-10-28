@@ -7,11 +7,15 @@ import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useSettingsStore } from '@/stores/settings';
 
 export default function LoginStep1() {
     const router = useRouter();
     const selfHostSettingsRef = useRef<BottomSheetModal>(null);
     const [email, setEmail] = useState('');
+    const { settings, setSelfHosted, resetToCloud } = useSettingsStore();
+
+    const isSelfHosted = settings.instance_type === 'self-hosted';
 
     const handleNext = () => {
         // Store email in router params and navigate to step 2
@@ -30,8 +34,11 @@ export default function LoginStep1() {
         supabaseUrl: string;
         supabaseAnonKey: string;
     }) => {
-        // TODO: Save self-hosting configuration for onboarding
-        console.log('Self-hosting configuration saved during onboarding:', data);
+        setSelfHosted(data);
+    };
+
+    const handleSwitchToCloud = () => {
+        resetToCloud();
     };
 
     // Basic email validation
@@ -58,11 +65,31 @@ export default function LoginStep1() {
                         textContentType="emailAddress"
                     />
 
-                    <Pressable onPress={handleSelfHosting} className="mt-4">
-                        <Text className="font-geist-medium text-sm text-primary">
-                            Self-hosting?
-                        </Text>
-                    </Pressable>
+                    <View className="mt-4 flex-row items-center justify-between">
+                        {isSelfHosted ? (
+                            <>
+                                <View className="flex-1">
+                                    <Text className="font-geist-medium text-sm text-black">
+                                        Using{' '}
+                                        <Text className="font-geist-mono-regular text-xs text-grey">
+                                            {settings.readspace_url}
+                                        </Text>
+                                    </Text>
+                                </View>
+                                <Pressable onPress={handleSwitchToCloud}>
+                                    <Text className="font-geist-medium text-sm text-primary">
+                                        Switch to cloud
+                                    </Text>
+                                </Pressable>
+                            </>
+                        ) : (
+                            <Pressable onPress={handleSelfHosting}>
+                                <Text className="font-geist-medium text-sm text-primary">
+                                    Self-hosting?
+                                </Text>
+                            </Pressable>
+                        )}
+                    </View>
 
                     <View className="flex-1" />
 

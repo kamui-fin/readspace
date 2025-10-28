@@ -4,6 +4,7 @@ import { LanguagePicker, type Language } from '@/components/LanguagePicker';
 import { SearchBar } from '@/components/SearchBar';
 import { FeedListSkeleton } from '@/components/skeletons';
 import { Chip } from '@/components/ui/Chip';
+import { useSearchHistory } from '@/stores/search-history';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
@@ -45,9 +46,6 @@ const CATEGORIES = [
 
 type ViewState = 'default' | 'category' | 'search' | 'focused';
 
-// Mock recent searches - TODO: Store these in AsyncStorage
-const RECENT_SEARCHES = ['artificial intelligence', 'design', 'technology news'];
-
 export default function DiscoverScreen() {
     const [viewState, setViewState] = useState<ViewState>('default');
     const [searchQuery, setSearchQuery] = useState('');
@@ -63,6 +61,7 @@ export default function DiscoverScreen() {
     const [pendingFeedUrl, setPendingFeedUrl] = useState<string | null>(null);
 
     const createFeed = useCreateFeed();
+    const { searches: recentSearches, addSearch } = useSearchHistory();
 
     // Animation for search bar
     const searchBarTop = useSharedValue(0);
@@ -131,6 +130,9 @@ export default function DiscoverScreen() {
 
     const handleSearchSubmit = () => {
         if (searchQuery.trim()) {
+            // Add to search history
+            addSearch(searchQuery);
+
             setActiveQuery(searchQuery);
             setViewState('search');
             setSelectedCategory(null);
@@ -175,6 +177,9 @@ export default function DiscoverScreen() {
     };
 
     const handleRecentSearchPress = (query: string) => {
+        // Move this search to the front of history
+        addSearch(query);
+
         setSearchQuery(query);
         setActiveQuery(query);
         setViewState('search');
@@ -251,26 +256,39 @@ export default function DiscoverScreen() {
                     {viewState === 'focused' ? (
                         /* Recent Searches / Search Focus View */
                         <ScrollView showsVerticalScrollIndicator={false} className="px-6">
-                            <Text className="mb-4 font-geist-semibold text-base text-black">
-                                Recent searches
-                            </Text>
-                            <View className="gap-3">
-                                {RECENT_SEARCHES.map((query, index) => (
-                                    <Pressable
-                                        key={index}
-                                        onPress={() => handleRecentSearchPress(query)}
-                                        className="flex-row items-center gap-3 py-2 transition-opacity active:opacity-60">
-                                        <Monicon
-                                            name="solar:clock-circle-outline"
-                                            size={20}
-                                            color="#90988B"
-                                        />
-                                        <Text className="flex-1 font-geist text-base text-black">
-                                            {query}
-                                        </Text>
-                                    </Pressable>
-                                ))}
-                            </View>
+                            {recentSearches.length > 0 ? (
+                                <>
+                                    <Text className="mb-4 font-geist-semibold text-base text-black">
+                                        Recent searches
+                                    </Text>
+                                    <View className="gap-3">
+                                        {recentSearches.map((query, index) => (
+                                            <Pressable
+                                                key={index}
+                                                onPress={() => handleRecentSearchPress(query)}
+                                                className="flex-row items-center gap-3 py-2 transition-opacity active:opacity-60">
+                                                <Monicon
+                                                    name="solar:clock-circle-outline"
+                                                    size={20}
+                                                    color="#90988B"
+                                                />
+                                                <Text className="flex-1 font-geist text-base text-black">
+                                                    {query}
+                                                </Text>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                </>
+                            ) : (
+                                <View className="py-12">
+                                    <Text className="text-center font-geist text-base text-grey">
+                                        No recent searches yet
+                                    </Text>
+                                    <Text className="mt-2 text-center font-geist text-sm text-grey">
+                                        Your search history will appear here
+                                    </Text>
+                                </View>
+                            )}
                         </ScrollView>
                     ) : viewState === 'default' ? (
                         <ScrollView showsVerticalScrollIndicator={false}>

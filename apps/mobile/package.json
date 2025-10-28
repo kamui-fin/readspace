@@ -2,7 +2,6 @@
     "name": "@readspace/mobile",
     "version": "1.0.0",
     "scripts": {
-        "postinstall": "bash ./scripts/postinstall.sh",
         "android": "expo run:android",
         "ios": "expo run:ios",
         "start": "expo start",
@@ -21,7 +20,9 @@
         "@monicon/metro": "^1.2.2",
         "@monicon/native": "^1.2.2",
         "@nandorojo/galeria": "^1.2.0",
+        "@react-native-async-storage/async-storage": "^2.2.0",
         "@readspace/shared": "workspace:*",
+        "@shopify/flash-list": "^2.2.0",
         "@supabase/supabase-js": "^2.76.1",
         "@tanstack/react-query": "^5.90.5",
         "class-variance-authority": "^0.7.1",

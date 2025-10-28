@@ -2,7 +2,8 @@ import type { Session, User } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
 import { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import { useSettingsStore } from '@/stores/settings';
 
 interface SignUpCredentials {
     email: string;
@@ -42,19 +43,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const settings = useSettingsStore((state) => state.settings);
 
     const isAuthenticated = !!session;
 
+    // Reconfigure clients when settings change (but NOT during initial load)
     useEffect(() => {
+        // Skip on initial mount - only run when settings actually change
+        if (loading) {
+            console.log('[AuthProvider] Skipping settings change during initial load');
+            return;
+        }
+
+        console.log('[AuthProvider] Settings changed, reconfiguring clients');
+
+        // Lazy imports to avoid circular dependencies
+        const { resetSupabaseClient } = require('@/lib/supabase/client');
+        const { configureApiClient } = require('@/lib/api/config');
+
+        resetSupabaseClient();
+        configureApiClient();
+
+        // If user was authenticated, clear their session to force re-auth
+        if (session) {
+            console.log('[AuthProvider] Clearing session due to settings change');
+            setSession(null);
+            setUser(null);
+        }
+    }, [settings.instance_type, settings.readspace_url, settings.supabase_url]);
+
+    useEffect(() => {
+        console.log('[AuthProvider] Setting up auth subscription for instance:', settings.instance_type);
+
         const getSession = async () => {
             try {
+                const supabase = getSupabaseClient();
+                console.log('[AuthProvider] Getting initial session');
                 const {
                     data: { session: currentSession },
                 } = await supabase.auth.getSession();
+                console.log('[AuthProvider] Initial session:', currentSession ? 'exists' : 'none');
                 setSession(currentSession);
                 setUser(currentSession?.user ?? null);
             } catch (error) {
-                console.error('Error in getSession:', error);
+                console.error('[AuthProvider] Error in getSession:', error);
             } finally {
                 setLoading(false);
             }
@@ -62,30 +94,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
         getSession();
 
+        const supabase = getSupabaseClient();
+        console.log('[AuthProvider] Subscribing to auth state changes');
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, newSession) => {
+            console.log('[AuthProvider] Auth state changed:', event, newSession?.user?.email);
             setSession(newSession);
             setUser(newSession?.user ?? null);
             setLoading(false);
         });
 
-        return () => subscription.unsubscribe();
-    }, []);
+        return () => {
+            console.log('[AuthProvider] Unsubscribing from auth state changes');
+            subscription.unsubscribe();
+        };
+    }, [settings.instance_type, settings.supabase_url]);
 
     const signIn = async (credentials: SignInCredentials) => {
+        console.log('[AuthProvider] Attempting sign in for:', credentials.email);
+        console.log('[AuthProvider] Current settings:', {
+            instance_type: settings.instance_type,
+            readspace_url: settings.readspace_url,
+            supabase_url: settings.supabase_url,
+            supabase_anon_key: settings.supabase_anon_key.substring(0, 50) + '...',
+        });
+
+        const supabase = getSupabaseClient();
         const { error } = await supabase.auth.signInWithPassword({
             email: credentials.email,
             password: credentials.password,
         });
 
         if (error) {
+            console.error('[AuthProvider] Sign in error:', error);
             throw new Error(error.message);
         }
+
+        console.log('[AuthProvider] Sign in successful');
     };
 
     const signUp = async (credentials: SignUpCredentials) => {
         console.log('Attempting to sign up with:', credentials.email);
+        const supabase = getSupabaseClient();
         const { error } = await supabase.auth.signUp({
             email: credentials.email,
             password: credentials.password,
@@ -100,6 +151,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const signOut = async () => {
         try {
+            const supabase = getSupabaseClient();
             await supabase.auth.signOut();
         } catch (error) {
             console.error('Error signing out:', error);
@@ -125,6 +177,7 @@ export function AuthQueryManager() {
     const { user } = useAuth();
 
     useEffect(() => {
+        const supabase = getSupabaseClient();
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, newSession) => {
