@@ -3,12 +3,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { forwardRef } from 'react';
 import { Text, View, type ViewProps } from 'react-native';
 
-const badgeVariants = cva('rounded-full px-3 py-1 bg-mid-grey', {
+const badgeVariants = cva('rounded-full px-3 py-1 bg-mid-grey dark:bg-mid-grey-dark', {
     variants: {},
     defaultVariants: {},
 });
 
-const badgeTextVariants = cva('font-geist-semibold text-xs text-grey', {
+const badgeTextVariants = cva('font-geist-semibold text-xs text-grey dark:text-grey-dark', {
     variants: {},
     defaultVariants: {},
 });

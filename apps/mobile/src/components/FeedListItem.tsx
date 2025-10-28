@@ -109,10 +109,10 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                 <Pressable
                     ref={ref}
                     onPress={handlePress}
-                    className={cn('flex-row items-center gap-4 bg-white py-4', className)}
+                    className={cn('flex-row items-center gap-4 bg-white dark:bg-white-dark py-4', className)}
                     {...props}>
                     {/* Icon */}
-                    <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-mid-grey">
+                    <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
                         {iconUrl ? (
                             <Image
                                 source={{ uri: iconUrl }}
@@ -120,7 +120,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                                 resizeMode="cover"
                             />
                         ) : (
-                            <Text className="font-geist-bold text-lg text-grey">
+                            <Text className="font-geist-bold text-lg text-grey dark:text-grey-dark">
                                 {title.charAt(0).toUpperCase()}
                             </Text>
                         )}
@@ -129,11 +129,11 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                     {/* Content */}
                     <View className="flex-1">
                         <Text
-                            className="mb-1 font-geist-semibold text-base text-black"
+                            className="mb-1 font-geist-semibold text-base text-black dark:text-black-dark"
                             numberOfLines={1}>
                             {title}
                         </Text>
-                        <Text className="font-geist text-sm text-grey" numberOfLines={2}>
+                        <Text className="font-geist text-sm text-grey dark:text-grey-dark" numberOfLines={2}>
                             {description}
                         </Text>
                     </View>
@@ -144,13 +144,13 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                         disabled={createFeed.isPending || deleteFeed.isPending}
                         className={cn(
                             'rounded-full border px-4 py-2',
-                            isActuallyFollowing ? 'border-mid-grey' : 'border-primary bg-primary',
+                            isActuallyFollowing ? 'border-mid-grey dark:border-mid-grey-dark' : 'border-primary dark:border-primary bg-primary dark:bg-primary',
                             (createFeed.isPending || deleteFeed.isPending) && 'opacity-50'
                         )}>
                         <Text
                             className={cn(
                                 'font-geist-semibold text-sm',
-                                isActuallyFollowing ? 'text-grey' : 'text-white'
+                                isActuallyFollowing ? 'text-grey dark:text-grey-dark' : 'text-white dark:text-white'
                             )}>
                             {createFeed.isPending || deleteFeed.isPending
                                 ? '...'

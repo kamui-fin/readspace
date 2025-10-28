@@ -9,13 +9,13 @@ import {
 } from 'react-native';
 
 const inputVariants = cva(
-    'w-full rounded-2xl bg-mid-grey px-5 py-4 font-geist text-base text-black',
+    'w-full rounded-2xl bg-mid-grey dark:bg-mid-grey-dark px-5 py-4 font-geist text-base text-black dark:text-black-dark',
     {
         variants: {
             state: {
                 default: 'border-0',
-                focused: 'border-2 border-primary',
-                error: 'border-2 border-red',
+                focused: 'border-2 border-primary dark:border-primary',
+                error: 'border-2 border-red dark:border-red',
             },
         },
         defaultVariants: {
@@ -40,7 +40,7 @@ export const Input = forwardRef<React.ElementRef<typeof RNTextInput>, InputProps
         return (
             <View className={cn('w-full', containerClassName)}>
                 {label && (
-                    <Text className="mb-2 font-geist-medium text-sm text-black">{label}</Text>
+                    <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">{label}</Text>
                 )}
                 <RNTextInput
                     ref={ref}
@@ -56,7 +56,7 @@ export const Input = forwardRef<React.ElementRef<typeof RNTextInput>, InputProps
                     }}
                     {...props}
                 />
-                {error && <Text className="mt-1 font-geist text-xs text-red">{error}</Text>}
+                {error && <Text className="mt-1 font-geist text-xs text-red dark:text-red">{error}</Text>}
             </View>
         );
     }

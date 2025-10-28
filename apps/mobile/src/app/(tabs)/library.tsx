@@ -137,10 +137,10 @@ export default function Library() {
 
     if (isLoading) {
         return (
-            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
                     <View className="mb-2 flex-row items-center justify-between">
-                        <Text className="font-geist-bold text-3xl tracking-heading text-black">
+                        <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                             My Bookshelf
                         </Text>
                         <View className="flex-row gap-3">
@@ -148,7 +148,7 @@ export default function Library() {
                             <View className="h-10 w-10" />
                         </View>
                     </View>
-                    <View className="mb-6 h-6 w-20 rounded-md bg-mid-grey" />
+                    <View className="mb-6 h-6 w-20 rounded-md bg-mid-grey dark:bg-mid-grey-dark" />
                     <View className="flex-row flex-wrap justify-between pb-24">
                         {Array.from({ length: 6 }).map((_, index) => (
                             <View key={index} className="mb-6 w-[48%]">
@@ -162,10 +162,10 @@ export default function Library() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
             <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
                 <View className="mb-2 flex-row items-center justify-between">
-                    <Text className="font-geist-bold text-3xl tracking-heading text-black">
+                    <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                         My Bookshelf
                     </Text>
                     <View className="flex-row gap-3">
@@ -181,13 +181,13 @@ export default function Library() {
                         </Pressable>
                     </View>
                 </View>
-                <Text className="mb-6 font-geist text-base text-grey">
+                <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">
                     {filteredBooks.length} {filteredBooks.length === 1 ? 'book' : 'books'}
                 </Text>
 
                 {filteredBooks.length === 0 ? (
                     <View className="flex-1 items-center justify-center py-12">
-                        <Text className="text-center text-base text-grey">
+                        <Text className="text-center text-base text-grey dark:text-grey-dark">
                             No books in your library yet
                         </Text>
                     </View>

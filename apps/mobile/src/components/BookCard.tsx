@@ -15,7 +15,7 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
     ({ title, coverUrl, pagesLeft, isCompleted, className, ...props }, ref) => {
         return (
             <Pressable ref={ref} className={cn('w-full', className)} {...props}>
-                <View className="relative mb-3 aspect-[2/3] w-full overflow-hidden rounded-2xl bg-mid-grey">
+                <View className="relative mb-3 aspect-[2/3] w-full overflow-hidden rounded-2xl bg-mid-grey dark:bg-mid-grey-dark">
                     {coverUrl && (
                         <Image
                             source={{ uri: coverUrl }}
@@ -29,9 +29,9 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
                         </View>
                     )}
                     {!isCompleted && pagesLeft !== undefined && (
-                        <View className="absolute bottom-0 left-0 right-0 h-2 bg-mid-grey">
+                        <View className="absolute bottom-0 left-0 right-0 h-2 bg-mid-grey dark:bg-mid-grey-dark">
                             <View
-                                className="h-full rounded bg-secondary"
+                                className="h-full rounded bg-secondary dark:bg-secondary"
                                 style={{
                                     width: `${Math.max(5, 100 - (pagesLeft / 500) * 100)}%`,
                                 }}
@@ -40,15 +40,15 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
                     )}
                 </View>
                 <Text
-                    className="mb-1 font-geist-semibold text-base text-black"
+                    className="mb-1 font-geist-semibold text-base text-black dark:text-black-dark"
                     numberOfLines={1}
                     ellipsizeMode="tail">
                     {title}
                 </Text>
                 {isCompleted ? (
-                    <Text className="font-geist text-sm text-grey">Completed</Text>
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">Completed</Text>
                 ) : pagesLeft !== undefined ? (
-                    <Text className="font-geist text-sm text-grey">{pagesLeft} p. left</Text>
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">{pagesLeft} p. left</Text>
                 ) : null}
             </Pressable>
         );

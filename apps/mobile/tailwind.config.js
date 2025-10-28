@@ -8,13 +8,28 @@ module.exports = {
             colors: {
                 primary: '#386641',
                 secondary: '#6A994E',
-                'mid-grey': '#F3F3F3',
-                grey: '#90988B',
+                'mid-grey': {
+                    DEFAULT: '#F3F3F3',
+                    dark: '#2a2a2a',
+                },
+                grey: {
+                    DEFAULT: '#90988B',
+                    dark: '#b0b0b0',
+                },
                 red: '#EA4335',
                 'green-grey': '#D1DBCD',
-                'light-grey': '#F9F9F9',
-                white: '#FFFFFF',
-                black: '#232222',
+                'light-grey': {
+                    DEFAULT: '#F9F9F9',
+                    dark: '#1a1a1a',
+                },
+                white: {
+                    DEFAULT: '#FFFFFF',
+                    dark: '#0a0a0a',
+                },
+                black: {
+                    DEFAULT: '#232222',
+                    dark: '#ffffff',
+                },
             },
             fontFamily: {
                 geist: ['Geist_400Regular'],

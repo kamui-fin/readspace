@@ -15,15 +15,6 @@
     --color-black: #232222;
   }
 
-  .dark {
-    /* Dark mode color overrides can go here if needed */
-    --color-mid-grey: #2a2a2a;
-    --color-light-grey: #1a1a1a;
-    --color-white: #232222;
-    --color-black: #ffffff;
-    --color-grey: #b0b0b0;
-  }
-
   /* Font family utilities */
   .font-geist-mono {
     font-family: 'GeistMono_400Regular';

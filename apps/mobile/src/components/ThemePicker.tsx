@@ -53,9 +53,10 @@ export const ThemePicker = forwardRef<BottomSheet, ThemePickerProps>(
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
-                <BottomSheetView className="flex-1 px-6">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}
+                style={{ backgroundColor: 'transparent' }}>
+                <BottomSheetView className="flex-1 bg-white dark:bg-light-grey-dark px-6">
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Pick a theme
                     </Text>
                     <View className="gap-3">

@@ -85,7 +85,7 @@ export function BottomNav({ onExplorePress }: BottomNavProps) {
 
     return (
         <View
-            className="border-t border-light-grey bg-white"
+            className="border-t border-light-grey dark:border-mid-grey-dark bg-white dark:bg-white-dark"
             style={{
                 paddingBottom: insets.bottom,
                 paddingLeft: Math.max(insets.left, 8), // Minimum 8px, but respect safe area

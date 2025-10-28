@@ -268,7 +268,7 @@ export default function FollowingScreen() {
         }
 
         if (item.type === 'divider') {
-            return <View className="mx-4 h-[0.5px] bg-light-grey" />;
+            return <View className="mx-4 h-[0.5px] bg-light-grey dark:bg-mid-grey-dark" />;
         }
 
         if (item.type === 'article' && item.data) {
@@ -315,7 +315,7 @@ export default function FollowingScreen() {
 
     if (isLoading) {
         return (
-            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <Header
                     variant="tabbed"
                     title={title}
@@ -332,7 +332,7 @@ export default function FollowingScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
             <Header
                 variant="tabbed"
                 title={title}

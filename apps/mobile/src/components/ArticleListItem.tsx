@@ -145,7 +145,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 <Pressable
                     ref={ref}
                     className={cn(
-                        'flex-row gap-3 bg-white py-4',
+                        'flex-row gap-3 bg-white dark:bg-white-dark py-4',
                         isRead && 'opacity-60',
                         className
                     )}
@@ -161,13 +161,13 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                     className="h-4 w-4 rounded-sm"
                                 />
                             ) : (
-                                <View className="h-4 w-4 rounded-sm bg-mid-grey" />
+                                <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
                             )}
 
                             <Text
                                 className={cn(
                                     'font-geist text-xs',
-                                    isRead ? 'text-grey' : 'text-grey'
+                                    isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
                                 )}>
                                 {source}
                             </Text>
@@ -178,14 +178,14 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
 
                             <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
 
-                            <Text className="font-geist text-xs text-grey">{timestamp}</Text>
+                            <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
                         </View>
 
                         {/* Title */}
                         <Text
                             className={cn(
                                 'mb-2 font-geist-semibold text-base leading-5',
-                                isRead ? 'text-grey' : 'text-black'
+                                isRead ? 'text-grey dark:text-grey-dark' : 'text-black dark:text-black-dark'
                             )}
                             numberOfLines={3}>
                             {title}
@@ -194,7 +194,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                         {/* Description */}
                         {description && (
                             <Text
-                                className="font-geist text-sm leading-5 text-grey"
+                                className="font-geist text-sm leading-5 text-grey dark:text-grey-dark"
                                 numberOfLines={2}>
                                 {stripHtml(description)}
                             </Text>
@@ -203,7 +203,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
 
                     {/* Thumbnail - positioned to the right */}
                     {imageUrl && (
-                        <View className="h-24 w-24 overflow-hidden rounded-xl bg-mid-grey">
+                        <View className="h-24 w-24 overflow-hidden rounded-xl bg-mid-grey dark:bg-mid-grey-dark">
                             <Image
                                 source={{ uri: imageUrl }}
                                 className="h-full w-full"

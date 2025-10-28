@@ -6,8 +6,8 @@ import { Pressable, Text, type PressableProps } from 'react-native';
 const chipVariants = cva('rounded-full px-8 py-3 transition-opacity active:opacity-80', {
     variants: {
         variant: {
-            default: 'bg-mid-grey',
-            selected: 'bg-secondary',
+            default: 'bg-mid-grey dark:bg-mid-grey-dark',
+            selected: 'bg-secondary dark:bg-secondary',
         },
     },
     defaultVariants: {
@@ -18,8 +18,8 @@ const chipVariants = cva('rounded-full px-8 py-3 transition-opacity active:opaci
 const chipTextVariants = cva('font-geist-medium text-sm', {
     variants: {
         variant: {
-            default: 'text-grey',
-            selected: 'text-white',
+            default: 'text-grey dark:text-grey-dark',
+            selected: 'text-white dark:text-white',
         },
     },
     defaultVariants: {

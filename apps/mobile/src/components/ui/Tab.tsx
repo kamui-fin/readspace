@@ -19,7 +19,7 @@ export const Tab = forwardRef<React.ElementRef<typeof Pressable>, TabProps>(
                 ref={ref}
                 className={cn(
                     'flex-row items-center gap-1.5 rounded px-3 py-2',
-                    active ? 'bg-secondary/10' : 'bg-light-grey/60',
+                    active ? 'bg-secondary/10 dark:bg-secondary/10' : 'bg-light-grey/60 dark:bg-mid-grey-dark/60',
                     className
                 )}
                 {...props}>
@@ -32,7 +32,7 @@ export const Tab = forwardRef<React.ElementRef<typeof Pressable>, TabProps>(
                 <Text
                     className={cn(
                         'font-geist-medium text-sm',
-                        active ? 'font-geist-bold text-secondary' : 'text-grey'
+                        active ? 'font-geist-bold text-secondary dark:text-secondary' : 'text-grey dark:text-grey-dark'
                     )}>
                     {label}
                 </Text>

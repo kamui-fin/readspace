@@ -72,7 +72,7 @@ export const Header = (props: HeaderProps) => {
             <View
                 className="flex-row items-center gap-2 px-4 pb-3"
                 onLayout={(e) => setForegroundHeight(e.nativeEvent.layout.height)}>
-                <Text className="font-geist-bold text-3xl tracking-heading text-black">
+                <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                     {title}
                 </Text>
                 {unreadCount !== undefined && unreadCount > 0 && (
@@ -88,7 +88,7 @@ export const Header = (props: HeaderProps) => {
 
         return (
             <View
-                className="mb-2 flex-row items-center gap-2 bg-white px-4 py-2"
+                className="mb-2 flex-row items-center gap-2 bg-white dark:bg-white-dark px-4 py-2"
                 onLayout={(e) => setTabsHeight(e.nativeEvent.layout.height)}>
                 {tabs.map((tab, index) => (
                     <Tab
@@ -136,7 +136,7 @@ export const Header = (props: HeaderProps) => {
     // Render sticky variant
     if (variant === 'sticky') {
         return (
-            <View className={cn('w-full bg-white', className)} style={{ paddingTop: insets.top }}>
+            <View className={cn('w-full bg-white dark:bg-white-dark', className)} style={{ paddingTop: insets.top }}>
                 {renderForeground()}
             </View>
         );
@@ -145,7 +145,7 @@ export const Header = (props: HeaderProps) => {
     // Render tabbed variant
     return (
         <Animated.View
-            className={cn('absolute z-10 w-full bg-white', className)}
+            className={cn('absolute z-10 w-full bg-white dark:bg-white-dark', className)}
             style={[{ paddingTop: insets.top }, animatedHeaderStyle]}>
             <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
             {renderTabs()}

@@ -74,7 +74,7 @@ export const Switch = forwardRef<View, SwitchProps>(
                 accessibilityState={{ checked: value }}
                 {...props}>
                 <Animated.View
-                    className="h-6 w-6 rounded-full bg-white shadow-sm"
+                    className="h-6 w-6 rounded-full bg-white dark:bg-white shadow-sm"
                     style={thumbStyle}
                 />
             </AnimatedPressable>

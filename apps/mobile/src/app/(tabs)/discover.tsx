@@ -225,12 +225,12 @@ export default function DiscoverScreen() {
     const categoriesRow2 = orderedCategories.slice(6);
 
     return (
-        <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
             <View className="flex-1">
                 {/* Header and Search Bar */}
                 <Animated.View style={searchBarAnimatedStyle} className="px-6">
                     {viewState === 'default' && (
-                        <Text className="mb-6 font-geist-bold text-3xl tracking-heading text-black">
+                        <Text className="mb-6 font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                             Discover feeds
                         </Text>
                     )}
@@ -258,7 +258,7 @@ export default function DiscoverScreen() {
                         <ScrollView showsVerticalScrollIndicator={false} className="px-6">
                             {recentSearches.length > 0 ? (
                                 <>
-                                    <Text className="mb-4 font-geist-semibold text-base text-black">
+                                    <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">
                                         Recent searches
                                     </Text>
                                     <View className="gap-3">
@@ -272,7 +272,7 @@ export default function DiscoverScreen() {
                                                     size={20}
                                                     color="#90988B"
                                                 />
-                                                <Text className="flex-1 font-geist text-base text-black">
+                                                <Text className="flex-1 font-geist text-base text-black dark:text-black-dark">
                                                     {query}
                                                 </Text>
                                             </Pressable>
@@ -281,10 +281,10 @@ export default function DiscoverScreen() {
                                 </>
                             ) : (
                                 <View className="py-12">
-                                    <Text className="text-center font-geist text-base text-grey">
+                                    <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">
                                         No recent searches yet
                                     </Text>
-                                    <Text className="mt-2 text-center font-geist text-sm text-grey">
+                                    <Text className="mt-2 text-center font-geist text-sm text-grey dark:text-grey-dark">
                                         Your search history will appear here
                                     </Text>
                                 </View>
@@ -295,7 +295,7 @@ export default function DiscoverScreen() {
                             {/* Categories */}
                             <View>
                                 <View className="mb-4 flex-row items-center justify-between px-6">
-                                    <Text className="font-geist-semibold text-base text-black">
+                                    <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                                         Categories
                                     </Text>
                                     {selectedCategory && (
@@ -347,7 +347,7 @@ export default function DiscoverScreen() {
 
                             {/* Trending */}
                             <View className="mt-8 px-6">
-                                <Text className="mb-4 font-geist-semibold text-base text-black">
+                                <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">
                                     Trending
                                 </Text>
                                 {isTrendingLoading ? (
@@ -357,7 +357,7 @@ export default function DiscoverScreen() {
                                         <Text className="text-center text-base text-red-600 mb-2">
                                             Error loading trending feeds
                                         </Text>
-                                        <Text className="text-center text-sm text-grey">
+                                        <Text className="text-center text-sm text-grey dark:text-grey-dark">
                                             {trendingError.message}
                                         </Text>
                                     </View>
@@ -375,7 +375,7 @@ export default function DiscoverScreen() {
                                         />
                                     ))
                                 ) : (
-                                    <Text className="py-8 text-center text-grey">
+                                    <Text className="py-8 text-center text-grey dark:text-grey-dark">
                                         No trending feeds available
                                     </Text>
                                 )}
@@ -388,7 +388,7 @@ export default function DiscoverScreen() {
                             {selectedCategory && (
                                 <View className="mb-6">
                                     <View className="mb-4 flex-row items-center justify-between px-6">
-                                        <Text className="font-geist-semibold text-base text-black">
+                                        <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                                             Categories
                                         </Text>
                                         <Pressable
@@ -466,7 +466,7 @@ export default function DiscoverScreen() {
                                 />
                             ) : (
                                 <View className="flex-1 items-center justify-center px-6 py-12">
-                                    <Text className="text-center text-base text-grey">
+                                    <Text className="text-center text-base text-grey dark:text-grey-dark">
                                         No feeds found matching your search
                                     </Text>
                                 </View>

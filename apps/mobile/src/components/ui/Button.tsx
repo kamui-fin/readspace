@@ -8,11 +8,11 @@ const buttonVariants = cva(
     {
         variants: {
             variant: {
-                primary: 'bg-primary',
-                secondary: 'bg-mid-grey',
-                black: 'bg-black',
-                neutral: 'bg-mid-grey',
-                outline: 'bg-transparent border-2 border-black',
+                primary: 'bg-primary dark:bg-primary',
+                secondary: 'bg-mid-grey dark:bg-mid-grey-dark',
+                black: 'bg-black dark:bg-black-dark',
+                neutral: 'bg-mid-grey dark:bg-mid-grey-dark',
+                outline: 'bg-transparent dark:bg-transparent border-2 border-black dark:border-black-dark',
             },
             size: {
                 default: 'h-[52px] px-6',
@@ -37,11 +37,11 @@ const buttonVariants = cva(
 const buttonTextVariants = cva('font-geist-medium text-center', {
     variants: {
         variant: {
-            primary: 'text-white',
-            secondary: 'text-grey',
-            black: 'text-white',
-            neutral: 'text-black',
-            outline: 'text-black',
+            primary: 'text-white dark:text-white',
+            secondary: 'text-grey dark:text-grey-dark',
+            black: 'text-white dark:text-black',
+            neutral: 'text-black dark:text-black-dark',
+            outline: 'text-black dark:text-black-dark',
         },
         size: {
             default: 'text-base',

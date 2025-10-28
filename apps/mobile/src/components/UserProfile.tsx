@@ -16,8 +16,8 @@ export const UserProfile = ({ name, email, avatarUrl, className }: UserProfilePr
 
             {/* User Info */}
             <View className="flex-1">
-                <Text className="font-geist-semibold text-xl text-black">{name}</Text>
-                <Text className="font-geist text-base text-grey">{email}</Text>
+                <Text className="font-geist-semibold text-xl text-black dark:text-black-dark">{name}</Text>
+                <Text className="font-geist text-base text-grey dark:text-grey-dark">{email}</Text>
             </View>
         </View>
     );

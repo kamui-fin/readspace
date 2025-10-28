@@ -170,12 +170,12 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+    <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
       <View className="flex-1">
         <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
           <View className="px-6 pt-0">
             {/* Title */}
-            <Text className="mb-6 font-geist-bold text-3xl tracking-heading text-black">
+            <Text className="mb-6 font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
               Settings
             </Text>
 
@@ -213,19 +213,19 @@ export default function SettingsScreen() {
 
             {/* Instance Information */}
             <SettingsGroup title="Instance" className="mb-8">
-              <View className="rounded-2xl bg-light-grey p-4">
-                <Text className="mb-1 font-geist-medium text-sm text-grey">
+              <View className="rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
+                <Text className="mb-1 font-geist-medium text-sm text-grey dark:text-grey-dark">
                   Current Instance
                 </Text>
-                <Text className="font-geist-semibold text-base text-black">
+                <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                   {settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
                 </Text>
                 {settings.instance_type === 'self-hosted' && (
-                  <Text className="mt-1 font-geist-mono-regular text-xs text-grey">
+                  <Text className="mt-1 font-geist-mono-regular text-xs text-grey dark:text-grey-dark">
                     {settings.readspace_url}
                   </Text>
                 )}
-                <Text className="mt-3 font-geist text-sm text-grey">
+                <Text className="mt-3 font-geist text-sm text-grey dark:text-grey-dark">
                   To switch instances, log out and reconfigure during sign in.
                 </Text>
               </View>
@@ -233,12 +233,12 @@ export default function SettingsScreen() {
 
             {/* OPML Import Status */}
             {importTaskId && importStatus && (
-              <View className="mb-8 rounded-2xl bg-light-grey p-4">
+              <View className="mb-8 rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
                 <View className="mb-2 flex-row items-center gap-3">
                   {importStatus.status === 'in_progress' && (
                     <ActivityIndicator size="small" color="#6A994E" />
                   )}
-                  <Text className="font-geist-semibold text-base text-black">
+                  <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                     {importStatus.status === 'in_progress'
                       ? 'Importing feeds...'
                       : importStatus.status === 'completed'
@@ -246,7 +246,7 @@ export default function SettingsScreen() {
                         : 'Import pending...'}
                   </Text>
                 </View>
-                <Text className="font-geist text-sm text-grey">
+                <Text className="font-geist text-sm text-grey dark:text-grey-dark">
                   {importStatus.message}
                 </Text>
               </View>
@@ -278,7 +278,7 @@ export default function SettingsScreen() {
             fullWidth
             onPress={handleLogout}
             disabled={loggingOut}
-            className="flex-row gap-2 rounded-2xl bg-light-grey py-4"
+            className="flex-row gap-2 rounded-2xl bg-light-grey dark:bg-light-grey-dark py-4"
             textClassName="font-geist-semibold text-base">
             <Monicon name="solar:logout-2-linear" size={24} color="#EA4335" />
             <Text
