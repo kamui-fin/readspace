@@ -1,9 +1,11 @@
 import { ArticleListItem } from '@/components/ArticleListItem';
 import { FeedPreviewBanner } from '@/components/FeedPreviewBanner';
+import { FolderPicker } from '@/components/FolderPicker';
 import { Header } from '@/components/Header';
 import { ArticleListSkeleton } from '@/components/skeletons';
 import { useFeedViewStore } from '@/stores/feed-view';
 import { groupArticlesByDate } from '@/utils/dateUtils';
+import BottomSheet from '@gorhom/bottom-sheet';
 import { LegendList } from '@legendapp/list';
 import {
     type Article,
@@ -25,8 +27,6 @@ import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
-import BottomSheet from '@gorhom/bottom-sheet';
-import { FolderPicker } from '@/components/FolderPicker';
 
 interface ListItem {
     type: 'section' | 'article' | 'divider';
@@ -111,10 +111,18 @@ export default function FollowingScreen() {
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = activeQuery;
 
-    // Flatten paginated articles
+    // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
         if (!data?.pages || !Array.isArray(data.pages)) return [];
-        return data.pages.flatMap((page: any) => page.items || []);
+        const articles = data.pages.flatMap((page: any) => page.items || []);
+        // Deduplicate articles by ID
+        const uniqueArticles = new Map();
+        for (const article of articles) {
+            if (!uniqueArticles.has(article.id)) {
+                uniqueArticles.set(article.id, article);
+            }
+        }
+        return Array.from(uniqueArticles.values());
     }, [data]);
 
     // Get unread counts - for feed/folder specific counts
@@ -216,6 +224,7 @@ export default function FollowingScreen() {
         }));
         const grouped = groupArticlesByDate(articlesWithDates);
         const items: ListItem[] = [];
+        let dividerCounter = 0;
 
         // Sort section headers chronologically
         const sortedSections = Object.entries(grouped).sort((a, b) => {
@@ -245,7 +254,7 @@ export default function FollowingScreen() {
                 if (i < articles.length - 1) {
                     items.push({
                         type: 'divider',
-                        id: `divider-${article.id}`,
+                        id: `divider-${dividerCounter++}`,
                     });
                 }
             }
@@ -253,7 +262,7 @@ export default function FollowingScreen() {
             // Add divider after section (before next section)
             items.push({
                 type: 'divider',
-                id: `divider-section-${sectionTitle}`,
+                id: `divider-${dividerCounter++}`,
             });
         }
 

@@ -1,4 +1,4 @@
-import { ProgressBar } from '@/components/ui/ProgressBar';
+import { Button } from '@/components/ui/Button';
 import { COLORS } from '@/constants/Colors';
 import { Monicon } from '@monicon/native';
 import { ApiClient, RSS_QUERY_KEYS, useImportTaskStatus } from '@readspace/shared';
@@ -13,8 +13,224 @@ import {
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  interpolateColor,
+  useAnimatedStyle,
+  useDerivedValue,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+
+// Animated ticker component for counting animations
+const AnimatedTicker = ({
+  value,
+  duration = 800,
+  color,
+  fontSize = 16,
+  fontWeight = '600',
+}: {
+  value: number;
+  duration?: number;
+  color: string;
+  fontSize?: number;
+  fontWeight?: string;
+}) => {
+  const animatedValue = useSharedValue(0);
+
+  useEffect(() => {
+    animatedValue.value = withTiming(value, { duration });
+  }, [value, duration, animatedValue]);
+
+  const animatedProps = useAnimatedStyle(() => ({
+    opacity: 1,
+  }));
+
+  const displayValue = useDerivedValue(() => {
+    return Math.round(animatedValue.value);
+  });
+
+  return (
+    <Animated.Text
+      style={[
+        animatedProps,
+        {
+          color,
+          fontSize,
+          fontWeight: fontWeight as any,
+          fontFamily: 'Geist_600SemiBold',
+        },
+      ]}>
+      {displayValue.value}
+    </Animated.Text>
+  );
+};
+
+// Progress bar with gradient ticks
+const TickProgressBar = ({
+  progress,
+  totalTicks = 35,
+  colors,
+}: {
+  progress: number; // 0-1
+  totalTicks?: number;
+  colors: any;
+}) => {
+  const progressValue = useSharedValue(0);
+
+  useEffect(() => {
+    progressValue.value = withSpring(progress, {
+      damping: 20,
+      stiffness: 100,
+    });
+  }, [progress, progressValue]);
+
+  const ticks = Array.from({ length: totalTicks }, (_, i) => {
+    const tickProgress = (i + 1) / totalTicks;
+
+    const animatedStyle = useAnimatedStyle(() => {
+      const isActive = progressValue.value >= tickProgress;
+      const opacity = isActive ? 1 : 0.2;
+
+      // Gradient from light green to dark green
+      const backgroundColor = interpolateColor(
+        tickProgress,
+        [0, 1],
+        [colors.secondary, colors.secondary]
+      );
+
+      return {
+        opacity: withTiming(opacity, { duration: 300 }),
+        backgroundColor,
+        transform: [
+          {
+            scaleY: withSpring(isActive ? 1 : 0.6, {
+              damping: 15,
+              stiffness: 200,
+            }),
+          },
+        ],
+      };
+    });
+
+    return (
+      <Animated.View
+        key={i}
+        style={[
+          {
+            width: 3,
+            height: 16,
+            borderRadius: 1.5,
+            marginHorizontal: 1,
+          },
+          animatedStyle,
+        ]}
+      />
+    );
+  });
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        height: 20,
+        width: '100%',
+        justifyContent: 'space-between',
+      }}>
+      {ticks}
+    </View>
+  );
+};
+
+// Mock data for different states
+const MOCK_STATES = {
+  pending: {
+    status: 'pending' as const,
+    message: 'Your import will start processing shortly.',
+    result: null,
+    error: null,
+  },
+  in_progress_25: {
+    status: 'in_progress' as const,
+    message: 'Importing feeds...',
+    result: {
+      total_feeds: 340,
+      estimated_feeds: 340,
+      summary: {
+        successful: 14,
+        already_existed: 0,
+        broken_feeds: 17,
+      },
+      errors: [],
+    },
+    error: null,
+  },
+  in_progress_50: {
+    status: 'in_progress' as const,
+    message: 'Importing feeds...',
+    result: {
+      total_feeds: 340,
+      estimated_feeds: 340,
+      summary: {
+        successful: 120,
+        already_existed: 25,
+        broken_feeds: 25,
+      },
+      errors: [],
+    },
+    error: null,
+  },
+  in_progress_75: {
+    status: 'in_progress' as const,
+    message: 'Importing feeds...',
+    result: {
+      total_feeds: 340,
+      estimated_feeds: 340,
+      summary: {
+        successful: 200,
+        already_existed: 45,
+        broken_feeds: 10,
+      },
+      errors: [],
+    },
+    error: null,
+  },
+  completed: {
+    status: 'completed' as const,
+    message: 'Import completed successfully!',
+    result: {
+      total_feeds: 340,
+      estimated_feeds: 340,
+      summary: {
+        successful: 287,
+        already_existed: 38,
+        broken_feeds: 15,
+      },
+      errors: [
+        {
+          title: 'TechCrunch',
+          url: 'https://techcrunch.com/feed/',
+          error: 'Feed timeout after 30 seconds',
+        },
+        {
+          title: 'The Verge',
+          url: 'https://www.theverge.com/rss/index.xml',
+          error: 'Invalid RSS format',
+        },
+      ],
+    },
+    error: null,
+  },
+  failed: {
+    status: 'failed' as const,
+    message: null,
+    result: null,
+    error: 'Unable to parse OPML file. The file may be corrupted or in an invalid format.',
+  },
+};
 
 export default function OPMLStatusPage() {
   const { taskId } = useLocalSearchParams<{ taskId: string }>();
@@ -25,9 +241,27 @@ export default function OPMLStatusPage() {
 
   const [showErrors, setShowErrors] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [shouldPoll, setShouldPoll] = useState(true);
 
-  // Poll for task status every 2 seconds
-  const { data: taskStatus, isLoading } = useImportTaskStatus(taskId, !!taskId);
+  // Mock mode controls
+  const [mockMode, setMockMode] = useState(taskId === 'mock');
+  const [mockState, setMockState] = useState<keyof typeof MOCK_STATES>('in_progress_25');
+
+  // Poll for task status every 2 seconds - stop polling when complete or failed
+  const { data: realTaskStatus, isLoading } = useImportTaskStatus(
+    taskId,
+    !!taskId && !mockMode && shouldPoll
+  );
+
+  // Use mock data in mock mode, otherwise use real data
+  const taskStatus = mockMode ? MOCK_STATES[mockState] : realTaskStatus;
+
+  // Stop polling when task is complete or failed
+  useEffect(() => {
+    if (taskStatus?.status === 'completed' || taskStatus?.status === 'failed') {
+      setShouldPoll(false);
+    }
+  }, [taskStatus?.status]);
 
   // Invalidate queries when import completes
   useEffect(() => {
@@ -66,11 +300,7 @@ export default function OPMLStatusPage() {
     router.push('/(tabs)');
   };
 
-  const handleViewFeeds = () => {
-    router.push('/(tabs)/discover');
-  };
-
-  if (isLoading) {
+  if (isLoading && !mockMode) {
     return (
       <SafeAreaView
         className="flex-1 bg-white dark:bg-white-dark"
@@ -82,7 +312,7 @@ export default function OPMLStatusPage() {
     );
   }
 
-  if (!taskStatus) {
+  if (!taskStatus && !mockMode) {
     return (
       <SafeAreaView
         className="flex-1 bg-white dark:bg-white-dark"
@@ -99,19 +329,24 @@ export default function OPMLStatusPage() {
           <Text className="mt-2 text-center font-geist text-base text-grey dark:text-grey-dark">
             This import task may have expired or been removed.
           </Text>
-          <Pressable
-            onPress={() => router.back()}
-            className="mt-6 rounded-2xl bg-primary px-6 py-3 active:opacity-70">
-            <Text className="font-geist-semibold text-base text-white">
+          <View className="mt-6 w-full max-w-xs">
+            <Button
+              onPress={() => router.back()}
+              variant="primary"
+              size="lg"
+              fullWidth>
               Go Back
-            </Text>
-          </Pressable>
+            </Button>
+          </View>
         </View>
       </SafeAreaView>
     );
   }
 
-  const { status, result, error, message } = taskStatus;
+  const status = taskStatus?.status;
+  const result = taskStatus && 'result' in taskStatus ? taskStatus.result : null;
+  const error = taskStatus && 'error' in taskStatus ? taskStatus.error : null;
+  const message = taskStatus && 'message' in taskStatus ? taskStatus.message : null;
   const progress = result?.summary;
   const errors = result?.errors || [];
 
@@ -125,51 +360,48 @@ export default function OPMLStatusPage() {
   return (
     <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
       {/* Header */}
-      <View className="border-b border-light-grey dark:border-light-grey-dark px-6 pb-4 pt-2">
-        <Pressable
-          onPress={() => router.back()}
-          className="mb-3 flex-row items-center gap-2 active:opacity-70">
-          <Monicon
-            name="solar:arrow-left-linear"
-            size={24}
-            color={colors.primary_foreground}
-          />
-          <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
-            Back
+      <View className="border-b border-light-grey dark:border-light-grey-dark px-4 py-4">
+        <View className="flex-row items-center gap-3">
+          <Pressable
+            onPress={() => router.back()}
+            className="active:opacity-70">
+            <Monicon
+              name="solar:arrow-left-linear"
+              size={24}
+              color={colors.primary_foreground}
+            />
+          </Pressable>
+          <Text className="font-geist-medium">
+            Import Status
           </Text>
-        </Pressable>
-        <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
-          Import Status
-        </Text>
+        </View>
       </View>
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         <View className="p-6">
           {/* Pending State */}
           {status === 'pending' && (
-            <View className="rounded-2xl bg-light-grey dark:bg-light-grey-dark p-6">
-              <View className="mb-4 flex-row items-start gap-3">
+            <View className="rounded-3xl bg-light-grey dark:bg-light-grey-dark p-5">
+              <View className="mb-4 items-center">
                 <Monicon
                   name="solar:clock-circle-linear"
-                  size={32}
+                  size={48}
                   color={colors.grey}
                 />
-                <View className="flex-1">
-                  <Text className="mb-2 font-geist-bold text-xl text-black dark:text-black-dark">
-                    Import Queued
-                  </Text>
-                  <Text className="font-geist text-base text-grey dark:text-grey-dark">
-                    {message || 'Your import will start processing shortly.'}
-                  </Text>
-                </View>
+                <Text className="mt-3 font-geist-bold text-xl text-black dark:text-black-dark">
+                  Import Queued
+                </Text>
+                <Text className="mt-1 text-center font-geist text-base text-grey dark:text-grey-dark">
+                  {message || 'Your import will start processing shortly.'}
+                </Text>
               </View>
 
               <Pressable
                 onPress={handleCancelImport}
                 disabled={isCancelling}
-                className="mt-4 items-center rounded-2xl bg-mid-grey dark:bg-mid-grey-dark py-3 active:opacity-70">
+                className="items-center py-2 active:opacity-70">
                 <Text className="font-geist-semibold text-base text-red">
-                  {isCancelling ? 'Cancelling...' : 'Cancel Import'}
+                  {isCancelling ? 'Cancelling...' : 'Cancel'}
                 </Text>
               </Pressable>
             </View>
@@ -177,91 +409,108 @@ export default function OPMLStatusPage() {
 
           {/* In Progress State */}
           {status === 'in_progress' && (
-            <View className="rounded-2xl bg-light-grey dark:bg-light-grey-dark p-6">
-              <View className="mb-4 flex-row items-start gap-3">
-                <ActivityIndicator size={32} color={colors.secondary} />
-                <View className="flex-1">
-                  <Text className="mb-2 font-geist-bold text-xl text-black dark:text-black-dark">
-                    Importing Feeds
-                  </Text>
-                  <Text className="font-geist text-base text-grey dark:text-grey-dark">
-                    {message || 'Processing your feeds...'}
-                  </Text>
+            <View className="rounded-3xl bg-light-grey dark:bg-light-grey-dark p-5">
+              {/* File Info Header */}
+              <View className="mb-8 flex-row items-start gap-3">
+                <Monicon
+                  name="solar:file-text-bold"
+                  size={48}
+                  color={colors.secondary}
+                />
+                <View className="flex-1 flex-row items-start justify-between">
+                  <View className="flex-1">
+                    <Text
+                      className="font-geist-semibold text-base text-black dark:text-black-dark"
+                      numberOfLines={1}>
+                      OPML File
+                    </Text>
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                      {totalFeeds > 0 ? `${totalFeeds} feeds` : ''}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-baseline ml-2">
+                    <AnimatedTicker
+                      value={Math.round(progressPercentage)}
+                      color={colors.grey}
+                      fontSize={24}
+                      fontWeight="700"
+                    />
+                    <Text className="font-geist-mono-bold text-2xl text-grey dark:text-grey-dark">
+                      %
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Progress Bar */}
+              {/* Tick Progress Bar */}
               <View className="mb-4">
-                <View className="mb-2 flex-row items-center justify-between">
-                  <Text className="font-geist-medium text-sm text-grey dark:text-grey-dark">
-                    Progress
-                  </Text>
-                  <Text className="font-geist-semibold text-sm text-black dark:text-black-dark">
-                    {totalProcessed} / {totalFeeds}
-                  </Text>
-                </View>
-                <ProgressBar percentage={progressPercentage} className="h-2" />
+                <TickProgressBar progress={progressPercentage / 100} totalTicks={35} colors={colors} />
               </View>
 
-              {/* Statistics */}
-              {progress && (
-                <View className="gap-3">
-                  <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                    <View className="flex-row items-center gap-2">
-                      <Monicon
-                        name="solar:check-circle-linear"
-                        size={20}
-                        color={colors.secondary}
-                      />
-                      <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                        Successfully Imported
-                      </Text>
-                    </View>
-                    <Text className="font-geist-bold text-base text-secondary">
-                      {progress.successful}
-                    </Text>
-                  </View>
+              {/* Progress Counter */}
+              <View className="mb-4 items-center">
+                <View className="flex-row items-baseline">
+                  <AnimatedTicker
+                    value={totalProcessed}
+                    color={colors.primary_foreground}
+                    fontSize={36}
+                    fontWeight="700"
+                  />
+                  <Text className="font-geist-bold text-2xl text-grey dark:text-grey-dark mx-1">
+                    /
+                  </Text>
+                  <Text className="font-geist-bold text-2xl text-grey dark:text-grey-dark">
+                    {totalFeeds}
+                  </Text>
+                </View>
+                <Text className="font-geist text-sm text-grey dark:text-grey-dark mt-1">
+                  feeds processed
+                </Text>
+              </View>
 
-                  <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                    <View className="flex-row items-center gap-2">
-                      <Monicon
-                        name="solar:info-circle-linear"
-                        size={20}
-                        color="#F59E0B"
-                      />
-                      <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                        Already Existed
-                      </Text>
+              {/* Status Details */}
+              {progress && (progress.successful > 0 || progress.broken_feeds > 0) && (
+                <View className="mb-6 flex-row items-center justify-center gap-4">
+                  {progress.successful > 0 && (
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="h-2 w-2 rounded-full bg-secondary" />
+                      <View className="flex-row items-baseline gap-1">
+                        <AnimatedTicker
+                          value={progress.successful}
+                          color={colors.grey}
+                          fontSize={12}
+                        />
+                        <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                          imported
+                        </Text>
+                      </View>
                     </View>
-                    <Text className="font-geist-bold text-base" style={{ color: '#F59E0B' }}>
-                      {progress.already_existed}
-                    </Text>
-                  </View>
-
-                  <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                    <View className="flex-row items-center gap-2">
-                      <Monicon
-                        name="solar:close-circle-linear"
-                        size={20}
-                        color={colors.red}
-                      />
-                      <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                        Failed
-                      </Text>
+                  )}
+                  {progress.broken_feeds > 0 && (
+                    <View className="flex-row items-center gap-1.5">
+                      <View className="h-2 w-2 rounded-full bg-red" />
+                      <View className="flex-row items-baseline gap-1">
+                        <AnimatedTicker
+                          value={progress.broken_feeds}
+                          color={colors.grey}
+                          fontSize={12}
+                        />
+                        <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                          failed
+                        </Text>
+                      </View>
                     </View>
-                    <Text className="font-geist-bold text-base text-red">
-                      {progress.broken_feeds}
-                    </Text>
-                  </View>
+                  )}
                 </View>
               )}
 
+              {/* Cancel Button */}
               <Pressable
                 onPress={handleCancelImport}
                 disabled={isCancelling}
-                className="mt-4 items-center rounded-2xl bg-mid-grey dark:bg-mid-grey-dark py-3 active:opacity-70">
+                className="items-center py-2 active:opacity-70">
                 <Text className="font-geist-semibold text-base text-red">
-                  {isCancelling ? 'Cancelling...' : 'Cancel Import'}
+                  {isCancelling ? 'Cancelling...' : 'Cancel'}
                 </Text>
               </Pressable>
             </View>
@@ -270,33 +519,27 @@ export default function OPMLStatusPage() {
           {/* Completed State */}
           {status === 'completed' && (
             <View>
-              <View className="mb-6 rounded-2xl bg-light-grey dark:bg-light-grey-dark p-6">
-                <View className="mb-4 flex-row items-start gap-3">
+              <View className="mb-6 rounded-3xl bg-light-grey dark:bg-light-grey-dark p-5">
+                <View className="mb-4 items-center">
                   <Monicon
                     name="solar:check-circle-linear"
-                    size={32}
+                    size={48}
                     color={colors.secondary}
                   />
-                  <View className="flex-1">
-                    <Text className="mb-2 font-geist-bold text-xl text-black dark:text-black-dark">
-                      Import Complete
-                    </Text>
-                    <Text className="font-geist text-base text-grey dark:text-grey-dark">
-                      Your OPML file has been successfully processed.
-                    </Text>
-                  </View>
+                  <Text className="mt-3 font-geist-bold text-xl text-black dark:text-black-dark">
+                    Import Complete
+                  </Text>
+                  <Text className="mt-1 text-center font-geist text-base text-grey dark:text-grey-dark">
+                    Your OPML file has been successfully processed.
+                  </Text>
                 </View>
 
                 {/* Statistics */}
                 {progress && (
-                  <View className="gap-3">
-                    <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                      <View className="flex-row items-center gap-2">
-                        <Monicon
-                          name="solar:check-circle-linear"
-                          size={20}
-                          color={colors.secondary}
-                        />
+                  <View className="gap-2.5">
+                    <View className="flex-row items-center justify-between rounded-2xl bg-white dark:bg-white-dark px-4 py-3">
+                      <View className="flex-row items-center gap-2.5">
+                        <View className="h-2 w-2 rounded-full bg-secondary" />
                         <Text className="font-geist text-sm text-grey dark:text-grey-dark">
                           Successfully Imported
                         </Text>
@@ -306,44 +549,40 @@ export default function OPMLStatusPage() {
                       </Text>
                     </View>
 
-                    <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                      <View className="flex-row items-center gap-2">
-                        <Monicon
-                          name="solar:info-circle-linear"
-                          size={20}
-                          color="#F59E0B"
-                        />
-                        <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                          Already Existed
+                    {progress.already_existed > 0 && (
+                      <View className="flex-row items-center justify-between rounded-2xl bg-white dark:bg-white-dark px-4 py-3">
+                        <View className="flex-row items-center gap-2.5">
+                          <View className="h-2 w-2 rounded-full" style={{ backgroundColor: '#F59E0B' }} />
+                          <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                            Already Existed
+                          </Text>
+                        </View>
+                        <Text className="font-geist-bold text-base" style={{ color: '#F59E0B' }}>
+                          {progress.already_existed}
                         </Text>
                       </View>
-                      <Text className="font-geist-bold text-base" style={{ color: '#F59E0B' }}>
-                        {progress.already_existed}
-                      </Text>
-                    </View>
+                    )}
 
-                    <View className="flex-row items-center justify-between rounded-xl bg-white dark:bg-white-dark p-3">
-                      <View className="flex-row items-center gap-2">
-                        <Monicon
-                          name="solar:close-circle-linear"
-                          size={20}
-                          color={colors.red}
-                        />
-                        <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                          Failed
+                    {progress.broken_feeds > 0 && (
+                      <View className="flex-row items-center justify-between rounded-2xl bg-white dark:bg-white-dark px-4 py-3">
+                        <View className="flex-row items-center gap-2.5">
+                          <View className="h-2 w-2 rounded-full bg-red" />
+                          <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                            Failed
+                          </Text>
+                        </View>
+                        <Text className="font-geist-bold text-base text-red">
+                          {progress.broken_feeds}
                         </Text>
                       </View>
-                      <Text className="font-geist-bold text-base text-red">
-                        {progress.broken_feeds}
-                      </Text>
-                    </View>
+                    )}
                   </View>
                 )}
               </View>
 
               {/* Error Details */}
               {errors.length > 0 && (
-                <View className="mb-6 rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
+                <View className="mb-6 rounded-3xl bg-light-grey dark:bg-light-grey-dark p-4">
                   <Pressable
                     onPress={() => setShowErrors(!showErrors)}
                     className="flex-row items-center justify-between active:opacity-70">
@@ -363,10 +602,10 @@ export default function OPMLStatusPage() {
 
                   {showErrors && (
                     <View className="mt-4 gap-3">
-                      {errors.map((err, index) => (
+                      {errors.map((err: { title?: string; url: string; error: string }, index: number) => (
                         <View
                           key={index}
-                          className="rounded-xl bg-white dark:bg-white-dark p-3">
+                          className="rounded-2xl bg-white dark:bg-white-dark p-3">
                           <Text className="mb-1 font-geist-semibold text-sm text-black dark:text-black-dark">
                             {err.title || 'Unknown feed'}
                           </Text>
@@ -386,52 +625,41 @@ export default function OPMLStatusPage() {
               )}
 
               {/* Action Buttons */}
-              <View className="gap-3">
-                <Pressable
-                  onPress={handleViewFeeds}
-                  className="items-center rounded-2xl bg-primary py-4 active:opacity-70">
-                  <Text className="font-geist-semibold text-base text-white">
-                    View Feeds
-                  </Text>
-                </Pressable>
 
-                <Pressable
-                  onPress={handleBackToBrowsing}
-                  className="items-center rounded-2xl bg-mid-grey dark:bg-mid-grey-dark py-4 active:opacity-70">
-                  <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
-                    Back to Browsing
-                  </Text>
-                </Pressable>
-              </View>
+              <Button
+                onPress={handleBackToBrowsing}
+                variant="primary"
+                size="lg"
+                fullWidth>
+                Back to Browsing
+              </Button>
             </View>
           )}
 
           {/* Failed State */}
           {status === 'failed' && (
-            <View className="rounded-2xl bg-light-grey dark:bg-light-grey-dark p-6">
-              <View className="mb-4 flex-row items-start gap-3">
+            <View className="rounded-3xl bg-light-grey dark:bg-light-grey-dark p-5">
+              <View className="mb-4 items-center">
                 <Monicon
                   name="solar:close-circle-linear"
-                  size={32}
+                  size={48}
                   color={colors.red}
                 />
-                <View className="flex-1">
-                  <Text className="mb-2 font-geist-bold text-xl text-black dark:text-black-dark">
-                    Import Failed
-                  </Text>
-                  <Text className="font-geist text-base text-red">
-                    {error || 'The import process encountered an error.'}
-                  </Text>
-                </View>
+                <Text className="mt-3 font-geist-bold text-xl text-black dark:text-black-dark">
+                  Import Failed
+                </Text>
+                <Text className="mt-1 text-center font-geist text-base text-red">
+                  {error || 'The import process encountered an error.'}
+                </Text>
               </View>
 
-              <Pressable
+              <Button
                 onPress={() => router.push('/(tabs)/settings')}
-                className="mt-4 items-center rounded-2xl bg-primary py-3 active:opacity-70">
-                <Text className="font-geist-semibold text-base text-white">
-                  Try Again
-                </Text>
-              </Pressable>
+                variant="primary"
+                size="lg"
+                fullWidth>
+                Try Again
+              </Button>
             </View>
           )}
         </View>

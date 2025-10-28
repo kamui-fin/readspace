@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/Button';
+import { COLORS } from '@/constants/Colors';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
@@ -12,7 +13,6 @@ import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
-import { COLORS } from '@/constants/Colors';
 
 export interface OPMLImportSheetProps {
   file: DocumentPicker.DocumentPickerAsset | null;
@@ -39,7 +39,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
       try {
         // Create FormData
         const formData = new FormData();
-        formData.append('file', {
+        formData.append('opml_file', {
           uri: file.uri,
           type: 'text/xml',
           name: file.name || 'feeds.opml',
@@ -79,6 +79,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
     }, [file, importOPML, ref, router]);
 
     const handleCancel = useCallback(() => {
+      setIsImporting(false);
       if (ref && typeof ref !== 'function' && ref.current) {
         ref.current.dismiss();
       }
@@ -111,6 +112,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
           backgroundColor: colors.green_grey,
         }}
         onDismiss={() => {
+          setIsImporting(false);
           if (!isImporting) {
             onCancel?.();
           }
@@ -125,7 +127,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
 
           {/* File Info Card */}
           <View className="mb-6 rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
-            <View className="mb-3 flex-row items-center gap-3">
+            <View className="flex-row items-center gap-3">
               <Monicon
                 name="lucide:file-text"
                 size={24}
@@ -133,17 +135,6 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
               />
               <Text className="flex-1 font-geist-semibold text-base text-black dark:text-black-dark">
                 {file?.name || 'Unknown file'}
-              </Text>
-            </View>
-
-            <View className="flex-row items-center gap-2">
-              <Monicon
-                name="solar:rss-linear"
-                size={20}
-                color={colors.secondary}
-              />
-              <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                {feedCount} {feedCount === 1 ? 'feed' : 'feeds'} to import
               </Text>
             </View>
           </View>
@@ -166,36 +157,32 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
           </View>
 
           {/* Action Buttons */}
-          <View className="gap-3">
+          <View className="flex-row gap-3">
+            <Button
+              variant="neutral"
+              onPress={handleCancel}
+              disabled={isImporting}
+              className="flex-1">
+              Cancel
+            </Button>
+
             <Button
               variant="primary"
-              fullWidth
               onPress={handleImport}
               disabled={isImporting}
-              className="rounded-2xl py-4">
+              className="flex-1">
               {isImporting ? (
-                <View className="flex-row items-center gap-2">
+                <View className="flex-row items-center gap-2 px-4">
                   <ActivityIndicator size="small" color="#FFFFFF" />
                   <Text className="font-geist-semibold text-base text-white">
-                    Starting Import...
+                    Importing...
                   </Text>
                 </View>
               ) : (
                 <Text className="font-geist-semibold text-base text-white">
-                  Import {feedCount} {feedCount === 1 ? 'Feed' : 'Feeds'}
+                  Import {feedCount} {feedCount === 1 ? 'feed' : 'feeds'}
                 </Text>
               )}
-            </Button>
-
-            <Button
-              variant="neutral"
-              fullWidth
-              onPress={handleCancel}
-              disabled={isImporting}
-              className="rounded-2xl bg-transparent py-4">
-              <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
-                Cancel
-              </Text>
             </Button>
           </View>
         </BottomSheetView>

@@ -7,7 +7,7 @@ import { DiscordIcon } from '@/components/ui/icons/DiscordIcon';
 import { GitHubIcon } from '@/components/ui/icons/GitHubIcon';
 import { useAuth } from '@/contexts/AuthProvider';
 import { useSettingsStore } from '@/stores/settings';
-import { readFileContent, validateOPMLFile, exportFeedsToOPML } from '@/utils/opml';
+import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@/utils/opml';
 import BottomSheet, { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
@@ -103,8 +103,6 @@ export default function SettingsScreen() {
 
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: 'text/xml',
-        copyToCacheDirectory: true,
         multiple: false,
       });
 

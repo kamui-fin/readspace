@@ -330,7 +330,7 @@ export default function FeedPreviewScreen() {
                                 className={`font-geist-semibold text-base ${isFollowing ? 'text-grey' : 'text-white'
                                     }`}>
                                 {createFeed.isPending || deleteFeed.isPending
-                                    ? '...'
+                                    ? 'Following...'
                                     : isFollowing
                                         ? 'Following'
                                         : 'Follow'}

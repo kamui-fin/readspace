@@ -1,3 +1,4 @@
+import { stripHtml } from '@/utils/html';
 import { Galeria } from '@nandorojo/galeria';
 import type { Article } from '@readspace/shared';
 import { calculateReadingTime } from '@readspace/shared';
@@ -6,7 +7,6 @@ import { useMemo } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 import { AISummaryCard } from './AISummaryCard';
-import { ArticleReaderSkeleton } from './skeletons';
 
 export interface ArticleReaderProps {
     article: Article;
@@ -145,7 +145,7 @@ export function ArticleReader({
                 <Text
                     className="mb-3 font-geist-bold text-3xl leading-tight text-black"
                     style={{ letterSpacing: -0.72 }}>
-                    {article.title}
+                    {stripHtml(article.title)}
                 </Text>
                 <View className="flex-row items-center gap-2">
                     {article.author && (

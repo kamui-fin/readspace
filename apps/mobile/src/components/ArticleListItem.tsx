@@ -1,4 +1,5 @@
 import { cn } from '@/utils/cn';
+import { stripHtml } from '@/utils/html';
 import { Monicon } from '@monicon/native';
 import * as Haptics from 'expo-haptics';
 import { forwardRef, useCallback, useRef } from 'react';
@@ -19,11 +20,6 @@ export interface ArticleListItemProps extends PressableProps {
     onToggleRead?: () => void;
     variant?: 'horizontal' | 'card';
     width?: number;
-}
-
-// Helper function to strip HTML tags from text
-function stripHtml(html: string): string {
-    return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
 const SWIPE_THRESHOLD = 0.8; // 40% of item width
@@ -163,7 +159,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                     </Text>
                                 </View>
                                 <Text className="font-geist-semibold text-base leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
-                                    {title}
+                                    {stripHtml(title)}
                                 </Text>
                             </View>
                         </>
@@ -176,7 +172,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 </Text>
                             </View>
                             <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
-                                {title}
+                                {stripHtml(title)}
                             </Text>
                             {description && (
                                 <Text
@@ -249,7 +245,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 isRead ? 'text-grey dark:text-grey-dark' : 'text-black dark:text-black-dark'
                             )}
                             numberOfLines={3}>
-                            {title}
+                            {stripHtml(title)}
                         </Text>
 
                         {/* Description */}
