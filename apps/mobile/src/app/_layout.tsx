@@ -1,4 +1,6 @@
+import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
 import { useFonts } from '@/hooks/useFonts';
+import { useSettingsStore } from '@/stores/settings';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
@@ -7,7 +9,6 @@ import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { Toaster } from 'sonner-native';
 import '../../global.css';
-import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
 // Import API client to initialize it
 import '@/lib/api/client';
 
@@ -28,6 +29,7 @@ function RootLayoutNav() {
     const { isAuthenticated, loading } = useAuth();
     const segments = useSegments();
     const router = useRouter();
+    const { settings } = useSettingsStore();
 
     useEffect(() => {
         console.log('[RootLayoutNav] Auth state:', { isAuthenticated, loading, segments });
@@ -39,19 +41,20 @@ function RootLayoutNav() {
 
         const inAuthGroup = segments[0] === '(tabs)';
         const inOnboarding = segments[0] === 'onboarding';
+        const inFeedOnboarding = inOnboarding && segments[1] === 'feeds';
 
-        console.log('[RootLayoutNav] Route check:', { inAuthGroup, inOnboarding, currentSegment: segments[0] });
+        console.log('[RootLayoutNav] Route check:', {
+            inAuthGroup,
+            inOnboarding,
+            inFeedOnboarding,
+            currentSegment: segments[0],
+            instanceType: settings.instance_type
+        });
 
         if (!isAuthenticated && inAuthGroup) {
             // Redirect to welcome if trying to access protected routes
             console.log('[RootLayoutNav] Not authenticated, redirecting to welcome');
             router.replace('/welcome');
-        } else if (isAuthenticated && (segments[0] === 'welcome' || inOnboarding)) {
-            // Redirect to tabs if authenticated and on welcome/onboarding
-            console.log('[RootLayoutNav] Authenticated, redirecting to tabs');
-            router.replace('/(tabs)');
-        } else {
-            console.log('[RootLayoutNav] No redirect needed');
         }
     }, [isAuthenticated, segments, loading, router]);
 

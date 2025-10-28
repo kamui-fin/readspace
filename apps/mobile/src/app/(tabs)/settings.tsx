@@ -1,43 +1,56 @@
 import { SettingsGroup, SettingsItem } from '@/components/SettingsGroup';
 import { ThemePicker, type Theme } from '@/components/ThemePicker';
 import { UserProfile } from '@/components/UserProfile';
+import { OPMLImportSheet } from '@/components/modals/OPMLImportSheet';
 import { Button } from '@/components/ui/Button';
 import { DiscordIcon } from '@/components/ui/icons/DiscordIcon';
 import { GitHubIcon } from '@/components/ui/icons/GitHubIcon';
 import { useAuth } from '@/contexts/AuthProvider';
-import BottomSheet from '@gorhom/bottom-sheet';
+import { useSettingsStore } from '@/stores/settings';
+import { readFileContent, validateOPMLFile, exportFeedsToOPML } from '@/utils/opml';
+import BottomSheet, { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
-  exportFeedsToOPML,
+  ActiveImportTask,
+  ApiClient,
+  RSS_QUERY_KEYS,
   useFeeds,
   useFolders,
-  useImportOPML,
-  useImportTaskStatus,
 } from '@readspace/shared';
+import { useQuery } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Linking, ScrollView, Text, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Linking, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
-import { useSettingsStore } from '@/stores/settings';
 
 export default function SettingsScreen() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { colorScheme, setColorScheme } = useColorScheme();
   const themePickerRef = useRef<BottomSheet>(null);
+  const importSheetRef = useRef<BottomSheetModal>(null);
   const [theme, setTheme] = useState<Theme>('system');
   const [loggingOut, setLoggingOut] = useState(false);
-  const [importTaskId, setImportTaskId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] =
+    useState<DocumentPicker.DocumentPickerAsset | null>(null);
+  const [feedCount, setFeedCount] = useState(0);
   const { settings } = useSettingsStore();
 
   // Hooks for OPML
-  const importOPML = useImportOPML();
   const { data: feeds } = useFeeds();
   const { data: folders } = useFolders();
-  const { data: importStatus } = useImportTaskStatus(importTaskId, !!importTaskId);
+
+  // Check for active imports
+  const { data: activeImports = [] } = useQuery<ActiveImportTask[]>({
+    queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+    queryFn: () => ApiClient.rss.listImportTasks(),
+    refetchInterval: 5000, // Poll every 5 seconds for updates
+  });
+
+  const activeImport = activeImports.length > 0 ? activeImports[0] : null;
 
   // Initialize theme from colorScheme
   useEffect(() => {
@@ -81,7 +94,13 @@ export default function SettingsScreen() {
   };
 
 
-  const handleOPMLImport = async () => {
+  const handleOPMLImport = useCallback(async () => {
+    // If there's an active import, navigate to its status page
+    if (activeImport) {
+      router.push(`/settings/opml-status/${activeImport.task_id}`);
+      return;
+    }
+
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: 'text/xml',
@@ -94,66 +113,51 @@ export default function SettingsScreen() {
       }
 
       const file = result.assets[0];
-      if (file) {
-        toast.loading('Importing OPML...', { id: 'opml-import' });
+      if (!file) return;
 
-        // Create FormData
-        const formData = new FormData();
-        formData.append('file', {
-          uri: file.uri,
-          type: 'text/xml',
-          name: file.name || 'feeds.opml',
-        } as any);
+      // Read and validate the file
+      const content = await readFileContent(file.uri);
+      const validation = await validateOPMLFile(content);
 
-        importOPML.mutate(formData, {
-          onSuccess: (data) => {
-            setImportTaskId(data.task_id);
-            toast.success('OPML import started!', {
-              id: 'opml-import',
-              description: `Processing ${data.estimated_feeds} feeds...`,
-            });
-          },
-          onError: (error: any) => {
-            toast.error('Failed to import OPML', {
-              id: 'opml-import',
-              description: error?.message || 'Please try again',
-            });
-          },
-        });
+      if (!validation.isValid) {
+        toast.error(validation.error || 'Invalid OPML file');
+        return;
       }
+
+      if (validation.hasNestedCategories) {
+        toast.error(
+          'OPML files with nested categories are not supported. Please flatten your categories before importing.'
+        );
+        return;
+      }
+
+      // Store file and feed count, then show confirmation sheet
+      setSelectedFile(file);
+      setFeedCount(validation.feedCount);
+      importSheetRef.current?.present();
     } catch (error) {
       console.error('Error picking document:', error);
       toast.error('Failed to select file', {
         description: 'Please try again',
       });
     }
-  };
+  }, [activeImport, router]);
 
-  const handleOPMLExport = () => {
+  const handleCancelImport = useCallback(() => {
+    setSelectedFile(null);
+    setFeedCount(0);
+  }, []);
+
+  const handleOPMLExport = async () => {
     try {
       const typedFolders = (folders as { id: string; name: string }[]) || [];
-      exportFeedsToOPML(feeds || [], typedFolders);
+      await exportFeedsToOPML(feeds || [], typedFolders);
       toast.success('OPML exported successfully!');
     } catch (error) {
       console.error('OPML export error:', error);
       toast.error('Failed to export OPML');
     }
   };
-
-  // Monitor import status
-  useEffect(() => {
-    if (importStatus?.status === 'completed') {
-      toast.success('OPML import completed!', {
-        description: `Imported ${importStatus.result?.imported_count || 0} feeds`,
-      });
-      setImportTaskId(null);
-    } else if (importStatus?.status === 'failed') {
-      toast.error('OPML import failed', {
-        description: importStatus.error || 'Unknown error',
-      });
-      setImportTaskId(null);
-    }
-  }, [importStatus]);
 
   const handleGithubPress = () => {
     const url = 'https://github.com/kamui-fin/readspace';
@@ -198,10 +202,11 @@ export default function SettingsScreen() {
                 onPress={handleThemePress}
               />
               <SettingsItem
-                label="Import OPML"
+                label={
+                  activeImport ? 'Currently importing...' : 'Import Subscriptions'
+                }
                 variant="button"
                 onPress={handleOPMLImport}
-                disabled={importOPML.isPending || !!importTaskId}
               />
               <SettingsItem
                 label="Export OPML"
@@ -214,14 +219,11 @@ export default function SettingsScreen() {
             {/* Instance Information */}
             <SettingsGroup title="Instance" className="mb-8">
               <View className="rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
-                <Text className="mb-1 font-geist-medium text-sm text-grey dark:text-grey-dark">
-                  Current Instance
-                </Text>
                 <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                   {settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
                 </Text>
                 {settings.instance_type === 'self-hosted' && (
-                  <Text className="mt-1 font-geist-mono-regular text-xs text-grey dark:text-grey-dark">
+                  <Text className="mt-1 font-geist-mono text-xs text-grey dark:text-grey-dark">
                     {settings.readspace_url}
                   </Text>
                 )}
@@ -230,27 +232,6 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </SettingsGroup>
-
-            {/* OPML Import Status */}
-            {importTaskId && importStatus && (
-              <View className="mb-8 rounded-2xl bg-light-grey dark:bg-light-grey-dark p-4">
-                <View className="mb-2 flex-row items-center gap-3">
-                  {importStatus.status === 'in_progress' && (
-                    <ActivityIndicator size="small" color="#6A994E" />
-                  )}
-                  <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
-                    {importStatus.status === 'in_progress'
-                      ? 'Importing feeds...'
-                      : importStatus.status === 'completed'
-                        ? 'Import completed!'
-                        : 'Import pending...'}
-                  </Text>
-                </View>
-                <Text className="font-geist text-sm text-grey dark:text-grey-dark">
-                  {importStatus.message}
-                </Text>
-              </View>
-            )}
 
             {/* Other Section */}
             <SettingsGroup title="Other" className="mb-6">
@@ -295,6 +276,13 @@ export default function SettingsScreen() {
         ref={themePickerRef}
         onThemeChange={handleThemeChange}
         initialTheme={theme}
+      />
+
+      <OPMLImportSheet
+        ref={importSheetRef}
+        file={selectedFile}
+        feedCount={feedCount}
+        onCancel={handleCancelImport}
       />
     </SafeAreaView>
   );

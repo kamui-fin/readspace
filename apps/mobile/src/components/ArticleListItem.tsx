@@ -17,6 +17,8 @@ export interface ArticleListItemProps extends PressableProps {
     className?: string;
     onBookmark?: () => void;
     onToggleRead?: () => void;
+    variant?: 'horizontal' | 'card';
+    width?: number;
 }
 
 // Helper function to strip HTML tags from text
@@ -40,6 +42,8 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             className,
             onBookmark,
             onToggleRead,
+            variant = 'horizontal',
+            width,
             ...props
         },
         ref
@@ -132,6 +136,63 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             [onBookmark, onToggleRead]
         );
 
+        // Card variant - no swipeable
+        if (variant === 'card') {
+            return (
+                <Pressable
+                    ref={ref}
+                    className={cn(
+                        'overflow-hidden rounded-2xl border border-light-grey bg-white active:opacity-80',
+                        className
+                    )}
+                    style={width ? { width } : undefined}
+                    {...props}>
+                    {imageUrl ? (
+                        <>
+                            <Image
+                                source={{ uri: imageUrl }}
+                                style={width ? { width } : undefined}
+                                className="h-48"
+                                resizeMode="cover"
+                            />
+                            <View className="p-4" style={width ? { width } : undefined}>
+                                <View className="mb-2 flex-row items-center gap-2">
+                                    <View className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                    <Text className="font-geist text-xs text-grey" numberOfLines={1} ellipsizeMode="tail">
+                                        {timestamp}
+                                    </Text>
+                                </View>
+                                <Text className="font-geist-semibold text-base leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
+                                    {title}
+                                </Text>
+                            </View>
+                        </>
+                    ) : (
+                        <View className="p-4" style={width ? { width } : undefined}>
+                            <View className="mb-3 flex-row items-center gap-2">
+                                <View className="h-1.5 w-1.5 rounded-full bg-primary" />
+                                <Text className="font-geist text-xs text-grey" numberOfLines={1} ellipsizeMode="tail">
+                                    {timestamp}
+                                </Text>
+                            </View>
+                            <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
+                                {title}
+                            </Text>
+                            {description && (
+                                <Text
+                                    className="font-geist text-sm leading-5 text-grey"
+                                    numberOfLines={3}
+                                    ellipsizeMode="tail">
+                                    {stripHtml(description)}
+                                </Text>
+                            )}
+                        </View>
+                    )}
+                </Pressable>
+            );
+        }
+
+        // Horizontal variant - with swipeable
         return (
             <Swipeable
                 ref={swipeableRef}

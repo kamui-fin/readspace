@@ -1485,6 +1485,32 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
+  // Get recommendations by categories hook
+  function useGetRecommendations(
+    categories: string[],
+    params?: {
+      language?: string;
+      limit?: number;
+    },
+    options?: Omit<
+      UseQueryOptions<
+        any,
+        Error,
+        any,
+        [string, string[], typeof params]
+      >,
+      "queryKey" | "queryFn"
+    >,
+  ) {
+    return useQuery({
+      queryKey: [RSS_QUERY_KEYS.DISCOVER_RECOMMENDATIONS, categories, params],
+      queryFn: () =>
+        ApiClient.rss.getRecommendationsByCategories(categories, params),
+      enabled: categories.length > 0,
+      ...options,
+    });
+  }
+
   // Return all hooks as an object
   return {
     // OPML hooks
@@ -1526,6 +1552,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
 
     // Discovery hooks
     useTrendingFeeds,
+    useGetRecommendations,
   };
 }
 
@@ -1571,6 +1598,7 @@ export const {
 
   // Discovery hooks
   useTrendingFeeds,
+  useGetRecommendations,
 } = defaultHooks;
 
 // Export the factory function for custom configurations

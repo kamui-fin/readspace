@@ -1,17 +1,19 @@
 import { create } from 'zustand';
 
-export type ViewType = 'following' | 'feed' | 'folder';
+export type ViewType = 'following' | 'feed' | 'folder' | 'feedPreview';
 
 interface FeedViewState {
     viewType: ViewType;
     selectedId: string | null;
     selectedName: string | null;
     activeTab: number; // 0=Today, 1=Saved, 2=All, 3=Recent, -1=none when feed/folder selected
+    isPreviewMode: boolean; // True when viewing an unsubscribed feed
 }
 
 interface FeedViewActions {
     selectFeed: (feedId: string, feedName: string) => void;
     selectFolder: (folderId: string, folderName: string) => void;
+    selectFeedPreview: (feedId: string, feedName: string) => void;
     selectTab: (tabIndex: number) => void;
     reset: () => void;
 }
@@ -23,6 +25,7 @@ const initialState: FeedViewState = {
     selectedId: null,
     selectedName: null,
     activeTab: 0, // Default to "Today"
+    isPreviewMode: false,
 };
 
 export const useFeedViewStore = create<FeedViewStore>((set) => ({
@@ -34,6 +37,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
             selectedId: feedId,
             selectedName: feedName,
             activeTab: -1, // Deselect tabs when feed is selected
+            isPreviewMode: false,
         }),
 
     selectFolder: (folderId, folderName) =>
@@ -42,6 +46,16 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
             selectedId: folderId,
             selectedName: folderName,
             activeTab: -1, // Deselect tabs when folder is selected
+            isPreviewMode: false,
+        }),
+
+    selectFeedPreview: (feedId, feedName) =>
+        set({
+            viewType: 'feedPreview',
+            selectedId: feedId,
+            selectedName: feedName,
+            activeTab: -1, // Deselect tabs when feed preview is selected
+            isPreviewMode: true,
         }),
 
     selectTab: (tabIndex) =>
@@ -50,6 +64,7 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
             selectedId: null,
             selectedName: null,
             activeTab: tabIndex,
+            isPreviewMode: false,
         }),
 
     reset: () => set(initialState),

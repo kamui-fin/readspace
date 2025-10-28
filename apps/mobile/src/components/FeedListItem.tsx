@@ -17,6 +17,7 @@ export interface FeedListItemProps extends PressableProps {
     feedId?: string;
     onFollowRequest?: (feedUrl: string) => void;
     showFolderPicker?: boolean; // If false, use onFollowRequest callback instead
+    isPreview?: boolean; // If true, disables interaction (for preview feeds)
 }
 
 export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedListItemProps>(
@@ -31,6 +32,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
             feedId,
             onFollowRequest,
             showFolderPicker = true,
+            isPreview = false,
             ...props
         },
         ref
@@ -51,7 +53,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
         const handlePress = () => {
             // Navigate to feed preview
             if (feedId) {
-                router.push(`/feed/${feedId}`);
+                router.push(`/discover/feed/${feedId}`);
             }
         };
 
@@ -109,7 +111,11 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                 <Pressable
                     ref={ref}
                     onPress={handlePress}
-                    className={cn('flex-row items-center gap-4 bg-white dark:bg-white-dark py-4', className)}
+                    className={cn(
+                        'flex-row items-center gap-4 py-4',
+                        isPreview ? 'bg-secondary/10 dark:bg-secondary/20' : 'bg-white dark:bg-white-dark',
+                        className
+                    )}
                     {...props}>
                     {/* Icon */}
                     <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
@@ -128,6 +134,14 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
 
                     {/* Content */}
                     <View className="flex-1">
+                        {/* Preview Badge */}
+                        {isPreview && (
+                            <View className="mb-1 self-start rounded-sm bg-secondary/20 px-1.5 py-0.5">
+                                <Text className="font-geist-medium text-[10px] uppercase tracking-wider text-secondary">
+                                    Preview
+                                </Text>
+                            </View>
+                        )}
                         <Text
                             className="mb-1 font-geist-semibold text-base text-black dark:text-black-dark"
                             numberOfLines={1}>

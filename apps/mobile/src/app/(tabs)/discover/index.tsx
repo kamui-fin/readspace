@@ -371,6 +371,7 @@ export default function DiscoverScreen() {
                                             description={feed.description || ''}
                                             iconUrl={feed.image_url || undefined}
                                             isFollowing={feed.is_subscribed || false}
+                                            isPreview={feed.is_preview}
                                             onFollowRequest={handleFeedFollowRequest}
                                         />
                                     ))
@@ -458,6 +459,7 @@ export default function DiscoverScreen() {
                                             iconUrl={item.image_url || undefined}
                                             isFollowing={item.is_subscribed || false}
                                             className="px-6"
+                                            isPreview={item.is_preview}
                                             onFollowRequest={handleFeedFollowRequest}
                                         />
                                     )}

@@ -34,18 +34,18 @@ export function BottomNav({ onExplorePress }: BottomNavProps) {
             iconBold: 'solar:notes-bold',
         },
         {
-            id: 'explore',
-            label: 'Explore',
-            iconOutline: 'solar:library-linear',
-            iconBold: 'solar:library-bold',
-            onPress: onExplorePress,
-        },
-        {
             id: 'discover',
             label: 'Discover',
             route: '/(tabs)/discover',
             iconOutline: 'solar:compass-outline',
             iconBold: 'solar:compass-bold',
+        },
+        {
+            id: 'explore',
+            label: 'Explore',
+            iconOutline: 'solar:library-linear',
+            iconBold: 'solar:library-bold',
+            onPress: onExplorePress,
         },
         {
             id: 'library',

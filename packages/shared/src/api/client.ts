@@ -556,6 +556,23 @@ export class ApiClient {
       );
     },
 
+    getRecommendationsByCategories: (
+      categories: string[],
+      params?: {
+        language?: string;
+        limit?: number;
+      },
+    ) => {
+      return this.post<DiscoverSearchResponse>(
+        "/api/rss/discover/recommendations",
+        {
+          categories,
+          language: params?.language || "en",
+          limit: params?.limit || 20,
+        },
+      );
+    },
+
     getCategories: (params?: { language?: string }) => {
       const queryParams = new URLSearchParams();
       if (params?.language) queryParams.append("language", params.language);

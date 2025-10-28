@@ -1,4 +1,5 @@
 import { ArticleListItem } from '@/components/ArticleListItem';
+import { FeedPreviewBanner } from '@/components/FeedPreviewBanner';
 import { Header } from '@/components/Header';
 import { ArticleListSkeleton } from '@/components/skeletons';
 import { useFeedViewStore } from '@/stores/feed-view';
@@ -7,6 +8,8 @@ import { LegendList } from '@legendapp/list';
 import {
     type Article,
     formatRelativeDate,
+    useCreateFeed,
+    useFeed,
     useFeeds,
     useInfiniteArticles,
     useInfiniteReadLaterArticles,
@@ -16,12 +19,14 @@ import {
     useUpdateArticle,
 } from '@readspace/shared';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+import BottomSheet from '@gorhom/bottom-sheet';
+import { FolderPicker } from '@/components/FolderPicker';
 
 interface ListItem {
     type: 'section' | 'article' | 'divider';
@@ -43,16 +48,23 @@ export default function FollowingScreen() {
     const selectedId = useFeedViewStore((state) => state.selectedId);
     const selectedName = useFeedViewStore((state) => state.selectedName);
     const activeTab = useFeedViewStore((state) => state.activeTab);
+    const isPreviewMode = useFeedViewStore((state) => state.isPreviewMode);
     const selectTab = useFeedViewStore((state) => state.selectTab);
 
     const [headerHeight, setHeaderHeight] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const scrollY = useSharedValue(0);
+    const folderPickerRef = useRef<BottomSheet>(null);
+
+    // Fetch feed data for preview mode banner
+    const { data: feedData } = useFeed(selectedId || '', {
+        enabled: isPreviewMode && !!selectedId,
+    });
 
     // Determine query parameters based on view type and active tab
     const queryParams = useMemo(() => {
-        // If viewing a specific feed
-        if (viewType === 'feed' && selectedId) {
+        // If viewing a specific feed or feed preview
+        if ((viewType === 'feed' || viewType === 'feedPreview') && selectedId) {
             return { feedIds: [selectedId] };
         }
         // If viewing a folder
@@ -64,7 +76,7 @@ export default function FollowingScreen() {
     }, [viewType, selectedId]);
 
     // When a feed or folder is selected, activeTab is -1, so we should use the "All" query with specific filters
-    const isViewingFeedOrFolder = activeTab === -1 && (viewType === 'feed' || viewType === 'folder');
+    const isViewingFeedOrFolder = activeTab === -1 && (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview');
 
     // Select the appropriate query hook based on active tab
     const todayQuery = useInfiniteTodayArticles({ size: 25 }, { enabled: activeTab === 0 } as any);
@@ -149,16 +161,51 @@ export default function FollowingScreen() {
 
     // Article mutations
     const updateArticle = useUpdateArticle();
+    const createFeed = useCreateFeed();
 
     // Determine the title based on view state
     const title = useMemo(() => {
-        if (viewType === 'feed' && selectedName) {
+        if ((viewType === 'feed' || viewType === 'feedPreview') && selectedName) {
             return selectedName;
         } else if (viewType === 'folder' && selectedName) {
             return selectedName;
         }
         return 'Following';
     }, [viewType, selectedName]);
+
+    // Handle following feed from preview banner
+    const handleFollowFromPreview = useCallback(() => {
+        folderPickerRef.current?.expand();
+    }, []);
+
+    const handleFolderSelect = useCallback(
+        (folderId: string | null) => {
+            if (!feedData?.url) {
+                toast.error('Feed URL is missing');
+                return;
+            }
+
+            createFeed.mutate(
+                {
+                    url: feedData.url,
+                    folder_id: folderId || undefined,
+                    silent: false,
+                },
+                {
+                    onSuccess: () => {
+                        toast.success(`Following ${feedData.title}`);
+                        // Exit preview mode
+                        const { selectFeed } = useFeedViewStore.getState();
+                        selectFeed(feedData.id, feedData.title);
+                    },
+                    onError: (error: any) => {
+                        toast.error(error?.message || 'Failed to follow feed');
+                    },
+                }
+            );
+        },
+        [feedData, createFeed]
+    );
 
     // Group articles by date and create flat list with sections and dividers
     const listItems = useMemo(() => {
@@ -322,7 +369,7 @@ export default function FollowingScreen() {
                     tabs={TAB_CONFIGS}
                     activeTab={activeTab}
                     onTabChange={selectTab}
-                    unreadCount={unreadCount}
+                    unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
                 />
@@ -332,38 +379,56 @@ export default function FollowingScreen() {
     }
 
     return (
-        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
-            <Header
-                variant="tabbed"
-                title={title}
-                tabs={TAB_CONFIGS}
-                activeTab={activeTab}
-                onTabChange={selectTab}
-                unreadCount={unreadCount}
-                scrollY={scrollY}
-                onHeaderHeightChange={setHeaderHeight}
-            />
-            <LegendList
-                data={listItems}
-                renderItem={renderItem}
-                estimatedItemSize={120}
-                contentContainerStyle={{ paddingTop: headerHeight }}
-                onScroll={scrollHandler}
-                scrollEventThrottle={16}
-                keyExtractor={(item) => item.id}
-                onEndReached={handleEndReached}
-                onEndReachedThreshold={0.5}
-                ListFooterComponent={renderFooter}
-                refreshControl={
-                    <RefreshControl
-                        refreshing={refreshing}
-                        onRefresh={handleRefresh}
-                        tintColor="#6A994E"
-                        colors={['#6A994E']}
-                        progressViewOffset={headerHeight}
-                    />
-                }
-            />
-        </SafeAreaView>
+        <>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+                <Header
+                    variant="tabbed"
+                    title={title}
+                    tabs={TAB_CONFIGS}
+                    activeTab={activeTab}
+                    onTabChange={selectTab}
+                    unreadCount={isPreviewMode ? 0 : unreadCount}
+                    scrollY={scrollY}
+                    onHeaderHeightChange={setHeaderHeight}
+                />
+                <LegendList
+                    data={listItems}
+                    renderItem={renderItem}
+                    estimatedItemSize={120}
+                    contentContainerStyle={{
+                        paddingTop: headerHeight,
+                        paddingBottom: isPreviewMode ? 80 : 0, // Add padding for banner
+                    }}
+                    onScroll={scrollHandler}
+                    scrollEventThrottle={16}
+                    keyExtractor={(item) => item.id}
+                    onEndReached={handleEndReached}
+                    onEndReachedThreshold={0.5}
+                    ListFooterComponent={renderFooter}
+                    refreshControl={
+                        <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={handleRefresh}
+                            tintColor="#6A994E"
+                            colors={['#6A994E']}
+                            progressViewOffset={headerHeight}
+                        />
+                    }
+                />
+
+                {/* Sticky preview banner at bottom */}
+                {isPreviewMode && feedData && (
+                    <View className="absolute bottom-0 left-0 right-0">
+                        <FeedPreviewBanner
+                            feedTitle={feedData.title}
+                            onFollow={handleFollowFromPreview}
+                        />
+                    </View>
+                )}
+            </SafeAreaView>
+
+            {/* Folder picker bottom sheet */}
+            <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
+        </>
     );
 }

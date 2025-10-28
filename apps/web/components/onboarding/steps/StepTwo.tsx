@@ -40,7 +40,7 @@ const StepTwo: React.FC = () => {
     const { user } = useCurrentUser()
     const router = useRouter()
 
-    // Fetch feeds for selected categories
+    // Fetch feeds for selected categories using bulk recommendations endpoint
     const {
         data: feedsData,
         isLoading,
@@ -48,31 +48,11 @@ const StepTwo: React.FC = () => {
     } = useQuery({
         queryKey: ["onboarding-feeds", onboardingData.selectedCategories],
         queryFn: async () => {
-            const promises = onboardingData.selectedCategories.map((category) =>
-                ApiClient.rss.searchFeeds({
-                    category,
-                    limit: 8, // Get top 8 per category
-                })
+            const response = await ApiClient.rss.getRecommendationsByCategories(
+                onboardingData.selectedCategories,
+                { limit: 20 }
             )
-
-            const results = await Promise.all(promises)
-
-            // Combine and deduplicate feeds from all categories
-            const allFeeds = results.flatMap(
-                (result: DiscoverSearchResponse) => result.results
-            )
-            const uniqueFeeds = allFeeds.filter(
-                (feed, index, self) =>
-                    index === self.findIndex((f) => f.id === feed.id)
-            )
-
-            // Sort by popularity and take top 20
-            return uniqueFeeds
-                .sort(
-                    (a, b) =>
-                        (b.popularity_score || 0) - (a.popularity_score || 0)
-                )
-                .slice(0, 20)
+            return response.results
         },
         enabled: onboardingData.selectedCategories.length > 0,
     })

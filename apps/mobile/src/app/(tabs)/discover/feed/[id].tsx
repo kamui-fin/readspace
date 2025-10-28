@@ -1,7 +1,10 @@
+import { ArticleListItem } from '@/components/ArticleListItem';
 import { FeedListItem } from '@/components/FeedListItem';
 import { FolderPicker } from '@/components/FolderPicker';
 import { FeedPreviewSkeleton } from '@/components/skeletons';
+import { ShimmerView } from '@/components/skeletons/ShimmerView';
 import { Button } from '@/components/ui/Button';
+import { useFeedViewStore } from '@/stores/feed-view';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
@@ -13,9 +16,9 @@ import {
     type FeedDiscoveryResult,
     type SimilarFeedsResponse,
 } from '@readspace/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Dimensions,
     FlatList,
@@ -30,7 +33,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = SCREEN_WIDTH * 0.85;
+const CARD_WIDTH = SCREEN_WIDTH * 0.7;
 const CARD_SPACING = 16;
 
 export default function FeedPreviewScreen() {
@@ -39,12 +42,27 @@ export default function FeedPreviewScreen() {
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const folderPickerRef = useRef<BottomSheet>(null);
     const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
+    const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
+    const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(null);
 
-    // Fetch feed data
-    const { data: feed, isLoading: isFeedLoading } = useFeed(id || '');
+    // Ref to track if preview refresh has already been triggered
+    const hasRefreshedPreview = useRef(false);
+
+    const queryClient = useQueryClient();
+
+    // Fetch feed data - disable if we're doing preview refresh
+    const { data: fetchedFeedData, isLoading: isFeedLoading } = useFeed(id || '', {
+        enabled: !!id && !isPreviewRefreshing,
+    });
+
+    // Use preview feed data if available, otherwise use fetched data
+    const feed = previewFeedData || fetchedFeedData;
+
+    // Determine if we should show preview mode (feed is not subscribed)
+    const shouldShowPreviewBanner = !!(feed && feed.is_subscribed === false);
 
     // Fetch preview articles for the feed
-    const { data: articlesData, isLoading: isArticlesLoading } = useQuery<{
+    const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery<{
         items: Article[];
         total: number;
     }>({
@@ -72,6 +90,30 @@ export default function FeedPreviewScreen() {
     const articles = articlesData?.items || [];
     const similarFeeds = similarData?.similar_feeds || [];
     const isFollowing = feed?.is_subscribed || false;
+
+    // Preview mode: refresh feed on mount to get latest articles
+    useEffect(() => {
+        if (shouldShowPreviewBanner && id && !hasRefreshedPreview.current) {
+            hasRefreshedPreview.current = true;
+            setIsPreviewRefreshing(true);
+
+            // Call API directly with preview=true parameter
+            ApiClient.rss
+                .refreshFeed(id, true, true)
+                .then((feedData) => {
+                    // Store the feed data from refresh response
+                    setPreviewFeedData(feedData);
+                    // Trigger articles refetch
+                    refetchArticles();
+                })
+                .catch((error) => {
+                    console.error('Preview refresh failed:', error);
+                })
+                .finally(() => {
+                    setIsPreviewRefreshing(false);
+                });
+        }
+    }, [shouldShowPreviewBanner, id, refetchArticles]);
 
     const handleBack = useCallback(() => {
         router.back();
@@ -153,14 +195,15 @@ export default function FeedPreviewScreen() {
     );
 
     const handleSeeAllSimilar = useCallback(() => {
-        router.push(`/feed/${id}/similar`);
+        router.push(`/discover/feed/${id}/similar`);
     }, [router, id]);
 
     const toggleDescription = useCallback(() => {
         setIsDescriptionExpanded((prev) => !prev);
     }, []);
 
-    if (isFeedLoading) {
+    // Only show full skeleton during initial feed loading, not during preview refresh
+    if (isFeedLoading && !isPreviewRefreshing) {
         return (
             <SafeAreaView className="flex-1 bg-white" edges={['top']}>
                 <FeedPreviewSkeleton />
@@ -247,28 +290,29 @@ export default function FeedPreviewScreen() {
                                     size={20}
                                     color="#386641"
                                 />
-                                <Text className="font-geist text-sm text-primary underline">
+                                <Text className="font-geist text-sm text-primary underline flex-1 flex-shrink" numberOfLines={1}>
                                     {feed.link || feed.url}
                                 </Text>
                             </Pressable>
                         )}
 
-                        {/* Feed Stats */}
-                        <View className="mb-6 flex-row items-center gap-4">
-                            {feed.top_level_category && (
-                                <>
-                                    <Text className="font-geist text-sm text-grey">
-                                        {feed.top_level_category}
-                                    </Text>
-                                    <Text className="text-grey">•</Text>
-                                </>
-                            )}
-                            {feed.language && (
-                                <Text className="font-geist text-sm text-grey">
-                                    {feed.language.toUpperCase()}
-                                </Text>
-                            )}
-                        </View>
+                        {/* Feed Tags */}
+                        {feed.tags && feed.tags.length > 0 && (
+                            <View className="mb-6 flex-row items-center gap-2 flex-wrap">
+                                {feed.tags.slice(0, 5).map((tag) => (
+                                    <View key={tag} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey px-3 py-1.5">
+                                        <Monicon
+                                            name="solar:tag-linear"
+                                            size={14}
+                                            color="#90988B"
+                                        />
+                                        <Text className="font-geist text-xs text-grey">
+                                            {typeof tag === 'object' ? tag.name : tag}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        )}
 
                         {/* Follow Button */}
                         <Button
@@ -305,12 +349,50 @@ export default function FeedPreviewScreen() {
                                 className="font-geist-bold text-lg text-black">
                                 Recent articles
                             </Text>
+                            {shouldShowPreviewBanner && feed && (
+                                <Pressable
+                                    onPress={() => {
+                                        // Navigate to Following screen with feed preview mode
+                                        const { selectFeedPreview } = useFeedViewStore.getState();
+                                        selectFeedPreview(feed.id, feed.title);
+                                        router.push('/(tabs)/');
+                                    }}
+                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60">
+                                    <Monicon
+                                        name="solar:alt-arrow-right-linear"
+                                        size={18}
+                                        color="#90988B"
+                                    />
+                                </Pressable>
+                            )}
                         </View>
 
-                        {isArticlesLoading ? (
-                            <View className="px-6 py-4">
-                                <View className="h-48 w-full rounded-2xl bg-mid-grey" />
-                            </View>
+                        {isArticlesLoading || isPreviewRefreshing ? (
+                            <FlatList
+                                data={[1, 2, 3]}
+                                horizontal
+                                showsHorizontalScrollIndicator={false}
+                                contentContainerStyle={{ paddingHorizontal: 24 }}
+                                renderItem={() => (
+                                    <View
+                                        className="overflow-hidden rounded-2xl border border-light-grey bg-white"
+                                        style={{ width: CARD_WIDTH, marginRight: CARD_SPACING }}>
+                                        <ShimmerView width={CARD_WIDTH} height={192} borderRadius={0} />
+                                        <View className="p-4" style={{ width: CARD_WIDTH }}>
+                                            <View className="mb-2 flex-row items-center gap-2">
+                                                <ShimmerView width={6} height={6} borderRadius={3} />
+                                                <ShimmerView width={64} height={12} borderRadius={4} />
+                                            </View>
+                                            <View className="gap-1.5">
+                                                <ShimmerView width="100%" height={16} borderRadius={4} />
+                                                <ShimmerView width="90%" height={16} borderRadius={4} />
+                                                <ShimmerView width="70%" height={16} borderRadius={4} />
+                                            </View>
+                                        </View>
+                                    </View>
+                                )}
+                                keyExtractor={(item) => item.toString()}
+                            />
                         ) : articles.length > 0 ? (
                             <FlatList
                                 data={articles}
@@ -318,58 +400,21 @@ export default function FeedPreviewScreen() {
                                 showsHorizontalScrollIndicator={false}
                                 contentContainerStyle={{ paddingHorizontal: 24 }}
                                 renderItem={({ item: article }) => (
-                                    <Pressable
+                                    <ArticleListItem
+                                        variant="card"
+                                        width={CARD_WIDTH}
+                                        source={previewFeedData?.title || 'Unknown'}
+                                        timestamp={
+                                            article.published_at
+                                                ? new Date(article.published_at).toLocaleDateString()
+                                                : 'Unknown date'
+                                        }
+                                        title={article.title}
+                                        description={article.description ?? undefined}
+                                        imageUrl={article.image_url ?? undefined}
                                         onPress={() => handleArticlePress(article.id)}
-                                        style={{ width: CARD_WIDTH, marginRight: CARD_SPACING }}
-                                        className="overflow-hidden rounded-2xl border border-light-grey bg-white active:opacity-80">
-                                        {article.image_url ? (
-                                            <>
-                                                <Image
-                                                    source={{ uri: article.image_url }}
-                                                    className="h-48 w-full"
-                                                    resizeMode="cover"
-                                                />
-                                                <View className="p-4">
-                                                    <View className="mb-2 flex-row items-center gap-2">
-                                                        <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                                        <Text className="font-geist text-xs text-grey">
-                                                            {article.published_at
-                                                                ? new Date(
-                                                                    article.published_at
-                                                                ).toLocaleDateString()
-                                                                : 'Unknown date'}
-                                                        </Text>
-                                                    </View>
-                                                    <Text className="font-geist-semibold text-base leading-6 text-black">
-                                                        {article.title}
-                                                    </Text>
-                                                </View>
-                                            </>
-                                        ) : (
-                                            <View className="p-4">
-                                                <View className="mb-3 flex-row items-center gap-2">
-                                                    <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                                    <Text className="font-geist text-xs text-grey">
-                                                        {article.published_at
-                                                            ? new Date(
-                                                                article.published_at
-                                                            ).toLocaleDateString()
-                                                            : 'Unknown date'}
-                                                    </Text>
-                                                </View>
-                                                <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black">
-                                                    {article.title}
-                                                </Text>
-                                                {article.description && (
-                                                    <Text
-                                                        className="font-geist text-sm leading-5 text-grey"
-                                                        numberOfLines={3}>
-                                                        {article.description}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        )}
-                                    </Pressable>
+                                        style={{ marginRight: CARD_SPACING }}
+                                    />
                                 )}
                                 keyExtractor={(item) => item.id}
                             />

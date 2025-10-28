@@ -3,11 +3,11 @@ import { SelfHostSettings } from '@/components/SelfHostSettings';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { MailIcon } from '@/components/ui/icons/MailIcon';
+import { useSettingsStore } from '@/stores/settings';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { useSettingsStore } from '@/stores/settings';
 
 export default function LoginStep1() {
     const router = useRouter();
@@ -71,7 +71,7 @@ export default function LoginStep1() {
                                 <View className="flex-1">
                                     <Text className="font-geist-medium text-sm text-black">
                                         Using{' '}
-                                        <Text className="font-geist-mono-regular text-xs text-grey">
+                                        <Text className="font-geist-mono text-xs text-grey">
                                             {settings.readspace_url}
                                         </Text>
                                     </Text>

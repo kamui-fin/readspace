@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { LockIcon } from '@/components/ui/icons/LockIcon';
 import { useAuth } from '@/contexts/AuthProvider';
+import { useSettingsStore } from '@/stores/settings';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -12,6 +13,7 @@ export default function SignupStep2() {
     const router = useRouter();
     const { email } = useLocalSearchParams<{ email: string }>();
     const { signUp } = useAuth();
+    const { settings } = useSettingsStore();
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
 
@@ -25,7 +27,16 @@ export default function SignupStep2() {
         try {
             await signUp({ email, password });
             toast.success('Account created successfully!');
-            // Router will automatically redirect to tabs via auth guard
+            router.replace('/onboarding/feeds/categories');
+
+            // Redirect based on instance type
+            // if (settings.instance_type === 'cloud') {
+            //     // Cloud users go through feed selection onboarding
+            //     router.replace('/onboarding/feeds/categories');
+            // } else {
+            //     // Self-hosted users skip directly to app
+            //     router.replace('/(tabs)');
+            // }
         } catch (error) {
             console.error('Sign up error:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to create account');

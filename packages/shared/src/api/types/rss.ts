@@ -38,10 +38,10 @@ export type Feed = {
   folder_name: string | null;
   is_favorite: boolean;
   language: string | null;
+  tags: string[] | null; // Array of tag names from the database
   top_level_category: string | null; // Feed category enum value
   popularity_score: number | null; // Popularity estimate (0-100)
   last_fetched_at: string | null;
-  tags: { id: string; name: string }[];
   unread_count: number;
   fetch_error_count: number;
   last_error_message: string | null;
@@ -225,10 +225,10 @@ export function feedDiscoveryResultToFeed(
     folder_name: null,
     is_favorite: false,
     language: discoveryResult.language,
+    tags: discoveryResult.tags,
     top_level_category: discoveryResult.category,
     popularity_score: discoveryResult.popularity_score,
     last_fetched_at: null,
-    tags: [], // Convert string[] to object[] format
     unread_count: 0,
     fetch_error_count: 0,
     last_error_message: null,

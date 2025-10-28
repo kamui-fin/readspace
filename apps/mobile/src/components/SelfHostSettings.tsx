@@ -65,7 +65,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 // Test API endpoint
                 toast.loading('Validating API endpoint...', { id: 'validation' });
                 try {
-                    const apiResponse = await fetch(data.apiUrl + '/health', {
+                    const apiResponse = await fetch(data.apiUrl + '/api/health', {
                         method: 'GET',
                         headers: { 'Content-Type': 'application/json' },
                     });
@@ -79,6 +79,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                     toast.dismiss('validation');
                     const errorMsg =
                         error instanceof Error ? error.message : 'Failed to connect to API';
+                    toast.error(errorMsg, { duration: 4000 });
                     setErrors((prev) => ({ ...prev, apiUrl: errorMsg }));
                     setIsValidating(false);
                     return;
@@ -93,9 +94,11 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 
                 if (!supabaseValidation.valid) {
                     toast.dismiss('validation');
+                    const supabaseError = supabaseValidation.error || 'Connection failed';
+                    toast.error(supabaseError, { duration: 4000 });
                     setErrors((prev) => ({
                         ...prev,
-                        supabaseUrl: supabaseValidation.error || 'Connection failed',
+                        supabaseUrl: supabaseError,
                     }));
                     setIsValidating(false);
                     return;
