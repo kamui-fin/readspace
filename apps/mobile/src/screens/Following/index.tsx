@@ -109,7 +109,11 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = activeQuery;
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isSuccess } = activeQuery;
+
+    // Use a more precise loading check: show skeleton only during initial load before any data arrives
+    // Once we have data (isSuccess), never show skeleton again - just show the data
+    const isInitialLoading = (isLoading || isFetching) && !isSuccess && !data;
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
@@ -281,24 +285,40 @@ export default function FollowingScreen() {
 
     const handleBookmark = useCallback(
         (articleId: string, currentlySaved: boolean) => {
-            updateArticle.mutate({
-                articleId,
-                data: { is_read_later: !currentlySaved },
-                articleType: 'feed',
-            });
-            toast.success(currentlySaved ? 'Removed from saved' : 'Saved for later');
+            const newValue = !currentlySaved;
+            updateArticle.mutate(
+                {
+                    articleId,
+                    data: { is_read_later: newValue },
+                    articleType: 'feed',
+                },
+                {
+                    // Optimistic update handles UI changes immediately
+                    onError: () => {
+                        toast.error('Failed to update bookmark');
+                    },
+                }
+            );
         },
         [updateArticle]
     );
 
     const handleToggleRead = useCallback(
         (articleId: string, currentlyRead: boolean) => {
-            updateArticle.mutate({
-                articleId,
-                data: { is_read: !currentlyRead },
-                articleType: 'feed',
-            });
-            toast.success(currentlyRead ? 'Marked as unread' : 'Marked as read');
+            const newValue = !currentlyRead;
+            updateArticle.mutate(
+                {
+                    articleId,
+                    data: { is_read: newValue },
+                    articleType: 'feed',
+                },
+                {
+                    // Optimistic update handles UI changes immediately
+                    onError: () => {
+                        toast.error('Failed to update read status');
+                    },
+                }
+            );
         },
         [updateArticle]
     );
@@ -329,12 +349,30 @@ export default function FollowingScreen() {
 
         if (item.type === 'article' && item.data) {
             const article = item.data;
+            const isClipped = article.article_type === 'clipped';
+
+            // For feed articles
             const feedTitle =
                 typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
             const feedImageUrl =
                 typeof article.feed === 'object' && article.feed
                     ? article.feed.image_url
                     : undefined;
+
+            // For clipped articles - get favicon from domain
+            const getFaviconUrl = (url: string): string => {
+                try {
+                    const domain = new URL(url).hostname;
+                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+                } catch {
+                    return '';
+                }
+            };
+
+            const displayFaviconUrl = isClipped && article.link
+                ? getFaviconUrl(article.link)
+                : feedImageUrl;
+
             return (
                 <ArticleListItem
                     className="px-4"
@@ -347,9 +385,13 @@ export default function FollowingScreen() {
                     title={article.title}
                     description={article.description || undefined}
                     imageUrl={article.image_url || undefined}
-                    faviconUrl={feedImageUrl || undefined}
+                    faviconUrl={displayFaviconUrl || undefined}
                     isRead={article.is_read || false}
                     isSaved={article.is_read_later || false}
+                    articleType={article.article_type}
+                    priority={article.priority || undefined}
+                    note={article.note || undefined}
+                    articleUrl={article.link}
                     onPress={() => router.push(`/articles/${article.id}`)}
                     onBookmark={() => handleBookmark(article.id, article.is_read_later || false)}
                     onToggleRead={() => handleToggleRead(article.id, article.is_read || false)}
@@ -369,7 +411,7 @@ export default function FollowingScreen() {
         );
     };
 
-    if (isLoading) {
+    if (isInitialLoading) {
         return (
             <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <Header

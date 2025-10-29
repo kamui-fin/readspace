@@ -1,8 +1,10 @@
 import { ArticleMenuModal } from '@/components/ArticleMenuModal';
 import { ArticleReader } from '@/components/ArticleReader';
 import { ArticleReaderSkeleton } from '@/components/skeletons';
+import { COLORS } from '@/constants/Colors';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
+import { useFocusEffect } from '@react-navigation/native';
 import {
     fetchTranslation,
     useArticle,
@@ -13,13 +15,16 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
 export default function ArticleScreen() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme();
+    const colors = COLORS[colorScheme ?? 'light'];
     const { id, isSubscribed: isSubscribedParam } = useLocalSearchParams<{
         id: string;
         isSubscribed?: string;
@@ -39,6 +44,9 @@ export default function ArticleScreen() {
     const { data: article, isLoading: isArticleLoading } = useArticle(id || '', {
         enabled: !!id,
     });
+
+    // Check if this is a clipped article
+    const isClipped = article?.article_type === 'clipped';
 
     const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
         article?.extracted_content ? 'extracted' : 'original'
@@ -67,16 +75,43 @@ export default function ArticleScreen() {
                 : article?.content || undefined
     );
 
-    // Mark as read on mount
+    // Sync contentSource with article.extracted_content (use useLayoutEffect to prevent flicker)
+    useLayoutEffect(() => {
+        setContentSource(article?.extracted_content ? 'extracted' : 'original');
+        setTranslatedContent(null);
+    }, [article?.id, article?.extracted_content]);
+
+    // Mark as read on mount (only if subscribed to the feed)
     useEffect(() => {
-        if (article && !article.is_read) {
-            updateArticle.mutate({
-                articleId: article.id,
-                data: { is_read: true },
-                articleType: 'feed',
-            });
+        if (article && !article.is_read && isSubscribed) {
+            updateArticle.mutate(
+                {
+                    articleId: article.id,
+                    data: { is_read: true },
+                    articleType: article.article_type || 'feed',
+                },
+                {
+                    // Silently mark as read - optimistic update handles UI
+                    onError: () => {
+                        // Rollback already handled by the hook
+                    },
+                }
+            );
         }
-    }, [article?.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [article?.id, isSubscribed]);
+
+    // Refetch article list when navigating back to ensure updated state
+    useFocusEffect(
+        useCallback(() => {
+            return () => {
+                // When losing focus (navigating away), invalidate article lists
+                queryClient.invalidateQueries({
+                    queryKey: ['rss-articles', 'infinite'],
+                });
+            };
+        }, [queryClient])
+    );
 
     // Handlers
     const handleClose = useCallback(() => {
@@ -87,13 +122,40 @@ export default function ArticleScreen() {
         if (!article) return;
 
         const newValue = !article.is_read_later;
-        updateArticle.mutate({
-            articleId: article.id,
-            data: { is_read_later: newValue },
-            articleType: 'feed',
-        });
-        toast(newValue ? 'Saved for later' : 'Removed from saved');
+        updateArticle.mutate(
+            {
+                articleId: article.id,
+                data: { is_read_later: newValue },
+                articleType: article.article_type || 'feed',
+            },
+            {
+                // UI icon changes immediately, no toast needed
+            }
+        );
     }, [article, updateArticle]);
+
+    const handleMarkAsDone = useCallback(() => {
+        if (!article) return;
+
+        // Show immediate feedback
+        toast('Marked as done');
+
+        updateArticle.mutate(
+            {
+                articleId: article.id,
+                data: { is_read_later: false },
+                articleType: article.article_type || 'feed',
+            },
+            {
+                onSuccess: () => {
+                    router.back();
+                },
+                onError: () => {
+                    toast.error('Failed to mark as done');
+                },
+            }
+        );
+    }, [article, updateArticle, router]);
 
     const handleMenuPress = useCallback(() => {
         menuModalRef.current?.present();
@@ -130,7 +192,7 @@ export default function ArticleScreen() {
 
     const handleSummarize = useCallback(async () => {
         if (aiSummary) {
-            toast('Summary already generated');
+            // Summary already exists, button should be disabled instead
             return;
         }
 
@@ -145,7 +207,7 @@ export default function ArticleScreen() {
             } else {
                 toast.error('Failed to generate summary', { id: 'summary' });
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to generate summary', { id: 'summary' });
         }
     }, [aiSummary, generateSummary]);
@@ -181,7 +243,7 @@ export default function ArticleScreen() {
             } else {
                 toast.error('Translation failed', { id: 'translate' });
             }
-        } catch (error) {
+        } catch {
             toast.error('Failed to translate article', { id: 'translate' });
         } finally {
             setIsTranslating(false);
@@ -194,7 +256,7 @@ export default function ArticleScreen() {
                 // Check if we already have extracted content from API
                 if (article?.extracted_content) {
                     setContentSource('extracted');
-                    toast('Showing extracted content');
+                    // Content switches immediately, no toast needed
                     return;
                 }
 
@@ -208,12 +270,12 @@ export default function ArticleScreen() {
                     } else {
                         toast.error('Failed to extract full text', { id: 'extract' });
                     }
-                } catch (error) {
+                } catch {
                     toast.error('Failed to extract full text', { id: 'extract' });
                 }
             } else {
                 setContentSource('original');
-                toast('Showing original content');
+                // Content switches immediately, no toast needed
             }
         },
         [article?.extracted_content, extractFullText]
@@ -229,14 +291,14 @@ export default function ArticleScreen() {
 
     if (isArticleLoading) {
         return (
-            <SafeAreaView edges={['top']} className="flex-1 bg-white">
+            <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
                 {/* Top Action Bar Skeleton */}
-                <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3">
-                    <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                <View className="flex-row items-center justify-between border-b border-light-grey dark:border-light-grey-dark px-4 py-3">
+                    <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
                     <View className="flex-row items-center gap-3">
-                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
-                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
-                        <View className="h-11 w-11 rounded-full bg-mid-grey" />
+                        <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
+                        <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
+                        <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
                     </View>
                 </View>
                 <ArticleReaderSkeleton />
@@ -246,23 +308,23 @@ export default function ArticleScreen() {
 
     if (!article) {
         return (
-            <SafeAreaView edges={['top']} className="flex-1 bg-white">
+            <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
                 <View className="flex-1 items-center justify-center px-6">
-                    <Text className="text-center text-base text-grey">Article not found</Text>
+                    <Text className="text-center text-base text-grey dark:text-grey-dark">Article not found</Text>
                 </View>
             </SafeAreaView>
         );
     }
 
     return (
-        <SafeAreaView edges={['top']} className="flex-1 bg-white">
+        <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
             {/* Top Action Bar */}
-            <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3">
+            <View className="flex-row items-center justify-between border-b border-light-grey dark:border-light-grey-dark px-4 py-3">
                 {/* Close Button */}
                 <Pressable
                     onPress={handleClose}
-                    className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey">
-                    <Monicon name="lucide:x" size={20} color="#232222" />
+                    className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
+                    <Monicon name="lucide:x" size={20} color={colors.black} />
                 </Pressable>
 
                 {/* Right Actions */}
@@ -270,31 +332,33 @@ export default function ArticleScreen() {
                     {/* Share Button */}
                     <Pressable
                         onPress={handleShare}
-                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey">
-                        <Monicon name="solar:share-outline" size={20} color="#232222" />
+                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
+                        <Monicon name="solar:share-outline" size={20} color={colors.black} />
                     </Pressable>
 
-                    {/* Bookmark Button */}
+                    {/* Bookmark Button (or Done button for clipped articles) */}
                     <Pressable
-                        onPress={handleBookmark}
-                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey">
+                        onPress={isClipped ? handleMarkAsDone : handleBookmark}
+                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
                         <Monicon
                             name={
-                                article.is_read_later
-                                    ? 'solar:bookmark-bold'
-                                    : 'solar:bookmark-linear'
+                                isClipped
+                                    ? 'solar:check-circle-bold'
+                                    : article.is_read_later
+                                        ? 'solar:bookmark-bold'
+                                        : 'solar:bookmark-linear'
                             }
                             size={20}
-                            color={article.is_read_later ? '#FBBC04' : '#232222'}
+                            color={isClipped ? '#6A994E' : article.is_read_later ? '#FBBC04' : colors.black}
                         />
                     </Pressable>
 
                     {/* Menu Button */}
                     <Pressable
                         onPress={handleMenuPress}
-                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey">
+                        className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
                         <View style={{ transform: [{ rotate: '90deg' }] }}>
-                            <Monicon name="solar:menu-dots-bold" size={20} color="#232222" />
+                            <Monicon name="solar:menu-dots-bold" size={20} color={colors.black} />
                         </View>
                     </Pressable>
                 </View>
@@ -321,6 +385,8 @@ export default function ArticleScreen() {
                 onWebModeChange={handleWebModeChange}
                 webModeEnabled={contentSource === 'extracted'}
                 isSubscribed={isSubscribed}
+                isClipped={isClipped}
+                onMarkAsDone={handleMarkAsDone}
             />
         </SafeAreaView>
     );

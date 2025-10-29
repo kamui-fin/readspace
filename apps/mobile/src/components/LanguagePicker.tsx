@@ -1,5 +1,7 @@
 import { Radio } from '@/components/ui/Radio';
+import { COLORS } from '@/constants/Colors';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -26,6 +28,8 @@ const DEFAULT_LANGUAGES: LanguageOption[] = [
 
 export const LanguagePicker = forwardRef<BottomSheet, LanguagePickerProps>(
     ({ onLanguageChange, initialLanguage, languages = DEFAULT_LANGUAGES, title = 'Pick a language' }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         // Use the first language's value as default if initialLanguage is not provided
         const [selectedLanguage, setSelectedLanguage] = useState<string>(
             initialLanguage || languages[0]?.value || 'english'
@@ -63,14 +67,14 @@ export const LanguagePicker = forwardRef<BottomSheet, LanguagePickerProps>(
                 snapPoints={snapPoints}
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
                 <BottomSheetScrollView
-                    className="flex-1 px-6"
+                    className="flex-1 bg-white dark:bg-white-dark px-6"
                     contentContainerStyle={{ paddingBottom: 24 }}
                     showsVerticalScrollIndicator={false}
                 >
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>
 

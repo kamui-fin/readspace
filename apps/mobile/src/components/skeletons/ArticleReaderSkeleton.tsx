@@ -3,12 +3,12 @@ import { ShimmerView } from './ShimmerView';
 
 export function ArticleReaderSkeleton() {
     return (
-        <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingBottom: 80 }}>
+        <ScrollView className="flex-1 bg-white dark:bg-white-dark" contentContainerStyle={{ paddingBottom: 80 }}>
             {/* Featured Image */}
             <ShimmerView width="100%" height={240} borderRadius={0} />
 
             {/* Article Header */}
-            <View className="mx-6 mb-6 mt-6 border-b border-light-grey pb-6">
+            <View className="mx-6 mb-6 mt-6 border-b border-light-grey dark:border-light-grey-dark pb-6">
                 {/* Source */}
                 <View className="mb-2 flex-row items-center gap-2">
                     <ShimmerView width={16} height={16} borderRadius={2} />

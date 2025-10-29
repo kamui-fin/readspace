@@ -1257,6 +1257,17 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           is_favorite?: boolean;
         };
         articleType?: "feed" | "clipped";
+      },
+      {
+        previousArticle: Article | undefined;
+        previousInfiniteQueries: Map<string, any>;
+        articleId: string;
+        data: {
+          is_read?: boolean;
+          read_at?: string;
+          is_read_later?: boolean;
+          is_favorite?: boolean;
+        };
       }
     >,
   ) {
@@ -1278,14 +1289,90 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       }): Promise<void> => {
         await ApiClient.rss.updateArticle(articleId, data, articleType);
       },
+      onMutate: async ({ articleId, data }) => {
+        // Cancel any outgoing refetches to prevent conflicts
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
+        });
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"],
+        });
+
+        // Snapshot the previous article data
+        const previousArticle = queryClient.getQueryData<Article>([
+          RSS_QUERY_KEYS.ARTICLE,
+          articleId,
+        ]);
+
+        // Store previous infinite query states
+        const previousInfiniteQueries = new Map();
+        const queries = queryClient.getQueriesData({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"],
+        });
+
+        for (const [queryKey, queryData] of queries) {
+          previousInfiniteQueries.set(JSON.stringify(queryKey), queryData);
+        }
+
+        // Optimistically update the specific article cache
+        queryClient.setQueryData(
+          [RSS_QUERY_KEYS.ARTICLE, articleId],
+          (old: Article | undefined) => {
+            if (!old) return old;
+            return { ...old, ...data };
+          },
+        );
+
+        // Optimistically update article in all infinite queries
+        queryClient.setQueriesData(
+          { queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"] },
+          (old: any) => {
+            if (!old?.pages) return old;
+            return {
+              ...old,
+              pages: old.pages.map((page: PaginatedResponse<Article>) => ({
+                ...page,
+                items: page.items.map((article: Article) =>
+                  article.id === articleId ? { ...article, ...data } : article,
+                ),
+              })),
+            };
+          },
+        );
+
+        return { previousArticle, previousInfiniteQueries, articleId, data };
+      },
+      onError: (_, __, context) => {
+        // Rollback on error
+        if (context?.previousArticle) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.ARTICLE, context.articleId],
+            context.previousArticle,
+          );
+        }
+
+        // Rollback infinite queries
+        if (context?.previousInfiniteQueries) {
+          for (const [queryKey, queryData] of context.previousInfiniteQueries.entries()) {
+            queryClient.setQueryData(JSON.parse(queryKey), queryData);
+          }
+        }
+
+        config.showError?.("Failed to update article");
+      },
       onSuccess: (_, { articleId }) => {
-        // Only invalidate the specific article, not all articles
+        // Only invalidate the specific article to ensure it's refreshed with server data
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
         });
-        // Only invalidate unread counts, not all articles to prevent infinite loops
+        // Invalidate unread counts to update badges and counts
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+          refetchType: "active",
+        });
+        // Invalidate all article lists to ensure consistency across views
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
           refetchType: "active",
         });
       },

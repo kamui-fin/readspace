@@ -45,7 +45,7 @@ export default function FeedRecommendationsStep() {
                 forceRefetch: true,
             });
 
-            toast.success('Following feed!');
+            // Button state changes to "Following", no toast needed
         } catch (error) {
             console.error('Failed to subscribe:', error);
             toast.error('Failed to follow feed');

@@ -1,5 +1,6 @@
 import { FolderPicker } from '@/components/FolderPicker';
 import { cn } from '@/utils/cn';
+import { stripHtml } from '@/utils/html';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
 import { useRouter } from 'expo-router';
@@ -97,7 +98,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                 },
                 {
                     onSuccess: () => {
-                        toast.success('Following feed!');
+                        // Button state changes to "Following", no toast needed
                     },
                     onError: (error: any) => {
                         toast.error(error?.message || 'Failed to follow feed');
@@ -145,10 +146,10 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                         <Text
                             className="mb-1 font-geist-semibold text-base text-black dark:text-black-dark"
                             numberOfLines={1}>
-                            {title}
+                            {stripHtml(title)}
                         </Text>
                         <Text className="font-geist text-sm text-grey dark:text-grey-dark" numberOfLines={2}>
-                            {description}
+                            {stripHtml(description)}
                         </Text>
                     </View>
 

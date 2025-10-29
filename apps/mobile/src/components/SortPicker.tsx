@@ -1,7 +1,9 @@
 import { Radio } from '@/components/ui/Radio';
 import { Switch } from '@/components/ui/Switch';
+import { COLORS } from '@/constants/Colors';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -22,6 +24,8 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 
 export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
     ({ onSortChange, initialSortBy = 'lastRead', initialOrder = 'descending' }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const [selectedSort, setSelectedSort] = useState<SortBy>(initialSortBy);
         const [sortOrder, setSortOrder] = useState<SortOrder>(initialOrder);
         const snapPoints = useMemo(() => ['45%'], []);
@@ -62,10 +66,10 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
                 snapPoints={snapPoints}
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
-                <BottomSheetView className="flex-1 px-6">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6">
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Sort by
                     </Text>
 
@@ -80,7 +84,7 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
                         ))}
                     </View>
 
-                    <View className="flex-row items-center justify-between rounded-2xl bg-mid-grey px-5 py-4">
+                    <View className="flex-row items-center justify-between rounded-2xl bg-mid-grey dark:bg-mid-grey-dark px-5 py-4">
                         <View className="flex-row items-center gap-3">
                             <Monicon
                                 name={
@@ -89,9 +93,9 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
                                         : 'solar:sort-from-bottom-to-top-bold'
                                 }
                                 size={24}
-                                color="#90988B"
+                                color={colors.grey}
                             />
-                            <Text className="font-geist-medium text-base text-grey">
+                            <Text className="font-geist-medium text-base text-grey dark:text-grey-dark">
                                 {sortOrder === 'descending' ? 'Descending' : 'Ascending'}
                             </Text>
                         </View>

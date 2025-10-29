@@ -44,7 +44,7 @@ export function FeedPreviewSkeleton() {
             </View>
 
             {/* Divider */}
-            <View className="mb-6 h-2 bg-light-grey" />
+            <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
             {/* Recent Articles */}
             <View className="mb-6 px-6">
@@ -58,7 +58,7 @@ export function FeedPreviewSkeleton() {
             </View>
 
             {/* Divider */}
-            <View className="mb-6 h-2 bg-light-grey" />
+            <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
             {/* Similar Feeds */}
             <View className="px-6 pb-8">

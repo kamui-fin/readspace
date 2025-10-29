@@ -3,11 +3,13 @@ import { FilterPicker, type BookFilter } from '@/components/FilterPicker';
 import { SortPicker, type SortBy, type SortOrder } from '@/components/SortPicker';
 import { BookCardSkeleton } from '@/components/skeletons';
 import { FAB } from '@/components/ui/FAB';
+import { COLORS } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthProvider';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import { useBooks, type UserBookLibrary } from '@readspace/shared';
 import * as DocumentPicker from 'expo-document-picker';
+import { useColorScheme } from 'nativewind';
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,6 +17,8 @@ import { toast } from 'sonner-native';
 
 export default function Library() {
     const { user } = useAuth();
+    const { colorScheme } = useColorScheme();
+    const colors = COLORS[colorScheme ?? 'light'];
     const sortPickerRef = useRef<BottomSheet>(null);
     const filterPickerRef = useRef<BottomSheet>(null);
     const [sortBy, setSortBy] = useState<SortBy>('lastRead');
@@ -36,16 +40,12 @@ export default function Library() {
     const handleSortChange = (newSortBy: SortBy, newOrder: SortOrder) => {
         setSortBy(newSortBy);
         setSortOrder(newOrder);
-        toast(`Sorted by ${newSortBy} (${newOrder})`);
+        // Sort order immediately visible in UI, no toast needed
     };
 
     const handleFilterChange = (newFilter: BookFilter) => {
         setFilter(newFilter);
-        if (newFilter !== 'none') {
-            toast(`Filtered by ${newFilter}`);
-        } else {
-            toast('Filter cleared');
-        }
+        // Filter changes immediately visible in list, no toast needed
     };
 
     const handleAddBook = async () => {
@@ -172,12 +172,12 @@ export default function Library() {
                         <Pressable
                             onPress={handleSortPress}
                             className="h-10 w-10 items-center justify-center rounded-full transition-opacity active:opacity-80">
-                            <Monicon name="solar:sort-linear" size={24} color="#232222" />
+                            <Monicon name="solar:sort-linear" size={24} color={colors.black} />
                         </Pressable>
                         <Pressable
                             onPress={handleFilterPress}
                             className="h-10 w-10 items-center justify-center rounded-full transition-opacity active:opacity-80">
-                            <Monicon name="solar:filter-linear" size={24} color="#232222" />
+                            <Monicon name="solar:filter-linear" size={24} color={colors.black} />
                         </Pressable>
                     </View>
                 </View>

@@ -1,7 +1,7 @@
 import type { Session, User } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import type React from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useSettingsStore } from '@/stores/settings';
 
@@ -175,6 +175,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 export function AuthQueryManager() {
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const hasInitializedRef = useRef(false);
 
     useEffect(() => {
         const supabase = getSupabaseClient();
@@ -183,6 +184,12 @@ export function AuthQueryManager() {
         } = supabase.auth.onAuthStateChange((event, newSession) => {
             const previousUserId = user?.id;
             const newUserId = newSession?.user?.id;
+
+            // Skip cache clearing on initial session restore
+            if (event === 'INITIAL_SESSION') {
+                hasInitializedRef.current = true;
+                return;
+            }
 
             // Clear query cache when user changes or signs out
             if (
@@ -193,8 +200,8 @@ export function AuthQueryManager() {
                 queryClient.clear();
             }
 
-            // Also clear cache when a new user signs in for the first time
-            if (event === 'SIGNED_IN' && !previousUserId && newUserId) {
+            // Only clear cache for SIGNED_IN if we've already initialized (not on app launch)
+            if (event === 'SIGNED_IN' && hasInitializedRef.current && !previousUserId && newUserId) {
                 console.log('🧹 Clearing query cache for fresh sign in');
                 queryClient.clear();
             }

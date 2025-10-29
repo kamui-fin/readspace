@@ -44,7 +44,7 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                 )}
 
                 {/* Feed Name */}
-                <Text className="flex-1 font-geist-medium text-base text-black" numberOfLines={1}>
+                <Text className="flex-1 font-geist-medium text-base text-black dark:text-black-dark" numberOfLines={1}>
                     {feed.title}
                 </Text>
 

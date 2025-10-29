@@ -1,9 +1,11 @@
+import { COLORS } from '@/constants/Colors';
 import {
     BottomSheetBackdrop,
     BottomSheetModal,
     BottomSheetTextInput,
     BottomSheetView,
 } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
@@ -13,6 +15,8 @@ export interface FolderNameModalProps {
 
 export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps>(
     ({ onCreateFolder }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const [folderName, setFolderName] = useState('');
         const [isOpen, setIsOpen] = useState(false);
         const snapPoints = useMemo(() => ['40%', '70%'], []);
@@ -49,18 +53,18 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                 keyboardBlurBehavior="restore"
                 android_keyboardInputMode="adjustResize"
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}
                 onChange={(index) => setIsOpen(index >= 0)}
                 onDismiss={() => {
                     setFolderName('');
                     setIsOpen(false);
                 }}>
                 <BottomSheetView className="flex-1 px-6 py-4">
-                    <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black">
+                    <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Choose a name
                     </Text>
-                    <Text className="mb-6 font-geist text-base text-grey">
+                    <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">
                         Creating a folder helps you organize your feeds.
                     </Text>
 
@@ -68,16 +72,16 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                         value={folderName}
                         onChangeText={setFolderName}
                         placeholder="e.g. Technology"
-                        placeholderTextColor="#90988B"
+                        placeholderTextColor={colors.grey}
                         style={{
                             marginBottom: 24,
                             borderRadius: 16,
-                            backgroundColor: '#F3F3F3',
+                            backgroundColor: colors['mid-grey'],
                             paddingHorizontal: 20,
                             paddingVertical: 16,
                             fontSize: 16,
                             fontFamily: 'Geist_400Regular',
-                            color: '#232222',
+                            color: colors.black,
                         }}
                         autoFocus={isOpen}
                         returnKeyType="done"
@@ -90,11 +94,11 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                         className={`items-center justify-center rounded-2xl py-4 transition-opacity ${
                             folderName.trim()
                                 ? 'bg-primary active:opacity-70'
-                                : 'bg-mid-grey opacity-50'
+                                : 'bg-mid-grey dark:bg-mid-grey-dark opacity-50'
                         }`}>
                         <Text
                             className={`font-geist-semibold text-base ${
-                                folderName.trim() ? 'text-white' : 'text-grey'
+                                folderName.trim() ? 'text-white dark:text-white-dark' : 'text-grey dark:text-grey-dark'
                             }`}>
                             Create
                         </Text>

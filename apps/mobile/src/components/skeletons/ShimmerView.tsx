@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { View, useColorScheme } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     useSharedValue,
@@ -17,6 +17,8 @@ interface ShimmerViewProps {
 }
 
 export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProps) {
+    const colorScheme = useColorScheme();
+    const isDark = colorScheme === 'dark';
     const shimmerTranslate = useSharedValue(-1);
 
     useEffect(() => {
@@ -40,13 +42,19 @@ export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProp
         };
     });
 
+    // Dark theme colors
+    const bgColor = isDark ? '#2A2A2A' : '#F3F3F3';
+    const gradientColors = isDark
+        ? ['#2A2A2A', '#333333', '#2A2A2A']
+        : ['#F3F3F3', '#FFFFFF', '#F3F3F3'];
+
     return (
         <View
             style={{
                 width,
                 height,
                 borderRadius,
-                backgroundColor: '#F3F3F3',
+                backgroundColor: bgColor,
                 overflow: 'hidden',
             }}>
             <Animated.View
@@ -58,7 +66,7 @@ export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProp
                     animatedStyle,
                 ]}>
                 <LinearGradient
-                    colors={['#F3F3F3', '#FFFFFF', '#F3F3F3']}
+                    colors={gradientColors}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={{

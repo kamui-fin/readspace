@@ -22,6 +22,7 @@
         "@monicon/native": "^1.2.2",
         "@nandorojo/galeria": "^1.2.0",
         "@react-native-async-storage/async-storage": "^2.2.0",
+        "@react-native-google-signin/google-signin": "^16.0.0",
         "@readspace/shared": "workspace:*",
         "@shopify/flash-list": "^2.2.0",
         "@supabase/supabase-js": "^2.76.1",

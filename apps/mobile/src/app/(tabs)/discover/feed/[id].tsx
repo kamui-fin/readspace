@@ -207,7 +207,7 @@ export default function FeedPreviewScreen() {
     // Only show full skeleton during initial feed loading, not during preview refresh
     if (isFeedLoading && !isPreviewRefreshing) {
         return (
-            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <FeedPreviewSkeleton />
             </SafeAreaView>
         );
@@ -215,9 +215,9 @@ export default function FeedPreviewScreen() {
 
     if (!feed) {
         return (
-            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <View className="flex-1 items-center justify-center px-6">
-                    <Text className="text-center text-base text-grey">Feed not found</Text>
+                    <Text className="text-center text-base text-grey dark:text-grey-dark">Feed not found</Text>
                 </View>
             </SafeAreaView>
         );
@@ -225,18 +225,18 @@ export default function FeedPreviewScreen() {
 
     return (
         <>
-            <SafeAreaView className="flex-1 bg-white" edges={['top']}>
+            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <ScrollView showsVerticalScrollIndicator={false}>
                     {/* Header */}
                     <View className="px-6 pb-4 pt-2">
                         <Pressable
                             onPress={handleBack}
-                            className="mb-6 h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey">
+                            className="mb-6 h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
                             <Monicon name="solar:alt-arrow-left-linear" size={24} color="#232222" />
                         </Pressable>
 
                         {/* Feed Icon */}
-                        <View className="mb-4 h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey bg-white">
+                        <View className="mb-4 h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark">
                             {feed.image_url ? (
                                 <Image
                                     source={{ uri: feed.image_url }}
@@ -244,7 +244,7 @@ export default function FeedPreviewScreen() {
                                     resizeMode="cover"
                                 />
                             ) : (
-                                <Text className="font-geist-bold text-3xl text-grey">
+                                <Text className="font-geist-bold text-3xl text-grey dark:text-grey-dark">
                                     {feed.title.charAt(0).toUpperCase()}
                                 </Text>
                             )}
@@ -253,28 +253,28 @@ export default function FeedPreviewScreen() {
                         {/* Feed Title */}
                         <Text
                             style={{ letterSpacing: -0.48 }}
-                            className="mb-2 font-geist-bold text-2xl text-black">
+                            className="mb-2 font-geist-bold text-2xl text-black dark:text-black-dark">
                             {feed.title}
                         </Text>
 
                         {/* Feed Description */}
                         {feed.description && (
                             <View className="mb-4">
-                                <Text className="font-geist text-base leading-6 text-grey">
+                                <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
                                     {isDescriptionExpanded
                                         ? feed.description
                                         : `${feed.description.slice(0, 80)}... `}
                                     {!isDescriptionExpanded && (
                                         <Text
                                             onPress={toggleDescription}
-                                            className="font-geist-medium text-base text-black">
+                                            className="font-geist-medium text-base text-black dark:text-black-dark">
                                             more
                                         </Text>
                                     )}
                                 </Text>
                                 {isDescriptionExpanded && (
                                     <Pressable onPress={toggleDescription}>
-                                        <Text className="mt-1 font-geist-medium text-base text-black">
+                                        <Text className="mt-1 font-geist-medium text-base text-black dark:text-black-dark">
                                             less
                                         </Text>
                                     </Pressable>
@@ -292,7 +292,7 @@ export default function FeedPreviewScreen() {
                                     size={20}
                                     color="#386641"
                                 />
-                                <Text className="font-geist text-sm text-primary underline flex-1 flex-shrink" numberOfLines={1}>
+                                <Text className="font-geist text-sm text-primary dark:text-primary underline flex-1 flex-shrink" numberOfLines={1}>
                                     {feed.link || feed.url}
                                 </Text>
                             </Pressable>
@@ -302,13 +302,13 @@ export default function FeedPreviewScreen() {
                         {feed.tags && feed.tags.length > 0 && (
                             <View className="mb-6 flex-row items-center gap-2 flex-wrap">
                                 {feed.tags.slice(0, 5).map((tag) => (
-                                    <View key={tag} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey px-3 py-1.5">
+                                    <View key={tag} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey dark:bg-mid-grey-dark px-3 py-1.5">
                                         <Monicon
                                             name="solar:tag-linear"
                                             size={14}
                                             color="#90988B"
                                         />
-                                        <Text className="font-geist text-xs text-grey">
+                                        <Text className="font-geist text-xs text-grey dark:text-grey-dark">
                                             {typeof tag === 'object' ? tag.name : tag}
                                         </Text>
                                     </View>
@@ -341,14 +341,14 @@ export default function FeedPreviewScreen() {
                     </View>
 
                     {/* Divider */}
-                    <View className="mb-6 h-2 bg-light-grey" />
+                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
                     {/* Recent Articles */}
                     <View className="mb-6">
                         <View className="mb-5 flex-row items-center justify-between px-6">
                             <Text
                                 style={{ letterSpacing: -0.36 }}
-                                className="font-geist-bold text-lg text-black">
+                                className="font-geist-bold text-lg text-black dark:text-black-dark">
                                 Recent articles
                             </Text>
                             {shouldShowPreviewBanner && feed && (
@@ -359,7 +359,7 @@ export default function FeedPreviewScreen() {
                                         selectFeedPreview(feed.id, feed.title);
                                         router.push('/(tabs)/');
                                     }}
-                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60">
+                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
                                     <Monicon
                                         name="solar:alt-arrow-right-linear"
                                         size={18}
@@ -377,7 +377,7 @@ export default function FeedPreviewScreen() {
                                 contentContainerStyle={{ paddingHorizontal: 24 }}
                                 renderItem={() => (
                                     <View
-                                        className="overflow-hidden rounded-2xl border border-light-grey bg-white"
+                                        className="overflow-hidden rounded-2xl border border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark"
                                         style={{ width: CARD_WIDTH, marginRight: CARD_SPACING }}>
                                         <ShimmerView width={CARD_WIDTH} height={192} borderRadius={0} />
                                         <View className="p-4" style={{ width: CARD_WIDTH }}>
@@ -422,7 +422,7 @@ export default function FeedPreviewScreen() {
                             />
                         ) : (
                             <View className="px-6 py-8">
-                                <Text className="text-center text-grey">
+                                <Text className="text-center text-grey dark:text-grey-dark">
                                     No recent articles available
                                 </Text>
                             </View>
@@ -430,7 +430,7 @@ export default function FeedPreviewScreen() {
                     </View>
 
                     {/* Divider */}
-                    <View className="mb-6 h-2 bg-light-grey" />
+                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
                     {/* You might also like */}
                     {similarFeeds.length > 0 && (
@@ -438,12 +438,12 @@ export default function FeedPreviewScreen() {
                             <View className="mb-5 flex-row items-center justify-between">
                                 <Text
                                     style={{ letterSpacing: -0.36 }}
-                                    className="font-geist-bold text-lg text-black">
+                                    className="font-geist-bold text-lg text-black dark:text-black-dark">
                                     You might also like
                                 </Text>
                                 <Pressable
                                     onPress={handleSeeAllSimilar}
-                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60">
+                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
                                     <Monicon
                                         name="solar:alt-arrow-right-linear"
                                         size={18}
@@ -456,10 +456,10 @@ export default function FeedPreviewScreen() {
                                 <View className="space-y-4">
                                     {Array.from({ length: 3 }).map((_, index) => (
                                         <View key={index} className="flex-row gap-3 py-3">
-                                            <View className="h-14 w-14 rounded-lg bg-mid-grey" />
+                                            <View className="h-14 w-14 rounded-lg bg-mid-grey dark:bg-mid-grey-dark" />
                                             <View className="flex-1 gap-2">
-                                                <View className="h-4 w-3/4 rounded bg-mid-grey" />
-                                                <View className="h-3 w-full rounded bg-mid-grey" />
+                                                <View className="h-4 w-3/4 rounded bg-mid-grey dark:bg-mid-grey-dark" />
+                                                <View className="h-3 w-full rounded bg-mid-grey dark:bg-mid-grey-dark" />
                                             </View>
                                         </View>
                                     ))}

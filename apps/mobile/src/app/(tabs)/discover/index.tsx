@@ -206,7 +206,7 @@ export default function DiscoverScreen() {
             },
             {
                 onSuccess: () => {
-                    toast.success('Following feed!');
+                    // Button state changes to "Following", no toast needed
                     setPendingFeedUrl(null);
                 },
                 onError: (error: any) => {

@@ -1,5 +1,7 @@
 import { Radio } from '@/components/ui/Radio';
+import { COLORS } from '@/constants/Colors';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
@@ -19,6 +21,8 @@ const FILTER_OPTIONS: { value: BookFilter; label: string }[] = [
 
 export const FilterPicker = forwardRef<BottomSheet, FilterPickerProps>(
     ({ onFilterChange, initialFilter = 'none' }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const [selectedFilter, setSelectedFilter] = useState<BookFilter>(initialFilter);
         const snapPoints = useMemo(() => ['40%'], []);
 
@@ -53,10 +57,10 @@ export const FilterPicker = forwardRef<BottomSheet, FilterPickerProps>(
                 snapPoints={snapPoints}
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
-                <BottomSheetView className="flex-1 px-6">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6">
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Filter
                     </Text>
                     <View className="gap-3">

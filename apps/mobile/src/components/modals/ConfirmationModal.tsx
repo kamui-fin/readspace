@@ -1,4 +1,6 @@
+import { COLORS } from '@/constants/Colors';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
@@ -16,6 +18,8 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
         { title, message, confirmText = 'Confirm', cancelText = 'Cancel', onConfirm, onCancel },
         ref
     ) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const snapPoints = useMemo(() => ['35%'], []);
 
         const handleConfirm = useCallback(() => {
@@ -52,19 +56,19 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                 enableDynamicSizing
                 stackBehavior="push"
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
                 <BottomSheetView className="flex-1 px-6 py-4">
-                    <Text className="mb-3 font-geist-bold text-2xl tracking-heading text-black">
+                    <Text className="mb-3 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>
-                    <Text className="mb-6 font-geist text-base text-grey">{message}</Text>
+                    <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">{message}</Text>
 
                     <View className="flex-row gap-3">
                         <Pressable
                             onPress={handleCancel}
-                            className="flex-1 items-center justify-center rounded-2xl bg-mid-grey py-4 transition-opacity active:opacity-70">
-                            <Text className="font-geist-semibold text-base text-grey">
+                            className="flex-1 items-center justify-center rounded-2xl bg-mid-grey dark:bg-mid-grey-dark py-4 transition-opacity active:opacity-70">
+                            <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
                                 {cancelText}
                             </Text>
                         </Pressable>
@@ -72,7 +76,7 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                         <Pressable
                             onPress={handleConfirm}
                             className="flex-1 items-center justify-center rounded-2xl bg-primary py-4 transition-opacity active:opacity-70">
-                            <Text className="font-geist-semibold text-base text-white">
+                            <Text className="font-geist-semibold text-base text-white dark:text-white-dark">
                                 {confirmText}
                             </Text>
                         </Pressable>

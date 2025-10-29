@@ -20,6 +20,10 @@ export interface ArticleListItemProps extends PressableProps {
     onToggleRead?: () => void;
     variant?: 'horizontal' | 'card';
     width?: number;
+    articleType?: 'feed' | 'clipped';
+    priority?: string;
+    note?: string;
+    articleUrl?: string;
 }
 
 const SWIPE_THRESHOLD = 0.8; // 40% of item width
@@ -40,12 +44,69 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             onToggleRead,
             variant = 'horizontal',
             width,
+            articleType = 'feed',
+            priority,
+            note,
+            articleUrl,
             ...props
         },
         ref
     ) => {
         const swipeableRef = useRef<Swipeable>(null);
         const hasTriggeredHaptic = useRef(false);
+
+        /**
+         * Extract domain from URL for display
+         */
+        const extractDomain = (url: string): string => {
+            try {
+                return new URL(url).hostname;
+            } catch {
+                return url;
+            }
+        };
+
+        /**
+         * Get priority color based on priority level
+         */
+        const getPriorityColor = (priorityLevel: string): string => {
+            switch (priorityLevel) {
+                case 'high':
+                    return '#EF4444'; // red
+                case 'medium':
+                    return '#F97316'; // orange
+                case 'low':
+                    return '#10B981'; // green
+                default:
+                    return '#3B82F6'; // blue
+            }
+        };
+
+        /**
+         * Get priority background color based on priority level
+         */
+        const getPriorityBgColor = (priorityLevel: string): string => {
+            switch (priorityLevel) {
+                case 'high':
+                    return '#FEE2E2'; // red-100
+                case 'medium':
+                    return '#FFEDD5'; // orange-100
+                case 'low':
+                    return '#D1FAE5'; // green-100
+                default:
+                    return '#DBEAFE'; // blue-100
+            }
+        };
+
+        // Determine display values for clipped articles
+        const displaySource = articleType === 'clipped' && articleUrl
+            ? extractDomain(articleUrl)
+            : source;
+
+        // Prioritize note over description for clipped articles
+        const displayDescription = articleType === 'clipped' && note
+            ? note
+            : description;
 
         // Render left action (bookmark)
         const renderLeftActions = useCallback(
@@ -138,7 +199,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 <Pressable
                     ref={ref}
                     className={cn(
-                        'overflow-hidden rounded-2xl border border-light-grey bg-white active:opacity-80',
+                        'overflow-hidden rounded-2xl border border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark active:opacity-80',
                         className
                     )}
                     style={width ? { width } : undefined}
@@ -154,11 +215,11 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                             <View className="p-4" style={width ? { width } : undefined}>
                                 <View className="mb-2 flex-row items-center gap-2">
                                     <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                    <Text className="font-geist text-xs text-grey" numberOfLines={1} ellipsizeMode="tail">
+                                    <Text className="font-geist text-xs text-grey dark:text-grey-dark" numberOfLines={1} ellipsizeMode="tail">
                                         {timestamp}
                                     </Text>
                                 </View>
-                                <Text className="font-geist-semibold text-base leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
+                                <Text className="font-geist-semibold text-base leading-6 text-black dark:text-black-dark" numberOfLines={3} ellipsizeMode="tail">
                                     {stripHtml(title)}
                                 </Text>
                             </View>
@@ -167,16 +228,16 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                         <View className="p-4" style={width ? { width } : undefined}>
                             <View className="mb-3 flex-row items-center gap-2">
                                 <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                <Text className="font-geist text-xs text-grey" numberOfLines={1} ellipsizeMode="tail">
+                                <Text className="font-geist text-xs text-grey dark:text-grey-dark" numberOfLines={1} ellipsizeMode="tail">
                                     {timestamp}
                                 </Text>
                             </View>
-                            <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black" numberOfLines={3} ellipsizeMode="tail">
+                            <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black dark:text-black-dark" numberOfLines={3} ellipsizeMode="tail">
                                 {stripHtml(title)}
                             </Text>
                             {description && (
                                 <Text
-                                    className="font-geist text-sm leading-5 text-grey"
+                                    className="font-geist text-sm leading-5 text-grey dark:text-grey-dark"
                                     numberOfLines={3}
                                     ellipsizeMode="tail">
                                     {stripHtml(description)}
@@ -211,6 +272,35 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                     <View className="flex-1">
                         {/* Header */}
                         <View className="mb-2 flex-row items-center gap-2">
+                            {/* Priority badge for clipped articles */}
+                            {articleType === 'clipped' && priority && (
+                                <View
+                                    style={{
+                                        backgroundColor: getPriorityBgColor(priority),
+                                        borderRadius: 12,
+                                        paddingHorizontal: 6,
+                                        paddingVertical: 2,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 3,
+                                    }}>
+                                    <Monicon
+                                        name="solar:paperclip-bold"
+                                        size={10}
+                                        color={getPriorityColor(priority)}
+                                    />
+                                    <Text
+                                        style={{
+                                            fontSize: 9,
+                                            fontWeight: '600',
+                                            color: getPriorityColor(priority),
+                                            textTransform: 'capitalize',
+                                        }}>
+                                        {priority}
+                                    </Text>
+                                </View>
+                            )}
+
                             {/* Favicon */}
                             {faviconUrl ? (
                                 <Image
@@ -226,10 +316,10 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                     'font-geist text-xs',
                                     isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
                                 )}>
-                                {source}
+                                {displaySource}
                             </Text>
 
-                            {isSaved && (
+                            {isSaved && articleType === 'feed' && (
                                 <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
                             )}
 
@@ -248,12 +338,12 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                             {stripHtml(title)}
                         </Text>
 
-                        {/* Description */}
-                        {description && (
+                        {/* Description or Note */}
+                        {displayDescription && (
                             <Text
                                 className="font-geist text-sm leading-5 text-grey dark:text-grey-dark"
                                 numberOfLines={2}>
-                                {stripHtml(description)}
+                                {stripHtml(displayDescription)}
                             </Text>
                         )}
                     </View>

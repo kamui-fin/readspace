@@ -1,7 +1,9 @@
 import { Switch } from '@/components/ui/Switch';
+import { COLORS } from '@/constants/Colors';
 import type BottomSheet from '@gorhom/bottom-sheet';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useRef } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { LanguagePicker, type LanguageOption } from './LanguagePicker';
@@ -37,8 +39,10 @@ export interface ArticleMenuModalProps {
     onSummarize?: () => void;
     onTranslate?: (languageCode: string) => void;
     onWebModeChange?: (enabled: boolean) => void;
+    onMarkAsDone?: () => void;
     webModeEnabled?: boolean;
     isSubscribed?: boolean; // Whether the user is subscribed to the article's feed
+    isClipped?: boolean; // Whether this is a clipped article
 }
 
 export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalProps>(
@@ -49,11 +53,15 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
             onSummarize,
             onTranslate,
             onWebModeChange,
+            onMarkAsDone,
             webModeEnabled = false,
             isSubscribed = true, // Default to true for backward compatibility
+            isClipped = false,
         },
         ref
     ) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const languagePickerRef = useRef<BottomSheet>(null);
 
         const handleWebModeToggle = useCallback(
@@ -104,20 +112,30 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                 label: 'Open in Browser',
                 onPress: onOpenInBrowser,
             },
-            // Only show AI features for subscribed feeds
-            ...(isSubscribed
+            // Show "Mark as Done" for clipped articles
+            ...(isClipped
                 ? [
-                      {
-                          icon: 'solar:document-text-bold',
-                          label: 'Generate Summary',
-                          onPress: onSummarize,
-                      },
-                      {
-                          icon: 'lucide:languages',
-                          label: 'Translate',
-                          onPress: handleTranslatePress,
-                      },
-                  ]
+                    {
+                        icon: 'solar:check-circle-bold',
+                        label: 'Mark as Done',
+                        onPress: onMarkAsDone,
+                    },
+                ]
+                : []),
+            // Only show AI features for subscribed feeds (not for clipped articles)
+            ...(isSubscribed && !isClipped
+                ? [
+                    {
+                        icon: 'solar:document-text-bold',
+                        label: 'Generate Summary',
+                        onPress: onSummarize,
+                    },
+                    {
+                        icon: 'lucide:languages',
+                        label: 'Translate',
+                        onPress: handleTranslatePress,
+                    },
+                ]
                 : []),
         ];
 
@@ -128,10 +146,10 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                     snapPoints={['40%']}
                     enablePanDownToClose
                     backdropComponent={renderBackdrop}
-                    backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                    handleIndicatorStyle={{ backgroundColor: '#E0E0E0', width: 40 }}>
+                    backgroundStyle={{ backgroundColor: colors.white }}
+                    handleIndicatorStyle={{ backgroundColor: colors.green_grey, width: 40 }}>
                     <BottomSheetView className="flex-1 px-6 py-4">
-                        <Text className="mb-4 font-geist-semibold text-lg text-black">
+                        <Text className="mb-4 font-geist-semibold text-lg text-black dark:text-black-dark">
                             Article Options
                         </Text>
 
@@ -151,23 +169,23 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                                 className="flex-row items-center gap-4 py-4"
                                 style={{
                                     borderTopWidth: index > 0 ? 0.5 : 0,
-                                    borderTopColor: '#F0F0F0',
+                                    borderTopColor: colorScheme === 'dark' ? '#2a2a2a' : '#F0F0F0',
                                 }}>
-                                <Monicon name={item.icon} size={24} color="#232222" />
-                                <Text className="flex-1 font-geist text-base text-black">
+                                <Monicon name={item.icon} size={24} color={colors.black} />
+                                <Text className="flex-1 font-geist text-base text-black dark:text-black-dark">
                                     {item.label}
                                 </Text>
                             </Pressable>
                         ))}
 
-                        {/* Web Mode Toggle - Only show for subscribed feeds */}
-                        {isSubscribed && (
+                        {/* Web Mode Toggle - Only show for subscribed feeds (not clipped articles) */}
+                        {isSubscribed && !isClipped && (
                             <View
                                 className="flex-row items-center justify-between py-4"
-                                style={{ borderTopWidth: 0.5, borderTopColor: '#F0F0F0' }}>
+                                style={{ borderTopWidth: 0.5, borderTopColor: colorScheme === 'dark' ? '#2a2a2a' : '#F0F0F0' }}>
                                 <View className="flex-row items-center gap-4">
-                                    <Monicon name="solar:global-bold" size={24} color="#232222" />
-                                    <Text className="font-geist text-base text-black">Web Mode</Text>
+                                    <Monicon name="solar:global-bold" size={24} color={colors.black} />
+                                    <Text className="font-geist text-base text-black dark:text-black-dark">Web Mode</Text>
                                 </View>
                                 <Switch value={webModeEnabled} onValueChange={handleWebModeToggle} />
                             </View>

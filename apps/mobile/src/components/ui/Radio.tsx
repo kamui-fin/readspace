@@ -21,7 +21,7 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
                 {...props}>
                 <View
                     className={cn(
-                        'h-6 w-6 items-center justify-center rounded-full border-2 border-green-grey dark:border-mid-grey-dark'
+                        'h-6 w-6 items-center justify-center rounded-full border-2 border-green-grey dark:border-grey-dark'
                     )}>
                     {selected && <View className="h-3 w-3 rounded-full bg-secondary dark:bg-secondary" />}
                 </View>

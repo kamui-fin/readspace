@@ -1,6 +1,8 @@
 import { Radio } from '@/components/ui/Radio';
+import { COLORS } from '@/constants/Colors';
 import BottomSheet, { BottomSheetBackdrop, BottomSheetView } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useMemo, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 
 export type Theme = 'system' | 'light' | 'dark';
@@ -18,8 +20,15 @@ const THEMES: { value: Theme; label: string }[] = [
 
 export const ThemePicker = forwardRef<BottomSheet, ThemePickerProps>(
     ({ onThemeChange, initialTheme = 'system' }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
         const [selectedTheme, setSelectedTheme] = useState<Theme>(initialTheme);
         const snapPoints = useMemo(() => ['35%'], []);
+
+        // Sync internal state with the store whenever initialTheme changes
+        useEffect(() => {
+            setSelectedTheme(initialTheme);
+        }, [initialTheme]);
 
         const handleThemeSelect = useCallback(
             (theme: Theme) => {
@@ -52,10 +61,10 @@ export const ThemePicker = forwardRef<BottomSheet, ThemePickerProps>(
                 snapPoints={snapPoints}
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}
                 style={{ backgroundColor: 'transparent' }}>
-                <BottomSheetView className="flex-1 bg-white dark:bg-light-grey-dark px-6">
+                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6">
                     <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Pick a theme
                     </Text>

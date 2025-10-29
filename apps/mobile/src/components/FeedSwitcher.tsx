@@ -4,13 +4,13 @@ import { FolderPicker } from '@/components/FolderPicker';
 import { ConfirmationModal } from '@/components/modals/ConfirmationModal';
 import { FolderNameModal } from '@/components/modals/FolderNameModal';
 import { Button } from '@/components/ui/Button';
+import { COLORS } from '@/constants/Colors';
 import { useFeedViewStore } from '@/stores/feed-view';
 import {
     BottomSheetBackdrop,
     BottomSheetFlashList,
     BottomSheetFooter,
     BottomSheetModal,
-    BottomSheetView,
 } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
@@ -24,6 +24,7 @@ import {
     type Folder,
 } from '@readspace/shared';
 import { usePathname, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
@@ -55,6 +56,8 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const pathname = usePathname();
         const selectFeed = useFeedViewStore((state) => state.selectFeed);
         const selectFolder = useFeedViewStore((state) => state.selectFolder);
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
 
         const bottomSheetRef = useRef<BottomSheetModal>(null);
         const folderNameModalRef = useRef<BottomSheetModal>(null);
@@ -69,16 +72,29 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
 
         // Fetch feeds and folders using TanStack Query
-        const { data: feedsData, isLoading: isFeedsLoading } = useFeeds();
-        const { data: foldersData, isLoading: isFoldersLoading } = useFolders();
+        const {
+            data: feedsData,
+            isLoading: isFeedsLoading,
+            isFetching: isFeedsFetching,
+            isSuccess: isFeedsSuccess
+        } = useFeeds();
+        const {
+            data: foldersData,
+            isLoading: isFoldersLoading,
+            isFetching: isFoldersFetching,
+            isSuccess: isFoldersSuccess
+        } = useFolders();
         const createFolderMutation = useCreateFolder();
         const deleteFeedMutation = useDeleteFeed();
         const deleteFolderMutation = useDeleteFolder();
         const updateFeedMutation = useUpdateFeed();
 
-        const feeds = (feedsData as Feed[]) || [];
-        const folders = (foldersData as Folder[]) || [];
-        const isLoading = isFeedsLoading || isFoldersLoading;
+        const feeds = useMemo(() => (feedsData as Feed[]) || [], [feedsData]);
+        const folders = useMemo(() => (foldersData as Folder[]) || [], [foldersData]);
+
+        // Only show loading spinner during initial load before any data arrives
+        const isLoading = ((isFeedsLoading || isFeedsFetching) && !isFeedsSuccess && !feedsData) ||
+                         ((isFoldersLoading || isFoldersFetching) && !isFoldersSuccess && !foldersData);
 
         // Expose methods to parent
         useImperativeHandle(ref, () => ({
@@ -358,10 +374,58 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 
         const keyExtractor = useCallback((item: ListItem) => item.id, []);
 
+        const renderHeader = useCallback(() => (
+            <View className="mb-4 flex-row items-center justify-between px-6">
+                <Text className="font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
+                    {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
+                </Text>
+
+                {/* Loading indicator */}
+                {isLoading && !isEditMode && (
+                    <ActivityIndicator size="small" color="#6A994E" />
+                )}
+
+                {/* Edit Mode Actions */}
+                {isEditMode && selectedCount > 0 && (
+                    <View className="flex-row gap-4">
+                        <Pressable
+                            onPress={handleMarkAllAsRead}
+                            className="transition-opacity active:opacity-70">
+                            <Monicon
+                                name="solar:check-read-linear"
+                                size={24}
+                                color="#232222"
+                                className="dark:text-black-dark"
+                            />
+                        </Pressable>
+                        <Pressable
+                            onPress={handleMoveToFolder}
+                            className="transition-opacity active:opacity-70">
+                            <Monicon
+                                name="solar:move-to-folder-linear"
+                                size={24}
+                                color="#232222"
+                                className="dark:text-black-dark"
+                            />
+                        </Pressable>
+                        <Pressable
+                            onPress={handleDeletePress}
+                            className="transition-opacity active:opacity-70">
+                            <Monicon
+                                name="solar:trash-bin-minimalistic-2-linear"
+                                size={24}
+                                color="#E63946"
+                            />
+                        </Pressable>
+                    </View>
+                )}
+            </View>
+        ), [isEditMode, selectedCount, isLoading, handleMarkAllAsRead, handleMoveToFolder, handleDeletePress]);
+
         const renderFooter = useCallback(
             (props: any) => (
                 <BottomSheetFooter {...props}>
-                    <View className="border-t border-light-grey bg-white px-6 pb-6 pt-4">
+                    <View className="border-t border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark px-6 pb-6 pt-4">
                         {isEditMode ? (
                             <Button variant="secondary" fullWidth onPress={toggleEditMode}>
                                 Cancel
@@ -380,7 +444,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                                 size={20}
                                                 color="#90988B"
                                             />
-                                            <Text className="font-geist-semibold text-base text-grey">
+                                            <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
                                                 New Folder
                                             </Text>
                                         </View>
@@ -421,76 +485,30 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     enablePanDownToClose
                     footerComponent={renderFooter}
                     backdropComponent={renderBackdrop}
-                    backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                    handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
-                    <BottomSheetView className="flex-1">
-                        {/* Header */}
-                        <View className="mb-4 flex-row items-center justify-between px-6">
-                            <Text className="font-geist-bold text-2xl tracking-heading text-black">
-                                {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
-                            </Text>
-
-                            {/* Loading indicator */}
-                            {isLoading && !isEditMode && (
-                                <ActivityIndicator size="small" color="#6A994E" />
-                            )}
-
-                            {/* Edit Mode Actions */}
-                            {isEditMode && selectedCount > 0 && (
-                                <View className="flex-row gap-4">
-                                    <Pressable
-                                        onPress={handleMarkAllAsRead}
-                                        className="transition-opacity active:opacity-70">
-                                        <Monicon
-                                            name="solar:check-read-linear"
-                                            size={24}
-                                            color="#232222"
-                                        />
-                                    </Pressable>
-                                    <Pressable
-                                        onPress={handleMoveToFolder}
-                                        className="transition-opacity active:opacity-70">
-                                        <Monicon
-                                            name="solar:move-to-folder-linear"
-                                            size={24}
-                                            color="#232222"
-                                        />
-                                    </Pressable>
-                                    <Pressable
-                                        onPress={handleDeletePress}
-                                        className="transition-opacity active:opacity-70">
-                                        <Monicon
-                                            name="solar:trash-bin-minimalistic-2-linear"
-                                            size={24}
-                                            color="#E63946"
-                                        />
-                                    </Pressable>
+                    backgroundStyle={{ backgroundColor: colors.white }}
+                    handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                    <BottomSheetFlashList
+                        data={listData}
+                        renderItem={renderItem}
+                        keyExtractor={keyExtractor}
+                        estimatedItemSize={50}
+                        ListHeaderComponent={renderHeader}
+                        ListEmptyComponent={
+                            isLoading ? (
+                                <View className="items-center justify-center py-12">
+                                    <ActivityIndicator size="large" color="#6A994E" />
                                 </View>
-                            )}
-                        </View>
-
-                        {/* Feed List */}
-                        {isLoading && listData.length === 0 ? (
-                            <View className="flex-1 items-center justify-center py-12">
-                                <ActivityIndicator size="large" color="#6A994E" />
-                            </View>
-                        ) : listData.length === 0 ? (
-                            <View className="flex-1 items-center justify-center px-6 py-12">
-                                <Text className="text-center text-base text-grey">
-                                    No feeds yet. Add some feeds to get started!
-                                </Text>
-                            </View>
-                        ) : (
-                            <BottomSheetFlashList
-                                data={listData}
-                                renderItem={renderItem}
-                                keyExtractor={keyExtractor}
-                                estimatedItemSize={50}
-                                contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
-                                showsVerticalScrollIndicator={false}
-                            />
-                        )}
-                    </BottomSheetView>
+                            ) : (
+                                <View className="items-center justify-center px-6 py-12">
+                                    <Text className="text-center text-base text-grey dark:text-grey-dark">
+                                        No feeds yet. Add some feeds to get started!
+                                    </Text>
+                                </View>
+                            )
+                        }
+                        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
+                        showsVerticalScrollIndicator={false}
+                    />
                 </BottomSheetModal>
 
                 {/* Modals */}

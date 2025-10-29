@@ -1,8 +1,10 @@
 import { stripHtml } from '@/utils/html';
+import { Monicon } from '@monicon/native';
 import { Galeria } from '@nandorojo/galeria';
 import type { Article } from '@readspace/shared';
 import { calculateReadingTime } from '@readspace/shared';
 import { Image } from 'expo-image';
+import { useColorScheme } from 'nativewind';
 import { useMemo } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import RenderHTML from 'react-native-render-html';
@@ -22,60 +24,350 @@ export function ArticleReader({
     onCloseSummary,
 }: ArticleReaderProps) {
     const { width } = useWindowDimensions();
+    const { colorScheme } = useColorScheme();
+    const isDark = colorScheme === 'dark';
+
+    // Dynamic colors for dark mode
+    const textColor = isDark ? '#ffffff' : '#232222';
+    const greyColor = isDark ? '#b0b0b0' : '#90988B';
+    const bgColor = isDark ? '#0a0a0a' : '#FFFFFF';
+    const lightGreyColor = isDark ? '#1a1a1a' : '#F9F9F9';
+    const midGreyColor = isDark ? '#2a2a2a' : '#F3F3F3';
+
+    // Check if this is a clipped article
+    const isClipped = article.article_type === 'clipped';
+
+    /**
+     * Extract domain from URL for display
+     */
+    const extractDomain = (url: string): string => {
+        try {
+            return new URL(url).hostname;
+        } catch {
+            return url;
+        }
+    };
+
+    /**
+     * Get priority color based on priority level
+     */
+    const getPriorityColor = (priorityLevel: string): string => {
+        switch (priorityLevel) {
+            case 'high':
+                return '#EF4444'; // red
+            case 'medium':
+                return '#F97316'; // orange
+            case 'low':
+                return '#10B981'; // green
+            default:
+                return '#3B82F6'; // blue
+        }
+    };
+
+    /**
+     * Get priority background color based on priority level
+     */
+    const getPriorityBgColor = (priorityLevel: string): string => {
+        switch (priorityLevel) {
+            case 'high':
+                return '#FEE2E2'; // red-100
+            case 'medium':
+                return '#FFEDD5'; // orange-100
+            case 'low':
+                return '#D1FAE5'; // green-100
+            default:
+                return '#DBEAFE'; // blue-100
+        }
+    };
 
     // Configure HTML rendering with beautiful typography (EB Garamond for body text)
     const tagsStyles = useMemo(
         () => ({
+            // Base body styles
             body: {
                 fontFamily: 'EBGaramond_400Regular',
                 fontSize: 18,
                 lineHeight: 30,
-                color: '#232222',
+                color: textColor,
             },
+            // Paragraph styles
             p: {
                 marginBottom: 20,
                 fontFamily: 'EBGaramond_400Regular',
                 fontSize: 18,
                 lineHeight: 30,
-                color: '#232222',
+                color: textColor,
             },
+            // Heading hierarchy with proper spacing and typography
             h1: {
                 fontFamily: 'EBGaramond_700Bold',
                 fontSize: 32,
                 lineHeight: 40,
-                color: '#232222',
+                color: textColor,
                 marginTop: 32,
                 marginBottom: 16,
             },
             h2: {
                 fontFamily: 'EBGaramond_700Bold',
-                fontSize: 24,
-                lineHeight: 32,
-                color: '#232222',
+                fontSize: 28,
+                lineHeight: 36,
+                color: textColor,
                 marginTop: 28,
-                marginBottom: 12,
+                marginBottom: 14,
             },
             h3: {
                 fontFamily: 'EBGaramond_600SemiBold',
+                fontSize: 24,
+                lineHeight: 32,
+                color: textColor,
+                marginTop: 24,
+                marginBottom: 12,
+            },
+            h4: {
+                fontFamily: 'EBGaramond_600SemiBold',
                 fontSize: 20,
                 lineHeight: 28,
-                color: '#232222',
-                marginTop: 24,
+                color: textColor,
+                marginTop: 20,
                 marginBottom: 10,
             },
-            strong: {
+            h5: {
                 fontFamily: 'EBGaramond_600SemiBold',
-                color: '#232222',
+                fontSize: 18,
+                lineHeight: 26,
+                color: textColor,
+                marginTop: 18,
+                marginBottom: 8,
+            },
+            h6: {
+                fontFamily: 'EBGaramond_600SemiBold',
+                fontSize: 16,
+                lineHeight: 24,
+                color: textColor,
+                marginTop: 16,
+                marginBottom: 8,
+            },
+            // Inline text formatting
+            strong: {
+                fontFamily: 'EBGaramond_700Bold',
+                color: textColor,
+            },
+            b: {
+                fontFamily: 'EBGaramond_700Bold',
+                color: textColor,
             },
             em: {
+                fontFamily: 'EBGaramond_400Regular',
                 fontStyle: 'italic' as const,
             },
-            a: {
-                color: '#2563EB',
+            i: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontStyle: 'italic' as const,
+            },
+            u: {
                 textDecorationLine: 'underline' as const,
             },
+            s: {
+                textDecorationLine: 'line-through' as const,
+                color: greyColor,
+            },
+            mark: {
+                backgroundColor: '#FEF3C7',
+                color: textColor,
+            },
+            // Links with brand secondary color
+            a: {
+                color: '#6A994E',
+                textDecorationLine: 'underline' as const,
+                fontFamily: 'EBGaramond_500Medium',
+            },
+            // Code elements with monospace font
+            code: {
+                fontFamily: 'GeistMono_400Regular',
+                fontSize: 16,
+                lineHeight: 24,
+                backgroundColor: midGreyColor,
+                color: '#386641',
+                paddingVertical: 2,
+                paddingHorizontal: 6,
+                borderRadius: 4,
+            },
+            // Pre-formatted code blocks
+            pre: {
+                fontFamily: 'GeistMono_400Regular',
+                fontSize: 14,
+                lineHeight: 22,
+                backgroundColor: midGreyColor,
+                color: textColor,
+                padding: 16,
+                borderRadius: 8,
+                marginTop: 16,
+                marginBottom: 20,
+            },
+            // Blockquotes with left border and muted styling
+            blockquote: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontSize: 18,
+                lineHeight: 30,
+                color: textColor,
+                fontStyle: 'italic' as const,
+                borderLeftWidth: 4,
+                borderLeftColor: '#6A994E',
+                backgroundColor: lightGreyColor,
+                paddingLeft: 16,
+                paddingRight: 16,
+                paddingTop: 12,
+                paddingBottom: 12,
+                marginTop: 20,
+                marginBottom: 20,
+                marginLeft: 0,
+                marginRight: 0,
+            },
+            // Horizontal rule
+            hr: {
+                backgroundColor: lightGreyColor,
+                height: 1,
+                marginTop: 24,
+                marginBottom: 24,
+                borderWidth: 0,
+            },
+            // Lists - unordered
+            ul: {
+                marginTop: 12,
+                marginBottom: 20,
+                paddingLeft: 0,
+            },
+            // Lists - ordered
+            ol: {
+                marginTop: 12,
+                marginBottom: 20,
+                paddingLeft: 0,
+            },
+            // List items with proper spacing
+            li: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontSize: 18,
+                lineHeight: 30,
+                color: textColor,
+                marginBottom: 8,
+            },
+            // Tables
+            table: {
+                marginTop: 20,
+                marginBottom: 20,
+                borderWidth: 1,
+                borderColor: lightGreyColor,
+                borderRadius: 8,
+            },
+            thead: {
+                backgroundColor: midGreyColor,
+            },
+            tbody: {
+                backgroundColor: bgColor,
+            },
+            tr: {
+                borderBottomWidth: 1,
+                borderBottomColor: lightGreyColor,
+            },
+            th: {
+                fontFamily: 'EBGaramond_600SemiBold',
+                fontSize: 16,
+                lineHeight: 24,
+                color: textColor,
+                padding: 12,
+                textAlign: 'left' as const,
+            },
+            td: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontSize: 16,
+                lineHeight: 24,
+                color: textColor,
+                padding: 12,
+            },
+            // Figure and caption
+            figure: {
+                marginTop: 20,
+                marginBottom: 20,
+                marginLeft: 0,
+                marginRight: 0,
+            },
+            figcaption: {
+                fontFamily: 'Geist_400Regular',
+                fontSize: 14,
+                lineHeight: 20,
+                color: greyColor,
+                textAlign: 'center' as const,
+                marginTop: 8,
+                fontStyle: 'italic' as const,
+            },
+            // Images
+            img: {
+                marginTop: 16,
+                marginBottom: 16,
+            },
+            // Superscript and subscript
+            sup: {
+                fontSize: 14,
+                lineHeight: 14,
+            },
+            sub: {
+                fontSize: 14,
+                lineHeight: 14,
+            },
+            // Small text
+            small: {
+                fontSize: 14,
+                lineHeight: 22,
+                color: greyColor,
+            },
+            // Abbreviation
+            abbr: {
+                textDecorationLine: 'underline' as const,
+                textDecorationStyle: 'dotted' as const,
+            },
+            // Citation
+            cite: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontStyle: 'italic' as const,
+                color: greyColor,
+            },
+            // Keyboard input
+            kbd: {
+                fontFamily: 'GeistMono_500Medium',
+                fontSize: 14,
+                backgroundColor: midGreyColor,
+                color: textColor,
+                paddingVertical: 2,
+                paddingHorizontal: 6,
+                borderRadius: 4,
+                borderWidth: 1,
+                borderColor: '#D1DBCD',
+            },
+            // Sample output
+            samp: {
+                fontFamily: 'GeistMono_400Regular',
+                fontSize: 16,
+                backgroundColor: midGreyColor,
+                color: textColor,
+            },
+            // Variable
+            var: {
+                fontFamily: 'EBGaramond_400Regular',
+                fontStyle: 'italic' as const,
+                color: '#386641',
+            },
+            // Definition
+            dfn: {
+                fontFamily: 'EBGaramond_600SemiBold',
+                fontStyle: 'italic' as const,
+            },
+            // Time element
+            time: {
+                fontFamily: 'EBGaramond_400Regular',
+                color: greyColor,
+            },
         }),
-        []
+        [textColor, greyColor, bgColor, lightGreyColor, midGreyColor]
     );
 
     const systemFonts = useMemo(
@@ -88,6 +380,10 @@ export function ArticleReader({
             'Geist_500Medium',
             'Geist_600SemiBold',
             'Geist_700Bold',
+            'GeistMono_400Regular',
+            'GeistMono_500Medium',
+            'GeistMono_600SemiBold',
+            'GeistMono_700Bold',
         ],
         []
     );
@@ -96,9 +392,28 @@ export function ArticleReader({
         typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
     const feedImageUrl =
         typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined;
-    const publishedDate = article.published_at
-        ? new Date(article.published_at).toLocaleDateString()
-        : 'Unknown date';
+
+    // For clipped articles, show domain and use created_at as saved date
+    const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
+    const displayDate = isClipped
+        ? `Saved ${new Date(article.created_at).toLocaleDateString()}`
+        : article.published_at
+            ? new Date(article.published_at).toLocaleDateString()
+            : 'Unknown date';
+
+    // Get favicon URL for clipped articles
+    const getFaviconUrl = (url: string): string => {
+        try {
+            const domain = new URL(url).hostname;
+            return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+        } catch {
+            return '';
+        }
+    };
+
+    const displayFaviconUrl = isClipped && article.link
+        ? getFaviconUrl(article.link)
+        : feedImageUrl;
 
     // Calculate reading time from content with proper CJK support
     const readTimeMinutes = useMemo(() => {
@@ -111,7 +426,7 @@ export function ArticleReader({
     const readTime = `${readTimeMinutes} min read`;
 
     return (
-        <ScrollView className="flex-1 bg-white" contentContainerStyle={{ paddingBottom: 80 }}>
+        <ScrollView className="flex-1 bg-white dark:bg-white-dark" contentContainerStyle={{ paddingBottom: 80 }}>
             {/* Featured Image with Galeria */}
             {article.image_url && (
                 <Galeria urls={[article.image_url]}>
@@ -129,32 +444,85 @@ export function ArticleReader({
             )}
 
             {/* Article Header */}
-            <View className="mx-6 mb-6 mt-6 border-b border-light-grey pb-6">
+            <View className="mx-6 mb-6 mt-6 border-b border-light-grey dark:border-light-grey-dark pb-6">
+                {/* Source and Priority */}
                 <View className="mb-2 flex-row items-center gap-2">
-                    {feedImageUrl && (
+                    {/* Priority badge for clipped articles */}
+                    {isClipped && article.priority && (
+                        <View
+                            style={{
+                                backgroundColor: getPriorityBgColor(article.priority),
+                                borderRadius: 12,
+                                paddingHorizontal: 8,
+                                paddingVertical: 4,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 4,
+                            }}>
+                            <Monicon
+                                name="solar:paperclip-bold"
+                                size={12}
+                                color={getPriorityColor(article.priority)}
+                            />
+                            <Text
+                                style={{
+                                    fontSize: 11,
+                                    fontWeight: '600',
+                                    color: getPriorityColor(article.priority),
+                                    textTransform: 'capitalize',
+                                }}>
+                                {article.priority}
+                            </Text>
+                        </View>
+                    )}
+
+                    {displayFaviconUrl && (
                         <Image
-                            source={{ uri: feedImageUrl }}
+                            source={{ uri: displayFaviconUrl }}
                             style={{ width: 16, height: 16, borderRadius: 2 }}
                             contentFit="contain"
                         />
                     )}
-                    <Text className="font-geist text-sm uppercase tracking-wide text-grey">
-                        {feedTitle || 'Unknown Source'}
+                    <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
+                        {displaySource || 'Unknown Source'}
                     </Text>
                 </View>
+
+                {/* Title */}
                 <Text
-                    className="mb-3 font-geist-bold text-3xl leading-tight text-black"
+                    className="mb-3 font-geist-bold text-3xl leading-tight text-black dark:text-black-dark"
                     style={{ letterSpacing: -0.72 }}>
                     {stripHtml(article.title)}
                 </Text>
-                <View className="flex-row items-center gap-2">
-                    {article.author && (
-                        <Text className="font-geist text-sm text-grey">By {article.author}</Text>
+
+                {/* Note for clipped articles */}
+                {isClipped && article.note && (
+                    <View className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 border border-amber-200 dark:border-amber-800">
+                        <Text className="font-geist text-sm leading-relaxed text-grey dark:text-grey-dark">
+                            {article.note}
+                        </Text>
+                    </View>
+                )}
+
+                {/* Metadata */}
+                <View className="flex-row flex-wrap items-center gap-2">
+                    {article.author && !isClipped && (
+                        <>
+                            <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                                By {article.author}
+                            </Text>
+                            <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>
+                        </>
                     )}
-                    {article.author && <Text className="font-geist text-sm text-grey">/</Text>}
-                    <Text className="font-geist text-sm text-grey">{publishedDate}</Text>
-                    {readTime && <Text className="font-geist text-sm text-grey">/</Text>}
-                    {readTime && <Text className="font-geist text-sm text-grey">{readTime}</Text>}
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                        {displayDate}
+                    </Text>
+                    {readTime && <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>}
+                    {readTime && (
+                        <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                            {readTime}
+                        </Text>
+                    )}
                 </View>
             </View>
 
