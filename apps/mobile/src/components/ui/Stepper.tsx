@@ -22,10 +22,10 @@ export const Stepper = forwardRef<React.ElementRef<typeof View>, StepperProps>(
         return (
             <View
                 ref={ref}
-                className={cn('relative h-1 overflow-hidden rounded-full bg-mid-grey', className)}
+                className={cn('relative h-1 overflow-hidden rounded-full bg-mid-grey dark:bg-mid-grey-dark', className)}
                 {...props}>
                 <Animated.View
-                    className="absolute h-full rounded-full bg-secondary"
+                    className="absolute h-full rounded-full bg-secondary dark:bg-secondary"
                     style={animatedStyle}
                 />
             </View>

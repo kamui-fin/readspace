@@ -1,24 +1,21 @@
-import { FolderPicker } from '@/components/FolderPicker';
+import { FollowButton } from '@/components/FollowButton';
 import { cn } from '@/utils/cn';
 import { stripHtml } from '@/utils/html';
-import BottomSheet from '@gorhom/bottom-sheet';
-import { useCreateFeed, useDeleteFeed, useFeeds } from '@readspace/shared';
 import { useRouter } from 'expo-router';
-import { forwardRef, useRef } from 'react';
+import { forwardRef } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
-import { toast } from 'sonner-native';
 
 export interface FeedListItemProps extends PressableProps {
     title: string;
     description: string;
     iconUrl?: string;
     isFollowing?: boolean;
-    feedUrl?: string;
     className?: string;
-    feedId?: string;
-    onFollowRequest?: (feedUrl: string) => void;
-    showFolderPicker?: boolean; // If false, use onFollowRequest callback instead
-    isPreview?: boolean; // If true, disables interaction (for preview feeds)
+    feedId: string;
+    feedUrl?: string; // For onboarding flow
+    isPreview?: boolean;
+    showFolderPicker?: boolean; // If false, use onFollowRequest instead
+    onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
 }
 
 export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedListItemProps>(
@@ -28,83 +25,20 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
             description,
             iconUrl,
             isFollowing = false,
-            feedUrl,
             className,
             feedId,
-            onFollowRequest,
-            showFolderPicker = true,
+            feedUrl,
             isPreview = false,
+            showFolderPicker = true,
+            onFollowRequest,
             ...props
         },
         ref
     ) => {
         const router = useRouter();
-        const folderPickerRef = useRef<BottomSheet>(null);
-
-        const createFeed = useCreateFeed();
-        const deleteFeed = useDeleteFeed();
-        const { data: userFeeds } = useFeeds();
-
-        // Derive actual follow state from user's subscribed feeds
-        // Compare by URL since discover feeds may have different IDs than user's subscribed feeds
-        // The URL is the canonical identifier for an RSS feed
-        const isActuallyFollowing =
-            userFeeds?.some((feed) => feedUrl && feed.url === feedUrl) ?? isFollowing;
 
         const handlePress = () => {
-            // Navigate to feed preview
-            if (feedId) {
-                router.push(`/discover/feed/${feedId}`);
-            }
-        };
-
-        const handleFollowPress = (e: any) => {
-            e.stopPropagation();
-
-            if (isActuallyFollowing && feedId) {
-                // Unfollow: delete the feed
-                deleteFeed.mutate(
-                    { feedId, silent: false },
-                    {
-                        onSuccess: () => {
-                            toast.success('Unfollowed feed');
-                        },
-                        onError: () => {
-                            toast.error('Failed to unfollow feed');
-                        },
-                    }
-                );
-            } else {
-                // Follow: either use callback or show local folder picker
-                if (onFollowRequest && feedUrl) {
-                    onFollowRequest(feedUrl);
-                } else if (showFolderPicker) {
-                    folderPickerRef.current?.expand();
-                }
-            }
-        };
-
-        const handleFolderSelect = async (folderId: string) => {
-            if (!feedUrl) {
-                toast.error('Feed URL is missing');
-                return;
-            }
-
-            createFeed.mutate(
-                {
-                    url: feedUrl,
-                    folder_id: folderId,
-                    silent: false,
-                },
-                {
-                    onSuccess: () => {
-                        // Button state changes to "Following", no toast needed
-                    },
-                    onError: (error: any) => {
-                        toast.error(error?.message || 'Failed to follow feed');
-                    },
-                }
-            );
+            router.push(`/discover/feed/${feedId}`);
         };
 
         return (
@@ -154,32 +88,14 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                     </View>
 
                     {/* Follow Button */}
-                    <Pressable
-                        onPress={handleFollowPress}
-                        disabled={createFeed.isPending || deleteFeed.isPending}
-                        className={cn(
-                            'rounded-full border px-4 py-2',
-                            isActuallyFollowing ? 'border-mid-grey dark:border-mid-grey-dark' : 'border-primary dark:border-primary bg-primary dark:bg-primary',
-                            (createFeed.isPending || deleteFeed.isPending) && 'opacity-50'
-                        )}>
-                        <Text
-                            className={cn(
-                                'font-geist-semibold text-sm',
-                                isActuallyFollowing ? 'text-grey dark:text-grey-dark' : 'text-white dark:text-white'
-                            )}>
-                            {createFeed.isPending || deleteFeed.isPending
-                                ? '...'
-                                : isActuallyFollowing
-                                    ? 'Following'
-                                    : 'Follow'}
-                        </Text>
-                    </Pressable>
+                    <FollowButton
+                        feedId={feedId}
+                        feedUrl={feedUrl}
+                        isFollowing={isFollowing}
+                        showFolderPicker={showFolderPicker}
+                        onFollowRequest={onFollowRequest}
+                    />
                 </Pressable>
-
-                {/* Folder Picker Bottom Sheet - Only render if using local picker */}
-                {showFolderPicker && !onFollowRequest && (
-                    <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-                )}
             </>
         );
     }

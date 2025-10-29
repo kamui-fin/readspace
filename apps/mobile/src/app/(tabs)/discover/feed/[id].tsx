@@ -20,6 +20,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Dimensions,
     FlatList,
     Image,
@@ -45,6 +46,9 @@ export default function FeedPreviewScreen() {
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
     const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(null);
 
+    // Local state to track subscription status for immediate UI updates
+    const [localIsSubscribed, setLocalIsSubscribed] = useState<boolean | null>(null);
+
     // Ref to track if preview refresh has already been triggered
     const hasRefreshedPreview = useRef(false);
 
@@ -57,6 +61,13 @@ export default function FeedPreviewScreen() {
 
     // Use preview feed data if available, otherwise use fetched data
     const feed = previewFeedData || fetchedFeedData;
+
+    // Sync local subscription state with feed data
+    useEffect(() => {
+        if (feed?.is_subscribed !== undefined && localIsSubscribed === null) {
+            setLocalIsSubscribed(feed.is_subscribed);
+        }
+    }, [feed?.is_subscribed, localIsSubscribed]);
 
     // Determine if we should show preview mode (feed is not subscribed)
     const shouldShowPreviewBanner = !!(feed && feed.is_subscribed === false);
@@ -89,7 +100,8 @@ export default function FeedPreviewScreen() {
 
     const articles = articlesData?.items || [];
     const similarFeeds = similarData?.similar_feeds || [];
-    const isFollowing = feed?.is_subscribed || false;
+    // Use local state if available, otherwise fall back to feed data
+    const isFollowing = localIsSubscribed !== null ? localIsSubscribed : (feed?.is_subscribed || false);
 
     // Preview mode: refresh feed on mount to get latest articles
     useEffect(() => {
@@ -121,6 +133,9 @@ export default function FeedPreviewScreen() {
 
     const handleFollowPress = useCallback(() => {
         if (isFollowing && feed?.id) {
+            // Immediately update local state
+            setLocalIsSubscribed(false);
+
             // Unfollow
             deleteFeed.mutate(
                 { feedId: feed.id, silent: false },
@@ -130,6 +145,8 @@ export default function FeedPreviewScreen() {
                     },
                     onError: () => {
                         toast.error('Failed to unfollow feed');
+                        // Rollback on error
+                        setLocalIsSubscribed(true);
                     },
                 }
             );
@@ -154,6 +171,11 @@ export default function FeedPreviewScreen() {
                 return;
             }
 
+            // Immediately update local state if following the current feed
+            if (!pendingSimilarFeedUrl) {
+                setLocalIsSubscribed(true);
+            }
+
             createFeed.mutate(
                 {
                     url: feedUrlToFollow,
@@ -161,13 +183,18 @@ export default function FeedPreviewScreen() {
                     silent: false,
                 },
                 {
-                    onSuccess: () => {
+                    onSuccess: (data) => {
                         toast.success(pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title}`);
                         setPendingSimilarFeedUrl(null);
                     },
                     onError: (error: any) => {
                         toast.error(error?.message || 'Failed to follow feed');
                         setPendingSimilarFeedUrl(null);
+
+                        // Rollback local state on error
+                        if (!pendingSimilarFeedUrl) {
+                            setLocalIsSubscribed(false);
+                        }
                     },
                 }
             );
@@ -323,19 +350,28 @@ export default function FeedPreviewScreen() {
                             fullWidth
                             disabled={createFeed.isPending || deleteFeed.isPending}
                             className="flex-row gap-2">
-                            <Monicon
-                                name={isFollowing ? 'solar:bell-bold' : 'solar:bell-outline'}
-                                size={20}
-                                color={isFollowing ? '#90988B' : '#FFFFFF'}
-                            />
+                            {createFeed.isPending || deleteFeed.isPending ? (
+                                <ActivityIndicator
+                                    size="small"
+                                    color={isFollowing ? '#90988B' : '#FFFFFF'}
+                                />
+                            ) : (
+                                <Monicon
+                                    name={isFollowing ? 'solar:trash-bin-minimalistic-2-bold' : 'solar:bell-outline'}
+                                    size={20}
+                                    color={isFollowing ? '#90988B' : '#FFFFFF'}
+                                />
+                            )}
                             <Text
                                 className={`font-geist-semibold text-base ${isFollowing ? 'text-grey' : 'text-white'
                                     }`}>
-                                {createFeed.isPending || deleteFeed.isPending
+                                {createFeed.isPending
                                     ? 'Following...'
-                                    : isFollowing
-                                        ? 'Following'
-                                        : 'Follow'}
+                                    : deleteFeed.isPending
+                                        ? 'Unfollowing...'
+                                        : isFollowing
+                                            ? 'Unfollow'
+                                            : 'Follow'}
                             </Text>
                         </Button>
                     </View>

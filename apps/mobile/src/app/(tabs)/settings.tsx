@@ -225,6 +225,12 @@ export default function SettingsScreen() {
                 variant="link"
                 icon={<DiscordIcon size={24} />}
                 onPress={handleDiscordPress}
+              />
+              <SettingsItem
+                label="[Debug] Onboarding Flow"
+                variant="link"
+                icon={<Monicon name="solar:bug-outline" size={24} color="#90988B" />}
+                onPress={() => router.push('/onboarding/feeds/categories')}
                 isLast
               />
             </SettingsGroup>

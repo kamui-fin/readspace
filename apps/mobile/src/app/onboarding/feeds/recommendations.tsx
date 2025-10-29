@@ -1,15 +1,18 @@
+import { COLORS } from '@/constants/Colors';
 import { FeedListItem } from '@/components/FeedListItem';
 import { OnboardingLayout } from '@/components/OnboardingLayout';
 import { Button } from '@/components/ui/Button';
 import { LibraryIcon } from '@/components/ui/icons/LibraryIcon';
 import { useGetRecommendations, useRefreshFeed, useSubscribeToFeed } from '@readspace/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 
 export default function FeedRecommendationsStep() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme();
     const { categories } = useLocalSearchParams<{ categories: string }>();
     const [subscribedFeeds, setSubscribedFeeds] = useState<string[]>([]);
 
@@ -59,6 +62,7 @@ export default function FeedRecommendationsStep() {
 
     const minFollowCount = 3;
     const canFinish = subscribedFeeds.length >= minFollowCount;
+    const iconColor = colorScheme === 'dark' ? COLORS.dark.grey : COLORS.light.grey;
 
     // Loading state with skeleton
     if (isLoading) {
@@ -66,7 +70,7 @@ export default function FeedRecommendationsStep() {
             <OnboardingLayout
                 currentStep={2}
                 totalSteps={2}
-                icon={<LibraryIcon size={24} color="#90988B" />}
+                icon={<LibraryIcon size={24} color={iconColor} />}
                 title="Curating your newsfeed..."
                 subtitle="Finding quality sources that match your interests">
                 <View className="flex-1">
@@ -94,7 +98,7 @@ export default function FeedRecommendationsStep() {
             <OnboardingLayout
                 currentStep={2}
                 totalSteps={2}
-                icon={<LibraryIcon size={24} color="#90988B" />}
+                icon={<LibraryIcon size={24} color={iconColor} />}
                 title="Having trouble finding sources"
                 subtitle="We couldn't load publications for your selected topics">
                 <View className="flex-1 items-center justify-center">
@@ -117,7 +121,7 @@ export default function FeedRecommendationsStep() {
         <OnboardingLayout
             currentStep={2}
             totalSteps={2}
-            icon={<LibraryIcon size={24} color="#90988B" />}
+            icon={<LibraryIcon size={24} color={iconColor} />}
             title="Picked for you"
             subtitle="Here are some top feeds based on your interests">
             <View className="flex-1">

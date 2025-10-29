@@ -6,8 +6,8 @@ import { Pressable, View, type PressableProps, type ViewProps } from 'react-nati
 const circleIconVariants = cva('items-center justify-center rounded-full', {
     variants: {
         variant: {
-            static: 'bg-light-grey',
-            clickable: 'bg-light-grey transition-opacity active:opacity-60',
+            static: 'bg-light-grey dark:bg-light-grey-dark',
+            clickable: 'bg-light-grey dark:bg-light-grey-dark transition-opacity active:opacity-60',
         },
         size: {
             default: 'h-12 w-12',

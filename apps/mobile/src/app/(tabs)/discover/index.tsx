@@ -1,5 +1,4 @@
 import { FeedListItem } from '@/components/FeedListItem';
-import { FolderPicker } from '@/components/FolderPicker';
 import { LanguagePicker, type Language } from '@/components/LanguagePicker';
 import { SearchBar } from '@/components/SearchBar';
 import { FeedListSkeleton } from '@/components/skeletons';
@@ -9,7 +8,6 @@ import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
     ApiClient,
-    useCreateFeed,
     useTrendingFeeds,
     type DiscoverSearchResponse,
     type Feed
@@ -26,7 +24,6 @@ import {
 } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { toast } from 'sonner-native';
 
 // Feed categories from RSS dataset
 const CATEGORIES = [
@@ -55,12 +52,9 @@ export default function DiscoverScreen() {
     const [isSearchFocused, setIsSearchFocused] = useState(false);
 
     const languagePickerRef = useRef<BottomSheet>(null);
-    const folderPickerRef = useRef<BottomSheet>(null);
     const searchBarRef = useRef<any>(null);
     const categoryScrollRef = useRef<ScrollView>(null);
-    const [pendingFeedUrl, setPendingFeedUrl] = useState<string | null>(null);
 
-    const createFeed = useCreateFeed();
     const { searches: recentSearches, addSearch } = useSearchHistory();
 
     // Animation for search bar
@@ -186,35 +180,6 @@ export default function DiscoverScreen() {
         setIsSearchFocused(false);
         searchBarRef.current?.blur();
         Keyboard.dismiss();
-    };
-
-    const handleFeedFollowRequest = (feedUrl: string) => {
-        setPendingFeedUrl(feedUrl);
-        folderPickerRef.current?.expand();
-    };
-
-    const handleFolderSelect = (folderId: string | null) => {
-        if (!pendingFeedUrl) {
-            return;
-        }
-
-        createFeed.mutate(
-            {
-                url: pendingFeedUrl,
-                folder_id: folderId || undefined,
-                silent: false,
-            },
-            {
-                onSuccess: () => {
-                    // Button state changes to "Following", no toast needed
-                    setPendingFeedUrl(null);
-                },
-                onError: (error: any) => {
-                    toast.error(error?.message || 'Failed to follow feed');
-                    setPendingFeedUrl(null);
-                },
-            }
-        );
     };
 
     const showClearButton = isSearchFocused || viewState === 'search' || viewState === 'category';
@@ -366,13 +331,11 @@ export default function DiscoverScreen() {
                                         <FeedListItem
                                             key={feed.id}
                                             feedId={feed.id}
-                                            feedUrl={feed.url}
                                             title={feed.title || 'Untitled Feed'}
                                             description={feed.description || ''}
                                             iconUrl={feed.image_url || undefined}
                                             isFollowing={feed.is_subscribed || false}
                                             isPreview={feed.is_preview}
-                                            onFollowRequest={handleFeedFollowRequest}
                                         />
                                     ))
                                 ) : (
@@ -453,14 +416,12 @@ export default function DiscoverScreen() {
                                     renderItem={({ item }) => (
                                         <FeedListItem
                                             feedId={item.id}
-                                            feedUrl={item.url}
                                             title={item.title || 'Untitled Feed'}
                                             description={item.description || ''}
                                             iconUrl={item.image_url || undefined}
                                             isFollowing={item.is_subscribed || false}
                                             className="px-6"
                                             isPreview={item.is_preview}
-                                            onFollowRequest={handleFeedFollowRequest}
                                         />
                                     )}
                                     contentContainerClassName="px-0"
@@ -483,12 +444,6 @@ export default function DiscoverScreen() {
                 ref={languagePickerRef}
                 initialLanguage={selectedLanguage}
                 onLanguageChange={handleLanguageChange}
-            />
-
-            {/* Folder Picker Bottom Sheet - Shared across all feed items */}
-            <FolderPicker
-                ref={folderPickerRef}
-                onFolderSelect={handleFolderSelect}
             />
         </SafeAreaView>
     );

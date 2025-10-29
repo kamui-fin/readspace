@@ -494,7 +494,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       onSuccess: () => {
         // Success toast is handled by the component or can be configured
       },
-      onSettled: () => {
+      onSettled: (data) => {
         // Only invalidate specific queries, don't remove cache to avoid skeleton reloading
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
         queryClient.invalidateQueries({
@@ -506,6 +506,12 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
         });
+        // Invalidate the specific feed cache to update the feed preview screen
+        if (data?.id) {
+          queryClient.invalidateQueries({
+            queryKey: [RSS_QUERY_KEYS.FEEDS, data.id],
+          });
+        }
       },
       ...options,
     });
@@ -889,7 +895,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           config.showSuccess?.("Feed deleted globally");
         }
       },
-      onSettled: () => {
+      onSettled: (data) => {
         // Invalidate unread counts to ensure they're refreshed
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
@@ -902,6 +908,12 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
         });
+        // Invalidate the specific feed cache to update the feed preview screen
+        if (data?.feedId) {
+          queryClient.invalidateQueries({
+            queryKey: [RSS_QUERY_KEYS.FEEDS, data.feedId],
+          });
+        }
       },
       ...options,
     });
@@ -1037,7 +1049,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           config.showSuccess?.("Feed removed successfully");
         }
       },
-      onSettled: () => {
+      onSettled: (data) => {
         // Invalidate unread counts to ensure they're refreshed
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
@@ -1050,6 +1062,12 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
         });
+        // Invalidate the specific feed cache to update the feed preview screen
+        if (data?.feedId) {
+          queryClient.invalidateQueries({
+            queryKey: [RSS_QUERY_KEYS.FEEDS, data.feedId],
+          });
+        }
       },
       ...options,
     });
@@ -1208,17 +1226,16 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await ApiClient.rss.subscribeToFeed(feedId, { folder_id: folderId });
       },
       onSuccess: () => {
-        // Invalidate and refetch feeds and unread counts
+        // Invalidate all feed-related queries
         queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
-        queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.FOLDERS],
-        });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
         });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
         });
+        // Invalidate discover queries to update subscription status
+        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'trending-feeds' || query.queryKey[0] === 'discover' });
       },
       onError: (error: unknown) => {
         let errorMessage = "Failed to subscribe to feed";

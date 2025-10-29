@@ -1,8 +1,10 @@
+import { COLORS } from '@/constants/Colors';
 import { OnboardingLayout } from '@/components/OnboardingLayout';
 import { Button } from '@/components/ui/Button';
 import { Chip } from '@/components/ui/Chip';
 import { TagIcon } from '@/components/ui/icons/TagIcon';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useState } from 'react';
 import { View } from 'react-native';
 
@@ -23,6 +25,7 @@ const FEED_CATEGORIES = [
 
 export default function FeedCategoriesStep() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme();
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
     const handleToggleCategory = (categoryId: string) => {
@@ -39,11 +42,13 @@ export default function FeedCategoriesStep() {
         router.push(`/onboarding/feeds/recommendations?categories=${encodeURIComponent(categoriesParam)}`);
     };
 
+    const iconColor = colorScheme === 'dark' ? COLORS.dark.grey : COLORS.light.grey;
+
     return (
         <OnboardingLayout
             currentStep={1}
             totalSteps={2}
-            icon={<TagIcon size={24} color="#90988B" />}
+            icon={<TagIcon size={24} color={iconColor} />}
             title="What topics sound good right now?"
             subtitle="Choose topics to build your personalized feed">
             <View className="flex-1">

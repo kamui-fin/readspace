@@ -1,5 +1,6 @@
 import { FeedSwitcher, type FeedSwitcherRef } from '@/components/FeedSwitcher';
 import { BottomNav } from '@/components/ui/BottomNav';
+import { FolderPickerProvider } from '@/contexts/FolderPickerContext';
 import { Tabs } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
@@ -11,7 +12,7 @@ export default function TabsLayout() {
     }, []);
 
     return (
-        <>
+        <FolderPickerProvider>
             <Tabs
                 tabBar={(props) => <BottomNav onExplorePress={handleExplorePress} />}
                 screenOptions={{
@@ -45,6 +46,6 @@ export default function TabsLayout() {
 
             {/* Feed Switcher Bottom Sheet */}
             <FeedSwitcher ref={feedSwitcherRef} />
-        </>
+        </FolderPickerProvider>
     );
 }
