@@ -21,9 +21,11 @@ interface AuthContextType {
     session: Session | null;
     isAuthenticated: boolean;
     loading: boolean;
+    needsOnboarding: boolean | null;
     signOut: () => Promise<void>;
     signIn: (credentials: SignInCredentials) => Promise<void>;
     signUp: (credentials: SignUpCredentials) => Promise<void>;
+    checkOnboardingStatus: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
+    const [needsOnboarding, setNeedsOnboarding] = useState<boolean | null>(null);
     const settings = useSettingsStore((state) => state.settings);
 
     const isAuthenticated = !!session;
@@ -177,14 +180,61 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
     };
 
+    const checkOnboardingStatus = async () => {
+        if (!user) {
+            console.log('[AuthProvider] No user, resetting onboarding status');
+            setNeedsOnboarding(null);
+            return;
+        }
+
+        try {
+            console.log('[AuthProvider] Checking onboarding status for user:', user.id);
+            const supabase = getSupabaseClient();
+            const { data: subscriptions, error } = await supabase
+                .from('feed_subscriptions')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1);
+
+            if (error) {
+                console.error('[AuthProvider] Error checking feed subscriptions:', error);
+                // Default to not needing onboarding on error to avoid blocking users
+                setNeedsOnboarding(false);
+                return;
+            }
+
+            const needsOnboarding = !subscriptions || subscriptions.length === 0;
+            console.log('[AuthProvider] Onboarding status:', {
+                subscriptionCount: subscriptions?.length ?? 0,
+                needsOnboarding,
+            });
+            setNeedsOnboarding(needsOnboarding);
+        } catch (error) {
+            console.error('[AuthProvider] Error in checkOnboardingStatus:', error);
+            // Default to not needing onboarding on error
+            setNeedsOnboarding(false);
+        }
+    };
+
+    // Check onboarding status when user changes
+    useEffect(() => {
+        if (user) {
+            checkOnboardingStatus();
+        } else {
+            setNeedsOnboarding(null);
+        }
+    }, [user?.id]);
+
     const value: AuthContextType = {
         user,
         session,
         isAuthenticated,
         loading,
+        needsOnboarding,
         signOut,
         signIn,
         signUp,
+        checkOnboardingStatus,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

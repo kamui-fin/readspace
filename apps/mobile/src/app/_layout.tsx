@@ -37,25 +37,51 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading, needsOnboarding } = useAuth();
     const segments = useSegments();
     const router = useRouter();
     const { colorScheme } = useColorScheme();
 
     useEffect(() => {
-        if (loading) return;
+        // Wait for both auth loading and onboarding status check
+        if (loading || (isAuthenticated && needsOnboarding === null)) {
+            console.log('[RootLayoutNav] Waiting for auth/onboarding status:', {
+                loading,
+                isAuthenticated,
+                needsOnboarding,
+            });
+            return;
+        }
 
         const inAuthGroup = segments[0] === '(tabs)';
         const inOnboarding = segments[0] === 'onboarding';
+        const onWelcome = segments[0] === 'welcome';
+
+        console.log('[RootLayoutNav] Navigation check:', {
+            isAuthenticated,
+            needsOnboarding,
+            currentSegment: segments[0],
+            inAuthGroup,
+            inOnboarding,
+            onWelcome,
+        });
 
         if (!isAuthenticated && inAuthGroup) {
-            // Redirect to welcome if trying to access protected routes
+            // Not authenticated but trying to access protected routes → redirect to welcome
+            console.log('[RootLayoutNav] Redirecting to welcome (not authenticated)');
             router.replace('/welcome');
-        } else if (isAuthenticated && (segments[0] === 'welcome' || inOnboarding)) {
-            // Redirect to tabs if authenticated and on welcome/onboarding
+        } else if (isAuthenticated && needsOnboarding && !inOnboarding) {
+            // Authenticated but needs onboarding and not in onboarding → redirect to onboarding
+            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
+            router.replace('/onboarding/feeds/categories');
+        } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
+            // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
+            console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
             router.replace('/(tabs)');
         }
-    }, [isAuthenticated, segments, loading]);
+        // router is stable in Expo Router and doesn't need to be in deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isAuthenticated, segments, loading, needsOnboarding]);
 
     return (
         <>

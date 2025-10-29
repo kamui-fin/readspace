@@ -53,38 +53,10 @@ export default function WelcomeScreen() {
             }
 
             console.log('[GoogleSignIn] Successfully signed in with Google');
+            toast.success('Successfully signed in with Google');
 
-            // Check if user is new (has no feed subscriptions)
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-
-            if (user) {
-                // Check if user has any feed subscriptions
-                const { data: subscriptions, error: subscriptionError } = await supabase
-                    .from('feed_subscriptions')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .limit(1);
-
-                // If user has no feed subscriptions, they're new - redirect to onboarding
-                const isNewUser =
-                    !subscriptionError && (!subscriptions || subscriptions.length === 0);
-
-                console.log('[GoogleSignIn] User feed check:', {
-                    userId: user.id,
-                    subscriptionCount: subscriptions?.length ?? 0,
-                    isNewUser,
-                });
-
-                toast.success('Successfully signed in with Google');
-
-                if (isNewUser) {
-                    // Navigate to onboarding categories for new users
-                    router.push('/onboarding/feeds/categories');
-                }
-                // For existing users, navigation will be handled by the AuthProvider's auth state listener
-            }
+            // Navigation will be handled by AuthProvider and _layout.tsx
+            // based on the needsOnboarding state
         } catch (error: any) {
             if (error.code === statusCodes.SIGN_IN_CANCELLED) {
                 console.log('[GoogleSignIn] User cancelled the sign-in flow');

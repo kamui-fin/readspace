@@ -10,8 +10,7 @@ import { Appearance } from 'react-native';
  * - Applying theme to NativeWind's colorScheme
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const { theme, systemColorScheme, setSystemColorScheme, getEffectiveColorScheme } =
-        useThemeStore();
+    const { theme, systemColorScheme, setSystemColorScheme } = useThemeStore();
     const { setColorScheme } = useColorScheme();
 
     // Listen to system theme changes
@@ -25,9 +24,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     // Apply effective color scheme to NativeWind whenever theme or system theme changes
     useEffect(() => {
-        const effectiveScheme = getEffectiveColorScheme();
+        // Calculate effective scheme directly here to ensure reactivity
+        const effectiveScheme =
+            theme === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : theme;
+
+        console.log('[ThemeProvider] Applying theme:', {
+            userTheme: theme,
+            systemScheme: systemColorScheme,
+            effectiveScheme,
+        });
+
         setColorScheme(effectiveScheme);
-    }, [theme, systemColorScheme, getEffectiveColorScheme, setColorScheme]);
+    }, [theme, systemColorScheme, setColorScheme]);
 
     return <>{children}</>;
 }

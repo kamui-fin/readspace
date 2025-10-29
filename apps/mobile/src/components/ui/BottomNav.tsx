@@ -47,13 +47,13 @@ export function BottomNav({ onExplorePress }: BottomNavProps) {
             iconBold: 'solar:library-bold',
             onPress: onExplorePress,
         },
-        {
-            id: 'library',
-            label: 'Library',
-            route: '/(tabs)/library',
-            iconOutline: 'solar:notebook-minimalistic-outline',
-            iconBold: 'solar:notebook-minimalistic-bold',
-        },
+        // {
+        //     id: 'library',
+        //     label: 'Library',
+        //     route: '/(tabs)/library',
+        //     iconOutline: 'solar:notebook-minimalistic-outline',
+        //     iconBold: 'solar:notebook-minimalistic-bold',
+        // },
         {
             id: 'settings',
             label: 'Settings',
