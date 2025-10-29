@@ -11,6 +11,7 @@ from app.schemas.rss_schemas import (
     DiscoverCategoriesResponse,
     DiscoverSearchResponse,
     FeedDiscoveryResult,
+    RecommendationsRequest,
 )
 from app.services.rss_search_service import RssSearchService
 
@@ -99,6 +100,122 @@ async def search_feeds(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while searching for feeds",
+        ) from e
+
+
+@router.post("/recommendations", response_model=DiscoverSearchResponse)
+async def get_recommendations_by_categories(
+    *,
+    db: AsyncSession = Depends(get_db),
+    request: RecommendationsRequest,
+) -> DiscoverSearchResponse:
+    """
+    Get feed recommendations based on multiple categories.
+
+    This endpoint efficiently fetches top feeds across multiple categories,
+    deduplicates them, and returns the top results sorted by popularity.
+
+    - **categories**: List of category names to get recommendations from
+    - **language**: Language code for filtering (defaults to 'en')
+    - **limit**: Maximum results to return (1-100, defaults to 20)
+    """
+    try:
+        search_service = RssSearchService(db)
+
+        # Fetch feeds for all categories using the search service
+        # We'll fetch more per category and then deduplicate
+        feeds_per_category = max(10, request.limit // len(request.categories) + 5)
+        
+        all_results = []
+        for category in request.categories:
+            try:
+                category_results = await search_service.search_feeds(
+                    query=None,
+                    category=category,
+                    language=request.language,
+                    limit=feeds_per_category,
+                )
+                all_results.extend(category_results)
+            except Exception as e:
+                logger.warning(
+                    "Failed to fetch feeds for category",
+                    category=category,
+                    error=str(e),
+                )
+                # Continue with other categories
+                continue
+
+        # Deduplicate by feed ID (keep first occurrence)
+        seen_ids = set()
+        unique_feeds = []
+        for feed in all_results:
+            if feed["id"] not in seen_ids:
+                seen_ids.add(feed["id"])
+                unique_feeds.append(feed)
+
+        # Sort by popularity score (descending) and take top N
+        sorted_feeds = sorted(
+            unique_feeds,
+            key=lambda f: f.get("popularity_score", 0),
+            reverse=True,
+        )[:request.limit]
+
+        # Convert to response schema
+        feed_results = []
+        for result in sorted_feeds:
+            try:
+                feed_result = FeedDiscoveryResult(
+                    id=result["id"],
+                    title=result["title"],
+                    description=result["description"],
+                    url=result["url"],
+                    link=result["link"],
+                    image_url=result["image_url"],
+                    tags=result["tags"],
+                    language=result["language"],
+                    category=result["category"],
+                    popularity_score=result["popularity_score"],
+                    relevance=result["relevance"],
+                    search_metadata=result.get("search_metadata"),
+                    is_preview=result.get("is_preview", False),
+                    preview_url=result.get("preview_url"),
+                )
+                feed_results.append(feed_result)
+            except Exception as e:
+                logger.warning(
+                    "Skipping malformed feed result due to validation error",
+                    feed_id=result.get("id"),
+                    url=result.get("url"),
+                    error=str(e),
+                )
+                continue
+
+        response = DiscoverSearchResponse(
+            results=feed_results,
+            total_count=len(feed_results),
+            query=None,
+            category=", ".join(request.categories) if request.categories else None,
+            language=request.language,
+        )
+
+        logger.info(
+            "Feed recommendations generated",
+            categories=request.categories,
+            language=request.language,
+            results_count=len(feed_results),
+        )
+
+        return response
+
+    except Exception as e:
+        logger.error(
+            "Error generating feed recommendations",
+            categories=request.categories,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An error occurred while generating recommendations",
         ) from e
 
 

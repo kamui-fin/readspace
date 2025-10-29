@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.crud import crud_feed, crud_folder
 from app.models.rss_models import Feed, FeedSubscription
 from app.schemas.subscription_schemas import SubscriptionCreate, SubscriptionUpdate
+from app.utils.url_normalizer import resolve_feed_url
 
 
 async def get_subscription_by_id(db: AsyncSession, *, subscription_id: UUID, user_id: UUID) -> FeedSubscription | None:
@@ -23,14 +24,45 @@ async def get_subscription_by_id(db: AsyncSession, *, subscription_id: UUID, use
 
 
 async def get_subscription_by_feed_url(db: AsyncSession, *, url: str, user_id: UUID) -> FeedSubscription | None:
-    """Get a user's subscription to a feed by the feed's URL."""
+    """Get a user's subscription to a feed by the feed's URL.
+
+    Checks both the exact URL and protocol variations (http vs https) to handle
+    legacy feeds stored with different protocols.
+    """
+    # Try exact match first
     result = await db.execute(
         select(FeedSubscription)
         .options(selectinload(FeedSubscription.feed), selectinload(FeedSubscription.folder))
         .join(Feed)
         .filter(Feed.url == url, FeedSubscription.user_id == user_id)
     )
-    return result.scalars().first()
+    subscription = result.scalars().first()
+    if subscription:
+        return subscription
+
+    # If not found, try protocol variation (http <-> https)
+    from urllib.parse import urlparse, urlunparse
+
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme in ("http", "https"):
+            # Try the opposite protocol
+            alt_scheme = "https" if parsed.scheme == "http" else "http"
+            alt_url = urlunparse((alt_scheme, parsed.netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
+            result = await db.execute(
+                select(FeedSubscription)
+                .options(selectinload(FeedSubscription.feed), selectinload(FeedSubscription.folder))
+                .join(Feed)
+                .filter(Feed.url == alt_url, FeedSubscription.user_id == user_id)
+            )
+            subscription = result.scalars().first()
+            if subscription:
+                return subscription
+    except Exception:
+        pass
+
+    return None
 
 
 async def get_subscriptions_by_user(
@@ -96,8 +128,12 @@ async def create_subscription(
     if not folder:
         raise ValueError(f"Folder with id {subscription_in.folder_id} not found for this user.")
 
-    # Check if subscription already exists
-    existing_subscription = await get_subscription_by_feed_url(db, url=str(subscription_in.url), user_id=user_id)
+    # Resolve URL to get canonical URL by following redirects
+    resolved_url = await resolve_feed_url(str(subscription_in.url))
+    original_url = str(subscription_in.url)
+
+    # Check if subscription already exists using resolved URL
+    existing_subscription = await get_subscription_by_feed_url(db, url=resolved_url, user_id=user_id)
     if existing_subscription:
         raise IntegrityError(
             statement=f"Subscription to feed '{subscription_in.url}' already exists for this user.",
@@ -105,14 +141,16 @@ async def create_subscription(
             orig=Exception("Duplicate subscription"),
         )
 
-    # Get or create global feed
-    feed_db = await crud_feed.get_feed_by_url(db, url=str(subscription_in.url))
+    # Get or create global feed using resolved URL (handles URL migrations)
+    feed_db = await crud_feed.get_or_migrate_feed(db, original_url=original_url, resolved_url=resolved_url)
     if not feed_db:
         if not feed_data:
             raise ValueError("Feed data required to create new feed.")
 
         from app.schemas.rss_schemas import FeedBase
 
+        # Update feed_data URL to use resolved URL
+        feed_data["url"] = resolved_url
         feed_base = FeedBase(**feed_data)
         feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
     # Feed exists, subscriber_count will be incremented automatically by database trigger

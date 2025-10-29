@@ -28,9 +28,82 @@ async def get_feed_by_id(db: AsyncSession, *, feed_id: UUID) -> Feed | None:
 
 
 async def get_feed_by_url(db: AsyncSession, *, url: str) -> Feed | None:
-    """Get a feed by URL from the global feeds table."""
+    """Get a feed by URL from the global feeds table.
+
+    This function checks for exact match first, then tries protocol variations
+    (http vs https) to handle legacy feeds that may have been stored with
+    different protocols.
+    """
+    # Try exact match first
     result = await db.execute(select(Feed).filter(Feed.url == url))
-    return result.scalars().first()
+    feed = result.scalars().first()
+    if feed:
+        return feed
+
+    # If not found, try protocol variation (http <-> https)
+    # This handles cases where old feeds are stored as http:// but new lookups use https://
+    from urllib.parse import urlparse, urlunparse
+
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme in ("http", "https"):
+            # Try the opposite protocol
+            alt_scheme = "https" if parsed.scheme == "http" else "http"
+            alt_url = urlunparse((alt_scheme, parsed.netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+
+            result = await db.execute(select(Feed).filter(Feed.url == alt_url))
+            feed = result.scalars().first()
+            if feed:
+                return feed
+    except Exception:
+        # If URL parsing fails, just return None
+        pass
+
+    return None
+
+
+async def get_or_migrate_feed(
+    db: AsyncSession, *, original_url: str, resolved_url: str
+) -> Feed | None:
+    """Get a feed by URL, handling URL migrations (redirects).
+
+    This function handles the case where a feed has moved to a new URL via redirects.
+    If the resolved URL doesn't exist but the original URL does, it updates the
+    old feed's URL to the new one.
+
+    Args:
+        db: Database session
+        original_url: The URL that was requested (before redirect resolution)
+        resolved_url: The URL after following redirects
+
+    Returns:
+        Feed object if found or migrated, None if not found
+    """
+    # First try to find feed by resolved URL (may include protocol variations)
+    feed = await get_feed_by_url(db, url=resolved_url)
+    if feed:
+        return feed
+
+    # If not found and URLs differ (redirect happened), check if old URL exists
+    if original_url != resolved_url:
+        old_feed = await get_feed_by_url(db, url=original_url)
+        if old_feed:
+            import structlog
+            logger = structlog.get_logger(__name__)
+            logger.info(
+                "Feed URL has changed (redirect detected), updating existing feed",
+                old_url=original_url,
+                new_url=resolved_url,
+                feed_id=old_feed.id,
+            )
+            # Update the old feed's URL to the new resolved URL
+            old_feed.url = resolved_url
+            db.add(old_feed)
+            await db.commit()
+            await db.refresh(old_feed)
+            return old_feed
+
+    return None
 
 
 async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:

@@ -950,6 +950,96 @@ class RssSearchService:
             logger.error("Error getting popular feeds", error=str(e))
             return []
 
+    async def get_trending_feeds(
+        self, language: str = "en", limit: int = 10, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Get trending RSS feeds sorted by popularity score.
+
+        Args:
+            language: Language code for filtering (defaults to 'en')
+            limit: Maximum number of results (defaults to 10)
+            category: Optional feed category to filter by
+
+        Returns:
+            List of feed results sorted by popularity with relevance scores
+        """
+        try:
+            logger.debug(
+                "Getting trending feeds",
+                language=language,
+                limit=limit,
+                category=category,
+            )
+
+            # Build base query
+            stmt = select(Feed).where((Feed.language == language) | (Feed.language.is_(None)))
+
+            # Add category filter if specified
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    stmt = stmt.where(Feed.top_level_category == category_enum)
+                    logger.debug("Applied category filter", category=category_enum.value)
+                except ValueError:
+                    logger.warning("Invalid category provided for trending feeds", category=category)
+                    # Continue without category filter
+
+            # Order by popularity and limit
+            stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last()).limit(limit)
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            # Convert to response format with relevance scores
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                # Calculate relevance based on rank (1.0 for top, decreasing linearly)
+                relevance = max(0.1, 1.0 - (i / limit)) if limit > 0 else 0.5
+
+                # Use RSS URL as fallback if link is malformed
+                normalized_link = self._normalize_url(feed.link)
+                normalized_url = self._normalize_url(str(feed.url))
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": normalized_url if normalized_url else str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category
+                    if feed.top_level_category
+                    else None,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {"search_type": "trending", "rank": i + 1},
+                    "created_at": feed.created_at,
+                    "updated_at": feed.updated_at,
+                }
+                feeds.append(feed_data)
+
+            logger.info(
+                "Trending feeds query completed",
+                language=language,
+                category=category,
+                results_count=len(feeds),
+            )
+            return feeds
+
+        except Exception as e:
+            logger.error(
+                "Error getting trending feeds",
+                error=str(e),
+                language=language,
+                category=category,
+                exc_info=True,
+            )
+            return []
+
     async def get_categories_with_counts(self, language: str = "en") -> list[dict[str, Any]]:
         """Get all categories with feed counts for the category grid."""
         try:

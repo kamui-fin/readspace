@@ -51,34 +51,36 @@ class FeedCreationService(BaseFeedService):
             update_existing=update_existing,
         )
 
-        # Normalize URL to prevent duplicates
-        from app.utils.url_normalizer import normalize_feed_url
+        # Resolve URL by following redirects to get canonical URL
+        from app.utils.url_normalizer import resolve_feed_url
 
-        normalized_url = normalize_feed_url(url)
+        resolved_url = await resolve_feed_url(url)
 
         logger.info(
-            "URL normalized for duplicate checking",
+            "URL resolved for duplicate checking",
             original_url=url,
-            normalized_url=normalized_url,
+            resolved_url=resolved_url,
         )
 
-        # Check if feed already exists using normalized URL
-        existing_feed = await crud_feed.get_feed_by_url(self.db, url=normalized_url)
+        # Check if feed exists or needs migration (handles URL changes via redirects)
+        existing_feed = await crud_feed.get_or_migrate_feed(
+            self.db, original_url=url, resolved_url=resolved_url
+        )
         if existing_feed:
-            return await self._handle_existing_feed(existing_feed, url, folder_id, tag_names, update_existing)
+            return await self._handle_existing_feed(existing_feed, resolved_url, folder_id, tag_names, update_existing)
 
         # Validate folder exists
         await self._validate_folder(folder_id)
 
-        # Fetch and parse feed using original URL (in case normalized URL doesn't work)
-        parsed_feed = await self._fetch_and_parse_feed(url)
+        # Fetch and parse feed using resolved URL (canonical URL from server)
+        parsed_feed = await self._fetch_and_parse_feed(resolved_url)
 
         # Check for duplicates using parsed feed data
         dedup_service = FeedDeduplicationService(self.db)
-        await dedup_service.check_for_duplicates(normalized_url, parsed_feed)
+        await dedup_service.check_for_duplicates(resolved_url, parsed_feed)
 
-        # Create the feed with normalized URL for storage
-        return await self._create_new_feed(normalized_url, folder_id, tag_names, parsed_feed)
+        # Create the feed with resolved URL for storage
+        return await self._create_new_feed(resolved_url, folder_id, tag_names, parsed_feed)
 
     async def _handle_existing_feed(
         self,

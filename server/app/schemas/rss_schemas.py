@@ -78,7 +78,9 @@ class FeedResponse(FeedBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
+    tags: list[str] | None = None  # Array of tag names from the database
     top_level_category: str | None = None  # Serialized as string from enum
+    popularity_score: float | None = None  # Popularity estimate (0-100)
     last_fetched_at: datetime | None = None
     last_modified_header: str | None = None
     etag_header: str | None = None
@@ -396,6 +398,14 @@ class DiscoverSearchRequest(BaseModel):
     category: str | None = Field(None, max_length=100, description="Feed category to filter by")
     language: str = Field("en", max_length=10, description="Language code for filtering")
     limit: int = Field(10, ge=1, le=20, description="Maximum number of results")
+
+
+class RecommendationsRequest(BaseModel):
+    """Request schema for getting feed recommendations based on multiple categories"""
+
+    categories: list[str] = Field(..., min_length=1, max_length=20, description="List of category names")
+    language: str = Field("en", max_length=10, description="Language code for filtering")
+    limit: int = Field(20, ge=1, le=100, description="Maximum number of results")
 
 
 class FeedDiscoveryResult(BaseModel):

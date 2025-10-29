@@ -302,6 +302,90 @@ async def add_new_feed(
 
 
 @router.get(
+    "/trending",
+    response_model=list[FeedResponse],
+    summary="Get trending RSS feeds",
+    description="Retrieve popular RSS feeds sorted by popularity score for discovery",
+    responses={
+        200: {
+            "description": "Successfully retrieved trending feeds",
+            "model": list[FeedResponse],
+        },
+        401: {
+            "description": "Unauthorized - authentication required",
+            "content": {"application/json": {"example": {"detail": "Authentication required"}}},
+        },
+        422: {"description": "Validation error in query parameters"},
+    },
+)
+async def get_trending_feeds(
+    language: str = Query("en", description="Language code for filtering feeds (e.g., 'en', 'es')"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of trending feeds to return (1-100)"),
+    category: str | None = Query(None, description="Optional feed category to filter by"),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> list[FeedResponse]:
+    """
+    Retrieve trending RSS feeds sorted by popularity score.
+
+    This endpoint returns the most popular feeds on the platform, sorted by their
+    popularity score in descending order. It can be filtered by language and category
+    to help users discover popular feeds relevant to their interests.
+
+    Args:
+        language: Language code for filtering (default: 'en')
+        limit: Maximum number of results to return (default: 10, max: 100)
+        category: Optional feed category to filter by (e.g., 'Technology & Programming')
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        list[FeedResponse]: List of trending feeds with metadata and relevance scores
+
+    Note:
+        - Requires authentication
+        - Results are sorted by popularity_score in descending order
+        - Feeds with null popularity scores are placed at the end
+        - Relevance scores are calculated based on rank position
+    """
+    from app.services.rss_search_service import RssSearchService
+
+    try:
+        search_service = RssSearchService(db=db)
+        trending_feeds = await search_service.get_trending_feeds(
+            language=language,
+            limit=limit,
+            category=category,
+        )
+
+        logger.info(
+            "Trending feeds retrieved successfully",
+            user_id=current_user.sub,
+            language=language,
+            category=category,
+            results_count=len(trending_feeds),
+        )
+
+        # Convert to FeedResponse format
+        # The trending_feeds already have the correct structure from the search service
+        return trending_feeds
+
+    except Exception as e:
+        logger.error(
+            "Error retrieving trending feeds",
+            error=str(e),
+            user_id=current_user.sub,
+            language=language,
+            category=category,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while retrieving trending feeds.",
+        ) from e
+
+
+@router.get(
     "/",
     response_model=list[FeedResponse],
     summary="List user's RSS feeds",
