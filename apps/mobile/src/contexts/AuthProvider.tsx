@@ -4,6 +4,7 @@ import type React from 'react';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useSettingsStore } from '@/stores/settings';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 interface SignUpCredentials {
     email: string;
@@ -151,10 +152,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const signOut = async () => {
         try {
+            console.log('[AuthProvider] Signing out');
+
+            // Sign out from Google if user is signed in with Google
+            try {
+                const googleUser = await GoogleSignin.getCurrentUser();
+                if (googleUser !== null) {
+                    console.log('[AuthProvider] Signing out from Google');
+                    await GoogleSignin.signOut();
+                }
+            } catch (googleError) {
+                console.error('[AuthProvider] Error signing out from Google:', googleError);
+                // Continue with Supabase sign out even if Google sign out fails
+            }
+
+            // Sign out from Supabase
             const supabase = getSupabaseClient();
             await supabase.auth.signOut();
+
+            console.log('[AuthProvider] Sign out successful');
         } catch (error) {
-            console.error('Error signing out:', error);
+            console.error('[AuthProvider] Error signing out:', error);
+            throw error;
         }
     };
 

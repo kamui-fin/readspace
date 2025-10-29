@@ -1,22 +1,30 @@
-import { useFonts } from '@/hooks/useFonts';
+import { GOOGLE_WEB_CLIENT_ID } from '@/constants/Config';
+import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
+import { useFonts } from '@/hooks/useFonts';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'nativewind';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
 import '../../global.css';
-import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
-import { useColorScheme } from 'nativewind';
 // Import API client to initialize it
 import '@/lib/api/client';
 
 // Prevent the splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+    webClientId: GOOGLE_WEB_CLIENT_ID,
+    offlineAccess: true,
+});
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
