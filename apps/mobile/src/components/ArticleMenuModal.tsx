@@ -142,9 +142,11 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
         return (
             <>
                 <BottomSheetModal
+                    key="article-menu-modal"
                     ref={ref}
                     snapPoints={['40%']}
                     enablePanDownToClose
+                    enableDismissOnClose={true}
                     backdropComponent={renderBackdrop}
                     backgroundStyle={{ backgroundColor: colors.white }}
                     handleIndicatorStyle={{ backgroundColor: colors.green_grey, width: 40 }}>

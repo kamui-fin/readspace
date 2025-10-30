@@ -550,10 +550,12 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         return (
             <>
                 <BottomSheetModal
+                    key="feed-switcher-main"
                     ref={bottomSheetRef}
                     snapPoints={snapPoints}
                     enablePanDownToClose
                     enableDynamicSizing={false}
+                    enableDismissOnClose={true}
                     footerComponent={renderFooter}
                     backdropComponent={renderBackdrop}
                     backgroundStyle={{ backgroundColor: colors.white }}
@@ -580,15 +582,25 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 </BottomSheetModal>
 
                 {/* Modals */}
-                <FolderNameModal ref={folderNameModalRef} onCreateFolder={handleCreateFolder} />
+                <FolderNameModal 
+                    key="folder-name-create"
+                    ref={folderNameModalRef} 
+                    onCreateFolder={handleCreateFolder} 
+                />
                 <FolderNameModal
+                    key="folder-name-rename"
                     ref={renameFolderModalRef}
                     mode="update"
                     initialName={folderToRename?.name || ''}
                     onUpdateFolder={handleRenameFolder}
                 />
-                <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
+                <FolderPicker 
+                    key="folder-picker-switcher"
+                    ref={folderPickerRef} 
+                    onFolderSelect={handleFolderSelect} 
+                />
                 <ConfirmationModal
+                    key="confirm-delete-switcher"
                     ref={confirmDeleteRef}
                     title={`Delete ${selectedCount} feed${selectedCount > 1 ? 's' : ''}?`}
                     message="This action cannot be undone. The selected feeds will be removed permanently."

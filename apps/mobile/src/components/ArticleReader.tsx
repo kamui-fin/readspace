@@ -4,9 +4,10 @@ import { Galeria } from '@nandorojo/galeria';
 import type { Article } from '@readspace/shared';
 import { calculateReadingTime } from '@readspace/shared';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useMemo } from 'react';
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import RenderHTML from 'react-native-render-html';
 import Constants from 'expo-constants';
 import { AISummaryCard } from './AISummaryCard';
@@ -24,6 +25,7 @@ export function ArticleReader({
     isLoadingSummary,
     onCloseSummary,
 }: ArticleReaderProps) {
+    const router = useRouter();
     const { width } = useWindowDimensions();
     const { colorScheme } = useColorScheme();
     const isDark = colorScheme === 'dark';
@@ -403,6 +405,22 @@ export function ArticleReader({
     const feedImageUrl =
         typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined;
 
+    // Try multiple ways to get the feed ID
+    let feedId: string | undefined;
+    if (typeof article.feed === 'object' && article.feed) {
+        feedId = (article.feed as any).id;
+    } else if (typeof article.feed === 'string') {
+        feedId = article.feed;
+    }
+    
+    // Check if there's a feed_id field directly on the article
+    if (!feedId && (article as any).feed_id) {
+        feedId = (article as any).feed_id;
+    }
+
+    console.log('ArticleReader - Full article keys:', Object.keys(article));
+    console.log('ArticleReader - isClipped:', isClipped, 'feedId:', feedId, 'feedTitle:', feedTitle, 'article.feed:', article.feed);
+
     // For clipped articles, show domain and use created_at as saved date
     const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
     const displayDate = isClipped
@@ -456,47 +474,74 @@ export function ArticleReader({
             {/* Article Header */}
             <View className="mx-6 mb-6 mt-6 border-b border-light-grey dark:border-light-grey-dark pb-6">
                 {/* Source and Priority */}
-                <View className="mb-2 flex-row items-center gap-2">
-                    {/* Priority badge for clipped articles */}
-                    {isClipped && article.priority && (
-                        <View
-                            style={{
-                                backgroundColor: getPriorityBgColor(article.priority),
-                                borderRadius: 12,
-                                paddingHorizontal: 8,
-                                paddingVertical: 4,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                            }}>
-                            <Monicon
-                                name="solar:paperclip-bold"
-                                size={12}
-                                color={getPriorityColor(article.priority)}
+                {!isClipped && feedId ? (
+                    <Pressable
+                        onPress={() => {
+                            console.log('PRESSED! Navigating to feed:', feedId);
+                            router.push(`/discover/feed/${feedId}`);
+                        }}
+                        style={{
+                            marginBottom: 8,
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 8,
+                            paddingVertical: 4,
+                        }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                        {displayFaviconUrl && (
+                            <Image
+                                source={{ uri: displayFaviconUrl }}
+                                style={{ width: 16, height: 16, borderRadius: 2 }}
+                                contentFit="contain"
                             />
-                            <Text
+                        )}
+                        <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
+                            {displaySource || 'Unknown Source'}
+                        </Text>
+                    </Pressable>
+                ) : (
+                    <View className="mb-2 flex-row items-center gap-2">
+                        {/* Priority badge for clipped articles */}
+                        {isClipped && article.priority && (
+                            <View
                                 style={{
-                                    fontSize: 11,
-                                    fontWeight: '600',
-                                    color: getPriorityColor(article.priority),
-                                    textTransform: 'capitalize',
+                                    backgroundColor: getPriorityBgColor(article.priority),
+                                    borderRadius: 12,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 4,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 4,
                                 }}>
-                                {article.priority}
-                            </Text>
-                        </View>
-                    )}
+                                <Monicon
+                                    name="solar:paperclip-bold"
+                                    size={12}
+                                    color={getPriorityColor(article.priority)}
+                                />
+                                <Text
+                                    style={{
+                                        fontSize: 11,
+                                        fontWeight: '600',
+                                        color: getPriorityColor(article.priority),
+                                        textTransform: 'capitalize',
+                                    }}>
+                                    {article.priority}
+                                </Text>
+                            </View>
+                        )}
 
-                    {displayFaviconUrl && (
-                        <Image
-                            source={{ uri: displayFaviconUrl }}
-                            style={{ width: 16, height: 16, borderRadius: 2 }}
-                            contentFit="contain"
-                        />
-                    )}
-                    <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
-                        {displaySource || 'Unknown Source'}
-                    </Text>
-                </View>
+                        {displayFaviconUrl && (
+                            <Image
+                                source={{ uri: displayFaviconUrl }}
+                                style={{ width: 16, height: 16, borderRadius: 2 }}
+                                contentFit="contain"
+                            />
+                        )}
+                        <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
+                            {displaySource || 'Unknown Source'}
+                        </Text>
+                    </View>
+                )}
 
                 {/* Title */}
                 <Text

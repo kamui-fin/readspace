@@ -55,6 +55,7 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                 ref={ref}
                 snapPoints={snapPoints}
                 enablePanDownToClose
+                enableDismissOnClose={true}
                 stackBehavior="push"
                 keyboardBehavior="extend"
                 keyboardBlurBehavior="restore"

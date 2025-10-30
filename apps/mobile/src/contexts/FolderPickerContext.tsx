@@ -24,7 +24,11 @@ export function FolderPickerProvider({ children }: { children: ReactNode }) {
     return (
         <FolderPickerContext.Provider value={{ openPicker }}>
             {children}
-            <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
+            <FolderPicker 
+                key="folder-picker-context"
+                ref={folderPickerRef} 
+                onFolderSelect={handleFolderSelect} 
+            />
         </FolderPickerContext.Provider>
     );
 }

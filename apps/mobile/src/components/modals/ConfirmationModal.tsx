@@ -53,6 +53,7 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                 ref={ref}
                 snapPoints={snapPoints}
                 enablePanDownToClose
+                enableDismissOnClose={true}
                 enableDynamicSizing
                 stackBehavior="push"
                 backdropComponent={renderBackdrop}

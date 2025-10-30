@@ -159,6 +159,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 ref={ref}
                 snapPoints={snapPoints}
                 enablePanDownToClose
+                enableDismissOnClose={true}
                 stackBehavior="push"
                 keyboardBehavior="extend"
                 keyboardBlurBehavior="restore"

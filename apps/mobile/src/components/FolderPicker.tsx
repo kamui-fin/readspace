@@ -90,6 +90,7 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
                 ref={bottomSheetRef}
                 snapPoints={snapPoints}
                 enablePanDownToClose
+                enableDismissOnClose={true}
                 backdropComponent={renderBackdrop}
                 footerComponent={renderFooter}
                 backgroundStyle={{ backgroundColor: colors.white }}

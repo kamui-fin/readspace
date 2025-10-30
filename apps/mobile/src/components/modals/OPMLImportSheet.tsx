@@ -103,6 +103,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
         ref={ref}
         snapPoints={snapPoints}
         enablePanDownToClose={!isImporting}
+        enableDismissOnClose={true}
         stackBehavior="push"
         backdropComponent={renderBackdrop}
         backgroundStyle={{

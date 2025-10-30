@@ -4,12 +4,14 @@ import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { useFonts } from '@/hooks/useFonts';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
+import * as Network from 'expo-network';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { AppState, Platform, Text, View, type AppStateStatus } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
@@ -41,6 +43,31 @@ function RootLayoutNav() {
     const segments = useSegments();
     const router = useRouter();
     const { colorScheme } = useColorScheme();
+    const [isOnline, setIsOnline] = useState(true);
+
+    // Setup network status listener
+    useEffect(() => {
+        onlineManager.setEventListener((setOnline) => {
+            const eventSubscription = Network.addNetworkStateListener((state: Network.NetworkState) => {
+                const online = !!state.isConnected;
+                setOnline(online);
+                setIsOnline(online);
+            });
+            return eventSubscription.remove;
+        });
+    }, []);
+
+    // Setup app focus listener
+    useEffect(() => {
+        function onAppStateChange(status: AppStateStatus) {
+            if (Platform.OS !== 'web') {
+                focusManager.setFocused(status === 'active');
+            }
+        }
+
+        const subscription = AppState.addEventListener('change', onAppStateChange);
+        return () => subscription.remove();
+    }, []);
 
     useEffect(() => {
         // Wait for both auth loading and onboarding status check
@@ -78,10 +105,10 @@ function RootLayoutNav() {
         } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
             // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
             // Exception: Don't redirect if on signup step-3 (email verification notice)
-            const onEmailVerification = segments[0] === 'onboarding' && 
-                                       segments[1] === 'signup' && 
-                                       segments[2] === 'step-3';
-            
+            const onEmailVerification = segments[0] === 'onboarding' &&
+                segments[1] === 'signup' &&
+                segments[2] === 'step-3';
+
             if (!onEmailVerification) {
                 console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
                 router.replace('/(tabs)');
@@ -102,6 +129,13 @@ function RootLayoutNav() {
                     <Stack.Screen name="welcome" />
                     <Stack.Screen name="(tabs)" />
                 </Stack>
+                {!isOnline && (
+                    <View className="absolute top-0 left-0 right-0 z-50 bg-red dark:bg-red px-4 py-3" style={{ paddingTop: 50 }}>
+                        <Text className="text-center font-geist text-sm text-white">
+                            No internet connection
+                        </Text>
+                    </View>
+                )}
             </BottomSheetModalProvider>
         </>
     );

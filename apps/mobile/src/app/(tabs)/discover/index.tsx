@@ -5,6 +5,7 @@ import { FeedListSkeleton } from '@/components/skeletons';
 import { Chip } from '@/components/ui/Chip';
 import { useSearchHistory } from '@/stores/search-history';
 import BottomSheet from '@gorhom/bottom-sheet';
+import { LegendList } from '@legendapp/list';
 import { Monicon } from '@monicon/native';
 import {
     ApiClient,
@@ -15,7 +16,6 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import {
-    FlatList,
     Keyboard,
     Pressable,
     ScrollView,
@@ -69,7 +69,7 @@ export default function DiscoverScreen() {
         selectedLanguage === 'english' ? 'en' : selectedLanguage === 'chinese' ? 'zh' : 'ja';
 
     // Fetch trending feeds for default view
-    const { data: trendingData, isLoading: isTrendingLoading, error: trendingError } = useTrendingFeeds(
+    const { data: trendingData, isLoading: isTrendingLoading, isFetching: isTrendingFetching, isSuccess: isTrendingSuccess, error: trendingError } = useTrendingFeeds(
         {
             language: languageCode,
             limit: 20,
@@ -79,12 +79,16 @@ export default function DiscoverScreen() {
         }
     );
 
+    // Only show skeleton on initial load, not on refetch
+    const showTrendingSkeleton = (isTrendingLoading || isTrendingFetching) && !isTrendingSuccess && !trendingData;
+
 
     // Search query for category or text search
     const {
         data: searchData,
         isLoading: isSearchLoading,
         isFetching,
+        isSuccess: isSearchSuccess,
     } = useQuery<DiscoverSearchResponse>({
         queryKey: ['discover', 'search', activeQuery, selectedCategory, languageCode],
         queryFn: async () => {
@@ -97,6 +101,9 @@ export default function DiscoverScreen() {
         },
         enabled: viewState === 'category' || viewState === 'search',
     });
+
+    // Only show skeleton on initial load, not on refetch
+    const showSearchSkeleton = (isSearchLoading || isFetching) && !isSearchSuccess && !searchData;
 
     const handleCategoryPress = (category: string) => {
         setSelectedCategory(category);
@@ -315,7 +322,7 @@ export default function DiscoverScreen() {
                                 <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">
                                     Trending
                                 </Text>
-                                {isTrendingLoading ? (
+                                {showTrendingSkeleton ? (
                                     <FeedListSkeleton count={5} />
                                 ) : trendingError ? (
                                     <View className="py-8">
@@ -327,17 +334,21 @@ export default function DiscoverScreen() {
                                         </Text>
                                     </View>
                                 ) : trendingData && trendingData.length > 0 ? (
-                                    trendingData.map((feed: Feed) => (
-                                        <FeedListItem
-                                            key={feed.id}
-                                            feedId={feed.id}
-                                            title={feed.title || 'Untitled Feed'}
-                                            description={feed.description || ''}
-                                            iconUrl={feed.image_url || undefined}
-                                            isFollowing={feed.is_subscribed || false}
-                                            isPreview={feed.is_preview}
-                                        />
-                                    ))
+                                    <LegendList
+                                        data={trendingData}
+                                        estimatedItemSize={80}
+                                        renderItem={({ item: feed }: { item: Feed }) => (
+                                            <FeedListItem
+                                                feedId={feed.id}
+                                                title={feed.title || 'Untitled Feed'}
+                                                description={feed.description || ''}
+                                                iconUrl={feed.image_url || undefined}
+                                                isFollowing={feed.is_subscribed || false}
+                                                isPreview={feed.is_preview}
+                                            />
+                                        )}
+                                        keyExtractor={(item: Feed) => item.id}
+                                    />
                                 ) : (
                                     <Text className="py-8 text-center text-grey dark:text-grey-dark">
                                         No trending feeds available
@@ -405,14 +416,14 @@ export default function DiscoverScreen() {
                                 </View>
                             )}
 
-                            {isSearchLoading || isFetching ? (
+                            {showSearchSkeleton ? (
                                 <View className="flex-1 px-6 py-4">
                                     <FeedListSkeleton count={8} />
                                 </View>
                             ) : searchData?.results && searchData.results.length > 0 ? (
-                                <FlatList
+                                <LegendList
                                     data={searchData.results}
-                                    keyExtractor={(item) => item.id}
+                                    estimatedItemSize={80}
                                     renderItem={({ item }) => (
                                         <FeedListItem
                                             feedId={item.id}
@@ -424,7 +435,7 @@ export default function DiscoverScreen() {
                                             isPreview={item.is_preview}
                                         />
                                     )}
-                                    contentContainerClassName="px-0"
+                                    keyExtractor={(item) => item.id}
                                     showsVerticalScrollIndicator={false}
                                 />
                             ) : (

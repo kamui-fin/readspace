@@ -1,14 +1,14 @@
 import { ArticleListItem } from '@/components/ArticleListItem';
 import { FeedListItem } from '@/components/FeedListItem';
-import { FolderPicker } from '@/components/FolderPicker';
+import { FolderPicker, type FolderPickerRef } from '@/components/FolderPicker';
 import { FeedPreviewSkeleton } from '@/components/skeletons';
 import { ShimmerView } from '@/components/skeletons/ShimmerView';
 import { Button } from '@/components/ui/Button';
 import { useFeedViewStore } from '@/stores/feed-view';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
     ApiClient,
+    formatRelativeDate,
     useCreateFeed,
     useDeleteFeed,
     useFeed,
@@ -41,7 +41,7 @@ export default function FeedPreviewScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
-    const folderPickerRef = useRef<BottomSheet>(null);
+    const folderPickerRef = useRef<FolderPickerRef>(null);
     const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
     const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(null);
@@ -113,8 +113,8 @@ export default function FeedPreviewScreen() {
             ApiClient.rss
                 .refreshFeed(id, true, true)
                 .then((feedData) => {
-                    // Store the feed data from refresh response
-                    setPreviewFeedData(feedData);
+                    // Store the feed data from refresh response (cast to FeedDiscoveryResult)
+                    setPreviewFeedData(feedData as unknown as FeedDiscoveryResult);
                     // Trigger articles refetch
                     refetchArticles();
                 })
@@ -152,13 +152,13 @@ export default function FeedPreviewScreen() {
             );
         } else {
             // Show folder picker to follow
-            folderPickerRef.current?.expand();
+            folderPickerRef.current?.present();
         }
     }, [isFollowing, feed, deleteFeed]);
 
     const handleSimilarFeedFollowRequest = useCallback((feedUrl: string) => {
         setPendingSimilarFeedUrl(feedUrl);
-        folderPickerRef.current?.expand();
+        folderPickerRef.current?.present();
     }, []);
 
     const handleFolderSelect = useCallback(
@@ -272,7 +272,7 @@ export default function FeedPreviewScreen() {
                                 />
                             ) : (
                                 <Text className="font-geist-bold text-3xl text-grey dark:text-grey-dark">
-                                    {feed.title.charAt(0).toUpperCase()}
+                                    {(feed.title || 'F').charAt(0).toUpperCase()}
                                 </Text>
                             )}
                         </View>
@@ -281,7 +281,7 @@ export default function FeedPreviewScreen() {
                         <Text
                             style={{ letterSpacing: -0.48 }}
                             className="mb-2 font-geist-bold text-2xl text-black dark:text-black-dark">
-                            {feed.title}
+                            {feed.title || 'Untitled Feed'}
                         </Text>
 
                         {/* Feed Description */}
@@ -328,18 +328,21 @@ export default function FeedPreviewScreen() {
                         {/* Feed Tags */}
                         {feed.tags && feed.tags.length > 0 && (
                             <View className="mb-6 flex-row items-center gap-2 flex-wrap">
-                                {feed.tags.slice(0, 5).map((tag) => (
-                                    <View key={tag} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey dark:bg-mid-grey-dark px-3 py-1.5">
-                                        <Monicon
-                                            name="solar:tag-linear"
-                                            size={14}
-                                            color="#90988B"
-                                        />
-                                        <Text className="font-geist text-xs text-grey dark:text-grey-dark">
-                                            {typeof tag === 'object' ? tag.name : tag}
-                                        </Text>
-                                    </View>
-                                ))}
+                                {feed.tags.slice(0, 5).map((tag, index) => {
+                                    const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
+                                    return (
+                                        <View key={`${tagName}-${index}`} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey dark:bg-mid-grey-dark px-3 py-1.5">
+                                            <Monicon
+                                                name="solar:tag-linear"
+                                                size={14}
+                                                color="#90988B"
+                                            />
+                                            <Text className="font-geist text-xs text-grey dark:text-grey-dark">
+                                                {tagName}
+                                            </Text>
+                                        </View>
+                                    );
+                                })}
                             </View>
                         )}
 
@@ -440,13 +443,19 @@ export default function FeedPreviewScreen() {
                                 className="font-geist-bold text-lg text-black dark:text-black-dark">
                                 Recent articles
                             </Text>
-                            {shouldShowPreviewBanner && feed && (
+                            {feed && (
                                 <Pressable
                                     onPress={() => {
-                                        // Navigate to Following screen with feed preview mode
-                                        const { selectFeedPreview } = useFeedViewStore.getState();
-                                        selectFeedPreview(feed.id, feed.title);
-                                        router.push('/(tabs)/');
+                                        if (shouldShowPreviewBanner) {
+                                            // Navigate to Following screen with feed preview mode
+                                            const { selectFeedPreview } = useFeedViewStore.getState();
+                                            selectFeedPreview(feed.id, feed.title || 'Feed');
+                                        } else {
+                                            // Navigate to Following screen with feed selected
+                                            const { selectFeed } = useFeedViewStore.getState();
+                                            selectFeed(feed.id, feed.title || 'Feed');
+                                        }
+                                        router.push('/(tabs)/' as any);
                                     }}
                                     className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
                                     <Monicon
@@ -494,10 +503,10 @@ export default function FeedPreviewScreen() {
                                     <ArticleListItem
                                         variant="card"
                                         width={CARD_WIDTH}
-                                        source={previewFeedData?.title || 'Unknown'}
+                                        source={previewFeedData?.title || feed?.title || 'Unknown'}
                                         timestamp={
                                             article.published_at
-                                                ? new Date(article.published_at).toLocaleDateString()
+                                                ? formatRelativeDate(new Date(article.published_at))
                                                 : 'Unknown date'
                                         }
                                         title={article.title}

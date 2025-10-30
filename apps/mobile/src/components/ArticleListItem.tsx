@@ -2,6 +2,7 @@ import { cn } from '@/utils/cn';
 import { stripHtml } from '@/utils/html';
 import { Monicon } from '@monicon/native';
 import * as Haptics from 'expo-haptics';
+import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useRef } from 'react';
 import { Animated, Image, Pressable, Text, View, type PressableProps, useColorScheme } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
@@ -24,6 +25,7 @@ export interface ArticleListItemProps extends PressableProps {
     priority?: string;
     note?: string;
     articleUrl?: string;
+    feedId?: string;
 }
 
 const SWIPE_THRESHOLD = 0.8; // 40% of item width
@@ -48,12 +50,15 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             priority,
             note,
             articleUrl,
+            feedId,
             ...props
         },
         ref
     ) => {
+        const router = useRouter();
         const swipeableRef = useRef<Swipeable>(null);
         const hasTriggeredHaptic = useRef(false);
+        const colorScheme = useColorScheme();
 
         /**
          * Extract domain from URL for display
@@ -86,7 +91,6 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         /**
          * Get priority background color based on priority level and color scheme
          */
-        const colorScheme = useColorScheme();
         const getPriorityBgColor = (priorityLevel: string): string => {
             const isDark = colorScheme === 'dark';
             switch (priorityLevel) {
@@ -274,66 +278,111 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                     {/* Content */}
                     <View className="flex-1">
                         {/* Header */}
-                        <View className="mb-2 flex-row items-center gap-2">
-                            {/* Priority badge for clipped articles */}
-                            {articleType === 'clipped' && priority && (
-                                <View
-                                    style={{
-                                        backgroundColor: getPriorityBgColor(priority),
-                                        borderRadius: 12,
-                                        paddingHorizontal: 6,
-                                        paddingVertical: 2,
-                                        flexDirection: 'row',
-                                        alignItems: 'center',
-                                        gap: 3,
-                                    }}>
-                                    <Monicon
-                                        name="solar:paperclip-bold"
-                                        size={10}
-                                        color={getPriorityColor(priority)}
+                        {articleType === 'feed' && feedId ? (
+                            <Pressable
+                                onPress={() => {
+                                    console.log('Navigating to feed from list:', feedId);
+                                    router.push(`/discover/feed/${feedId}`);
+                                }}
+                                style={{
+                                    marginBottom: 8,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                }}
+                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                                {/* Favicon */}
+                                {faviconUrl ? (
+                                    <Image
+                                        source={{ uri: faviconUrl }}
+                                        className="h-4 w-4 rounded-sm"
                                     />
-                                    <Text
-                                        style={{
-                                            fontSize: 9,
-                                            fontWeight: '600',
-                                            color: getPriorityColor(priority),
-                                            textTransform: 'capitalize',
-                                        }}>
-                                        {priority}
-                                    </Text>
-                                </View>
-                            )}
-
-                            {/* Favicon */}
-                            {faviconUrl ? (
-                                <Image
-                                    source={{ uri: faviconUrl }}
-                                    className="h-4 w-4 rounded-sm"
-                                />
-                            ) : (
-                                <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
-                            )}
-
-                            {/* Feed name with truncation */}
-                            <Text
-                                className={cn(
-                                    'font-geist text-xs',
-                                    isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
+                                ) : (
+                                    <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
                                 )}
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                                style={{ flexShrink: 1 }}>
-                                {displaySource}
-                            </Text>
 
-                            {isSaved && articleType === 'feed' && (
-                                <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
-                            )}
+                                {/* Feed name with truncation */}
+                                <Text
+                                    className={cn(
+                                        'font-geist text-xs',
+                                        isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
+                                    )}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={{ flexShrink: 1 }}>
+                                    {displaySource}
+                                </Text>
 
-                            <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+                                {isSaved && articleType === 'feed' && (
+                                    <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
+                                )}
 
-                            <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
-                        </View>
+                                <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+
+                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
+                            </Pressable>
+                        ) : (
+                            <View className="mb-2 flex-row items-center gap-2">
+                                {/* Priority badge for clipped articles */}
+                                {articleType === 'clipped' && priority && (
+                                    <View
+                                        style={{
+                                            backgroundColor: getPriorityBgColor(priority),
+                                            borderRadius: 12,
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 2,
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 3,
+                                        }}>
+                                        <Monicon
+                                            name="solar:paperclip-bold"
+                                            size={10}
+                                            color={getPriorityColor(priority)}
+                                        />
+                                        <Text
+                                            style={{
+                                                fontSize: 9,
+                                                fontWeight: '600',
+                                                color: getPriorityColor(priority),
+                                                textTransform: 'capitalize',
+                                            }}>
+                                            {priority}
+                                        </Text>
+                                    </View>
+                                )}
+
+                                {/* Favicon */}
+                                {faviconUrl ? (
+                                    <Image
+                                        source={{ uri: faviconUrl }}
+                                        className="h-4 w-4 rounded-sm"
+                                    />
+                                ) : (
+                                    <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
+                                )}
+
+                                {/* Feed name with truncation */}
+                                <Text
+                                    className={cn(
+                                        'font-geist text-xs',
+                                        isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
+                                    )}
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={{ flexShrink: 1 }}>
+                                    {displaySource}
+                                </Text>
+
+                                {isSaved && articleType === 'feed' && (
+                                    <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
+                                )}
+
+                                <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+
+                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
+                            </View>
+                        )}
 
                         {/* Title */}
                         <Text

@@ -1,11 +1,11 @@
 import { ArticleListItem } from '@/components/ArticleListItem';
 import { FeedPreviewBanner } from '@/components/FeedPreviewBanner';
-import { FolderPicker } from '@/components/FolderPicker';
+import { FolderPicker, type FolderPickerRef } from '@/components/FolderPicker';
 import { Header } from '@/components/Header';
 import { ArticleListSkeleton } from '@/components/skeletons';
+import { COLORS } from '@/constants/Colors';
 import { useFeedViewStore } from '@/stores/feed-view';
 import { groupArticlesByDate } from '@/utils/dateUtils';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { LegendList } from '@legendapp/list';
 import { Monicon } from '@monicon/native';
 import {
@@ -22,6 +22,7 @@ import {
     useUpdateArticle,
 } from '@readspace/shared';
 import { useRouter } from 'expo-router';
+import { useColorScheme } from 'nativewind';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
@@ -45,6 +46,7 @@ const TAB_CONFIGS = [
 
 export default function FollowingScreen() {
     const router = useRouter();
+    const { colorScheme } = useColorScheme();
     const viewType = useFeedViewStore((state) => state.viewType);
     const selectedId = useFeedViewStore((state) => state.selectedId);
     const selectedName = useFeedViewStore((state) => state.selectedName);
@@ -55,7 +57,9 @@ export default function FollowingScreen() {
     const [headerHeight, setHeaderHeight] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
     const scrollY = useSharedValue(0);
-    const folderPickerRef = useRef<BottomSheet>(null);
+    const folderPickerRef = useRef<FolderPickerRef>(null);
+
+    const colors = COLORS[colorScheme ?? 'light'];
 
     // Fetch feed data for preview mode banner
     const { data: feedData } = useFeed(selectedId || '', {
@@ -188,7 +192,7 @@ export default function FollowingScreen() {
 
     // Handle following feed from preview banner
     const handleFollowFromPreview = useCallback(() => {
-        folderPickerRef.current?.expand();
+        folderPickerRef.current?.present();
     }, []);
 
     const handleFolderSelect = useCallback(
@@ -359,6 +363,19 @@ export default function FollowingScreen() {
                 typeof article.feed === 'object' && article.feed
                     ? article.feed.image_url
                     : undefined;
+            
+            // Try multiple ways to get the feed ID
+            let feedId: string | undefined;
+            if (typeof article.feed === 'object' && article.feed) {
+                feedId = (article.feed as any).id;
+            } else if (typeof article.feed === 'string') {
+                feedId = article.feed;
+            }
+            
+            // Check if there's a feed_id field directly on the article
+            if (!feedId && (article as any).feed_id) {
+                feedId = (article as any).feed_id;
+            }
 
             // For clipped articles - get favicon from domain
             const getFaviconUrl = (url: string): string => {
@@ -393,6 +410,7 @@ export default function FollowingScreen() {
                     priority={article.priority || undefined}
                     note={article.note || undefined}
                     articleUrl={article.link}
+                    feedId={feedId || undefined}
                     onPress={() => router.push(`/articles/${article.id}`)}
                     onBookmark={() => handleBookmark(article.id, article.is_read_later || false, article.article_type)}
                     onToggleRead={() => handleToggleRead(article.id, article.is_read || false, article.article_type)}
@@ -475,10 +493,10 @@ export default function FollowingScreen() {
                     ListEmptyComponent={
                         !isInitialLoading ? (
                             <View className="items-center justify-center px-6 py-20">
-                                <Monicon 
-                                    name="solar:inbox-broken" 
-                                    size={64} 
-                                    color="#90988B" 
+                                <Monicon
+                                    name="solar:inbox-broken"
+                                    size={64}
+                                    color="#90988B"
                                 />
                                 <Text className="text-center mt-4 font-geist-medium text-lg text-black dark:text-black-dark mb-2">
                                     Nothing here yet
@@ -493,6 +511,7 @@ export default function FollowingScreen() {
                         <RefreshControl
                             refreshing={refreshing}
                             onRefresh={handleRefresh}
+                            progressBackgroundColor={colors.white}
                             tintColor="#6A994E"
                             colors={['#6A994E']}
                             progressViewOffset={headerHeight}
