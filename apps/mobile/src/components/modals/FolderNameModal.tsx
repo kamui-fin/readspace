@@ -10,26 +10,33 @@ import { forwardRef, useCallback, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
 export interface FolderNameModalProps {
-    onCreateFolder: (name: string) => void;
+    onCreateFolder?: (name: string) => void;
+    onUpdateFolder?: (name: string) => void;
+    mode?: 'create' | 'update';
+    initialName?: string;
 }
 
 export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps>(
-    ({ onCreateFolder }, ref) => {
+    ({ onCreateFolder, onUpdateFolder, mode = 'create', initialName = '' }, ref) => {
         const { colorScheme } = useColorScheme();
         const colors = COLORS[colorScheme ?? 'light'];
-        const [folderName, setFolderName] = useState('');
+        const [folderName, setFolderName] = useState(initialName);
         const [isOpen, setIsOpen] = useState(false);
         const snapPoints = useMemo(() => ['40%', '70%'], []);
 
-        const handleCreate = useCallback(() => {
+        const handleSubmit = useCallback(() => {
             if (folderName.trim()) {
-                onCreateFolder(folderName.trim());
-                setFolderName('');
+                if (mode === 'create') {
+                    onCreateFolder?.(folderName.trim());
+                } else {
+                    onUpdateFolder?.(folderName.trim());
+                }
+                setFolderName(mode === 'create' ? '' : initialName);
                 if (ref && typeof ref !== 'function' && ref.current) {
                     ref.current.dismiss();
                 }
             }
-        }, [folderName, onCreateFolder, ref]);
+        }, [folderName, mode, onCreateFolder, onUpdateFolder, initialName, ref]);
 
         const renderBackdrop = useCallback(
             (props: any) => (
@@ -55,17 +62,24 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}
-                onChange={(index) => setIsOpen(index >= 0)}
+                onChange={(index) => {
+                    setIsOpen(index >= 0);
+                    if (index >= 0 && mode === 'update') {
+                        setFolderName(initialName);
+                    }
+                }}
                 onDismiss={() => {
-                    setFolderName('');
+                    setFolderName(mode === 'create' ? '' : initialName);
                     setIsOpen(false);
                 }}>
                 <BottomSheetView className="flex-1 px-6 py-4">
                     <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
-                        Choose a name
+                        {mode === 'create' ? 'Choose a name' : 'Rename folder'}
                     </Text>
                     <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">
-                        Creating a folder helps you organize your feeds.
+                        {mode === 'create'
+                            ? 'Creating a folder helps you organize your feeds.'
+                            : 'Enter a new name for this folder.'}
                     </Text>
 
                     <BottomSheetTextInput
@@ -85,11 +99,11 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                         }}
                         autoFocus={isOpen}
                         returnKeyType="done"
-                        onSubmitEditing={handleCreate}
+                        onSubmitEditing={handleSubmit}
                     />
 
                     <Pressable
-                        onPress={handleCreate}
+                        onPress={handleSubmit}
                         disabled={!folderName.trim()}
                         className={`items-center justify-center rounded-2xl py-4 transition-opacity ${
                             folderName.trim()
@@ -100,7 +114,7 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                             className={`font-geist-semibold text-base ${
                                 folderName.trim() ? 'text-white dark:text-white-dark' : 'text-grey dark:text-grey-dark'
                             }`}>
-                            Create
+                            {mode === 'create' ? 'Create' : 'Rename'}
                         </Text>
                     </Pressable>
                 </BottomSheetView>

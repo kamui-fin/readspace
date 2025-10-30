@@ -1,21 +1,37 @@
 import { Button } from '@/components/ui/Button';
 import { Radio } from '@/components/ui/Radio';
-import BottomSheet, {
+import { COLORS } from '@/constants/Colors';
+import {
     BottomSheetBackdrop,
     BottomSheetFooter,
+    BottomSheetModal,
     BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { useFolders } from '@readspace/shared';
-import { forwardRef, useCallback, useMemo, useState } from 'react';
+import { useColorScheme } from 'nativewind';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
+
+export interface FolderPickerRef {
+    present: () => void;
+    dismiss: () => void;
+}
 
 export interface FolderPickerProps {
     onFolderSelect: (folderId: string) => void;
     initialFolderId?: string | null;
 }
 
-export const FolderPicker = forwardRef<BottomSheet, FolderPickerProps>(
+export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
     ({ onFolderSelect, initialFolderId }, ref) => {
+        const bottomSheetRef = useRef<BottomSheetModal>(null);
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
+        
+        useImperativeHandle(ref, () => ({
+            present: () => bottomSheetRef.current?.present(),
+            dismiss: () => bottomSheetRef.current?.dismiss(),
+        }));
         const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
             initialFolderId ?? null
         );
@@ -34,12 +50,9 @@ export const FolderPicker = forwardRef<BottomSheet, FolderPickerProps>(
         const handleConfirm = useCallback(() => {
             if (selectedFolderId) {
                 onFolderSelect(selectedFolderId);
-                // Close the bottom sheet
-                if (ref && typeof ref !== 'function' && ref.current) {
-                    ref.current.close();
-                }
+                bottomSheetRef.current?.dismiss();
             }
-        }, [selectedFolderId, onFolderSelect, ref]);
+        }, [selectedFolderId, onFolderSelect]);
 
         const renderBackdrop = useCallback(
             (props: any) => (
@@ -56,7 +69,7 @@ export const FolderPicker = forwardRef<BottomSheet, FolderPickerProps>(
         const renderFooter = useCallback(
             (props: any) => (
                 <BottomSheetFooter {...props}>
-                    <View className="border-t border-light-grey bg-white px-6 pb-6 pt-4">
+                    <View className="border-t border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark px-6 pb-6 pt-4">
                         <Button
                             variant="primary"
                             fullWidth
@@ -73,17 +86,16 @@ export const FolderPicker = forwardRef<BottomSheet, FolderPickerProps>(
         );
 
         return (
-            <BottomSheet
-                ref={ref}
-                index={-1}
+            <BottomSheetModal
+                ref={bottomSheetRef}
                 snapPoints={snapPoints}
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
                 footerComponent={renderFooter}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
                 <View className="flex-1 px-6">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black">
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Select Folder
                     </Text>
                     <BottomSheetScrollView showsVerticalScrollIndicator={false}>
@@ -100,7 +112,7 @@ export const FolderPicker = forwardRef<BottomSheet, FolderPickerProps>(
                         </View>
                     </BottomSheetScrollView>
                 </View>
-            </BottomSheet>
+            </BottomSheetModal>
         );
     }
 );

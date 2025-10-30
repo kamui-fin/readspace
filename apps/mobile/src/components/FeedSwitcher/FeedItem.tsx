@@ -2,33 +2,48 @@ import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/utils/cn';
 import type { Feed } from '@readspace/shared';
-import { forwardRef } from 'react';
+import { forwardRef, useEffect } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
+import Animated, { FadeInDown, FadeOutUp, useSharedValue } from 'react-native-reanimated';
 
 export interface FeedItemProps extends Omit<PressableProps, 'children'> {
     feed: Feed;
     isEditMode?: boolean;
     isSelected?: boolean;
+    isNested?: boolean;
     onPress?: () => void;
     className?: string;
 }
 
 export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemProps>(
-    ({ feed, isEditMode = false, isSelected = false, onPress, className, ...props }, ref) => {
+    ({ feed, isEditMode = false, isSelected = false, isNested = false, onPress, className, ...props }, ref) => {
+        // Reset animation when feed id changes (view recycling)
+        const animKey = useSharedValue(feed.id);
+        
+        useEffect(() => {
+            animKey.value = feed.id;
+        }, [feed.id, animKey]);
+
         return (
-            <Pressable
-                ref={ref}
-                onPress={onPress}
-                className={cn(
-                    'flex-row items-center gap-3 py-3 transition-opacity active:opacity-70',
-                    className
-                )}
-                {...props}>
+            <Animated.View
+                entering={FadeInDown.duration(250).springify()}
+                exiting={FadeOutUp.duration(200)}
+            >
+                <Pressable
+                    ref={ref}
+                    onPress={onPress}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className={cn(
+                        'flex-row items-center gap-3 py-3 transition-opacity active:opacity-70',
+                        isNested && 'pl-6',
+                        className
+                    )}
+                    {...props}>
                 {/* Icon or Checkbox */}
                 {isEditMode ? (
                     <Checkbox checked={isSelected} />
                 ) : (
-                    <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey">
+                    <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
                         {feed.image_url ? (
                             <Image
                                 source={{ uri: feed.image_url }}
@@ -36,7 +51,7 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                                 resizeMode="cover"
                             />
                         ) : (
-                            <Text className="font-geist-bold text-sm text-grey">
+                            <Text className="font-geist-bold text-sm text-grey dark:text-grey-dark">
                                 {feed.title.charAt(0).toUpperCase()}
                             </Text>
                         )}
@@ -48,9 +63,10 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                     {feed.title}
                 </Text>
 
-                {/* Unread Badge */}
-                {feed.unread_count > 0 && <Badge label={feed.unread_count.toString()} />}
-            </Pressable>
+                    {/* Unread Badge */}
+                    {feed.unread_count > 0 && <Badge label={feed.unread_count.toString()} />}
+                </Pressable>
+            </Animated.View>
         );
     }
 );

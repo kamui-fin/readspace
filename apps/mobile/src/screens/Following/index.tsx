@@ -7,6 +7,7 @@ import { useFeedViewStore } from '@/stores/feed-view';
 import { groupArticlesByDate } from '@/utils/dateUtils';
 import BottomSheet from '@gorhom/bottom-sheet';
 import { LegendList } from '@legendapp/list';
+import { Monicon } from '@monicon/native';
 import {
     type Article,
     formatRelativeDate,
@@ -284,13 +285,13 @@ export default function FollowingScreen() {
     }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
     const handleBookmark = useCallback(
-        (articleId: string, currentlySaved: boolean) => {
+        (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
             const newValue = !currentlySaved;
             updateArticle.mutate(
                 {
                     articleId,
                     data: { is_read_later: newValue },
-                    articleType: 'feed',
+                    articleType,
                 },
                 {
                     // Optimistic update handles UI changes immediately
@@ -304,13 +305,13 @@ export default function FollowingScreen() {
     );
 
     const handleToggleRead = useCallback(
-        (articleId: string, currentlyRead: boolean) => {
+        (articleId: string, currentlyRead: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
             const newValue = !currentlyRead;
             updateArticle.mutate(
                 {
                     articleId,
                     data: { is_read: newValue },
-                    articleType: 'feed',
+                    articleType,
                 },
                 {
                     // Optimistic update handles UI changes immediately
@@ -393,8 +394,8 @@ export default function FollowingScreen() {
                     note={article.note || undefined}
                     articleUrl={article.link}
                     onPress={() => router.push(`/articles/${article.id}`)}
-                    onBookmark={() => handleBookmark(article.id, article.is_read_later || false)}
-                    onToggleRead={() => handleToggleRead(article.id, article.is_read || false)}
+                    onBookmark={() => handleBookmark(article.id, article.is_read_later || false, article.article_type)}
+                    onToggleRead={() => handleToggleRead(article.id, article.is_read || false, article.article_type)}
                 />
             );
         }
@@ -411,6 +412,21 @@ export default function FollowingScreen() {
         );
     };
 
+    const emptyStateMessage = useMemo(() => {
+        switch (activeTab) {
+            case 0:
+                return "No articles for today yet. Check back later!";
+            case 1:
+                return "No saved articles. Swipe right on articles to bookmark them.";
+            case 2:
+                return "No articles yet. Add some feeds to get started!";
+            case 3:
+                return "No recently read articles.";
+            default:
+                return "No articles available.";
+        }
+    }, [activeTab]);
+
     if (isInitialLoading) {
         return (
             <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
@@ -424,7 +440,7 @@ export default function FollowingScreen() {
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
                 />
-                <ArticleListSkeleton count={5} className="mt-28" />
+                <ArticleListSkeleton count={6} className="mt-28" />
             </SafeAreaView>
         );
     }
@@ -448,7 +464,7 @@ export default function FollowingScreen() {
                     estimatedItemSize={120}
                     contentContainerStyle={{
                         paddingTop: headerHeight,
-                        paddingBottom: isPreviewMode ? 80 : 0, // Add padding for banner
+                        paddingBottom: isPreviewMode ? 80 : 16,
                     }}
                     onScroll={scrollHandler}
                     scrollEventThrottle={16}
@@ -456,6 +472,23 @@ export default function FollowingScreen() {
                     onEndReached={handleEndReached}
                     onEndReachedThreshold={0.5}
                     ListFooterComponent={renderFooter}
+                    ListEmptyComponent={
+                        !isInitialLoading ? (
+                            <View className="items-center justify-center px-6 py-20">
+                                <Monicon 
+                                    name="solar:inbox-broken" 
+                                    size={64} 
+                                    color="#90988B" 
+                                />
+                                <Text className="text-center mt-4 font-geist-medium text-lg text-black dark:text-black-dark mb-2">
+                                    Nothing here yet
+                                </Text>
+                                <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">
+                                    {emptyStateMessage}
+                                </Text>
+                            </View>
+                        ) : null
+                    }
                     refreshControl={
                         <RefreshControl
                             refreshing={refreshing}

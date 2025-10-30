@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import and_, delete, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -248,3 +248,59 @@ async def get_all_subscriptions_for_user(db: AsyncSession, *, user_id: UUID) -> 
 
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+async def delete_subscriptions_bulk(
+    db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID
+) -> dict[str, list[UUID]]:
+    """Delete multiple subscriptions in a single query.
+
+    Args:
+        db: Database session
+        feed_ids: List of feed IDs to unsubscribe from
+        user_id: User ID who owns the subscriptions
+
+    Returns:
+        Dictionary with 'deleted_ids' list of successfully deleted feed IDs
+    """
+    stmt = (
+        delete(FeedSubscription)
+        .where(and_(FeedSubscription.user_id == user_id, FeedSubscription.feed_id.in_(feed_ids)))
+        .returning(FeedSubscription.feed_id)
+    )
+
+    result = await db.execute(stmt)
+    deleted_feed_ids = [row[0] for row in result.fetchall()]
+
+    await db.commit()
+
+    return {"deleted_ids": deleted_feed_ids}
+
+
+async def update_subscriptions_folder_bulk(
+    db: AsyncSession, *, feed_ids: list[UUID], folder_id: UUID, user_id: UUID
+) -> dict[str, list[UUID]]:
+    """Update folder for multiple subscriptions in a single query.
+
+    Args:
+        db: Database session
+        feed_ids: List of feed IDs to move
+        folder_id: Target folder ID
+        user_id: User ID who owns the subscriptions
+
+    Returns:
+        Dictionary with 'updated_ids' list of successfully updated feed IDs
+    """
+    stmt = (
+        update(FeedSubscription)
+        .where(and_(FeedSubscription.user_id == user_id, FeedSubscription.feed_id.in_(feed_ids)))
+        .values(folder_id=folder_id)
+        .returning(FeedSubscription.feed_id)
+    )
+
+    result = await db.execute(stmt)
+    updated_feed_ids = [row[0] for row in result.fetchall()]
+
+    await db.commit()
+
+    return {"updated_ids": updated_feed_ids}

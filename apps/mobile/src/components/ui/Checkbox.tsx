@@ -31,7 +31,7 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
                     className
                 )}
                 {...props}>
-                <Monicon name="lucide:check" size={14} color="#FFFFFF" />
+                <AnimatedMonicon name="lucide:check" size={14} color="#FFFFFF" style={animatedStyle} />
             </Pressable>
         );
     }

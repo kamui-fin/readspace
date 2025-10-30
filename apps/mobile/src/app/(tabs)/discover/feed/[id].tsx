@@ -379,6 +379,59 @@ export default function FeedPreviewScreen() {
                     {/* Divider */}
                     <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
+                    {/* You might also like */}
+                    {similarFeeds.length > 0 && (
+                        <View className="px-6 pb-8">
+                            <View className="mb-5 flex-row items-center justify-between">
+                                <Text
+                                    style={{ letterSpacing: -0.36 }}
+                                    className="font-geist-bold text-lg text-black dark:text-black-dark">
+                                    You might also like
+                                </Text>
+                                <Pressable
+                                    onPress={handleSeeAllSimilar}
+                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
+                                    <Monicon
+                                        name="solar:alt-arrow-right-linear"
+                                        size={18}
+                                        color="#90988B"
+                                    />
+                                </Pressable>
+                            </View>
+
+                            {isSimilarLoading ? (
+                                <View className="space-y-4">
+                                    {Array.from({ length: 3 }).map((_, index) => (
+                                        <View key={index} className="flex-row gap-3 py-3">
+                                            <View className="h-14 w-14 rounded-lg bg-mid-grey dark:bg-mid-grey-dark" />
+                                            <View className="flex-1 gap-2">
+                                                <View className="h-4 w-3/4 rounded bg-mid-grey dark:bg-mid-grey-dark" />
+                                                <View className="h-3 w-full rounded bg-mid-grey dark:bg-mid-grey-dark" />
+                                            </View>
+                                        </View>
+                                    ))}
+                                </View>
+                            ) : (
+                                <View>
+                                    {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
+                                        <FeedListItem
+                                            key={suggestedFeed.id}
+                                            feedId={suggestedFeed.id}
+                                            feedUrl={suggestedFeed.url}
+                                            title={suggestedFeed.title || 'Untitled Feed'}
+                                            description={suggestedFeed.description || ''}
+                                            iconUrl={suggestedFeed.image_url || undefined}
+                                            isFollowing={suggestedFeed.is_subscribed || false}
+                                            onFollowRequest={handleSimilarFeedFollowRequest}
+                                        />
+                                    ))}
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* Divider */}
+                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
                     {/* Recent Articles */}
                     <View className="mb-6">
                         <View className="mb-5 flex-row items-center justify-between px-6">
@@ -465,59 +518,6 @@ export default function FeedPreviewScreen() {
                         )}
                     </View>
 
-                    {/* Divider */}
-                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
-
-                    {/* You might also like */}
-                    {similarFeeds.length > 0 && (
-                        <View className="px-6 pb-8">
-                            <View className="mb-5 flex-row items-center justify-between">
-                                <Text
-                                    style={{ letterSpacing: -0.36 }}
-                                    className="font-geist-bold text-lg text-black dark:text-black-dark">
-                                    You might also like
-                                </Text>
-                                <Pressable
-                                    onPress={handleSeeAllSimilar}
-                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
-                                    <Monicon
-                                        name="solar:alt-arrow-right-linear"
-                                        size={18}
-                                        color="#90988B"
-                                    />
-                                </Pressable>
-                            </View>
-
-                            {isSimilarLoading ? (
-                                <View className="space-y-4">
-                                    {Array.from({ length: 3 }).map((_, index) => (
-                                        <View key={index} className="flex-row gap-3 py-3">
-                                            <View className="h-14 w-14 rounded-lg bg-mid-grey dark:bg-mid-grey-dark" />
-                                            <View className="flex-1 gap-2">
-                                                <View className="h-4 w-3/4 rounded bg-mid-grey dark:bg-mid-grey-dark" />
-                                                <View className="h-3 w-full rounded bg-mid-grey dark:bg-mid-grey-dark" />
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <View>
-                                    {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
-                                        <FeedListItem
-                                            key={suggestedFeed.id}
-                                            feedId={suggestedFeed.id}
-                                            feedUrl={suggestedFeed.url}
-                                            title={suggestedFeed.title || 'Untitled Feed'}
-                                            description={suggestedFeed.description || ''}
-                                            iconUrl={suggestedFeed.image_url || undefined}
-                                            isFollowing={suggestedFeed.is_subscribed || false}
-                                            onFollowRequest={handleSimilarFeedFollowRequest}
-                                        />
-                                    ))}
-                                </View>
-                            )}
-                        </View>
-                    )}
                 </ScrollView>
             </SafeAreaView>
 

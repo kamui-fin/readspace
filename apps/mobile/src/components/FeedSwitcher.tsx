@@ -1,6 +1,6 @@
 import { FeedItem } from '@/components/FeedSwitcher/FeedItem';
 import { FolderItem } from '@/components/FeedSwitcher/FolderItem';
-import { FolderPicker } from '@/components/FolderPicker';
+import { FolderPicker, type FolderPickerRef } from '@/components/FolderPicker';
 import { ConfirmationModal } from '@/components/modals/ConfirmationModal';
 import { FolderNameModal } from '@/components/modals/FolderNameModal';
 import { Button } from '@/components/ui/Button';
@@ -14,19 +14,23 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
+    useBulkDeleteFeeds,
+    useBulkUpdateFeedsFolder,
     useCreateFolder,
     useDeleteFeed,
     useDeleteFolder,
     useFeeds,
     useFolders,
     useUpdateFeed,
+    useUpdateFolder,
     type Feed,
     type Folder,
 } from '@readspace/shared';
+import type { FlashList } from '@shopify/flash-list';
 import { usePathname, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { BackHandler, Pressable, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 
 export interface FeedSwitcherRef {
@@ -61,15 +65,19 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 
         const bottomSheetRef = useRef<BottomSheetModal>(null);
         const folderNameModalRef = useRef<BottomSheetModal>(null);
-        const folderPickerRef = useRef<BottomSheetModal>(null);
+        const renameFolderModalRef = useRef<BottomSheetModal>(null);
+        const folderPickerRef = useRef<FolderPickerRef>(null);
         const confirmDeleteRef = useRef<BottomSheetModal>(null);
+        const flashListRef = useRef<FlashList<ListItem>>(null);
 
         const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
         const [isEditMode, setIsEditMode] = useState(false);
         const [selectedFeedIds, setSelectedFeedIds] = useState<Set<string>>(new Set());
         const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
+        const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
+        const [currentIndex, setCurrentIndex] = useState<number>(-1);
 
-        const snapPoints = useMemo(() => ['50%', '75%', '90%'], []);
+        const snapPoints = useMemo(() => ['80%'], []);
 
         // Fetch feeds and folders using TanStack Query
         const {
@@ -88,13 +96,16 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const deleteFeedMutation = useDeleteFeed();
         const deleteFolderMutation = useDeleteFolder();
         const updateFeedMutation = useUpdateFeed();
+        const updateFolderMutation = useUpdateFolder();
+        const bulkDeleteFeedsMutation = useBulkDeleteFeeds();
+        const bulkUpdateFeedsFolderMutation = useBulkUpdateFeedsFolder();
 
         const feeds = useMemo(() => (feedsData as Feed[]) || [], [feedsData]);
         const folders = useMemo(() => (foldersData as Folder[]) || [], [foldersData]);
 
         // Only show loading spinner during initial load before any data arrives
         const isLoading = ((isFeedsLoading || isFeedsFetching) && !isFeedsSuccess && !feedsData) ||
-                         ((isFoldersLoading || isFoldersFetching) && !isFoldersSuccess && !foldersData);
+            ((isFoldersLoading || isFoldersFetching) && !isFoldersSuccess && !foldersData);
 
         // Expose methods to parent
         useImperativeHandle(ref, () => ({
@@ -103,6 +114,22 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         }));
 
         const selectedCount = selectedFeedIds.size + selectedFolderIds.size;
+
+        // Handle back button to close feed switcher
+        useEffect(() => {
+            const onBackPress = () => {
+                if (currentIndex !== -1) {
+                    bottomSheetRef.current?.dismiss();
+                    return true;
+                }
+                return false;
+            };
+
+            if (currentIndex !== -1) {
+                const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+                return () => subscription.remove();
+            }
+        }, [currentIndex]);
 
         const renderBackdrop = useCallback(
             (props: any) => (
@@ -159,6 +186,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         }, [folders, feeds, expandedFolders, selectedFolderIds, selectedFeedIds]);
 
         const toggleFolderExpand = useCallback((folderId: string) => {
+            // Prepare FlashList for layout animation with Reanimated
+            flashListRef.current?.prepareForLayoutAnimationRender();
+
             setExpandedFolders((prev) => {
                 const next = new Set(prev);
                 if (next.has(folderId)) {
@@ -180,6 +210,19 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                         } else {
                             next.add(feedId);
                         }
+
+                        // Clear folder selection if any child feed is modified
+                        const feed = feeds.find((f) => f.id === feedId);
+                        if (feed?.folder_id) {
+                            setSelectedFolderIds((prevFolders) => {
+                                const nextFolders = new Set(prevFolders);
+                                if (feed.folder_id) {
+                                    nextFolders.delete(feed.folder_id);
+                                }
+                                return nextFolders;
+                            });
+                        }
+
                         return next;
                     });
                 } else {
@@ -253,14 +296,6 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             setSelectedFolderIds(new Set());
         }, []);
 
-        const handleMarkAllAsRead = useCallback(() => {
-            // TODO: Implement mark all as read API
-            const feedsToUpdate = Array.from(selectedFeedIds);
-            toast.success(`Marked ${feedsToUpdate.length} feeds as read`);
-            setIsEditMode(false);
-            setSelectedFeedIds(new Set());
-            setSelectedFolderIds(new Set());
-        }, [selectedFeedIds]);
 
         const handleMoveToFolder = useCallback(() => {
             folderPickerRef.current?.present();
@@ -270,25 +305,22 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             async (folderId: string) => {
                 const feedsToMove = Array.from(selectedFeedIds);
                 try {
-                    // Move each feed to the new folder
-                    await Promise.all(
-                        feedsToMove.map((feedId) =>
-                            updateFeedMutation.mutateAsync({
-                                feedId,
-                                data: { folder_id: folderId },
-                            })
-                        )
-                    );
-                    toast.success(`Moved ${feedsToMove.length} feed${feedsToMove.length > 1 ? 's' : ''} to folder`);
+                    // Bulk move feeds using single API call
+                    await bulkUpdateFeedsFolderMutation.mutateAsync({
+                        feedIds: feedsToMove,
+                        folderId,
+                    });
+
+                    // Don't show toast here - the mutation handles success toast
                     setIsEditMode(false);
                     setSelectedFeedIds(new Set());
                     setSelectedFolderIds(new Set());
                 } catch (error) {
-                    toast.error('Failed to move feeds');
+                    // Error toast is handled by mutation, but keep fallback
                     console.error('Error moving feeds:', error);
                 }
             },
-            [selectedFeedIds, updateFeedMutation]
+            [selectedFeedIds, bulkUpdateFeedsFolderMutation]
         );
 
         const handleDeletePress = useCallback(() => {
@@ -300,27 +332,29 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             const foldersToDelete = Array.from(selectedFolderIds);
 
             try {
-                // Delete feeds first
-                await Promise.all(
-                    feedsToDelete.map((feedId) => deleteFeedMutation.mutateAsync({ feedId }))
-                );
+                // Delete folders first (typically fewer, so individual calls are okay)
+                if (foldersToDelete.length > 0) {
+                    await Promise.all(
+                        foldersToDelete.map((folderId) => deleteFolderMutation.mutateAsync(folderId))
+                    );
+                }
 
-                // Then delete folders
-                await Promise.all(
-                    foldersToDelete.map((folderId) => deleteFolderMutation.mutateAsync(folderId))
-                );
+                // Bulk delete feeds using single API call - only if there are feeds to delete
+                if (feedsToDelete.length > 0) {
+                    await bulkDeleteFeedsMutation.mutateAsync({
+                        feedIds: feedsToDelete,
+                    });
+                }
 
-                const totalDeleted = feedsToDelete.length + foldersToDelete.length;
-                toast.success(`Deleted ${totalDeleted} item${totalDeleted > 1 ? 's' : ''}`);
-
+                // Don't show toast here - the mutations handle success toasts
                 setIsEditMode(false);
                 setSelectedFeedIds(new Set());
                 setSelectedFolderIds(new Set());
             } catch (error) {
-                toast.error('Failed to delete items');
+                // Error toasts are handled by mutations, but keep fallback
                 console.error('Error deleting items:', error);
             }
-        }, [selectedFeedIds, selectedFolderIds, deleteFeedMutation, deleteFolderMutation]);
+        }, [selectedFeedIds, selectedFolderIds, bulkDeleteFeedsMutation, deleteFolderMutation]);
 
         const handleCreateFolder = useCallback(
             async (name: string) => {
@@ -338,6 +372,37 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const handleNewFolderPress = useCallback(() => {
             folderNameModalRef.current?.present();
         }, []);
+
+        const handleRenameFolderPress = useCallback(() => {
+            // Get the single selected folder
+            const folderId = Array.from(selectedFolderIds)[0];
+            const folder = folders.find((f) => f.id === folderId);
+            if (folder) {
+                setFolderToRename(folder);
+                renameFolderModalRef.current?.present();
+            }
+        }, [selectedFolderIds, folders]);
+
+        const handleRenameFolder = useCallback(
+            async (name: string) => {
+                if (folderToRename) {
+                    try {
+                        await updateFolderMutation.mutateAsync({
+                            folderId: folderToRename.id,
+                            name,
+                        });
+                        toast.success(`Renamed folder to "${name}"`);
+                        setFolderToRename(null);
+                        setIsEditMode(false);
+                        setSelectedFolderIds(new Set());
+                    } catch (error) {
+                        toast.error('Failed to rename folder');
+                        console.error('Error renaming folder:', error);
+                    }
+                }
+            },
+            [folderToRename, updateFolderMutation]
+        );
 
         const renderItem = useCallback(
             ({ item }: { item: ListItem }) => {
@@ -357,14 +422,13 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     );
                 } else if (item.type === 'feed' && item.feed) {
                     return (
-                        <View className="pl-6">
-                            <FeedItem
-                                feed={item.feed}
-                                isEditMode={isEditMode}
-                                isSelected={item.isSelected || false}
-                                onPress={() => handleFeedPress(item.feed!.id)}
-                            />
-                        </View>
+                        <FeedItem
+                            feed={item.feed}
+                            isEditMode={isEditMode}
+                            isSelected={item.isSelected || false}
+                            onPress={() => handleFeedPress(item.feed!.id)}
+                            isNested
+                        />
                     );
                 }
                 return null;
@@ -379,57 +443,63 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 <Text className="font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                     {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
                 </Text>
-
-                {/* Loading indicator */}
-                {isLoading && !isEditMode && (
-                    <ActivityIndicator size="small" color="#6A994E" />
-                )}
-
-                {/* Edit Mode Actions */}
-                {isEditMode && selectedCount > 0 && (
-                    <View className="flex-row gap-4">
-                        <Pressable
-                            onPress={handleMarkAllAsRead}
-                            className="transition-opacity active:opacity-70">
-                            <Monicon
-                                name="solar:check-read-linear"
-                                size={24}
-                                color="#232222"
-                                className="dark:text-black-dark"
-                            />
-                        </Pressable>
-                        <Pressable
-                            onPress={handleMoveToFolder}
-                            className="transition-opacity active:opacity-70">
-                            <Monicon
-                                name="solar:move-to-folder-linear"
-                                size={24}
-                                color="#232222"
-                                className="dark:text-black-dark"
-                            />
-                        </Pressable>
-                        <Pressable
-                            onPress={handleDeletePress}
-                            className="transition-opacity active:opacity-70">
-                            <Monicon
-                                name="solar:trash-bin-minimalistic-2-linear"
-                                size={24}
-                                color="#E63946"
-                            />
-                        </Pressable>
-                    </View>
-                )}
             </View>
-        ), [isEditMode, selectedCount, isLoading, handleMarkAllAsRead, handleMoveToFolder, handleDeletePress]);
+        ), [isEditMode, selectedCount]);
 
         const renderFooter = useCallback(
             (props: any) => (
                 <BottomSheetFooter {...props}>
                     <View className="border-t border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark px-6 pb-6 pt-4">
                         {isEditMode ? (
-                            <Button variant="secondary" fullWidth onPress={toggleEditMode}>
-                                Cancel
-                            </Button>
+                            <View className="flex-row gap-3">
+                                <View className="flex-1">
+                                    <Button variant="secondary" fullWidth onPress={toggleEditMode}>
+                                        Cancel
+                                    </Button>
+                                </View>
+
+                                {/* Action buttons - only show when items are selected */}
+                                {selectedCount > 0 && (
+                                    <>
+                                        {/* Rename button - only show when exactly 1 folder is selected */}
+                                        {selectedFolderIds.size === 1 && (
+                                            <Pressable
+                                                onPress={handleRenameFolderPress}
+                                                className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                                <Monicon
+                                                    name="solar:pen-2-linear"
+                                                    size={24}
+                                                    color={colors.black}
+                                                />
+                                            </Pressable>
+                                        )}
+
+                                        {/* Move button - show when feeds are selected */}
+                                        {selectedFeedIds.size > 0 && (
+                                            <Pressable
+                                                onPress={handleMoveToFolder}
+                                                className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                                <Monicon
+                                                    name="solar:move-to-folder-linear"
+                                                    size={24}
+                                                    color={colors.black}
+                                                />
+                                            </Pressable>
+                                        )}
+
+                                        {/* Delete button - always show when items are selected */}
+                                        <Pressable
+                                            onPress={handleDeletePress}
+                                            className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                            <Monicon
+                                                name="solar:trash-bin-minimalistic-2-linear"
+                                                size={24}
+                                                color="#E63946"
+                                            />
+                                        </Pressable>
+                                    </>
+                                )}
+                            </View>
                         ) : (
                             <View className="flex-row gap-3">
                                 <View className="flex-1">
@@ -474,7 +544,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     </View>
                 </BottomSheetFooter>
             ),
-            [isEditMode, handleNewFolderPress, toggleEditMode]
+            [isEditMode, selectedCount, selectedFeedIds, selectedFolderIds, handleNewFolderPress, toggleEditMode, handleRenameFolderPress, handleMoveToFolder, handleDeletePress]
         );
 
         return (
@@ -483,36 +553,40 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     ref={bottomSheetRef}
                     snapPoints={snapPoints}
                     enablePanDownToClose
+                    enableDynamicSizing={false}
                     footerComponent={renderFooter}
                     backdropComponent={renderBackdrop}
                     backgroundStyle={{ backgroundColor: colors.white }}
-                    handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                    handleIndicatorStyle={{ backgroundColor: colors.green_grey }}
+                    onChange={setCurrentIndex}>
                     <BottomSheetFlashList
+                        ref={flashListRef}
                         data={listData}
                         renderItem={renderItem}
                         keyExtractor={keyExtractor}
                         estimatedItemSize={50}
                         ListHeaderComponent={renderHeader}
                         ListEmptyComponent={
-                            isLoading ? (
-                                <View className="items-center justify-center py-12">
-                                    <ActivityIndicator size="large" color="#6A994E" />
-                                </View>
-                            ) : (
-                                <View className="items-center justify-center px-6 py-12">
-                                    <Text className="text-center text-base text-grey dark:text-grey-dark">
-                                        No feeds yet. Add some feeds to get started!
-                                    </Text>
-                                </View>
-                            )
+                            <View className="items-center justify-center px-6 py-12">
+                                <Text className="font-geist text-center text-base text-grey dark:text-grey-dark">
+                                    No feeds yet. Add some feeds to get started!
+                                </Text>
+                            </View>
                         }
                         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 100 }}
                         showsVerticalScrollIndicator={false}
+                        enableDynamicSizing={false}
                     />
                 </BottomSheetModal>
 
                 {/* Modals */}
                 <FolderNameModal ref={folderNameModalRef} onCreateFolder={handleCreateFolder} />
+                <FolderNameModal
+                    ref={renameFolderModalRef}
+                    mode="update"
+                    initialName={folderToRename?.name || ''}
+                    onUpdateFolder={handleRenameFolder}
+                />
                 <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
                 <ConfirmationModal
                     ref={confirmDeleteRef}

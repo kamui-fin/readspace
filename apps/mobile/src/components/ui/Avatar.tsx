@@ -1,5 +1,6 @@
 import { cn } from '@/utils/cn';
-import { Image, Text, View } from 'react-native';
+import BoringAvatar from 'react-native-boring-avatars';
+import { Image, View } from 'react-native';
 
 export interface AvatarProps {
     name: string;
@@ -9,18 +10,26 @@ export interface AvatarProps {
 }
 
 export const Avatar = ({ name, imageUrl, size = 64, className }: AvatarProps) => {
+    // Color palette matching the app's design system
+    const colors = ['#386641', '#6A994E', '#90988B', '#D1DBCD', '#F3F3F3'];
+    
     return (
         <View
             className={cn('items-center justify-center overflow-hidden rounded-full', className)}
             style={{ width: size, height: size }}>
             {imageUrl ? (
-                <Image source={{ uri: imageUrl }} className="h-full w-full" resizeMode="cover" />
+                <Image 
+                    source={{ uri: imageUrl }} 
+                    className="h-full w-full" 
+                    resizeMode="cover" 
+                />
             ) : (
-                <View className="h-full w-full items-center justify-center bg-gradient-to-br from-primary to-secondary">
-                    <Text className="font-geist-bold text-white" style={{ fontSize: size * 0.4 }}>
-                        {name.charAt(0).toUpperCase()}
-                    </Text>
-                </View>
+                <BoringAvatar
+                    name={name}
+                    variant="beam"
+                    colors={colors}
+                    size={size}
+                />
             )}
         </View>
     );

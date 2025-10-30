@@ -179,7 +179,7 @@ export const OPMLImportSheet = forwardRef<BottomSheetModal, OPMLImportSheetProps
                   </Text>
                 </View>
               ) : (
-                <Text className="font-geist-semibold text-base text-white">
+                <Text className="font-geist-semibold text-base text-white" numberOfLines={1}>
                   Import {feedCount} {feedCount === 1 ? 'feed' : 'feeds'}
                 </Text>
               )}

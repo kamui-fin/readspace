@@ -3,6 +3,7 @@ import { FeedListItem } from '@/components/FeedListItem';
 import { OnboardingLayout } from '@/components/OnboardingLayout';
 import { Button } from '@/components/ui/Button';
 import { LibraryIcon } from '@/components/ui/icons/LibraryIcon';
+import { useAuth } from '@/contexts/AuthProvider';
 import { useGetRecommendations, useRefreshFeed, useSubscribeToFeed } from '@readspace/shared';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -18,6 +19,7 @@ export default function FeedRecommendationsStep() {
 
     const subscribeToFeed = useSubscribeToFeed();
     const refreshFeed = useRefreshFeed();
+    const { checkOnboardingStatus } = useAuth();
 
     // Parse categories from URL param
     const categoryList = categories ? categories.split(',') : [];
@@ -55,7 +57,9 @@ export default function FeedRecommendationsStep() {
         }
     };
 
-    const handleFinish = () => {
+    const handleFinish = async () => {
+        // Update onboarding status before navigating
+        await checkOnboardingStatus();
         // Navigate to main app
         router.replace('/(tabs)');
     };
@@ -68,7 +72,7 @@ export default function FeedRecommendationsStep() {
     if (isLoading) {
         return (
             <OnboardingLayout
-                currentStep={2}
+                currentStep={1}
                 totalSteps={2}
                 icon={<LibraryIcon size={24} color={iconColor} />}
                 title="Curating your newsfeed..."
@@ -96,7 +100,7 @@ export default function FeedRecommendationsStep() {
     if (error || !recommendationsData?.results?.length) {
         return (
             <OnboardingLayout
-                currentStep={2}
+                currentStep={1}
                 totalSteps={2}
                 icon={<LibraryIcon size={24} color={iconColor} />}
                 title="Having trouble finding sources"
@@ -119,7 +123,7 @@ export default function FeedRecommendationsStep() {
 
     return (
         <OnboardingLayout
-            currentStep={2}
+            currentStep={1}
             totalSteps={2}
             icon={<LibraryIcon size={24} color={iconColor} />}
             title="Picked for you"
@@ -136,6 +140,7 @@ export default function FeedRecommendationsStep() {
                             feedId={feed.id}
                             onFollowRequest={handleFollowRequest}
                             showFolderPicker={false}
+                            disableNavigation={true}
                             className="border-b border-mid-grey dark:border-mid-grey-dark"
                         />
                     ))}

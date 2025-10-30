@@ -16,14 +16,14 @@ export function AISummaryCard({ summary, isLoading = false, onClose }: AISummary
 
     return (
         <Animated.View entering={FadeIn.duration(300)} exiting={FadeOut.duration(200)}>
-            <View className="mx-6 mb-6 overflow-hidden rounded-xl border border-light-grey bg-white shadow-sm">
+            <View className="mx-6 mb-6 overflow-hidden rounded-xl border border-light-grey bg-white shadow-sm dark:border-light-grey-dark dark:bg-white-dark">
                 {/* Header */}
                 <View className="flex-row items-center justify-between px-5 py-4">
                     <View className="flex-1 flex-row items-center gap-3">
-                        <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                        <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10 dark:bg-primary/20">
                             <Monicon name="solar:magic-stick-3-bold" size={16} color="#6A994E" />
                         </View>
-                        <Text className="font-geist-semibold text-base text-black">
+                        <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                             AI Summary
                         </Text>
                     </View>
@@ -31,7 +31,7 @@ export function AISummaryCard({ summary, isLoading = false, onClose }: AISummary
                         {/* Collapse/Expand Button */}
                         <Pressable
                             onPress={() => setIsExpanded(!isExpanded)}
-                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey"
+                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey dark:active:bg-light-grey-dark"
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                             <Monicon
                                 name={
@@ -46,7 +46,7 @@ export function AISummaryCard({ summary, isLoading = false, onClose }: AISummary
                         {/* Close Button */}
                         <Pressable
                             onPress={onClose}
-                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey"
+                            className="h-8 w-8 items-center justify-center rounded-full active:bg-light-grey dark:active:bg-light-grey-dark"
                             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                             <Monicon name="lucide:x" size={18} color="#90988B" />
                         </Pressable>
@@ -55,16 +55,16 @@ export function AISummaryCard({ summary, isLoading = false, onClose }: AISummary
 
                 {/* Content */}
                 {isExpanded && (
-                    <View className="border-t border-light-grey px-5 pb-5 pt-4">
+                    <View className="border-t border-light-grey px-5 pb-5 pt-4 dark:border-light-grey-dark">
                         {isLoading ? (
                             <View className="flex-row items-center gap-3 py-2">
                                 <ActivityIndicator size="small" color="#6A994E" />
-                                <Text className="font-geist text-sm text-grey">
+                                <Text className="font-geist text-sm text-grey dark:text-grey-dark">
                                     Generating summary...
                                 </Text>
                             </View>
                         ) : (
-                            <Text className="font-geist text-[15px] leading-relaxed text-grey">
+                            <Text className="font-geist text-[15px] leading-relaxed text-grey dark:text-grey-dark">
                                 {summary}
                             </Text>
                         )}

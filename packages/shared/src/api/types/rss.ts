@@ -61,14 +61,15 @@ export type SidebarData = {
 
 // OPML Import types
 export type OPMLImportResponse = {
-  processing_mode: "background";
-  task_id: string;
-  message: string;
-  estimated_feeds: number;
-  check_status_url: string;
+  processing_mode?: "background";
+  task_id?: string;
+  message?: string;
+  estimated_feeds?: number;
+  check_status_url?: string;
   // Results when completed (in task status)
   imported_count?: number;
   failed_count?: number;
+  already_existed_count?: number;
   total_feeds?: number;
   errors?: Array<{
     url: string;
@@ -85,10 +86,7 @@ export type OPMLImportResponse = {
   summary?: {
     successful: number;
     already_existed: number;
-    broken_feeds: number;
-    temporary_errors: number;
-    fetch_failures: number;
-    invalid_feeds: number;
+    failed: number;
   };
 };
 
@@ -97,6 +95,13 @@ export type ImportTaskStatus = {
   status: "pending" | "in_progress" | "completed" | "failed";
   message: string;
   result?: OPMLImportResponse;
+  progress?: {
+    completed: number;
+    total: number;
+    successful: number;
+    failed: number;
+    already_existed: number;
+  };
   error?: string;
 };
 
@@ -142,13 +147,13 @@ export type Article = {
   estimated_read_time_minutes: number | null; // Added, made nullable
   custom_metadata: unknown | null; // JSON field with dynamic structure
   feed?:
-    | FeedBasicInfo
-    | {
-        id: string | null;
-        title: string | null;
-        url: string | null;
-        image_url: string | null;
-      }; // More flexible feed object for both RSS and clipped articles
+  | FeedBasicInfo
+  | {
+    id: string | null;
+    title: string | null;
+    url: string | null;
+    image_url: string | null;
+  }; // More flexible feed object for both RSS and clipped articles
   article_type: "feed" | "clipped";
   priority?: string | null; // Added for clipped articles
   note?: string | null; // Added for clipped articles

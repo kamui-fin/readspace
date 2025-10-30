@@ -25,7 +25,7 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
                     )}>
                     {selected && <View className="h-3 w-3 rounded-full bg-secondary dark:bg-secondary" />}
                 </View>
-                <Text className={cn('font-geist-medium text-base text-grey dark:text-grey-dark', labelClassName)}>
+                <Text className={cn('font-geist-medium text-base text-black dark:text-black-dark', labelClassName)}>
                     {label}
                 </Text>
             </Pressable>

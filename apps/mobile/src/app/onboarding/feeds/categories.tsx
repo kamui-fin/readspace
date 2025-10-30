@@ -46,7 +46,7 @@ export default function FeedCategoriesStep() {
 
     return (
         <OnboardingLayout
-            currentStep={1}
+            currentStep={0}
             totalSteps={2}
             icon={<TagIcon size={24} color={iconColor} />}
             title="What topics sound good right now?"

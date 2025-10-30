@@ -38,7 +38,7 @@ const AnimatedTicker = ({
   fontSize?: number;
   fontWeight?: string;
 }) => {
-  const animatedValue = useSharedValue(0);
+  const animatedValue = useSharedValue(value);
 
   useEffect(() => {
     animatedValue.value = withTiming(value, { duration });
@@ -156,45 +156,36 @@ const MOCK_STATES = {
   in_progress_25: {
     status: 'in_progress' as const,
     message: 'Importing feeds...',
-    result: {
-      total_feeds: 340,
-      estimated_feeds: 340,
-      summary: {
-        successful: 14,
-        already_existed: 0,
-        broken_feeds: 17,
-      },
-      errors: [],
+    progress: {
+      completed: 31,
+      total: 340,
+      successful: 14,
+      already_existed: 0,
+      failed: 17,
     },
     error: null,
   },
   in_progress_50: {
     status: 'in_progress' as const,
     message: 'Importing feeds...',
-    result: {
-      total_feeds: 340,
-      estimated_feeds: 340,
-      summary: {
-        successful: 120,
-        already_existed: 25,
-        broken_feeds: 25,
-      },
-      errors: [],
+    progress: {
+      completed: 170,
+      total: 340,
+      successful: 120,
+      already_existed: 25,
+      failed: 25,
     },
     error: null,
   },
   in_progress_75: {
     status: 'in_progress' as const,
     message: 'Importing feeds...',
-    result: {
-      total_feeds: 340,
-      estimated_feeds: 340,
-      summary: {
-        successful: 200,
-        already_existed: 45,
-        broken_feeds: 10,
-      },
-      errors: [],
+    progress: {
+      completed: 255,
+      total: 340,
+      successful: 200,
+      already_existed: 45,
+      failed: 10,
     },
     error: null,
   },
@@ -207,18 +198,20 @@ const MOCK_STATES = {
       summary: {
         successful: 287,
         already_existed: 38,
-        broken_feeds: 15,
+        failed: 15,
       },
       errors: [
         {
           title: 'TechCrunch',
           url: 'https://techcrunch.com/feed/',
           error: 'Feed timeout after 30 seconds',
+          status: 'failed',
         },
         {
           title: 'The Verge',
           url: 'https://www.theverge.com/rss/index.xml',
           error: 'Invalid RSS format',
+          status: 'failed',
         },
       ],
     },
@@ -286,6 +279,10 @@ export default function OPMLStatusPage() {
     setIsCancelling(true);
     try {
       await ApiClient.rss.cancelImportTask(taskId);
+      // Immediately invalidate the import tasks query to update UI
+      await queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+      });
       toast.success('Import cancelled successfully');
       router.back();
     } catch (error) {
@@ -345,15 +342,20 @@ export default function OPMLStatusPage() {
 
   const status = taskStatus?.status;
   const result = taskStatus && 'result' in taskStatus ? taskStatus.result : null;
+  const progressData = taskStatus && 'progress' in taskStatus ? taskStatus.progress : null;
   const error = taskStatus && 'error' in taskStatus ? taskStatus.error : null;
   const message = taskStatus && 'message' in taskStatus ? taskStatus.message : null;
-  const progress = result?.summary;
+
+  // For in_progress status, use progress field; for completed, use result.summary
+  const progress = status === 'in_progress' ? progressData : result?.summary;
   const errors = result?.errors || [];
 
   const totalProcessed = progress
-    ? progress.successful + progress.already_existed + progress.broken_feeds
+    ? progress.successful + progress.already_existed + (progress.failed || 0)
     : 0;
-  const totalFeeds = result?.total_feeds || result?.estimated_feeds || 0;
+  const totalFeeds = status === 'in_progress'
+    ? (progressData?.total || 0)
+    : (result?.total_feeds || result?.estimated_feeds || 0);
   const progressPercentage =
     totalFeeds > 0 ? (totalProcessed / totalFeeds) * 100 : 0;
 
@@ -371,7 +373,7 @@ export default function OPMLStatusPage() {
               color={colors.primary_foreground}
             />
           </Pressable>
-          <Text className="font-geist-medium">
+          <Text className="font-geist-medium text-black dark:text-black-dark">
             Import Status
           </Text>
         </View>
@@ -469,7 +471,7 @@ export default function OPMLStatusPage() {
               </View>
 
               {/* Status Details */}
-              {progress && (progress.successful > 0 || progress.broken_feeds > 0) && (
+              {progress && (progress.successful > 0 || progress.failed > 0) && (
                 <View className="mb-6 flex-row items-center justify-center gap-4">
                   {progress.successful > 0 && (
                     <View className="flex-row items-center gap-1.5">
@@ -486,12 +488,12 @@ export default function OPMLStatusPage() {
                       </View>
                     </View>
                   )}
-                  {progress.broken_feeds > 0 && (
+                  {progress.failed > 0 && (
                     <View className="flex-row items-center gap-1.5">
                       <View className="h-2 w-2 rounded-full bg-red" />
                       <View className="flex-row items-baseline gap-1">
                         <AnimatedTicker
-                          value={progress.broken_feeds}
+                          value={progress.failed}
                           color={colors.grey}
                           fontSize={12}
                         />
@@ -563,7 +565,7 @@ export default function OPMLStatusPage() {
                       </View>
                     )}
 
-                    {progress.broken_feeds > 0 && (
+                    {progress.failed > 0 && (
                       <View className="flex-row items-center justify-between rounded-2xl bg-white dark:bg-white-dark px-4 py-3">
                         <View className="flex-row items-center gap-2.5">
                           <View className="h-2 w-2 rounded-full bg-red" />
@@ -572,7 +574,7 @@ export default function OPMLStatusPage() {
                           </Text>
                         </View>
                         <Text className="font-geist-bold text-base text-red">
-                          {progress.broken_feeds}
+                          {progress.failed}
                         </Text>
                       </View>
                     )}

@@ -1,5 +1,4 @@
-import { FolderPicker } from '@/components/FolderPicker';
-import BottomSheet from '@gorhom/bottom-sheet';
+import { FolderPicker, type FolderPickerRef } from '@/components/FolderPicker';
 import { createContext, useContext, useRef, type ReactNode } from 'react';
 
 interface FolderPickerContextValue {
@@ -9,12 +8,12 @@ interface FolderPickerContextValue {
 const FolderPickerContext = createContext<FolderPickerContextValue | null>(null);
 
 export function FolderPickerProvider({ children }: { children: ReactNode }) {
-    const folderPickerRef = useRef<BottomSheet>(null);
+    const folderPickerRef = useRef<FolderPickerRef>(null);
     const onSelectRef = useRef<((folderId: string) => void) | null>(null);
 
     const openPicker = (onSelect: (folderId: string) => void) => {
         onSelectRef.current = onSelect;
-        folderPickerRef.current?.expand();
+        folderPickerRef.current?.present();
     };
 
     const handleFolderSelect = (folderId: string) => {

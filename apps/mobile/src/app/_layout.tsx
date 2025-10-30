@@ -70,9 +70,10 @@ function RootLayoutNav() {
             // Not authenticated but trying to access protected routes → redirect to welcome
             console.log('[RootLayoutNav] Redirecting to welcome (not authenticated)');
             router.replace('/welcome');
-        } else if (isAuthenticated && needsOnboarding && !inOnboarding) {
-            // Authenticated but needs onboarding and not in onboarding → redirect to onboarding
-            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
+        } else if (isAuthenticated && needsOnboarding && !inOnboarding && onWelcome) {
+            // Authenticated but needs onboarding and on welcome screen → redirect to onboarding
+            // Only redirect from welcome screen to avoid navigation loops
+            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding from welcome)');
             router.replace('/onboarding/feeds/categories');
         } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
             // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
@@ -101,6 +102,7 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
     const { loaded, error } = useFonts();
+    const { colorScheme } = useColorScheme();
 
     useEffect(() => {
         if (error) throw error;
@@ -125,6 +127,7 @@ export default function RootLayout() {
                             <AuthQueryManager />
                             <RootLayoutNav />
                             <Toaster
+                                theme={colorScheme === 'dark' ? 'dark' : 'light'}
                                 position="top-center"
                                 offset={48}
                                 toastOptions={{
@@ -132,8 +135,8 @@ export default function RootLayout() {
                                         borderRadius: 8,
                                         paddingHorizontal: 20,
                                         paddingVertical: 16,
-                                        backgroundColor: '#F9F9F9',
-                                        shadowColor: '#959DA5',
+                                        backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9F9F9',
+                                        shadowColor: colorScheme === 'dark' ? '#000000' : '#959DA5',
                                         shadowOffset: { width: 0, height: 2 },
                                         shadowOpacity: 0.2,
                                         shadowRadius: 4,
@@ -142,12 +145,12 @@ export default function RootLayout() {
                                     titleStyle: {
                                         fontFamily: 'Geist_500Medium',
                                         fontSize: 15,
-                                        color: '#232222',
+                                        color: colorScheme === 'dark' ? '#FFFFFF' : '#232222',
                                     },
                                     descriptionStyle: {
                                         fontFamily: 'Geist_400Regular',
                                         fontSize: 14,
-                                        color: '#90988B',
+                                        color: colorScheme === 'dark' ? '#A0A0A0' : '#90988B',
                                     },
                                 }}
                             />

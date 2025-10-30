@@ -53,10 +53,10 @@ export default function WelcomeScreen() {
             }
 
             console.log('[GoogleSignIn] Successfully signed in with Google');
-            toast.success('Successfully signed in with Google');
-
+            
             // Navigation will be handled by AuthProvider and _layout.tsx
             // based on the needsOnboarding state
+            // The layout will redirect to onboarding if user has no feed subscriptions
         } catch (error: any) {
             if (error.code === statusCodes.SIGN_IN_CANCELLED) {
                 console.log('[GoogleSignIn] User cancelled the sign-in flow');

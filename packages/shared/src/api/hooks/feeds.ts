@@ -1073,6 +1073,216 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
+  function useBulkDeleteFeeds(
+    options?: UseMutationOptions<
+      { deleted_count: number; deleted_ids: string[] },
+      unknown,
+      { feedIds: string[] },
+      {
+        previousFeeds: Feed[] | undefined;
+        previousUnreadCounts: UnreadCounts | undefined;
+      }
+    >,
+  ) {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: ({ feedIds }: { feedIds: string[] }) =>
+        ApiClient.rss.bulkDeleteFeeds(feedIds),
+      onMutate: async ({ feedIds }) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+        });
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+
+        // Snapshot previous values
+        const previousFeeds = queryClient.getQueryData<Feed[]>([
+          RSS_QUERY_KEYS.FEEDS,
+        ]);
+        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
+          RSS_QUERY_KEYS.UNREAD_COUNTS,
+        ]);
+
+        // Optimistically remove feeds
+        queryClient.setQueryData(
+          [RSS_QUERY_KEYS.FEEDS],
+          (old: Feed[] | undefined) => {
+            if (!old) return [];
+            return old.filter((feed: Feed) => !feedIds.includes(feed.id));
+          },
+        );
+
+        // Get feeds being deleted for unread count updates
+        const feedsBeingDeleted = Array.isArray(previousFeeds)
+          ? (previousFeeds as Feed[]).filter((feed: Feed) =>
+              feedIds.includes(feed.id),
+            )
+          : [];
+
+        // Optimistically update unread counts
+        queryClient.setQueryData(
+          [RSS_QUERY_KEYS.UNREAD_COUNTS],
+          (old: UnreadCounts | undefined) => {
+            if (!old || feedsBeingDeleted.length === 0) return old;
+
+            const updatedCounts = { ...old };
+            const totalUnreadReduction = feedsBeingDeleted.reduce(
+              (sum, feed) => sum + (feed.unread_count || 0),
+              0,
+            );
+
+            // Reduce total unread count
+            if (updatedCounts.total_unread) {
+              updatedCounts.total_unread = Math.max(
+                0,
+                updatedCounts.total_unread - totalUnreadReduction,
+              );
+            }
+
+            // Reduce folder unread counts
+            if (updatedCounts.unread_by_folder) {
+              const folderReductions: Record<string, number> = {};
+              feedsBeingDeleted.forEach((feed) => {
+                if (feed.folder_id && feed.unread_count) {
+                  folderReductions[feed.folder_id] =
+                    (folderReductions[feed.folder_id] || 0) + feed.unread_count;
+                }
+              });
+
+              updatedCounts.unread_by_folder =
+                updatedCounts.unread_by_folder.map(
+                  (folder: { folder_id: string; unread_count: number }) => {
+                    const reduction = folderReductions[folder.folder_id] || 0;
+                    return {
+                      ...folder,
+                      unread_count: Math.max(0, folder.unread_count - reduction),
+                    };
+                  },
+                );
+            }
+
+            return updatedCounts;
+          },
+        );
+
+        return { previousFeeds, previousUnreadCounts };
+      },
+      onError: (_, __, context) => {
+        // Rollback on error
+        if (context?.previousFeeds) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.FEEDS],
+            context.previousFeeds,
+          );
+        }
+        if (context?.previousUnreadCounts) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            context.previousUnreadCounts,
+          );
+        }
+        config.showError?.("Failed to delete feeds");
+      },
+      onSuccess: (data) => {
+        config.showSuccess?.(
+          `Deleted ${data.deleted_count} feed${data.deleted_count > 1 ? "s" : ""}`,
+        );
+      },
+      onSettled: () => {
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
+        });
+      },
+      ...options,
+    });
+  }
+
+  function useBulkUpdateFeedsFolder(
+    options?: UseMutationOptions<
+      {
+        updated_count: number;
+        updated_ids: string[];
+        folder_id: string;
+      },
+      unknown,
+      { feedIds: string[]; folderId: string },
+      {
+        previousFeeds: Feed[] | undefined;
+      }
+    >,
+  ) {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: ({
+        feedIds,
+        folderId,
+      }: {
+        feedIds: string[];
+        folderId: string;
+      }) => ApiClient.rss.bulkUpdateFeedsFolder(feedIds, folderId),
+      onMutate: async ({ feedIds, folderId }) => {
+        // Cancel any outgoing refetches
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+        });
+
+        // Snapshot previous values
+        const previousFeeds = queryClient.getQueryData<Feed[]>([
+          RSS_QUERY_KEYS.FEEDS,
+        ]);
+
+        // Optimistically update feeds folder
+        queryClient.setQueryData(
+          [RSS_QUERY_KEYS.FEEDS],
+          (old: Feed[] | undefined) => {
+            if (!old) return [];
+            return old.map((feed: Feed) =>
+              feedIds.includes(feed.id)
+                ? { ...feed, folder_id: folderId }
+                : feed,
+            );
+          },
+        );
+
+        return { previousFeeds };
+      },
+      onError: (_, __, context) => {
+        // Rollback on error
+        if (context?.previousFeeds) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.FEEDS],
+            context.previousFeeds,
+          );
+        }
+        config.showError?.("Failed to move feeds");
+      },
+      onSuccess: (data) => {
+        config.showSuccess?.(
+          `Moved ${data.updated_count} feed${data.updated_count > 1 ? "s" : ""} to folder`,
+        );
+      },
+      onSettled: () => {
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+      },
+      ...options,
+    });
+  }
+
   // Article hooks
   function useArticles(
     params: {
@@ -1638,6 +1848,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useRefreshStatus,
     useDeleteFeed,
     useAdminDeleteFeed,
+    useBulkDeleteFeeds,
+    useBulkUpdateFeedsFolder,
 
     // Article hooks
     useArticles,
@@ -1684,6 +1896,8 @@ export const {
   useRefreshStatus,
   useDeleteFeed,
   useAdminDeleteFeed,
+  useBulkDeleteFeeds,
+  useBulkUpdateFeedsFolder,
 
   // Article hooks
   useArticles,

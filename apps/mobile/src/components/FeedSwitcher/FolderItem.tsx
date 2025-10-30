@@ -3,11 +3,8 @@ import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/utils/cn';
 import { Monicon } from '@monicon/native';
 import type { Folder } from '@readspace/shared';
-import { forwardRef, useEffect } from 'react';
+import { forwardRef } from 'react';
 import { Pressable, Text, type PressableProps } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-
-const AnimatedMonicon = Animated.createAnimatedComponent(Monicon);
 
 export interface FolderItemProps extends Omit<PressableProps, 'children'> {
     folder: Folder;
@@ -39,21 +36,6 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
         },
         ref
     ) => {
-        const rotation = useSharedValue(isExpanded ? 90 : 0);
-
-        useEffect(() => {
-            rotation.value = withSpring(isExpanded ? 90 : 0, {
-                damping: 15,
-                stiffness: 150,
-            });
-        }, [isExpanded, rotation]);
-
-        const animatedIconStyle = useAnimatedStyle(() => {
-            return {
-                transform: [{ rotate: `${rotation.value}deg` }],
-            };
-        });
-
         const handlePress = () => {
             if (isEditMode) {
                 onPress?.();
@@ -88,6 +70,7 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                 onPress={handlePress}
                 onLongPress={handleLongPress}
                 delayLongPress={500}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 className={cn(
                     'flex-row items-center gap-3 py-3 transition-opacity active:opacity-70',
                     className
@@ -112,9 +95,13 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                 {!isEditMode && (
                     <Pressable
                         onPress={handleChevronPress}
-                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                        className="p-2 transition-opacity active:opacity-70">
-                        <Monicon name="solar:alt-arrow-right-linear" size={20} color="#90988B" />
+                        hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
+                        className="transition-opacity active:opacity-70">
+                        <Monicon 
+                            name={isExpanded ? "solar:alt-arrow-down-linear" : "solar:alt-arrow-right-linear"} 
+                            size={20} 
+                            color="#90988B" 
+                        />
                     </Pressable>
                 )}
             </Pressable>

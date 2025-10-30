@@ -49,34 +49,34 @@ export function ArticleReader({
     };
 
     /**
-     * Get priority color based on priority level
+     * Get priority color based on priority level and color scheme
      */
     const getPriorityColor = (priorityLevel: string): string => {
         switch (priorityLevel) {
             case 'high':
-                return '#EF4444'; // red
+                return isDark ? '#FCA5A5' : '#EF4444'; // red-300 : red-500
             case 'medium':
-                return '#F97316'; // orange
+                return isDark ? '#FDBA74' : '#F97316'; // orange-300 : orange-500
             case 'low':
-                return '#10B981'; // green
+                return isDark ? '#6EE7B7' : '#10B981'; // green-300 : green-500
             default:
-                return '#3B82F6'; // blue
+                return isDark ? '#93C5FD' : '#3B82F6'; // blue-300 : blue-500
         }
     };
 
     /**
-     * Get priority background color based on priority level
+     * Get priority background color based on priority level and color scheme
      */
     const getPriorityBgColor = (priorityLevel: string): string => {
         switch (priorityLevel) {
             case 'high':
-                return '#FEE2E2'; // red-100
+                return isDark ? '#7F1D1D' : '#FEE2E2'; // red-900 : red-100
             case 'medium':
-                return '#FFEDD5'; // orange-100
+                return isDark ? '#7C2D12' : '#FFEDD5'; // orange-900 : orange-100
             case 'low':
-                return '#D1FAE5'; // green-100
+                return isDark ? '#064E3B' : '#D1FAE5'; // green-900 : green-100
             default:
-                return '#DBEAFE'; // blue-100
+                return isDark ? '#1E3A8A' : '#DBEAFE'; // blue-900 : blue-100
         }
     };
 
@@ -157,12 +157,10 @@ export function ArticleReader({
                 color: textColor,
             },
             em: {
-                fontFamily: 'EBGaramond_400Regular',
-                fontStyle: 'italic' as const,
+                fontFamily: 'EBGaramond_400Medium_Italic',
             },
             i: {
-                fontFamily: 'EBGaramond_400Regular',
-                fontStyle: 'italic' as const,
+                fontFamily: 'EBGaramond_400Medium_Italic',
             },
             u: {
                 textDecorationLine: 'underline' as const,
@@ -206,11 +204,10 @@ export function ArticleReader({
             },
             // Blockquotes with left border and muted styling
             blockquote: {
-                fontFamily: 'EBGaramond_400Regular',
+                fontFamily: 'EBGaramond_400Medium_Italic',
                 fontSize: 18,
                 lineHeight: 30,
                 color: textColor,
-                fontStyle: 'italic' as const,
                 borderLeftWidth: 4,
                 borderLeftColor: '#6A994E',
                 backgroundColor: lightGreyColor,
@@ -327,7 +324,7 @@ export function ArticleReader({
             },
             // Citation
             cite: {
-                fontFamily: 'EBGaramond_400Regular',
+                fontFamily: 'EBGaramond_400Medium_Italic',
                 fontStyle: 'italic' as const,
                 color: greyColor,
             },
@@ -536,6 +533,9 @@ export function ArticleReader({
             {/* Article Content */}
             <View className="px-6">
                 <RenderHTML
+                    defaultTextProps={{
+                        selectable: true,
+                    }}
                     contentWidth={width - 48}
                     source={{ html: article.content || '<p>No content available</p>' }}
                     tagsStyles={tagsStyles}

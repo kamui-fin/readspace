@@ -37,10 +37,39 @@ export function configureApiClient(readspaceUrl?: string) {
                 return null;
             }
 
+            // Get the current session
             const {
                 data: { session },
             } = await supabase.auth.getSession();
-            return session?.access_token ?? null;
+
+            if (!session) {
+                return null;
+            }
+
+            // Check if token is expired or about to expire (within 60 seconds)
+            const expiresAt = session.expires_at;
+            if (expiresAt) {
+                const now = Math.floor(Date.now() / 1000);
+                const timeUntilExpiry = expiresAt - now;
+
+                // If token expires in less than 60 seconds, refresh it
+                if (timeUntilExpiry < 60) {
+                    console.log('[ApiClient] Token expiring soon, refreshing...');
+                    const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession();
+                    
+                    if (error) {
+                        console.error('[ApiClient] Failed to refresh session:', error);
+                        return session.access_token; // Return old token as fallback
+                    }
+
+                    if (refreshedSession) {
+                        console.log('[ApiClient] Session refreshed successfully');
+                        return refreshedSession.access_token;
+                    }
+                }
+            }
+
+            return session.access_token;
         },
     });
 }

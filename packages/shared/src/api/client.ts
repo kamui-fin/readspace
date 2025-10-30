@@ -394,6 +394,17 @@ export class ApiClient {
     deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
     adminDeleteFeed: (id: string) =>
       this.delete(`/api/rss/feeds/${id}/admin`),
+    bulkDeleteFeeds: (feed_ids: string[]) =>
+      this.post<{
+        deleted_count: number;
+        deleted_ids: string[];
+      }>("/api/rss/feeds/bulk-delete", { feed_ids }),
+    bulkUpdateFeedsFolder: (feed_ids: string[], folder_id: string) =>
+      this.post<{
+        updated_count: number;
+        updated_ids: string[];
+        folder_id: string;
+      }>("/api/rss/feeds/bulk-update-folder", { feed_ids, folder_id }),
     subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
       this.post(`/api/rss/feeds/${feedId}/subscribe`, data),
     getSimilarFeeds: (

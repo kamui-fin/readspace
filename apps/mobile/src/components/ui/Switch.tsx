@@ -4,6 +4,7 @@ import { Pressable, type PressableProps, View } from 'react-native';
 import Animated, {
     interpolate,
     interpolateColor,
+    runOnUI,
     useAnimatedStyle,
     useSharedValue,
     withTiming,
@@ -60,14 +61,21 @@ export const Switch = forwardRef<View, SwitchProps>(
             onValueChange?.(!value);
         };
 
+        const handleLayout = (e: any) => {
+            const h = e.nativeEvent.layout.height;
+            const w = e.nativeEvent.layout.width;
+            runOnUI(() => {
+                'worklet';
+                height.value = h;
+                width.value = w;
+            })();
+        };
+
         return (
             <AnimatedPressable
                 ref={ref}
                 onPress={handlePress}
-                onLayout={(e) => {
-                    height.value = e.nativeEvent.layout.height;
-                    width.value = e.nativeEvent.layout.width;
-                }}
+                onLayout={handleLayout}
                 className={cn('h-8 w-14 rounded-full p-1', className)}
                 style={trackStyle}
                 role="switch"

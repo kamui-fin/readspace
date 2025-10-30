@@ -16,6 +16,7 @@ export interface FeedListItemProps extends PressableProps {
     isPreview?: boolean;
     showFolderPicker?: boolean; // If false, use onFollowRequest instead
     onFollowRequest?: (feedUrl: string) => void | Promise<void>; // For onboarding flow
+    disableNavigation?: boolean; // Disable navigation to feed details
 }
 
 export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedListItemProps>(
@@ -31,6 +32,7 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
             isPreview = false,
             showFolderPicker = true,
             onFollowRequest,
+            disableNavigation = false,
             ...props
         },
         ref
@@ -38,7 +40,9 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
         const router = useRouter();
 
         const handlePress = () => {
-            router.push(`/discover/feed/${feedId}`);
+            if (!disableNavigation) {
+                router.push(`/discover/feed/${feedId}`);
+            }
         };
 
         return (

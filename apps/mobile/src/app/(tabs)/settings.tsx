@@ -18,7 +18,8 @@ import {
   useFeeds,
   useFolders,
 } from '@readspace/shared';
-import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -28,6 +29,7 @@ import { toast } from 'sonner-native';
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, signOut } = useAuth();
   const { theme, setTheme } = useThemeStore();
   const themePickerRef = useRef<BottomSheet>(null);
@@ -50,6 +52,15 @@ export default function SettingsScreen() {
   });
 
   const activeImport = activeImports.length > 0 ? activeImports[0] : null;
+
+  // Refetch import tasks when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      queryClient.invalidateQueries({
+        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+      });
+    }, [queryClient])
+  );
 
   const handleLogout = async () => {
     setLoggingOut(true);
@@ -166,9 +177,7 @@ export default function SettingsScreen() {
             <UserProfile
               name={user?.user_metadata?.full_name || 'User'}
               email={user?.email || ''}
-              avatarUrl={
-                user?.user_metadata?.avatar_url || 'https://i.pravatar.cc/150'
-              }
+              avatarUrl={user?.user_metadata?.avatar_url}
               className="mb-8"
             />
 
@@ -182,7 +191,7 @@ export default function SettingsScreen() {
               />
               <SettingsItem
                 label={
-                  activeImport ? 'Currently importing...' : 'Import Subscriptions'
+                  activeImport ? '1 active import...' : 'Import Subscriptions'
                 }
                 variant="button"
                 onPress={handleOPMLImport}
@@ -225,13 +234,6 @@ export default function SettingsScreen() {
                 variant="link"
                 icon={<DiscordIcon size={24} />}
                 onPress={handleDiscordPress}
-              />
-              <SettingsItem
-                label="[Debug] Onboarding Flow"
-                variant="link"
-                icon={<Monicon name="solar:bug-outline" size={24} color="#90988B" />}
-                onPress={() => router.push('/onboarding/feeds/categories')}
-                isLast
               />
             </SettingsGroup>
           </View>
