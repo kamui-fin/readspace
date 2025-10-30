@@ -6,7 +6,6 @@ import { getSupabaseClient } from '@/lib/supabase/client';
 import { useSettingsStore } from '@/stores/settings';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as Linking from 'expo-linking';
-import * as QueryParams from 'expo-auth-session/build/QueryParams';
 
 interface SignUpCredentials {
     email: string;
@@ -57,24 +56,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
     useEffect(() => {
         const handleDeepLink = async (url: string) => {
             console.log('[AuthProvider] Handling deep link:', url);
-            
-            const { params, errorCode } = QueryParams.getQueryParams(url);
-            
-            if (errorCode) {
-                console.error('[AuthProvider] Deep link error:', errorCode);
+
+            const parsed = Linking.parse(url);
+            const { access_token, refresh_token, error: errorParam } = parsed.queryParams || {};
+
+            if (errorParam) {
+                console.error('[AuthProvider] Deep link error:', errorParam);
                 return;
             }
 
-            const { access_token, refresh_token } = params;
-            
             if (access_token && refresh_token) {
                 console.log('[AuthProvider] Setting session from deep link');
                 const supabase = getSupabaseClient();
                 const { error } = await supabase.auth.setSession({
-                    access_token,
-                    refresh_token,
+                    access_token: access_token as string,
+                    refresh_token: refresh_token as string,
                 });
-                
+
                 if (error) {
                     console.error('[AuthProvider] Error setting session from deep link:', error);
                 }

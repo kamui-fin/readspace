@@ -29,7 +29,17 @@ const config: ExpoConfig = {
         package: 'com.readspace.app',
         softwareKeyboardLayoutMode: 'pan',
     },
-    plugins: ['expo-router'],
+    plugins: [
+        'expo-router',
+        [
+            "expo-build-properties",
+            {
+                android: {
+                    usesCleartextTraffic: true,
+                },
+            },
+        ]
+    ],
     experiments: {
         typedRoutes: true,
         tsconfigPaths: true,

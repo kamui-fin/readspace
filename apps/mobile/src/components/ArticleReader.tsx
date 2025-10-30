@@ -8,6 +8,7 @@ import { useColorScheme } from 'nativewind';
 import { useMemo } from 'react';
 import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import RenderHTML from 'react-native-render-html';
+import Constants from 'expo-constants';
 import { AISummaryCard } from './AISummaryCard';
 
 export interface ArticleReaderProps {
@@ -157,10 +158,10 @@ export function ArticleReader({
                 color: textColor,
             },
             em: {
-                fontFamily: 'EBGaramond_400Medium_Italic',
+                fontFamily: 'EBGaramond_400Regular_Italic',
             },
             i: {
-                fontFamily: 'EBGaramond_400Medium_Italic',
+                fontFamily: 'EBGaramond_400Regular_Italic',
             },
             u: {
                 textDecorationLine: 'underline' as const,
@@ -204,17 +205,14 @@ export function ArticleReader({
             },
             // Blockquotes with left border and muted styling
             blockquote: {
-                fontFamily: 'EBGaramond_400Medium_Italic',
+                fontFamily: 'EBGaramond_400Regular_Italic',
                 fontSize: 18,
                 lineHeight: 30,
                 color: textColor,
                 borderLeftWidth: 4,
                 borderLeftColor: '#6A994E',
                 backgroundColor: lightGreyColor,
-                paddingLeft: 16,
-                paddingRight: 16,
-                paddingTop: 12,
-                paddingBottom: 12,
+                padding: 16,
                 marginTop: 20,
                 marginBottom: 20,
                 marginLeft: 0,
@@ -232,13 +230,13 @@ export function ArticleReader({
             ul: {
                 marginTop: 12,
                 marginBottom: 20,
-                paddingLeft: 0,
+                paddingLeft: 24,
             },
             // Lists - ordered
             ol: {
                 marginTop: 12,
                 marginBottom: 20,
-                paddingLeft: 0,
+                paddingLeft: 24,
             },
             // List items with proper spacing
             li: {
@@ -247,6 +245,7 @@ export function ArticleReader({
                 lineHeight: 30,
                 color: textColor,
                 marginBottom: 8,
+                paddingLeft: 8,
             },
             // Tables
             table: {
@@ -289,13 +288,12 @@ export function ArticleReader({
                 marginRight: 0,
             },
             figcaption: {
-                fontFamily: 'Geist_400Regular',
+                fontFamily: 'EBGaramond_400Regular',
                 fontSize: 14,
                 lineHeight: 20,
                 color: greyColor,
                 textAlign: 'center' as const,
                 marginTop: 8,
-                fontStyle: 'italic' as const,
             },
             // Images
             img: {
@@ -324,7 +322,7 @@ export function ArticleReader({
             },
             // Citation
             cite: {
-                fontFamily: 'EBGaramond_400Medium_Italic',
+                fontFamily: 'EBGaramond_500Medium',
                 fontStyle: 'italic' as const,
                 color: greyColor,
             },
@@ -356,7 +354,6 @@ export function ArticleReader({
             // Definition
             dfn: {
                 fontFamily: 'EBGaramond_600SemiBold',
-                fontStyle: 'italic' as const,
             },
             // Time element
             time: {
@@ -370,9 +367,13 @@ export function ArticleReader({
     const systemFonts = useMemo(
         () => [
             'EBGaramond_400Regular',
+            'EBGaramond_400Regular_Italic',
             'EBGaramond_500Medium',
+            'EBGaramond_500Medium_Italic',
             'EBGaramond_600SemiBold',
+            'EBGaramond_600SemiBold_Italic',
             'EBGaramond_700Bold',
+            'EBGaramond_700Bold_Italic',
             'Geist_400Regular',
             'Geist_500Medium',
             'Geist_600SemiBold',
@@ -381,7 +382,19 @@ export function ArticleReader({
             'GeistMono_500Medium',
             'GeistMono_600SemiBold',
             'GeistMono_700Bold',
+            'serif',
+            ...Constants.systemFonts
         ],
+        []
+    );
+
+    const classesStyles = useMemo(
+        () => ({
+            'list-marker': {
+                marginRight: 8,
+                minWidth: 20,
+            },
+        }),
         []
     );
 
@@ -540,7 +553,25 @@ export function ArticleReader({
                     source={{ html: article.content || '<p>No content available</p>' }}
                     tagsStyles={tagsStyles}
                     systemFonts={systemFonts}
+                    classesStyles={classesStyles}
                     enableExperimentalMarginCollapsing
+                    enableCSSInlineProcessing={false}
+                    renderersProps={{
+                        ul: {
+                            markerTextStyle: {
+                                fontFamily: 'EBGaramond_400Regular',
+                                fontSize: 18,
+                                color: textColor,
+                            },
+                        },
+                        ol: {
+                            markerTextStyle: {
+                                fontFamily: 'EBGaramond_400Regular',
+                                fontSize: 18,
+                                color: textColor,
+                            },
+                        },
+                    }}
                 />
             </View>
         </ScrollView>

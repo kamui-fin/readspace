@@ -21,15 +21,17 @@
         "@monicon/metro": "^1.2.2",
         "@monicon/native": "^1.2.2",
         "@nandorojo/galeria": "^1.2.0",
+        "@native-html/table-plugin": "^5.3.1",
         "@react-native-async-storage/async-storage": "^2.2.0",
         "@react-native-google-signin/google-signin": "^16.0.0",
         "@readspace/shared": "workspace:*",
-        "@shopify/flash-list": "^2.2.0",
+        "@shopify/flash-list": "^2.0.2",
         "@supabase/supabase-js": "^2.76.1",
         "@tanstack/react-query": "^5.90.5",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
-        "expo": "54.0.20",
+        "expo": "54.0.21",
+        "expo-build-properties": "~1.0.9",
         "expo-clipboard": "^8.0.7",
         "expo-constants": "~18.0.10",
         "expo-dev-client": "~6.0.16",
@@ -40,7 +42,7 @@
         "expo-image": "^3.0.10",
         "expo-linear-gradient": "~15.0.7",
         "expo-linking": "~8.0.8",
-        "expo-router": "~6.0.13",
+        "expo-router": "~6.0.14",
         "expo-secure-store": "^15.0.7",
         "expo-sharing": "^14.0.7",
         "expo-splash-screen": "^31.0.10",
@@ -59,7 +61,7 @@
         "react-native-screens": "~4.16.0",
         "react-native-svg": "15.12.1",
         "react-native-url-polyfill": "^3.0.0",
-        "react-native-worklets": "^0.6.1",
+        "react-native-worklets": "^0.5.1",
         "sonner-native": "^0.21.1",
         "zod": "^4.1.12",
         "zustand": "^5.0.8"
@@ -76,6 +78,9 @@
         "prettier-plugin-tailwindcss": "^0.5.11",
         "tailwindcss": "^3.4.0",
         "typescript": "~5.9.2"
+    },
+    "resolutions": {
+        "react-native-svg": "15.12.1"
     },
     "main": "expo-router/entry",
     "private": true
