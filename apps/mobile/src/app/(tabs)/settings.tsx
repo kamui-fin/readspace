@@ -40,25 +40,37 @@ export default function SettingsScreen() {
   const [feedCount, setFeedCount] = useState(0);
   const { settings } = useSettingsStore();
 
-  // Hooks for OPML
-  const { data: feeds } = useFeeds();
-  const { data: folders } = useFolders();
+  // Hooks for OPML - only fetch when user is authenticated
+  const { data: feeds } = useFeeds(undefined, { enabled: !!user });
+  const { data: folders } = useFolders({ enabled: !!user });
 
-  // Check for active imports
+  // Check for active imports - only poll when screen is focused and there are active imports
+  const [shouldPoll, setShouldPoll] = useState(false);
+
   const { data: activeImports = [] } = useQuery<ActiveImportTask[]>({
     queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
     queryFn: () => ApiClient.rss.listImportTasks(),
-    refetchInterval: 5000, // Poll every 5 seconds for updates
+    enabled: !!user, // Only run query when user is authenticated
+    // Only poll when screen is focused AND there are active imports
+    refetchInterval: (query) => {
+      const hasActiveImports = query.state.data && query.state.data.length > 0;
+      return shouldPoll && hasActiveImports ? 5000 : false;
+    },
   });
 
   const activeImport = activeImports.length > 0 ? activeImports[0] : null;
 
-  // Refetch import tasks when screen comes into focus
+  // Refetch import tasks when screen comes into focus and stop polling when leaving
   useFocusEffect(
     useCallback(() => {
+      setShouldPoll(true);
       queryClient.invalidateQueries({
         queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
       });
+
+      return () => {
+        setShouldPoll(false);
+      };
     }, [queryClient])
   );
 

@@ -8,6 +8,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { toast } from 'sonner-native';
+import { getSupabaseClient } from '@/lib/supabase/client';
+import * as Linking from 'expo-linking';
 
 export default function SignupStep2() {
     const router = useRouter();
@@ -25,18 +27,34 @@ export default function SignupStep2() {
 
         setLoading(true);
         try {
-            await signUp({ email, password });
-            toast.success('Account created successfully!');
-            router.replace('/onboarding/feeds/categories');
+            if (settings.instance_type === 'cloud') {
+                // Cloud: Use Supabase directly with email confirmation
+                const supabase = getSupabaseClient();
+                const redirectTo = Linking.createURL('onboarding/feeds/categories');
 
-            // Redirect based on instance type
-            // if (settings.instance_type === 'cloud') {
-            //     // Cloud users go through feed selection onboarding
-            //     router.replace('/onboarding/feeds/categories');
-            // } else {
-            //     // Self-hosted users skip directly to app
-            //     router.replace('/(tabs)');
-            // }
+                const { error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        emailRedirectTo: redirectTo,
+                    },
+                });
+
+                if (error) {
+                    throw new Error(error.message);
+                }
+
+                // Navigate to email verification notice
+                router.push({
+                    pathname: '/onboarding/signup/step-3',
+                    params: { email },
+                });
+            } else {
+                // Self-hosted: Use existing signUp method (no email verification)
+                await signUp({ email, password });
+                toast.success('Account created successfully!');
+                router.replace('/(tabs)');
+            }
         } catch (error) {
             console.error('Sign up error:', error);
             toast.error(error instanceof Error ? error.message : 'Failed to create account');

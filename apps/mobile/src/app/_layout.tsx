@@ -77,8 +77,15 @@ function RootLayoutNav() {
             router.replace('/onboarding/feeds/categories');
         } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
             // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
-            console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
-            router.replace('/(tabs)');
+            // Exception: Don't redirect if on signup step-3 (email verification notice)
+            const onEmailVerification = segments[0] === 'onboarding' && 
+                                       segments[1] === 'signup' && 
+                                       segments[2] === 'step-3';
+            
+            if (!onEmailVerification) {
+                console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
+                router.replace('/(tabs)');
+            }
         }
         // router is stable in Expo Router and doesn't need to be in deps
         // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -65,24 +65,32 @@ async function fetchWithRetry<T>(
   let response = await fetch(url, options);
 
   // If we get a 401, try refreshing the token and retry once
+  // But only if we had a token in the first place (user is logged in)
   if (response.status === 401) {
-    console.log("Received 401, attempting token refresh and retry");
+    const hadToken = options.headers && 'Authorization' in (options.headers as Record<string, string>);
+    
+    if (hadToken) {
+      console.log("Received 401, attempting token refresh and retry");
 
-    try {
-      // Get a fresh token (this should trigger a refresh in Supabase)
-      const freshHeaders = await getAuthHeaders(getAuthToken);
-
-      // Retry the request with fresh token
-      response = await fetch(url, {
-        ...options,
-        headers: {
-          ...freshHeaders,
-          ...options.headers,
-        },
-      });
-    } catch (retryError) {
-      console.warn("Token refresh retry failed:", retryError);
-      // Fall through to handle the original 401 response
+      try {
+        // Get a fresh token (this should trigger a refresh in Supabase)
+        const freshHeaders = await getAuthHeaders(getAuthToken);
+        
+        // Only retry if we got a fresh token
+        if (freshHeaders.Authorization) {
+          // Retry the request with fresh token
+          response = await fetch(url, {
+            ...options,
+            headers: {
+              ...freshHeaders,
+              ...options.headers,
+            },
+          });
+        }
+      } catch (retryError) {
+        console.warn("Token refresh retry failed:", retryError);
+        // Fall through to handle the original 401 response
+      }
     }
   }
 
@@ -242,23 +250,32 @@ export class ApiClient {
       });
 
       // Handle 401 retry for file uploads too
+      // But only if we had a token in the first place (user is logged in)
       if (response.status === 401) {
-        console.log("Upload received 401, attempting token refresh and retry");
+        const hadToken = uploadHeaders.Authorization;
+        
+        if (hadToken) {
+          console.log("Upload received 401, attempting token refresh and retry");
 
-        try {
-          const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { "Content-Type": _, ...freshUploadHeaders } =
-            freshHeaders as Record<string, string>;
+          try {
+            const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
+            
+            // Only retry if we got a fresh token
+            if (freshHeaders.Authorization) {
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const { "Content-Type": _, ...freshUploadHeaders } =
+                freshHeaders as Record<string, string>;
 
-          response = await fetch(url, {
-            method: "POST",
-            body: formData,
-            signal,
-            headers: freshUploadHeaders,
-          });
-        } catch (retryError) {
-          console.warn("Upload token refresh retry failed:", retryError);
+              response = await fetch(url, {
+                method: "POST",
+                body: formData,
+                signal,
+                headers: freshUploadHeaders,
+              });
+            }
+          } catch (retryError) {
+            console.warn("Upload token refresh retry failed:", retryError);
+          }
         }
       }
 

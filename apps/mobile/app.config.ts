@@ -7,7 +7,7 @@ const config: ExpoConfig = {
     orientation: 'portrait',
     icon: './assets/images/icon.png',
     scheme: 'readspace',
-    userInterfaceStyle: 'light',
+    userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     splash: {
         image: './assets/images/splash-icon.png',
@@ -28,11 +28,6 @@ const config: ExpoConfig = {
         edgeToEdgeEnabled: true,
         package: 'com.readspace.app',
         softwareKeyboardLayoutMode: 'pan',
-    },
-    web: {
-        bundler: 'metro',
-        output: 'static',
-        favicon: './assets/images/favicon.png',
     },
     plugins: ['expo-router'],
     experiments: {

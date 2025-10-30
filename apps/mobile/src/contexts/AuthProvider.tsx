@@ -5,6 +5,8 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { getSupabaseClient } from '@/lib/supabase/client';
 import { useSettingsStore } from '@/stores/settings';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+import * as Linking from 'expo-linking';
+import * as QueryParams from 'expo-auth-session/build/QueryParams';
 
 interface SignUpCredentials {
     email: string;
@@ -50,6 +52,51 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const settings = useSettingsStore((state) => state.settings);
 
     const isAuthenticated = !!session;
+
+    // Handle deep linking for email verification
+    useEffect(() => {
+        const handleDeepLink = async (url: string) => {
+            console.log('[AuthProvider] Handling deep link:', url);
+            
+            const { params, errorCode } = QueryParams.getQueryParams(url);
+            
+            if (errorCode) {
+                console.error('[AuthProvider] Deep link error:', errorCode);
+                return;
+            }
+
+            const { access_token, refresh_token } = params;
+            
+            if (access_token && refresh_token) {
+                console.log('[AuthProvider] Setting session from deep link');
+                const supabase = getSupabaseClient();
+                const { error } = await supabase.auth.setSession({
+                    access_token,
+                    refresh_token,
+                });
+                
+                if (error) {
+                    console.error('[AuthProvider] Error setting session from deep link:', error);
+                }
+            }
+        };
+
+        // Handle initial URL if app was opened from a link
+        Linking.getInitialURL().then((url) => {
+            if (url) {
+                handleDeepLink(url);
+            }
+        });
+
+        // Handle URLs while app is running
+        const subscription = Linking.addEventListener('url', ({ url }) => {
+            handleDeepLink(url);
+        });
+
+        return () => {
+            subscription.remove();
+        };
+    }, []);
 
     // Reconfigure clients when settings change (but NOT during initial load)
     useEffect(() => {
