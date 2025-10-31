@@ -29,7 +29,8 @@ const HTML_ENTITIES: Record<string, string> = {
  * @param html - The HTML string to clean
  * @returns The cleaned text with HTML tags removed and entities decoded
  */
-export function stripHtml(html: string): string {
+export function stripHtml(html: string | null | undefined): string {
+    if (!html) return '';
     let text = html;
 
     // Remove HTML tags

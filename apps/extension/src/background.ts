@@ -247,7 +247,7 @@ browser.tabs.onActivated.addListener(async (activeInfo) => {
   }
 })
 
-// Context menu setup
+/* // Context menu setup
 browser.runtime.onInstalled.addListener(async () => {
   // Create context menu for saving to Readspace
   try {
@@ -259,7 +259,7 @@ browser.runtime.onInstalled.addListener(async () => {
   } catch (error) {
     console.error('Failed to create context menu:', error)
   }
-})
+}) */
 
 // Set up Supabase auth state listener to handle token refresh
 // This runs in the background script (persistent service worker)
@@ -324,7 +324,10 @@ async function initializeAuthListener() {
             console.log('✅ Extension store updated with fresh token')
           }
         } catch (error) {
-          console.error('❌ Failed to update store with refreshed token:', error)
+          console.error(
+            '❌ Failed to update store with refreshed token:',
+            error
+          )
         }
       }
 

@@ -2,6 +2,7 @@ import { GOOGLE_WEB_CLIENT_ID } from '@/constants/Config';
 import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
 import { ThemeProvider } from '@/contexts/ThemeProvider';
 import { useFonts } from '@/hooks/useFonts';
+import { useThemeStore } from '@/stores/theme';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -144,18 +145,19 @@ function RootLayoutNav() {
 export default function RootLayout() {
     const { loaded, error } = useFonts();
     const { colorScheme } = useColorScheme();
+    const isThemeHydrated = useThemeStore((state) => state.isHydrated);
 
     useEffect(() => {
         if (error) throw error;
     }, [error]);
 
     useEffect(() => {
-        if (loaded) {
+        if (loaded && isThemeHydrated) {
             SplashScreen.hideAsync();
         }
-    }, [loaded]);
+    }, [loaded, isThemeHydrated]);
 
-    if (!loaded) {
+    if (!loaded || !isThemeHydrated) {
         return null;
     }
 

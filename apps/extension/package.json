@@ -83,7 +83,6 @@
     "permissions": [
       "activeTab",
       "storage",
-      "scripting",
       "notifications",
       "identity",
       "contextMenus"

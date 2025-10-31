@@ -2,7 +2,7 @@ import { FollowButton } from '@/components/FollowButton';
 import { cn } from '@/utils/cn';
 import { stripHtml } from '@/utils/html';
 import { useRouter } from 'expo-router';
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
 
 export interface FeedListItemProps extends PressableProps {
@@ -38,12 +38,16 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
         ref
     ) => {
         const router = useRouter();
+        const [imageError, setImageError] = useState(false);
 
         const handlePress = () => {
             if (!disableNavigation) {
                 router.push(`/discover/feed/${feedId}`);
             }
         };
+
+        // Generate UI Avatars fallback URL
+        const fallbackAvatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(title)}&size=128&background=random&length=2&bold=true&format=png`;
 
         return (
             <>
@@ -58,16 +62,19 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                     {...props}>
                     {/* Icon */}
                     <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
-                        {iconUrl ? (
+                        {iconUrl && !imageError ? (
                             <Image
                                 source={{ uri: iconUrl }}
                                 className="h-full w-full"
                                 resizeMode="cover"
+                                onError={() => setImageError(true)}
                             />
                         ) : (
-                            <Text className="font-geist-bold text-lg text-grey dark:text-grey-dark">
-                                {title.charAt(0).toUpperCase()}
-                            </Text>
+                            <Image
+                                source={{ uri: fallbackAvatarUrl }}
+                                className="h-full w-full"
+                                resizeMode="cover"
+                            />
                         )}
                     </View>
 

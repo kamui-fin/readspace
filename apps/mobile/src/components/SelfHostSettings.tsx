@@ -1,10 +1,12 @@
 import { Button } from '@/components/ui/Button';
+import { COLORS } from '@/constants/Colors';
 import {
     BottomSheetBackdrop,
     BottomSheetModal,
     BottomSheetTextInput,
     BottomSheetView,
 } from '@gorhom/bottom-sheet';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
@@ -28,6 +30,9 @@ export interface SelfHostSettingsProps {
 
 export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsProps>(
     ({ onSave, initialData }, ref) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
+        
         const [apiUrl, setApiUrl] = useState(initialData?.apiUrl || '');
         const [supabaseUrl, setSupabaseUrl] = useState(initialData?.supabaseUrl || '');
         const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
@@ -165,107 +170,107 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 keyboardBlurBehavior="restore"
                 android_keyboardInputMode="adjustResize"
                 backdropComponent={renderBackdrop}
-                backgroundStyle={{ backgroundColor: '#FFFFFF' }}
-                handleIndicatorStyle={{ backgroundColor: '#D1DBCD' }}>
-                <BottomSheetView className="flex-1 px-6 py-4">
-                    <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black">
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6 py-4">
+                    <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Self-hosted connection
                     </Text>
-                    <Text className="mb-6 font-geist text-base text-grey">
+                    <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">
                         Connect to your own Readspace instance
                     </Text>
 
                     <View style={{ gap: 16 }}>
                         <View>
-                            <Text className="mb-2 font-geist-medium text-sm text-black">
+                            <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
                                 API Url
                             </Text>
                             <BottomSheetTextInput
                                 value={apiUrl}
                                 onChangeText={setApiUrl}
                                 placeholder="http://localhost:18008"
-                                placeholderTextColor="#90988B"
+                                placeholderTextColor={colors.grey}
                                 keyboardType="url"
                                 autoCapitalize="none"
                                 autoComplete="off"
                                 autoCorrect={false}
                                 style={{
                                     borderRadius: 16,
-                                    backgroundColor: '#F3F3F3',
+                                    backgroundColor: colors['mid-grey'],
                                     paddingHorizontal: 20,
                                     paddingVertical: 16,
                                     fontSize: 16,
                                     fontFamily: 'GeistMono_400Regular',
-                                    color: '#232222',
+                                    color: colors.black,
                                     borderWidth: errors.apiUrl ? 2 : 0,
-                                    borderColor: errors.apiUrl ? '#EA4335' : 'transparent',
+                                    borderColor: errors.apiUrl ? colors.red : 'transparent',
                                 }}
                             />
                             {errors.apiUrl && (
-                                <Text className="mt-1 font-geist text-xs text-red">
+                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
                                     {errors.apiUrl}
                                 </Text>
                             )}
                         </View>
 
                         <View>
-                            <Text className="mb-2 font-geist-medium text-sm text-black">
+                            <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
                                 Supabase Url
                             </Text>
                             <BottomSheetTextInput
                                 value={supabaseUrl}
                                 onChangeText={setSupabaseUrl}
                                 placeholder="http://localhost:18000"
-                                placeholderTextColor="#90988B"
+                                placeholderTextColor={colors.grey}
                                 keyboardType="url"
                                 autoCapitalize="none"
                                 autoComplete="off"
                                 autoCorrect={false}
                                 style={{
                                     borderRadius: 16,
-                                    backgroundColor: '#F3F3F3',
+                                    backgroundColor: colors['mid-grey'],
                                     paddingHorizontal: 20,
                                     paddingVertical: 16,
                                     fontSize: 16,
                                     fontFamily: 'GeistMono_400Regular',
-                                    color: '#232222',
+                                    color: colors.black,
                                     borderWidth: errors.supabaseUrl ? 2 : 0,
-                                    borderColor: errors.supabaseUrl ? '#EA4335' : 'transparent',
+                                    borderColor: errors.supabaseUrl ? colors.red : 'transparent',
                                 }}
                             />
                             {errors.supabaseUrl && (
-                                <Text className="mt-1 font-geist text-xs text-red">
+                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
                                     {errors.supabaseUrl}
                                 </Text>
                             )}
                         </View>
 
                         <View>
-                            <Text className="mb-2 font-geist-medium text-sm text-black">
+                            <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
                                 Supabase Anonymous Key
                             </Text>
                             <BottomSheetTextInput
                                 value={supabaseAnonKey}
                                 onChangeText={setSupabaseAnonKey}
                                 placeholder="Your anonymous key"
-                                placeholderTextColor="#90988B"
+                                placeholderTextColor={colors.grey}
                                 autoCapitalize="none"
                                 autoComplete="off"
                                 autoCorrect={false}
                                 style={{
                                     borderRadius: 16,
-                                    backgroundColor: '#F3F3F3',
+                                    backgroundColor: colors['mid-grey'],
                                     paddingHorizontal: 20,
                                     paddingVertical: 16,
                                     fontSize: 16,
                                     fontFamily: 'GeistMono_400Regular',
-                                    color: '#232222',
+                                    color: colors.black,
                                     borderWidth: errors.supabaseAnonKey ? 2 : 0,
-                                    borderColor: errors.supabaseAnonKey ? '#EA4335' : 'transparent',
+                                    borderColor: errors.supabaseAnonKey ? colors.red : 'transparent',
                                 }}
                             />
                             {errors.supabaseAnonKey && (
-                                <Text className="mt-1 font-geist text-xs text-red">
+                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
                                     {errors.supabaseAnonKey}
                                 </Text>
                             )}
@@ -284,7 +289,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                         {isValidating ? (
                             <View className="flex-row items-center gap-2">
                                 <ActivityIndicator size="small" color="#FFFFFF" />
-                                <Text className="font-geist-semibold text-base text-white">
+                                <Text className="font-geist-semibold text-base text-white dark:text-white">
                                     Validating...
                                 </Text>
                             </View>

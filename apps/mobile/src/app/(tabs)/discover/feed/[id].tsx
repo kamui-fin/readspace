@@ -51,6 +51,8 @@ export default function FeedPreviewScreen() {
 
     // Ref to track if preview refresh has already been triggered
     const hasRefreshedPreview = useRef(false);
+    // State to track if we need to wait for preview refresh before showing articles
+    const [shouldWaitForPreview, setShouldWaitForPreview] = useState(false);
 
     const queryClient = useQueryClient();
 
@@ -73,6 +75,7 @@ export default function FeedPreviewScreen() {
     const shouldShowPreviewBanner = !!(feed && feed.is_subscribed === false);
 
     // Fetch preview articles for the feed
+    // Don't fetch articles until preview refresh is done (if in preview mode)
     const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery<{
         items: Article[];
         total: number;
@@ -85,7 +88,7 @@ export default function FeedPreviewScreen() {
             });
             return response;
         },
-        enabled: !!id,
+        enabled: !!id && !shouldWaitForPreview,
     });
 
     // Fetch similar feeds (top 4 for preview)
@@ -103,23 +106,33 @@ export default function FeedPreviewScreen() {
     // Use local state if available, otherwise fall back to feed data
     const isFollowing = localIsSubscribed !== null ? localIsSubscribed : (feed?.is_subscribed || false);
 
+    // Check if feed is dead (no articles published in last 6 months)
+    const isFeedDead = articles.length > 0 && articles[0].published_at
+        ? new Date().getTime() - new Date(articles[0].published_at).getTime() > 6 * 30 * 24 * 60 * 60 * 1000
+        : false;
+
     // Preview mode: refresh feed on mount to get latest articles
     useEffect(() => {
         if (shouldShowPreviewBanner && id && !hasRefreshedPreview.current) {
             hasRefreshedPreview.current = true;
+            setShouldWaitForPreview(true);
             setIsPreviewRefreshing(true);
 
             // Call API directly with preview=true parameter
             ApiClient.rss
                 .refreshFeed(id, true, true)
-                .then((feedData) => {
+                .then(async (feedData) => {
                     // Store the feed data from refresh response (cast to FeedDiscoveryResult)
                     setPreviewFeedData(feedData as unknown as FeedDiscoveryResult);
-                    // Trigger articles refetch
-                    refetchArticles();
+                    // Enable articles query and trigger refetch
+                    setShouldWaitForPreview(false);
+                    // Wait for articles to be fetched before hiding loading state
+                    await refetchArticles();
                 })
                 .catch((error) => {
                     console.error('Preview refresh failed:', error);
+                    // Enable articles query even on error
+                    setShouldWaitForPreview(false);
                 })
                 .finally(() => {
                     setIsPreviewRefreshing(false);
@@ -263,17 +276,26 @@ export default function FeedPreviewScreen() {
                         </Pressable>
 
                         {/* Feed Icon */}
-                        <View className="mb-4 h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark">
-                            {feed.image_url ? (
-                                <Image
-                                    source={{ uri: feed.image_url }}
-                                    className="h-full w-full"
-                                    resizeMode="cover"
-                                />
-                            ) : (
-                                <Text className="font-geist-bold text-3xl text-grey dark:text-grey-dark">
-                                    {(feed.title || 'F').charAt(0).toUpperCase()}
-                                </Text>
+                        <View className="mb-4 relative">
+                            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark">
+                                {feed.image_url ? (
+                                    <Image
+                                        source={{ uri: feed.image_url }}
+                                        className="h-full w-full"
+                                        resizeMode="cover"
+                                    />
+                                ) : (
+                                    <Text className="font-geist-bold text-3xl text-grey dark:text-grey-dark">
+                                        {(feed.title || 'F').charAt(0).toUpperCase()}
+                                    </Text>
+                                )}
+                            </View>
+                            {isFeedDead && (
+                                <View className="absolute -top-1 -right-1 rounded-full bg-red px-2.5 py-1 border-2 border-white dark:border-white-dark shadow-sm">
+                                    <Text className="font-geist-semibold text-xs text-white">
+                                        Inactive
+                                    </Text>
+                                </View>
                             )}
                         </View>
 
@@ -383,55 +405,53 @@ export default function FeedPreviewScreen() {
                     <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
 
                     {/* You might also like */}
-                    {similarFeeds.length > 0 && (
-                        <View className="px-6 pb-8">
-                            <View className="mb-5 flex-row items-center justify-between">
-                                <Text
-                                    style={{ letterSpacing: -0.36 }}
-                                    className="font-geist-bold text-lg text-black dark:text-black-dark">
-                                    You might also like
-                                </Text>
-                                <Pressable
-                                    onPress={handleSeeAllSimilar}
-                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
-                                    <Monicon
-                                        name="solar:alt-arrow-right-linear"
-                                        size={18}
-                                        color="#90988B"
-                                    />
-                                </Pressable>
-                            </View>
-
-                            {isSimilarLoading ? (
-                                <View className="space-y-4">
-                                    {Array.from({ length: 3 }).map((_, index) => (
-                                        <View key={index} className="flex-row gap-3 py-3">
-                                            <View className="h-14 w-14 rounded-lg bg-mid-grey dark:bg-mid-grey-dark" />
-                                            <View className="flex-1 gap-2">
-                                                <View className="h-4 w-3/4 rounded bg-mid-grey dark:bg-mid-grey-dark" />
-                                                <View className="h-3 w-full rounded bg-mid-grey dark:bg-mid-grey-dark" />
-                                            </View>
-                                        </View>
-                                    ))}
-                                </View>
-                            ) : (
-                                <View>
-                                    {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
-                                        <FeedListItem
-                                            key={suggestedFeed.id}
-                                            feedId={suggestedFeed.id}
-                                            feedUrl={suggestedFeed.url}
-                                            title={suggestedFeed.title || 'Untitled Feed'}
-                                            description={suggestedFeed.description || ''}
-                                            iconUrl={suggestedFeed.image_url || undefined}
-                                            isFollowing={suggestedFeed.is_subscribed || false}
-                                            onFollowRequest={handleSimilarFeedFollowRequest}
-                                        />
-                                    ))}
-                                </View>
-                            )}
+                    <View className="px-6 pb-8">
+                        <View className="mb-5 flex-row items-center justify-between">
+                            <Text
+                                style={{ letterSpacing: -0.36 }}
+                                className="font-geist-bold text-lg text-black dark:text-black-dark">
+                                You might also like
+                            </Text>
+                            <Pressable
+                                onPress={handleSeeAllSimilar}
+                                className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
+                                <Monicon
+                                    name="solar:alt-arrow-right-linear"
+                                    size={18}
+                                    color="#90988B"
+                                />
+                            </Pressable>
                         </View>
-                    )}
+
+                        {isSimilarLoading ? (
+                            <View className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <View key={index} className="flex-row gap-3 py-3">
+                                        <ShimmerView width={56} height={56} borderRadius={8} />
+                                        <View className="flex-1 gap-2">
+                                            <ShimmerView width="75%" height={16} borderRadius={4} />
+                                            <ShimmerView width="100%" height={12} borderRadius={4} />
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : similarFeeds.length > 0 ? (
+                            <View>
+                                {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
+                                    <FeedListItem
+                                        key={suggestedFeed.id}
+                                        feedId={suggestedFeed.id}
+                                        feedUrl={suggestedFeed.url}
+                                        title={suggestedFeed.title || 'Untitled Feed'}
+                                        description={suggestedFeed.description || ''}
+                                        iconUrl={suggestedFeed.image_url || undefined}
+                                        isFollowing={suggestedFeed.is_subscribed || false}
+                                        onFollowRequest={handleSimilarFeedFollowRequest}
+                                    />
+                                ))}
+                            </View>
+                        ) : null}
+                    </View>
 
                     {/* Divider */}
                     <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
@@ -467,7 +487,7 @@ export default function FeedPreviewScreen() {
                             )}
                         </View>
 
-                        {isArticlesLoading || isPreviewRefreshing ? (
+                        {isArticlesLoading || isPreviewRefreshing || shouldWaitForPreview ? (
                             <FlatList
                                 data={[1, 2, 3]}
                                 horizontal

@@ -79,8 +79,8 @@ export default function DiscoverScreen() {
         }
     );
 
-    // Only show skeleton on initial load, not on refetch
-    const showTrendingSkeleton = (isTrendingLoading || isTrendingFetching) && !isTrendingSuccess && !trendingData;
+    // Show skeleton until we have data
+    const showTrendingSkeleton = (isTrendingLoading || isTrendingFetching) && (!trendingData || trendingData.length === 0);
 
 
     // Search query for category or text search

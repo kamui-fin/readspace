@@ -116,10 +116,6 @@ export default function FollowingScreen() {
 
     const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isSuccess } = activeQuery;
 
-    // Use a more precise loading check: show skeleton only during initial load before any data arrives
-    // Once we have data (isSuccess), never show skeleton again - just show the data
-    const isInitialLoading = (isLoading || isFetching) && !isSuccess && !data;
-
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
         if (!data?.pages || !Array.isArray(data.pages)) return [];
@@ -278,6 +274,10 @@ export default function FollowingScreen() {
         return items;
     }, [allArticles]);
 
+    // Show skeleton during initial load until we have items ready to render
+    // Keep skeleton visible if we're loading AND don't have any items yet
+    const isInitialLoading = (isLoading || isFetching) && listItems.length === 0;
+
     const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         scrollY.value = event.nativeEvent.contentOffset.y;
     };
@@ -363,7 +363,7 @@ export default function FollowingScreen() {
                 typeof article.feed === 'object' && article.feed
                     ? article.feed.image_url
                     : undefined;
-            
+
             // Try multiple ways to get the feed ID
             let feedId: string | undefined;
             if (typeof article.feed === 'object' && article.feed) {
@@ -371,7 +371,7 @@ export default function FollowingScreen() {
             } else if (typeof article.feed === 'string') {
                 feedId = article.feed;
             }
-            
+
             // Check if there's a feed_id field directly on the article
             if (!feedId && (article as any).feed_id) {
                 feedId = (article as any).feed_id;

@@ -412,7 +412,7 @@ export function ArticleReader({
     } else if (typeof article.feed === 'string') {
         feedId = article.feed;
     }
-    
+
     // Check if there's a feed_id field directly on the article
     if (!feedId && (article as any).feed_id) {
         feedId = (article as any).feed_id;
@@ -452,6 +452,42 @@ export function ArticleReader({
     }, [article.content, article.estimated_read_time_minutes]);
 
     const readTime = `${readTimeMinutes} min read`;
+
+    // Remove the first image from HTML content if it matches the featured image
+    const cleanedContent = useMemo(() => {
+        if (!article.content || !article.image_url) return article.content;
+        // Normalize URLs by decoding HTML entities
+        const normalizeUrl = (url: string) => {
+            return url
+                .replace(/&amp;/g, '&')
+                .replace(/&#038;/g, '&')
+                .replace(/&quot;/g, '"')
+                .replace(/&#039;/g, "'");
+        };
+
+        const normalizedImageUrl = normalizeUrl(article.image_url);
+        let content = article.content;
+
+        // Remove img tags that match the featured image
+        const imgPattern = /<img[^>]*src=["'][^"']*["'][^>]*>/gi;
+        content = content.replace(imgPattern, (match) => {
+            const normalizedMatch = normalizeUrl(match);
+            return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
+        });
+
+        // Remove figure tags containing the featured image (do this first)
+        const figurePattern = /<figure[^>]*>[\s\S]*?<img[^>]*src=["'][^"']*["'][^>]*>[\s\S]*?<\/figure>/gi;
+        content = content.replace(figurePattern, (match) => {
+            const normalizedMatch = normalizeUrl(match);
+            return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
+        });
+
+        // Clean up any empty figure tags left behind
+        content = content.replace(/<figure[^>]*>\s*<figcaption>\s*<\/figcaption>\s*<\/figure>/gi, '');
+        content = content.replace(/<figure[^>]*>\s*<\/figure>/gi, '');
+
+        return content;
+    }, [article.content, article.image_url]);
 
     return (
         <ScrollView className="flex-1 bg-white dark:bg-white-dark" contentContainerStyle={{ paddingBottom: 80 }}>
@@ -595,7 +631,7 @@ export function ArticleReader({
                         selectable: true,
                     }}
                     contentWidth={width - 48}
-                    source={{ html: article.content || '<p>No content available</p>' }}
+                    source={{ html: cleanedContent || '<p>No content available</p>' }}
                     tagsStyles={tagsStyles}
                     systemFonts={systemFonts}
                     classesStyles={classesStyles}

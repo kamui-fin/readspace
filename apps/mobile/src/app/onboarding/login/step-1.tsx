@@ -69,7 +69,7 @@ export default function LoginStep1() {
                         {isSelfHosted ? (
                             <>
                                 <View className="flex-1">
-                                    <Text className="font-geist-medium text-sm text-black">
+                                    <Text className="font-geist-medium text-sm text-black dark:text-grey">
                                         Using{' '}
                                         <Text className="font-geist-mono text-xs text-grey">
                                             {settings.readspace_url}

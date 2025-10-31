@@ -4,6 +4,24 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import * as SecureStore from 'expo-secure-store';
 import { getSettings } from '@/stores/settings';
 
+// Remove non-essential metadata to keep session size under SecureStore's 2048 byte limit
+function removeUserMetaData(itemValue: string): string {
+    try {
+        const parsedItemValue = JSON.parse(itemValue);
+
+        // Remove less sensitive properties that can make the session too large
+        if (parsedItemValue?.user) {
+            delete parsedItemValue.user.identities;
+            delete parsedItemValue.user.user_metadata;
+        }
+
+        return JSON.stringify(parsedItemValue);
+    } catch (error) {
+        console.error('Error parsing session data:', error);
+        return itemValue;
+    }
+}
+
 // Create an adapter for expo-secure-store that implements AsyncStorage interface
 const SecureStoreAdapter = {
     getItem: async (key: string): Promise<string | null> => {
@@ -16,7 +34,7 @@ const SecureStoreAdapter = {
     },
     setItem: async (key: string, value: string): Promise<void> => {
         try {
-            await SecureStore.setItemAsync(key, value);
+            await SecureStore.setItemAsync(key, removeUserMetaData(value));
         } catch (error) {
             console.error(`Error setting item ${key} in SecureStore:`, error);
             throw error;

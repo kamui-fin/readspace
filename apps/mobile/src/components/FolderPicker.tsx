@@ -35,7 +35,7 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
         const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
             initialFolderId ?? null
         );
-        const snapPoints = useMemo(() => ['50%', '75%'], []);
+        const snapPoints = useMemo(() => ['70%', '90%'], []);
         const { data: folders } = useFolders();
 
         const typedFolders = (folders as { id: string; name: string }[]) || [];

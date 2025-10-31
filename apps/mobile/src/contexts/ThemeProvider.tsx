@@ -10,7 +10,7 @@ import { Appearance } from 'react-native';
  * - Applying theme to NativeWind's colorScheme
  */
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const { theme, systemColorScheme, setSystemColorScheme } = useThemeStore();
+    const { theme, systemColorScheme, setSystemColorScheme, isHydrated } = useThemeStore();
     const { setColorScheme } = useColorScheme();
 
     // Listen to system theme changes
@@ -32,10 +32,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             userTheme: theme,
             systemScheme: systemColorScheme,
             effectiveScheme,
+            isHydrated,
         });
 
         setColorScheme(effectiveScheme);
-    }, [theme, systemColorScheme, setColorScheme]);
+    }, [theme, systemColorScheme, setColorScheme, isHydrated]);
 
     return <>{children}</>;
 }
