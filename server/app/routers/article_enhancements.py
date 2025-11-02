@@ -11,9 +11,9 @@ from app.core.custom_exceptions import ServiceUnavailableError
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.services.ai_service import get_ai_service
+from app.services.article_management_service import ArticleManagementService
 from app.services.auth import get_current_user
 from app.services.content_extraction_service import ContentExtractionService
-from app.services.rss_service import RssOrchestrationService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])
@@ -157,11 +157,11 @@ async def summarize_article(
             user_id=user.sub,
         )
 
-        rss_service = RssOrchestrationService(db, UUID(user.sub))
+        article_service = ArticleManagementService(db, UUID(user.sub))
         ai_service = get_ai_service()
 
         # Get the article to verify ownership and get content
-        article = await rss_service.get_article(article_id)
+        article = await article_service.get_article(article_id)
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
@@ -245,11 +245,11 @@ async def translate_article(
             user_id=user.sub,
         )
 
-        rss_service = RssOrchestrationService(db, UUID(user.sub))
+        article_service = ArticleManagementService(db, UUID(user.sub))
         ai_service = get_ai_service()
 
         # Get the article to verify ownership and get content
-        article = await rss_service.get_article(article_id)
+        article = await article_service.get_article(article_id)
         if not article:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 

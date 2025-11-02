@@ -1,0 +1,1058 @@
+# ruff: noqa: S608
+
+"""RSS Feed Search Service for discovery functionality."""
+
+import re
+from typing import Any
+
+import structlog
+from sqlalchemy import or_, select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.config import get_settings
+from app.models.rss_models import Feed, FeedCategory
+from app.services.ai_service import get_ai_service
+from app.utils.rsshub_url_transformer import transform_rsshub_url
+
+logger = structlog.get_logger(__name__)
+
+
+class RssSearchService:
+    """Service for searching and discovering RSS feeds using hybrid search."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+        self.settings = get_settings()
+        self.ai_service = get_ai_service() if self.settings.ENABLE_AI else None
+
+    def _normalize_url(self, url_str: str | None) -> str | None:
+        """Normalize URL for API responses, preserving original schemes like rsshub://"""
+        if not url_str:
+            return None
+        url_str = str(url_str).strip()
+
+        # Keep rsshub:// URLs as-is for display purposes
+        if url_str.startswith("rsshub://"):
+            return url_str
+
+        # If it's already a valid web URL, validate it
+        if url_str.startswith(("http://", "https://")):
+            try:
+                from urllib.parse import urlparse
+
+                parsed = urlparse(url_str)
+
+                # Comprehensive validation for netloc (domain part)
+                if not parsed.netloc or " " in parsed.netloc:
+                    return None
+
+                # Check for common malformed URL patterns
+                netloc = parsed.netloc.lower()
+
+                # Invalid characters in domain/port
+                if any(char in netloc for char in [",", ";", "|", "<", ">", "[", "]", "{", "}"]):
+                    logger.warning(
+                        "Malformed URL detected with invalid characters in netloc", url=url_str, netloc=netloc
+                    )
+                    return None
+
+                # Check for valid port if present
+                if ":" in netloc:
+                    domain_port = netloc.split(":")
+                    if len(domain_port) > 2:  # More than one colon (invalid IPv4)
+                        return None
+                    if len(domain_port) == 2:
+                        try:
+                            port = int(domain_port[1])
+                            if not (1 <= port <= 65535):
+                                return None
+                        except ValueError:
+                            # Port is not a valid integer
+                            return None
+
+                return url_str
+            except Exception as e:
+                logger.warning("URL parsing failed during normalization", url=url_str, error=str(e))
+                return None
+
+        # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
+        if ":" in url_str and not url_str.startswith(("http://", "https://", "rsshub://")):
+            return None
+
+        # Otherwise, assume it's a web URL missing the protocol and add it.
+        return f"https://{url_str}"
+
+    def _is_valid_url(self, query: str) -> bool:
+        """Check if query looks like a valid URL."""
+        if not query or not isinstance(query, str):
+            return False
+
+        query = query.strip()
+
+        # Check for RSS feed URLs (http/https)
+        url_pattern = re.compile(
+            r"^https?://"  # http:// or https://
+            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
+            r"localhost|"  # localhost...
+            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
+            r"(?::\d+)?"  # optional port
+            r"(?:/?|[/?]\S+)$",
+            re.IGNORECASE,
+        )
+
+        return bool(url_pattern.match(query))
+
+    def _is_website_url(self, query: str) -> bool:
+        """Check if query looks like a website URL (not necessarily RSS feed)."""
+        if not query or not isinstance(query, str):
+            return False
+
+        query = query.strip()
+
+        # Broader pattern that includes websites without http://
+        website_pattern = re.compile(
+            r"^(?:https?://)?"  # Optional http:// or https://
+            r"(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|"  # domain...
+            r"localhost|"  # localhost...
+            r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})"  # ...or ip
+            r"(?::\d+)?"  # optional port
+            r"(?:/?|[/?]\S+)?$",
+            re.IGNORECASE,
+        )
+
+        return bool(website_pattern.match(query))
+
+    def _is_rsshub_url(self, query: str) -> bool:
+        """Check if query is an rsshub:// URL."""
+        if not query or not isinstance(query, str):
+            return False
+        return query.strip().lower().startswith("rsshub://")
+
+    def _detect_subreddit(self, query: str) -> str | None:
+        """Detect if query is a subreddit pattern and return the RSS URL."""
+        if not query or not isinstance(query, str):
+            return None
+
+        query = query.strip()
+
+        # Patterns: r/cats, /r/cats, r/cats/
+        subreddit_patterns = [
+            r"^r/([a-zA-Z0-9_]+)/?$",  # r/cats
+            r"^/r/([a-zA-Z0-9_]+)/?$",  # /r/cats
+        ]
+
+        for pattern in subreddit_patterns:
+            match = re.match(pattern, query)
+            if match:
+                subreddit_name = match.group(1)
+                reddit_rss_url = f"https://www.reddit.com/r/{subreddit_name}/.rss"
+                logger.debug(
+                    "Subreddit detected",
+                    query=query,
+                    subreddit=subreddit_name,
+                    rss_url=reddit_rss_url,
+                )
+                return reddit_rss_url
+
+        return None
+
+    def _generate_url_variations(self, url: str) -> list[str]:
+        """Generate URL variations for comprehensive matching."""
+        if not url or not isinstance(url, str):
+            return []
+
+        url = url.strip()
+        variations = [url]  # Always include original
+
+        # Handle rsshub:// URLs - keep as-is
+        if url.startswith("rsshub://"):
+            return variations
+
+        # For HTTP(S) URLs, generate variations
+        if url.startswith(("http://", "https://")):
+            # Add version without protocol
+            no_protocol = url.replace("https://", "").replace("http://", "")
+            variations.append(no_protocol)
+
+            # Add with/without trailing slash
+            if url.endswith("/"):
+                variations.append(url.rstrip("/"))
+            else:
+                variations.append(url + "/")
+
+            # Add www variations if not present
+            if "://www." not in url:
+                if url.startswith("https://"):
+                    variations.append(url.replace("https://", "https://www."))
+                elif url.startswith("http://"):
+                    variations.append(url.replace("http://", "http://www."))
+        else:
+            # For URLs without protocol
+            variations.extend(
+                [
+                    f"https://{url}",
+                    f"http://{url}",
+                    f"https://www.{url}",
+                    f"http://www.{url}",
+                ]
+            )
+
+            # Add with/without trailing slash
+            if url.endswith("/"):
+                no_slash = url.rstrip("/")
+                variations.extend(
+                    [
+                        no_slash,
+                        f"https://{no_slash}",
+                        f"http://{no_slash}",
+                        f"https://www.{no_slash}",
+                        f"http://www.{no_slash}",
+                    ]
+                )
+            else:
+                with_slash = url + "/"
+                variations.extend(
+                    [
+                        with_slash,
+                        f"https://{with_slash}",
+                        f"http://{with_slash}",
+                        f"https://www.{with_slash}",
+                        f"http://www.{with_slash}",
+                    ]
+                )
+
+        # Remove duplicates while preserving order
+        unique_variations = []
+        seen = set()
+        for variation in variations:
+            if variation not in seen:
+                unique_variations.append(variation)
+                seen.add(variation)
+
+        return unique_variations
+
+    async def _search_exact_url_matches(
+        self, query_url: str, language: str, limit: int, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Search for feeds with exact URL matches.
+        *** OPTIMIZED: Uses 'IN' clause, which is fast with B-Tree indexes
+        on 'url' and 'link'. ***
+        """
+        try:
+            logger.debug("Starting exact URL search", url=query_url)
+
+            url_variations = self._generate_url_variations(query_url)
+            if not url_variations:
+                return []
+
+            stmt = select(Feed).where((Feed.language == language) | (Feed.language.is_(None)))
+
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    stmt = stmt.where(Feed.top_level_category == category_enum)
+                except ValueError:
+                    pass  # Ignore invalid category
+
+            # --- OPTIMIZATION: Use IN clause ---
+            # This is much cleaner and faster with B-Tree indexes.
+            stmt = stmt.where(or_(Feed.url.in_(url_variations), Feed.link.in_(url_variations)))
+
+            stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last()).limit(limit)
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            # ... (rest of function to format results is fine) ...
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                normalized_link = self._normalize_url(feed.link)
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category
+                    if feed.top_level_category
+                    else None,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": 1.0,
+                    "search_metadata": {
+                        "search_type": "exact_url_match",
+                        "matched_url": query_url,
+                        "matched_field": "url" if str(feed.url) in url_variations else "link",
+                        "rank": i + 1,
+                    },
+                }
+                feeds.append(feed_data)
+
+            logger.info("Exact URL search completed", url=query_url, results_count=len(feeds))
+            return feeds
+
+        except Exception as e:
+            logger.error("Error in exact URL search", url=query_url, error=str(e))
+            return []
+
+    async def _search_by_website_url(
+        self, url: str, language: str, limit: int, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Search for feeds matching a website URL in both url and link fields.
+        *** OPTIMIZED: This query is now extremely fast because it uses
+        the 'pg_trgm' GIN indexes. ***
+        """
+        try:
+            search_url = url if url.startswith(("http://", "https://")) else f"https://{url}"
+            stmt = select(Feed).where((Feed.language == language) | (Feed.language.is_(None)))
+
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    stmt = stmt.where(Feed.top_level_category == category_enum)
+                except ValueError:
+                    pass
+
+            try:
+                parsed_url = urlparse(search_url)
+                # Use the netloc (e.g., 'www.example.com') for the contains search
+                domain = parsed_url.netloc.lower()
+                if not domain and "://" not in search_url:
+                    # Handle cases like "example.com/path"
+                    domain = search_url.split("/")[0].lower()
+
+                if domain.startswith("www."):
+                    domain = domain[4:]
+
+                logger.debug("Searching by website domain", domain=domain)
+                # This 'contains' is now fast thanks to the pg_trgm GIN index
+                stmt = stmt.where((Feed.url.contains(domain)) | (Feed.link.contains(domain)))
+            except Exception as e:
+                logger.warning("Could not parse domain, falling back to basic contains", url=search_url, error=str(e))
+                # Fallback is also fast with pg_trgm
+                fallback_term = search_url.lower().replace("https://", "").replace("http://", "")
+                stmt = stmt.where((Feed.url.contains(fallback_term)) | (Feed.link.contains(fallback_term)))
+
+            stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last()).limit(limit)
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            # ... (rest of function to format results is fine) ...
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                normalized_link = self._normalize_url(feed.link)
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category
+                    if feed.top_level_category
+                    else None,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": max(0.1, 1.0 - (i / limit)) if limit > 0 else 0.5,
+                    "search_metadata": {
+                        "search_type": "website_url",
+                        "matched_url": search_url,
+                        "rank": i + 1,
+                    },
+                }
+                feeds.append(feed_data)
+
+            logger.info("Website URL search completed", url=search_url, results_count=len(feeds))
+            return feeds
+
+        except Exception as e:
+            logger.error("Error in website URL search", url=url, error=str(e))
+            return []
+
+    async def search_feeds(
+        self,
+        query: str | None = None,
+        category: str | None = None,
+        language: str = "en",
+        limit: int = 40,
+    ) -> list[dict[str, Any]]:
+        """
+        Search for RSS feeds using hybrid search or category browsing.
+
+        OPTIMIZED: Simplified flow to avoid redundant queries and blocking operations.
+
+        Args:
+            query: Search query text (optional)
+            category: Feed category to filter by (optional)
+            language: Language code for filtering (defaults to 'en')
+            limit: Maximum number of results (max 100)
+
+        Returns:
+            List of feed results with relevance scores
+        """
+        # Ensure limit doesn't exceed 100
+        limit = min(limit, 100)
+
+        # Quick non-DB checks first (fast regex/string operations)
+        if query:
+            # Check for subreddit patterns (fast regex)
+            subreddit_url = self._detect_subreddit(query)
+            if subreddit_url:
+                preview_result = await self._preview_url_as_feed(subreddit_url)
+                if preview_result:
+                    return [preview_result]
+
+            # Check for rsshub:// URLs (fast string check)
+            if self._is_rsshub_url(query):
+                preview_result = await self._preview_url_as_feed(query)
+                if preview_result:
+                    logger.info("Successfully previewed rsshub URL", url=query)
+                    return [preview_result]
+                else:
+                    logger.warning("Failed to preview rsshub URL", url=query)
+                    return []
+
+        # URL-based search (single DB query path - no redundant queries)
+        if query and (self._is_valid_url(query) or self._is_website_url(query)):
+            # Try exact match first (fast B-tree index lookup)
+            exact_matches = await self._search_exact_url_matches(query, language, limit, category)
+            if exact_matches:
+                logger.info("Found exact URL matches", count=len(exact_matches))
+                return exact_matches[:limit]
+
+            # Fall back to domain search (uses pg_trgm GIN index)
+            if self._is_website_url(query):
+                website_results = await self._search_by_website_url(query, language, limit, category)
+                if website_results:
+                    logger.info("Found website domain matches", count=len(website_results))
+                    return website_results[:limit]
+
+            # If it's a valid RSS URL but not in DB, try preview
+            if self._is_valid_url(query):
+                preview_result = await self._preview_url_as_feed(query)
+                if preview_result:
+                    logger.info("Created preview for URL not in database", url=query)
+                    return [preview_result]
+
+        # Regular text search (non-URL queries)
+        if query:
+            # Use hybrid search if AI is enabled, otherwise use simple search
+            if self.settings.ENABLE_AI and self.ai_service:
+                return await self._hybrid_search(query, language, limit, category)
+            else:
+                logger.info("AI disabled, using FTS-only search", query=query)
+                return await self._simple_search(query, language, limit, category)
+        elif category:
+            return await self._category_search(category, language, limit)
+        else:
+            # Return popular feeds across all categories
+            return await self._popular_feeds(language, limit)
+
+    async def _preview_url_as_feed(self, url: str) -> dict[str, Any] | None:
+        """
+        Try to fetch and preview a URL as an RSS feed.
+
+        Args:
+            url: URL to preview as feed (can be rsshub:// URL)
+
+        Returns:
+            Feed preview data if successful, None if not a valid feed
+        """
+        try:
+            logger.debug("Attempting to preview URL as feed", url=url)
+
+            # Transform rsshub:// URLs to actual HTTP URLs for fetching
+            fetch_url = transform_rsshub_url(url)
+            if fetch_url != url:
+                logger.debug("Transformed rsshub URL", original=url, transformed=fetch_url)
+
+            # Import here to avoid circular imports
+            from uuid import uuid4
+
+            from app.services.feed_creation_service import FeedCreationService
+
+            # Create a temporary service instance for preview with a dummy user_id
+            temp_service = FeedCreationService(self.db, user_id=uuid4())
+
+            # Try to fetch and parse the URL using the transformed URL
+            fetch_result = await temp_service._fetch_feed_content(fetch_url)
+            if fetch_result["status"] != 200 or not fetch_result["content"]:
+                logger.debug(
+                    "Failed to fetch URL or empty content",
+                    url=fetch_url,
+                    status=fetch_result.get("status"),
+                )
+                return None
+
+            # Parse the content using the transformed URL
+            parsed_feed = temp_service._parse_feed_data(fetch_result["content"], fetch_url)
+
+            # Extract feed metadata using the transformed URL
+            metadata = temp_service._extract_feed_metadata(parsed_feed, fetch_url)
+
+            # Determine image URL - use Reddit favicon for Reddit RSS feeds
+            image_url = metadata.image_url
+            if "reddit.com" in fetch_url:
+                image_url = "https://www.redditstatic.com/shreddit/assets/favicon/76x76.png"
+
+            # Create preview result - use original URL for display purposes
+            # but show the transformed URL internally for verification
+            normalized_link = self._normalize_url(str(metadata.link) if metadata.link else None)
+            preview_data = {
+                "id": f"preview_{hash(url)}",  # Temporary ID for preview using original URL
+                "title": metadata.title,
+                "description": metadata.description,
+                "url": url,  # Keep original rsshub:// URL for display
+                "link": normalized_link if normalized_link else url,  # Use original for link too
+                "image_url": self._normalize_url(str(image_url) if image_url else None),
+                "tags": [],  # No tags for preview
+                "language": metadata.language,
+                "category": None,  # No category for preview
+                "popularity_score": 0.0,  # No popularity score for preview
+                "relevance": 1.0,  # Max relevance for preview
+                "search_metadata": {
+                    "search_type": "rsshub_preview" if url != fetch_url else "url_preview",
+                    "fetched_at": fetch_result.get("headers", {}).get("date"),
+                    "content_type": fetch_result.get("headers", {}).get("content-type"),
+                    "transformed_url": fetch_url if url != fetch_url else None,
+                },
+                "is_preview": True,
+                "preview_url": url,  # Original URL for preview
+            }
+
+            logger.info("Successfully created feed preview", url=url, title=metadata.title)
+            return preview_data
+
+        except Exception as e:
+            logger.debug("Failed to preview URL as feed", url=url, error=str(e))
+            return None
+
+    async def _hybrid_search(
+        self, query: str, language: str, limit: int, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Perform hybrid search combining BM25 text search and vector similarity.
+        Based on the working search_engine_demo.py implementation.
+        """
+        try:
+            logger.debug(
+                "Starting hybrid search",
+                query=query,
+                language=language,
+                limit=limit,
+                category=category,
+            )
+
+            # Ensure AI is enabled for hybrid search
+            if not self.settings.ENABLE_AI or not self.ai_service:
+                logger.warning("AI disabled but hybrid search called, falling back to simple search")
+                return await self._simple_search(query, language, limit, category)
+
+            # Generate embedding for the query using Gemini
+            embedding = await self.ai_service.generate_embedding_with_gemini(query)
+            if embedding is None:
+                logger.warning("Failed to generate embedding with Gemini, falling back to text-only search")
+                return await self._simple_search(query, language, limit, category)
+
+            # Convert embedding to string format for PostgreSQL vector type
+            embedding_str = f"[{','.join(map(str, embedding))}]"
+
+            # Build parameters dictionary and category filter string
+            params = {
+                "query": query,
+                "language": language,
+                "embedding": embedding_str,
+                "limit": limit,
+            }
+            category_filter = ""
+
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    # Add the category parameter and update the filter string
+                    params["category"] = category_enum.value if hasattr(category_enum, "value") else category_enum
+                    category_filter = "AND f.top_level_category = :category"
+                except ValueError:
+                    logger.warning(f"Invalid category provided: {category}")
+
+            # SQL query using named parameters and the standard CAST() function
+            sql_query = f"""
+                WITH q AS (
+                    SELECT websearch_to_tsquery('english', :query) AS query,
+                           LOWER(:query) AS query_lower
+                ),
+                -- Full-text search results with ranks
+                fts_results AS (
+                    SELECT
+                        f.id,
+                        ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) AS title_score,
+                        ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q)) AS desc_score,
+                        ROW_NUMBER() OVER (ORDER BY
+                            (0.7 * ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) +
+                             0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) DESC
+                        ) AS fts_rank
+                    FROM feeds f
+                    WHERE (f.tsv_title_link @@ (SELECT query FROM q)
+                           OR f.tsv_desc_tags @@ (SELECT query FROM q))
+                      AND (f.language = :language OR f.language IS NULL)
+                      {category_filter}
+                    ORDER BY
+                        (0.7 * ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) +
+                         0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) DESC
+                    LIMIT 200
+                ),
+                -- Vector search results with ranks
+                vector_results AS (
+                    SELECT
+                        f.id,
+                        CASE
+                            WHEN f.embedding IS NOT NULL THEN 1 - (f.embedding <=> CAST(:embedding AS vector))
+                            ELSE 0.0
+                        END AS vector_score,
+                        ROW_NUMBER() OVER (ORDER BY
+                            CASE
+                                WHEN f.embedding IS NOT NULL THEN f.embedding <=> CAST(:embedding AS vector)
+                                ELSE 1.0
+                            END
+                        ) AS vector_rank
+                    FROM feeds f
+                    WHERE (f.language = :language OR f.language IS NULL)
+                      {category_filter}
+                    ORDER BY
+                        CASE
+                            WHEN f.embedding IS NOT NULL THEN f.embedding <=> CAST(:embedding AS vector)
+                            ELSE 1.0
+                        END
+                    LIMIT 200
+                ),
+                -- Combined results with enhanced title/domain priority scoring
+                combined_scores AS (
+                    SELECT
+                        COALESCE(fts.id, vec.id) AS id,
+                        COALESCE(fts.title_score, 0.0) AS title_score,
+                        COALESCE(fts.desc_score, 0.0) AS desc_score,
+                        COALESCE(vec.vector_score, 0.0) AS vector_score,
+                        COALESCE(fts.fts_rank, 999999) AS fts_rank,
+                        COALESCE(vec.vector_rank, 999999) AS vector_rank,
+                        CASE
+                            WHEN fts.id IS NOT NULL AND vec.id IS NOT NULL THEN 'both'
+                            WHEN fts.id IS NOT NULL THEN 'fts'
+                            ELSE 'vector'
+                        END AS sources
+                    FROM fts_results fts
+                    FULL OUTER JOIN vector_results vec ON fts.id = vec.id
+                )
+                SELECT
+                    f.id, f.title, f.description, f.url, f.link, f.image_url,
+                    f.tags, f.language, f.top_level_category, f.popularity_score,
+                    cs.title_score AS bm25_title_score,
+                    cs.desc_score AS bm25_desc_score,
+                    cs.vector_score AS vector_similarity,
+                    cs.fts_rank,
+                    cs.vector_rank,
+                    cs.sources,
+                    -- Optimized fast scoring
+                    (
+                        -- Heavily weight title matches, just like you wanted
+                        (4.0 * cs.title_score + 1.0 * cs.desc_score) +
+                        
+                        -- Add vector similarity
+                        1.0 * cs.vector_score +
+                        
+                        -- Add popularity boost
+                        0.1 * (COALESCE(f.popularity_score, 0.0) / 100.0)
+                        
+                    ) AS enhanced_score
+                FROM combined_scores cs
+                JOIN feeds f ON f.id = cs.id
+                ORDER BY enhanced_score DESC
+                LIMIT :limit
+            """
+            logger.debug("Executing hybrid search query", params=list(params.keys()))
+
+            # Use text() with proper parameter binding for asyncpg
+            result = await self.db.execute(text(sql_query), params)
+            rows = result.fetchall()
+            logger.debug("Hybrid search query completed", row_count=len(rows))
+
+            # Convert to dictionaries with relevance scores
+            feeds = []
+            max_score = max((row.enhanced_score for row in rows), default=1.0)
+
+            for row in rows:
+                # Normalize relevance score to 0-1 range
+                relevance = min(row.enhanced_score / max_score, 1.0) if max_score > 0 else 0.0
+
+                # Use RSS URL as fallback if link is malformed
+                normalized_link = self._normalize_url(row.link)
+                normalized_url = self._normalize_url(str(row.url))
+                feed_data = {
+                    "id": str(row.id),
+                    "title": row.title,
+                    "description": row.description,
+                    "url": normalized_url if normalized_url else str(row.url),
+                    "link": normalized_link if normalized_link else str(row.url),
+                    "image_url": self._normalize_url(row.image_url),
+                    "tags": row.tags or [],
+                    "language": row.language,
+                    "category": row.top_level_category if row.top_level_category else None,
+                    "popularity_score": row.popularity_score or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {
+                        "bm25_title_score": float(row.bm25_title_score or 0),
+                        "bm25_desc_score": float(row.bm25_desc_score or 0),
+                        "vector_similarity": float(row.vector_similarity or 0),
+                        "sources": row.sources,
+                        "enhanced_score": float(row.enhanced_score),
+                    },
+                }
+                feeds.append(feed_data)
+
+            logger.info("Hybrid search completed", query=query, results_count=len(feeds))
+            return feeds
+
+        except Exception as e:
+            logger.error("Error in hybrid search", query=query, error=str(e), exc_info=True)
+            # Fallback to simple text search
+            return await self._simple_search(query, language, limit, category)
+
+    async def _simple_search(
+        self, query: str, language: str, limit: int, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        --- OPTIMIZED (using FTS) ---
+        Fallback simple text search using FTS, not slow LIKE.
+        """
+        try:
+            params = {"query": query, "language": language, "limit": limit}
+            category_filter = ""
+
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    params["category"] = category_enum.value
+                    category_filter = "AND f.top_level_category = :category"
+                except ValueError:
+                    pass  # Ignore invalid category
+
+            # Use FTS for ranking
+            sql_query = f"""
+                WITH q AS (
+                    SELECT websearch_to_tsquery('english', :query) AS query
+                )
+                SELECT
+                    f.id, f.title, f.description, f.url, f.link, f.image_url,
+                    f.tags, f.language, f.top_level_category, f.popularity_score,
+                    -- Use the same FTS ranking as hybrid search
+                    (0.7 * ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) +
+                     0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) AS relevance_score
+                FROM feeds f
+                WHERE (f.tsv_title_link @@ (SELECT query FROM q)
+                       OR f.tsv_desc_tags @@ (SELECT query FROM q))
+                  AND (f.language = :language OR f.language IS NULL)
+                  {category_filter}
+                ORDER BY
+                    relevance_score DESC,
+                    f.popularity_score DESC NULLS LAST
+                LIMIT :limit
+            """
+
+            result = await self.db.execute(text(sql_query), params)
+            feeds_db = result.mappings().all()
+
+            feeds = []
+            # Find max score for normalization
+            max_score = 0.0
+            if feeds_db:
+                max_score = max(row["relevance_score"] for row in feeds_db)
+                if max_score == 0:
+                    max_score = 1.0
+
+            for row in feeds_db:
+                relevance = min(row["relevance_score"] / max_score, 1.0) if max_score > 0 else 0.5
+                normalized_link = self._normalize_url(row["link"])
+                normalized_url = self._normalize_url(str(row["url"]))
+                feed_data = {
+                    "id": str(row["id"]),
+                    "title": row["title"],
+                    "description": row["description"],
+                    "url": normalized_url if normalized_url else str(row["url"]),
+                    "link": normalized_link if normalized_link else str(row["url"]),
+                    "image_url": self._normalize_url(row["image_url"]),
+                    "tags": row["tags"] or [],
+                    "language": row["language"],
+                    "category": row["top_level_category"] if row["top_level_category"] else None,
+                    "popularity_score": row["popularity_score"] or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {
+                        "search_type": "simple_fts_fallback",
+                        "bm25_score": float(row["relevance_score"]),
+                    },
+                }
+                feeds.append(feed_data)
+            return feeds
+
+        except Exception as e:
+            logger.error("Error in simple search", query=query, error=str(e))
+            return []
+
+    async def _category_search(self, category: str, language: str, limit: int) -> list[dict[str, Any]]:
+        """Get top feeds for a specific category."""
+        try:
+            # Validate category
+            try:
+                category_enum = FeedCategory(category)
+            except ValueError:
+                logger.warning(f"Invalid category: {category}")
+                return []
+
+            # Build query for category
+            stmt = select(Feed).where(
+                (Feed.top_level_category == category_enum) & ((Feed.language == language) | (Feed.language.is_(None)))
+            )
+
+            # Conditional ordering: prioritize indie blogs for Miscellaneous category
+            if category_enum == FeedCategory.MISCELLANEOUS:
+                stmt = stmt.order_by(
+                    # This is more index-friendly
+                    (Feed.tags.contains(["indieblog"])).desc(),
+                    Feed.popularity_score.desc().nulls_last(),
+                )
+            else:
+                # For other categories: standard popularity ordering
+                stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last())
+
+            stmt = stmt.limit(limit)
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            # Convert to response format
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                # Assign relevance based on popularity rank
+                relevance = max(0.1, 1.0 - (i / limit)) if limit > 0 else 0.5
+
+                # Use RSS URL as fallback if link is malformed
+                normalized_link = self._normalize_url(feed.link)
+                normalized_url = self._normalize_url(str(feed.url))
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": normalized_url if normalized_url else str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {"search_type": "category", "rank": i + 1},
+                }
+                feeds.append(feed_data)
+
+            return feeds
+
+        except Exception as e:
+            logger.error("Error in category search", category=category, error=str(e))
+            return []
+
+    async def _popular_feeds(self, language: str, limit: int) -> list[dict[str, Any]]:
+        """Get popular feeds across all categories."""
+        try:
+            stmt = (
+                select(Feed)
+                .where((Feed.language == language) | (Feed.language.is_(None)))
+                .order_by(Feed.popularity_score.desc().nulls_last())
+                .limit(limit)
+            )
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                relevance = max(0.1, 1.0 - (i / limit)) if limit > 0 else 0.5
+
+                # Use RSS URL as fallback if link is malformed
+                normalized_link = self._normalize_url(feed.link)
+                normalized_url = self._normalize_url(str(feed.url))
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": normalized_url if normalized_url else str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category
+                    if feed.top_level_category
+                    else None,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {"search_type": "popular", "rank": i + 1},
+                }
+                feeds.append(feed_data)
+
+            return feeds
+
+        except Exception as e:
+            logger.error("Error getting popular feeds", error=str(e))
+            return []
+
+    async def get_trending_feeds(
+        self, language: str = "en", limit: int = 10, category: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Get trending RSS feeds sorted by popularity score.
+
+        Results are cached for 1 hour to improve performance.
+
+        Args:
+            language: Language code for filtering (defaults to 'en')
+            limit: Maximum number of results (defaults to 10)
+            category: Optional feed category to filter by
+
+        Returns:
+            List of feed results sorted by popularity with relevance scores
+        """
+        from app.core.cache import cache_result
+
+        @cache_result(ttl=3600)  # Cache for 1 hour
+        async def _get_trending_feeds_cached(lang: str, lim: int, cat: str | None) -> list[dict[str, Any]]:
+            return await self._get_trending_feeds_impl(lang, lim, cat)
+
+        return await _get_trending_feeds_cached(language, limit, category)
+
+    async def _get_trending_feeds_impl(self, language: str, limit: int, category: str | None) -> list[dict[str, Any]]:
+        """Internal implementation of get_trending_feeds."""
+        try:
+            logger.debug(
+                "Getting trending feeds",
+                language=language,
+                limit=limit,
+                category=category,
+            )
+
+            # Build base query
+            stmt = select(Feed).where((Feed.language == language) | (Feed.language.is_(None)))
+
+            # Add category filter if specified
+            if category:
+                try:
+                    category_enum = FeedCategory(category)
+                    stmt = stmt.where(Feed.top_level_category == category_enum)
+                    logger.debug("Applied category filter", category=category_enum.value)
+                except ValueError:
+                    logger.warning("Invalid category provided for trending feeds", category=category)
+                    # Continue without category filter
+
+            # Order by popularity and limit
+            stmt = stmt.order_by(Feed.popularity_score.desc().nulls_last()).limit(limit)
+
+            result = await self.db.execute(stmt)
+            feeds_db = result.scalars().all()
+
+            # Convert to response format with relevance scores
+            feeds = []
+            for i, feed in enumerate(feeds_db):
+                # Calculate relevance based on rank (1.0 for top, decreasing linearly)
+                relevance = max(0.1, 1.0 - (i / limit)) if limit > 0 else 0.5
+
+                # Use RSS URL as fallback if link is malformed
+                normalized_link = self._normalize_url(feed.link)
+                normalized_url = self._normalize_url(str(feed.url))
+                feed_data = {
+                    "id": str(feed.id),
+                    "title": feed.title,
+                    "description": feed.description,
+                    "url": normalized_url if normalized_url else str(feed.url),
+                    "link": normalized_link if normalized_link else str(feed.url),
+                    "image_url": self._normalize_url(feed.image_url),
+                    "tags": feed.tags or [],
+                    "language": feed.language,
+                    "category": feed.top_level_category.value
+                    if feed.top_level_category and hasattr(feed.top_level_category, "value")
+                    else feed.top_level_category
+                    if feed.top_level_category
+                    else None,
+                    "popularity_score": feed.popularity_score or 0.0,
+                    "relevance": round(relevance, 3),
+                    "search_metadata": {"search_type": "trending", "rank": i + 1},
+                    "created_at": feed.created_at,
+                    "updated_at": feed.updated_at,
+                }
+                feeds.append(feed_data)
+
+            logger.info(
+                "Trending feeds query completed",
+                language=language,
+                category=category,
+                results_count=len(feeds),
+            )
+            return feeds
+
+        except Exception as e:
+            logger.error(
+                "Error getting trending feeds",
+                error=str(e),
+                language=language,
+                category=category,
+                exc_info=True,
+            )
+            return []
+
+    async def get_categories_with_counts(self, language: str = "en") -> list[dict[str, Any]]:
+        """
+        Get all categories in predefined order.
+
+        Results are cached for 30 minutes to improve performance.
+        """
+        from app.core.cache import cache_result
+
+        @cache_result(ttl=1800)  # Cache for 30 minutes
+        async def _get_categories_cached(lang: str) -> list[dict[str, Any]]:
+            return self._get_categories_impl(lang)
+
+        return await _get_categories_cached(language)
+
+    def _get_categories_impl(self, language: str) -> list[dict[str, Any]]:
+        """Internal implementation of get_categories_with_counts."""
+        ordered_categories = [
+            FeedCategory.TECHNOLOGY_PROGRAMMING,
+            FeedCategory.ARTIFICIAL_INTELLIGENCE,
+            FeedCategory.DESIGN_CREATIVITY,
+            FeedCategory.BUSINESS_FINANCE,
+            FeedCategory.NEWS_POLITICS,
+            FeedCategory.GAMING_ENTERTAINMENT,
+            FeedCategory.SCIENCE_RESEARCH,
+            FeedCategory.LIFESTYLE_PERSONAL,
+            FeedCategory.CULTURE_ARTS,
+            FeedCategory.SECURITY_PRIVACY,
+            FeedCategory.EDUCATION_LEARNING,
+            FeedCategory.MISCELLANEOUS,
+        ]
+
+        return [
+            {
+                "name": cat.value,
+                "display_name": cat.value,
+            }
+            for cat in ordered_categories
+        ]

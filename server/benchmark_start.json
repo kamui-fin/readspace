@@ -1,0 +1,807 @@
+{
+  "timestamp": "2025-11-01T10:11:58.923376",
+  "base_url": "http://localhost:8008",
+  "user_id": "f9820f4b-ae6b-434a-b337-7182adc72910",
+  "total_calls": 63,
+  "results": [
+    {
+      "endpoint": "/api/rss/folders/",
+      "method": "GET",
+      "params": {
+        "limit": 100
+      },
+      "duration_ms": 10.879379988182336,
+      "response_size_bytes": 10941,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/folders/2ea8a2ca-af71-4b57-9c39-f2c0efbdc451",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 7.28900299873203,
+      "response_size_bytes": 213,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/",
+      "method": "GET",
+      "params": {
+        "limit": 200
+      },
+      "duration_ms": 170.36389801069163,
+      "response_size_bytes": 194042,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/",
+      "method": "GET",
+      "params": {
+        "folder_id": "2ea8a2ca-af71-4b57-9c39-f2c0efbdc451",
+        "limit": 100
+      },
+      "duration_ms": 27.814492990728468,
+      "response_size_bytes": 16530,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/",
+      "method": "GET",
+      "params": {
+        "is_favorite": true,
+        "limit": 50
+      },
+      "duration_ms": 29.089492018101737,
+      "response_size_bytes": 48444,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 10.509622981771827,
+      "response_size_bytes": 1013,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/trending",
+      "method": "GET",
+      "params": {
+        "limit": 20,
+        "language": "en"
+      },
+      "duration_ms": 22.794650023570284,
+      "response_size_bytes": 17428,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 216.41520300181583,
+      "response_size_bytes": 62544,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 228.977787977783,
+      "response_size_bytes": 156237,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 100
+      },
+      "duration_ms": 244.15380699792877,
+      "response_size_bytes": 311830,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "feed_ids": "31729d06-4ecd-4942-9f25-c6a51724c45f",
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 23.227466008393094,
+      "response_size_bytes": 455692,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "folder_id": "2ea8a2ca-af71-4b57-9c39-f2c0efbdc451",
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 31.040362984640524,
+      "response_size_bytes": 178788,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "is_read": false,
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 304.13101401063614,
+      "response_size_bytes": 155580,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "is_read": true,
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 250.3812100039795,
+      "response_size_bytes": 157047,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "is_favorite": true,
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 169.79952401015908,
+      "response_size_bytes": 155869,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "is_read_later": true,
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 218.55963399866596,
+      "response_size_bytes": 155622,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "published_since": "2025-10-25T15:11:53.128085+00:00",
+        "published_until": "2025-11-01T15:11:53.128085+00:00",
+        "page": 1,
+        "size": 50
+      },
+      "duration_ms": 157.4706970131956,
+      "response_size_bytes": 156234,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "published_at",
+        "sort_order": "asc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 213.11449399217963,
+      "response_size_bytes": 61345,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "published_at",
+        "sort_order": "desc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 217.99761900911108,
+      "response_size_bytes": 62544,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "created_at",
+        "sort_order": "asc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 145.38958799676038,
+      "response_size_bytes": 62657,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "created_at",
+        "sort_order": "desc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 153.48156398977153,
+      "response_size_bytes": 222632,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "title",
+        "sort_order": "asc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 242.31855501420796,
+      "response_size_bytes": 70043,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "sort_by": "title",
+        "sort_order": "desc",
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 263.94048499059863,
+      "response_size_bytes": 62123,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 276.92894500796683,
+      "response_size_bytes": 62544,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 2,
+        "size": 20
+      },
+      "duration_ms": 229.4233530119527,
+      "response_size_bytes": 62342,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 5,
+        "size": 20
+      },
+      "duration_ms": 218.0186889891047,
+      "response_size_bytes": 62340,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 10,
+        "size": 20
+      },
+      "duration_ms": 215.23106400854886,
+      "response_size_bytes": 61847,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 50,
+        "size": 20
+      },
+      "duration_ms": 218.80475198850036,
+      "response_size_bytes": 62130,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/today",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 25
+      },
+      "duration_ms": 80.68873500451446,
+      "response_size_bytes": 78129,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/recently_read",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 20
+      },
+      "duration_ms": 94.18852100498043,
+      "response_size_bytes": 62889,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/read_later",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 100
+      },
+      "duration_ms": 210.54979800828733,
+      "response_size_bytes": 308137,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/unread_counts",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 321.46554498467594,
+      "response_size_bytes": 3735,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/unread_counts",
+      "method": "GET",
+      "params": {
+        "folder_id": "2ea8a2ca-af71-4b57-9c39-f2c0efbdc451"
+      },
+      "duration_ms": 12.277556001208723,
+      "response_size_bytes": 21,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/7431fb46-085d-4da7-b015-1ae788d6d77d",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 9.6970209851861,
+      "response_size_bytes": 2993,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/search",
+      "method": "GET",
+      "params": {
+        "limit": 40
+      },
+      "duration_ms": 25.478434981778264,
+      "response_size_bytes": 27144,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/search",
+      "method": "GET",
+      "params": {
+        "q": "technology",
+        "limit": 40
+      },
+      "duration_ms": 282.36593600013293,
+      "response_size_bytes": 40396,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/search",
+      "method": "GET",
+      "params": {
+        "category": "Technology & Programming",
+        "limit": 40
+      },
+      "duration_ms": 18.007884005783126,
+      "response_size_bytes": 29974,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/search",
+      "method": "GET",
+      "params": {
+        "q": "news",
+        "language": "en",
+        "limit": 40
+      },
+      "duration_ms": 219.6327740093693,
+      "response_size_bytes": 38812,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/categories",
+      "method": "GET",
+      "params": {
+        "language": "en"
+      },
+      "duration_ms": 6.9349360128398985,
+      "response_size_bytes": 1272,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/categories/Technology & Programming",
+      "method": "GET",
+      "params": {
+        "language": "en",
+        "limit": 20
+      },
+      "duration_ms": 13.701543008210137,
+      "response_size_bytes": 14579,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/recommendations",
+      "method": "POST",
+      "params": {},
+      "duration_ms": 17.049532994860783,
+      "response_size_bytes": 14532,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 10,
+        "min_similarity": 0.1
+      },
+      "duration_ms": 135.13473299099132,
+      "response_size_bytes": 9231,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 10,
+        "min_similarity": 0.3
+      },
+      "duration_ms": 123.86277699260972,
+      "response_size_bytes": 9231,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 10,
+        "min_similarity": 0.5
+      },
+      "duration_ms": 114.77488098898903,
+      "response_size_bytes": 9231,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 5,
+        "min_similarity": 0.1
+      },
+      "duration_ms": 120.75972600723617,
+      "response_size_bytes": 4912,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 10,
+        "min_similarity": 0.1
+      },
+      "duration_ms": 121.70715699903667,
+      "response_size_bytes": 9231,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/similar/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "GET",
+      "params": {
+        "limit": 20,
+        "min_similarity": 0.1
+      },
+      "duration_ms": 123.05257498519495,
+      "response_size_bytes": 17713,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/discover/search",
+      "method": "GET",
+      "params": {
+        "limit": 1
+      },
+      "duration_ms": 15.988422004738823,
+      "response_size_bytes": 779,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/31729d06-4ecd-4942-9f25-c6a51724c45f/subscribe",
+      "method": "POST",
+      "params": {},
+      "duration_ms": 8.500931988237426,
+      "response_size_bytes": 84,
+      "status_code": 429,
+      "success": false,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "PUT",
+      "params": {},
+      "duration_ms": 27.441496000392362,
+      "response_size_bytes": 1013,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "PUT",
+      "params": {},
+      "duration_ms": 13.208648015279323,
+      "response_size_bytes": 1013,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/31729d06-4ecd-4942-9f25-c6a51724c45f",
+      "method": "PUT",
+      "params": {},
+      "duration_ms": 13.709154009120539,
+      "response_size_bytes": 1013,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/bulk-update-folder",
+      "method": "POST",
+      "params": {},
+      "duration_ms": 8.637499995529652,
+      "response_size_bytes": 281,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/7431fb46-085d-4da7-b015-1ae788d6d77d",
+      "method": "PUT",
+      "params": {
+        "article_type": "feed"
+      },
+      "duration_ms": 13.986981008201838,
+      "response_size_bytes": 2970,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/1d56d1c6-06de-4cc7-a232-f59eb3550494",
+      "method": "PUT",
+      "params": {
+        "article_type": "feed"
+      },
+      "duration_ms": 13.348856999073178,
+      "response_size_bytes": 3196,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/98697c22-fd59-425e-adb1-8355bdc75b4b",
+      "method": "PUT",
+      "params": {
+        "article_type": "feed"
+      },
+      "duration_ms": 13.24022701010108,
+      "response_size_bytes": 3055,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/a9c07883-bd57-432d-8c3d-27afcbe42a19",
+      "method": "PUT",
+      "params": {
+        "article_type": "feed"
+      },
+      "duration_ms": 13.597835000837222,
+      "response_size_bytes": 3209,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 1,
+        "size": 25,
+        "sort_by": "published_at",
+        "sort_order": "desc"
+      },
+      "duration_ms": 288.5604580224026,
+      "response_size_bytes": 78133,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 2,
+        "size": 25,
+        "sort_by": "published_at",
+        "sort_order": "desc"
+      },
+      "duration_ms": 219.86410100362264,
+      "response_size_bytes": 78161,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/",
+      "method": "GET",
+      "params": {
+        "page": 3,
+        "size": 25,
+        "sort_by": "published_at",
+        "sort_order": "desc"
+      },
+      "duration_ms": 214.38548201695085,
+      "response_size_bytes": 77830,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/folders/",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 17.97233399702236,
+      "response_size_bytes": 10941,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/feeds/",
+      "method": "GET",
+      "params": {
+        "limit": 200
+      },
+      "duration_ms": 164.133236015914,
+      "response_size_bytes": 194042,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    },
+    {
+      "endpoint": "/api/rss/articles/unread_counts",
+      "method": "GET",
+      "params": {},
+      "duration_ms": 319.19015498715453,
+      "response_size_bytes": 3735,
+      "status_code": 200,
+      "success": true,
+      "error": null
+    }
+  ]
+}

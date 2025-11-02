@@ -92,7 +92,7 @@ class FeedResponse(FeedBase):
     is_subscribed: bool = False
     user_id: UUID | None = None
     folder_id: UUID | None = None
-    unread_count: int | None = None
+    is_favorite: bool | None = None
 
     @field_validator("link", mode="before")
     @classmethod

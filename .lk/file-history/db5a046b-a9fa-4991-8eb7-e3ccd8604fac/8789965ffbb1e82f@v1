@@ -1,0 +1,49 @@
+"""Simple caching decorator for expensive operations."""
+import functools
+import hashlib
+import time
+from typing import Any, Callable
+
+# Simple in-memory cache (can be replaced with Redis later)
+_cache: dict[str, tuple[Any, float]] = {}
+
+
+def cache_result(ttl: int = 300):
+    """Cache function result for specified TTL in seconds."""
+    def decorator(func: Callable) -> Callable:
+        @functools.wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Create cache key from function name and arguments
+            key_data = f"{func.__name__}:{args}:{sorted(kwargs.items())}"
+            cache_key = hashlib.md5(key_data.encode()).hexdigest()
+            
+            # Check cache
+            if cache_key in _cache:
+                result, timestamp = _cache[cache_key]
+                if time.time() - timestamp < ttl:
+                    return result
+            
+            # Execute function
+            result = await func(*args, **kwargs)
+            
+            # Store in cache
+            _cache[cache_key] = (result, time.time())
+            
+            # Simple cache cleanup (remove expired entries)
+            if len(_cache) > 1000:
+                current_time = time.time()
+                expired_keys = [
+                    k for k, (_, ts) in _cache.items() 
+                    if current_time - ts >= ttl
+                ]
+                for k in expired_keys:
+                    del _cache[k]
+            
+            return result
+        return wrapper
+    return decorator
+
+
+def clear_cache():
+    """Clear all cached results."""
+    _cache.clear()

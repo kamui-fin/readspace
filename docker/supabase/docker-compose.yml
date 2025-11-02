@@ -333,6 +333,7 @@ services:
     depends_on:
       vector:
         condition: service_healthy
+    shm_size: 16g
     environment:
       POSTGRES_HOST: /var/run/postgresql
       PGPORT: ${POSTGRES_PORT}

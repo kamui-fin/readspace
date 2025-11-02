@@ -269,8 +269,3 @@ class ArticleQueryBuilder:
             "created_at": table.c.published_at,  # Map to published_at in unified view
         }
         return sort_columns.get(sort_by, table.c.published_at)
-
-    def build_count_query(self, base_query: Select) -> Select:
-        """Build count query from base query."""
-        # Extract the filter conditions from the base query
-        return select(func.count()).select_from(base_query.subquery())

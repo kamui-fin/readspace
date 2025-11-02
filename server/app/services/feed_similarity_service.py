@@ -79,33 +79,26 @@ class FeedSimilarityService:
                 logger.warning("Source feed has no embedding", feed_id=feed_id)
                 return []
 
-            # Get user's subscribed feed IDs to exclude them from results
-            subscribed_feed_ids = await self._get_user_subscribed_feed_ids()
-
-            # Build the similarity search query
+            # OPTIMIZATION: Use CTE to get subscribed feeds in the same query
+            # This eliminates the separate query for subscribed_feed_ids
             params = {
                 "source_feed_id": feed_id,
+                "user_id": self.user_id,
                 "limit": limit,
                 "min_similarity": min_similarity,
             }
 
-            # Build exclusion filter for subscribed feeds
-            exclusion_filter = ""
-            if subscribed_feed_ids:
-                # Create placeholders for subscribed feed IDs
-                placeholders = [f":subscribed_feed_{i}" for i in range(len(subscribed_feed_ids))]
-                exclusion_filter = f"AND f.id NOT IN ({', '.join(placeholders)})"
-
-                # Add subscribed feed IDs to params
-                for i, feed_id_to_exclude in enumerate(subscribed_feed_ids):
-                    params[f"subscribed_feed_{i}"] = feed_id_to_exclude
-
-            sql_query = f"""
+            sql_query = """
                 WITH source_feed AS (
                     SELECT embedding
                     FROM feeds
                     WHERE id = :source_feed_id
                     AND embedding IS NOT NULL
+                ),
+                subscribed_feeds AS (
+                    SELECT feed_id
+                    FROM feed_subscriptions
+                    WHERE user_id = :user_id
                 )
                 SELECT
                     f.id,
@@ -124,12 +117,12 @@ class FeedSimilarityService:
                 WHERE f.id != :source_feed_id  -- Exclude the source feed itself
                   AND f.embedding IS NOT NULL  -- Only consider feeds with embeddings
                   AND (1 - (f.embedding <=> sf.embedding)) >= :min_similarity  -- Similarity threshold
-                  {exclusion_filter}  -- Exclude user's subscribed feeds
+                  AND f.id NOT IN (SELECT feed_id FROM subscribed_feeds)  -- Exclude user's subscribed feeds
                 ORDER BY f.embedding <=> sf.embedding  -- Order by cosine distance (ascending = most similar first)
                 LIMIT :limit
             """
 
-            logger.debug("Executing similarity search query", params=list(params.keys()))
+            logger.debug("Executing similarity search query with CTE", params=list(params.keys()))
 
             result = await self.db.execute(text(sql_query), params)
             rows = result.fetchall()

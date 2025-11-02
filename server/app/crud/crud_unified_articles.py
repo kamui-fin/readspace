@@ -37,7 +37,7 @@ class CRUDUnifiedArticles:
         limit: int = 100,
         include_feed_articles: bool = True,
         include_clipped_articles: bool = True,
-    ) -> tuple[list[ArticleResponse], int]:
+    ) -> list[ArticleResponse]:
         """Get unified articles combining feed and clipped articles with filtering."""
 
         # Prepare filters
@@ -54,7 +54,6 @@ class CRUDUnifiedArticles:
         }
 
         articles = []
-        total_count = 0
 
         if include_feed_articles and include_clipped_articles:
             # Build union query
@@ -72,11 +71,6 @@ class CRUDUnifiedArticles:
             # Transform to response objects
             articles = [self.transformer.raw_row_to_unified(row) for row in rows]
 
-            # Get total count
-            count_query = self.query_builder.build_count_query(union_query)
-            count_result = await db.execute(count_query)
-            total_count = count_result.scalar() or 0
-
         elif include_feed_articles:
             # Only feed articles
             feed_query = self.query_builder.build_feed_article_query(user_id, filters)
@@ -88,13 +82,6 @@ class CRUDUnifiedArticles:
             feed_articles = result.scalars().all()
 
             articles = [self.transformer.feed_to_unified(fa) for fa in feed_articles]
-
-            # Get count
-            count_query = self.query_builder.build_count_query(
-                self.query_builder.build_feed_article_query(user_id, filters)
-            )
-            count_result = await db.execute(count_query)
-            total_count = count_result.scalar() or 0
 
         elif include_clipped_articles:
             # Only clipped articles
@@ -108,14 +95,7 @@ class CRUDUnifiedArticles:
 
             articles = [self.transformer.clipped_to_unified(ca) for ca in clipped_articles]
 
-            # Get count
-            count_query = self.query_builder.build_count_query(
-                self.query_builder.build_clipped_article_query(user_id, filters)
-            )
-            count_result = await db.execute(count_query)
-            total_count = count_result.scalar() or 0
-
-        return articles, total_count
+        return articles
 
     def _apply_sorting_and_pagination(self, query: Any, sort_by: str, sort_order: str, skip: int, limit: int) -> Any:
         """Apply sorting and pagination to a query."""

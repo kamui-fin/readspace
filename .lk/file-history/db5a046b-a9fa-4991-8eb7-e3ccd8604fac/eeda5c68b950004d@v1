@@ -1,0 +1,142 @@
+"""Add performance indexes for query optimization
+
+Revision ID: add_performance_indexes
+Revises: fdb333511dc0
+Create Date: 2025-11-01 00:00:00.000000+00:00
+
+"""
+from typing import Sequence, Union
+
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers, used by Alembic.
+revision: str = 'add_performance_indexes'
+down_revision: Union[str, None] = 'fdb333511dc0'
+branch_labels: Union[str, Sequence[str], None] = None
+depends_on: Union[str, Sequence[str], None] = None
+
+
+def upgrade() -> None:
+    """Add performance indexes for critical query patterns."""
+    
+    # ============================================================================
+    # USER ARTICLE STATES INDEXES
+    # ============================================================================
+    
+    # Composite index for unread article queries (most common pattern)
+    # This dramatically speeds up unread counts and article filtering
+    op.create_index(
+        'idx_user_states_unread_lookup',
+        'user_article_states',
+        ['user_id', 'is_read', 'is_read_later'],
+        unique=False,
+        postgresql_where=sa.text('is_read = FALSE OR is_read IS NULL')
+    )
+    
+    # Index for read_later queries
+    # Speeds up "Read Later" view and counts
+    op.create_index(
+        'idx_user_states_read_later',
+        'user_article_states',
+        ['user_id', 'is_read_later'],
+        unique=False,
+        postgresql_where=sa.text('is_read_later = TRUE')
+    )
+    
+    # Index for favorite queries
+    # Speeds up favorites view and filtering
+    op.create_index(
+        'idx_user_states_favorites',
+        'user_article_states',
+        ['user_id', 'is_favorite'],
+        unique=False,
+        postgresql_where=sa.text('is_favorite = TRUE')
+    )
+    
+    # ============================================================================
+    # FEED SUBSCRIPTIONS INDEXES
+    # ============================================================================
+    
+    # Index for feed lookups by user
+    # Critical for feed listing and article queries
+    op.create_index(
+        'idx_feed_subs_user_feed',
+        'feed_subscriptions',
+        ['user_id', 'feed_id'],
+        unique=False
+    )
+    
+    # Index for favorite feeds
+    # Speeds up favorite feed filtering
+    op.create_index(
+        'idx_feed_subs_favorites',
+        'feed_subscriptions',
+        ['user_id', 'is_favorite'],
+        unique=False,
+        postgresql_where=sa.text('is_favorite = TRUE')
+    )
+    
+    # ============================================================================
+    # FEED ARTICLES INDEXES
+    # ============================================================================
+    
+    # Composite index for article queries with feed and content joins
+    # Speeds up article listing and feed-specific queries
+    op.create_index(
+        'idx_feed_articles_queries',
+        'feed_articles',
+        ['feed_id', 'content_id', sa.text('created_at DESC')],
+        unique=False
+    )
+    
+    # Index for article lookups by content
+    # Speeds up content-based queries and joins
+    op.create_index(
+        'idx_feed_articles_content',
+        'feed_articles',
+        ['content_id'],
+        unique=False
+    )
+    
+    # ============================================================================
+    # ARTICLE CONTENT INDEXES
+    # ============================================================================
+    
+    # Full-text search index for title and description
+    # Dramatically speeds up search queries
+    op.execute("""
+        CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_article_content_fts 
+        ON article_contents USING gin(
+            to_tsvector('english', coalesce(title, '') || ' ' || coalesce(description, ''))
+        )
+    """)
+    
+    # Index for recent articles (common pattern)
+    # Speeds up "Today" view and recent article queries
+    op.create_index(
+        'idx_article_content_recent',
+        'article_contents',
+        [sa.text('published_at DESC NULLS LAST')],
+        unique=False,
+        postgresql_where=sa.text("published_at >= NOW() - INTERVAL '30 days'")
+    )
+
+
+def downgrade() -> None:
+    """Remove performance indexes."""
+    
+    # Drop in reverse order
+    op.drop_index('idx_article_content_recent', table_name='article_contents')
+    op.execute('DROP INDEX CONCURRENTLY IF EXISTS idx_article_content_fts')
+    
+    op.drop_index('idx_feed_articles_content', table_name='feed_articles')
+    op.drop_index('idx_feed_articles_queries', table_name='feed_articles')
+    
+    op.drop_index('idx_feed_subs_favorites', table_name='feed_subscriptions')
+    op.drop_index('idx_feed_subs_user_feed', table_name='feed_subscriptions')
+    
+    op.drop_index('idx_user_states_favorites', table_name='user_article_states')
+    op.drop_index('idx_user_states_read_later', table_name='user_article_states')
+    op.drop_index('idx_user_states_unread_lookup', table_name='user_article_states')

@@ -94,11 +94,11 @@ class ArticleCrudOperations:
         skip: int = 0,
         limit: int = 100,
         allow_preview: bool = False,
-    ) -> tuple[list[tuple[FeedArticle, UserArticleState]], int]:
+    ) -> list[tuple[FeedArticle, UserArticleState]]:
         """Get articles for a user with comprehensive filtering and sorting."""
         query_builder = ArticleQueryBuilder(user_id, allow_preview=allow_preview)
 
-        stmt, count_stmt = query_builder.build_filtered_query(
+        stmt = query_builder.build_filtered_query(
             feed_ids=feed_ids,
             folder_id=folder_id,
             is_read=is_read,
@@ -114,14 +114,11 @@ class ArticleCrudOperations:
             limit=limit,
         )
 
-        total_count_result = await db.execute(count_stmt)
-        total_count = total_count_result.scalar_one_or_none() or 0
-
         articles_result = await db.execute(stmt)
         rows = articles_result.all()  # Get all rows
         # Extract the FeedArticle and UserArticleState objects from each row
         articles = [(row[0], row[1]) for row in rows]  # row[0] is FeedArticle, row[1] is UserArticleState
-        return articles, total_count
+        return articles
 
     @staticmethod
     async def create_articles_batch(
@@ -135,13 +132,13 @@ class ArticleCrudOperations:
             # Step 1: Bulk duplicate check - collect all (feed_id, guid) pairs
             feed_guid_pairs = [(article.feed_id, article.guid) for article in articles_data]
 
-            # Single query to check for existing articles
+            # Fix: Use proper tuple matching instead of cartesian product
+            # Build OR conditions for each (feed_id, guid) pair
+            from sqlalchemy import tuple_
+
             existing_result = await db.execute(
                 select(FeedArticle.feed_id, FeedArticle.guid).filter(
-                    and_(
-                        FeedArticle.feed_id.in_([pair[0] for pair in feed_guid_pairs]),
-                        FeedArticle.guid.in_([pair[1] for pair in feed_guid_pairs]),
-                    )
+                    tuple_(FeedArticle.feed_id, FeedArticle.guid).in_(feed_guid_pairs)
                 )
             )
             existing_pairs = {(row[0], row[1]) for row in existing_result.fetchall()}
@@ -245,8 +242,9 @@ class ArticleCrudOperations:
                 )
                 await db.execute(user_state_insert_stmt)
 
-            # Commit all changes atomically
-            await db.commit()
+            # Note: Commit is handled by the dependency injection layer (get_db)
+            # No manual commit needed here to avoid double-commit overhead
+            await db.flush()  # Ensure changes are flushed to get IDs
 
             # Return the created articles list (not count)
             return created_articles_list
@@ -296,8 +294,8 @@ class ArticleCrudOperations:
                 if hasattr(clipped_article, field):
                     setattr(clipped_article, field, value)
 
-            # Commit the changes
-            await db.commit()
+            # Note: Commit is handled by the dependency injection layer (get_db)
+            await db.flush()  # Ensure changes are persisted
 
             # Refresh the object
             await db.refresh(clipped_article)
@@ -343,8 +341,8 @@ class ArticleCrudOperations:
                 user_state = UserArticleState(user_id=user_id, article_id=article_id, **update_data)
                 db.add(user_state)
 
-            # Commit the changes
-            await db.commit()
+            # Note: Commit is handled by the dependency injection layer (get_db)
+            await db.flush()  # Ensure changes are persisted
 
             # Refresh both objects
             await db.refresh(feed_article)

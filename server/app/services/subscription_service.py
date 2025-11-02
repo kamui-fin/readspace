@@ -252,3 +252,71 @@ class SubscriptionService:
             legacy_feeds.append(legacy_feed)
 
         return legacy_feeds
+
+    async def create_subscription_by_feed_id(
+        self,
+        *,
+        feed_id: UUID,
+        folder_id: UUID | str,
+        custom_title: str | None = None,
+    ) -> SubscriptionResponse:
+        """Create a subscription directly by feed ID, bypassing URL parsing."""
+
+        # Handle 'default' folder_id by getting the actual default folder
+        actual_folder_id = folder_id
+        if folder_id == "default":
+            from app.services.folder_service import FolderService
+
+            folder_service = FolderService(self.db, self.user_id)
+            default_folder = await folder_service.get_default_folder()
+            if default_folder:
+                actual_folder_id = default_folder.id
+            else:
+                raise ValueError("Could not find or create default folder")
+
+        logger.info(
+            "Creating subscription by feed ID",
+            feed_id=feed_id,
+            folder_id=actual_folder_id,
+            user_id=self.user_id,
+        )
+
+        # Check if the feed exists in the global feeds table
+        from app.crud import crud_feed
+
+        feed = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+        if not feed:
+            raise ValueError("Feed not found")
+
+        # Check if user is already subscribed to this feed
+        existing_subscription = await crud_subscription.get_subscription_by_feed_id(
+            self.db, feed_id=feed_id, user_id=self.user_id
+        )
+        if existing_subscription:
+            raise ValueError("Already subscribed to this feed")
+
+        try:
+            # Create subscription using the feed's URL
+            subscription_in = SubscriptionCreate(
+                url=str(feed.url),
+                folder_id=actual_folder_id,
+                custom_title=custom_title,
+            )
+
+            subscription_db = await crud_subscription.create_subscription(
+                self.db,
+                subscription_in=subscription_in,
+                user_id=self.user_id,
+                feed_data=None,  # Feed already exists
+            )
+
+            logger.info(
+                "Subscription created successfully by feed ID",
+                subscription_id=subscription_db.id,
+                feed_id=feed_id,
+            )
+            return SubscriptionResponse.model_validate(subscription_db)
+
+        except IntegrityError as e:
+            logger.warning("Subscription already exists", feed_id=feed_id, user_id=self.user_id)
+            raise ValueError("Subscription to feed already exists") from e

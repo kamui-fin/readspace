@@ -242,16 +242,6 @@ class TestArticleQueryBuilder:
         result = self.builder._get_sort_column(mock_table, "unknown_column")
         assert result == "published_at_column"
 
-    def test_build_count_query(self):
-        """Test building count query from base query."""
-        base_query = select(FeedArticle)
-        count_query = self.builder.build_count_query(base_query)
-
-        assert isinstance(count_query, Select)
-        # Should contain count function
-        query_str = str(count_query)
-        assert "count" in query_str.lower()
-
     def test_build_union_query_basic(self):
         """Test building basic union query."""
         feed_query = self.builder.build_feed_article_query(self.user_id, {})

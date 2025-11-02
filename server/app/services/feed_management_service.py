@@ -110,30 +110,13 @@ class FeedManagementService:
 
         # Add subscription-specific data if user is subscribed
         if subscription_db:
-            # Get unread count for this specific feed
-            from sqlalchemy import func, select
-
-            from app.models.rss_models import FeedArticle, UserArticleState
-
-            unread_counts_stmt = (
-                select(func.count(UserArticleState.id))
-                .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
-                .where(
-                    UserArticleState.user_id == self.user_id,
-                    ~UserArticleState.is_read,
-                    FeedArticle.feed_id == feed_id,
-                )
-            )
-            unread_count_result = await self.db.execute(unread_counts_stmt)
-            unread_count = unread_count_result.scalar_one_or_none() or 0
-
             # Override title with custom title if set, and add subscription data
             feed_data.update(
                 {
                     "title": subscription_db.custom_title or feed_db.title,
                     "user_id": subscription_db.user_id,
                     "folder_id": subscription_db.folder_id,
-                    "unread_count": unread_count,
+                    "is_favorite": subscription_db.is_favorite,
                 }
             )
 
@@ -147,12 +130,15 @@ class FeedManagementService:
         search_query: str | None = None,
         skip: int = 0,
         limit: int = 100,
+        include_unread_counts: bool = False,
     ) -> list[FeedResponse]:
-        """List feeds with optional filtering."""
-        from sqlalchemy import and_, func, or_, select
+        """
+        List user's feed subscriptions with optional filtering and unread counts.
 
-        from app.models.rss_models import FeedArticle, UserArticleState
-
+        Args:
+            include_unread_counts: If True, includes unread counts in a single optimized query.
+                                 If False, only fetches feed metadata (faster).
+        """
         feeds_db = await crud_feed.get_feeds_by_user(
             db=self.db,
             user_id=self.user_id,
@@ -164,41 +150,17 @@ class FeedManagementService:
             limit=limit,
         )
 
-        feed_ids = [feed.id for feed, subscription in feeds_db]
-
-        if not feed_ids:
+        if not feeds_db:
             return []
 
-        # Get unread counts for all feeds in a single query
-        unread_counts_stmt = (
-            select(FeedArticle.feed_id, func.count(FeedArticle.id))
-            .outerjoin(
-                UserArticleState,
-                and_(
-                    UserArticleState.article_id == FeedArticle.id,
-                    UserArticleState.user_id == self.user_id,
-                ),
-            )
-            .where(
-                and_(
-                    FeedArticle.feed_id.in_(feed_ids),
-                    # Count as unread if no state record OR explicitly marked unread
-                    or_(
-                        UserArticleState.is_read.is_(None),
-                        ~UserArticleState.is_read,
-                    ),
-                )
-            )
-            .group_by(FeedArticle.feed_id)
-        )
-        unread_counts_result = await self.db.execute(unread_counts_stmt)
-        unread_counts_raw = unread_counts_result.all()
-        unread_counts: dict[UUID, int] = {row[0]: row[1] for row in unread_counts_raw}
+        # Get unread counts in a single query if requested
+        unread_counts_by_feed = {}
+        if include_unread_counts:
+            feed_ids = [feed.id for feed, _ in feeds_db]
+            unread_counts_by_feed = await self._get_unread_counts_for_feeds(feed_ids)
 
         feed_responses = []
         for feed, subscription in feeds_db:
-            unread_count = unread_counts.get(feed.id, 0)
-
             feed_data = {
                 "id": feed.id,
                 "url": self._normalize_url(str(feed.url) if feed.url else None),
@@ -219,10 +181,16 @@ class FeedManagementService:
                 "last_article_published_at": feed.last_article_published_at,
                 "created_at": feed.created_at,
                 "updated_at": feed.updated_at,
+                "is_subscribed": True,
                 "user_id": subscription.user_id,
                 "folder_id": subscription.folder_id,
-                "unread_count": unread_count,
+                "is_favorite": subscription.is_favorite,
             }
+
+            # Add unread count if requested
+            if include_unread_counts:
+                feed_data["unread_count"] = unread_counts_by_feed.get(feed.id, 0)
+
             feed_responses.append(FeedResponse(**feed_data))
 
         return feed_responses
@@ -253,27 +221,7 @@ class FeedManagementService:
 
         if updated_subscription:
             logger.info("Feed settings updated successfully", feed_id=feed_id)
-            # The response should be a FeedResponse, so I need to construct it.
-            # The updated_subscription contains the feed object.
             feed_db = updated_subscription.feed
-            # I need to get unread count as well.
-            # For now, I will just return the validated model from the subscription.
-            # The list_feeds method has the logic for unread count. I will copy it.
-            from sqlalchemy import func, select
-
-            from app.models.rss_models import FeedArticle, UserArticleState
-
-            unread_counts_stmt = (
-                select(func.count(UserArticleState.id))
-                .join(FeedArticle, UserArticleState.article_id == FeedArticle.id)
-                .where(
-                    UserArticleState.user_id == self.user_id,
-                    ~UserArticleState.is_read,
-                    FeedArticle.feed_id == feed_id,
-                )
-            )
-            unread_count_result = await self.db.execute(unread_counts_stmt)
-            unread_count = unread_count_result.scalar_one_or_none() or 0
 
             feed_data = {
                 "id": feed_db.id,
@@ -298,7 +246,7 @@ class FeedManagementService:
                 "is_subscribed": True,
                 "user_id": updated_subscription.user_id,
                 "folder_id": updated_subscription.folder_id,
-                "unread_count": unread_count,
+                "is_favorite": updated_subscription.is_favorite,
             }
             return FeedResponse(**feed_data)
         return None
@@ -458,6 +406,48 @@ class FeedManagementService:
         )
         unread_count_result = await self.db.execute(unread_counts_stmt)
         return unread_count_result.scalar_one_or_none() or 0
+
+    async def _get_unread_counts_for_feeds(self, feed_ids: list[UUID]) -> dict[UUID, int]:
+        """Get unread counts for multiple feeds in a single optimized query."""
+        if not feed_ids:
+            return {}
+
+        from sqlalchemy import and_, func, or_, select
+
+        from app.models.rss_models import FeedArticle, UserArticleState
+
+        # Single query to get unread counts for all feeds
+        unread_counts_stmt = (
+            select(FeedArticle.feed_id, func.count(FeedArticle.id).label("unread_count"))
+            .outerjoin(
+                UserArticleState,
+                and_(
+                    UserArticleState.article_id == FeedArticle.id,
+                    UserArticleState.user_id == self.user_id,
+                ),
+            )
+            .where(
+                and_(
+                    FeedArticle.feed_id.in_(feed_ids),
+                    # Count as unread if no state record OR explicitly marked unread
+                    or_(
+                        UserArticleState.is_read.is_(None),
+                        ~UserArticleState.is_read,
+                    ),
+                )
+            )
+            .group_by(FeedArticle.feed_id)
+        )
+
+        result = await self.db.execute(unread_counts_stmt)
+        rows = result.fetchall()
+
+        # Convert to dict, ensuring all feed_ids have a count (default 0)
+        unread_counts = dict.fromkeys(feed_ids, 0)
+        for row in rows:
+            unread_counts[row.feed_id] = row.unread_count
+
+        return unread_counts
 
     def _construct_feed_response(self, feed_db: Any, subscription_db: Any, unread_count: int) -> FeedResponse:
         feed_data = {

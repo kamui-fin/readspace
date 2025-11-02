@@ -245,43 +245,46 @@ class FeedService:
         if not content_to_create:
             return 0
 
+        # Use explicit transaction boundary for atomic article creation
         try:
-            # Step 2: Bulk create content first
-            content_insert_stmt = insert(ArticleContent).values(content_to_create)
-            content_result = await self.db.execute(content_insert_stmt.returning(ArticleContent.id))
-            content_rows = content_result.fetchall()
-            await self.db.flush()
+            async with self.db.begin_nested():
+                # Step 2: Bulk create content first
+                content_insert_stmt = insert(ArticleContent).values(content_to_create)
+                content_result = await self.db.execute(content_insert_stmt.returning(ArticleContent.id))
+                content_rows = content_result.fetchall()
 
-            # Step 3: Prepare article data with content IDs
-            article_insert_data = []
-            for i, content_row in enumerate(content_rows):
-                if i < len(articles_to_create):
-                    guid, _ = articles_to_create[i]
-                    article_insert_data.append(
-                        {
-                            "feed_id": feed_db.id,
-                            "content_id": content_row.id,
-                            "guid": guid,
-                            "created_at": datetime.now(timezone.utc),
-                            "updated_at": datetime.now(timezone.utc),
-                        }
-                    )
+                # Step 3: Prepare article data with content IDs
+                article_insert_data = []
+                for i, content_row in enumerate(content_rows):
+                    if i < len(articles_to_create):
+                        guid, _ = articles_to_create[i]
+                        article_insert_data.append(
+                            {
+                                "feed_id": feed_db.id,
+                                "content_id": content_row.id,
+                                "guid": guid,
+                                "created_at": datetime.now(timezone.utc),
+                                "updated_at": datetime.now(timezone.utc),
+                            }
+                        )
 
-            # Step 4: Bulk insert articles with PostgreSQL-specific ON CONFLICT DO NOTHING
-            # This is the key efficiency improvement - single query handles all duplicates
-            from sqlalchemy.dialects.postgresql import insert as pg_insert
+                # Step 4: Bulk insert articles with PostgreSQL-specific ON CONFLICT DO NOTHING
+                # This is the key efficiency improvement - single query handles all duplicates
+                from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-            article_insert_stmt = pg_insert(FeedArticle).values(article_insert_data)
-            article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(index_elements=["feed_id", "guid"])
+                article_insert_stmt = pg_insert(FeedArticle).values(article_insert_data)
+                article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(index_elements=["feed_id", "guid"])
 
-            result = await self.db.execute(article_insert_stmt)
-            await self.db.commit()
+                result = await self.db.execute(article_insert_stmt)
+                # Transaction auto-commits on successful exit from context manager
 
             created_count = result.rowcount or 0
 
             if created_count > 0:
                 logger.info(
-                    f"Bulk created {created_count} new articles from {len(entries)} entries",
+                    "Bulk created new articles",
+                    created_count=created_count,
+                    total_entries=len(entries),
                     feed_id=str(feed_db.id),
                 )
             else:
@@ -293,7 +296,7 @@ class FeedService:
             return created_count
 
         except Exception as e:
-            await self.db.rollback()
+            # Transaction auto-rolls back on exception
             logger.error("Error in bulk article creation", feed_id=str(feed_db.id), error=str(e))
             raise
 

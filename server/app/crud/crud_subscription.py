@@ -250,9 +250,7 @@ async def get_all_subscriptions_for_user(db: AsyncSession, *, user_id: UUID) -> 
     return list(result.scalars().all())
 
 
-async def delete_subscriptions_bulk(
-    db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID
-) -> dict[str, list[UUID]]:
+async def delete_subscriptions_bulk(db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID) -> dict[str, list[UUID]]:
     """Delete multiple subscriptions in a single query.
 
     Args:

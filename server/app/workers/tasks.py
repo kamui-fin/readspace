@@ -1,31 +1,244 @@
-import asyncio  # Add asyncio import
+import asyncio
 from typing import Any
 from uuid import UUID
 
 import structlog
+from celery.signals import worker_process_init, worker_process_shutdown
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import NullPool
 
 from app.core.celery_app import celery
 from app.core.config import get_settings
+from app.core.constants import MAX_FEEDS_BATCH_SIZE
+from app.services.feed_enrichment_service import FeedEnrichmentService
+from app.services.feed_service import FeedService
+from app.services.opml_import_service import OpmlImportService
 
 logger = structlog.get_logger(__name__)
 settings = get_settings()
 
+# Module-level persistent event loop and database engine for Celery workers
+# This avoids creating/destroying event loops and DB connections on every task
+_event_loop: asyncio.AbstractEventLoop | None = None
+_db_engine: AsyncEngine | None = None
+_session_maker: async_sessionmaker[AsyncSession] | None = None
 
-async def create_task_db_session() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
-    """Create a database session for Celery tasks."""
-    engine = create_async_engine(
-        settings.SUPABASE_DB_CONNECTION,
-        poolclass=NullPool,
-    )
-    task_async_session_local = async_sessionmaker(
-        engine,
-        class_=AsyncSession,
-        autoflush=False,
-        expire_on_commit=False,
-    )
-    return engine, task_async_session_local
+@worker_process_init.connect
+def _on_worker_process_init(**_):
+    global _event_loop, _db_engine, _session_maker
+    _event_loop = None
+    _db_engine = None
+    _session_maker = None
+
+
+@worker_process_shutdown.connect
+def _shutdown_worker(**_):
+    if _db_engine and not _db_engine.pool.is_closed():
+        loop = get_task_event_loop()
+        loop.run_until_complete(_db_engine.dispose())
+    if _event_loop and not _event_loop.is_closed():
+        _event_loop.close()
+
+
+def get_task_event_loop() -> asyncio.AbstractEventLoop:
+    """Get or create persistent event loop for Celery tasks.
+
+    This reuses the same event loop across tasks to avoid overhead
+    of creating/destroying event loops (1-5ms per task).
+    """
+    global _event_loop
+    if _event_loop is None or _event_loop.is_closed():
+        _event_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(_event_loop)
+        logger.info("Created persistent event loop for Celery worker")
+    return _event_loop
+
+
+async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+    """Get or create persistent database engine and session maker for Celery tasks.
+
+    This maintains a connection pool that is reused across tasks, providing:
+    - 10x faster connections (no setup/teardown overhead)
+    - Better resource utilization
+    - Automatic connection health checking with pool_pre_ping
+
+    Returns:
+        Tuple of (engine, session_maker)
+    """
+    global _db_engine, _session_maker
+
+    if _db_engine is None or _session_maker is None:
+        _db_engine = create_async_engine(
+            settings.SUPABASE_DB_CONNECTION,
+            pool_size=5,  # Smaller pool for Celery workers (vs 20 for API)
+            max_overflow=10,  # Allow burst capacity
+            pool_pre_ping=True,  # Verify connections are alive before use
+            pool_recycle=3600,  # Recycle connections after 1 hour
+            echo=False,
+        )
+        _session_maker = async_sessionmaker(
+            _db_engine,
+            class_=AsyncSession,
+            autoflush=False,
+            expire_on_commit=False,
+        )
+        logger.info("Initialized persistent DB engine for Celery worker", pool_size=5, max_overflow=10)
+
+    return _db_engine, _session_maker
+
+
+# ============================================================================
+# ASYNC TASK IMPLEMENTATIONS (module-level functions - testable & reusable)
+# ============================================================================
+
+
+async def async_import_single_feed(
+    user_id: UUID,
+    feed_url: str,
+    folder_id: str,
+    tag_names: list[str] | None = None,
+    feed_title: str | None = None,
+    update_existing: bool = False,
+    is_revoked: bool = False,
+) -> dict[str, Any]:
+    """Import a single feed - async implementation.
+
+    Args:
+        user_id: User UUID
+        feed_url: Feed URL to import
+        folder_id: Folder ID for the feed
+        tag_names: Optional list of tag names
+        feed_title: Optional feed title override
+        update_existing: Whether to update existing feed
+        is_revoked: Whether the task was cancelled
+
+    Returns:
+        Import result dictionary
+    """
+    if is_revoked:
+        return {
+            "success": False,
+            "url": feed_url,
+            "title": feed_title or "Unknown",
+            "status": "cancelled",
+            "error": "Task was cancelled by user",
+        }
+
+    _, session_maker = await get_persistent_db_engine()
+    async with session_maker() as db:
+        opml_service = OpmlImportService(db=db, user_id=user_id)
+        return await opml_service.import_single_feed(
+            feed_url=feed_url,
+            folder_id=folder_id,
+            tag_names=tag_names,
+            feed_title=feed_title,
+            update_existing=update_existing,
+        )
+
+
+async def async_import_opml(
+    user_id: UUID,
+    opml_content: str,
+    default_folder_name: str = "Imported Feeds",
+    is_revoked: bool = False,
+) -> dict[str, Any]:
+    """Import OPML file - async implementation.
+
+    Args:
+        user_id: User UUID
+        opml_content: OPML file content
+        default_folder_name: Default folder name for feeds without folders
+        is_revoked: Whether the task was cancelled
+
+    Returns:
+        Import result dictionary
+    """
+    if is_revoked:
+        logger.info("OPML import task was cancelled before starting", user_id=str(user_id))
+        raise Exception("Task was cancelled by user")
+
+    logger.info("Starting OPML import orchestration", user_id=str(user_id))
+
+    _, session_maker = await get_persistent_db_engine()
+    async with session_maker() as db:
+        opml_service = OpmlImportService(db=db, user_id=user_id)
+        result = await opml_service.process_opml_import(
+            opml_content=opml_content, default_folder_name=default_folder_name
+        )
+
+        logger.info(
+            f"Bulk queued {result['queued_tasks']} feed import tasks",
+            user_id=str(user_id),
+        )
+        return result
+
+
+async def async_refresh_single_feed(feed_id: UUID) -> None:
+    """Refresh a single feed - async implementation.
+
+    Args:
+        feed_id: Feed UUID
+    """
+    logger.info("Starting feed refresh", feed_id=str(feed_id))
+
+    _, session_maker = await get_persistent_db_engine()
+    async with session_maker() as db:
+        feed_service = FeedService(db=db)
+        await feed_service.refresh_feed(feed_id=feed_id)
+        logger.info("Successfully refreshed feed", feed_id=str(feed_id))
+
+
+async def async_schedule_all_feeds() -> None:
+    """Schedule all feeds needing refresh - async implementation."""
+    logger.info("Starting schedule all feed refreshes")
+
+    _, session_maker = await get_persistent_db_engine()
+    async with session_maker() as db:
+        feed_service = FeedService(db=db)
+        feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=MAX_FEEDS_BATCH_SIZE)
+
+        logger.info(f"Found {len(feeds_to_check)} feeds to refresh")
+
+        if feeds_to_check:
+            feed_ids = [str(feed.id) for feed in feeds_to_check]
+            tasks = [refresh_single_feed_task.delay(feed_id) for feed_id in feed_ids]
+            logger.info(f"Bulk dispatched {len(tasks)} feed refresh tasks")
+
+
+async def async_enrich_feed(feed_id: UUID) -> dict[str, Any]:
+    """Enrich a feed with AI metadata - async implementation.
+
+    Args:
+        feed_id: Feed UUID
+
+    Returns:
+        Enrichment result dictionary
+    """
+    logger.info("Starting feed enrichment", feed_id=str(feed_id))
+
+    _, session_maker = await get_persistent_db_engine()
+    async with session_maker() as db:
+        enrichment_service = FeedEnrichmentService(db=db)
+        result = await enrichment_service.enrich_feed(str(feed_id))
+
+        if result.get("success"):
+            logger.info(
+                "Feed enrichment completed",
+                feed_id=str(feed_id),
+                enrichment_data=result.get("enrichment_data", {}),
+            )
+        else:
+            logger.error(
+                "Feed enrichment failed",
+                feed_id=str(feed_id),
+                error=result.get("error"),
+            )
+
+        return result
+
+
+# ============================================================================
+# CELERY TASK WRAPPERS (thin layer around async implementations)
+# ============================================================================
 
 
 @celery.task(
@@ -43,49 +256,24 @@ def import_single_feed_task(
     feed_title: str | None = None,
     update_existing: bool = False,
 ) -> dict[str, Any]:
-    """Celery task to import a single feed."""
-
-    async def _async_import_single_feed() -> dict[str, Any]:
-        # Check if task was revoked before starting work
-        if hasattr(self.request, "is_revoked") and self.request.is_revoked():
-            return {
-                "success": False,
-                "url": feed_url,
-                "title": feed_title or "Unknown",
-                "status": "cancelled",
-                "error": "Task was cancelled by user",
-            }
-
-        engine, task_async_session_local = await create_task_db_session()
-        try:
-            async with task_async_session_local() as db:
-                user_uuid = UUID(user_id)
-                from app.services.rss_service import (
-                    RssOrchestrationService,
-                )
-
-                rss_service = RssOrchestrationService(db=db, user_id=user_uuid)
-
-                # Use the refactored service method
-                return await rss_service.import_single_feed(
-                    feed_url=feed_url,
-                    folder_id=folder_id,
-                    tag_names=tag_names,
-                    feed_title=feed_title,
-                    update_existing=update_existing,
-                )
-
-        except Exception:
-            raise
-        finally:
-            if engine:
-                await engine.dispose()
+    """Celery task wrapper for importing a single feed."""
+    loop = get_task_event_loop()
+    is_revoked = hasattr(self.request, "is_revoked") and self.request.is_revoked()
 
     try:
-        return asyncio.run(_async_import_single_feed())
+        return loop.run_until_complete(
+            async_import_single_feed(
+                user_id=UUID(user_id),
+                feed_url=feed_url,
+                folder_id=folder_id,
+                tag_names=tag_names,
+                feed_title=feed_title,
+                update_existing=update_existing,
+                is_revoked=is_revoked,
+            )
+        )
     except Exception as exc:
-        # Check if task was revoked/cancelled
-        if hasattr(self.request, "is_revoked") and self.request.is_revoked():
+        if is_revoked:
             logger.info(
                 "import_single_feed_task was cancelled",
                 user_id=user_id,
@@ -114,7 +302,6 @@ def import_single_feed_task(
                 error=str(exc),
                 exc_info=True,
             )
-            # Return failure result instead of raising
             return {
                 "success": False,
                 "url": feed_url,
@@ -127,68 +314,30 @@ def import_single_feed_task(
 @celery.task(
     name="app.workers.tasks.import_opml_task",
     bind=True,
-    max_retries=0,  # No retries for OPML imports - fail immediately
+    max_retries=0,
     default_retry_delay=300,
 )
 def import_opml_task(
     self: Any, user_id: str, opml_content: str, default_folder_name: str = "Imported Feeds"
 ) -> dict[str, Any]:
-    """Celery task to orchestrate OPML import by queuing individual feed import tasks."""
-
-    async def _async_import_opml() -> dict[str, Any]:
-        # Check if task was revoked before starting work
-        if hasattr(self.request, "is_revoked") and self.request.is_revoked():
-            logger.info("OPML import task was cancelled before starting", user_id=user_id)
-            raise Exception("Task was cancelled by user")
-
-        engine, task_async_session_local = await create_task_db_session()
-        try:
-            logger.info("Starting OPML import orchestration task", user_id=user_id)
-
-            async with task_async_session_local() as db:
-                user_uuid = UUID(user_id)
-                from app.services.rss_service import (
-                    RssOrchestrationService,
-                )
-
-                rss_service = RssOrchestrationService(db=db, user_id=user_uuid)
-
-                # Use the refactored service method
-                result = await rss_service.process_opml_import(
-                    opml_content=opml_content, default_folder_name=default_folder_name
-                )
-
-                logger.info(
-                    f"Bulk queued {result['queued_tasks']} feed import tasks",
-                    user_id=user_id,
-                )
-
-                return result
-
-        except Exception as exc:
-            logger.error(
-                "Error in OPML import orchestration task",
-                user_id=user_id,
-                error=str(exc),
-                exc_info=True,
-            )
-            raise
-        finally:
-            if engine:
-                await engine.dispose()
+    """Celery task wrapper for OPML import orchestration."""
+    loop = get_task_event_loop()
+    is_revoked = hasattr(self.request, "is_revoked") and self.request.is_revoked()
 
     try:
-        return asyncio.run(_async_import_opml())
-    except Exception as exc:
-        # Check if task was revoked/cancelled
-        if hasattr(self.request, "is_revoked") and self.request.is_revoked():
-            logger.info(
-                "import_opml_task was cancelled",
-                user_id=user_id,
+        return loop.run_until_complete(
+            async_import_opml(
+                user_id=UUID(user_id),
+                opml_content=opml_content,
+                default_folder_name=default_folder_name,
+                is_revoked=is_revoked,
             )
-            raise exc  # Let it fail, cleanup will be handled by the API endpoint
+        )
+    except Exception as exc:
+        if is_revoked:
+            logger.info("import_opml_task was cancelled", user_id=user_id)
+            raise exc
 
-        # No retries for OPML import tasks - fail immediately
         logger.error(
             "OPML import task failed",
             user_id=user_id,
@@ -205,48 +354,22 @@ def import_opml_task(
     default_retry_delay=30,
 )
 def refresh_single_feed_task(self: Any, feed_id: str) -> None:
-    """Celery task to refresh a single global RSS feed."""
-
-    async def _async_refresh_single_feed() -> None:
-        engine, task_async_session_local = await create_task_db_session()
-        try:
-            logger.info("Starting refresh_single_feed_task", feed_id=feed_id)
-
-            async with task_async_session_local() as db:
-                from app.services.feed_service import FeedService
-
-                feed_uuid = UUID(feed_id)
-                feed_service = FeedService(db=db)
-
-                # Refresh the global feed (will create articles for all subscribers)
-                await feed_service.refresh_feed(feed_id=feed_uuid)
-                logger.info("Successfully refreshed global feed via task", feed_id=feed_id)
-            return None
-        except Exception as exc:
-            logger.error(
-                "Error in _async_refresh_single_feed",
-                feed_id=feed_id,
-                error=str(exc),
-                exc_info=True,
-            )
-            raise  # Re-raise to be caught by the outer sync function to call self.retry
-        finally:
-            if engine:
-                await engine.dispose()
+    """Celery task wrapper for refreshing a single feed."""
+    loop = get_task_event_loop()
 
     try:
-        return asyncio.run(_async_refresh_single_feed())
+        return loop.run_until_complete(async_refresh_single_feed(feed_id=UUID(feed_id)))
     except Exception as exc:
-        # Categorize errors for better user feedback
         error_str = str(exc).lower()
+
+        # Categorize errors for better handling
         if "dataerror" in error_str or "invalid input for query argument" in error_str:
-            # SQL type conversion error - usually from malformed feed data
             logger.error(
                 "SQL type conversion error for refresh_single_feed_task",
                 feed_id=feed_id,
                 error=str(exc),
             )
-            if self.request.retries < (self.max_retries or 3):
+            if self.request.retries < (self.max_retries or 2):
                 logger.info(
                     f"Retrying refresh_single_feed_task after SQL error, attempt {self.request.retries + 1}",
                     feed_id=feed_id,
@@ -258,16 +381,17 @@ def refresh_single_feed_task(self: Any, feed_id: str) -> None:
                     feed_id=feed_id,
                     error=str(exc),
                 )
-                raise ConnectionError("Feed data contains invalid types that cannot be processed") from exc
+                raise ConnectionError("Feed data contains invalid types") from exc
+
         elif "timeout" in error_str or "timed out" in error_str:
-            # Timeout error
             raise ConnectionError("Feed timed out during refresh") from exc
+
         elif "connection" in error_str:
-            # Connection error
             raise ConnectionError("Connection failed during feed refresh") from exc
+
         else:
-            # Other errors - retry as normal
-            if self.request.retries < (self.max_retries or 3):
+            # General errors - retry with backoff
+            if self.request.retries < (self.max_retries or 2):
                 logger.info(
                     f"Retrying refresh_single_feed_task, attempt {self.request.retries + 1}",
                     feed_id=feed_id,
@@ -285,45 +409,9 @@ def refresh_single_feed_task(self: Any, feed_id: str) -> None:
 
 @celery.task(name="app.workers.tasks.schedule_all_feed_refreshes_task")
 def schedule_all_feed_refreshes_task() -> None:
-    """Celery Beat task to find global feeds needing refresh and dispatch individual refresh tasks."""
-
-    async def _async_schedule_all_feeds() -> None:
-        engine, task_async_session_local = await create_task_db_session()
-        try:
-            logger.info("Starting schedule_all_feed_refreshes_task (new version)")
-
-            async with task_async_session_local() as db:
-                from app.services.feed_service import FeedService
-
-                feed_service = FeedService(db=db)
-                feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=1000)
-
-                logger.info(f"Found {len(feeds_to_check)} global feeds to potentially refresh.")
-
-                # Bulk queue all refresh tasks at once for better performance
-                if feeds_to_check:
-                    feed_ids = [str(feed.id) for feed in feeds_to_check]
-                    tasks = [refresh_single_feed_task.delay(feed_id) for feed_id in feed_ids]
-                    dispatched_count = len(tasks)
-
-                    # Log efficiency metrics
-                    logger.info(f"Bulk dispatched {dispatched_count} global feed refresh tasks")
-                else:
-                    dispatched_count = 0
-            return None
-        except Exception as e:
-            logger.error(
-                "Error in _async_schedule_all_feeds (new version)",
-                error=str(e),
-                exc_info=True,
-            )
-            raise  # Re-raise to be handled by the outer sync function/Celery
-        finally:
-            if engine:
-                await engine.dispose()
-                logger.info("Task-specific engine disposed for schedule_all_feed_refreshes_task")
-
-    return asyncio.run(_async_schedule_all_feeds())
+    """Celery task wrapper for scheduling all feed refreshes."""
+    loop = get_task_event_loop()
+    return loop.run_until_complete(async_schedule_all_feeds())
 
 
 @celery.task(
@@ -333,48 +421,11 @@ def schedule_all_feed_refreshes_task() -> None:
     default_retry_delay=300,
 )
 def enrich_feed_task(self: Any, feed_id: str) -> dict[str, Any]:
-    """Celery task to enrich a feed with AI-powered metadata and additional information."""
-
-    async def _async_enrich_feed() -> dict[str, Any]:
-        engine, task_async_session_local = await create_task_db_session()
-        try:
-            logger.info("Starting feed enrichment task", feed_id=feed_id)
-
-            async with task_async_session_local() as db:
-                from app.services.feed_enrichment_service import FeedEnrichmentService
-
-                enrichment_service = FeedEnrichmentService(db=db)
-                result = await enrichment_service.enrich_feed(feed_id)
-
-                if result.get("success"):
-                    logger.info(
-                        "Feed enrichment completed successfully",
-                        feed_id=feed_id,
-                        enrichment_data=result.get("enrichment_data", {}),
-                    )
-                else:
-                    logger.error(
-                        "Feed enrichment failed",
-                        feed_id=feed_id,
-                        error=result.get("error"),
-                    )
-
-                return result
-
-        except Exception as exc:
-            logger.error(
-                "Error in feed enrichment task",
-                feed_id=feed_id,
-                error=str(exc),
-                exc_info=True,
-            )
-            raise
-        finally:
-            if engine:
-                await engine.dispose()
+    """Celery task wrapper for enriching a feed with AI metadata."""
+    loop = get_task_event_loop()
 
     try:
-        return asyncio.run(_async_enrich_feed())
+        return loop.run_until_complete(async_enrich_feed(feed_id=UUID(feed_id)))
     except Exception as exc:
         if self.request.retries < (self.max_retries or 2):
             logger.info(
@@ -389,7 +440,6 @@ def enrich_feed_task(self: Any, feed_id: str) -> dict[str, Any]:
                 error=str(exc),
                 exc_info=True,
             )
-            # Return failure result instead of raising
             return {
                 "success": False,
                 "feed_id": feed_id,

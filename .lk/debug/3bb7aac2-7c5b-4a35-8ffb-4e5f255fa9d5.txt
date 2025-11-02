@@ -1,0 +1,113 @@
+[DEBUG] Watching for changes in setting files /home/kamui/dev/projects/readspace/.lk/settings.json, /home/kamui/dev/projects/readspace/.claude/settings.local.json...
+[DEBUG] Applying permission update: Adding 50 allow rule(s) to destination 'localSettings': ["WebFetch(domain:tanstack.com)","Bash(grep:*)","Bash(pnpm tsc:*)","Bash(poetry run pytest:*)","Bash(poetry run poe:*)","Bash(find:*)","WebSearch","Bash(mkdir:*)","Bash(poe test:*)","Bash(python3:*)","Bash(python:*)","Bash(curl:*)","WebFetch(domain:supabase.com)","Bash(celery -A app.core.celery_app call app.workers.tasks.schedule_all_feed_refreshes_task)","Bash(docker compose:*)","Bash(poetry run celery:*)","Bash(poetry run alembic:*)","Bash(poetry run python:*)","Bash(pnpm type-check:*)","WebFetch(domain:github.com)","Bash(git checkout:*)","Bash(pnpm add:*)","Bash(docker network inspect:*)","mcp__playwright__browser_navigate","Bash(npm run lint)","Bash(pnpm lint:*)","WebFetch(domain:react-pdf.org)","Bash(poe lint:*)","WebFetch(domain:pnpm.io)","Bash(xargs sed:*)","Bash(npx tsc:*)","Bash(npm run build:*)","Bash(pnpm build:*)","Bash(poetry run:*)","Bash(for file in app/routers/rss_similar.py app/routers/rss_feeds.py app/routers/rss_folders.py app/routers/highlights.py)","Bash(do echo \"=== $file ===\")","Bash(done)","WebFetch(domain:turborepo.com)","Bash(turbo lint:*)","Bash(bun run check-types:*)","Bash(git rm:*)","Bash(git mv:*)","Bash(time curl:*)","Bash(bun add:*)","WebFetch(domain:meliorence.github.io)","mcp__context7__resolve-library-id","mcp__context7__get-library-docs","Bash(/home/kamui/.bun/bin/bun run check-types:*)","Bash(/home/kamui/.bun/bin/bun run --filter=@readspace/shared build)","Bash(git diff:*)"]
+[DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+[DEBUG] Total LSP servers loaded: 0
+[DEBUG] LSP manager initialized with 0 servers
+[DEBUG] LSP server manager initialized successfully
+[DEBUG] Loading skills from directories: managed=/etc/claude-code/.claude/skills, user=.lk/skills, project=/home/kamui/dev/projects/readspace/.claude/skills
+[DEBUG] >>>>> getPluginSkills CALLED <<<<<
+[DEBUG] Creating shell snapshot for zsh (zsh)
+[DEBUG] Looking for shell config file: /home/kamui/.zshrc
+[DEBUG] Snapshots directory: .lk/shell-snapshots
+[DEBUG] Creating snapshot at: .lk/shell-snapshots/snapshot-zsh-1762047089889-xzqcto.sh
+[DEBUG] Shell binary exists: false
+[DEBUG] Execution timeout: 10000ms
+[DEBUG] Writing to temp file: .lk/todos/3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5-agent-3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5.json.tmp.3173535.1762047089893
+[DEBUG] Temp file written successfully, size: 2 bytes
+[DEBUG] Renaming .lk/todos/3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5-agent-3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5.json.tmp.3173535.1762047089893 to .lk/todos/3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5-agent-3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5.json
+[DEBUG] File .lk/todos/3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5-agent-3bb7aac2-7c5b-4a35-8ffb-4e5f255fa9d5.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047089898
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047089898 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] getPluginSkills: Processing 0 enabled plugins
+[DEBUG] Total plugin skills loaded: 0
+[DEBUG] Total plugin commands loaded: 0
+[DEBUG] Registered 0 hooks from 0 plugins
+[DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, duplicates removed: 0)
+[DEBUG] getSkillsIfEnabled returning: 0 skill dir commands, 0 plugin skills
+[DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=/home/kamui/.nvm/versions/node/v22.14.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg)
+[DEBUG] Total plugin agents loaded: 0
+[DEBUG] Summarizing last 2 of 102 messages (~103006 tokens)
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090059
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090059 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090061
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090061 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090063
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090063 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Shell snapshot created successfully (155419 bytes)
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090239
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090239 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Getting matching hook commands for SessionStart with query: startup
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090275
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37109 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090275 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090276
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37109 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090276 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090278
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37109 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090278 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] performStartupChecks called
+[DEBUG] Starting background plugin installations
+[DEBUG] performBackgroundPluginInstallations called
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /review, /design-review
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090288
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37109 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090288 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047090290
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37214 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047090290 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically
+[DEBUG] Setting installation status: 0 marketplaces, 0 installable plugins, 0 uninstallable plugins
+[DEBUG] Loaded plugins - Enabled: 0, Disabled: 0, Commands: 0, Agents: 0, Errors: 0
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] Getting matching hook commands for SessionEnd with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] Cleaned up session snapshot: .lk/shell-snapshots/snapshot-zsh-1762047089889-xzqcto.sh
+[DEBUG] LSP server manager shut down successfully
+[DEBUG] Writing to temp file: .lk/.claude.json.tmp.3173535.1762047092547
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37594 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming .lk/.claude.json.tmp.3173535.1762047092547 to .lk/.claude.json
+[DEBUG] File .lk/.claude.json written atomically

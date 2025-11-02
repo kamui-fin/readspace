@@ -6,6 +6,7 @@ from uuid import UUID
 
 import feedparser  # type: ignore
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.custom_exceptions import (
@@ -19,14 +20,32 @@ from app.crud import crud_feed, crud_folder, crud_subscription
 from app.crud.crud_article import create_articles_batch
 from app.schemas.rss_schemas import ArticleCreate
 from app.schemas.subscription_schemas import LegacyFeedResponse, SubscriptionCreate
-from app.services.base_feed_service import BaseFeedService
 from app.services.feed_deduplication_service import FeedDeduplicationService
 
 logger = structlog.get_logger(__name__)
 
 
-class FeedCreationService(BaseFeedService):
+class FeedCreationService:
     """Service responsible for creating new feeds."""
+
+    def __init__(self, db: AsyncSession, user_id: UUID):
+        self.db = db
+        self.user_id = user_id
+
+        # Initialize service dependencies
+        from app.core.redis_cache import RedisCache
+        from app.services.article_extractor import ArticleExtractor
+        from app.services.article_service import ArticleBusinessLogic
+        from app.services.feed_fetcher import FeedFetcher
+        from app.services.feed_parser import FeedParsingService
+        from app.services.feed_validator import FeedValidator
+
+        redis_cache = RedisCache()
+        self.feed_fetcher = FeedFetcher(redis_cache)
+        self.feed_validator = FeedValidator()
+        self.article_extractor = ArticleExtractor()
+        self.feed_parser = FeedParsingService()
+        self.article_logic = ArticleBusinessLogic()
 
     async def add_new_feed(
         self,
@@ -63,9 +82,7 @@ class FeedCreationService(BaseFeedService):
         )
 
         # Check if feed exists or needs migration (handles URL changes via redirects)
-        existing_feed = await crud_feed.get_or_migrate_feed(
-            self.db, original_url=url, resolved_url=resolved_url
-        )
+        existing_feed = await crud_feed.get_or_migrate_feed(self.db, original_url=url, resolved_url=resolved_url)
         if existing_feed:
             return await self._handle_existing_feed(existing_feed, resolved_url, folder_id, tag_names, update_existing)
 

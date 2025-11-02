@@ -12,6 +12,7 @@ from app.crud.crud_article import (
     count_today_articles,
     count_unread_articles,
     count_unread_articles_by_folder,
+    get_all_unread_counts,
     get_article,
     get_articles_by_user,
     get_recently_read_articles,
@@ -63,7 +64,7 @@ class ArticleManagementService:
         """Get articles with filtering and pagination."""
         skip = (page - 1) * size
 
-        articles_db, total_count = await get_articles_by_user(
+        articles_db = await get_articles_by_user(
             db=self.db,
             user_id=self.user_id,
             feed_ids=feed_ids,
@@ -84,11 +85,13 @@ class ArticleManagementService:
 
         articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
-        pages = (total_count + size - 1) // size if size > 0 else 0
+        # Calculate pages based on whether we got a full page
+        # If we got fewer items than requested, this is the last page
+        pages = page if len(articles) < size else page + 1
 
         result = PaginatedResponse(
             items=articles,
-            total=total_count,
+            total=0,  # No longer calculated - not needed for infinite scroll
             page=page,
             size=size,
             pages=pages,
@@ -197,7 +200,7 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get unread articles with filtering."""
-        articles_db, total_count = await get_articles_by_user(
+        articles_db = await get_articles_by_user(
             db=self.db,
             user_id=self.user_id,
             folder_id=folder_id,
@@ -211,11 +214,11 @@ class ArticleManagementService:
         articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
         page = skip // limit + 1
-        pages = (total_count + limit - 1) // limit if limit > 0 else 0
+        pages = page if len(articles) < limit else page + 1
 
         return PaginatedResponse(
             items=articles,
-            total=total_count,
+            total=0,
             page=page,
             size=limit,
             pages=pages,
@@ -227,10 +230,7 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles marked as read later (includes both RSS feed and clipped articles)."""
-        (
-            articles,
-            total_count,
-        ) = await crud_unified_articles.get_unified_articles_by_user(
+        articles = await crud_unified_articles.get_unified_articles_by_user(
             db=self.db,
             user_id=self.user_id,
             is_read_later=True,
@@ -243,11 +243,11 @@ class ArticleManagementService:
         )
 
         page = skip // limit + 1
-        pages = (total_count + limit - 1) // limit if limit > 0 else 0
+        pages = page if len(articles) < limit else page + 1
 
         return PaginatedResponse(
             items=articles,
-            total=total_count,
+            total=0,
             page=page,
             size=limit,
             pages=pages,
@@ -259,7 +259,7 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get recently read articles."""
-        articles_db, total_count = await get_recently_read_articles(
+        articles_db = await get_recently_read_articles(
             db=self.db,
             user_id=self.user_id,
             skip=skip,
@@ -274,11 +274,11 @@ class ArticleManagementService:
         ]
 
         page = skip // limit + 1
-        pages = (total_count + limit - 1) // limit if limit > 0 else 0
+        pages = page if len(articles) < limit else page + 1
 
         return PaginatedResponse(
             items=articles,
-            total=total_count,
+            total=0,
             page=page,
             size=limit,
             pages=pages,
@@ -326,3 +326,7 @@ class ArticleManagementService:
     async def get_today_count(self) -> int:
         """Get total count of articles published today for the user."""
         return await count_today_articles(db=self.db, user_id=self.user_id)
+
+    async def get_all_unread_counts(self) -> dict[str, int | dict[UUID, int]]:
+        """Get all unread counts in a single optimized query."""
+        return await get_all_unread_counts(db=self.db, user_id=self.user_id)

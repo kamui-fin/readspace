@@ -1653,10 +1653,11 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           page: pageParam,
           size: params.size || 25,
         }) as Promise<PaginatedResponse<Article>>,
-      getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
+      getNextPageParam: (lastPage: PaginatedResponse<Article>, allPages) => {
         const currentPage = lastPage.page || 1;
-        const totalPages = lastPage.pages || 1;
-        return currentPage < totalPages ? currentPage + 1 : undefined;
+        const pageSize = lastPage.size || 25;
+        // If we got a full page of results, there might be more
+        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
       },
       initialPageParam: 1,
       ...options,
@@ -1686,14 +1687,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           params.size || 25,
         ) as Promise<PaginatedResponse<Article>>,
       getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const page = lastPage as {
-          page?: number;
-          pages?: number;
-          total_pages?: number;
-        };
-        const currentPage = page.page || 1;
-        const totalPages = page.pages || page.total_pages || 1;
-        return currentPage < totalPages ? currentPage + 1 : undefined;
+        const currentPage = lastPage.page || 1;
+        const pageSize = params.size || 25;
+        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
       },
       initialPageParam: 1,
       ...options,
@@ -1723,14 +1719,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           params.size || 25,
         ) as Promise<PaginatedResponse<Article>>,
       getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const page = lastPage as {
-          page?: number;
-          pages?: number;
-          total_pages?: number;
-        };
-        const currentPage = page.page || 1;
-        const totalPages = page.pages || page.total_pages || 1;
-        return currentPage < totalPages ? currentPage + 1 : undefined;
+        const currentPage = lastPage.page || 1;
+        const pageSize = params.size || 25;
+        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
       },
       initialPageParam: 1,
       ...options,
@@ -1760,14 +1751,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           size: params?.size || 25,
         }) as Promise<PaginatedResponse<Article>>,
       getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const page = lastPage as {
-          page?: number;
-          pages?: number;
-          total_pages?: number;
-        };
-        const currentPage = page.page || 1;
-        const totalPages = page.pages || page.total_pages || 1;
-        return currentPage < totalPages ? currentPage + 1 : undefined;
+        const currentPage = lastPage.page || 1;
+        const pageSize = params?.size || 25;
+        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
       },
       initialPageParam: 1,
       ...options,

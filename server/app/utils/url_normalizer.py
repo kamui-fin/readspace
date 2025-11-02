@@ -1,8 +1,9 @@
 """URL normalization utilities for RSS feeds."""
 
+from urllib.parse import urlparse, urlunparse
+
 import httpx
 import structlog
-from urllib.parse import urlparse, urlunparse
 
 logger = structlog.get_logger(__name__)
 
@@ -185,13 +186,13 @@ async def resolve_feed_url(url: str, timeout_seconds: int = 10, max_redirects: i
                 return _basic_normalize_url(url)
 
             except httpx.NetworkError as e:
-                logger.warning(
-                    "Network error during URL resolution, using basic normalization", url=url, error=str(e)
-                )
+                logger.warning("Network error during URL resolution, using basic normalization", url=url, error=str(e))
                 return _basic_normalize_url(url)
 
             except Exception as e:
-                logger.warning("Unexpected error during URL resolution, using basic normalization", url=url, error=str(e))
+                logger.warning(
+                    "Unexpected error during URL resolution, using basic normalization", url=url, error=str(e)
+                )
                 return _basic_normalize_url(url)
 
     except Exception as e:

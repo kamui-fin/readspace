@@ -7,15 +7,12 @@ from app.services.auth import TokenData, get_current_user
 
 from . import (
     article_enhancements,
-    books,
-    highlights,
     rss_articles,
     rss_discover,
     rss_feeds,
     rss_folders,
     rss_opml,
     rss_similar,
-    upload,
     users,
 )
 
@@ -23,9 +20,6 @@ router = APIRouter()
 
 # Include all route modules
 router.include_router(article_enhancements.router)
-router.include_router(books.router)
-router.include_router(highlights.router)
-router.include_router(upload.router, prefix="/upload", tags=["Upload"])
 router.include_router(users.router)
 
 # RSS Routers

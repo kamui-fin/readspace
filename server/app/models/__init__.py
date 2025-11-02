@@ -1,15 +1,27 @@
-# This file ensures that all models are registered with SQLAlchemy's Base metadata
+"""Model module initialization with centralized exports."""
 
-# Import the Base from the central location
 from app.db.base_class import Base  # noqa: F401
+from app.models.article import ArticleContent, ClippedArticle, FeedArticle, UserArticleState
+from app.models.enums import FeedCategory
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user_models import AuthUser, Profile
 
-from .rss_models import (
-    ArticleContent,  # noqa: F401
-    ClippedArticle,  # noqa: F401
-    Feed,  # noqa: F401
-    FeedArticle,  # noqa: F401
-    FeedSubscription,  # noqa: F401
-    Folder,  # noqa: F401
-    UserArticleState,  # noqa: F401
-)
-from .user_models import AuthUser, Profile  # noqa: F401
+__all__ = [
+    "Base",
+    # Enums
+    "FeedCategory",
+    # Feed models
+    "Feed",
+    "FeedSubscription",
+    # Article models
+    "ArticleContent",
+    "FeedArticle",
+    "UserArticleState",
+    "ClippedArticle",
+    # Folder models
+    "Folder",
+    # User models
+    "AuthUser",
+    "Profile",
+]

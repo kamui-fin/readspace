@@ -56,7 +56,7 @@ async def get_articles_by_user(
     skip: int = 0,
     limit: int = 100,
     allow_preview: bool = False,
-) -> tuple[list[tuple[FeedArticle, UserArticleState]], int]:
+) -> list[tuple[FeedArticle, UserArticleState]]:
     """Get articles for a user with comprehensive filtering and sorting."""
     return await ArticleCrudOperations.get_articles_filtered(
         db,
@@ -111,7 +111,7 @@ async def get_recently_read_articles(
     skip: int = 0,
     limit: int = 50,
     days_back: int = 30,
-) -> tuple[list[FeedArticle], int]:
+) -> list[tuple[FeedArticle, UserArticleState]]:
     """Get recently read articles."""
     return await ArticleSpecializedQueries.get_recently_read_articles(
         db, user_id=user_id, skip=skip, limit=limit, days_back=days_back
@@ -120,7 +120,7 @@ async def get_recently_read_articles(
 
 async def get_read_later_articles(
     db: AsyncSession, *, user_id: UUID, skip: int = 0, limit: int = 50
-) -> tuple[list[FeedArticle], int]:
+) -> list[FeedArticle]:
     """Get read later articles."""
     return await ArticleSpecializedQueries.get_read_later_articles(db, user_id=user_id, skip=skip, limit=limit)
 
@@ -148,6 +148,11 @@ async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
 async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
     """Count articles published today."""
     return await ArticleSpecializedQueries.count_today_articles(db, user_id=user_id)
+
+
+async def get_all_unread_counts(db: AsyncSession, *, user_id: UUID) -> dict[str, int | dict[UUID, int]]:
+    """Get all unread counts in a single optimized query."""
+    return await ArticleSpecializedQueries.get_all_unread_counts(db, user_id=user_id)
 
 
 # CRUD classes for different article types

@@ -1,0 +1,1619 @@
+[DEBUG] Watching for changes in setting files /home/kamui/dev/projects/readspace/.lk/settings.json, /home/kamui/dev/projects/readspace/server/.claude/settings.local.json...
+[DEBUG] Applying permission update: Adding 1 allow rule(s) to destination 'localSettings': ["Bash(git rm:*)"]
+[DEBUG] Found 0 plugins (0 enabled, 0 disabled)
+[DEBUG] Total LSP servers loaded: 0
+[DEBUG] LSP manager initialized with 0 servers
+[DEBUG] LSP server manager initialized successfully
+[DEBUG] Loading skills from directories: managed=/etc/claude-code/.claude/skills, user=../.lk/skills, project=/home/kamui/dev/projects/readspace/server/.claude/skills
+[DEBUG] >>>>> getPluginSkills CALLED <<<<<
+[DEBUG] Creating shell snapshot for zsh (zsh)
+[DEBUG] Looking for shell config file: /home/kamui/.zshrc
+[DEBUG] Snapshots directory: ../.lk/shell-snapshots
+[DEBUG] Creating snapshot at: ../.lk/shell-snapshots/snapshot-zsh-1762047888338-z01oyn.sh
+[DEBUG] Shell binary exists: false
+[DEBUG] Execution timeout: 10000ms
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047888341
+[DEBUG] Temp file written successfully, size: 2 bytes
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047888341 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888346
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888346 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] getPluginSkills: Processing 0 enabled plugins
+[DEBUG] Total plugin skills loaded: 0
+[DEBUG] Total plugin commands loaded: 0
+[DEBUG] Registered 0 hooks from 0 plugins
+[DEBUG] Loaded 0 unique skills (managed: 0, user: 0, project: 0, duplicates removed: 0)
+[DEBUG] getSkillsIfEnabled returning: 0 skill dir commands, 0 plugin skills
+[DEBUG] Ripgrep first use test: PASSED (mode=builtin, path=/home/kamui/.nvm/versions/node/v22.14.0/lib/node_modules/@anthropic-ai/claude-code/vendor/ripgrep/x64-linux/rg)
+[DEBUG] Total plugin agents loaded: 0
+[DEBUG] Summarizing last 4 of 100 messages (~131928 tokens)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888535
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888535 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888537
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888537 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888539
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888539 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888735
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888735 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Getting matching hook commands for SessionStart with query: startup
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "startup" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888765
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37248 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888765 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888766
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37248 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888766 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] performStartupChecks called
+[DEBUG] Starting background plugin installations
+[DEBUG] performBackgroundPluginInstallations called
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888777
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37248 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888777 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047888779
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37353 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047888779 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Setting installation status: 0 marketplaces, 0 installable plugins, 0 uninstallable plugins
+[DEBUG] Loaded plugins - Enabled: 0, Disabled: 0, Commands: 0, Agents: 0, Errors: 0
+[DEBUG] Shell snapshot created successfully (155472 bytes)
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] [FileIndex] Using Fuse.js fallback for search
+[DEBUG] [FileIndex] Using Fuse.js fallback for search
+[DEBUG] [FileIndex] Using Fuse.js fallback for search
+[DEBUG] Getting matching hook commands for SubagentStop with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] FileHistory: Added snapshot for db88852c-f857-4d23-b89b-b7dda16a5b4e, tracking 0 files
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Getting matching hook commands for SubagentStop with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047904091
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1244 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047904091 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047911425
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37384 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047911425 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Getting matching hook commands for Stop with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762047911443
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37418 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762047911443 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] FileHistory: Making snapshot for message 364dd072-8520-473f-9e9b-0cc216393de7
+[DEBUG] FileHistory: Added snapshot for 364dd072-8520-473f-9e9b-0cc216393de7, tracking 0 files
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047964646
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1248 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762047964646 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Permission suggestions for Edit: [
+  {
+    "type": "setMode",
+    "mode": "acceptEdits",
+    "destination": "session"
+  }
+]
+[DEBUG] Getting matching hook commands for Notification with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] Applying permission update: Setting mode to 'acceptEdits'
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/db/session.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/db/session.py.tmp.3215810.1762048007524
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1830 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/db/session.py.tmp.3215810.1762048007524 to /home/kamui/dev/projects/readspace/server/app/db/session.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/db/session.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048012308
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1250 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048012308 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048039919
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 17781 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048039919 to /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048050032
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 16982 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048050032 to /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048060970
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 17148 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048060970 to /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048068604
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1252 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048068604 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048085002
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 17188 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048085002 to /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048095171
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 17280 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py.tmp.3215810.1762048095171 to /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/crud/crud_feed.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048101097
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1254 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048101097 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Glob
+[DEBUG] Getting matching hook commands for PreToolUse with query: Glob
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Glob
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Glob
+[DEBUG] Getting matching hook commands for PreToolUse with query: Glob
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Glob
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Glob" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py.tmp.3215810.1762048138804
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1395 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py.tmp.3215810.1762048138804 to /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py.tmp.3215810.1762048146962
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1431 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py.tmp.3215810.1762048146962 to /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/utils/guid_generator.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048153313
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1256 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048153313 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] [FileIndex] Using Fuse.js fallback for search
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] rg error (signal=undefined, code=ERR_CHILD_PROCESS_STDIO_MAXBUFFER, stderr: ), 16 results
+[ERROR] RangeError: RangeError [ERR_CHILD_PROCESS_STDIO_MAXBUFFER]: stdout maxBuffer length exceeded
+    at Socket.onChildStdout (node:child_process:481:14)
+    at Socket.emit (node:events:518:28)
+    at Socket.emit (node:domain:489:12)
+    at addChunk (node:internal/streams/readable:561:12)
+    at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+    at Readable.push (node:internal/streams/readable:392:5)
+    at Pipe.onStreamRead (node:internal/stream_base_commons:189:23)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/core/constants.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048170428
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 2629 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048170428 to /home/kamui/dev/projects/readspace/server/app/core/constants.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/core/constants.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048178328
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 2907 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048178328 to /home/kamui/dev/projects/readspace/server/app/core/constants.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/core/constants.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/workers/tasks.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/workers/tasks.py.tmp.3215810.1762048193364
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 14829 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/workers/tasks.py.tmp.3215810.1762048193364 to /home/kamui/dev/projects/readspace/server/app/workers/tasks.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/workers/tasks.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/workers/tasks.py.tmp.3215810.1762048197897
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 14845 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/workers/tasks.py.tmp.3215810.1762048197897 to /home/kamui/dev/projects/readspace/server/app/workers/tasks.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/workers/tasks.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/utils/validators.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/utils/validators.py.tmp.3215810.1762048207978
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 7759 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/utils/validators.py.tmp.3215810.1762048207978 to /home/kamui/dev/projects/readspace/server/app/utils/validators.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/utils/validators.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/utils/validators.py.tmp.3215810.1762048215531
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 7754 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/utils/validators.py.tmp.3215810.1762048215531 to /home/kamui/dev/projects/readspace/server/app/utils/validators.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/utils/validators.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py.tmp.3215810.1762048227527
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 70223 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py.tmp.3215810.1762048227527 to /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py.tmp.3215810.1762048232101
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 70222 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py.tmp.3215810.1762048232101 to /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_feeds.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048238580
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1258 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048238580 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048239627
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37437 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048239627 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Streaming aborted by user: Request was aborted.
+[ERROR] Error in non-streaming fallback: Request was aborted.
+[ERROR] Error: Error: Request was aborted.
+    at Ck.makeRequest (file:///home/kamui/.nvm/versions/node/v22.14.0/lib/node_modules/@anthropic-ai/claude-code/cli.js:359:3850)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048239645
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37457 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048239645 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] FileHistory: Making snapshot for message 93ee8e11-6585-4e6b-b6e2-5834ebecd2d4
+[DEBUG] FileHistory: Added snapshot for 93ee8e11-6585-4e6b-b6e2-5834ebecd2d4, tracking 7 files
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048318863
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 3365 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/core/constants.py.tmp.3215810.1762048318863 to /home/kamui/dev/projects/readspace/server/app/core/constants.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/core/constants.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/main.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/main.py.tmp.3215810.1762048331129
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 6014 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/main.py.tmp.3215810.1762048331129 to /home/kamui/dev/projects/readspace/server/app/main.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/main.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/main.py.tmp.3215810.1762048335943
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 5953 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/main.py.tmp.3215810.1762048335943 to /home/kamui/dev/projects/readspace/server/app/main.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/main.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048348158
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 43989 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048348158 to /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048355802
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 43637 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048355802 to /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048374606
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 43647 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048374606 to /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Grep
+[DEBUG] Getting matching hook commands for PreToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Grep
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Grep" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py.tmp.3215810.1762048392148
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 7398 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py.tmp.3215810.1762048392148 to /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py.tmp.3215810.1762048401377
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 7656 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py.tmp.3215810.1762048401377 to /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/alembic/versions/20251101_000000_add_performance_indexes.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048408712
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1376 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048408712 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Bash
+[DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+[DEBUG] Stream started - received first chunk
+[DEBUG] Permission suggestions for Bash: [
+  {
+    "type": "addRules",
+    "rules": [
+      {
+        "toolName": "Bash",
+        "ruleContent": "poetry run ruff format:*"
+      }
+    ],
+    "behavior": "allow",
+    "destination": "localSettings"
+  }
+]
+[DEBUG] Getting matching hook commands for Notification with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] No hook environment files found
+[DEBUG] Getting matching hook commands for PostToolUse with query: Bash
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+[DEBUG] executePreToolHooks called for tool: Bash
+[DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] Permission suggestions for Bash: [
+  {
+    "type": "addRules",
+    "rules": [
+      {
+        "toolName": "Bash",
+        "ruleContent": "poetry run ruff check:*"
+      }
+    ],
+    "behavior": "allow",
+    "destination": "localSettings"
+  }
+]
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048467342
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37352 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048467342 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048467344
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37352 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048467344 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048467346
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37457 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048467346 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048468763
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37352 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048468763 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048468764
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37352 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048468764 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048468772
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37457 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048468772 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048472054
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 43648 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py.tmp.3215810.1762048472054 to /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/routers/rss_opml.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Read
+[DEBUG] Getting matching hook commands for PreToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Getting matching hook commands for PostToolUse with query: Read
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Read" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Edit
+[DEBUG] Getting matching hook commands for PreToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] FileHistory: Tracked file modification for /home/kamui/dev/projects/readspace/server/app/services/rss_search_service.py
+[DEBUG] Writing to temp file: /home/kamui/dev/projects/readspace/server/app/services/rss_search_service.py.tmp.3215810.1762048484152
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 45841 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming /home/kamui/dev/projects/readspace/server/app/services/rss_search_service.py.tmp.3215810.1762048484152 to /home/kamui/dev/projects/readspace/server/app/services/rss_search_service.py
+[DEBUG] File /home/kamui/dev/projects/readspace/server/app/services/rss_search_service.py written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: Edit
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Edit" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: Bash
+[DEBUG] Getting matching hook commands for PreToolUse with query: Bash
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "Bash" (0 before deduplication)
+[DEBUG] Stream started - received first chunk
+[DEBUG] Permission suggestions for Bash: [
+  {
+    "type": "addRules",
+    "rules": [
+      {
+        "toolName": "Bash",
+        "ruleContent": "poetry run ruff:*"
+      }
+    ],
+    "behavior": "allow",
+    "destination": "localSettings"
+  }
+]
+[DEBUG] Getting matching hook commands for Notification with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048508939
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37479 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048508939 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] FileHistory: Making snapshot for message cbba2745-7c6a-461a-bb4c-af465d1eaab9
+[DEBUG] FileHistory: Added snapshot for cbba2745-7c6a-461a-bb4c-af465d1eaab9, tracking 11 files
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048526388
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1240 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048526388 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048543331
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37509 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048543331 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Getting matching hook commands for Stop with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048543341
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37538 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048543341 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048567200
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37538 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048567200 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Getting matching hook commands for UserPromptSubmit with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
+[DEBUG] FileHistory: Making snapshot for message c31b188f-ed6f-42d4-b2c2-bdd44e8e6b78
+[DEBUG] FileHistory: Added snapshot for c31b188f-ed6f-42d4-b2c2-bdd44e8e6b78, tracking 11 files
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Stream started - received first chunk
+[DEBUG] Stream started - received first chunk
+[DEBUG] executePreToolHooks called for tool: TodoWrite
+[DEBUG] Getting matching hook commands for PreToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Writing to temp file: ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048575530
+[DEBUG] Preserving file permissions: 100644
+[DEBUG] Temp file written successfully, size: 1244 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json.tmp.3215810.1762048575530 to ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json
+[DEBUG] File ../.lk/todos/8fa219c1-4222-42e3-bfe1-225057b9b616-agent-8fa219c1-4222-42e3-bfe1-225057b9b616.json written atomically
+[DEBUG] Getting matching hook commands for PostToolUse with query: TodoWrite
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "TodoWrite" (0 before deduplication)
+[DEBUG] Hooks: getAsyncHookResponseAttachments called
+[DEBUG] Hooks: checkForNewResponses called
+[DEBUG] Hooks: Found 0 total hooks in registry
+[DEBUG] Hooks: checkForNewResponses returning 0 responses
+[DEBUG] Skills and commands included in Skill tool:
+[DEBUG] Slash commands included in SlashCommand tool: /devlog, /design-review, /review
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048579012
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37538 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048579012 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] Streaming aborted by user: Request was aborted.
+[ERROR] Error in non-streaming fallback: Request was aborted.
+[ERROR] Error: Error: Request was aborted.
+    at Ck.makeRequest (file:///home/kamui/.nvm/versions/node/v22.14.0/lib/node_modules/@anthropic-ai/claude-code/cli.js:359:3850)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[DEBUG] Writing to temp file: ../.lk/.claude.json.tmp.3215810.1762048579035
+[DEBUG] Preserving file permissions: 100600
+[DEBUG] Temp file written successfully, size: 37538 bytes
+[DEBUG] Applied original permissions to temp file
+[DEBUG] Renaming ../.lk/.claude.json.tmp.3215810.1762048579035 to ../.lk/.claude.json
+[DEBUG] File ../.lk/.claude.json written atomically
+[DEBUG] AutoUpdaterWrapper: Installation type: npm-global, using native: false
+[DEBUG] Getting matching hook commands for SessionEnd with query: undefined
+[DEBUG] Found 0 hook matchers in settings
+[DEBUG] Matched 0 unique hooks for query "no match query" (0 before deduplication)
