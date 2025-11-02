@@ -340,7 +340,7 @@ class ArticleCrudOperations:
         article_in: ArticleUpdate,
         user_id: UUID,
         article_type: str = "feed",
-    ) -> FeedArticle | None:
+    ) -> tuple[FeedArticle, UserArticleState] | ClippedArticle | None:
         """Update article status (read, favorite, etc.)."""
         update_data = article_in.model_dump(exclude_unset=True)
 
@@ -354,7 +354,7 @@ class ArticleCrudOperations:
             # Handle clipped articles
             clipped_article_result = await db.execute(
                 select(ClippedArticle)
-                .options(selectinload(ClippedArticle.content))
+                .options(selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content))
                 .where(
                     and_(
                         ClippedArticle.id == article_id,
@@ -393,7 +393,10 @@ class ArticleCrudOperations:
                         UserArticleState.article_id == article_id,
                     ),
                 )
-                .options(selectinload(FeedArticle.content), selectinload(FeedArticle.feed))
+                .options(
+                    selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                    selectinload(FeedArticle.feed)
+                )
                 .where(
                     and_(
                         FeedArticle.id == article_id,
@@ -422,9 +425,27 @@ class ArticleCrudOperations:
             # Note: Commit is handled by the dependency injection layer (get_db)
             await db.flush()  # Ensure changes are persisted
 
-            # Only refresh feed_article if needed (user_state is already in session)
-            # No need for separate refresh calls - data is already in session after flush
-            await db.refresh(feed_article)
-
-            # Return the feed article (maintaining compatibility)
-            return feed_article
+            # Refresh with eager loading and get the updated user state
+            refreshed_result = await db.execute(
+                select(FeedArticle, UserArticleState)
+                .options(
+                    selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                    selectinload(FeedArticle.feed)
+                )
+                .outerjoin(
+                    UserArticleState,
+                    and_(
+                        UserArticleState.user_id == user_id,
+                        UserArticleState.article_id == article_id,
+                    ),
+                )
+                .where(FeedArticle.id == article_id)
+            )
+            result_tuple = refreshed_result.first()
+            
+            if result_tuple:
+                feed_article, updated_user_state = result_tuple
+                # Return tuple for transformer compatibility
+                return (feed_article, updated_user_state)
+            
+            return None

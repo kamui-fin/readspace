@@ -22,7 +22,7 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
         """Check if user already has this content clipped"""
         result = await db.execute(
             select(ClippedArticle)
-            .options(selectinload(ClippedArticle.content))
+            .options(selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content))
             .where(
                 and_(
                     ClippedArticle.user_id == user_id,
@@ -35,7 +35,7 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
     async def get_with_content(self, db: AsyncSession, *, article_id: UUID) -> ClippedArticle | None:
         """Get clipped article with content"""
         result = await db.execute(
-            select(ClippedArticle).options(selectinload(ClippedArticle.content)).where(ClippedArticle.id == article_id)
+            select(ClippedArticle).options(selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content)).where(ClippedArticle.id == article_id)
         )
         return result.scalar_one_or_none()
 
@@ -56,7 +56,7 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
         """
         result = await db.execute(
             select(ClippedArticle)
-            .options(selectinload(ClippedArticle.content))
+            .options(selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content))
             .join(ArticleContent, ClippedArticle.content_id == ArticleContent.id)
             .where(and_(ClippedArticle.user_id == user_id, ArticleContent.link == url))
         )

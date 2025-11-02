@@ -139,6 +139,7 @@ async def create_subscription(
     subscription_in: SubscriptionCreate,
     user_id: UUID,
     feed_data: dict | None = None,
+    feed_db: Feed | None = None,
 ) -> FeedSubscription:
     """Create a new feed subscription for a user."""
     # Handle folder_id conversion (string UUID or 'default' should be handled by service layer)
@@ -169,18 +170,20 @@ async def create_subscription(
             orig=Exception("Duplicate subscription"),
         )
 
-    # Get or create global feed using resolved URL (handles URL normalization and redirects)
-    feed_db = await crud_feed.get_or_migrate_feed(db, original_url=original_url, resolved_url=resolved_url)
-    if not feed_db:
-        if not feed_data:
-            raise ValueError("Feed data required to create new feed.")
+    # Use provided feed_db if available, otherwise get or create global feed
+    if feed_db is None:
+        # Get or create global feed using resolved URL (handles URL normalization and redirects)
+        feed_db = await crud_feed.get_or_migrate_feed(db, original_url=original_url, resolved_url=resolved_url)
+        if not feed_db:
+            if not feed_data:
+                raise ValueError("Feed data required to create new feed.")
 
-        from app.schemas import FeedBase
+            from app.schemas import FeedBase
 
-        # Update feed_data URL to use resolved URL
-        feed_data["url"] = resolved_url
-        feed_base = FeedBase(**feed_data)
-        feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
+            # Update feed_data URL to use resolved URL
+            feed_data["url"] = resolved_url
+            feed_base = FeedBase(**feed_data)
+            feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
     # Feed exists, subscriber_count will be incremented automatically by database trigger
 
     # Create subscription

@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, Profile, Subscription, UserArticleState
+from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Profile, UserArticleState
 
 
 @pytest.fixture
@@ -15,7 +15,7 @@ async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, t
     from datetime import UTC, datetime
 
     # Create subscription
-    subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id)
     db_session.add(subscription)
     await db_session.flush()
 
@@ -57,7 +57,7 @@ class TestExtractFullText:
     @pytest.mark.asyncio
     async def test_extract_full_text_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test extracting full text using real extraction service."""
-        response = client.post(f"/api/v1/articles/{test_article_with_content.id}/extract-full-text")
+        response = client.post(f"/api/articles/{test_article_with_content.id}/extract-full-text")
 
         assert response.status_code == 200
         data = response.json()
@@ -70,13 +70,13 @@ class TestExtractFullText:
     def test_extract_full_text_not_found(self, client: TestClient):
         """Test extracting from non-existent article."""
         fake_id = uuid4()
-        response = client.post(f"/api/v1/articles/{fake_id}/extract-full-text")
+        response = client.post(f"/api/articles/{fake_id}/extract-full-text")
 
         assert response.status_code == 404
 
     def test_extract_full_text_invalid_uuid(self, client: TestClient):
         """Test with invalid UUID."""
-        response = client.post("/api/v1/articles/invalid-uuid/extract-full-text")
+        response = client.post("/api/articles/invalid-uuid/extract-full-text")
 
         assert response.status_code == 422
 
@@ -87,7 +87,7 @@ class TestSummarizeArticle:
     @pytest.mark.asyncio
     async def test_summarize_article_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test article summarization using real AI service."""
-        response = client.post(f"/api/v1/articles/{test_article_with_content.id}/summarize")
+        response = client.post(f"/api/articles/{test_article_with_content.id}/summarize")
 
         assert response.status_code == 200
         data = response.json()
@@ -101,7 +101,7 @@ class TestSummarizeArticle:
     async def test_summarize_with_custom_content(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test summarizing custom content."""
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/summarize",
+            f"/api/articles/{test_article_with_content.id}/summarize",
             json={"content": "Custom content to summarize for testing purposes."},
         )
 
@@ -112,7 +112,7 @@ class TestSummarizeArticle:
     def test_summarize_article_not_found(self, client: TestClient):
         """Test summarizing non-existent article."""
         fake_id = uuid4()
-        response = client.post(f"/api/v1/articles/{fake_id}/summarize")
+        response = client.post(f"/api/articles/{fake_id}/summarize")
 
         assert response.status_code == 404
 
@@ -124,7 +124,7 @@ class TestTranslateArticle:
     async def test_translate_article_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test article translation using real AI service."""
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/translate",
+            f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "es"},
         )
 
@@ -140,7 +140,7 @@ class TestTranslateArticle:
     async def test_translate_with_custom_content(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test translating custom content."""
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/translate",
+            f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "fr", "content": "Custom content to translate"},
         )
 
@@ -156,7 +156,7 @@ class TestTranslateArticle:
 
         for lang in languages:
             response = client.post(
-                f"/api/v1/articles/{test_article_with_content.id}/translate",
+                f"/api/articles/{test_article_with_content.id}/translate",
                 json={"target_language": lang},
             )
 
@@ -167,7 +167,7 @@ class TestTranslateArticle:
     def test_translate_article_missing_language(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test translation without target language."""
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/translate",
+            f"/api/articles/{test_article_with_content.id}/translate",
             json={},
         )
 
@@ -176,7 +176,7 @@ class TestTranslateArticle:
     def test_translate_article_invalid_language(self, client: TestClient, test_article_with_content: FeedArticle):
         """Test translation with invalid language code."""
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/translate",
+            f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "invalid_lang_code_too_long"},
         )
 
@@ -186,7 +186,7 @@ class TestTranslateArticle:
         """Test translating non-existent article."""
         fake_id = uuid4()
         response = client.post(
-            f"/api/v1/articles/{fake_id}/translate",
+            f"/api/articles/{fake_id}/translate",
             json={"target_language": "es"},
         )
 
@@ -202,16 +202,16 @@ class TestArticleEnhancementIntegration:
         article_id = test_article_with_content.id
 
         # 1. Extract full text (real service)
-        extract_response = client.post(f"/api/v1/articles/{article_id}/extract-full-text")
+        extract_response = client.post(f"/api/articles/{article_id}/extract-full-text")
         assert extract_response.status_code == 200
 
         # 2. Summarize the content (real AI service)
-        summarize_response = client.post(f"/api/v1/articles/{article_id}/summarize")
+        summarize_response = client.post(f"/api/articles/{article_id}/summarize")
         assert summarize_response.status_code == 200
 
         # 3. Translate the content (real AI service)
         translate_response = client.post(
-            f"/api/v1/articles/{article_id}/translate",
+            f"/api/articles/{article_id}/translate",
             json={"target_language": "es"},
         )
         assert translate_response.status_code == 200
@@ -223,14 +223,14 @@ class TestArticleEnhancementIntegration:
 
         # Summarize custom content
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/summarize",
+            f"/api/articles/{test_article_with_content.id}/summarize",
             json={"content": custom_content},
         )
         assert response.status_code == 200
 
         # Translate custom content
         response = client.post(
-            f"/api/v1/articles/{test_article_with_content.id}/translate",
+            f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "es", "content": custom_content},
         )
         assert response.status_code == 200

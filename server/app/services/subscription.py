@@ -14,6 +14,7 @@ from app.schemas.subscriptions import (
 )
 from app.services.feeds.feed import FeedService
 from app.services.folder import FolderService
+from app.core.custom_exceptions import FeedSubscriptionError
 
 logger = structlog.get_logger(__name__)
 
@@ -231,7 +232,7 @@ class SubscriptionService:
             self.db, feed_id=feed_id, user_id=self.user_id
         )
         if existing_subscription:
-            raise ValueError("Already subscribed to this feed")
+            raise FeedSubscriptionError("Already subscribed to this feed")
 
         try:
             # Create subscription using the feed's URL
@@ -246,6 +247,7 @@ class SubscriptionService:
                 subscription_in=subscription_in,
                 user_id=self.user_id,
                 feed_data=None,  # Feed already exists
+                feed_db=feed,  # Pass the existing feed object
             )
 
             logger.info(
@@ -257,4 +259,4 @@ class SubscriptionService:
 
         except IntegrityError as e:
             logger.warning("Subscription already exists", feed_id=feed_id, user_id=self.user_id)
-            raise ValueError("Subscription to feed already exists") from e
+            raise FeedSubscriptionError("Subscription to feed already exists") from e

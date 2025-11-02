@@ -33,10 +33,17 @@ from app.core.config import get_settings
 from app.db.session import get_db
 from app.main import app
 from app.models import Feed, Folder, Profile
-from app.services.auth import get_current_user
+from app.services.user.auth import get_current_user
 
 # Get settings after loading .env
 settings = get_settings()
+
+# Override any test conftest.py settings with our .env values
+if env_path.exists():
+    # Force reload the .env to override any previous test settings
+    load_dotenv(env_path, override=True)
+    # Update the environment to use our .env values
+    os.environ["SUPABASE_DB_CONNECTION"] = os.getenv("SUPABASE_DB_CONNECTION", settings.SUPABASE_DB_CONNECTION)
 
 # Use your .env database URL or fall back to test default
 TEST_DATABASE_URL = os.getenv(
@@ -76,27 +83,37 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
 
     Uses real database with transaction isolation - changes are rolled back after each test.
     """
-    async with db_engine.begin() as connection:
-        async_session = sessionmaker(connection, class_=AsyncSession, expire_on_commit=False)
-        async with async_session() as session:
-            # Start a nested transaction
-            await session.begin()
-            yield session
-            # Rollback the transaction to clean up
-            await session.rollback()
+    # Create a connection and transaction
+    connection = await db_engine.connect()
+    transaction = await connection.begin()
+    
+    try:
+        # Create session bound to the connection
+        session = AsyncSession(bind=connection, expire_on_commit=False)
+        
+        yield session
+        
+        # Close the session
+        await session.close()
+        
+    finally:
+        # Always rollback the transaction to clean up test data
+        await transaction.rollback()
+        await connection.close()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def test_user(db_session: AsyncSession) -> Profile:
     """
     Create a test user with auth entry in real database.
 
     Creates both auth.users entry and profile for full e2e testing.
+    The profile will be auto-created by the database trigger.
     """
     user_id = str(uuid4())
     email = f"test-{uuid4().hex[:8]}@example.com"
 
-    # Create auth user in real auth schema
+    # Create auth user in real auth schema - profile will be auto-created by trigger
     await db_session.execute(
         text(
             """
@@ -115,22 +132,32 @@ async def test_user(db_session: AsyncSession) -> Profile:
         ),
         {"user_id": user_id, "email": email},
     )
-
-    # Create profile
-    user = Profile(id=user_id, email=email, role="user")
-    db_session.add(user)
+    
+    # Flush to make the user available in this transaction (trigger will fire)
     await db_session.flush()
-    await db_session.refresh(user)
+    
+    # Now fetch the auto-created profile
+    result = await db_session.execute(
+        text("SELECT id, email FROM profiles WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    profile_row = result.fetchone()
+    
+    if not profile_row:
+        raise Exception(f"Profile was not auto-created for user {user_id}")
+    
+    # Return a Profile object with the database default role
+    user = Profile(id=profile_row.id, email=profile_row.email, role="basic")
     return user
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def admin_user(db_session: AsyncSession) -> Profile:
     """Create an admin test user in real database."""
     user_id = str(uuid4())
     email = f"admin-{uuid4().hex[:8]}@example.com"
 
-    # Create auth user
+    # Create auth user - profile will be auto-created by trigger
     await db_session.execute(
         text(
             """
@@ -149,12 +176,29 @@ async def admin_user(db_session: AsyncSession) -> Profile:
         ),
         {"user_id": user_id, "email": email},
     )
-
-    # Create admin profile
-    user = Profile(id=user_id, email=email, role="admin")
-    db_session.add(user)
+    
+    # Flush so trigger fires
     await db_session.flush()
-    await db_session.refresh(user)
+    
+    # Update the profile to have admin role
+    await db_session.execute(
+        text("UPDATE profiles SET role = 'admin' WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    await db_session.flush()
+    
+    # Fetch the updated profile
+    result = await db_session.execute(
+        text("SELECT id, email, role FROM profiles WHERE id = :user_id"),
+        {"user_id": user_id}
+    )
+    profile_row = result.fetchone()
+    
+    if not profile_row:
+        raise Exception(f"Profile was not auto-created for admin user {user_id}")
+
+    # Return admin profile
+    user = Profile(id=profile_row.id, email=profile_row.email, role=profile_row.role)
     return user
 
 
@@ -225,7 +269,7 @@ def admin_client(db_session: AsyncSession, mock_admin_user):
 @pytest_asyncio.fixture
 async def test_folder(db_session: AsyncSession, test_user: Profile) -> Folder:
     """Create a test folder in real database."""
-    folder = Folder(id=uuid4(), user_id=test_user.id, name="Test Folder", description="Test description")
+    folder = Folder(id=uuid4(), user_id=test_user.id, name="Test Folder")
     db_session.add(folder)
     await db_session.flush()
     await db_session.refresh(folder)
@@ -234,19 +278,60 @@ async def test_folder(db_session: AsyncSession, test_user: Profile) -> Folder:
 
 @pytest_asyncio.fixture
 async def test_feed(db_session: AsyncSession) -> Feed:
-    """Create a test feed in real database."""
+    """Create a test feed in real database using real RSS feed."""
     feed = Feed(
         id=uuid4(),
-        url="https://example.com/feed.xml",
-        title="Test Feed",
-        description="Test feed description",
-        link="https://example.com",
+        url="https://hnrss.org/newest",
+        title="Hacker News - Newest",
+        description="Hacker News newest stories RSS feed",
+        link="https://news.ycombinator.com",
         language="en",
     )
     db_session.add(feed)
     await db_session.flush()
     await db_session.refresh(feed)
     return feed
+
+
+@pytest_asyncio.fixture
+async def async_client(db_session: AsyncSession, mock_current_user):
+    """
+    Create an async test client for e2e testing.
+
+    Uses real database session and only mocks authentication.
+    All other services (Redis, Celery, external APIs) use real implementations.
+    """
+    from httpx import ASGITransport
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_current_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def async_admin_client(db_session: AsyncSession, mock_admin_user):
+    """Create an async test client with admin user."""
+    from httpx import ASGITransport
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = mock_admin_user
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        yield client
+
+    app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture

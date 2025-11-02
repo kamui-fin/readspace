@@ -14,13 +14,6 @@ from app.models.user import Profile
 # This ensures they're available during test collection phase
 os.environ.update(
     {
-        "SUPABASE_URL": "http://localhost:54321",
-        "SUPABASE_JWT_SECRET": "test-jwt-secret",
-        "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
-        "SUPABASE_DB_CONNECTION": "postgresql://postgres:postgres@localhost:54322/postgres",
-        "REDIS_URL": "redis://localhost:6379/0",
-        "CELERY_BROKER_URL": "redis://localhost:6379/0",
-        "CELERY_RESULT_BACKEND": "redis://localhost:6379/1",
         "ENVIRONMENT": "test",
     }
 )
@@ -89,6 +82,37 @@ def mock_http_client():
     mock.put = AsyncMock()
     mock.delete = AsyncMock()
     return mock
+
+
+@pytest.fixture
+def mock_feed_fetch():
+    """Mock feed fetching for discovery tests."""
+    with patch("app.services.feeds.feed_creation.FeedCreationService._fetch_feed_content") as mock_fetch:
+        # Mock successful feed fetch
+        mock_fetch.return_value = {
+            "status": 200,
+            "content": """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>Test Feed</title>
+        <description>Test feed description</description>
+        <link>https://example.com</link>
+        <item>
+            <title>Test Article 1</title>
+            <description>Test article description</description>
+            <link>https://example.com/article1</link>
+            <pubDate>Mon, 01 Jan 2024 12:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title>Test Article 2</title>
+            <description>Another test article</description>
+            <link>https://example.com/article2</link>
+            <pubDate>Mon, 01 Jan 2024 13:00:00 GMT</pubDate>
+        </item>
+    </channel>
+</rss>""",
+        }
+        yield mock_fetch
 
 
 async def create_test_user(session: AsyncSession, user_id: str = None, email: str = None) -> Profile:

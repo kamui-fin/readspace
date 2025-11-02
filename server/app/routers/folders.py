@@ -113,6 +113,9 @@ async def update_folder(
             folder_id=folder_id,
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data") from e
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
     except Exception as e:
         logger.error(
             "Unexpected error updating folder",
@@ -166,6 +169,9 @@ async def delete_folder(
             folder_id=folder_id,
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid folder data") from e
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 404) without modification
+        raise
     except Exception as e:
         logger.error(
             "Unexpected error deleting folder",

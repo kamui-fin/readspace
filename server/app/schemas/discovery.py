@@ -59,6 +59,7 @@ class CategoryInfo(BaseModel):
     name: str
     display_name: str
     avg_popularity: float
+    count: int = Field(0, description="Number of feeds in this category")
 
 
 class DiscoverCategoriesResponse(BaseModel):

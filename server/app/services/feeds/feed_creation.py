@@ -160,6 +160,7 @@ class FeedCreationService:
             self.db,
             subscription_in=subscription_data,
             user_id=self.user_id,
+            feed_db=existing_feed,  # Pass the feed object directly
         )
 
         logger.info(
@@ -246,6 +247,7 @@ class FeedCreationService:
             self.db,
             subscription_in=subscription_data,
             user_id=self.user_id,
+            feed_db=db_feed,  # Pass the feed object directly
         )
 
         # Trigger background feed enrichment
@@ -479,16 +481,16 @@ class FeedCreationService:
         result = await self.feed_fetcher.fetch_content(url, etag, last_modified, timeout_seconds)
 
         # Convert FeedFetcher response format to expected format
-        if result.get("not_modified"):
+        if result.not_modified:
             return {
                 "status": 304,
                 "content": None,
-                "headers": result.get("headers", {}),
+                "headers": result.headers,
             }
 
-        if result.get("error"):
-            error_type = result["error"]
-            status_code = result.get("status_code", 500)
+        if result.error:
+            error_type = result.error
+            status_code = result.status_code
 
             if error_type == "timeout":
                 raise FeedConnectionError(f"Feed timed out: {url}")
@@ -505,9 +507,9 @@ class FeedCreationService:
                 raise FeedConnectionError(f"Network error fetching feed: {url}")
 
         return {
-            "status": result.get("status_code", 200),
-            "content": result.get("content", ""),
-            "headers": result.get("headers", {}),
+            "status": result.status_code,
+            "content": result.content,
+            "headers": result.headers,
         }
 
     def _parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:

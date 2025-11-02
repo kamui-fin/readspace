@@ -28,7 +28,12 @@ async def get_similar_feeds(
     similarity_service = FeedSimilarityService(db=db, user_id=UUID(current_user.sub))
 
     try:
-        # Get the source feed info first
+        # Check if user is subscribed to the feed
+        is_subscribed = await similarity_service._is_user_subscribed_to_feed(feed_id)
+        if not is_subscribed:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found or not subscribed")
+
+        # Get the source feed info
         source_feed = await similarity_service._get_user_feed(feed_id)
         if not source_feed:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Source feed not found")

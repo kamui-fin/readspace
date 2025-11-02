@@ -189,7 +189,7 @@ EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,
     AuthorizationError: status.HTTP_403_FORBIDDEN,
     DuplicateResourceError: status.HTTP_409_CONFLICT,
-    FeedSubscriptionError: status.HTTP_409_CONFLICT,  # Fixed: should be 409 not 400
+    FeedSubscriptionError: status.HTTP_400_BAD_REQUEST,  # Already subscribed scenarios
     # Server errors (5xx)
     ExternalServiceError: status.HTTP_503_SERVICE_UNAVAILABLE,
     FeedConnectionError: status.HTTP_503_SERVICE_UNAVAILABLE,

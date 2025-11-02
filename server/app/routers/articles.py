@@ -273,7 +273,21 @@ async def list_articles(
         is_favorite=is_favorite,
     )
 
-    return result.model_dump()
+    # Transform the tuples into ArticleResponse objects
+    from app.crud.article.article_transformer import ArticleTransformer
+    transformer = ArticleTransformer()
+    
+    transformed_items = []
+    for item in result.items:
+        transformed_item = transformer.to_unified(item)
+        transformed_items.append(transformed_item.model_dump())
+    
+    return {
+        "items": transformed_items,
+        "next_cursor": result.next_cursor,
+        "has_more": result.has_more,
+        "total_count": result.total_count,
+    }
 
 
 @router.get(

@@ -122,7 +122,8 @@ class FeedSimilarityService:
                     f.popularity_score,
                     -- Calculate similarity score (1 - cosine distance)
                     (1 - (f.embedding <=> (SELECT embedding FROM source_feed))) AS similarity_score
-                FROM feeds f, source_feed sf
+                FROM feeds f
+                CROSS JOIN source_feed sf
                 WHERE f.id != :source_feed_id  -- Exclude the source feed itself
                   AND f.embedding IS NOT NULL  -- Only consider feeds with embeddings
                   AND (1 - (f.embedding <=> sf.embedding)) >= :min_similarity  -- Similarity threshold
@@ -133,6 +134,7 @@ class FeedSimilarityService:
 
             logger.debug("Executing similarity search query with CTE", params=list(params.keys()))
 
+            # Execute the raw SQL query and fetch results as tuples to avoid ORM mapping issues
             result = await self.db.execute(text(sql_query), params)
             rows = result.fetchall()
 
@@ -141,21 +143,22 @@ class FeedSimilarityService:
             # Convert results to FeedDiscoveryResult format
             similar_feeds = []
             for row in rows:
+                # Access row data by index to avoid potential ORM lazy loading issues
                 feed_data = FeedDiscoveryResult(
-                    id=str(row.id),
-                    title=row.title,
-                    description=row.description,
-                    url=str(row.url),  # Keep original URL for display
-                    link=self._normalize_url(row.link),
-                    image_url=self._normalize_url(row.image_url),
-                    tags=row.tags or [],
-                    language=row.language,
-                    category=row.top_level_category if row.top_level_category else None,
-                    popularity_score=row.popularity_score or 0.0,
-                    relevance=round(float(row.similarity_score), 3),  # Use similarity as relevance
+                    id=str(row[0]),  # f.id
+                    title=row[1],    # f.title
+                    description=row[2],  # f.description
+                    url=str(row[3]),     # f.url
+                    link=self._normalize_url(row[4]),  # f.link
+                    image_url=self._normalize_url(row[5]),  # f.image_url
+                    tags=row[6] or [],   # f.tags
+                    language=row[7],     # f.language
+                    category=row[8] if row[8] else None,  # f.top_level_category
+                    popularity_score=row[9] or 0.0,  # f.popularity_score
+                    relevance=round(float(row[10]), 3),  # similarity_score
                     search_metadata={
                         "search_type": "similarity",
-                        "similarity_score": float(row.similarity_score),
+                        "similarity_score": float(row[10]),  # similarity_score
                         "source_feed_id": str(feed_id),
                     },
                 )
@@ -223,3 +226,21 @@ class FeedSimilarityService:
                 error=str(e),
             )
             return []
+
+    async def _is_user_subscribed_to_feed(self, feed_id: UUID) -> bool:
+        """Check if the user is subscribed to a specific feed."""
+        try:
+            stmt = select(FeedSubscription).where(
+                FeedSubscription.user_id == self.user_id,
+                FeedSubscription.feed_id == feed_id
+            )
+            result = await self.db.execute(stmt)
+            return result.scalar_one_or_none() is not None
+        except Exception as e:
+            logger.error(
+                "Error checking feed subscription",
+                feed_id=feed_id,
+                user_id=self.user_id,
+                error=str(e),
+            )
+            return False

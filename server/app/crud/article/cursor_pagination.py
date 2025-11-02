@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, UserArticleState
@@ -80,13 +81,16 @@ async def get_articles_cursor_paginated(
     """
     # Build base query for feed articles with subscriptions
     query = (
-        select(ArticleContent)
-        .join(FeedArticle, FeedArticle.article_id == ArticleContent.id)
+        select(FeedArticle, UserArticleState)
+        .options(
+            selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+            selectinload(FeedArticle.feed)
+        )
         .join(Feed, Feed.id == FeedArticle.feed_id)
         .join(FeedSubscription, and_(FeedSubscription.feed_id == Feed.id, FeedSubscription.user_id == user_id))
         .outerjoin(
             UserArticleState,
-            and_(UserArticleState.article_id == ArticleContent.id, UserArticleState.user_id == user_id),
+            and_(UserArticleState.article_id == FeedArticle.id, UserArticleState.user_id == user_id),
         )
     )
 
@@ -116,30 +120,33 @@ async def get_articles_cursor_paginated(
 
     # Apply cursor filter (articles after the cursor)
     if params.cursor:
-        query = query.where(ArticleContent.id > params.cursor)
+        query = query.where(FeedArticle.id > params.cursor)
 
-    # Order by article_id for consistent cursor pagination
-    query = query.order_by(ArticleContent.id.asc())
+    # Order by FeedArticle.id for consistent cursor pagination
+    query = query.order_by(FeedArticle.id.asc())
 
     # Fetch one more than limit to check if there are more pages
     query = query.limit(params.limit + 1)
 
     # Execute query
     result = await db.execute(query)
-    articles = result.scalars().unique().all()
+    rows = result.all()
+
+    # Convert Row objects to tuples
+    article_tuples = [(row[0], row[1]) for row in rows]
 
     # Determine if there are more pages
-    has_more = len(articles) > params.limit
+    has_more = len(article_tuples) > params.limit
     if has_more:
-        articles = articles[: params.limit]  # Remove the extra item
+        article_tuples = article_tuples[: params.limit]  # Remove the extra item
 
     # Get next cursor (last item's ID)
-    next_cursor = articles[-1].id if articles and has_more else None
+    next_cursor = article_tuples[-1][0].id if article_tuples and has_more else None
 
     # Optionally get total count (can be expensive, so make it optional)
     # For now, we'll skip total count to keep it fast
     total_count = None
 
     return CursorPaginationResult(
-        items=list(articles), next_cursor=next_cursor, has_more=has_more, total_count=total_count
+        items=list(article_tuples), next_cursor=next_cursor, has_more=has_more, total_count=total_count
     )

@@ -1,10 +1,10 @@
 """E2E tests for similar feeds routes."""
 
 import pytest
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Feed, Profile, Subscription
+from app.models import Feed, FeedSubscription, Profile, Folder
 
 
 class TestGetSimilarFeeds:
@@ -12,15 +12,15 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_success(
-        self, client: TestClient, test_feed: Feed, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test getting similar feeds for a subscribed feed."""
         # Create subscription
-        subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = client.get(f"/api/v1/similar/{test_feed.id}")
+        response = await async_client.get(f"/api/similar/{test_feed.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -30,14 +30,14 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_with_limit(
-        self, client: TestClient, test_feed: Feed, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test limiting similar feed results."""
-        subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = client.get(f"/api/v1/similar/{test_feed.id}?limit=5")
+        response = await async_client.get(f"/api/similar/{test_feed.id}?limit=5")
 
         assert response.status_code == 200
         data = response.json()
@@ -45,14 +45,14 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_with_min_similarity(
-        self, client: TestClient, test_feed: Feed, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test filtering by minimum similarity score."""
-        subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = client.get(f"/api/v1/similar/{test_feed.id}?min_similarity=0.5")
+        response = await async_client.get(f"/api/similar/{test_feed.id}?min_similarity=0.5")
 
         assert response.status_code == 200
         data = response.json()
@@ -61,49 +61,54 @@ class TestGetSimilarFeeds:
             if "similarity_score" in feed:
                 assert feed["similarity_score"] >= 0.5
 
-    def test_get_similar_feeds_not_subscribed(self, client: TestClient, test_feed: Feed):
+    @pytest.mark.asyncio
+    async def test_get_similar_feeds_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test getting similar feeds for non-subscribed feed."""
-        response = client.get(f"/api/v1/similar/{test_feed.id}")
+        response = await async_client.get(f"/api/similar/{test_feed.id}")
 
         assert response.status_code == 404
 
-    def test_get_similar_feeds_not_found(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_get_similar_feeds_not_found(self, async_client: AsyncClient):
         """Test getting similar feeds for non-existent feed."""
         from uuid import uuid4
 
         fake_id = uuid4()
-        response = client.get(f"/api/v1/similar/{fake_id}")
+        response = await async_client.get(f"/api/similar/{fake_id}")
 
         assert response.status_code == 404
 
-    def test_get_similar_feeds_invalid_uuid(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_get_similar_feeds_invalid_uuid(self, async_client: AsyncClient):
         """Test with invalid UUID format."""
-        response = client.get("/api/v1/similar/invalid-uuid")
+        response = await async_client.get("/api/similar/invalid-uuid")
 
         assert response.status_code == 422
 
-    def test_get_similar_feeds_invalid_limit(self, client: TestClient, test_feed: Feed):
+    @pytest.mark.asyncio
+    async def test_get_similar_feeds_invalid_limit(self, async_client: AsyncClient, test_feed: Feed):
         """Test with invalid limit parameter."""
-        response = client.get(f"/api/v1/similar/{test_feed.id}?limit=0")
+        response = await async_client.get(f"/api/similar/{test_feed.id}?limit=0")
 
         assert response.status_code == 422
 
-    def test_get_similar_feeds_invalid_similarity(self, client: TestClient, test_feed: Feed):
+    @pytest.mark.asyncio
+    async def test_get_similar_feeds_invalid_similarity(self, async_client: AsyncClient, test_feed: Feed):
         """Test with invalid similarity threshold."""
-        response = client.get(f"/api/v1/similar/{test_feed.id}?min_similarity=2.0")
+        response = await async_client.get(f"/api/similar/{test_feed.id}?min_similarity=2.0")
 
         assert response.status_code == 422
 
     @pytest.mark.asyncio
     async def test_similar_feeds_source_info(
-        self, client: TestClient, test_feed: Feed, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test that source feed info is included in response."""
-        subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = client.get(f"/api/v1/similar/{test_feed.id}")
+        response = await async_client.get(f"/api/similar/{test_feed.id}")
 
         assert response.status_code == 200
         data = response.json()
@@ -116,14 +121,14 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_similar_feeds_result_structure(
-        self, client: TestClient, test_feed: Feed, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test structure of similar feed results."""
-        subscription = Subscription(user_id=test_user.id, feed_id=test_feed.id)
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
-        response = client.get(f"/api/v1/similar/{test_feed.id}")
+        response = await async_client.get(f"/api/similar/{test_feed.id}")
 
         assert response.status_code == 200
         data = response.json()

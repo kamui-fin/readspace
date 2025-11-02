@@ -28,7 +28,7 @@ from app.models import FeedArticle, UserArticleState
 from app.schemas import ArticleCreate, FeedResponse, FeedUpdate
 from app.schemas.subscriptions import SubscriptionResponse, SubscriptionUpdate
 from app.services.feeds.feed_creation import FeedCreationService
-from app.services.feeds.feed_fetcher import FeedFetcher
+from app.services.feeds.feed_fetcher import FeedFetcher, FetchResult
 from app.services.feeds.feed_parser import FeedParsingService
 from app.utils.url_normalizer import normalize_url_for_display
 
@@ -99,16 +99,16 @@ class FeedManagementService:
         )
 
     async def get_feed(self, feed_id: UUID) -> FeedResponse | None:
-        """Get a specific feed by ID. Returns feed data regardless of subscription status."""
-        # Fetch the feed
-        feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
-        if not feed_db:
-            return None
-
-        # Check if user is subscribed to this feed
+        """Get a specific feed by ID. Only returns feed if user is subscribed."""
+        # Check if user is subscribed to this feed first
         subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
+        if not subscription_db:
+            return None
+
+        # Fetch the feed
+        feed_db = subscription_db.feed
 
         # Base feed data (always present)
         feed_data = {
@@ -134,17 +134,15 @@ class FeedManagementService:
             "is_subscribed": subscription_db is not None,
         }
 
-        # Add subscription-specific data if user is subscribed
-        if subscription_db:
-            # Override title with custom title if set, and add subscription data
-            feed_data.update(
-                {
-                    "title": subscription_db.custom_title or feed_db.title,
-                    "user_id": subscription_db.user_id,
-                    "folder_id": subscription_db.folder_id,
-                    "is_favorite": subscription_db.is_favorite,
-                }
-            )
+        # Add subscription-specific data (user is always subscribed at this point)
+        feed_data.update(
+            {
+                "title": subscription_db.custom_title or feed_db.title,
+                "user_id": subscription_db.user_id,
+                "folder_id": subscription_db.folder_id,
+                "is_favorite": subscription_db.is_favorite,
+            }
+        )
 
         return FeedResponse(**feed_data)
 
@@ -221,7 +219,7 @@ class FeedManagementService:
 
         return feed_responses
 
-    async def update_feed_user_settings(self, feed_id: UUID, feed_in: FeedUpdate) -> FeedResponse | None:
+    async def update_feed_user_settings(self, feed_id: UUID, feed_in: FeedUpdate) -> SubscriptionResponse | None:
         """Update user-configurable feed settings."""
         logger.info("Updating feed settings", feed_id=feed_id, user_id=self.user_id)
 
@@ -245,34 +243,7 @@ class FeedManagementService:
 
         if updated_subscription:
             logger.info("Feed settings updated successfully", feed_id=feed_id)
-            feed_db = updated_subscription.feed
-
-            feed_data = {
-                "id": feed_db.id,
-                "url": normalize_url_for_display(str(feed_db.url) if feed_db.url else None),
-                "title": updated_subscription.custom_title or feed_db.title,
-                "description": feed_db.description,
-                "link": normalize_url_for_display(str(feed_db.link) if feed_db.link else None),
-                "language": feed_db.language,
-                "image_url": normalize_url_for_display(str(feed_db.image_url) if feed_db.image_url else None),
-                "tags": feed_db.tags,
-                "top_level_category": feed_db.top_level_category,
-                "popularity_score": feed_db.popularity_score,
-                "ttl": feed_db.ttl,
-                "skip_hours": feed_db.skip_hours,
-                "skip_days": feed_db.skip_days,
-                "last_fetched_at": feed_db.last_fetched_at,
-                "last_modified_header": feed_db.last_modified_header,
-                "etag_header": feed_db.etag_header,
-                "last_article_published_at": feed_db.last_article_published_at,
-                "created_at": feed_db.created_at,
-                "updated_at": feed_db.updated_at,
-                "is_subscribed": True,
-                "user_id": updated_subscription.user_id,
-                "folder_id": updated_subscription.folder_id,
-                "is_favorite": updated_subscription.is_favorite,
-            }
-            return FeedResponse(**feed_data)
+            return SubscriptionResponse.model_validate(updated_subscription)
         return None
 
     async def delete_feed(self, feed_id: UUID) -> bool:
@@ -353,7 +324,7 @@ class FeedManagementService:
                 str(feed_db.url), etag=etag, last_modified=last_modified
             )
 
-            if fetch_result["status_code"] == 304:  # Not Modified
+            if fetch_result.status_code == 304:  # Not Modified
                 # Update last_fetched_at even if not modified
                 await crud_feed.update_feed_metadata(
                     self.db, feed_db=feed_db, last_fetched_at=datetime.now(timezone.utc)
@@ -366,11 +337,11 @@ class FeedManagementService:
                     unread_count = await self._get_unread_count(feed_id)
                     return self._construct_feed_response(feed_db, subscription_db, unread_count)
 
-            if fetch_result["status_code"] != 200 or not fetch_result["content"]:
+            if fetch_result.status_code != 200 or not fetch_result.content:
                 logger.error(
                     "Failed to fetch content for feed refresh",
                     feed_id=feed_id,
-                    status=fetch_result.get("status_code"),
+                    status=fetch_result.status_code,
                 )
                 # Return current state with correct user-specific data
                 if preview_mode:
@@ -380,7 +351,7 @@ class FeedManagementService:
                     return self._construct_feed_response(feed_db, subscription_db, unread_count)
 
             # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_data(fetch_result["content"], str(feed_db.url))
+            parsed_feed = self.feed_parser.parse_feed_data(fetch_result.content, str(feed_db.url))
 
             # Update feed metadata and create new articles
             await self._update_feed_and_articles(feed_db, fetch_result, parsed_feed)
@@ -520,7 +491,7 @@ class FeedManagementService:
         }
         return FeedResponse(**feed_data)
 
-    async def _update_feed_and_articles(self, feed_db: Any, fetch_result: dict[str, Any], parsed_feed: Any) -> None:
+    async def _update_feed_and_articles(self, feed_db: Any, fetch_result: FetchResult, parsed_feed: Any) -> None:
         """Update feed metadata and create new articles."""
         # This is a simplified version - could be expanded or moved to feed_creation_service
         # Extract and create new articles first to get latest published_at
@@ -561,7 +532,7 @@ class FeedManagementService:
                 logger.info(f"Created {created_count} new articles", feed_id=feed_db.id)
 
         # Update feed metadata with latest published_at timestamp
-        feed_headers = fetch_result.get("headers", {})
+        feed_headers = fetch_result.headers
 
         # If we found a newer published_at, use it; otherwise keep the existing value
         update_last_article_published_at = latest_published_at

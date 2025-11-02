@@ -526,13 +526,13 @@ async def get_feed(
 
 @router.put(
     "/{feed_id}",
-    response_model=FeedResponse,
+    response_model=SubscriptionResponse,
     summary="Update feed settings",
     description="Update user-configurable settings for an RSS feed subscription",
     responses={
         200: {
             "description": "Successfully updated feed settings",
-            "model": FeedResponse,
+            "model": SubscriptionResponse,
         },
         400: {
             "description": "Bad request - validation error in update data",
@@ -564,7 +564,7 @@ async def update_feed_settings(
     feed_in: FeedUpdate = Body(..., description="Feed settings to update (all fields optional)"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> FeedResponse:
+) -> SubscriptionResponse:
     """
     Update user-configurable settings for an RSS feed subscription.
 
@@ -620,6 +620,9 @@ async def update_feed_settings(
             user_id=current_user.sub,
         )
         return updated_feed
+    except HTTPException:
+        # Re-raise HTTP exceptions from downstream handlers
+        raise
     except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
         logger.warning(f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e

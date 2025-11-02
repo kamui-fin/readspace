@@ -181,7 +181,7 @@ app.add_middleware(
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     logger.error(f"Validation error: {exc.errors()}")
     return JSONResponse(
-        status_code=400,
+        status_code=422,
         content={"detail": exc.errors()},
     )
 

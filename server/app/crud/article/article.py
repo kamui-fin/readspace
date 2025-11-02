@@ -124,7 +124,7 @@ async def update_article(
     article_in: ArticleUpdate,
     user_id: UUID,
     article_type: str = "feed",
-) -> FeedArticle | None:
+) -> tuple[FeedArticle, UserArticleState] | ClippedArticle | None:
     """Update article status."""
     return await ArticleCrudOperations.update_article_status(
         db,

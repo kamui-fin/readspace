@@ -1,7 +1,7 @@
 """E2E tests for user routes."""
 
 import pytest
-from fastapi.testclient import TestClient
+from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,25 +11,30 @@ from app.models import Profile
 class TestUserProfile:
     """Test user profile endpoints."""
 
-    def test_get_current_user_profile_success(self, client: TestClient, test_user: Profile):
+    @pytest.mark.asyncio
+    async def test_get_current_user_profile_success(self, async_client: AsyncClient, test_user: Profile):
         """Test getting current user profile successfully."""
-        response = client.get("/api/v1/users/profile")
+        response = await async_client.get("/api/users/profile")
 
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == str(test_user.id)
         assert data["email"] == test_user.email
-        assert data["role"] == test_user.role
+        # The database default role is "basic", not "user"
+        assert data["role"] == "basic"
         assert "created_at" in data
         assert "updated_at" in data
 
-    def test_get_current_user_profile_unauthenticated(self):
+    @pytest.mark.asyncio
+    async def test_get_current_user_profile_unauthenticated(self):
         """Test getting profile without authentication."""
         from app.main import app
+        from httpx import ASGITransport, AsyncClient
 
         # Create client without auth override
-        with TestClient(app) as client:
-            response = client.get("/api/v1/users/profile")
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/users/profile")
             assert response.status_code == 401
 
     @pytest.mark.asyncio
@@ -37,7 +42,8 @@ class TestUserProfile:
         """Test getting profile when user doesn't exist in database."""
         from app.main import app
         from app.schemas.auth import TokenData
-        from app.services.auth import get_current_user
+        from app.services.user.auth import get_current_user
+        from httpx import ASGITransport, AsyncClient
 
         # Mock user that doesn't exist in DB
         async def mock_nonexistent_user():
@@ -51,16 +57,18 @@ class TestUserProfile:
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[get_current_user] = mock_nonexistent_user
 
-        with TestClient(app) as client:
-            response = client.get("/api/v1/users/profile")
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.get("/api/users/profile")
             assert response.status_code == 404
             assert "not found" in response.json()["detail"].lower()
 
         app.dependency_overrides.clear()
 
-    def test_profile_response_schema(self, client: TestClient, test_user: Profile):
+    @pytest.mark.asyncio
+    async def test_profile_response_schema(self, async_client: AsyncClient, test_user: Profile):
         """Test that profile response matches expected schema."""
-        response = client.get("/api/v1/users/profile")
+        response = await async_client.get("/api/users/profile")
 
         assert response.status_code == 200
         data = response.json()
@@ -79,11 +87,11 @@ class TestUserProfile:
 
     @pytest.mark.asyncio
     async def test_profile_reflects_database_state(
-        self, client: TestClient, test_user: Profile, db_session: AsyncSession
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test that profile endpoint returns current database state."""
         # Get profile via API
-        response = client.get("/api/v1/users/profile")
+        response = await async_client.get("/api/users/profile")
         assert response.status_code == 200
         api_data = response.json()
 

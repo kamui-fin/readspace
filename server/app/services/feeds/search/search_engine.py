@@ -49,7 +49,7 @@ async def _get_trending_feeds_cached_impl(
 
 
 @cache_result(ttl=1800)  # Cache for 30 minutes
-def _get_categories_cached_impl(language: str, service_instance: "RssSearchService") -> list[dict[str, Any]]:
+async def _get_categories_cached_impl(language: str, service_instance: "RssSearchService") -> list[dict[str, Any]]:
     """
     Cached implementation of get_categories_with_counts.
 
@@ -1106,7 +1106,7 @@ class RssSearchService:
         Returns:
             List of category results
         """
-        return _get_categories_cached_impl(language, self)
+        return await _get_categories_cached_impl(language, self)
 
     def _get_categories_impl(self, language: str) -> list[dict[str, Any]]:
         """Internal implementation of get_categories_with_counts."""
@@ -1129,6 +1129,8 @@ class RssSearchService:
             {
                 "name": cat.value,
                 "display_name": cat.value,
+                "avg_popularity": 0.0,  # Default popularity score for now
+                "count": 0,  # Default count for now - could be enhanced to query actual feed counts
             }
             for cat in ordered_categories
         ]
