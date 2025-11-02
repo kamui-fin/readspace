@@ -9,15 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import MAX_AI_SUMMARIZATION_CONTENT_BYTES, MAX_AI_TRANSLATION_CONTENT_BYTES
 from app.core.custom_exceptions import ServiceUnavailableError
-from app.crud.crud_article import get_article as crud_get_article
+from app.crud.article.article import get_article as crud_get_article
 from app.db.session import get_db
 from app.models import ClippedArticle
 from app.schemas.auth import TokenData
 from app.schemas.enums import LanguageCode
 from app.services.ai.ai_service import get_ai_service
-from app.services.article_management_service import ArticleManagementService
-from app.services.auth import get_current_user
-from app.services.content_extraction_service import ContentExtractionService
+from app.services.articles.article_management import ArticleManagementService
+from app.services.user.auth import get_current_user
+from app.services.articles.content_extraction import ContentExtractionService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])

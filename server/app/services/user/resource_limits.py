@@ -8,8 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.resource_limits import RESOURCE_LIMITS
 from app.models import FeedSubscription
-from app.models.book_models import UserBookLibrary
-
 
 class ResourceLimitService:
     """Service for checking and enforcing resource limits based on user roles."""

@@ -156,7 +156,7 @@ class ArticleBase(BaseModel):
 
 
 class ArticleCreate(BaseModel):
-    """Schema for creating an article (for backward compatibility with RSS system)."""
+    """Schema for creating an article from RSS feed."""
 
     feed_id: UUID
     user_id: UUID

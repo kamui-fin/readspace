@@ -8,8 +8,8 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_profile import crud_profile
-from app.services.resource_limit_service import ResourceLimitError, ResourceLimitService
+from app.crud import crud_profile
+from app.services.user.resource_limits import ResourceLimitError, ResourceLimitService
 
 
 def require_resource_limit(resource: str) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:

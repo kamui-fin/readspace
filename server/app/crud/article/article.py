@@ -5,8 +5,8 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.article_crud_operations import ArticleCrudOperations
-from app.crud.article_specialized_queries import ArticleSpecializedQueries
+from app.crud.article.article_crud_operations import ArticleCrudOperations
+from app.crud.article.article_specialized_queries import ArticleSpecializedQueries
 from app.crud.base import CRUDBase
 from app.models import (
     ClippedArticle,
@@ -211,5 +211,5 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
         pass
 
 
-# Initialize CRUD instances for legacy compatibility (prefer module-level functions)
+# CRUD class instances (not actively used - prefer module-level functions)
 crud_feed_article = CRUDFeedArticle(FeedArticle)

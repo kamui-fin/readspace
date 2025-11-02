@@ -20,8 +20,7 @@ from app.core.custom_exceptions import (
 from app.core.decorators import require_resource_limit
 from app.core.dependencies import get_subscription_service
 from app.crud import crud_feed, crud_subscription
-from app.crud.crud_folder import crud_folder
-from app.crud.crud_profile import crud_profile
+from app.crud import crud_folder, crud_profile
 from app.db.session import get_db
 from app.models import Feed
 from app.schemas import FeedCreate, FeedResponse, FeedUpdate
@@ -30,11 +29,11 @@ from app.schemas.subscriptions import (
     SubscriptionCreateByFeedId,
     SubscriptionResponse,
 )
-from app.services.auth import get_current_user
-from app.services.feed_management_service import FeedManagementService
-from app.services.resource_limit_service import ResourceLimitService
-from app.services.rss_search_service import RssSearchService
-from app.services.subscription_service import SubscriptionService
+from app.services.user.auth import get_current_user
+from app.services.feeds.feed_management import FeedManagementService
+from app.services.user.resource_limits import ResourceLimitService
+from app.services.feeds.search.search_engine import RssSearchService
+from app.services.subscription import SubscriptionService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])

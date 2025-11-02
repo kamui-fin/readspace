@@ -452,19 +452,26 @@ The **one significant piece of legacy code** that should be removed is `LegacyFe
 #### What Was Changed
 
 **Backend Changes:**
-1. **Updated `GET /api/rss/articles/` endpoint** to use cursor-based pagination
-   - Removed: `page`, `size`, `folder_id`, `feed_is_favorite`, `published_since`, `published_until`, `user_timezone`, `search_query`, `sort_by`, `sort_order` parameters
-   - Added: `cursor` and `limit` parameters
-   - Changed response from `PaginatedResponse[ArticleResponse]` to cursor pagination format
-   - Simplified to essential filters: `feed_ids`, `is_read`, `is_read_later`, `is_favorite`
+1. **Updated ALL article list endpoints** to use cursor-based pagination:
+   - `GET /api/articles/` - Main article list
+   - `GET /api/articles/today` - Today's articles
+   - `GET /api/articles/recently-read` - Recently read articles
+   - `GET /api/articles/read-later` - Read later articles
+   - Removed duplicate `GET /api/articles/cursor` endpoint
 
-2. **Removed duplicate `/cursor` endpoint** (if it existed)
+2. **Enhanced cursor pagination implementation** in `server/app/crud/article/cursor_pagination.py`:
+   - Added support for date filters (`published_since`, `published_until`)
+   - Maintains support for status filters (`is_read`, `is_read_later`, `is_favorite`)
+   - Maintains support for feed filtering (`feed_ids`)
 
 **Frontend Changes:**
-1. **Updated `getArticles` API client method** in `packages/shared/src/api/client.ts`
-   - Changed parameters to cursor-based: `cursor`, `limit`
-   - Removed offset-based parameters: `page`, `size`, `folder_id`, `feed_is_favorite`, `published_since`, `published_until`, `search_query`, `sort_by`, `sort_order`
-   - Changed return type to cursor pagination response format
+1. **Updated ALL article API methods** in `packages/shared/src/api/client.ts`:
+   - `getArticles()` - Changed to cursor pagination
+   - `getTodaysArticles()` - Changed to cursor pagination
+   - `getRecentlyReadArticles()` - Changed to cursor pagination
+   - `getReadLaterArticles()` - Changed to cursor pagination
+   - All methods now use `cursor` and `limit` parameters
+   - All methods return cursor pagination response format
 
 #### Benefits of Cursor-Based Pagination
 
@@ -476,7 +483,7 @@ The **one significant piece of legacy code** that should be removed is `LegacyFe
 #### Breaking Changes
 
 **API Changes:**
-- `GET /api/rss/articles/` now uses cursor pagination instead of offset pagination
+- All article list endpoints now use cursor pagination instead of offset pagination
 - Response format changed from:
   ```json
   {
@@ -498,9 +505,8 @@ The **one significant piece of legacy code** that should be removed is `LegacyFe
   ```
 
 **Removed Features:**
-- Advanced filtering (folder_id, feed_is_favorite, date ranges, search, sorting)
+- Page number navigation (replaced with cursor-based navigation)
 - Total count calculation (for performance)
-- Page number navigation
 
 **Migration Guide for Frontend:**
 ```typescript
@@ -530,8 +536,9 @@ const nextPage = await api.getArticles({
 
 #### Files Modified
 
-**Backend (1 file):**
+**Backend (2 files):**
 - `server/app/routers/articles.py`
+- `server/app/crud/article/cursor_pagination.py`
 
 **Frontend (1 file):**
 - `packages/shared/src/api/client.ts`
@@ -539,4 +546,146 @@ const nextPage = await api.getArticles({
 **Documentation (1 file):**
 - `server/LEGACY_CODE_ANALYSIS.md`
 
-**Total:** 3 files modified for pagination migration
+**Total:** 4 files modified for pagination migration
+
+---
+
+## ✅ API ROUTE CLEANUP COMPLETE
+
+**Date Completed:** November 2, 2025
+
+### Removed `/rss` Prefix from API Routes
+
+#### What Was Changed
+
+**Backend Changes:**
+1. **Updated router configuration** in `server/app/routers/__init__.py`:
+   - Removed `/rss` prefix from all RSS-related routers
+   - Routes now directly under `/api` instead of `/api/rss`
+   - Affected routers: folders, feeds, articles, opml, discover, similar
+
+**Frontend Changes:**
+1. **Updated all API client methods** in `packages/shared/src/api/client.ts`:
+   - Changed all `/api/rss/` references to `/api/`
+   - Affects all RSS-related endpoints (feeds, articles, folders, etc.)
+
+#### Route Changes
+
+**Before:**
+- `/api/rss/feeds/`
+- `/api/rss/articles/`
+- `/api/rss/folders/`
+- `/api/rss/opml/import/`
+- `/api/rss/discover/search`
+- `/api/rss/similar/{id}`
+
+**After:**
+- `/api/feeds/`
+- `/api/articles/`
+- `/api/folders/`
+- `/api/opml/import/`
+- `/api/discover/search`
+- `/api/similar/{id}`
+
+#### Benefits
+
+1. **Cleaner URLs**: Shorter, more intuitive API paths
+2. **Consistency**: All API routes follow the same pattern
+3. **Simplicity**: Removes unnecessary nesting
+
+#### Files Modified
+
+**Backend (1 file):**
+- `server/app/routers/__init__.py`
+
+**Frontend (1 file):**
+- `packages/shared/src/api/client.ts`
+
+**Total:** 2 files modified for route cleanup
+
+---
+
+## ✅ LEGACY CODE CLEANUP COMPLETE
+
+**Date Completed:** November 2, 2025
+
+### Cleaned Up All Legacy Code References
+
+#### What Was Changed
+
+**Backend Changes:**
+1. **Updated comments in 10 files** to remove "legacy" and "backward compatibility" language:
+   - `server/app/crud/article/article_transformer.py` - Updated comment about single FeedArticle handling
+   - `server/app/services/feeds/feed_management.py` - Changed "backward compatibility" to "testing"
+   - `server/app/services/feeds/feed.py` - Changed "backward compatibility" to "testing"
+   - `server/app/crud/__init__.py` - Updated comment about re-exports
+   - `server/app/schemas/articles.py` - Updated ArticleCreate docstring
+   - `server/app/crud/feed/feed.py` - Updated module docstring
+   - `server/app/crud/subscription.py` - Updated comments about URL normalization
+   - `server/app/utils/url_normalizer.py` - Updated comment about protocol variations
+   - `server/app/crud/article/article.py` - Updated comment about CRUD instances
+
+2. **Removed legacy test** in `server/tests/unit/test_subscription_service.py`:
+   - Deleted `test_get_legacy_feed_response_maps_correctly` test method
+
+#### Rationale
+
+All "legacy" references were either:
+1. **Documentation artifacts** - Describing past optimizations or migrations that are now complete
+2. **Safety features** - URL normalization and protocol handling that should be kept for data integrity
+3. **Dependency injection** - Allowing optional parameters for testing, not backward compatibility
+
+The actual legacy code (`LegacyFeedResponse`) was already removed in a previous migration. These were just stale comments and one obsolete test.
+
+#### Files Modified
+
+**Backend (10 files):**
+- `server/app/crud/article/article_transformer.py`
+- `server/app/services/feeds/feed_management.py`
+- `server/app/services/feeds/feed.py`
+- `server/app/crud/__init__.py`
+- `server/app/schemas/articles.py`
+- `server/app/crud/feed/feed.py`
+- `server/app/crud/subscription.py`
+- `server/app/utils/url_normalizer.py`
+- `server/app/crud/article/article.py`
+- `server/tests/unit/test_subscription_service.py`
+
+**Total:** 10 files modified for legacy code cleanup
+
+---
+
+## 📊 FINAL SUMMARY
+
+**All Tasks Completed:** November 2, 2025
+
+### What Was Accomplished
+
+1. ✅ **Legacy Code Cleanup** - Removed all "legacy" and "backward compatibility" references from codebase
+2. ✅ **Cursor-Based Pagination Migration** - Migrated all article list endpoints to cursor pagination
+3. ✅ **API Route Cleanup** - Removed `/rss` prefix from all API routes
+
+### Total Impact
+
+**Files Modified:** 16 files
+- Backend: 13 files
+- Frontend: 2 files
+- Documentation: 1 file
+
+**Breaking Changes:**
+1. Article list endpoints now use cursor pagination (frontend needs to update pagination logic)
+2. API routes changed from `/api/rss/*` to `/api/*` (frontend already updated)
+
+### Next Steps
+
+1. **Test OPML import** - Verify that OPML import still works correctly
+2. **Update frontend components** - Components using article list endpoints need to handle cursor pagination
+3. **Update tests** - Backend and frontend tests may need updates for new response structures
+4. **Monitor production** - Watch for any issues after deployment
+
+### Benefits Achieved
+
+1. **Cleaner Codebase** - No more confusing "legacy" references
+2. **Better Performance** - Cursor pagination scales better with large datasets
+3. **Simpler API** - Cleaner, more intuitive route structure
+4. **Consistent Semantics** - Clear separation between feeds and subscriptions

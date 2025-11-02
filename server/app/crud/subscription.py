@@ -48,7 +48,7 @@ async def get_subscription_by_feed_url(db: AsyncSession, *, url: str, user_id: U
     """Get a user's subscription to a feed by the feed's URL.
 
     Checks both the exact URL and protocol variations (http vs https) to handle
-    legacy feeds stored with different protocols.
+    feeds that may have been stored with different protocols before normalization.
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
     embedding (~3KB) and description to reduce payload size.
@@ -169,7 +169,7 @@ async def create_subscription(
             orig=Exception("Duplicate subscription"),
         )
 
-    # Get or create global feed using resolved URL (handles URL migrations)
+    # Get or create global feed using resolved URL (handles URL normalization and redirects)
     feed_db = await crud_feed.get_or_migrate_feed(db, original_url=original_url, resolved_url=resolved_url)
     if not feed_db:
         if not feed_data:

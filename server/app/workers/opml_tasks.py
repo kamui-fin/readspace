@@ -6,7 +6,7 @@ from uuid import UUID
 import structlog
 
 from app.core.celery_app import celery
-from app.services.opml_import import OpmlImportService
+from app.services.opml.opml_import import OpmlImportService
 from app.workers.common import ensure_uuid, get_task_event_loop, get_worker_db
 
 logger = structlog.get_logger(__name__)

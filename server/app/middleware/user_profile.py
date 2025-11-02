@@ -9,7 +9,7 @@ from starlette.responses import Response
 
 from app.crud.profile import crud_profile
 from app.db.session import get_db
-from app.services.auth import get_optional_user
+from app.services.user.auth import get_optional_user
 
 logger = structlog.get_logger(__name__)
 

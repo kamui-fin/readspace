@@ -15,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import BROWSER_USER_AGENT, FAVICON_FETCH_TIMEOUT
-from app.crud.crud_feed import update_feed_enrichment
+from app.crud.feed.feed import update_feed_enrichment
 from app.models import Feed
 from app.services.ai.ai_service import get_ai_service
-from app.services.page_rank import get_page_rank_service
-from app.services.popularity_scorer import PopularityScorer
+from app.services.feeds.enrichment.page_rank import get_page_rank_service
+from app.services.feeds.enrichment.popularity_scorer import PopularityScorer
 
 logger = structlog.get_logger(__name__)
 

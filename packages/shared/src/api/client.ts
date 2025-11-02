@@ -8,6 +8,7 @@ import type {
 } from "./types/books";
 import type {
   ActiveImportTask,
+  Article,
   ArticlesPaginatedResponse,
   DiscoverSearchResponse,
   Feed,
@@ -289,62 +290,31 @@ export class ApiClient {
     }
   }
 
-  // Book endpoints
-  static books = {
-    getUserBooks: () => this.get<UserBookLibrary[]>("/api/books/"),
-    getBook: (id: string) => this.get<UserBookLibrary>(`/api/books/${id}`),
-    createBook: (data: BookMetadataCreate) =>
-      this.post<UserBookLibrary>("/api/books/", data),
-    updateBook: (id: string, data: UserBookLibraryUpdate) =>
-      this.put<UserBookLibrary>(`/api/books/${id}`, data),
-    updateBookProgress: (id: string, data: UserBookLibraryUpdate) =>
-      this.put<UserBookLibrary>(`/api/books/${id}/progress`, data),
-    deleteBook: (id: string) => this.delete<void>(`/api/books/${id}`),
-    deleteBookMetadata: (metadataId: string) =>
-      this.delete<void>(`/api/books/metadata/${metadataId}`),
-  };
-
-  // Highlight endpoints
-  static highlights = {
-    getBookHighlights: (bookId: string) =>
-      this.get<Highlight[]>(`/api/highlights/book/${bookId}`),
-    createHighlight: (data: HighlightCreate) =>
-      this.post<Highlight>("/api/highlights/", data),
-    updateHighlight: (highlightId: string, data: HighlightUpdate) =>
-      this.put<Highlight>(`/api/highlights/${highlightId}`, data),
-    updateHighlightNote: (highlightId: string, note: string) =>
-      this.put<Highlight>(`/api/highlights/${highlightId}/note`, { note }),
-    deleteHighlight: (highlightId: string) =>
-      this.delete<void>(`/api/highlights/${highlightId}`),
-    deleteHighlightByText: (text: string) =>
-      this.delete<void>(`/api/highlights/text/${encodeURIComponent(text)}`),
-  };
-
   // RSS endpoints
   static rss = {
     // Folders
-    getFolders: () => this.get<Folder[]>("/api/rss/folders/"),
-    getFolder: (id: string) => this.get<Folder>(`/api/rss/folders/${id}`),
+    getFolders: () => this.get<Folder[]>("/api/folders/"),
+    getFolder: (id: string) => this.get<Folder>(`/api/folders/${id}`),
     createFolder: (data: { name: string }) =>
-      this.post<Folder>("/api/rss/folders/", data),
+      this.post<Folder>("/api/folders/", data),
     updateFolder: (id: string, data: { name: string }) =>
-      this.put<Folder>(`/api/rss/folders/${id}`, data),
-    deleteFolder: (id: string) => this.delete<void>(`/api/rss/folders/${id}`),
+      this.put<Folder>(`/api/folders/${id}`, data),
+    deleteFolder: (id: string) => this.delete<void>(`/api/folders/${id}`),
 
     // OPML Import
     importOPML: (formData: FormData) =>
       this.uploadFile(
-        "/api/rss/opml/import/",
+        "/api/opml/import/",
         formData,
       ) as Promise<OPMLImportResponse>,
     getImportTaskStatus: (taskId: string) =>
-      this.get<ImportTaskStatus>(`/api/rss/opml/import/status/${taskId}`),
+      this.get<ImportTaskStatus>(`/api/opml/import/status/${taskId}`),
     getActiveImportTask: () =>
-      this.get<ImportTaskStatus | null>("/api/rss/opml/import/active"),
+      this.get<ImportTaskStatus | null>("/api/opml/import/active"),
     listImportTasks: () =>
-      this.get<ActiveImportTask[]>("/api/rss/opml/import/tasks"),
+      this.get<ActiveImportTask[]>("/api/opml/import/tasks"),
     cancelImportTask: (taskId: string) =>
-      this.delete<void>(`/api/rss/opml/import/cancel/${taskId}`),
+      this.delete<void>(`/api/opml/import/cancel/${taskId}`),
 
     // Feeds
     getFeeds: (params?: {
@@ -364,12 +334,12 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<Feed[]>(
-        `/api/rss/feeds/${queryString ? `?${queryString}` : ""}`,
+        `/api/feeds/${queryString ? `?${queryString}` : ""}`,
       );
     },
-    getFeed: (id: string) => this.get<Feed>(`/api/rss/feeds/${id}`),
+    getFeed: (id: string) => this.get<Feed>(`/api/feeds/${id}`),
     createFeed: (data: { url: string; folder_id?: string }, signal?: AbortSignal) =>
-      this.post<Subscription>("/api/rss/feeds/", data, signal ? { signal } : undefined),
+      this.post<Subscription>("/api/feeds/", data, signal ? { signal } : undefined),
     updateFeed: (
       id: string,
       data: {
@@ -377,7 +347,7 @@ export class ApiClient {
         is_favorite?: boolean;
         title?: string;
       },
-    ) => this.put<Feed>(`/api/rss/feeds/${id}`, data),
+    ) => this.put<Feed>(`/api/feeds/${id}`, data),
     adminUpdateFeed: (
       id: string,
       data: {
@@ -389,7 +359,7 @@ export class ApiClient {
         url?: string;
         image_url?: string;
       },
-    ) => this.put<Feed>(`/api/rss/feeds/${id}/admin`, data),
+    ) => this.put<Feed>(`/api/feeds/${id}/admin`, data),
     refreshFeed: (
       id: string,
       forceRefetch: boolean = false,
@@ -401,30 +371,30 @@ export class ApiClient {
       const queryString = queryParams.toString();
 
       return this.post<Feed>(
-        `/api/rss/feeds/${id}/refresh${queryString ? `?${queryString}` : ""}`,
+        `/api/feeds/${id}/refresh${queryString ? `?${queryString}` : ""}`,
       );
     },
     refreshFolderFeeds: (folderId: string) =>
-      this.post(`/api/rss/feeds/refresh_folder/${folderId}`),
-    refreshAllFeeds: () => this.post("/api/rss/feeds/refresh"),
+      this.post(`/api/feeds/refresh_folder/${folderId}`),
+    refreshAllFeeds: () => this.post("/api/feeds/refresh"),
     getRefreshStatus: (taskId: string) =>
-      this.get(`/api/rss/feeds/refresh-status/${taskId}`),
-    deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
+      this.get(`/api/feeds/refresh-status/${taskId}`),
+    deleteFeed: (id: string) => this.delete(`/api/feeds/${id}`),
     adminDeleteFeed: (id: string) =>
-      this.delete(`/api/rss/feeds/${id}/admin`),
+      this.delete(`/api/feeds/${id}/admin`),
     bulkDeleteFeeds: (feed_ids: string[]) =>
       this.post<{
         deleted_count: number;
         deleted_ids: string[];
-      }>("/api/rss/feeds/bulk-delete", { feed_ids }),
+      }>("/api/feeds/bulk-delete", { feed_ids }),
     bulkUpdateFeedsFolder: (feed_ids: string[], folder_id: string) =>
       this.post<{
         updated_count: number;
         updated_ids: string[];
         folder_id: string;
-      }>("/api/rss/feeds/bulk-update-folder", { feed_ids, folder_id }),
+      }>("/api/feeds/bulk-update-folder", { feed_ids, folder_id }),
     subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
-      this.post(`/api/rss/feeds/${feedId}/subscribe`, data),
+      this.post(`/api/feeds/${feedId}/subscribe`, data),
     getSimilarFeeds: (
       id: string,
       params?: {
@@ -439,7 +409,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<SimilarFeedsResponse>(
-        `/api/rss/similar/${id}${queryString ? `?${queryString}` : ""}`,
+        `/api/similar/${id}${queryString ? `?${queryString}` : ""}`,
       );
     },
 
@@ -475,33 +445,49 @@ export class ApiClient {
         next_cursor: string | null;
         has_more: boolean;
         total_count: number | null;
-      }>(`/api/rss/articles/${queryString ? `?${queryString}` : ""}`);
+      }>(`/api/articles/${queryString ? `?${queryString}` : ""}`);
     },
-    getRecentlyReadArticles: (
-      page?: number,
-      size?: number,
-    ): Promise<ArticlesPaginatedResponse> => {
+    getRecentlyReadArticles: (params?: {
+      cursor?: string;
+      limit?: number;
+    }): Promise<{
+      items: Article[];
+      next_cursor: string | null;
+      has_more: boolean;
+      total_count: number | null;
+    }> => {
       const queryParams = new URLSearchParams();
-      if (page) queryParams.append("page", page.toString());
-      if (size) queryParams.append("size", size.toString());
+      if (params?.cursor) queryParams.append("cursor", params.cursor);
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
 
       const queryString = queryParams.toString();
-      return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/recently-read${queryString ? `?${queryString}` : ""}`,
-      );
+      return this.get<{
+        items: Article[];
+        next_cursor: string | null;
+        has_more: boolean;
+        total_count: number | null;
+      }>(`/api/articles/recently-read${queryString ? `?${queryString}` : ""}`);
     },
-    getReadLaterArticles: (
-      page?: number,
-      size?: number,
-    ): Promise<ArticlesPaginatedResponse> => {
+    getReadLaterArticles: (params?: {
+      cursor?: string;
+      limit?: number;
+    }): Promise<{
+      items: Article[];
+      next_cursor: string | null;
+      has_more: boolean;
+      total_count: number | null;
+    }> => {
       const queryParams = new URLSearchParams();
-      if (page) queryParams.append("page", page.toString());
-      if (size) queryParams.append("size", size.toString());
+      if (params?.cursor) queryParams.append("cursor", params.cursor);
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
 
       const queryString = queryParams.toString();
-      return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/read-later${queryString ? `?${queryString}` : ""}`,
-      );
+      return this.get<{
+        items: Article[];
+        next_cursor: string | null;
+        has_more: boolean;
+        total_count: number | null;
+      }>(`/api/articles/read-later${queryString ? `?${queryString}` : ""}`);
     },
     getUnreadCounts: (folderId?: string) => {
       const queryParams = new URLSearchParams();
@@ -509,10 +495,10 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get(
-        `/api/rss/articles/unread-counts${queryString ? `?${queryString}` : ""}`,
+        `/api/articles/unread-counts${queryString ? `?${queryString}` : ""}`,
       );
     },
-    getArticle: (id: string) => this.get(`/api/rss/articles/${id}`),
+    getArticle: (id: string) => this.get(`/api/articles/${id}`),
     updateArticle: (
       id: string,
       data: {
@@ -524,19 +510,27 @@ export class ApiClient {
         note?: string | null;
       },
       articleType: "feed" | "clipped" = "feed",
-    ) => this.put(`/api/rss/articles/${id}?article_type=${articleType}`, data),
+    ) => this.put(`/api/articles/${id}?article_type=${articleType}`, data),
     getTodaysArticles: (params?: {
-      page?: number;
-      size?: number;
-    }): Promise<ArticlesPaginatedResponse> => {
+      cursor?: string;
+      limit?: number;
+    }): Promise<{
+      items: Article[];
+      next_cursor: string | null;
+      has_more: boolean;
+      total_count: number | null;
+    }> => {
       const queryParams = new URLSearchParams();
-      if (params?.page) queryParams.append("page", params.page.toString());
-      if (params?.size) queryParams.append("size", params.size.toString());
+      if (params?.cursor) queryParams.append("cursor", params.cursor);
+      if (params?.limit) queryParams.append("limit", params.limit.toString());
 
       const queryString = queryParams.toString();
-      return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/today${queryString ? `?${queryString}` : ""}`,
-      );
+      return this.get<{
+        items: Article[];
+        next_cursor: string | null;
+        has_more: boolean;
+        total_count: number | null;
+      }>(`/api/articles/today${queryString ? `?${queryString}` : ""}`);
     },
 
     saveArticle: (data: {
@@ -544,12 +538,12 @@ export class ApiClient {
       title?: string;
       content?: string;
       metadata?: Record<string, string>;
-    }) => this.post("/api/rss/articles", data),
+    }) => this.post("/api/articles", data),
 
     checkArticleSaved: (url: string) => {
       const queryParams = new URLSearchParams();
       queryParams.append("url", url);
-      return this.get(`/api/rss/articles/check-saved?${queryParams.toString()}`);
+      return this.get(`/api/articles/check-saved?${queryParams.toString()}`);
     },
 
     // Discover endpoints
@@ -567,7 +561,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<DiscoverSearchResponse>(
-        `/api/rss/discover/search${queryString ? `?${queryString}` : ""}`,
+        `/api/discover/search${queryString ? `?${queryString}` : ""}`,
       );
     },
 
@@ -579,7 +573,7 @@ export class ApiClient {
       },
     ) => {
       return this.post<DiscoverSearchResponse>(
-        "/api/rss/discover/recommendations",
+        "/api/discover/recommendations",
         {
           categories,
           language: params?.language || "en",
@@ -594,7 +588,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get(
-        `/api/rss/discover/categories${queryString ? `?${queryString}` : ""}`,
+        `/api/discover/categories${queryString ? `?${queryString}` : ""}`,
       );
     },
 
@@ -611,7 +605,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get(
-        `/api/rss/discover/categories/${encodeURIComponent(categoryName)}${queryString ? `?${queryString}` : ""}`,
+        `/api/discover/categories/${encodeURIComponent(categoryName)}${queryString ? `?${queryString}` : ""}`,
       );
     },
 
@@ -622,7 +616,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get(
-        `/api/rss/discover/preview/articles${queryString ? `?${queryString}` : ""}`,
+        `/api/discover/preview/articles${queryString ? `?${queryString}` : ""}`,
       );
     },
 
@@ -638,7 +632,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<Feed[]>(
-        `/api/rss/feeds/trending${queryString ? `?${queryString}` : ""}`,
+        `/api/feeds/trending${queryString ? `?${queryString}` : ""}`,
       );
     },
   };

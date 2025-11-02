@@ -7,7 +7,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AUTO_EXTRACT_ENABLED, AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
-from app.crud.crud_article import (
+from app.crud.article.article import (
     count_read_later_articles,
     count_today_articles,
     count_unread_articles,
@@ -18,18 +18,18 @@ from app.crud.crud_article import (
     get_recently_read_articles,
     get_unread_counts_by_folder,
 )
-from app.crud.crud_article import (
+from app.crud.article.article import (
     update_article as crud_update_article,
 )
-from app.crud.crud_unified_articles import crud_unified_articles
-from app.crud.transformers.article_transformer import ArticleTransformer
+from app.crud.article.unified_articles import crud_unified_articles
+from app.crud.article.article_transformer import ArticleTransformer
 from app.models import ClippedArticle, FeedArticle
 from app.schemas import (
     ArticleResponse,
     ArticleUpdate,
     PaginatedResponse,
 )
-from app.services.content_extraction import ContentExtractionService
+from app.services.articles.content_extraction import ContentExtractionService
 from app.utils.content_detector import is_content_complete
 
 logger = structlog.get_logger(__name__)
@@ -63,7 +63,7 @@ class ArticleManagementService:
         allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering and pagination."""
-        from app.crud.crud_article import count_articles_by_user
+        from app.crud.article.article import count_articles_by_user
 
         skip = (page - 1) * size
 

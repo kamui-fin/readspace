@@ -8,8 +8,8 @@ from sqlalchemy import asc, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import Select
 
-from app.crud.query_builders.unified_article_query_builder import UnifiedArticleQueryBuilder
-from app.crud.transformers.article_transformer import ArticleTransformer
+from app.crud.article.unified_article_query_builder import UnifiedArticleQueryBuilder
+from app.crud.article.article_transformer import ArticleTransformer
 from app.schemas import ArticleResponse
 
 # Module-level singletons for stateless builders

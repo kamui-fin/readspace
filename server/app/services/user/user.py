@@ -7,7 +7,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.crud_profile import crud_profile
+from app.crud.profile import crud_profile
 from app.models.user import Profile
 from app.schemas.auth import TokenData
 

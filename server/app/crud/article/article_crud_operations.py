@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.constants import BATCH_INSERT_THRESHOLD
-from app.crud.article_query_builder import ArticleQueryBuilder
+from app.crud.article.article_query_builder import ArticleQueryBuilder
 from app.models import (
     ArticleContent,
     ClippedArticle,

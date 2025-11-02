@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request, Response, status
 from fastapi.responses import JSONResponse
 
 from app.core.config import Settings
-from app.services.auth import get_optional_user
+from app.services.user.auth import get_optional_user
 
 logger = structlog.get_logger()
 settings = Settings()

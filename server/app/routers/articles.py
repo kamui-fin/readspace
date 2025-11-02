@@ -19,10 +19,10 @@ from app.schemas import (
     SaveArticleRequest,
 )
 from app.schemas.auth import TokenData
-from app.services.article_management_service import ArticleManagementService
-from app.services.auth import get_current_user
-from app.services.user_service import UserService
-from app.services.web_article_service import WebArticleService
+from app.services.articles.article_management import ArticleManagementService
+from app.services.user.auth import get_current_user
+from app.services.user.user import UserService
+from app.services.articles.web_article import WebArticleService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["RSS Articles"])
@@ -278,14 +278,23 @@ async def list_articles(
 
 @router.get(
     "/today",
-    response_model=PaginatedResponse[ArticleResponse],
+    response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="Get today's articles",
-    description="Retrieve articles published in the last 24 hours",
+    summary="Get today's articles with cursor pagination",
+    description="Retrieve articles published in the last 24 hours using cursor-based pagination",
     responses={
         200: {
             "description": "Successfully retrieved today's articles",
-            "model": PaginatedResponse[ArticleResponse],
+            "content": {
+                "application/json": {
+                    "example": {
+                        "items": [],
+                        "next_cursor": "uuid-string",
+                        "has_more": True,
+                        "total_count": None,
+                    }
+                }
+            },
         },
         422: {
             "description": "Validation error in pagination parameters",
@@ -294,8 +303,8 @@ async def list_articles(
                     "example": {
                         "detail": [
                             {
-                                "loc": ["query", "size"],
-                                "msg": "ensure this value is less than or equal to 100",
+                                "loc": ["query", "limit"],
+                                "msg": "ensure this value is less than or equal to 200",
                                 "type": "value_error.number.not_le",
                             }
                         ]
@@ -308,11 +317,11 @@ async def list_articles(
 async def get_todays_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-    page: int = Query(1, ge=1, description="Page number for pagination"),
-    size: int = Query(25, ge=1, le=MAX_PAGE_SIZE, description="Number of items per page"),
-) -> PaginatedResponse[ArticleResponse]:
+    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
+) -> dict:
     """
-    Retrieve articles published in the last 24 hours.
+    Retrieve articles published in the last 24 hours using cursor-based pagination.
 
     This endpoint provides a convenient way to access recent articles from all subscribed feeds.
     The time range is calculated from the current UTC time minus 24 hours.
@@ -320,16 +329,19 @@ async def get_todays_articles(
     Args:
         db: Database session dependency
         current_user: Authenticated user token data
-        page: Page number starting from 1 (default: 1)
-        size: Number of articles per page, max 100 (default: 25)
+        cursor: Optional cursor (article ID) for pagination
+        limit: Number of items per page (default: 50, max: 200)
 
     Returns:
-        PaginatedResponse[ArticleResponse]: Paginated list of articles from the last 24 hours,
-        sorted by publication date in descending order (newest first)
+        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
 
-    Raises:
-        HTTPException:
-            - 422: Validation error in pagination parameters
+    Response Format:
+        {
+            "items": [...],
+            "next_cursor": "uuid-string" or null,
+            "has_more": boolean,
+            "total_count": null (not computed for performance)
+        }
 
     Note:
         - Time calculations use UTC timezone
@@ -339,34 +351,48 @@ async def get_todays_articles(
     """
     from datetime import timedelta
 
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+
     # Get current time in UTC
     now_utc = datetime.now(UTC)
 
     # Get articles from the last 24 hours
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
 
-    article_service = ArticleManagementService(db=db, user_id=UUID(current_user.sub))
-    paginated_articles = await article_service.get_articles(
+    # Create pagination parameters
+    params = CursorPaginationParams(limit=limit, cursor=cursor)
+
+    # Get articles using cursor pagination with date filter
+    result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=params,
         published_since=twenty_four_hours_ago,
         published_until=now_utc,
-        sort_by="published_at",
-        sort_order="desc",
-        page=page,
-        size=size,
     )
-    return paginated_articles
+
+    return result.model_dump()
 
 
 @router.get(
     "/recently-read",
-    response_model=PaginatedResponse[ArticleResponse],
+    response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="Get recently read articles",
-    description="Retrieve articles that have been recently read by the user",
+    summary="Get recently read articles with cursor pagination",
+    description="Retrieve articles that have been recently read by the user using cursor-based pagination",
     responses={
         200: {
             "description": "Successfully retrieved recently read articles",
-            "model": PaginatedResponse[ArticleResponse],
+            "content": {
+                "application/json": {
+                    "example": {
+                        "items": [],
+                        "next_cursor": "uuid-string",
+                        "has_more": True,
+                        "total_count": None,
+                    }
+                }
+            },
         },
         422: {
             "description": "Validation error in pagination parameters",
@@ -375,9 +401,9 @@ async def get_todays_articles(
                     "example": {
                         "detail": [
                             {
-                                "loc": ["query", "page"],
-                                "msg": "ensure this value is greater than or equal to 1",
-                                "type": "value_error.number.not_ge",
+                                "loc": ["query", "limit"],
+                                "msg": "ensure this value is less than or equal to 200",
+                                "type": "value_error.number.not_le",
                             }
                         ]
                     }
@@ -389,11 +415,11 @@ async def get_todays_articles(
 async def get_recently_read_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(20, ge=1, le=MAX_PAGE_SIZE, description="Page size"),
-) -> PaginatedResponse[ArticleResponse]:
+    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
+) -> dict:
     """
-    Retrieve articles that have been recently read by the user.
+    Retrieve articles that have been recently read by the user using cursor-based pagination.
 
     This endpoint returns articles that the user has marked as read, sorted by
     when they were read (most recently read first). Useful for creating
@@ -402,16 +428,19 @@ async def get_recently_read_articles(
     Args:
         db: Database session dependency
         current_user: Authenticated user token data
-        page: Page number starting from 1 (default: 1)
-        size: Number of articles per page, max 100 (default: 20)
+        cursor: Optional cursor (article ID) for pagination
+        limit: Number of items per page (default: 50, max: 200)
 
     Returns:
-        PaginatedResponse[ArticleResponse]: Paginated list of recently read articles,
-        sorted by read timestamp in descending order (most recently read first)
+        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
 
-    Raises:
-        HTTPException:
-            - 422: Validation error in pagination parameters
+    Response Format:
+        {
+            "items": [...],
+            "next_cursor": "uuid-string" or null,
+            "has_more": boolean,
+            "total_count": null (not computed for performance)
+        }
 
     Note:
         - Only includes articles explicitly marked as read by the user
@@ -419,21 +448,41 @@ async def get_recently_read_articles(
         - The definition of "recent" is configurable (typically within the last 30 days)
         - Includes articles from both RSS feeds and saved web articles
     """
-    article_service = ArticleManagementService(db=db, user_id=UUID(current_user.sub))
-    skip = (page - 1) * size
-    return await article_service.get_recently_read_articles(skip=skip, limit=size)
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+
+    # Create pagination parameters
+    params = CursorPaginationParams(limit=limit, cursor=cursor)
+
+    # Get recently read articles using cursor pagination
+    result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=params,
+        is_read=True,
+    )
+
+    return result.model_dump()
 
 
 @router.get(
     "/read-later",
-    response_model=PaginatedResponse[ArticleResponse],
+    response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="Get read later articles",
-    description="Retrieve articles marked for reading later by the user",
+    summary="Get read later articles with cursor pagination",
+    description="Retrieve articles marked for reading later by the user using cursor-based pagination",
     responses={
         200: {
             "description": "Successfully retrieved read later articles",
-            "model": PaginatedResponse[ArticleResponse],
+            "content": {
+                "application/json": {
+                    "example": {
+                        "items": [],
+                        "next_cursor": "uuid-string",
+                        "has_more": True,
+                        "total_count": None,
+                    }
+                }
+            },
         },
         422: {
             "description": "Validation error in pagination parameters",
@@ -442,7 +491,7 @@ async def get_recently_read_articles(
                     "example": {
                         "detail": [
                             {
-                                "loc": ["query", "size"],
+                                "loc": ["query", "limit"],
                                 "msg": "ensure this value is less than or equal to 200",
                                 "type": "value_error.number.not_le",
                             }
@@ -456,11 +505,11 @@ async def get_recently_read_articles(
 async def get_read_later_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(100, ge=1, le=MAX_PAGE_SIZE, description="Page size"),
-) -> PaginatedResponse[ArticleResponse]:
+    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
+) -> dict:
     """
-    Retrieve articles marked for reading later by the user.
+    Retrieve articles marked for reading later by the user using cursor-based pagination.
 
     This endpoint returns the user's "read later" list - articles they have
     specifically saved to read at a later time. This includes both articles
@@ -469,27 +518,39 @@ async def get_read_later_articles(
     Args:
         db: Database session dependency
         current_user: Authenticated user token data
-        page: Page number starting from 1 (default: 1)
-        size: Number of articles per page, max 200 (default: 100)
+        cursor: Optional cursor (article ID) for pagination
+        limit: Number of items per page (default: 50, max: 200)
 
     Returns:
-        PaginatedResponse[ArticleResponse]: Paginated list of articles marked for
-        reading later, with sorting and metadata
+        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
 
-    Raises:
-        HTTPException:
-            - 422: Validation error in pagination parameters
+    Response Format:
+        {
+            "items": [...],
+            "next_cursor": "uuid-string" or null,
+            "has_more": boolean,
+            "total_count": null (not computed for performance)
+        }
 
     Note:
         - Only includes articles where is_read_later flag is True
-        - Higher page size limit (200) compared to other endpoints due to typical
-          read-later list sizes
         - Includes both RSS feed articles and manually saved web articles
         - Articles remain in this list until explicitly marked as read or removed
     """
-    article_service = ArticleManagementService(db=db, user_id=UUID(current_user.sub))
-    skip = (page - 1) * size
-    return await article_service.get_read_later_articles(skip=skip, limit=size)
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+
+    # Create pagination parameters
+    params = CursorPaginationParams(limit=limit, cursor=cursor)
+
+    # Get read later articles using cursor pagination
+    result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=params,
+        is_read_later=True,
+    )
+
+    return result.model_dump()
 
 
 @router.get(
@@ -851,103 +912,4 @@ async def update_article(
     return updated_article
 
 
-@router.get(
-    "/cursor",
-    response_model=dict,
-    status_code=status.HTTP_200_OK,
-    summary="List articles with cursor pagination",
-    description="Retrieve articles using cursor-based pagination for better performance with large datasets",
-    responses={
-        200: {
-            "description": "Successfully retrieved paginated articles",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "items": [{"id": "uuid", "title": "Article 1"}],
-                        "next_cursor": "uuid",
-                        "has_more": True,
-                        "total_count": None,
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid query parameters"},
-        422: {"description": "Validation error in query parameters"},
-    },
-)
-async def list_articles_cursor(
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
-    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
-    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
-    feed_ids: list[UUID] | None = Query(None, description="Filter by specific feed IDs"),
-    is_read: bool | None = Query(None, description="Filter by read status"),
-    is_read_later: bool | None = Query(None, description="Filter by read later status"),
-    is_favorite: bool | None = Query(None, description="Filter by favorite status"),
-) -> dict:
-    """
-    Retrieve articles using cursor-based pagination for better performance.
 
-    Cursor pagination provides better performance for large datasets compared to
-    offset-based pagination. It uses the article ID as a cursor, which allows
-    for efficient querying without the performance issues of OFFSET.
-
-    Args:
-        db: Database session dependency
-        current_user: Authenticated user token data
-        cursor: Cursor for the next page (article ID from previous response)
-        limit: Number of articles to return (default: 50, max: 200)
-        feed_ids: Optional list of feed UUIDs to filter articles
-        is_read: Optional boolean to filter by read status
-        is_read_later: Optional boolean to filter articles marked for reading later
-        is_favorite: Optional boolean to filter articles marked as favorites
-
-    Returns:
-        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
-
-    Response Format:
-        {
-            "items": [ArticleResponse],  # List of articles
-            "next_cursor": "uuid",        # Cursor for next page (null if no more)
-            "has_more": true,             # Whether more pages exist
-            "total_count": null           # Total count (optional, null for performance)
-        }
-
-    Note:
-        - More efficient than offset pagination for large datasets
-        - Consistent results even when data is being inserted/updated
-        - Use next_cursor from response as cursor parameter for next page
-        - Returns empty items list when no articles match filters
-    """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
-
-    # Create pagination parameters
-    params = CursorPaginationParams(limit=limit, cursor=cursor)
-
-    # Get articles using cursor pagination
-    result = await get_articles_cursor_paginated(
-        db=db,
-        user_id=UUID(current_user.sub),
-        params=params,
-        feed_ids=feed_ids,
-        is_read=is_read,
-        is_read_later=is_read_later,
-        is_favorite=is_favorite,
-    )
-
-    logger.info(
-        "Cursor paginated articles retrieved",
-        user_id=current_user.sub,
-        cursor=cursor,
-        limit=limit,
-        items_count=len(result.items),
-        has_more=result.has_more,
-    )
-
-    # Convert result to dict for response
-    return {
-        "items": result.items,
-        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
-        "has_more": result.has_more,
-        "total_count": result.total_count,
-    }

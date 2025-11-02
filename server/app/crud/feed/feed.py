@@ -1,15 +1,13 @@
-"""CRUD operations for the new global feeds (feeds_new) table.
+"""CRUD operations for global feeds.
 
 This module provides a facade for feed CRUD operations by re-exporting
 functionality from specialized modules:
-- crud_feed_queries.py: Basic CRUD operations
-- crud_feed_scheduling.py: Feed refresh scheduling
-- crud_feed_enrichment.py: Metadata and enrichment updates
-
-Import from this module for backward compatibility.
+- feed_queries.py: Basic CRUD operations
+- feed_scheduling.py: Feed refresh scheduling
+- feed_enrichment.py: Metadata and enrichment updates
 """
 
-# Import all functions from specialized modules for backward compatibility
+# Import all functions from specialized modules
 from app.crud.feed.feed_enrichment import (
     update_feed_enrichment,
     update_feed_metadata,
@@ -27,7 +25,7 @@ from app.crud.feed.feed_scheduling import (
     update_feed_error,
 )
 
-# Re-export all for backward compatibility
+# Re-export all functions
 __all__ = [
     # Query functions
     "normalize_feed_url",

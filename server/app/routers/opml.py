@@ -24,9 +24,9 @@ from app.schemas import (
     OpmlTaskMetadata,
 )
 from app.schemas.auth import TokenData
-from app.services.auth import get_current_user
-from app.services.feed_management_service import FeedManagementService
-from app.services.opml_processor import OpmlProcessor
+from app.services.user.auth import get_current_user
+from app.services.feeds.feed_management import FeedManagementService
+from app.services.opml.opml_processor import OpmlProcessor
 from app.workers.opml_tasks import import_opml_task  # Import the background task
 
 logger = structlog.get_logger(__name__)

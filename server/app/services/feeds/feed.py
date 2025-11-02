@@ -65,7 +65,7 @@ class FeedService:
     ):
         self.db = db
         self._cache = get_redis_cache()
-        # Allow dependency injection while maintaining backward compatibility
+        # Allow dependency injection for testing
         self.feed_fetcher = feed_fetcher or FeedFetcher(self._cache)
         self.feed_parser = feed_parser or FeedParsingService()
 

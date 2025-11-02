@@ -54,6 +54,8 @@ async def get_articles_cursor_paginated(
     is_read: bool | None = None,
     is_read_later: bool | None = None,
     is_favorite: bool | None = None,
+    published_since: Any | None = None,
+    published_until: Any | None = None,
 ) -> CursorPaginationResult:
     """
     Get articles using cursor-based pagination for better performance.
@@ -70,6 +72,8 @@ async def get_articles_cursor_paginated(
         is_read: Optional filter for read status
         is_read_later: Optional filter for read later status
         is_favorite: Optional filter for favorite status
+        published_since: Optional filter for articles published after this date
+        published_until: Optional filter for articles published before this date
 
     Returns:
         CursorPaginationResult with items and pagination metadata
@@ -102,6 +106,13 @@ async def get_articles_cursor_paginated(
 
     if is_favorite is not None:
         query = query.where(UserArticleState.is_favorite.is_(is_favorite))
+
+    # Apply date filters
+    if published_since is not None:
+        query = query.where(ArticleContent.published_at >= published_since)
+
+    if published_until is not None:
+        query = query.where(ArticleContent.published_at <= published_until)
 
     # Apply cursor filter (articles after the cursor)
     if params.cursor:

@@ -17,8 +17,8 @@ from app.schemas import (
     FeedDiscoveryResult,
     RecommendationsRequest,
 )
-from app.services.feed_creation_service import FeedCreationService
-from app.services.rss_search_service import RssSearchService
+from app.services.feeds.feed_creation import FeedCreationService
+from app.services.feeds.search.search_engine import RssSearchService
 from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)

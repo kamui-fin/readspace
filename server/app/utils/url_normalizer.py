@@ -109,7 +109,7 @@ def get_protocol_variation(url: str) -> str | None:
     """Get the protocol variation (http <-> https) of a URL.
 
     This is useful for checking if a feed exists with a different protocol,
-    which can happen with legacy feeds stored before normalization.
+    which can happen with feeds stored before URL normalization was implemented.
 
     Args:
         url: The URL to get the protocol variation for

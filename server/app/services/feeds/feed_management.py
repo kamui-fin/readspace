@@ -23,13 +23,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_subscription
-from app.crud.crud_article import create_articles_batch
+from app.crud.article.article import create_articles_batch
 from app.models import FeedArticle, UserArticleState
 from app.schemas import ArticleCreate, FeedResponse, FeedUpdate
 from app.schemas.subscriptions import SubscriptionResponse, SubscriptionUpdate
 from app.services.feeds.feed_creation import FeedCreationService
-from app.services.feed_fetcher import FeedFetcher
-from app.services.feed_parser import FeedParsingService
+from app.services.feeds.feed_fetcher import FeedFetcher
+from app.services.feeds.feed_parser import FeedParsingService
 from app.utils.url_normalizer import normalize_url_for_display
 
 logger = structlog.get_logger(__name__)
@@ -70,7 +70,7 @@ class FeedManagementService:
         self.db = db
         self.user_id = user_id
         self._cache = get_redis_cache()
-        # Allow dependency injection while maintaining backward compatibility
+        # Allow dependency injection for testing
         self.feed_creation_service = feed_creation_service or FeedCreationService(db, user_id)
         self.feed_fetcher = feed_fetcher or FeedFetcher(self._cache)
         self.feed_parser = feed_parser or FeedParsingService()

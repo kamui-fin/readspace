@@ -54,7 +54,7 @@ class ArticleTransformer:
                 is_favorite = False
                 read_at = None
         else:
-            # Legacy single FeedArticle (for backward compatibility)
+            # Single FeedArticle without user state
             article = feed_article
             is_read = getattr(feed_article, "is_read", False)
             is_read_later = getattr(feed_article, "is_read_later", False)

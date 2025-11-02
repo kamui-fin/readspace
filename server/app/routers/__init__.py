@@ -22,13 +22,13 @@ router = APIRouter()
 router.include_router(article_enhancements.router)
 router.include_router(users.router)
 
-# RSS Routers
-router.include_router(folders.router, prefix="/rss")
-router.include_router(feeds.router, prefix="/rss")
-router.include_router(articles.router, prefix="/rss")
-router.include_router(opml.router, prefix="/rss")
-router.include_router(discover.router, prefix="/rss")
-router.include_router(similar.router, prefix="/rss")
+# RSS Routers (no /rss prefix - routes are directly under /api)
+router.include_router(folders.router)
+router.include_router(feeds.router)
+router.include_router(articles.router)
+router.include_router(opml.router)
+router.include_router(discover.router)
+router.include_router(similar.router)
 
 
 @router.get("/health")
