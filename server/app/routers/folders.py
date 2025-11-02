@@ -6,10 +6,10 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.schemas import FolderCreate, FolderResponse, FolderUpdate
 from app.schemas.auth import TokenData
-from app.schemas.rss_schemas import FolderCreate, FolderResponse, FolderUpdate
-from app.services.auth import get_current_user
-from app.services.folder_service import FolderService
+from app.services.folder import FolderService
+from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/folders", tags=["RSS Folders"])

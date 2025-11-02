@@ -8,8 +8,8 @@ from uuid import uuid4
 import pytest
 
 from app.crud.transformers.article_transformer import ArticleTransformer
-from app.models.rss_models import ArticleContent, ClippedArticle, Feed, FeedArticle
-from app.schemas.rss_schemas import ArticleResponse
+from app.models import ArticleContent, ClippedArticle, Feed, FeedArticle
+from app.schemas import ArticleResponse
 
 
 @pytest.mark.unit

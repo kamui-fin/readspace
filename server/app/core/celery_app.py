@@ -1,10 +1,13 @@
+import json
 import logging
 import os
 from typing import Any
+from uuid import UUID
 
 from celery import Celery  # type: ignore[import-untyped]
 from celery.schedules import crontab  # type: ignore[import-untyped]
 from celery.signals import worker_process_init  # type: ignore[import-untyped]
+from kombu.serialization import register  # type: ignore[import-untyped]
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.instrumentation.celery import CeleryInstrumentor
@@ -22,6 +25,34 @@ from app.utils.logging_config import setup_logging
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
+
+
+# Custom JSON encoder/decoder for UUID support
+def _uuid_dumps(obj: Any) -> bytes:
+    """Custom JSON encoder for UUID objects."""
+
+    def _default(o: Any) -> Any:
+        if isinstance(o, UUID):
+            return str(o)
+        raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+
+    return json.dumps(obj, default=_default).encode("utf-8")
+
+
+def _uuid_loads(data: bytes) -> Any:
+    """Custom JSON decoder for UUID strings."""
+    # Celery will pass strings and we convert in task, so no special decoding needed
+    return json.loads(data.decode("utf-8"))
+
+
+# Register custom JSON serializer with UUID support
+register(
+    "json_with_uuid",
+    _uuid_dumps,
+    _uuid_loads,
+    content_type="application/json",
+    content_encoding="utf-8",
+)
 
 
 def setup_celery_tracing() -> None:
@@ -75,13 +106,16 @@ celery = Celery(
     __name__,  # Using __name__ will make the app name 'app.core.celery_app'
     broker=CELERY_BROKER_URL,
     backend=CELERY_RESULT_BACKEND,
-    include=["app.workers.tasks"],  # List of modules to import when the worker starts
+    include=[
+        "app.workers.feed_tasks",
+        "app.workers.opml_tasks",
+    ],  # List of modules to import when the worker starts
 )
 
 celery.conf.update(
-    task_serializer="json",
-    result_serializer="json",
-    accept_content=["json"],
+    task_serializer="json_with_uuid",
+    result_serializer="json_with_uuid",
+    accept_content=["json_with_uuid", "json"],
     timezone="UTC",
     enable_utc=True,
     worker_send_task_events=True,
@@ -94,7 +128,7 @@ celery.conf.update(
 # Define periodic tasks (Celery Beat schedule)
 celery.conf.beat_schedule = {
     "schedule-hourly-feed-refreshes": {
-        "task": "app.workers.tasks.schedule_all_feed_refreshes_task",
+        "task": "app.workers.feed_tasks.schedule_all_feed_refreshes_task",
         "schedule": crontab(minute="*/30"),  # Every 30 minutes for frequent updates during dev/testing
     },
 }

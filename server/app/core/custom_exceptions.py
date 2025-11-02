@@ -1,5 +1,5 @@
 """
-Custom application exceptions
+Custom application exceptions with structured error responses
 """
 
 from typing import Any
@@ -8,12 +8,46 @@ from fastapi import HTTPException, status
 
 
 class ReadspaceException(Exception):
-    """Base exception for all Readspace-specific errors"""
+    """Base exception for all Readspace-specific errors with structured error details"""
 
-    def __init__(self, message: str, details: dict[str, Any] | None = None):
+    def __init__(
+        self,
+        message: str,
+        details: dict[str, Any] | None = None,
+        error_code: str | None = None,
+        field_errors: dict[str, str] | None = None,
+    ):
+        """
+        Initialize a structured exception.
+
+        Args:
+            message: User-friendly error message
+            details: Additional context/debug information
+            error_code: Machine-readable error code (e.g., "FEED_ALREADY_EXISTS")
+            field_errors: Field-specific validation errors {field_name: error_message}
+        """
         self.message = message
         self.details = details or {}
+        self.error_code = error_code
+        self.field_errors = field_errors or {}
         super().__init__(self.message)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert exception to structured error dictionary."""
+        error_dict: dict[str, Any] = {
+            "message": self.message,
+        }
+
+        if self.error_code:
+            error_dict["error_code"] = self.error_code
+
+        if self.field_errors:
+            error_dict["field_errors"] = self.field_errors
+
+        if self.details:
+            error_dict["details"] = self.details
+
+        return error_dict
 
 
 class ValidationError(ReadspaceException):
@@ -147,31 +181,33 @@ def http_service_unavailable(message: str = "Service unavailable") -> HTTPExcept
 
 # Exception Mapper - Maps custom exceptions to HTTP exceptions
 EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
+    # Client errors (4xx)
     NotFoundError: status.HTTP_404_NOT_FOUND,
     ValidationError: status.HTTP_400_BAD_REQUEST,
     FeedValidationError: status.HTTP_400_BAD_REQUEST,
+    FeedParsingError: status.HTTP_400_BAD_REQUEST,
     AuthenticationError: status.HTTP_401_UNAUTHORIZED,
     AuthorizationError: status.HTTP_403_FORBIDDEN,
     DuplicateResourceError: status.HTTP_409_CONFLICT,
-    FeedSubscriptionError: status.HTTP_400_BAD_REQUEST,
+    FeedSubscriptionError: status.HTTP_409_CONFLICT,  # Fixed: should be 409 not 400
+    # Server errors (5xx)
     ExternalServiceError: status.HTTP_503_SERVICE_UNAVAILABLE,
     FeedConnectionError: status.HTTP_503_SERVICE_UNAVAILABLE,
-    FeedParsingError: status.HTTP_400_BAD_REQUEST,
+    ServiceUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
     StorageError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     DatabaseError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     ConfigurationError: status.HTTP_500_INTERNAL_SERVER_ERROR,
-    ServiceUnavailableError: status.HTTP_503_SERVICE_UNAVAILABLE,
 }
 
 
 def to_http_exception(exc: ReadspaceException) -> HTTPException:
-    """Convert a custom exception to an HTTP exception.
+    """Convert a custom exception to an HTTP exception with structured error details.
 
     Args:
         exc: Custom exception to convert
 
     Returns:
-        HTTPException with appropriate status code and detail message
+        HTTPException with appropriate status code and structured error detail
 
     Example:
         try:
@@ -186,4 +222,7 @@ def to_http_exception(exc: ReadspaceException) -> HTTPException:
     if status_code == status.HTTP_401_UNAUTHORIZED:
         headers = {"WWW-Authenticate": "Bearer"}
 
-    return HTTPException(status_code=status_code, detail=exc.message, headers=headers)
+    # Use structured error response if exception provides it
+    detail = exc.to_dict()
+
+    return HTTPException(status_code=status_code, detail=detail, headers=headers)

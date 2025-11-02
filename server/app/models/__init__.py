@@ -5,7 +5,7 @@ from app.models.article import ArticleContent, ClippedArticle, FeedArticle, User
 from app.models.enums import FeedCategory
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
-from app.models.user_models import AuthUser, Profile
+from app.models.user import AuthUser, Profile
 
 __all__ = [
     "Base",

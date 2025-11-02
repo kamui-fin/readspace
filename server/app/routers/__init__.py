@@ -3,16 +3,16 @@ from typing import Any
 import structlog
 from fastapi import APIRouter, Depends
 
-from app.services.auth import TokenData, get_current_user
+from app.services.user.auth import TokenData, get_current_user
 
 from . import (
     article_enhancements,
-    rss_articles,
-    rss_discover,
-    rss_feeds,
-    rss_folders,
-    rss_opml,
-    rss_similar,
+    articles,
+    discover,
+    feeds,
+    folders,
+    opml,
+    similar,
     users,
 )
 
@@ -23,12 +23,12 @@ router.include_router(article_enhancements.router)
 router.include_router(users.router)
 
 # RSS Routers
-router.include_router(rss_folders.router, prefix="/rss")
-router.include_router(rss_feeds.router, prefix="/rss")
-router.include_router(rss_articles.router, prefix="/rss")
-router.include_router(rss_opml.router, prefix="/rss")
-router.include_router(rss_discover.router, prefix="/rss")
-router.include_router(rss_similar.router, prefix="/rss")
+router.include_router(folders.router, prefix="/rss")
+router.include_router(feeds.router, prefix="/rss")
+router.include_router(articles.router, prefix="/rss")
+router.include_router(opml.router, prefix="/rss")
+router.include_router(discover.router, prefix="/rss")
+router.include_router(similar.router, prefix="/rss")
 
 
 @router.get("/health")

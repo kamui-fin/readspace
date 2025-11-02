@@ -8,7 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.sql import Select
 
 from app.crud.query_builders.article_query_builder import ArticleQueryBuilder
-from app.models.rss_models import ClippedArticle, FeedArticle
+from app.models import ClippedArticle, FeedArticle
 
 
 @pytest.mark.unit

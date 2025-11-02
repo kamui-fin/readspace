@@ -15,6 +15,7 @@ import type {
   ImportTaskStatus,
   OPMLImportResponse,
   SimilarFeedsResponse,
+  Subscription,
 } from "./types/rss";
 
 export class ApiError extends Error {
@@ -368,7 +369,7 @@ export class ApiClient {
     },
     getFeed: (id: string) => this.get<Feed>(`/api/rss/feeds/${id}`),
     createFeed: (data: { url: string; folder_id?: string }, signal?: AbortSignal) =>
-      this.post<Feed>("/api/rss/feeds/", data, signal ? { signal } : undefined),
+      this.post<Subscription>("/api/rss/feeds/", data, signal ? { signal } : undefined),
     updateFeed: (
       id: string,
       data: {
@@ -405,9 +406,9 @@ export class ApiClient {
     },
     refreshFolderFeeds: (folderId: string) =>
       this.post(`/api/rss/feeds/refresh_folder/${folderId}`),
-    refreshAllFeeds: () => this.post("/api/rss/feeds/refresh_all"),
+    refreshAllFeeds: () => this.post("/api/rss/feeds/refresh"),
     getRefreshStatus: (taskId: string) =>
-      this.get(`/api/rss/feeds/refresh_status/${taskId}`),
+      this.get(`/api/rss/feeds/refresh-status/${taskId}`),
     deleteFeed: (id: string) => this.delete(`/api/rss/feeds/${id}`),
     adminDeleteFeed: (id: string) =>
       this.delete(`/api/rss/feeds/${id}/admin`),
@@ -442,53 +443,39 @@ export class ApiClient {
       );
     },
 
-    // Articles
+    // Articles (cursor-based pagination)
     getArticles: (params: {
+      cursor?: string;
+      limit?: number;
       feed_ids?: string[];
-      folder_id?: string;
       is_read?: boolean;
       is_read_later?: boolean;
       is_favorite?: boolean;
-      feed_is_favorite?: boolean;
-      published_since?: string;
-      published_until?: string;
-      search_query?: string;
-      sort_by?: string;
-      sort_order?: string;
-      page?: number;
-      size?: number;
-    }): Promise<ArticlesPaginatedResponse> => {
+    }): Promise<{
+      items: Article[];
+      next_cursor: string | null;
+      has_more: boolean;
+      total_count: number | null;
+    }> => {
       const queryParams = new URLSearchParams();
+      if (params.cursor) queryParams.append("cursor", params.cursor);
+      if (params.limit) queryParams.append("limit", params.limit.toString());
       if (params.feed_ids)
         params.feed_ids.forEach((id) => queryParams.append("feed_ids", id));
-      if (params.folder_id) queryParams.append("folder_id", params.folder_id);
       if (params.is_read !== undefined)
         queryParams.append("is_read", params.is_read.toString());
       if (params.is_read_later !== undefined)
         queryParams.append("is_read_later", params.is_read_later.toString());
       if (params.is_favorite !== undefined)
         queryParams.append("is_favorite", params.is_favorite.toString());
-      if (params.feed_is_favorite !== undefined)
-        queryParams.append(
-          "feed_is_favorite",
-          params.feed_is_favorite.toString(),
-        );
-      if (params.published_since)
-        queryParams.append("published_since", params.published_since);
-      if (params.published_until)
-        queryParams.append("published_until", params.published_until);
-      if (params.search_query)
-        queryParams.append("search_query", params.search_query);
-      if (params.sort_by) queryParams.append("sort_by", params.sort_by);
-      if (params.sort_order)
-        queryParams.append("sort_order", params.sort_order);
-      if (params.page) queryParams.append("page", params.page.toString());
-      if (params.size) queryParams.append("size", params.size.toString());
 
       const queryString = queryParams.toString();
-      return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/${queryString ? `?${queryString}` : ""}`,
-      );
+      return this.get<{
+        items: Article[];
+        next_cursor: string | null;
+        has_more: boolean;
+        total_count: number | null;
+      }>(`/api/rss/articles/${queryString ? `?${queryString}` : ""}`);
     },
     getRecentlyReadArticles: (
       page?: number,
@@ -500,7 +487,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/recently_read${queryString ? `?${queryString}` : ""}`,
+        `/api/rss/articles/recently-read${queryString ? `?${queryString}` : ""}`,
       );
     },
     getReadLaterArticles: (
@@ -513,7 +500,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get<ArticlesPaginatedResponse>(
-        `/api/rss/articles/read_later${queryString ? `?${queryString}` : ""}`,
+        `/api/rss/articles/read-later${queryString ? `?${queryString}` : ""}`,
       );
     },
     getUnreadCounts: (folderId?: string) => {
@@ -522,7 +509,7 @@ export class ApiClient {
 
       const queryString = queryParams.toString();
       return this.get(
-        `/api/rss/articles/unread_counts${queryString ? `?${queryString}` : ""}`,
+        `/api/rss/articles/unread-counts${queryString ? `?${queryString}` : ""}`,
       );
     },
     getArticle: (id: string) => this.get(`/api/rss/articles/${id}`),
@@ -557,7 +544,7 @@ export class ApiClient {
       title?: string;
       content?: string;
       metadata?: Record<string, string>;
-    }) => this.post("/api/rss/articles/save", data),
+    }) => this.post("/api/rss/articles", data),
 
     checkArticleSaved: (url: string) => {
       const queryParams = new URLSearchParams();

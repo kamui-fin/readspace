@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
+from xml.etree import ElementTree as ET
 
 import structlog
 from celery.result import AsyncResult  # type: ignore[import-untyped]
@@ -16,16 +17,17 @@ from app.core.constants import (
 )
 from app.core.redis_cache import RedisCache
 from app.db.session import get_db
-from app.schemas.auth import TokenData
-from app.schemas.rss_schemas import (
+from app.schemas import (
     OpmlImportCancelResponse,
     OpmlImportResponse,
     OpmlImportStatusResponse,
     OpmlTaskMetadata,
 )
+from app.schemas.auth import TokenData
 from app.services.auth import get_current_user
 from app.services.feed_management_service import FeedManagementService
-from app.workers.tasks import import_opml_task  # Import the background task
+from app.services.opml_processor import OpmlProcessor
+from app.workers.opml_tasks import import_opml_task  # Import the background task
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(
@@ -36,6 +38,79 @@ router = APIRouter(
         422: {"description": "Validation error"},
     },
 )
+
+
+def validate_opml_structure(content: str, filename: str) -> int:
+    """Validate OPML file structure and count feeds.
+
+    Parses the OPML XML to ensure it's valid and counts feeds properly using
+    XML parsing instead of naive string search.
+
+    Args:
+        content: OPML file content as string
+        filename: Original filename for error reporting
+
+    Returns:
+        int: Number of feeds found in the OPML file
+
+    Raises:
+        HTTPException: If XML is malformed or not a valid OPML file
+    """
+    try:
+        root = ET.fromstring(content)
+    except ET.ParseError as e:
+        logger.warning(
+            "Failed to parse OPML XML",
+            filename=filename,
+            error=str(e),
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid XML structure in OPML file: {str(e)}. "
+                "Please ensure the file is a valid OPML document exported from an RSS reader."
+            ),
+        ) from e
+
+    # Verify it's an OPML file (not RSS or other XML)
+    if root.tag != "opml":
+        logger.warning(
+            "File is not OPML format",
+            filename=filename,
+            root_tag=root.tag,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid file format. Expected OPML root element, got '{root.tag}'. "
+                "This appears to be an RSS/Atom feed file, not an OPML subscription list. "
+                "Please export your feed subscriptions as OPML from your RSS reader."
+            ),
+        )
+
+    # Check for body element
+    body = root.find(".//body")
+    if body is None:
+        logger.warning(
+            "OPML missing body element",
+            filename=filename,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OPML structure: missing <body> element. Please check your OPML file.",
+        )
+
+    # Count feeds properly using XML parsing (feeds have xmlUrl attribute)
+    feeds = root.findall(".//outline[@xmlUrl]")
+    feed_count = len(feeds)
+
+    logger.info(
+        "OPML structure validated",
+        filename=filename,
+        feed_count=feed_count,
+    )
+
+    return feed_count
 
 
 async def store_import_task_metadata(user_id: str, task_id: str, estimated_feeds: int, filename: str) -> None:
@@ -77,11 +152,11 @@ async def store_import_task_metadata(user_id: str, task_id: str, estimated_feeds
             active_tasks.append(task)
 
     active_tasks.append(task_metadata)
-    await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS)
+    await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
 
     # 2. Task -> metadata mapping (for auth and quick lookup)
     task_key = f"opml_import_task:{task_id}"
-    await redis_cache.set(task_key, task_metadata, ttl_seconds=IMPORT_TASK_TTL_SECONDS)
+    await redis_cache.set(task_key, task_metadata, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
 
 
 async def get_import_task_metadata(task_id: str) -> dict[str, Any] | None:
@@ -118,7 +193,7 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
     active_tasks = [task for task in existing_tasks if task.get("task_id") != task_id]
 
     if active_tasks:
-        await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=IMPORT_TASK_TTL_SECONDS)
+        await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
     else:
         await redis_cache.delete(user_tasks_key)
 
@@ -229,7 +304,7 @@ async def import_opml_file(
     Raises:
         HTTPException: 400 for invalid files, 413 for oversized files, 500 for server errors
     """
-    if not opml_file.filename or not opml_file.filename.endswith(SUPPORTED_FILE_EXTENSIONS):
+    if not opml_file.filename or not opml_file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
         logger.warning(
             "Invalid OPML file type uploaded",
             filename=opml_file.filename,
@@ -288,11 +363,15 @@ async def import_opml_file(
                     ),
                 )
 
+        # Validate OPML structure and count feeds properly
+        feed_count = validate_opml_structure(content_str, opml_file.filename or "unknown.opml")
+
         # Queue orchestration task
         logger.info(
             "Queuing OPML import orchestration task",
             filename=opml_file.filename,
             size_mb=file_size_mb,
+            feed_count=feed_count,
             user_id=current_user.sub,
         )
 
@@ -303,11 +382,10 @@ async def import_opml_file(
         )
 
         # Store task metadata in Redis for persistence and auth
-        estimated_feeds = content_str.count("xmlUrl")
         await store_import_task_metadata(
             user_id=current_user.sub,
             task_id=orchestration_task.id,
-            estimated_feeds=estimated_feeds,
+            estimated_feeds=feed_count,
             filename=opml_file.filename or "unknown.opml",
         )
 
@@ -318,7 +396,7 @@ async def import_opml_file(
                 f"OPML file ({file_size_mb:.1f}MB) queued for processing. "
                 "New feeds will be imported and existing feeds will be updated/reorganized as needed."
             ),
-            "estimated_feeds": estimated_feeds,
+            "estimated_feeds": feed_count,
             "check_status_url": f"/api/rss/opml/import/status/{orchestration_task.id}",
             "status_page_url": f"/import-opml/status/{orchestration_task.id}",
         }
@@ -1128,9 +1206,7 @@ async def export_opml_file(
     try:
         # Get all user feeds and export to OPML
         user_feeds = await feed_service.list_feeds()
-        # Import OPML processor to handle export
-        from app.services.opml_processor import OpmlProcessor
-
+        # Use OPML processor to handle export
         opml_processor = OpmlProcessor()
         opml_string = await opml_processor.export_feeds_to_opml(user_feeds)
         logger.info("OPML export successful", user_id=current_user.sub)

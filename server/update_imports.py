@@ -10,10 +10,19 @@ IMPORT_MAPPINGS = [
     # Model imports - consolidate to app.models
     (r"from app\.models\.rss_models import ([^(]+)", r"from app.models import \1"),
     # Worker imports - update to new modules
-    (r"from app\.workers\.tasks import import_single_feed_task", "from app.workers.opml_tasks import import_single_feed_task"),
+    (
+        r"from app\.workers\.tasks import import_single_feed_task",
+        "from app.workers.opml_tasks import import_single_feed_task",
+    ),
     (r"from app\.workers\.tasks import import_opml_task", "from app.workers.opml_tasks import import_opml_task"),
-    (r"from app\.workers\.tasks import refresh_single_feed_task", "from app.workers.feed_tasks import refresh_single_feed_task"),
-    (r"from app\.workers\.tasks import schedule_all_feed_refreshes_task", "from app.workers.feed_tasks import schedule_all_feed_refreshes_task"),
+    (
+        r"from app\.workers\.tasks import refresh_single_feed_task",
+        "from app.workers.feed_tasks import refresh_single_feed_task",
+    ),
+    (
+        r"from app\.workers\.tasks import schedule_all_feed_refreshes_task",
+        "from app.workers.feed_tasks import schedule_all_feed_refreshes_task",
+    ),
     (r"from app\.workers\.tasks import enrich_feed_task", "from app.workers.feed_tasks import enrich_feed_task"),
     # Router imports - remove rss_ prefix
     (r"from app\.routers import rss_articles", "from app.routers import articles"),
@@ -23,6 +32,7 @@ IMPORT_MAPPINGS = [
     (r"from app\.routers import rss_opml", "from app.routers import opml"),
     (r"from app\.routers import rss_similar", "from app.routers import similar"),
 ]
+
 
 def update_file(file_path: Path) -> bool:
     """Update imports in a single file.
@@ -46,6 +56,7 @@ def update_file(file_path: Path) -> bool:
         print(f"✗ Error updating {file_path}: {e}")
         return False
 
+
 def main():
     """Update all Python files in the project."""
     server_dir = Path(__file__).parent
@@ -53,7 +64,8 @@ def main():
 
     # Exclude the update script itself and virtual environments
     python_files = [
-        f for f in python_files
+        f
+        for f in python_files
         if "update_imports.py" not in str(f)
         and ".venv" not in str(f)
         and "venv" not in str(f)
@@ -68,6 +80,7 @@ def main():
             modified_count += 1
 
     print(f"\n✓ Complete! Modified {modified_count} files.")
+
 
 if __name__ == "__main__":
     main()

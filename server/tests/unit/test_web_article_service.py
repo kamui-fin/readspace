@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.rss_schemas import (
+from app.schemas import (
     ArticleContentCreate,
     ArticleContentResponse,
     ClippedArticleCreate,

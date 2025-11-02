@@ -6,9 +6,8 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.rss_schemas import FolderResponse
-from app.schemas.subscription_schemas import FeedResponse, SubscriptionResponse
-from app.services.subscription_service import SubscriptionService
+from app.schemas import FolderResponse, SubscriptionFeedResponse, SubscriptionResponse
+from app.services.subscription import SubscriptionService
 
 
 @pytest.fixture
@@ -60,23 +59,15 @@ def sample_subscription_response():
         custom_title=None,
         created_at="2023-01-01T00:00:00Z",
         updated_at="2023-01-01T00:00:00Z",
-        feed=FeedResponse(
+        feed=SubscriptionFeedResponse(
             id=feed_id,
             url="https://example.com/feed.xml",
             title="Sample Feed",
-            description="A sample feed",
             link="https://example.com",
             language="en",
             image_url="https://example.com/image.jpg",
-            ttl=60,
-            skip_hours=None,
-            skip_days=None,
             last_fetched_at=None,
-            last_modified_header=None,
-            etag_header=None,
             last_article_published_at=None,
-            created_at="2023-01-01T00:00:00Z",
-            updated_at="2023-01-01T00:00:00Z",
         ),
         folder=FolderResponse(
             id=folder_id,
@@ -248,20 +239,21 @@ class TestSubscriptionService:
             mock_sub.created_at = sample_subscription_response.created_at
             mock_sub.updated_at = sample_subscription_response.updated_at
 
-            # Mock feed
+            # Mock feed - get_legacy_feed_response accesses the full feed from DB,
+            # not the minimal SubscriptionFeedResponse
             mock_feed = Mock()
             mock_feed.url = sample_subscription_response.feed.url
             mock_feed.title = sample_subscription_response.feed.title
-            mock_feed.description = sample_subscription_response.feed.description
+            mock_feed.description = "A sample feed"  # Full feed has description
             mock_feed.link = sample_subscription_response.feed.link
             mock_feed.language = sample_subscription_response.feed.language
             mock_feed.image_url = sample_subscription_response.feed.image_url
-            mock_feed.ttl = sample_subscription_response.feed.ttl
-            mock_feed.skip_hours = sample_subscription_response.feed.skip_hours
-            mock_feed.skip_days = sample_subscription_response.feed.skip_days
+            mock_feed.ttl = 60  # Full feed has ttl
+            mock_feed.skip_hours = None
+            mock_feed.skip_days = None
             mock_feed.last_fetched_at = sample_subscription_response.feed.last_fetched_at
-            mock_feed.last_modified_header = sample_subscription_response.feed.last_modified_header
-            mock_feed.etag_header = sample_subscription_response.feed.etag_header
+            mock_feed.last_modified_header = None
+            mock_feed.etag_header = None
             mock_feed.last_article_published_at = sample_subscription_response.feed.last_article_published_at
 
             mock_sub.feed = mock_feed

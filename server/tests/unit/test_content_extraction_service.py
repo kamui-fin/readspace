@@ -1,7 +1,5 @@
 """Unit tests for ContentExtractionService."""
 
-import asyncio
-
 import pytest
 
 from app.services.content_extraction_service import ContentExtractionService

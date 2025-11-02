@@ -27,7 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.db.session import AsyncSessionLocal
-from app.models.rss_models import (
+from app.models import (
     ArticleContent,
     Feed,
     FeedArticle,
@@ -96,7 +96,7 @@ async def create_folders(db: AsyncSession, user_id: UUID) -> list[UUID]:
     for i in range(NUM_FOLDERS):
         folder = Folder(
             id=uuid4(),
-            name=f"{TEST_MARKER}_Folder_{i+1}",
+            name=f"{TEST_MARKER}_Folder_{i + 1}",
             user_id=user_id,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
@@ -114,15 +114,11 @@ async def create_folders(db: AsyncSession, user_id: UUID) -> list[UUID]:
 async def get_existing_real_feeds(db: AsyncSession, limit: int = 100) -> list[UUID]:
     """Get existing real feeds from the database (non-benchmark feeds)."""
     print(f"\n🔍 Finding {limit} existing real feeds...")
-    
+
     # Get feeds that don't have the BENCHMARK_TEST marker
-    result = await db.execute(
-        select(Feed)
-        .where(~Feed.tags.contains([TEST_MARKER]))
-        .limit(limit)
-    )
+    result = await db.execute(select(Feed).where(~Feed.tags.contains([TEST_MARKER])).limit(limit))
     real_feeds = result.scalars().all()
-    
+
     real_feed_ids = [feed.id for feed in real_feeds]
     print(f"✅ Found {len(real_feed_ids)} existing real feeds")
     return real_feed_ids
@@ -130,7 +126,7 @@ async def get_existing_real_feeds(db: AsyncSession, limit: int = 100) -> list[UU
 
 async def create_feeds(db: AsyncSession) -> tuple[list[UUID], list[UUID]]:
     """Create test feeds with BENCHMARK_TEST marker and fake embeddings.
-    
+
     Returns:
         Tuple of (all_feed_ids, real_feed_ids) where real_feed_ids are existing production feeds
     """
@@ -138,7 +134,7 @@ async def create_feeds(db: AsyncSession) -> tuple[list[UUID], list[UUID]]:
 
     feed_ids = []
     categories = list(FeedCategory)
-    
+
     for batch_start in range(0, NUM_FEEDS, BATCH_SIZE):
         batch_end = min(batch_start + BATCH_SIZE, NUM_FEEDS)
         feeds = []
@@ -147,12 +143,12 @@ async def create_feeds(db: AsyncSession) -> tuple[list[UUID], list[UUID]]:
             url = f"https://benchmark-test-feed-{i}.example.com/rss"
             title = f"{TEST_MARKER} - {fake.catch_phrase()}"
             link = f"https://benchmark-test-feed-{i}.example.com"
-            
+
             # Generate fake embedding (768 dimensions for realistic vector search)
             # Use deterministic random for reproducibility
             random.seed(i)
             embedding = [random.gauss(0, 0.1) for _ in range(768)]
-            
+
             feed = Feed(
                 id=uuid4(),
                 url=url,
@@ -182,7 +178,7 @@ async def create_feeds(db: AsyncSession) -> tuple[list[UUID], list[UUID]]:
 
     # Get existing real feeds for testing subscription/refresh operations
     real_feed_ids = await get_existing_real_feeds(db, limit=100)
-    
+
     print(f"✅ Created {len(feed_ids)} test feeds + found {len(real_feed_ids)} real feeds")
     return feed_ids, real_feed_ids
 
@@ -193,11 +189,11 @@ async def create_subscriptions(
     """Create subscriptions for a subset of test feeds."""
     # Only subscribe to NUM_SUBSCRIBED_FEEDS feeds
     subscribed_feed_ids = random.sample(feed_ids, min(NUM_SUBSCRIBED_FEEDS, len(feed_ids)))
-    
+
     print(f"\n🔗 Creating {len(subscribed_feed_ids)} subscriptions (out of {len(feed_ids)} total feeds)...")
 
     successfully_created = []
-    
+
     for batch_start in range(0, len(subscribed_feed_ids), BATCH_SIZE):
         batch_end = min(batch_start + BATCH_SIZE, len(subscribed_feed_ids))
         subscriptions = []
@@ -247,7 +243,9 @@ async def create_subscriptions(
     return successfully_created
 
 
-async def create_articles(db: AsyncSession, feed_ids: list[UUID], subscribed_feed_ids: list[UUID], user_id: UUID) -> None:
+async def create_articles(
+    db: AsyncSession, feed_ids: list[UUID], subscribed_feed_ids: list[UUID], user_id: UUID
+) -> None:
     """Create articles and content. Only create user states for subscribed feeds."""
     print(f"\n📰 Creating ~{NUM_ARTICLES:,} articles across all feeds...")
     print(f"   (User states will only be created for {len(subscribed_feed_ids)} subscribed feeds)")
@@ -256,7 +254,7 @@ async def create_articles(db: AsyncSession, feed_ids: list[UUID], subscribed_fee
     content_batch = []
     article_batch = []
     state_batch = []
-    
+
     # Convert to set for faster lookup
     subscribed_feed_set = set(subscribed_feed_ids)
 
@@ -404,9 +402,9 @@ async def main():
             await create_articles(db, feed_ids, subscribed_feed_ids, user_id)
 
             print("\n✅ Test data population complete!")
-            print(f"\nTo view summary, run:")
+            print("\nTo view summary, run:")
             print(f"  python scripts/show_test_data_summary.py {user_id}")
-            print(f"\nTo clean up later, run:")
+            print("\nTo clean up later, run:")
             print(f"  python scripts/cleanup_test_data.py {user_id}")
 
         except Exception as e:

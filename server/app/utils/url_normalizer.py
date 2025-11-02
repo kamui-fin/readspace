@@ -11,12 +11,12 @@ logger = structlog.get_logger(__name__)
 def normalize_feed_url(url: str) -> str:
     """Normalize a feed URL to prevent duplicates.
 
-    This function:
-    - Converts to lowercase (for domain)
-    - Removes trailing slashes from path
-    - Ensures HTTPS when possible
-    - Removes common tracking parameters
-    - Removes fragment identifiers
+    This function ensures consistent URL storage by:
+    - Always using https for http/https URLs
+    - Converting domain to lowercase
+    - Removing trailing slashes from path
+    - Removing common tracking parameters
+    - Removing fragment identifiers
 
     Args:
         url: Raw URL string
@@ -37,30 +37,23 @@ def normalize_feed_url(url: str) -> str:
         # If parsing fails, return original URL
         return url
 
-    # Normalize scheme - prefer https
+    # Normalize scheme - always use https if it's an http/https URL
     scheme = parsed.scheme.lower()
-    if scheme not in ("http", "https", "ftp"):
+    if scheme in ("http", "https"):
+        scheme = "https"
+    elif scheme not in ("ftp", "rsshub"):
         # For non-standard schemes, return as-is
         return url
 
-    # Convert http to https for common domains that support it
-    if scheme == "http":
-        scheme = "https"
-
     # Normalize domain - convert to lowercase
     netloc = parsed.netloc.lower()
-
-    # Remove www. prefix for consistency
-    if netloc.startswith("www."):
-        netloc = netloc[4:]
 
     # Normalize path - remove trailing slash unless it's the root
     path = parsed.path
     if path.endswith("/") and len(path) > 1:
         path = path.rstrip("/")
-    # Ensure root path has a slash
     elif not path:
-        path = "/"
+        path = ""
 
     # Remove common tracking parameters
     query_params = []
@@ -110,6 +103,59 @@ def are_urls_equivalent(url1: str, url2: str) -> bool:
         True if URLs are equivalent after normalization
     """
     return normalize_feed_url(url1) == normalize_feed_url(url2)
+
+
+def get_protocol_variation(url: str) -> str | None:
+    """Get the protocol variation (http <-> https) of a URL.
+
+    This is useful for checking if a feed exists with a different protocol,
+    which can happen with legacy feeds stored before normalization.
+
+    Args:
+        url: The URL to get the protocol variation for
+
+    Returns:
+        The URL with the opposite protocol (http <-> https), or None if
+        the URL doesn't use http/https protocols
+    """
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme in ("http", "https"):
+            # Try the opposite protocol
+            alt_scheme = "https" if parsed.scheme == "http" else "http"
+            return urlunparse((alt_scheme, parsed.netloc, parsed.path, parsed.params, parsed.query, parsed.fragment))
+        return None
+    except Exception:
+        return None
+
+
+def normalize_url_for_display(url_str: str | None) -> str | None:
+    """Normalize URL for API responses, preserving original schemes like rsshub://
+
+    Args:
+        url_str: URL string to normalize
+
+    Returns:
+        Normalized URL string or None if invalid
+    """
+    if not url_str:
+        return None
+    url_str = str(url_str).strip()
+
+    # Keep rsshub:// URLs as-is for display purposes
+    if url_str.startswith("rsshub://"):
+        return url_str
+
+    # If it's already a valid web URL, return it
+    if url_str.startswith(("http://", "https://")):
+        return url_str
+
+    # If it contains any other scheme (like data:, ftp:, etc.), it's invalid.
+    if ":" in url_str:
+        return None
+
+    # Otherwise, assume it's a web URL missing the protocol and add it.
+    return f"https://{url_str}"
 
 
 async def resolve_feed_url(url: str, timeout_seconds: int = 10, max_redirects: int = 10) -> str:

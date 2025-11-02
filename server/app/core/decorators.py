@@ -40,10 +40,15 @@ def require_resource_limit(resource: str) -> Callable[[Callable[..., Awaitable[A
             if "db" in kwargs:
                 db = kwargs["db"]
 
-            if not user_id or not db:
-                # If we can't find the required parameters, proceed without checking
-                # This allows the function to handle missing parameters itself
-                return await func(*args, **kwargs)
+            # Fail loudly if required parameters are missing
+            if not user_id:
+                raise ValueError(
+                    "user_id is required for resource limit checking but was not found in function parameters"
+                )
+            if not db:
+                raise ValueError(
+                    "db session is required for resource limit checking but was not found in function parameters"
+                )
 
             try:
                 # Get user profile to determine role

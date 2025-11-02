@@ -14,7 +14,7 @@ engine = create_async_engine(
     pool_pre_ping=True,  # Verify connections before using
     pool_size=30,  # Increased from 20 for higher concurrency
     max_overflow=40,  # Increased from 10 for better burst capacity
-    pool_timeout=30,  # Connection acquisition timeout (prevents indefinite waiting)
+    pool_timeout=5,  # Connection acquisition timeout - fail fast to detect pool exhaustion
     pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
     connect_args={
         # Enable statement caching for better performance (5-10ms improvement per query)

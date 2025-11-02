@@ -8,17 +8,12 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from alembic import context
 from app.core.config import get_settings
 from app.db.base_class import Base
-from app.models import rss_models  # noqa: F401 # Added for RSS models
 
 # Import all models here to ensure they are registered with Base.metadata
-from app.models.book_models import (  # noqa: F401
-    BookFormat,
-    BookMetadata,
-    Highlight,
-    HighlightColor,
-    UserBookLibrary,
-)
-from app.models.user_models import Profile  # noqa: F401
+from app.models.article import ArticleContent, ClippedArticle, FeedArticle, UserArticleState  # noqa: F401
+from app.models.feed import Feed, FeedSubscription  # noqa: F401
+from app.models.folder import Folder  # noqa: F401
+from app.models.user import AuthUser, Profile  # noqa: F401
 
 # Import all models here to ensure they are registered with Base.metadata
 

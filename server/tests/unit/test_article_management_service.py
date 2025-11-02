@@ -5,19 +5,22 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.rss_schemas import ArticleResponse, ArticleUpdate, PaginatedResponse
+from app.schemas import ArticleResponse, ArticleUpdate, PaginatedResponse
 from app.services.article_management_service import ArticleManagementService
 
 
 def create_mock_article(is_read=False):
-    """Helper function to create a mock article with all required fields for ArticleResponse."""
+    """Helper function to create a mock article with all required fields for ArticleResponse.
+
+    Returns a tuple of (FeedArticle, UserArticleState) to match the expected format.
+    """
     from datetime import datetime
 
     # Create mock content object
     mock_content = MagicMock()
     mock_content.title = "Test Article"
     mock_content.link = "https://example.com"
-    mock_content.description = "Test description"
+    mock_content.description = "Test description for this article that is longer than 200 characters to test truncation functionality. This is a sample description that should be truncated when displayed in list views but shown in full when viewing article details."
     mock_content.content = "Test content"
     mock_content.image_url = "https://example.com/image.png"
     mock_content.author = "Test Author"
@@ -28,24 +31,29 @@ def create_mock_article(is_read=False):
     mock_feed = MagicMock()
     mock_feed.id = uuid4()
     mock_feed.title = "Test Feed"
-    mock_feed.url = "https://example.com/feed.xml"
+    mock_feed.link = "https://example.com"
     mock_feed.image_url = None
     mock_feed.folder_id = uuid4()
 
-    # Create mock article object
+    # Create mock FeedArticle object
     mock_article = MagicMock()
     mock_article.id = uuid4()
     mock_article.content = mock_content
     mock_article.feed = mock_feed
     mock_article.created_at = datetime.now()
     mock_article.updated_at = datetime.now()
-    mock_article.is_read = is_read
-    mock_article.is_read_later = False
-    mock_article.is_favorite = False
     mock_article.feed_id = mock_feed.id
     mock_article.guid = "test-guid"
 
-    return mock_article
+    # Create mock UserArticleState
+    mock_user_state = MagicMock()
+    mock_user_state.is_read = is_read
+    mock_user_state.is_read_later = False
+    mock_user_state.is_favorite = False
+    mock_user_state.read_at = None
+
+    # Return tuple of (FeedArticle, UserArticleState)
+    return (mock_article, mock_user_state)
 
 
 @pytest.mark.unit
@@ -68,8 +76,14 @@ class TestArticleManagementService:
         total_count = 2
 
         with pytest.MonkeyPatch().context() as m:
-            mock_get_articles_by_user = AsyncMock()
-            mock_get_articles_by_user.return_value = (mock_articles, total_count)
+            # Mock both the count and get functions
+            mock_count_articles_by_user = AsyncMock(return_value=total_count)
+            mock_get_articles_by_user = AsyncMock(return_value=mock_articles)
+
+            m.setattr(
+                "app.services.article_management_service.count_articles_by_user",
+                mock_count_articles_by_user,
+            )
             m.setattr(
                 "app.services.article_management_service.get_articles_by_user",
                 mock_get_articles_by_user,
@@ -80,6 +94,8 @@ class TestArticleManagementService:
             assert isinstance(result, PaginatedResponse)
             assert len(result.items) == 2
             assert result.total == 2
+            # Check that description_preview exists
+            assert result.items[0].description_preview is not None
 
             mock_get_articles_by_user.assert_called_once_with(
                 db=self.db,

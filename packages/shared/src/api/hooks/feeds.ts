@@ -18,6 +18,7 @@ import type {
   OPMLImportResponse,
   PaginatedResponse,
   SidebarData,
+  Subscription,
   UnreadCounts
 } from "../types";
 
@@ -447,7 +448,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
 
   function useCreateFeed(
     options?: UseMutationOptions<
-      Feed,
+      Subscription,
       unknown,
       {
         url: string;
@@ -507,9 +508,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
         });
         // Invalidate the specific feed cache to update the feed preview screen
-        if (data?.id) {
+        // Use feed_id from the subscription response
+        if (data?.feed_id) {
           queryClient.invalidateQueries({
-            queryKey: [RSS_QUERY_KEYS.FEEDS, data.id],
+            queryKey: [RSS_QUERY_KEYS.FEEDS, data.feed_id],
           });
         }
       },

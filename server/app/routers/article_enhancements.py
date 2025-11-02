@@ -4,13 +4,17 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import MAX_AI_SUMMARIZATION_CONTENT_BYTES, MAX_AI_TRANSLATION_CONTENT_BYTES
 from app.core.custom_exceptions import ServiceUnavailableError
+from app.crud.crud_article import get_article as crud_get_article
 from app.db.session import get_db
+from app.models import ClippedArticle
 from app.schemas.auth import TokenData
-from app.services.ai_service import get_ai_service
+from app.schemas.enums import LanguageCode
+from app.services.ai.ai_service import get_ai_service
 from app.services.article_management_service import ArticleManagementService
 from app.services.auth import get_current_user
 from app.services.content_extraction_service import ContentExtractionService
@@ -31,7 +35,26 @@ class ExtractFullTextResponse(BaseModel):
 class SummarizeRequest(BaseModel):
     """Request for article summarization."""
 
-    content: str | None = Field(None, description="Optional content to summarize instead of article content")
+    content: str | None = Field(
+        None,
+        description="Optional content to summarize instead of article content (max 100KB)",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_size(cls, v: str | None) -> str | None:
+        """Validate that content does not exceed maximum size for AI processing."""
+        if v is None or v == "":
+            return v
+
+        content_bytes = len(v.encode("utf-8"))
+        if content_bytes > MAX_AI_SUMMARIZATION_CONTENT_BYTES:
+            size_kb = MAX_AI_SUMMARIZATION_CONTENT_BYTES // 1024
+            raise ValueError(
+                f"Content too large for summarization. Maximum size is {size_kb}KB "
+                f"({MAX_AI_SUMMARIZATION_CONTENT_BYTES:,} bytes), received {content_bytes:,} bytes."
+            )
+        return v
 
 
 class SummarizeResponse(BaseModel):
@@ -45,13 +68,30 @@ class SummarizeResponse(BaseModel):
 class TranslateRequest(BaseModel):
     """Request for article translation."""
 
-    target_language: str = Field(
+    target_language: LanguageCode = Field(
         ...,
-        min_length=2,
-        max_length=10,
-        description="Target language code (e.g., 'es', 'fr', 'zh')",
+        description="Target language code (ISO 639-1 format, e.g., 'es', 'fr', 'zh')",
     )
-    content: str | None = Field(None, description="Optional content to translate instead of article content")
+    content: str | None = Field(
+        None,
+        description="Optional content to translate instead of article content (max 50KB)",
+    )
+
+    @field_validator("content")
+    @classmethod
+    def validate_content_size(cls, v: str | None) -> str | None:
+        """Validate that content does not exceed maximum size for AI processing."""
+        if v is None or v == "":
+            return v
+
+        content_bytes = len(v.encode("utf-8"))
+        if content_bytes > MAX_AI_TRANSLATION_CONTENT_BYTES:
+            size_kb = MAX_AI_TRANSLATION_CONTENT_BYTES // 1024
+            raise ValueError(
+                f"Content too large for translation. Maximum size is {size_kb}KB "
+                f"({MAX_AI_TRANSLATION_CONTENT_BYTES:,} bytes), received {content_bytes:,} bytes."
+            )
+        return v
 
 
 class TranslateResponse(BaseModel):
@@ -84,8 +124,6 @@ async def extract_full_text(
             user_id=user.sub,
         )
 
-        from app.crud.crud_article import get_article as crud_get_article
-
         extraction_service = ContentExtractionService()
 
         # Get the article directly from DB to verify ownership and get URL
@@ -95,8 +133,6 @@ async def extract_full_text(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 
         # Handle both tuple (FeedArticle, UserArticleState) and ClippedArticle types
-        from app.models.rss_models import ClippedArticle
-
         if isinstance(article_db, ClippedArticle):
             article_link = article_db.content.link if article_db.content else None
             article_title = article_db.content.title if article_db.content else None

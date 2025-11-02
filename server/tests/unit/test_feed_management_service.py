@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.rss_schemas import FeedResponse, FeedUpdate
+from app.schemas import FeedResponse, FeedUpdate
 from app.services.feed_management_service import FeedManagementService
 
 
@@ -19,7 +19,7 @@ class TestFeedManagementService:
         # Mock dependencies
         with (
             patch("app.services.feed_management_service.FeedCreationService"),
-            patch("app.services.feed_management_service.RedisCache"),
+            patch("app.services.feed_management_service.get_redis_cache"),
             patch("app.services.feed_management_service.FeedFetcher"),
             patch("app.services.feed_management_service.FeedParsingService"),
         ):

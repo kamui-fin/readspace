@@ -15,6 +15,7 @@ class Folder(Base):
     __tablename__ = "folders"
 
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # CHECK constraint ensures name is not empty (enforced at database level)
     name = Column(String(255), nullable=False)
     user_id = Column(
         SQLUUID(as_uuid=True),
@@ -29,4 +30,9 @@ class Folder(Base):
         onupdate=lambda: datetime.now(timezone.utc),
     )
 
-    __table_args__ = (UniqueConstraint("user_id", "name", name="uq_folder_user_name"),)
+    __table_args__ = (
+        # UNIQUE constraint ensures one folder name per user
+        UniqueConstraint("user_id", "name", name="uq_folder_user_name"),
+        # CHECK constraint added in migration: ck_folder_name_not_empty
+        # Ensures name <> '' AND name IS NOT NULL
+    )

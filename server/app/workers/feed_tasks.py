@@ -7,9 +7,9 @@ import structlog
 
 from app.core.celery_app import celery
 from app.core.constants import MAX_FEEDS_BATCH_SIZE
-from app.services.feed_enrichment_service import FeedEnrichmentService
-from app.services.feed_service import FeedService
-from app.workers.common import get_persistent_db_engine, get_task_event_loop
+from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
+from app.services.feeds.feed import FeedService
+from app.workers.common import ensure_uuid, get_task_event_loop, get_worker_db
 
 logger = structlog.get_logger(__name__)
 
@@ -27,28 +27,50 @@ async def async_refresh_single_feed(feed_id: UUID) -> None:
     """
     logger.info("Starting feed refresh", feed_id=str(feed_id))
 
-    _, session_maker = await get_persistent_db_engine()
-    async with session_maker() as db:
+    async for db in get_worker_db():
         feed_service = FeedService(db=db)
         await feed_service.refresh_feed(feed_id=feed_id)
         logger.info("Successfully refreshed feed", feed_id=str(feed_id))
 
 
 async def async_schedule_all_feeds() -> None:
-    """Schedule all feeds needing refresh - async implementation."""
+    """Schedule all feeds needing refresh - async implementation.
+
+    Uses Celery group() for parallel task dispatch, reducing overhead from 5-10ms per task
+    to a single batch dispatch operation.
+    """
+    from celery import group  # type: ignore[import-untyped]
+
     logger.info("Starting schedule all feed refreshes")
 
-    _, session_maker = await get_persistent_db_engine()
-    async with session_maker() as db:
+    async for db in get_worker_db():
         feed_service = FeedService(db=db)
         feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=MAX_FEEDS_BATCH_SIZE)
 
-        logger.info(f"Found {len(feeds_to_check)} feeds to refresh")
+        logger.info("Found feeds to refresh", feed_count=len(feeds_to_check))
 
         if feeds_to_check:
-            feed_ids = [str(feed.id) for feed in feeds_to_check]
-            tasks = [refresh_single_feed_task.delay(feed_id) for feed_id in feed_ids]
-            logger.info(f"Bulk dispatched {len(tasks)} feed refresh tasks")
+            feed_ids = [feed.id for feed in feeds_to_check]
+
+            try:
+                # Use Celery group for parallel task dispatch
+                # This dispatches all tasks in a single batch operation instead of individual .delay() calls
+                task_group = group(refresh_single_feed_task.s(feed_id) for feed_id in feed_ids)
+                result = task_group.apply_async()
+
+                logger.info(
+                    "Dispatched feed refresh tasks using group",
+                    task_count=len(feed_ids),
+                    group_id=result.id if hasattr(result, "id") else None,
+                )
+            except Exception as exc:
+                logger.error(
+                    "Failed to dispatch feed refresh task group",
+                    task_count=len(feed_ids),
+                    error=str(exc),
+                    exc_info=True,
+                )
+                raise
 
 
 async def async_enrich_feed(feed_id: UUID) -> dict[str, Any]:
@@ -62,8 +84,7 @@ async def async_enrich_feed(feed_id: UUID) -> dict[str, Any]:
     """
     logger.info("Starting feed enrichment", feed_id=str(feed_id))
 
-    _, session_maker = await get_persistent_db_engine()
-    async with session_maker() as db:
+    async for db in get_worker_db():
         enrichment_service = FeedEnrichmentService(db=db)
         result = await enrichment_service.enrich_feed(str(feed_id))
 
@@ -94,58 +115,36 @@ async def async_enrich_feed(feed_id: UUID) -> dict[str, Any]:
     max_retries=2,
     default_retry_delay=30,
 )
-def refresh_single_feed_task(self: Any, feed_id: str) -> None:
-    """Celery task wrapper for refreshing a single feed."""
+def refresh_single_feed_task(self: Any, feed_id: UUID | str) -> None:
+    """Celery task wrapper for refreshing a single feed.
+
+    Args:
+        feed_id: Feed UUID (may be string from serialization)
+    """
     loop = get_task_event_loop()
+    feed_id = ensure_uuid(feed_id)
 
     try:
-        return loop.run_until_complete(async_refresh_single_feed(feed_id=UUID(feed_id)))
+        return loop.run_until_complete(async_refresh_single_feed(feed_id=feed_id))
     except Exception as exc:
-        error_str = str(exc).lower()
-
-        # Categorize errors for better handling
-        if "dataerror" in error_str or "invalid input for query argument" in error_str:
-            logger.error(
-                "SQL type conversion error for refresh_single_feed_task",
-                feed_id=feed_id,
+        # Attempt retry with exponential backoff if under max retries
+        if self.request.retries < (self.max_retries or 2):
+            logger.info(
+                "Retrying refresh_single_feed_task",
+                feed_id=str(feed_id),
+                attempt=self.request.retries + 1,
                 error=str(exc),
             )
-            if self.request.retries < (self.max_retries or 2):
-                logger.info(
-                    f"Retrying refresh_single_feed_task after SQL error, attempt {self.request.retries + 1}",
-                    feed_id=feed_id,
-                )
-                raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
-            else:
-                logger.error(
-                    "Max retries reached for refresh_single_feed_task with SQL error",
-                    feed_id=feed_id,
-                    error=str(exc),
-                )
-                raise ConnectionError("Feed data contains invalid types") from exc
+            raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
 
-        elif "timeout" in error_str or "timed out" in error_str:
-            raise ConnectionError("Feed timed out during refresh") from exc
-
-        elif "connection" in error_str:
-            raise ConnectionError("Connection failed during feed refresh") from exc
-
-        else:
-            # General errors - retry with backoff
-            if self.request.retries < (self.max_retries or 2):
-                logger.info(
-                    f"Retrying refresh_single_feed_task, attempt {self.request.retries + 1}",
-                    feed_id=feed_id,
-                )
-                raise self.retry(exc=exc, countdown=60 * (self.request.retries + 1)) from exc
-            else:
-                logger.error(
-                    "Max retries reached for refresh_single_feed_task",
-                    feed_id=feed_id,
-                    error=str(exc),
-                    exc_info=True,
-                )
-                raise
+        # Max retries reached, log and re-raise
+        logger.error(
+            "Max retries reached for refresh_single_feed_task",
+            feed_id=str(feed_id),
+            error=str(exc),
+            exc_info=True,
+        )
+        raise
 
 
 @celery.task(name="app.workers.feed_tasks.schedule_all_feed_refreshes_task")
@@ -161,17 +160,23 @@ def schedule_all_feed_refreshes_task() -> None:
     max_retries=2,
     default_retry_delay=300,
 )
-def enrich_feed_task(self: Any, feed_id: str) -> dict[str, Any]:
-    """Celery task wrapper for enriching a feed with AI metadata."""
+def enrich_feed_task(self: Any, feed_id: UUID | str) -> dict[str, Any]:
+    """Celery task wrapper for enriching a feed with AI metadata.
+
+    Args:
+        feed_id: Feed UUID (may be string from serialization)
+    """
     loop = get_task_event_loop()
+    feed_id = ensure_uuid(feed_id)
 
     try:
-        return loop.run_until_complete(async_enrich_feed(feed_id=UUID(feed_id)))
+        return loop.run_until_complete(async_enrich_feed(feed_id=feed_id))
     except Exception as exc:
         if self.request.retries < (self.max_retries or 2):
             logger.info(
-                f"Retrying feed enrichment task, attempt {self.request.retries + 1}",
+                "Retrying feed enrichment task",
                 feed_id=feed_id,
+                attempt=self.request.retries + 1,
             )
             raise self.retry(exc=exc, countdown=300 * (self.request.retries + 1)) from exc
         else:

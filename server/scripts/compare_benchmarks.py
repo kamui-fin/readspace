@@ -21,7 +21,7 @@ def format_duration(ms: float) -> str:
     """Format duration in milliseconds."""
     if ms < 1000:
         return f"{ms:.2f}ms"
-    return f"{ms/1000:.2f}s"
+    return f"{ms / 1000:.2f}s"
 
 
 def format_size(bytes_val: float) -> str:
@@ -158,9 +158,9 @@ def compare_benchmarks(baseline_file: str, current_file: str):
     # Biggest regressions
     print("\n⚠️  BIGGEST REGRESSIONS (Top 10)")
     print("-" * 100)
-    regressions = sorted([c for c in comparisons if c["duration_change"] > 0], key=lambda x: x["duration_change"], reverse=True)[
-        :10
-    ]
+    regressions = sorted(
+        [c for c in comparisons if c["duration_change"] > 0], key=lambda x: x["duration_change"], reverse=True
+    )[:10]
     if regressions:
         for i, comp in enumerate(regressions, 1):
             print(f"{i}. {comp['endpoint']}")
@@ -175,9 +175,7 @@ def compare_benchmarks(baseline_file: str, current_file: str):
     print("\n" + "=" * 100)
     print("📋 DETAILED COMPARISON")
     print("=" * 100)
-    print(
-        f"\n{'Endpoint':<60} {'Baseline':<15} {'Current':<15} {'Change':<15} {'Status':<10}"
-    )
+    print(f"\n{'Endpoint':<60} {'Baseline':<15} {'Current':<15} {'Change':<15} {'Status':<10}")
     print("-" * 115)
 
     for comp in sorted(comparisons, key=lambda x: abs(x["duration_change"]), reverse=True):
@@ -272,7 +270,9 @@ def main():
     """Main execution."""
     if len(sys.argv) < 3:
         print("❌ Usage: python compare_benchmarks.py <baseline.json> <current.json>")
-        print("   Example: python compare_benchmarks.py benchmark_results_20250101_120000.json benchmark_results_20250101_130000.json")
+        print(
+            "   Example: python compare_benchmarks.py benchmark_results_20250101_120000.json benchmark_results_20250101_130000.json"
+        )
         sys.exit(1)
 
     baseline_file = sys.argv[1]

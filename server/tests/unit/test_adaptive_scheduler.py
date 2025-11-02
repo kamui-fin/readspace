@@ -1,7 +1,7 @@
 """Unit tests for adaptive feed scheduler - pure logic only, no database."""
 
-from app.core.constants import DEFAULT_REFRESH_INTERVAL_MINUTES, MAX_ERROR_BACKOFF_MINUTES
-from app.services.adaptive_feed_scheduler import calculate_error_backoff_interval
+from app.core.constants import DEFAULT_REFRESH_INTERVAL_MINUTES
+from app.services.feeds.adaptive_feed_scheduler import calculate_error_backoff_interval
 
 
 def test_calculate_error_backoff_no_errors():
@@ -67,7 +67,7 @@ def test_calculate_error_backoff_progression():
 
 def test_content_hash_calculation():
     """Test content hash calculation produces consistent hashes."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     # Mock entries with minimal interface
     class MockEntry:
@@ -92,7 +92,7 @@ def test_content_hash_calculation():
 
 def test_content_hash_detects_differences():
     """Test content hash produces different hashes for different content."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     class MockEntry:
         def __init__(self, title: str, link: str):
@@ -118,7 +118,7 @@ def test_content_hash_detects_differences():
 
 def test_content_hash_empty_entries():
     """Test content hash handles empty entry list."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     service = FeedService(db=None)  # type: ignore
     hash_result = service._calculate_content_hash([])
@@ -128,7 +128,7 @@ def test_content_hash_empty_entries():
 
 def test_content_hash_only_uses_top_10():
     """Test that content hash only considers first 10 articles."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     class MockEntry:
         def __init__(self, title: str, link: str):
@@ -151,7 +151,7 @@ def test_content_hash_only_uses_top_10():
 
 def test_content_hash_handles_missing_attributes():
     """Test content hash handles entries with missing title/link gracefully."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     class PartialEntry:
         """Entry with only some attributes."""
@@ -171,7 +171,7 @@ def test_content_hash_handles_missing_attributes():
 
 def test_content_hash_order_matters():
     """Test that article order affects the hash."""
-    from app.services.feed_service import FeedService
+    from app.services.feeds.feed import FeedService
 
     class MockEntry:
         def __init__(self, title: str, link: str):

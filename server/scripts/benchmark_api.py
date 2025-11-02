@@ -69,8 +69,9 @@ class APIBenchmark:
         """Get or create Redis client."""
         if self.redis_client is None:
             import redis.asyncio as redis
+
             from app.core.config import get_settings
-            
+
             settings = get_settings()
             self.redis_client = redis.from_url(
                 settings.REDIS_URL,
@@ -91,32 +92,35 @@ class APIBenchmark:
     async def authenticate(base_url: str, email: str, password: str) -> tuple[str, UUID]:
         """Authenticate with Supabase and return access token and user ID."""
         print(f"🔐 Authenticating as {email}...")
-        
+
         # Import Supabase client
         from supabase import create_client
+
         from app.core.config import get_settings
-        
+
         settings = get_settings()
-        
+
         # Create Supabase client
         supabase = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY.get_secret_value())
-        
+
         # Sign in with email and password
         try:
-            response = supabase.auth.sign_in_with_password({
-                "email": email,
-                "password": password,
-            })
-            
+            response = supabase.auth.sign_in_with_password(
+                {
+                    "email": email,
+                    "password": password,
+                }
+            )
+
             if not response.user or not response.session:
                 raise Exception("Authentication failed: No user or session returned")
-            
+
             access_token = response.session.access_token
             user_id = response.user.id
-            
+
             print(f"✅ Authenticated successfully (User ID: {user_id})")
             return access_token, UUID(user_id)
-            
+
         except Exception as e:
             raise Exception(f"Authentication failed: {str(e)}")
 
@@ -194,10 +198,10 @@ class APIBenchmark:
         )
 
         self.results.append(result)
-        
+
         # Flush Redis cache after each request for accurate benchmarking
         await self._flush_redis()
-        
+
         return result
 
     async def benchmark_folders(self):
@@ -221,7 +225,6 @@ class APIBenchmark:
         # List feeds with filters
         if self.folder_ids:
             await self.make_request("GET", "/api/rss/feeds/", params={"folder_id": self.folder_ids[0], "limit": 100})
-
 
         # List feeds with favorites filter
         await self.make_request("GET", "/api/rss/feeds/", params={"is_favorite": True, "limit": 50})
@@ -371,7 +374,7 @@ class APIBenchmark:
                     f"/api/rss/similar/{self.feed_ids[0]}",
                     params={"limit": 10, "min_similarity": min_similarity},
                 )
-            
+
             # Test with different limits
             for limit in [5, 10, 20]:
                 await self.make_request(
@@ -411,14 +414,14 @@ class APIBenchmark:
                 f"/api/rss/feeds/{self.feed_ids[0]}",
                 json_data={"is_favorite": True},
             )
-            
+
             # Update feed (rename)
             await self.make_request(
                 "PUT",
                 f"/api/rss/feeds/{self.feed_ids[0]}",
                 json_data={"title": "Benchmark Test Feed Renamed"},
             )
-            
+
             # Update feed (move to folder)
             if len(self.folder_ids) > 1:
                 await self.make_request(
@@ -508,7 +511,7 @@ class APIBenchmark:
             self.make_request("GET", "/api/rss/feeds/", params={"limit": 200}),
             self.make_request("GET", "/api/rss/articles/unread_counts"),
         ]
-        
+
         # Execute in parallel (simulating real app behavior)
         await asyncio.gather(*tasks)
 
@@ -519,7 +522,7 @@ class APIBenchmark:
         print("=" * 80)
         print(f"Base URL: {self.base_url}")
         print(f"User ID: {self.user_id}")
-        print(f"Cache: Flushed after each request (cold-start measurements)")
+        print("Cache: Flushed after each request (cold-start measurements)")
         print(f"Time: {datetime.now().isoformat()}")
 
         start_time = time.perf_counter()
@@ -530,7 +533,7 @@ class APIBenchmark:
         await self.benchmark_articles()
         await self.benchmark_discovery()
         await self.benchmark_similar_feeds()
-        
+
         # Production usage patterns
         await self.benchmark_feed_operations()
         await self.benchmark_article_operations()
@@ -627,7 +630,7 @@ class APIBenchmark:
                 print(f"{result.method} {result.endpoint}")
                 print(f"   Status: {result.status_code} | Error: {result.error}")
                 print(f"   Params: {json.dumps(result.params)}")
-        
+
         # Show 429s separately as informational
         rate_limits = [r for r in self.results if r.status_code == 429]
         if rate_limits:
@@ -687,8 +690,12 @@ async def main():
     if len(sys.argv) < 4:
         print("❌ Usage: python benchmark_api.py <base_url> <email> <password> [test_user_id] [output_filename]")
         print("   Example: python benchmark_api.py http://localhost:8000 test@example.com password123")
-        print("   Or with specific user: python benchmark_api.py http://localhost:8000 test@example.com password123 123e4567-e89b-12d3-a456-426614174000")
-        print("   Or with custom output: python benchmark_api.py http://localhost:8000 test@example.com password123 123e4567-e89b-12d3-a456-426614174000 my_benchmark.json")
+        print(
+            "   Or with specific user: python benchmark_api.py http://localhost:8000 test@example.com password123 123e4567-e89b-12d3-a456-426614174000"
+        )
+        print(
+            "   Or with custom output: python benchmark_api.py http://localhost:8000 test@example.com password123 123e4567-e89b-12d3-a456-426614174000 my_benchmark.json"
+        )
         sys.exit(1)
 
     base_url = sys.argv[1]
@@ -698,11 +705,11 @@ async def main():
     try:
         # Authenticate and get token
         auth_token, authenticated_user_id = await APIBenchmark.authenticate(base_url, email, password)
-        
+
         # Use provided user_id if given, otherwise use authenticated user
         user_id = authenticated_user_id
         output_filename = None
-        
+
         if len(sys.argv) >= 5:
             try:
                 user_id = UUID(sys.argv[4])
@@ -712,7 +719,7 @@ async def main():
                 sys.exit(1)
         else:
             print(f"ℹ️  Using authenticated user ID: {user_id}")
-        
+
         # Check for output filename parameter
         if len(sys.argv) >= 6:
             output_filename = sys.argv[5]
@@ -724,6 +731,7 @@ async def main():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
 

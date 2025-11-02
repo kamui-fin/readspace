@@ -4,9 +4,10 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FEEDS_BATCH_SIZE
+from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FEEDS_BATCH_SIZE, MAX_PAGE_SIZE
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,
@@ -17,16 +18,22 @@ from app.core.custom_exceptions import (
     to_http_exception,
 )
 from app.core.decorators import require_resource_limit
+from app.core.dependencies import get_subscription_service
+from app.crud import crud_feed, crud_subscription
+from app.crud.crud_folder import crud_folder
+from app.crud.crud_profile import crud_profile
 from app.db.session import get_db
+from app.models import Feed
+from app.schemas import FeedCreate, FeedResponse, FeedUpdate
 from app.schemas.auth import TokenData
-from app.schemas.rss_schemas import FeedCreate, FeedResponse, FeedUpdate
-from app.schemas.subscription_schemas import (
-    LegacyFeedResponse,
+from app.schemas.subscriptions import (
     SubscriptionCreateByFeedId,
     SubscriptionResponse,
 )
 from app.services.auth import get_current_user
 from app.services.feed_management_service import FeedManagementService
+from app.services.resource_limit_service import ResourceLimitService
+from app.services.rss_search_service import RssSearchService
 from app.services.subscription_service import SubscriptionService
 
 logger = structlog.get_logger(__name__)
@@ -70,7 +77,6 @@ router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
         500: {"description": "Internal server error"},
     },
 )
-@require_resource_limit("max_subscriptions")
 async def subscribe_to_feed(
     *,
     feed_id: UUID,
@@ -79,6 +85,7 @@ async def subscribe_to_feed(
     ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
+    subscription_service: SubscriptionService = Depends(get_subscription_service),
 ) -> SubscriptionResponse:
     """
     Subscribe to an existing RSS feed by its UUID.
@@ -92,6 +99,7 @@ async def subscribe_to_feed(
         subscription_data: Configuration for the subscription including folder assignment
         db: Database session dependency
         current_user: Authenticated user information
+        subscription_service: Injected subscription service
 
     Returns:
         SubscriptionResponse: Complete subscription details including feed and folder info
@@ -108,7 +116,36 @@ async def subscribe_to_feed(
         - Subject to max_subscriptions resource limit
         - Creates a direct subscription without URL validation
     """
-    subscription_service = SubscriptionService(db=db, user_id=UUID(current_user.sub))
+    # SECURITY: Check feed existence BEFORE checking resource limits to prevent feed ID enumeration
+    feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
+    if not feed:
+        logger.warning(
+            "Feed not found for subscription",
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+
+    # Now check resource limits after verifying the feed exists
+    profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found",
+        )
+
+    resource_service = ResourceLimitService(db)
+    can_proceed = await resource_service.check_limit(UUID(current_user.sub), "max_subscriptions", str(profile.role))
+
+    if not can_proceed:
+        limits = resource_service.get_user_limits(str(profile.role))
+        current_usage = await resource_service.get_current_usage(UUID(current_user.sub), "max_subscriptions")
+
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Resource limit exceeded for max_subscriptions. "
+            f"Current usage: {current_usage}/{limits.get('max_subscriptions', 0)}",
+        )
 
     try:
         # Create subscription directly using the feed ID
@@ -156,14 +193,14 @@ async def subscribe_to_feed(
 
 @router.post(
     "/",
-    response_model=LegacyFeedResponse,
+    response_model=SubscriptionResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new RSS feed",
     description="Add a new RSS feed by URL with automatic parsing, validation, and subscription creation",
     responses={
         201: {
             "description": "Successfully added and subscribed to the feed",
-            "model": LegacyFeedResponse,
+            "model": SubscriptionResponse,
         },
         400: {
             "description": "Bad request - invalid feed URL, parsing error, or validation failure",
@@ -196,7 +233,7 @@ async def add_new_feed(
     db: AsyncSession = Depends(get_db),
     feed_in: FeedCreate = Body(..., description="Feed URL and folder assignment for the new subscription"),
     current_user: TokenData = Depends(get_current_user),
-) -> LegacyFeedResponse:
+) -> SubscriptionResponse:
     """
     Add a new RSS feed by URL with automatic parsing and subscription creation.
 
@@ -213,7 +250,7 @@ async def add_new_feed(
         current_user: Authenticated user information
 
     Returns:
-        LegacyFeedResponse: Complete feed details with subscription information
+        SubscriptionResponse: Complete subscription details including feed information
 
     Raises:
         HTTPException:
@@ -290,7 +327,7 @@ async def add_new_feed(
 )
 async def get_trending_feeds(
     language: str = Query("en", description="Language code for filtering feeds (e.g., 'en', 'es')"),
-    limit: int = Query(10, ge=1, le=100, description="Maximum number of trending feeds to return (1-100)"),
+    limit: int = Query(10, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of trending feeds to return"),
     category: str | None = Query(None, description="Optional feed category to filter by"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
@@ -318,8 +355,6 @@ async def get_trending_feeds(
         - Feeds with null popularity scores are placed at the end
         - Relevance scores are calculated based on rank position
     """
-    from app.services.rss_search_service import RssSearchService
-
     try:
         search_service = RssSearchService(db=db)
         trending_feeds = await search_service.get_trending_feeds(
@@ -385,7 +420,7 @@ async def list_feeds(
         False, description="Include unread article counts for each feed (single optimized query)"
     ),
     skip: int = Query(0, ge=0, description="Number of feeds to skip for pagination"),
-    limit: int = Query(100, ge=1, le=200, description="Maximum number of feeds to return (1-200)"),
+    limit: int = Query(100, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of feeds to return"),
     current_user: TokenData = Depends(get_current_user),
 ) -> list[FeedResponse]:
     """
@@ -603,7 +638,7 @@ async def update_feed_settings(
 
 
 @router.post(
-    "/refresh_all",
+    "/refresh",
     response_model=dict[str, Any],
     summary="Refresh all user feeds",
     description="Trigger a background refresh of all feeds the user is subscribed to",
@@ -685,12 +720,12 @@ async def refresh_all_feeds(
             }
 
         # Import the refresh task
-        from app.workers.tasks import refresh_single_feed_task
+        from app.workers.feed_tasks import refresh_single_feed_task
 
         # Queue individual refresh tasks for each feed
         task_ids = []
         for feed in user_feeds:
-            task = refresh_single_feed_task.delay(str(feed.id))
+            task = refresh_single_feed_task.delay(feed.id)
             task_ids.append(task.id)
 
         logger.info(
@@ -872,7 +907,7 @@ async def refresh_feed(
 
 
 @router.get(
-    "/refresh_status/{task_id}",
+    "/refresh-status/{task_id}",
     response_model=dict[str, Any],
     summary="Get background refresh status",
     description="Check the status of a background feed refresh task with detailed progress information",
@@ -1329,8 +1364,6 @@ async def admin_update_feed(
         - Changes are applied to the global feed record
     """
     # Check if user is admin by fetching their profile
-    from app.crud.crud_profile import crud_profile
-
     user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != "admin":
         logger.warning(
@@ -1345,8 +1378,6 @@ async def admin_update_feed(
         )
 
     # Get the feed from the global feeds table
-    from app.crud import crud_feed
-
     feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
     if not feed:
         logger.warning(
@@ -1373,7 +1404,7 @@ async def admin_update_feed(
 
         # Handle top_level_category separately since it's an enum
         if feed_in.top_level_category is not None:
-            from app.models.rss_models import FeedCategory
+            from app.models import FeedCategory
 
             # Convert string to enum if needed
             # The frontend sends the enum VALUE (e.g., "Design & Creativity")
@@ -1489,8 +1520,6 @@ async def admin_delete_feed(
         - This action cannot be undone
     """
     # Check if user is admin by fetching their profile
-    from app.crud.crud_profile import crud_profile
-
     user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != "admin":
         logger.warning(
@@ -1505,10 +1534,6 @@ async def admin_delete_feed(
         )
 
     # Check if feed exists first
-    from sqlalchemy import select
-
-    from app.models.rss_models import Feed
-
     result = await db.execute(select(Feed).where(Feed.id == feed_id))
     feed = result.scalar_one_or_none()
 
@@ -1670,8 +1695,6 @@ async def bulk_delete_feeds(
     if not feed_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
-    from app.crud import crud_subscription
-
     result = await crud_subscription.delete_subscriptions_bulk(db=db, feed_ids=feed_ids, user_id=UUID(current_user.sub))
 
     logger.info(
@@ -1751,8 +1774,6 @@ async def bulk_update_feeds_folder(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
     # Verify folder ownership
-    from app.crud import crud_folder, crud_subscription
-
     folder = await crud_folder.get_folder(db, folder_id=folder_id, user_id=UUID(current_user.sub))
     if not folder:
         raise HTTPException(

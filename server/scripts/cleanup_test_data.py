@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from sqlalchemy import select
 
 from app.db.session import AsyncSessionLocal
-from app.models.rss_models import Feed, Folder
+from app.models import Feed, Folder
 
 TEST_MARKER = "BENCHMARK_TEST"
 

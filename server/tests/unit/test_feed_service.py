@@ -7,8 +7,8 @@ from uuid import uuid4
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.schemas.rss_schemas import FeedBase
-from app.services.feed_service import FeedService
+from app.schemas import FeedBase
+from app.services.feeds.feed import FeedService
 
 
 @pytest.fixture
@@ -136,32 +136,34 @@ class TestFeedService:
     @pytest.mark.asyncio
     async def test_refresh_feed_not_modified(self, feed_service, sample_feed_db):
         """Should handle 304 Not Modified response."""
+        from app.services.feed_fetcher import FetchResult
+
         feed_id = sample_feed_db.id
 
-        # Mock successful fetch that returns 304
-        mock_fetch_result = {"status_code": 304, "content": None, "headers": {}}
+        # Mock successful fetch that returns 304 (using FetchResult dataclass)
+        mock_fetch_result = FetchResult(content="", headers={}, status_code=304, not_modified=True)
 
         with (
             patch("app.crud.crud_feed.get_feed_by_id") as mock_get,
             patch.object(feed_service.feed_fetcher, "fetch_content") as mock_fetch,
-            patch("app.crud.crud_feed.update_feed_metadata") as mock_update,
         ):
             mock_get.return_value = sample_feed_db
             mock_fetch.return_value = mock_fetch_result
-            mock_update.return_value = sample_feed_db
 
             result = await feed_service.refresh_feed(feed_id=feed_id)
 
             assert result is not None
             mock_fetch.assert_called_once()
-            mock_update.assert_called_once()
+            # Should NOT call update_feed_metadata for 304 responses (optimization)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_fetch_error(self, feed_service, sample_feed_db):
         """Should handle fetch errors."""
+        from app.services.feed_fetcher import FetchResult
+
         feed_id = sample_feed_db.id
 
-        mock_fetch_result = {"status_code": 404, "content": None, "headers": {}}
+        mock_fetch_result = FetchResult(content="", headers={}, status_code=404, error="http_404")
 
         with (
             patch("app.crud.crud_feed.get_feed_by_id") as mock_get,
@@ -177,17 +179,19 @@ class TestFeedService:
     @pytest.mark.asyncio
     async def test_refresh_feed_successful_parse_and_update(self, feed_service, sample_feed_db):
         """Should successfully parse and update feed."""
+        from app.services.feed_fetcher import FetchResult
+
         feed_id = sample_feed_db.id
 
-        # Mock successful fetch with content
-        mock_fetch_result = {
-            "status_code": 200,
-            "content": "<?xml version='1.0'?><rss><channel><title>Test</title></channel></rss>",
-            "headers": {
+        # Mock successful fetch with content (using FetchResult dataclass)
+        mock_fetch_result = FetchResult(
+            content="<?xml version='1.0'?><rss><channel><title>Test</title></channel></rss>",
+            headers={
                 "etag": "test-etag",
                 "last-modified": "Wed, 01 Jan 2023 00:00:00 GMT",
             },
-        }
+            status_code=200,
+        )
 
         # Mock parsed feed
         mock_parsed_feed = Mock()
@@ -234,15 +238,17 @@ class TestFeedService:
     @pytest.mark.asyncio
     async def test_refresh_feed_force_refetch_ignores_cache_headers(self, feed_service, sample_feed_db):
         """Should ignore cache headers when force_refetch is True."""
+        from app.services.feed_fetcher import FetchResult
+
         feed_id = sample_feed_db.id
         sample_feed_db.etag_header = "existing-etag"
         sample_feed_db.last_modified_header = "existing-modified"
 
-        mock_fetch_result = {
-            "status_code": 200,
-            "content": "<?xml version='1.0'?><rss><channel><title>Test</title></channel></rss>",
-            "headers": {},
-        }
+        mock_fetch_result = FetchResult(
+            content="<?xml version='1.0'?><rss><channel><title>Test</title></channel></rss>",
+            headers={},
+            status_code=200,
+        )
 
         mock_parsed_feed = Mock()
         mock_parsed_feed.feed = Mock()

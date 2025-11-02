@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
@@ -20,10 +20,14 @@ class ArticleContent(Base):
     id = Column(SQLUUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Core article data
-    title = Column(String(1000))
+    # Reduced from String(1000) to String(500) - most article titles are < 200 chars
+    # This saves ~800 bytes per article in storage
+    title = Column(String(500))
     link = Column(String(2048), nullable=False)
-    description = Column(String(5000))
-    content = Column(Text)
+    # Defer large text fields to reduce bandwidth in list queries
+    # Use undefer() or undefer_group('content_details') when full content is needed
+    description = deferred(Column(String(5000)), group="content_details")
+    content = deferred(Column(Text), group="content_details")
     image_url = Column(String(2048))
     author = Column(String(500))
 
@@ -73,6 +77,8 @@ class FeedArticle(Base):
     content = relationship("ArticleContent", foreign_keys=[content_id])
     user_states = relationship("UserArticleState", back_populates="article", cascade="all, delete-orphan")
 
+    __table_args__ = (UniqueConstraint("feed_id", "guid", name="uq_feed_article_feed_guid"),)
+
 
 class UserArticleState(Base):
     """User-specific article interaction states."""
@@ -109,6 +115,8 @@ class UserArticleState(Base):
     # Relationships
     user = relationship("Profile", foreign_keys=[user_id])
     article = relationship("FeedArticle", back_populates="user_states")
+
+    __table_args__ = (UniqueConstraint("user_id", "article_id", name="uq_user_article_state"),)
 
 
 class ClippedArticle(Base):

@@ -7,7 +7,7 @@ import pytest
 from sqlalchemy import select
 
 from app.crud.crud_feed_article import CRUDFeedArticle, crud_feed_article
-from app.models.rss_models import FeedArticle
+from app.models import FeedArticle
 
 
 @pytest.mark.unit

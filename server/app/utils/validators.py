@@ -20,6 +20,10 @@ from app.core.constants import (
 )
 from app.core.custom_exceptions import ValidationError
 
+# Precompiled regex patterns
+EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+TAG_NAME_PATTERN = re.compile(r"^[a-z0-9_-]+$")
+
 
 def validate_url(url: str, required: bool = True) -> str | None:
     """
@@ -72,9 +76,7 @@ def validate_email(email: str) -> str:
     if not email:
         raise ValidationError("Email is required")
 
-    # Basic email regex pattern
-    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    if not re.match(email_pattern, email):
+    if not EMAIL_PATTERN.match(email):
         raise ValidationError("Invalid email format")
 
     return email.lower()
@@ -158,7 +160,7 @@ def validate_tag_name(name: str) -> str:
         raise ValidationError("Tag name cannot be empty")
 
     # Tag names should be lowercase and alphanumeric with hyphens/underscores
-    if not re.match(r"^[a-z0-9_-]+$", validated.lower()):
+    if not TAG_NAME_PATTERN.match(validated.lower()):
         raise ValidationError("Tag name can only contain lowercase letters, numbers, hyphens, and underscores")
 
     return validated.lower()

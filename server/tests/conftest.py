@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user_models import Profile
+from app.models.user import Profile
 
 # Set test environment variables immediately at module import
 # This ensures they're available during test collection phase

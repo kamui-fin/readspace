@@ -14,7 +14,7 @@ from sqlalchemy.dialects import postgresql
 from alembic import op
 
 # Import the enum for proper type creation
-from app.models.rss_models import FeedCategory
+from app.models import FeedCategory
 
 # revision identifiers, used by Alembic.
 revision: str = "add_rss_dataset_fields"

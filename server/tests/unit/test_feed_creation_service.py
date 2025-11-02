@@ -11,8 +11,8 @@ from app.core.custom_exceptions import (
     FeedValidationError,
     NotFoundError,
 )
-from app.schemas.rss_schemas import ArticleCreate, FeedBase
-from app.schemas.subscription_schemas import LegacyFeedResponse
+from app.schemas import ArticleCreate, FeedBase
+from app.schemas.subscriptions import LegacyFeedResponse
 from app.services.feed_creation_service import FeedCreationService
 
 

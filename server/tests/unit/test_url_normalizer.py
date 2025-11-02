@@ -16,13 +16,13 @@ class TestUrlNormalizer:
         """Test HTTP to HTTPS conversion."""
         assert normalize_feed_url("http://example.com/feed") == "https://example.com/feed"
 
-    def test_www_removal(self):
-        """Test www prefix removal."""
-        assert normalize_feed_url("https://www.example.com/feed") == "https://example.com/feed"
+    def test_www_preservation(self):
+        """Test that www prefix is preserved (server redirects will handle canonical URL)."""
+        assert normalize_feed_url("https://www.example.com/feed") == "https://www.example.com/feed"
 
     def test_combined_normalizations(self):
         """Test multiple normalizations together."""
-        assert normalize_feed_url("http://www.example.com/feed/") == "https://example.com/feed"
+        assert normalize_feed_url("http://www.example.com/feed/") == "https://www.example.com/feed"
 
     def test_tracking_parameter_removal(self):
         """Test removal of tracking parameters."""
@@ -48,7 +48,7 @@ class TestUrlNormalizer:
     def test_complex_normalization(self):
         """Test complex URL with multiple issues."""
         complex_url = "http://www.EXAMPLE.com/feed/?utm_campaign=test#anchor"
-        assert normalize_feed_url(complex_url) == "https://example.com/feed"
+        assert normalize_feed_url(complex_url) == "https://www.example.com/feed"
 
     def test_edge_cases(self):
         """Test edge cases."""
@@ -72,7 +72,8 @@ class TestUrlNormalizer:
     def test_url_equivalence(self):
         """Test URL equivalence checking."""
         assert are_urls_equivalent("https://example.com/feed", "http://example.com/feed/")
-        assert are_urls_equivalent("https://www.example.com/feed", "https://example.com/feed")
+        # www is now preserved, so these are not equivalent (server redirects will determine canonical URL)
+        assert not are_urls_equivalent("https://www.example.com/feed", "https://example.com/feed")
         assert are_urls_equivalent("https://example.com/feed?utm_source=test", "https://example.com/feed")
 
         # Non-equivalent URLs

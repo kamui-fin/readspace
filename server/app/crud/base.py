@@ -1,4 +1,5 @@
 from typing import Any, Generic, Protocol, TypeVar
+from uuid import UUID
 
 from pydantic import BaseModel
 from sqlalchemy import update
@@ -8,9 +9,9 @@ from sqlalchemy.future import select
 
 
 class HasId(Protocol):
-    """Protocol for models that have an id attribute."""
+    """Protocol for models that have an id attribute of type UUID."""
 
-    id: Any
+    id: UUID
 
 
 ModelType = TypeVar("ModelType", bound=HasId)
@@ -28,12 +29,17 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         """
         self.model = model
 
-    async def get(self, db: AsyncSession, id: Any) -> ModelType | None:
+    async def get(self, db: AsyncSession, id: UUID) -> ModelType | None:
         result = await db.execute(select(self.model).where(self.model.id == id))
         return result.scalar_one_or_none()
 
     async def create(self, db: AsyncSession, *, obj_in: CreateSchemaType) -> ModelType:
-        """Create a new record using INSERT...RETURNING for optimal performance."""
+        """
+        Create a new record using INSERT...RETURNING for optimal performance.
+
+        Note: Does not commit. Caller is responsible for transaction management.
+        This allows batching multiple operations in a single transaction.
+        """
         obj_in_data = obj_in.model_dump()
 
         # Use INSERT...RETURNING to get the created object without refresh()
@@ -41,7 +47,6 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(insert_stmt.returning(self.model))
         db_obj = result.scalar_one()
 
-        await db.commit()
         return db_obj
 
     async def update(
@@ -51,7 +56,12 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         db_obj: ModelType,
         obj_in: UpdateSchemaType | dict[str, Any],
     ) -> ModelType:
-        """Update a record using UPDATE...RETURNING for optimal performance."""
+        """
+        Update a record using UPDATE...RETURNING for optimal performance.
+
+        Note: Does not commit. Caller is responsible for transaction management.
+        This allows batching multiple operations in a single transaction.
+        """
         if isinstance(obj_in, dict):
             update_data = obj_in
         else:
@@ -65,12 +75,16 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         result = await db.execute(update_stmt)
         updated_obj = result.scalar_one()
 
-        await db.commit()
         return updated_obj
 
-    async def remove(self, db: AsyncSession, *, id: Any) -> ModelType | None:
+    async def remove(self, db: AsyncSession, *, id: UUID) -> ModelType | None:
+        """
+        Remove a record by ID.
+
+        Note: Does not commit. Caller is responsible for transaction management.
+        This allows batching multiple operations in a single transaction.
+        """
         obj = await self.get(db, id=id)
         if obj:
             await db.delete(obj)
-            await db.commit()
         return obj

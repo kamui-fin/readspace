@@ -2,6 +2,22 @@
 
 import re
 
+from bs4 import BeautifulSoup
+
+# Precompiled regex patterns
+# CJK Unicode ranges:
+# - CJK Unified Ideographs: \u4e00-\u9fff
+# - Hiragana: \u3040-\u309f
+# - Katakana: \u30a0-\u30ff
+# - CJK Symbols and Punctuation: \u3000-\u303f
+# - Hangul Syllables: \uac00-\ud7af
+# - Halfwidth and Fullwidth Forms: \uff00-\uffef
+CJK_PATTERN = re.compile(r"[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]")
+WHITESPACE_PATTERN = re.compile(r"\s+")
+HTML_TAG_PATTERN = re.compile(r"<[^>]*>")
+PUNCTUATION_PATTERN = re.compile(r"[^\w\s]")
+HTML_TAG_FALLBACK_PATTERN = re.compile(r"<[^>]+>")
+
 
 def is_cjk_text(text: str) -> bool:
     """
@@ -12,22 +28,13 @@ def is_cjk_text(text: str) -> bool:
     if not text.strip():
         return False
 
-    # CJK Unicode ranges:
-    # - CJK Unified Ideographs: \u4e00-\u9fff
-    # - Hiragana: \u3040-\u309f
-    # - Katakana: \u30a0-\u30ff
-    # - CJK Symbols and Punctuation: \u3000-\u303f
-    # - Hangul Syllables: \uac00-\ud7af
-    # - Halfwidth and Fullwidth Forms: \uff00-\uffef
-    cjk_pattern = r"[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\uac00-\ud7af\uff00-\uffef]"
-
     # Remove whitespace and count total characters
-    non_whitespace = re.sub(r"\s+", "", text)
+    non_whitespace = WHITESPACE_PATTERN.sub("", text)
     if len(non_whitespace) == 0:
         return False
 
     # Count CJK characters
-    cjk_chars = len(re.findall(cjk_pattern, text))
+    cjk_chars = len(CJK_PATTERN.findall(text))
 
     # Consider text CJK if more than 20% of characters are CJK
     return (cjk_chars / len(non_whitespace)) > 0.2
@@ -56,7 +63,7 @@ def calculate_reading_time(
         return 1
 
     # Clean HTML tags if present
-    clean_text = re.sub(r"<[^>]*>", " ", content)
+    clean_text = HTML_TAG_PATTERN.sub(" ", content)
     clean_text = clean_text.strip()
 
     if not clean_text:
@@ -64,11 +71,11 @@ def calculate_reading_time(
 
     if is_cjk_text(clean_text):
         # For CJK text, count characters (excluding whitespace)
-        char_count = len(re.sub(r"\s+", "", clean_text))
+        char_count = len(WHITESPACE_PATTERN.sub("", clean_text))
         reading_time = max(1, round(char_count / cjk_cpm))
     else:
         # For non-CJK text, count words
-        clean_text = re.sub(r"[^\w\s]", " ", clean_text)  # Remove punctuation
+        clean_text = PUNCTUATION_PATTERN.sub(" ", clean_text)  # Remove punctuation
         word_count = len(clean_text.split())
         reading_time = max(1, round(word_count / default_wpm))
 
@@ -91,13 +98,11 @@ def calculate_reading_time_from_html(html_content: str, default_wpm: int = 230, 
         return None
 
     try:
-        from bs4 import BeautifulSoup
-
         soup = BeautifulSoup(html_content, "html.parser")
         text_only = soup.get_text(separator=" ", strip=True)
     except Exception:
         # Fallback to regex if BeautifulSoup fails
-        text_only = re.sub(r"<[^>]+>", " ", html_content)
+        text_only = HTML_TAG_FALLBACK_PATTERN.sub(" ", html_content)
         text_only = " ".join(text_only.split())
 
     if not text_only.strip():

@@ -53,6 +53,34 @@ export type Feed = {
   is_preview?: boolean;
 };
 
+// Subscription type - matches backend SubscriptionResponse
+export type Subscription = {
+  id: string;
+  user_id: string;
+  feed_id: string;
+  folder_id: string;
+  is_favorite: boolean;
+  custom_title: string | null;
+  created_at: string;
+  updated_at: string;
+  feed: {
+    id: string;
+    url: string;
+    title: string | null;
+    link: string | null;
+    language: string | null;
+    image_url: string | null;
+    last_fetched_at: string | null;
+    last_article_published_at: string | null;
+  };
+  folder: {
+    id: string;
+    name: string;
+    user_id: string;
+    created_at: string;
+  };
+};
+
 export type SidebarData = {
   folders: Folder[];
   feeds: Feed[];

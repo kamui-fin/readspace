@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.rss_schemas import ArticleCreate
+from app.schemas import ArticleCreate
 from app.services.article_extractor import ArticleExtractor
 
 

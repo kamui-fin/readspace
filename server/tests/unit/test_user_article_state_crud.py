@@ -16,7 +16,7 @@ from app.crud.crud_user_article_state import (
     toggle_article_read_later,
     update_user_article_state,
 )
-from app.models.rss_models import UserArticleState
+from app.models import UserArticleState
 from app.schemas.subscription_schemas import (
     UserArticleStateCreate,
     UserArticleStateUpdate,

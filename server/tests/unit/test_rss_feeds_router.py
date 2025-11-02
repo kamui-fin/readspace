@@ -13,8 +13,8 @@ from app.routers.rss_feeds import (
     refresh_feed,
     update_feed_settings,
 )
+from app.schemas import FeedUpdate
 from app.schemas.auth import TokenData
-from app.schemas.rss_schemas import FeedUpdate
 
 
 @pytest.mark.unit

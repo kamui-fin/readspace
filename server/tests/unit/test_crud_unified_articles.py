@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 
 from app.crud.crud_unified_articles import CRUDUnifiedArticles
-from app.schemas.rss_schemas import ArticleResponse
+from app.schemas import ArticleResponse
 
 
 @pytest.mark.unit

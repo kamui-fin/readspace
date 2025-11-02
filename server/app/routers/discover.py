@@ -1,19 +1,25 @@
 """RSS Feed Discovery Router for search and browsing functionality."""
 
+import time
+from datetime import datetime
 from typing import Any
+from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.constants import MAX_PAGE_SIZE
 from app.db.session import get_db
-from app.schemas.rss_schemas import (
+from app.schemas import (
     DiscoverCategoriesResponse,
     DiscoverSearchResponse,
     FeedDiscoveryResult,
     RecommendationsRequest,
 )
+from app.services.feed_creation_service import FeedCreationService
 from app.services.rss_search_service import RssSearchService
+from app.utils.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/discover", tags=["RSS Discovery"])
@@ -26,7 +32,7 @@ async def search_feeds(
     q: str | None = Query(None, description="Search query text", max_length=500),
     category: str | None = Query(None, description="Feed category to filter by", max_length=100),
     language: str = Query("en", description="Language code for filtering", max_length=10),
-    limit: int = Query(40, ge=1, le=100, description="Maximum number of results"),
+    limit: int = Query(40, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of results"),
 ) -> DiscoverSearchResponse:
     """
     Search for RSS feeds using hybrid search or browse by category.
@@ -261,7 +267,7 @@ async def get_category_feeds(
     db: AsyncSession = Depends(get_db),
     category_name: str,
     language: str = Query("en", description="Language code for filtering", max_length=10),
-    limit: int = Query(20, ge=1, le=20, description="Maximum number of results"),
+    limit: int = Query(20, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of results"),
 ) -> DiscoverSearchResponse:
     """
     Get top feeds for a specific category.
@@ -346,7 +352,7 @@ async def get_preview_articles(
     *,
     db: AsyncSession = Depends(get_db),
     url: str = Query(..., description="RSS feed URL to preview"),
-    limit: int = Query(25, ge=1, le=100, description="Maximum number of articles to return"),
+    limit: int = Query(25, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of articles to return"),
 ) -> dict[str, Any]:
     """
     Get articles from an RSS feed URL for preview purposes.
@@ -363,12 +369,6 @@ async def get_preview_articles(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid RSS feed URL or feed could not be fetched",
             )
-
-        # Import here to avoid circular imports
-        from uuid import uuid4
-
-        from app.services.feed_creation_service import FeedCreationService
-        from app.utils.rsshub_url_transformer import transform_rsshub_url
 
         # Create a temporary service instance for fetching articles
         temp_service = FeedCreationService(db, user_id=uuid4())
@@ -428,9 +428,6 @@ async def get_preview_articles(
             # Convert published_parsed to ISO string if available
             if article["published_at"]:
                 try:
-                    import time
-                    from datetime import datetime
-
                     article["published_at"] = (
                         datetime.fromtimestamp(time.mktime(article["published_at"])).isoformat() + "Z"
                     )

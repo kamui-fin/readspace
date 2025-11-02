@@ -58,7 +58,6 @@ class CategoryInfo(BaseModel):
 
     name: str
     display_name: str
-    feed_count: int
     avg_popularity: float
 
 

@@ -5,8 +5,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas.rss_schemas import FolderCreate, FolderResponse, FolderUpdate
-from app.services.folder_service import FolderService
+from app.schemas import FolderCreate, FolderResponse, FolderUpdate
+from app.services.folder import FolderService
 
 
 @pytest.mark.unit
@@ -36,7 +36,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.create_folder.return_value = expected_folder
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.create_folder(folder_in)
 
@@ -61,7 +61,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.get_folder.return_value = expected_folder
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.get_folder(folder_id)
 
@@ -76,7 +76,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.get_folder.return_value = None
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.get_folder(folder_id)
 
@@ -106,7 +106,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.get_folders_by_user.return_value = mock_folders
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.list_folders(skip=10, limit=20)
 
@@ -136,7 +136,7 @@ class TestFolderService:
             existing_folder.user_id = self.user_id
             mock_crud_folder.get_folder.return_value = existing_folder
             mock_crud_folder.update_folder.return_value = updated_folder
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.update_folder(folder_id, folder_update)
 
@@ -154,7 +154,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.get_folder.return_value = None
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.update_folder(folder_id, folder_update)
 
@@ -168,7 +168,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.delete_folder.return_value = True
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.delete_folder(folder_id)
 
@@ -185,7 +185,7 @@ class TestFolderService:
         with pytest.MonkeyPatch().context() as m:
             mock_crud_folder = AsyncMock()
             mock_crud_folder.delete_folder.return_value = False
-            m.setattr("app.services.folder_service.crud_folder", mock_crud_folder)
+            m.setattr("app.services.folder.crud_folder", mock_crud_folder)
 
             result = await self.service.delete_folder(folder_id)
 

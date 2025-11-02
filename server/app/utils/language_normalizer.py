@@ -7,6 +7,14 @@ from iso639 import Lang
 
 logger = structlog.get_logger(__name__)
 
+# Precompiled regex patterns for language tag extraction
+LANGUAGE_PATTERNS = [
+    re.compile(r"^([a-z]{2,3})-[a-z]{2}$"),  # en-us, zh-cn (after lowercase)
+    re.compile(r"^([a-z]{2,3})-[a-z]{4}$"),  # zh-hans, zh-hant (after lowercase)
+    re.compile(r"^([a-z]{2,3})-[a-z]+$"),  # other variants (after lowercase)
+    re.compile(r"^([a-z]{2,3})_[a-z]{2}$"),  # en_us (underscore variant, after lowercase)
+]
+
 
 def normalize_language_code(language_code: str | None) -> str | None:
     """
@@ -86,18 +94,10 @@ def _extract_base_language(language_code: str) -> str | None:
         pt-BR -> pt
         fr-FR -> fr
     """
-    # Common patterns for language tags
-    patterns = [
-        r"^([a-z]{2,3})-[a-z]{2}$",  # en-us, zh-cn (after lowercase)
-        r"^([a-z]{2,3})-[a-z]{4}$",  # zh-hans, zh-hant (after lowercase)
-        r"^([a-z]{2,3})-[a-z]+$",  # other variants (after lowercase)
-        r"^([a-z]{2,3})_[a-z]{2}$",  # en_us (underscore variant, after lowercase)
-    ]
-
     language_code_lower = language_code.lower()
 
-    for pattern in patterns:
-        match = re.match(pattern, language_code_lower)
+    for pattern in LANGUAGE_PATTERNS:
+        match = pattern.match(language_code_lower)
         if match:
             base = match.group(1)
             # Validate that it looks like a language code

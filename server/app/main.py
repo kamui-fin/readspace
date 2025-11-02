@@ -22,6 +22,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
 from app.core.redis_cache import RedisCache
+from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, RequestIdMiddleware
 from app.routers import router as api_router  # Import the main router
 from app.utils.logging_config import setup_logging
 
@@ -153,6 +154,17 @@ FastAPIInstrumentor.instrument_app(app)
 # Initialize Prometheus metrics
 instrumentator = Instrumentator()
 instrumentator.instrument(app).expose(app)
+
+# Add Request ID middleware (must be added before other middleware to ensure request_id is always available)
+app.add_middleware(RequestIdMiddleware)
+
+# Add HTTP Caching middleware (adds ETag and Cache-Control headers)
+# This should be early in the chain to cache the final response
+app.add_middleware(HTTPCachingMiddleware)
+
+# Add Compression middleware (compresses responses with Brotli)
+# This should be last in the middleware chain so it compresses the final response
+app.add_middleware(CompressionMiddleware)
 
 # Configure CORS
 app.add_middleware(

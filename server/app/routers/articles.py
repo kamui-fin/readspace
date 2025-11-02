@@ -2,14 +2,15 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import pytz
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ERROR_ARTICLE_NOT_FOUND
+from app.core.constants import ERROR_ARTICLE_NOT_FOUND, MAX_PAGE_SIZE
+from app.core.dependencies import get_user_service
 from app.db.session import get_db
-from app.schemas.auth import TokenData
-from app.schemas.rss_schemas import (
+from app.schemas import (
     ArticleResponse,
     ArticleUpdate,
     ClippedArticleResponse,
@@ -17,6 +18,7 @@ from app.schemas.rss_schemas import (
     PaginatedResponse,
     SaveArticleRequest,
 )
+from app.schemas.auth import TokenData
 from app.services.article_management_service import ArticleManagementService
 from app.services.auth import get_current_user
 from app.services.user_service import UserService
@@ -26,8 +28,35 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["RSS Articles"])
 
 
+def validate_timezone(timezone: str | None) -> str | None:
+    """Validate timezone against IANA timezone database.
+
+    Args:
+        timezone: Timezone string to validate (e.g., 'America/New_York')
+
+    Returns:
+        The validated timezone string or None if input was None
+
+    Raises:
+        HTTPException: If timezone is not a valid IANA timezone
+    """
+    if timezone is None:
+        return None
+
+    if timezone not in pytz.all_timezones_set:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                f"Invalid timezone '{timezone}'. Must be a valid IANA timezone "
+                f"(e.g., 'America/New_York', 'Europe/London', 'Asia/Tokyo'). "
+                f"See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones for valid values."
+            ),
+        )
+    return timezone
+
+
 @router.post(
-    "/save",
+    "/",
     response_model=ClippedArticleResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Save web article",
@@ -63,6 +92,7 @@ async def save_web_article(
     request: SaveArticleRequest,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
+    user_service: UserService = Depends(get_user_service),
 ) -> ClippedArticleResponse:
     """
     Save a web article from URL for read-later functionality.
@@ -75,6 +105,7 @@ async def save_web_article(
         request: Article save request containing URL and optional metadata
         db: Database session dependency
         current_user: Authenticated user token data
+        user_service: Injected user service
 
     Returns:
         ClippedArticleResponse: The saved article with extracted content and metadata
@@ -91,7 +122,6 @@ async def save_web_article(
         - Duplicate URLs for the same user are handled gracefully
     """
     # Ensure user profile exists in database
-    user_service = UserService(db=db)
     await user_service.ensure_user_profile_exists(current_user)
 
     web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
@@ -149,30 +179,20 @@ async def save_web_article(
 
 @router.get(
     "/",
-    response_model=PaginatedResponse[ArticleResponse],
+    response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="List user articles",
-    description="Retrieve a paginated list of articles with advanced filtering and sorting options",
+    summary="List user articles with cursor pagination",
+    description="Retrieve articles using cursor-based pagination for better performance with large datasets",
     responses={
         200: {
-            "description": "Successfully retrieved paginated articles",
-            "model": PaginatedResponse[ArticleResponse],
-        },
-        400: {
-            "description": "Invalid query parameters",
+            "description": "Successfully retrieved articles with cursor pagination",
             "content": {
                 "application/json": {
-                    "examples": {
-                        "invalid_sort": {
-                            "summary": "Invalid sort parameter",
-                            "value": {
-                                "detail": "Invalid sort_by parameter. Allowed values: ['published_at', 'created_at', 'read_at', 'title']"  # noqa: E501
-                            },
-                        },
-                        "invalid_order": {
-                            "summary": "Invalid sort order",
-                            "value": {"detail": "Invalid sort_order parameter. Allowed values: asc, desc"},
-                        },
+                    "example": {
+                        "items": [],
+                        "next_cursor": "uuid-string",
+                        "has_more": True,
+                        "total_count": None,
                     }
                 }
             },
@@ -184,9 +204,9 @@ async def save_web_article(
                     "example": {
                         "detail": [
                             {
-                                "loc": ["query", "page"],
-                                "msg": "ensure this value is greater than or equal to 1",
-                                "type": "value_error.number.not_ge",
+                                "loc": ["query", "limit"],
+                                "msg": "ensure this value is less than or equal to 200",
+                                "type": "value_error.number.not_le",
                             }
                         ]
                     }
@@ -198,111 +218,62 @@ async def save_web_article(
 async def list_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
+    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
     feed_ids: list[UUID] | None = Query(None, description="Filter by specific feed IDs"),
-    folder_id: UUID | None = Query(None, description="Filter by folder ID"),
     is_read: bool | None = Query(None, description="Filter by read status"),
     is_read_later: bool | None = Query(None, description="Filter by read later status"),
     is_favorite: bool | None = Query(None, description="Filter by article favorite status"),
-    feed_is_favorite: bool | None = Query(None, description="Filter by parent feed's favorite status"),
-    published_since: datetime | None = Query(None, description="Filter by articles published since this UTC datetime"),
-    published_until: datetime | None = Query(None, description="Filter by articles published until this UTC datetime"),
-    user_timezone: str | None = Query(
-        None,
-        description="User's timezone for date calculations (e.g., 'America/New_York')",
-    ),
-    search_query: str | None = Query(None, description="Search query for article title and description"),
-    sort_by: str = Query(
-        "published_at",
-        description="Sort articles by: published_at, created_at, read_at, title",
-    ),
-    sort_order: str = Query("desc", description="Sort order: asc or desc"),
-    page: int = Query(1, ge=1, description="Page number for pagination"),
-    size: int = Query(20, ge=1, le=100, description="Number of items per page"),
-) -> PaginatedResponse[ArticleResponse]:
+) -> dict:
     """
-    Retrieve a paginated list of articles with advanced filtering and sorting options.
+    Retrieve articles using cursor-based pagination for better performance.
 
-    This endpoint provides comprehensive article listing functionality with support for:
-    - Multi-criteria filtering (read status, favorites, date ranges, feeds, folders)
-    - Full-text search across article titles and descriptions
-    - Flexible sorting options
-    - Pagination with configurable page sizes
-    - Preview mode for unsubscribed feeds
+    Cursor pagination provides better performance for large datasets compared to
+    offset-based pagination. It uses the article ID as a cursor, which allows
+    for efficient querying without the performance issues of OFFSET.
 
     Args:
         db: Database session dependency
         current_user: Authenticated user token data
-        feed_ids: Optional list of feed UUIDs to filter articles from specific feeds
-        folder_id: Optional folder UUID to filter articles from feeds in a specific folder
-        is_read: Optional boolean to filter by read status (True=read, False=unread, None=all)
+        cursor: Optional cursor (article ID) for pagination
+        limit: Number of items per page (default: 50, max: 200)
+        feed_ids: Optional list of feed UUIDs to filter articles
+        is_read: Optional boolean to filter by read status
         is_read_later: Optional boolean to filter articles marked for reading later
         is_favorite: Optional boolean to filter articles marked as favorites
-        feed_is_favorite: Optional boolean to filter articles from favorite feeds
-        published_since: Optional UTC datetime to filter articles published after this date
-        published_until: Optional UTC datetime to filter articles published before this date
-        user_timezone: Optional timezone string for date calculations (e.g., 'America/New_York')
-        search_query: Optional search string to match against article titles and descriptions
-        sort_by: Sort field - one of: published_at, created_at, read_at, title (default: published_at)
-        sort_order: Sort direction - 'asc' or 'desc' (default: desc)
-        page: Page number starting from 1 (default: 1)
-        size: Number of articles per page, max 100 (default: 20)
 
     Returns:
-        PaginatedResponse[ArticleResponse]: Paginated list of articles with metadata
+        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
 
-    Raises:
-        HTTPException:
-            - 400: Invalid sort_by or sort_order parameters
-            - 422: Validation error in query parameters (e.g., invalid page/size values)
+    Response Format:
+        {
+            "items": [...],
+            "next_cursor": "uuid-string" or null,
+            "has_more": boolean,
+            "total_count": null (not computed for performance)
+        }
 
     Note:
-        - When requesting articles from a single unsubscribed feed, preview mode is enabled
-        - Search queries perform case-insensitive matching on titles and descriptions
-        - Date filters use UTC timezone unless user_timezone is specified
-        - Results include article metadata, read status, and feed information
+        - Cursor should be the ID of the last article from the previous page
+        - Returns empty items list when no articles match filters
     """
-    article_service = ArticleManagementService(db=db, user_id=UUID(current_user.sub))
-    allowed_sort_by = ["published_at", "created_at", "read_at", "title"]
-    if sort_by not in allowed_sort_by:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid sort_by parameter. Allowed values: {allowed_sort_by}",
-        )
-    if sort_order.lower() not in ["asc", "desc"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid sort_order parameter. Allowed values: asc, desc",
-        )
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
 
-    # Check if user is requesting preview mode by checking if they have access to the feed
-    allow_preview = False
-    if feed_ids and len(feed_ids) == 1:
-        # If requesting articles for a single feed, check if user is subscribed
-        from app.services.feed_management_service import FeedManagementService
+    # Create pagination parameters
+    params = CursorPaginationParams(limit=limit, cursor=cursor)
 
-        feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
-        feed_data = await feed_service.get_feed(feed_ids[0])
-        if feed_data and not feed_data.is_subscribed:
-            allow_preview = True
-
-    paginated_articles = await article_service.get_articles(
+    # Get articles using cursor pagination
+    result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=params,
         feed_ids=feed_ids,
-        folder_id=folder_id,
         is_read=is_read,
         is_read_later=is_read_later,
         is_favorite=is_favorite,
-        feed_is_favorite=feed_is_favorite,
-        published_since=published_since,
-        published_until=published_until,
-        user_timezone=user_timezone,
-        search_query=search_query,
-        sort_by=sort_by,
-        sort_order=sort_order,
-        page=page,
-        size=size,
-        allow_preview=allow_preview,
     )
-    return paginated_articles
+
+    return result.model_dump()
 
 
 @router.get(
@@ -338,7 +309,7 @@ async def get_todays_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number for pagination"),
-    size: int = Query(25, ge=1, le=100, description="Number of items per page"),
+    size: int = Query(25, ge=1, le=MAX_PAGE_SIZE, description="Number of items per page"),
 ) -> PaginatedResponse[ArticleResponse]:
     """
     Retrieve articles published in the last 24 hours.
@@ -387,7 +358,7 @@ async def get_todays_articles(
 
 
 @router.get(
-    "/recently_read",
+    "/recently-read",
     response_model=PaginatedResponse[ArticleResponse],
     status_code=status.HTTP_200_OK,
     summary="Get recently read articles",
@@ -419,7 +390,7 @@ async def get_recently_read_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(20, ge=1, le=100, description="Page size"),
+    size: int = Query(20, ge=1, le=MAX_PAGE_SIZE, description="Page size"),
 ) -> PaginatedResponse[ArticleResponse]:
     """
     Retrieve articles that have been recently read by the user.
@@ -454,7 +425,7 @@ async def get_recently_read_articles(
 
 
 @router.get(
-    "/read_later",
+    "/read-later",
     response_model=PaginatedResponse[ArticleResponse],
     status_code=status.HTTP_200_OK,
     summary="Get read later articles",
@@ -486,7 +457,7 @@ async def get_read_later_articles(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
     page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(100, ge=1, le=200, description="Page size"),
+    size: int = Query(100, ge=1, le=MAX_PAGE_SIZE, description="Page size"),
 ) -> PaginatedResponse[ArticleResponse]:
     """
     Retrieve articles marked for reading later by the user.
@@ -522,7 +493,7 @@ async def get_read_later_articles(
 
 
 @router.get(
-    "/unread_counts",
+    "/unread-counts",
     response_model=dict[str, Any],
     status_code=status.HTTP_200_OK,
     summary="Get unread article counts",
@@ -878,3 +849,105 @@ async def update_article(
         user_id=current_user.sub,
     )
     return updated_article
+
+
+@router.get(
+    "/cursor",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="List articles with cursor pagination",
+    description="Retrieve articles using cursor-based pagination for better performance with large datasets",
+    responses={
+        200: {
+            "description": "Successfully retrieved paginated articles",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "items": [{"id": "uuid", "title": "Article 1"}],
+                        "next_cursor": "uuid",
+                        "has_more": True,
+                        "total_count": None,
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid query parameters"},
+        422: {"description": "Validation error in query parameters"},
+    },
+)
+async def list_articles_cursor(
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+    cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
+    feed_ids: list[UUID] | None = Query(None, description="Filter by specific feed IDs"),
+    is_read: bool | None = Query(None, description="Filter by read status"),
+    is_read_later: bool | None = Query(None, description="Filter by read later status"),
+    is_favorite: bool | None = Query(None, description="Filter by favorite status"),
+) -> dict:
+    """
+    Retrieve articles using cursor-based pagination for better performance.
+
+    Cursor pagination provides better performance for large datasets compared to
+    offset-based pagination. It uses the article ID as a cursor, which allows
+    for efficient querying without the performance issues of OFFSET.
+
+    Args:
+        db: Database session dependency
+        current_user: Authenticated user token data
+        cursor: Cursor for the next page (article ID from previous response)
+        limit: Number of articles to return (default: 50, max: 200)
+        feed_ids: Optional list of feed UUIDs to filter articles
+        is_read: Optional boolean to filter by read status
+        is_read_later: Optional boolean to filter articles marked for reading later
+        is_favorite: Optional boolean to filter articles marked as favorites
+
+    Returns:
+        dict: Cursor pagination result with items, next_cursor, has_more, and total_count
+
+    Response Format:
+        {
+            "items": [ArticleResponse],  # List of articles
+            "next_cursor": "uuid",        # Cursor for next page (null if no more)
+            "has_more": true,             # Whether more pages exist
+            "total_count": null           # Total count (optional, null for performance)
+        }
+
+    Note:
+        - More efficient than offset pagination for large datasets
+        - Consistent results even when data is being inserted/updated
+        - Use next_cursor from response as cursor parameter for next page
+        - Returns empty items list when no articles match filters
+    """
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+
+    # Create pagination parameters
+    params = CursorPaginationParams(limit=limit, cursor=cursor)
+
+    # Get articles using cursor pagination
+    result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=params,
+        feed_ids=feed_ids,
+        is_read=is_read,
+        is_read_later=is_read_later,
+        is_favorite=is_favorite,
+    )
+
+    logger.info(
+        "Cursor paginated articles retrieved",
+        user_id=current_user.sub,
+        cursor=cursor,
+        limit=limit,
+        items_count=len(result.items),
+        has_more=result.has_more,
+    )
+
+    # Convert result to dict for response
+    return {
+        "items": result.items,
+        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
+        "has_more": result.has_more,
+        "total_count": result.total_count,
+    }

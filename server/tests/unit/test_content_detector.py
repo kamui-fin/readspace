@@ -1,7 +1,5 @@
 """Unit tests for content detector utility."""
 
-import pytest
-
 from app.utils.content_detector import is_content_complete
 
 

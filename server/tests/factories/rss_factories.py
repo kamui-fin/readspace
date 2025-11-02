@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
-from app.models.rss_models import (
+from app.models import (
     ArticleContent,
     ClippedArticle,
     Feed,

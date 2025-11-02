@@ -201,9 +201,10 @@ class ArticleResponse(ArticleBase):
     extracted_content: str | None = None
     extracted_read_time: int | None = Field(None, ge=0)
 
-
-# Legacy alias (kept for backward compatibility)
-Article = FeedArticleResponse
+    # Performance optimization: truncated description for list views
+    # Full description field may be None in list views to save bandwidth
+    # Use description_preview for display in article lists
+    description_preview: str | None = Field(None, max_length=250)
 
 
 # ========= Article Management Schemas =========
