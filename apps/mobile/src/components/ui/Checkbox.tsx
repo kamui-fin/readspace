@@ -25,7 +25,9 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
                 ref={ref}
                 className={cn(
                     'h-6 w-6 items-center justify-center rounded-full border-2 transition-opacity active:opacity-70',
-                    checked ? 'border-primary dark:border-primary bg-primary dark:bg-primary' : 'border-green-grey dark:border-mid-grey-dark bg-transparent dark:bg-transparent',
+                    checked
+                        ? 'border-primary bg-primary dark:border-primary dark:bg-primary'
+                        : 'border-green-grey bg-transparent dark:border-mid-grey-dark dark:bg-transparent',
                     className
                 )}
                 {...props}>

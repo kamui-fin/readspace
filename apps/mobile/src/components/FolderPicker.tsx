@@ -27,7 +27,7 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
         const bottomSheetRef = useRef<BottomSheetModal>(null);
         const { colorScheme } = useColorScheme();
         const colors = COLORS[colorScheme ?? 'light'];
-        
+
         useImperativeHandle(ref, () => ({
             present: () => bottomSheetRef.current?.present(),
             dismiss: () => bottomSheetRef.current?.dismiss(),
@@ -40,12 +40,9 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
 
         const typedFolders = (folders as { id: string; name: string }[]) || [];
 
-        const handleSelect = useCallback(
-            (folderId: string) => {
-                setSelectedFolderId(folderId);
-            },
-            []
-        );
+        const handleSelect = useCallback((folderId: string) => {
+            setSelectedFolderId(folderId);
+        }, []);
 
         const handleConfirm = useCallback(() => {
             if (selectedFolderId) {
@@ -69,7 +66,7 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
         const renderFooter = useCallback(
             (props: any) => (
                 <BottomSheetFooter {...props}>
-                    <View className="border-t border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark px-6 pb-6 pt-4">
+                    <View className="border-t border-light-grey bg-white px-6 pb-6 pt-4 dark:border-light-grey-dark dark:bg-white-dark">
                         <Button
                             variant="primary"
                             fullWidth

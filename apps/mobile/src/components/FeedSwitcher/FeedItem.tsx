@@ -16,10 +16,21 @@ export interface FeedItemProps extends Omit<PressableProps, 'children'> {
 }
 
 export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemProps>(
-    ({ feed, isEditMode = false, isSelected = false, isNested = false, onPress, className, ...props }, ref) => {
+    (
+        {
+            feed,
+            isEditMode = false,
+            isSelected = false,
+            isNested = false,
+            onPress,
+            className,
+            ...props
+        },
+        ref
+    ) => {
         // Reset animation when feed id changes (view recycling)
         const animKey = useSharedValue(feed.id);
-        
+
         useEffect(() => {
             animKey.value = feed.id;
         }, [feed.id, animKey]);
@@ -27,8 +38,7 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
         return (
             <Animated.View
                 entering={FadeInDown.duration(250).springify()}
-                exiting={FadeOutUp.duration(200)}
-            >
+                exiting={FadeOutUp.duration(200)}>
                 <Pressable
                     ref={ref}
                     onPress={onPress}
@@ -39,29 +49,31 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                         className
                     )}
                     {...props}>
-                {/* Icon or Checkbox */}
-                {isEditMode ? (
-                    <Checkbox checked={isSelected} />
-                ) : (
-                    <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
-                        {feed.image_url ? (
-                            <Image
-                                source={{ uri: feed.image_url }}
-                                className="h-full w-full"
-                                resizeMode="cover"
-                            />
-                        ) : (
-                            <Text className="font-geist-bold text-sm text-grey dark:text-grey-dark">
-                                {feed.title.charAt(0).toUpperCase()}
-                            </Text>
-                        )}
-                    </View>
-                )}
+                    {/* Icon or Checkbox */}
+                    {isEditMode ? (
+                        <Checkbox checked={isSelected} />
+                    ) : (
+                        <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
+                            {feed.image_url ? (
+                                <Image
+                                    source={{ uri: feed.image_url }}
+                                    className="h-full w-full"
+                                    resizeMode="cover"
+                                />
+                            ) : (
+                                <Text className="font-geist-bold text-sm text-grey dark:text-grey-dark">
+                                    {feed.title.charAt(0).toUpperCase()}
+                                </Text>
+                            )}
+                        </View>
+                    )}
 
-                {/* Feed Name */}
-                <Text className="flex-1 font-geist-medium text-base text-black dark:text-black-dark" numberOfLines={1}>
-                    {feed.title}
-                </Text>
+                    {/* Feed Name */}
+                    <Text
+                        className="flex-1 font-geist-medium text-base text-black dark:text-black-dark"
+                        numberOfLines={1}>
+                        {feed.title}
+                    </Text>
 
                     {/* Unread Badge */}
                     {feed.unread_count > 0 && <Badge label={feed.unread_count.toString()} />}

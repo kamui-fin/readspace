@@ -63,12 +63,14 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                     <Text className="mb-3 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>
-                    <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">{message}</Text>
+                    <Text className="mb-6 font-geist text-base text-grey dark:text-grey-dark">
+                        {message}
+                    </Text>
 
                     <View className="flex-row gap-3">
                         <Pressable
                             onPress={handleCancel}
-                            className="flex-1 items-center justify-center rounded-2xl bg-mid-grey dark:bg-mid-grey-dark py-4 transition-opacity active:opacity-70">
+                            className="flex-1 items-center justify-center rounded-2xl bg-mid-grey py-4 transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
                             <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
                                 {cancelText}
                             </Text>

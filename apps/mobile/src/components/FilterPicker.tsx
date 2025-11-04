@@ -59,7 +59,7 @@ export const FilterPicker = forwardRef<BottomSheet, FilterPickerProps>(
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
-                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6">
+                <BottomSheetView className="flex-1 bg-white px-6 dark:bg-white-dark">
                     <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Filter
                     </Text>

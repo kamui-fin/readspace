@@ -9,7 +9,6 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
 
-
 export default function WelcomeScreen() {
     const router = useRouter();
     const { settings, resetToCloud } = useSettingsStore();
@@ -53,7 +52,7 @@ export default function WelcomeScreen() {
             }
 
             console.log('[GoogleSignIn] Successfully signed in with Google');
-            
+
             // Navigation will be handled by AuthProvider and _layout.tsx
             // based on the needsOnboarding state
             // The layout will redirect to onboarding if user has no feed subscriptions
@@ -108,7 +107,9 @@ export default function WelcomeScreen() {
                     </Button>
 
                     <Button variant="secondary" fullWidth size="lg" onPress={handleSignUp}>
-                        <Text className="font-geist-medium text-lg dark:text-white">Sign up with Email</Text>
+                        <Text className="font-geist-medium text-lg dark:text-white">
+                            Sign up with Email
+                        </Text>
                     </Button>
 
                     {/* Log in link */}

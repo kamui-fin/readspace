@@ -15,7 +15,7 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
             <Pressable
                 ref={ref}
                 className={cn(
-                    'flex-row items-center gap-3 rounded-2xl bg-mid-grey dark:bg-mid-grey-dark px-5 py-4 transition-opacity active:opacity-80',
+                    'flex-row items-center gap-3 rounded-2xl bg-mid-grey px-5 py-4 transition-opacity active:opacity-80 dark:bg-mid-grey-dark',
                     className
                 )}
                 {...props}>
@@ -23,9 +23,15 @@ export const Radio = forwardRef<React.ElementRef<typeof Pressable>, RadioProps>(
                     className={cn(
                         'h-6 w-6 items-center justify-center rounded-full border-2 border-green-grey dark:border-grey-dark'
                     )}>
-                    {selected && <View className="h-3 w-3 rounded-full bg-secondary dark:bg-secondary" />}
+                    {selected && (
+                        <View className="h-3 w-3 rounded-full bg-secondary dark:bg-secondary" />
+                    )}
                 </View>
-                <Text className={cn('font-geist-medium text-base text-black dark:text-black-dark', labelClassName)}>
+                <Text
+                    className={cn(
+                        'font-geist-medium text-base text-black dark:text-black-dark',
+                        labelClassName
+                    )}>
                     {label}
                 </Text>
             </Pressable>

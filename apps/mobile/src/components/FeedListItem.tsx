@@ -56,7 +56,9 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                     onPress={handlePress}
                     className={cn(
                         'flex-row items-center gap-4 py-4',
-                        isPreview ? 'bg-secondary/10 dark:bg-secondary/20' : 'bg-white dark:bg-white-dark',
+                        isPreview
+                            ? 'bg-secondary/10 dark:bg-secondary/20'
+                            : 'bg-white dark:bg-white-dark',
                         className
                     )}
                     {...props}>
@@ -93,7 +95,9 @@ export const FeedListItem = forwardRef<React.ElementRef<typeof Pressable>, FeedL
                             numberOfLines={1}>
                             {stripHtml(title)}
                         </Text>
-                        <Text className="font-geist text-sm text-grey dark:text-grey-dark" numberOfLines={2}>
+                        <Text
+                            className="font-geist text-sm text-grey dark:text-grey-dark"
+                            numberOfLines={2}>
                             {stripHtml(description)}
                         </Text>
                     </View>

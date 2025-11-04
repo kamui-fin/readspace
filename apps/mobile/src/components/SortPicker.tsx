@@ -68,7 +68,7 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
-                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6">
+                <BottomSheetView className="flex-1 bg-white px-6 dark:bg-white-dark">
                     <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Sort by
                     </Text>
@@ -84,7 +84,7 @@ export const SortPicker = forwardRef<BottomSheet, SortPickerProps>(
                         ))}
                     </View>
 
-                    <View className="flex-row items-center justify-between rounded-2xl bg-mid-grey dark:bg-mid-grey-dark px-5 py-4">
+                    <View className="flex-row items-center justify-between rounded-2xl bg-mid-grey px-5 py-4 dark:bg-mid-grey-dark">
                         <View className="flex-row items-center gap-3">
                             <Monicon
                                 name={

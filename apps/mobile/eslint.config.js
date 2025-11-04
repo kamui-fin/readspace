@@ -10,6 +10,7 @@ module.exports = defineConfig([
     {
         rules: {
             'react/display-name': 'off',
+            'react/no-unescaped-entities': 'off',
         },
     },
 ]);

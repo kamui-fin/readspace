@@ -82,7 +82,9 @@ export default function FollowingScreen() {
     }, [viewType, selectedId]);
 
     // When a feed or folder is selected, activeTab is -1, so we should use the "All" query with specific filters
-    const isViewingFeedOrFolder = activeTab === -1 && (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview');
+    const isViewingFeedOrFolder =
+        activeTab === -1 &&
+        (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview');
 
     // Select the appropriate query hook based on active tab
     const todayQuery = useInfiniteTodayArticles({ limit: 25 }, { enabled: activeTab === 0 } as any);
@@ -115,13 +117,23 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isSuccess } = activeQuery;
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isFetching,
+        isSuccess,
+    } = activeQuery;
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
         const infiniteData = data as any;
         if (!infiniteData?.pages) return [];
-        const articles = infiniteData.pages.flatMap((page: CursorPaginatedResponse<Article>) => page.items || []);
+        const articles = infiniteData.pages.flatMap(
+            (page: CursorPaginatedResponse<Article>) => page.items || []
+        );
         // Deduplicate articles by ID
         const uniqueArticles = new Map();
         for (const article of articles) {
@@ -138,15 +150,16 @@ export default function FollowingScreen() {
 
     // Calculate count based on active view
     const unreadCount = useMemo(() => {
-        const feeds = (feedsData as { id: string; unread_count?: number; folder_id?: string }[]) || [];
+        const feeds =
+            (feedsData as { id: string; unread_count?: number; folder_id?: string }[]) || [];
         const counts = unreadCounts as {
             total_unread?: number;
-            unread_by_folder?: Record<string, number>
+            unread_by_folder?: Record<string, number>;
         };
 
         // For feed-specific view
         if (viewType === 'feed' && selectedId) {
-            const feed = feeds.find(f => f.id === selectedId);
+            const feed = feeds.find((f) => f.id === selectedId);
             return feed?.unread_count || 0;
         }
 
@@ -160,7 +173,7 @@ export default function FollowingScreen() {
         switch (activeTab) {
             case 0: // Today
                 // Count articles from today's data
-                return allArticles.filter(a => !a.is_read).length;
+                return allArticles.filter((a) => !a.is_read).length;
             case 1: // Saved (count all saved, not unread)
                 return allArticles.length;
             case 2: // All
@@ -387,9 +400,8 @@ export default function FollowingScreen() {
                 }
             };
 
-            const displayFaviconUrl = isClipped && article.link
-                ? getFaviconUrl(article.link)
-                : feedImageUrl;
+            const displayFaviconUrl =
+                isClipped && article.link ? getFaviconUrl(article.link) : feedImageUrl;
 
             return (
                 <ArticleListItem
@@ -412,8 +424,16 @@ export default function FollowingScreen() {
                     articleUrl={article.link}
                     feedId={feedId || undefined}
                     onPress={() => router.push(`/articles/${article.id}`)}
-                    onBookmark={() => handleBookmark(article.id, article.is_read_later || false, article.article_type)}
-                    onToggleRead={() => handleToggleRead(article.id, article.is_read || false, article.article_type)}
+                    onBookmark={() =>
+                        handleBookmark(
+                            article.id,
+                            article.is_read_later || false,
+                            article.article_type
+                        )
+                    }
+                    onToggleRead={() =>
+                        handleToggleRead(article.id, article.is_read || false, article.article_type)
+                    }
                 />
             );
         }
@@ -433,15 +453,15 @@ export default function FollowingScreen() {
     const emptyStateMessage = useMemo(() => {
         switch (activeTab) {
             case 0:
-                return "No articles for today yet. Check back later!";
+                return 'No articles for today yet. Check back later!';
             case 1:
-                return "No saved articles. Swipe right on articles to bookmark them.";
+                return 'No saved articles. Swipe right on articles to bookmark them.';
             case 2:
-                return "No articles yet. Add some feeds to get started!";
+                return 'No articles yet. Add some feeds to get started!';
             case 3:
-                return "No recently read articles.";
+                return 'No recently read articles.';
             default:
-                return "No articles available.";
+                return 'No articles available.';
         }
     }, [activeTab]);
 
@@ -493,12 +513,8 @@ export default function FollowingScreen() {
                     ListEmptyComponent={
                         !isInitialLoading ? (
                             <View className="items-center justify-center px-6 py-20">
-                                <Monicon
-                                    name="solar:inbox-broken"
-                                    size={64}
-                                    color="#90988B"
-                                />
-                                <Text className="text-center mt-4 font-geist-medium text-lg text-black dark:text-black-dark mb-2">
+                                <Monicon name="solar:inbox-broken" size={64} color="#90988B" />
+                                <Text className="mb-2 mt-4 text-center font-geist-medium text-lg text-black dark:text-black-dark">
                                     Nothing here yet
                                 </Text>
                                 <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">

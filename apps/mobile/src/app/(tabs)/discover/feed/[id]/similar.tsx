@@ -41,29 +41,32 @@ export default function SimilarFeedsScreen() {
         folderPickerRef.current?.present();
     }, []);
 
-    const handleFolderSelect = useCallback((folderId: string | null) => {
-        if (!pendingFeedUrl) {
-            return;
-        }
-
-        createFeed.mutate(
-            {
-                url: pendingFeedUrl,
-                folder_id: folderId || undefined,
-                silent: false,
-            },
-            {
-                onSuccess: () => {
-                    // Button state changes to "Following", no toast needed
-                    setPendingFeedUrl(null);
-                },
-                onError: (error: any) => {
-                    toast.error(error?.message || 'Failed to follow feed');
-                    setPendingFeedUrl(null);
-                },
+    const handleFolderSelect = useCallback(
+        (folderId: string | null) => {
+            if (!pendingFeedUrl) {
+                return;
             }
-        );
-    }, [pendingFeedUrl, createFeed]);
+
+            createFeed.mutate(
+                {
+                    url: pendingFeedUrl,
+                    folder_id: folderId || undefined,
+                    silent: false,
+                },
+                {
+                    onSuccess: () => {
+                        // Button state changes to "Following", no toast needed
+                        setPendingFeedUrl(null);
+                    },
+                    onError: (error: any) => {
+                        toast.error(error?.message || 'Failed to follow feed');
+                        setPendingFeedUrl(null);
+                    },
+                }
+            );
+        },
+        [pendingFeedUrl, createFeed]
+    );
 
     if (isLoading) {
         return (
@@ -193,10 +196,7 @@ export default function SimilarFeedsScreen() {
             </View>
 
             {/* Folder Picker Bottom Sheet - Shared across all feed items */}
-            <FolderPicker
-                ref={folderPickerRef}
-                onFolderSelect={handleFolderSelect}
-            />
+            <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
         </SafeAreaView>
     );
 }

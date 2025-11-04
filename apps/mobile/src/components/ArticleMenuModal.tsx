@@ -115,27 +115,27 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
             // Show "Mark as Done" for clipped articles
             ...(isClipped
                 ? [
-                    {
-                        icon: 'solar:check-circle-bold',
-                        label: 'Mark as Done',
-                        onPress: onMarkAsDone,
-                    },
-                ]
+                      {
+                          icon: 'solar:check-circle-bold',
+                          label: 'Mark as Done',
+                          onPress: onMarkAsDone,
+                      },
+                  ]
                 : []),
             // Only show AI features for subscribed feeds (not for clipped articles)
             ...(isSubscribed && !isClipped
                 ? [
-                    {
-                        icon: 'solar:document-text-bold',
-                        label: 'Generate Summary',
-                        onPress: onSummarize,
-                    },
-                    {
-                        icon: 'lucide:languages',
-                        label: 'Translate',
-                        onPress: handleTranslatePress,
-                    },
-                ]
+                      {
+                          icon: 'solar:document-text-bold',
+                          label: 'Generate Summary',
+                          onPress: onSummarize,
+                      },
+                      {
+                          icon: 'lucide:languages',
+                          label: 'Translate',
+                          onPress: handleTranslatePress,
+                      },
+                  ]
                 : []),
         ];
 
@@ -184,12 +184,24 @@ export const ArticleMenuModal = forwardRef<BottomSheetModal, ArticleMenuModalPro
                         {isSubscribed && !isClipped && (
                             <View
                                 className="flex-row items-center justify-between py-4"
-                                style={{ borderTopWidth: 0.5, borderTopColor: colorScheme === 'dark' ? '#2a2a2a' : '#F0F0F0' }}>
+                                style={{
+                                    borderTopWidth: 0.5,
+                                    borderTopColor: colorScheme === 'dark' ? '#2a2a2a' : '#F0F0F0',
+                                }}>
                                 <View className="flex-row items-center gap-4">
-                                    <Monicon name="solar:global-bold" size={24} color={colors.black} />
-                                    <Text className="font-geist text-base text-black dark:text-black-dark">Web Mode</Text>
+                                    <Monicon
+                                        name="solar:global-bold"
+                                        size={24}
+                                        color={colors.black}
+                                    />
+                                    <Text className="font-geist text-base text-black dark:text-black-dark">
+                                        Web Mode
+                                    </Text>
                                 </View>
-                                <Switch value={webModeEnabled} onValueChange={handleWebModeToggle} />
+                                <Switch
+                                    value={webModeEnabled}
+                                    onValueChange={handleWebModeToggle}
+                                />
                             </View>
                         )}
                     </BottomSheetView>

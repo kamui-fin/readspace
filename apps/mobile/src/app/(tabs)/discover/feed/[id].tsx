@@ -76,7 +76,11 @@ export default function FeedPreviewScreen() {
 
     // Fetch preview articles for the feed
     // Don't fetch articles until preview refresh is done (if in preview mode)
-    const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery({
+    const {
+        data: articlesData,
+        isLoading: isArticlesLoading,
+        refetch: refetchArticles,
+    } = useQuery({
         queryKey: ['feed-articles', id],
         queryFn: async () => {
             const response = await ApiClient.rss.getArticles({
@@ -101,12 +105,15 @@ export default function FeedPreviewScreen() {
     const articles = articlesData?.items || [];
     const similarFeeds = similarData?.similar_feeds || [];
     // Use local state if available, otherwise fall back to feed data
-    const isFollowing = localIsSubscribed !== null ? localIsSubscribed : (feed?.is_subscribed || false);
+    const isFollowing =
+        localIsSubscribed !== null ? localIsSubscribed : feed?.is_subscribed || false;
 
     // Check if feed is dead (no articles published in last 6 months)
-    const isFeedDead = articles.length > 0 && articles[0].published_at
-        ? new Date().getTime() - new Date(articles[0].published_at).getTime() > 6 * 30 * 24 * 60 * 60 * 1000
-        : false;
+    const isFeedDead =
+        articles.length > 0 && articles[0].published_at
+            ? new Date().getTime() - new Date(articles[0].published_at).getTime() >
+              6 * 30 * 24 * 60 * 60 * 1000
+            : false;
 
     // Preview mode: refresh feed on mount to get latest articles
     useEffect(() => {
@@ -194,7 +201,9 @@ export default function FeedPreviewScreen() {
                 },
                 {
                     onSuccess: (data) => {
-                        toast.success(pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title}`);
+                        toast.success(
+                            pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title}`
+                        );
                         setPendingSimilarFeedUrl(null);
                     },
                     onError: (error: any) => {
@@ -254,7 +263,9 @@ export default function FeedPreviewScreen() {
         return (
             <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
                 <View className="flex-1 items-center justify-center px-6">
-                    <Text className="text-center text-base text-grey dark:text-grey-dark">Feed not found</Text>
+                    <Text className="text-center text-base text-grey dark:text-grey-dark">
+                        Feed not found
+                    </Text>
                 </View>
             </SafeAreaView>
         );
@@ -273,8 +284,8 @@ export default function FeedPreviewScreen() {
                         </Pressable>
 
                         {/* Feed Icon */}
-                        <View className="mb-4 relative">
-                            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark">
+                        <View className="relative mb-4">
+                            <View className="h-24 w-24 items-center justify-center overflow-hidden rounded-3xl border-2 border-light-grey bg-white dark:border-light-grey-dark dark:bg-white-dark">
                                 {feed.image_url ? (
                                     <Image
                                         source={{ uri: feed.image_url }}
@@ -288,7 +299,7 @@ export default function FeedPreviewScreen() {
                                 )}
                             </View>
                             {isFeedDead && (
-                                <View className="absolute -top-1 -right-1 rounded-full bg-red px-2.5 py-1 border-2 border-white dark:border-white-dark shadow-sm">
+                                <View className="absolute -right-1 -top-1 rounded-full border-2 border-white bg-red px-2.5 py-1 shadow-sm dark:border-white-dark">
                                     <Text className="font-geist-semibold text-xs text-white">
                                         Inactive
                                     </Text>
@@ -338,7 +349,9 @@ export default function FeedPreviewScreen() {
                                     size={20}
                                     color="#386641"
                                 />
-                                <Text className="font-geist text-sm text-primary dark:text-primary underline flex-1 flex-shrink" numberOfLines={1}>
+                                <Text
+                                    className="flex-1 flex-shrink font-geist text-sm text-primary underline dark:text-primary"
+                                    numberOfLines={1}>
                                     {feed.link || feed.url}
                                 </Text>
                             </Pressable>
@@ -346,11 +359,14 @@ export default function FeedPreviewScreen() {
 
                         {/* Feed Tags */}
                         {feed.tags && feed.tags.length > 0 && (
-                            <View className="mb-6 flex-row items-center gap-2 flex-wrap">
+                            <View className="mb-6 flex-row flex-wrap items-center gap-2">
                                 {feed.tags.slice(0, 5).map((tag, index) => {
-                                    const tagName = typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
+                                    const tagName =
+                                        typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
                                     return (
-                                        <View key={`${tagName}-${index}`} className="flex-row items-center gap-1.5 rounded-full bg-mid-grey dark:bg-mid-grey-dark px-3 py-1.5">
+                                        <View
+                                            key={`${tagName}-${index}`}
+                                            className="flex-row items-center gap-1.5 rounded-full bg-mid-grey px-3 py-1.5 dark:bg-mid-grey-dark">
                                             <Monicon
                                                 name="solar:tag-linear"
                                                 size={14}
@@ -379,21 +395,26 @@ export default function FeedPreviewScreen() {
                                 />
                             ) : (
                                 <Monicon
-                                    name={isFollowing ? 'solar:trash-bin-minimalistic-2-bold' : 'solar:bell-outline'}
+                                    name={
+                                        isFollowing
+                                            ? 'solar:trash-bin-minimalistic-2-bold'
+                                            : 'solar:bell-outline'
+                                    }
                                     size={20}
                                     color={isFollowing ? '#90988B' : '#FFFFFF'}
                                 />
                             )}
                             <Text
-                                className={`font-geist-semibold text-base ${isFollowing ? 'text-grey' : 'text-white'
-                                    }`}>
+                                className={`font-geist-semibold text-base ${
+                                    isFollowing ? 'text-grey' : 'text-white'
+                                }`}>
                                 {createFeed.isPending
                                     ? 'Following...'
                                     : deleteFeed.isPending
-                                        ? 'Unfollowing...'
-                                        : isFollowing
-                                            ? 'Unfollow'
-                                            : 'Follow'}
+                                      ? 'Unfollowing...'
+                                      : isFollowing
+                                        ? 'Unfollow'
+                                        : 'Follow'}
                             </Text>
                         </Button>
                     </View>
@@ -411,7 +432,7 @@ export default function FeedPreviewScreen() {
                             </Text>
                             <Pressable
                                 onPress={handleSeeAllSimilar}
-                                className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
+                                className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60 dark:bg-mid-grey-dark">
                                 <Monicon
                                     name="solar:alt-arrow-right-linear"
                                     size={18}
@@ -427,7 +448,11 @@ export default function FeedPreviewScreen() {
                                         <ShimmerView width={56} height={56} borderRadius={8} />
                                         <View className="flex-1 gap-2">
                                             <ShimmerView width="75%" height={16} borderRadius={4} />
-                                            <ShimmerView width="100%" height={12} borderRadius={4} />
+                                            <ShimmerView
+                                                width="100%"
+                                                height={12}
+                                                borderRadius={4}
+                                            />
                                         </View>
                                     </View>
                                 ))}
@@ -465,7 +490,8 @@ export default function FeedPreviewScreen() {
                                     onPress={() => {
                                         if (shouldShowPreviewBanner) {
                                             // Navigate to Following screen with feed preview mode
-                                            const { selectFeedPreview } = useFeedViewStore.getState();
+                                            const { selectFeedPreview } =
+                                                useFeedViewStore.getState();
                                             selectFeedPreview(feed.id, feed.title || 'Feed');
                                         } else {
                                             // Navigate to Following screen with feed selected
@@ -474,7 +500,7 @@ export default function FeedPreviewScreen() {
                                         }
                                         router.push('/(tabs)/' as any);
                                     }}
-                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey dark:bg-mid-grey-dark active:opacity-60">
+                                    className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60 dark:bg-mid-grey-dark">
                                     <Monicon
                                         name="solar:alt-arrow-right-linear"
                                         size={18}
@@ -492,18 +518,42 @@ export default function FeedPreviewScreen() {
                                 contentContainerStyle={{ paddingHorizontal: 24 }}
                                 renderItem={() => (
                                     <View
-                                        className="overflow-hidden rounded-2xl border border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark"
+                                        className="overflow-hidden rounded-2xl border border-light-grey bg-white dark:border-light-grey-dark dark:bg-white-dark"
                                         style={{ width: CARD_WIDTH, marginRight: CARD_SPACING }}>
-                                        <ShimmerView width={CARD_WIDTH} height={192} borderRadius={0} />
+                                        <ShimmerView
+                                            width={CARD_WIDTH}
+                                            height={192}
+                                            borderRadius={0}
+                                        />
                                         <View className="p-4" style={{ width: CARD_WIDTH }}>
                                             <View className="mb-2 flex-row items-center gap-2">
-                                                <ShimmerView width={6} height={6} borderRadius={3} />
-                                                <ShimmerView width={64} height={12} borderRadius={4} />
+                                                <ShimmerView
+                                                    width={6}
+                                                    height={6}
+                                                    borderRadius={3}
+                                                />
+                                                <ShimmerView
+                                                    width={64}
+                                                    height={12}
+                                                    borderRadius={4}
+                                                />
                                             </View>
                                             <View className="gap-1.5">
-                                                <ShimmerView width="100%" height={16} borderRadius={4} />
-                                                <ShimmerView width="90%" height={16} borderRadius={4} />
-                                                <ShimmerView width="70%" height={16} borderRadius={4} />
+                                                <ShimmerView
+                                                    width="100%"
+                                                    height={16}
+                                                    borderRadius={4}
+                                                />
+                                                <ShimmerView
+                                                    width="90%"
+                                                    height={16}
+                                                    borderRadius={4}
+                                                />
+                                                <ShimmerView
+                                                    width="70%"
+                                                    height={16}
+                                                    borderRadius={4}
+                                                />
                                             </View>
                                         </View>
                                     </View>
@@ -543,7 +593,6 @@ export default function FeedPreviewScreen() {
                             </View>
                         )}
                     </View>
-
                 </ScrollView>
             </SafeAreaView>
 

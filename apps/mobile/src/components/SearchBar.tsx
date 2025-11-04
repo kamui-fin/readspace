@@ -44,7 +44,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             <View className="flex-row items-center gap-3">
                 <View
                     className={cn(
-                        'flex-1 flex-row items-center gap-3 rounded-2xl bg-mid-grey dark:bg-mid-grey-dark px-4 py-1',
+                        'flex-1 flex-row items-center gap-3 rounded-2xl bg-mid-grey px-4 py-1 dark:bg-mid-grey-dark',
                         isFocused && 'border-2 border-primary dark:border-primary',
                         containerClassName
                     )}>
@@ -97,7 +97,9 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
                         onPress={onCancel}
                         className="transition-opacity active:opacity-60"
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                        <Text className="font-geist text-base text-grey dark:text-grey-dark">Cancel</Text>
+                        <Text className="font-geist text-base text-grey dark:text-grey-dark">
+                            Cancel
+                        </Text>
                     </Pressable>
                 )}
             </View>

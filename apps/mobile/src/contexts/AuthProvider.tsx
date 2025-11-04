@@ -122,7 +122,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }, [settings.instance_type, settings.readspace_url, settings.supabase_url]);
 
     useEffect(() => {
-        console.log('[AuthProvider] Setting up auth subscription for instance:', settings.instance_type);
+        console.log(
+            '[AuthProvider] Setting up auth subscription for instance:',
+            settings.instance_type
+        );
 
         const getSession = async () => {
             try {
@@ -315,7 +318,12 @@ export function AuthQueryManager() {
             }
 
             // Only clear cache for SIGNED_IN if we've already initialized (not on app launch)
-            if (event === 'SIGNED_IN' && hasInitializedRef.current && !previousUserId && newUserId) {
+            if (
+                event === 'SIGNED_IN' &&
+                hasInitializedRef.current &&
+                !previousUserId &&
+                newUserId
+            ) {
                 console.log('🧹 Clearing query cache for fresh sign in');
                 queryClient.clear();
             }

@@ -29,7 +29,15 @@ import {
 import { FlashList } from '@shopify/flash-list';
 import { usePathname, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+    forwardRef,
+    useCallback,
+    useEffect,
+    useImperativeHandle,
+    useMemo,
+    useRef,
+    useState,
+} from 'react';
 import { BackHandler, Pressable, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 
@@ -84,13 +92,13 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             data: feedsData,
             isLoading: isFeedsLoading,
             isFetching: isFeedsFetching,
-            isSuccess: isFeedsSuccess
+            isSuccess: isFeedsSuccess,
         } = useFeeds();
         const {
             data: foldersData,
             isLoading: isFoldersLoading,
             isFetching: isFoldersFetching,
-            isSuccess: isFoldersSuccess
+            isSuccess: isFoldersSuccess,
         } = useFolders();
         const createFolderMutation = useCreateFolder();
         const deleteFeedMutation = useDeleteFeed();
@@ -104,7 +112,8 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const folders = useMemo(() => (foldersData as Folder[]) || [], [foldersData]);
 
         // Only show loading spinner during initial load before any data arrives
-        const isLoading = ((isFeedsLoading || isFeedsFetching) && !isFeedsSuccess && !feedsData) ||
+        const isLoading =
+            ((isFeedsLoading || isFeedsFetching) && !isFeedsSuccess && !feedsData) ||
             ((isFoldersLoading || isFoldersFetching) && !isFoldersSuccess && !foldersData);
 
         // Expose methods to parent
@@ -296,7 +305,6 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             setSelectedFolderIds(new Set());
         }, []);
 
-
         const handleMoveToFolder = useCallback(() => {
             folderPickerRef.current?.present();
         }, []);
@@ -335,7 +343,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 // Delete folders first (typically fewer, so individual calls are okay)
                 if (foldersToDelete.length > 0) {
                     await Promise.all(
-                        foldersToDelete.map((folderId) => deleteFolderMutation.mutateAsync(folderId))
+                        foldersToDelete.map((folderId) =>
+                            deleteFolderMutation.mutateAsync(folderId)
+                        )
                     );
                 }
 
@@ -438,18 +448,21 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 
         const keyExtractor = useCallback((item: ListItem) => item.id, []);
 
-        const renderHeader = useCallback(() => (
-            <View className="mb-4 flex-row items-center justify-between px-6">
-                <Text className="font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
-                    {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
-                </Text>
-            </View>
-        ), [isEditMode, selectedCount]);
+        const renderHeader = useCallback(
+            () => (
+                <View className="mb-4 flex-row items-center justify-between px-6">
+                    <Text className="font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
+                        {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
+                    </Text>
+                </View>
+            ),
+            [isEditMode, selectedCount]
+        );
 
         const renderFooter = useCallback(
             (props: any) => (
                 <BottomSheetFooter {...props}>
-                    <View className="border-t border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark px-6 pb-6 pt-4">
+                    <View className="border-t border-light-grey bg-white px-6 pb-6 pt-4 dark:border-light-grey-dark dark:bg-white-dark">
                         {isEditMode ? (
                             <View className="flex-row gap-3">
                                 <View className="flex-1">
@@ -544,7 +557,17 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     </View>
                 </BottomSheetFooter>
             ),
-            [isEditMode, selectedCount, selectedFeedIds, selectedFolderIds, handleNewFolderPress, toggleEditMode, handleRenameFolderPress, handleMoveToFolder, handleDeletePress]
+            [
+                isEditMode,
+                selectedCount,
+                selectedFeedIds,
+                selectedFolderIds,
+                handleNewFolderPress,
+                toggleEditMode,
+                handleRenameFolderPress,
+                handleMoveToFolder,
+                handleDeletePress,
+            ]
         );
 
         return (
@@ -570,7 +593,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                         ListHeaderComponent={renderHeader}
                         ListEmptyComponent={
                             <View className="items-center justify-center px-6 py-12">
-                                <Text className="font-geist text-center text-base text-grey dark:text-grey-dark">
+                                <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">
                                     No feeds yet. Add some feeds to get started!
                                 </Text>
                             </View>
@@ -582,10 +605,10 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 </BottomSheetModal>
 
                 {/* Modals */}
-                <FolderNameModal 
+                <FolderNameModal
                     key="folder-name-create"
-                    ref={folderNameModalRef} 
-                    onCreateFolder={handleCreateFolder} 
+                    ref={folderNameModalRef}
+                    onCreateFolder={handleCreateFolder}
                 />
                 <FolderNameModal
                     key="folder-name-rename"
@@ -594,10 +617,10 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     initialName={folderToRename?.name || ''}
                     onUpdateFolder={handleRenameFolder}
                 />
-                <FolderPicker 
+                <FolderPicker
                     key="folder-picker-switcher"
-                    ref={folderPickerRef} 
-                    onFolderSelect={handleFolderSelect} 
+                    ref={folderPickerRef}
+                    onFolderSelect={handleFolderSelect}
                 />
                 <ConfirmationModal
                     key="confirm-delete-switcher"

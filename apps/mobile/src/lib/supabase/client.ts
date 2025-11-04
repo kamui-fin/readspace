@@ -67,10 +67,7 @@ let supabaseClient: SupabaseClient | null = null;
  * The client is created lazily based on current settings from the store.
  * If url and key are provided, they override the settings store (useful for validation).
  */
-export function getSupabaseClient(
-    supabaseUrl?: string,
-    supabaseAnonKey?: string
-): SupabaseClient {
+export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string): SupabaseClient {
     // If client exists and no override params provided, return existing client
     if (supabaseClient && !supabaseUrl && !supabaseAnonKey) {
         return supabaseClient;
@@ -82,9 +79,7 @@ export function getSupabaseClient(
     const key = supabaseAnonKey || settings.supabase_anon_key;
 
     if (!url || !key) {
-        throw new Error(
-            'Missing Supabase configuration. Please configure your instance settings.'
-        );
+        throw new Error('Missing Supabase configuration. Please configure your instance settings.');
     }
 
     const resolvedUrl = resolveHostname(url);

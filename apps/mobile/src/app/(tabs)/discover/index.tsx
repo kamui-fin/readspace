@@ -11,17 +11,11 @@ import {
     ApiClient,
     useTrendingFeeds,
     type DiscoverSearchResponse,
-    type Feed
+    type Feed,
 } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
-import {
-    Keyboard,
-    Pressable,
-    ScrollView,
-    Text,
-    View,
-} from 'react-native';
+import { Keyboard, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -69,7 +63,13 @@ export default function DiscoverScreen() {
         selectedLanguage === 'english' ? 'en' : selectedLanguage === 'chinese' ? 'zh' : 'ja';
 
     // Fetch trending feeds for default view
-    const { data: trendingData, isLoading: isTrendingLoading, isFetching: isTrendingFetching, isSuccess: isTrendingSuccess, error: trendingError } = useTrendingFeeds(
+    const {
+        data: trendingData,
+        isLoading: isTrendingLoading,
+        isFetching: isTrendingFetching,
+        isSuccess: isTrendingSuccess,
+        error: trendingError,
+    } = useTrendingFeeds(
         {
             language: languageCode,
             limit: 20,
@@ -80,8 +80,8 @@ export default function DiscoverScreen() {
     );
 
     // Show skeleton until we have data
-    const showTrendingSkeleton = (isTrendingLoading || isTrendingFetching) && (!trendingData || trendingData.length === 0);
-
+    const showTrendingSkeleton =
+        (isTrendingLoading || isTrendingFetching) && (!trendingData || trendingData.length === 0);
 
     // Search query for category or text search
     const {
@@ -326,7 +326,7 @@ export default function DiscoverScreen() {
                                     <FeedListSkeleton count={5} />
                                 ) : trendingError ? (
                                     <View className="py-8">
-                                        <Text className="text-center text-base text-red-600 mb-2">
+                                        <Text className="text-red-600 mb-2 text-center text-base">
                                             Error loading trending feeds
                                         </Text>
                                         <Text className="text-center text-sm text-grey dark:text-grey-dark">

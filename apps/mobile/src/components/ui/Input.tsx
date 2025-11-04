@@ -40,7 +40,9 @@ export const Input = forwardRef<React.ElementRef<typeof RNTextInput>, InputProps
         return (
             <View className={cn('w-full', containerClassName)}>
                 {label && (
-                    <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">{label}</Text>
+                    <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
+                        {label}
+                    </Text>
                 )}
                 <RNTextInput
                     ref={ref}
@@ -56,7 +58,9 @@ export const Input = forwardRef<React.ElementRef<typeof RNTextInput>, InputProps
                     }}
                     {...props}
                 />
-                {error && <Text className="mt-1 font-geist text-xs text-red dark:text-red">{error}</Text>}
+                {error && (
+                    <Text className="mt-1 font-geist text-xs text-red dark:text-red">{error}</Text>
+                )}
             </View>
         );
     }

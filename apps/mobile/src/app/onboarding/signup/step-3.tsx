@@ -21,7 +21,7 @@ export default function SignupStep3() {
                 </Text>
             }>
             <View className="flex-1">
-                <Text className="font-geist text-base text-grey text-center">
+                <Text className="text-center font-geist text-base text-grey">
                     Click the link in the email to verify your account and continue setting up your
                     feed.
                 </Text>

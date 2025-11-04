@@ -12,8 +12,12 @@ interface SettingsGroupProps {
 export const SettingsGroup = ({ title, children, className }: SettingsGroupProps) => {
     return (
         <View className={cn('gap-2', className)}>
-            <Text className="font-geist-semibold text-sm text-grey dark:text-grey-dark">{title}</Text>
-            <View className="overflow-hidden rounded-2xl bg-light-grey dark:bg-light-grey-dark">{children}</View>
+            <Text className="font-geist-semibold text-sm text-grey dark:text-grey-dark">
+                {title}
+            </Text>
+            <View className="overflow-hidden rounded-2xl bg-light-grey dark:bg-light-grey-dark">
+                {children}
+            </View>
         </View>
     );
 };
@@ -57,7 +61,9 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
                 case 'select':
                     return (
                         <View className="flex-row items-center gap-2">
-                            <Text className="font-geist text-base text-grey dark:text-grey-dark">{value}</Text>
+                            <Text className="font-geist text-base text-grey dark:text-grey-dark">
+                                {value}
+                            </Text>
                             <Monicon name="lucide:chevrons-up-down" size={20} color="#90988B" />
                         </View>
                     );
@@ -76,12 +82,14 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
             <Pressable
                 ref={ref}
                 className={cn(
-                    'flex-row items-center justify-between bg-white dark:bg-white-dark px-4 py-4 pl-0 transition-opacity active:opacity-80',
+                    'flex-row items-center justify-between bg-white px-4 py-4 pl-0 transition-opacity active:opacity-80 dark:bg-white-dark',
                     !isLast && 'border-b border-light-grey dark:border-mid-grey-dark',
                     className
                 )}
                 {...props}>
-                <Text className="font-geist text-base text-black dark:text-black-dark">{label}</Text>
+                <Text className="font-geist text-base text-black dark:text-black-dark">
+                    {label}
+                </Text>
                 {renderRightContent()}
             </Pressable>
         );

@@ -38,7 +38,9 @@ export function ArticleListSkeleton({ count = 8, className }: ArticleListSkeleto
                     </View>
 
                     {/* Divider */}
-                    {index < count - 1 && <View className="h-[0.5px] bg-green-grey dark:bg-light-grey-dark" />}
+                    {index < count - 1 && (
+                        <View className="h-[0.5px] bg-green-grey dark:bg-light-grey-dark" />
+                    )}
                 </View>
             ))}
         </View>

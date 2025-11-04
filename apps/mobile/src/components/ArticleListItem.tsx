@@ -4,7 +4,15 @@ import { Monicon } from '@monicon/native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback, useRef } from 'react';
-import { Animated, Image, Pressable, Text, View, type PressableProps, useColorScheme } from 'react-native';
+import {
+    Animated,
+    Image,
+    Pressable,
+    Text,
+    View,
+    type PressableProps,
+    useColorScheme,
+} from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 
 export interface ArticleListItemProps extends PressableProps {
@@ -106,14 +114,11 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         };
 
         // Determine display values for clipped articles
-        const displaySource = articleType === 'clipped' && articleUrl
-            ? extractDomain(articleUrl)
-            : source;
+        const displaySource =
+            articleType === 'clipped' && articleUrl ? extractDomain(articleUrl) : source;
 
         // Prioritize note over description for clipped articles
-        const displayDescription = articleType === 'clipped' && note
-            ? note
-            : description;
+        const displayDescription = articleType === 'clipped' && note ? note : description;
 
         // Render left action (bookmark)
         const renderLeftActions = useCallback(
@@ -206,7 +211,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 <Pressable
                     ref={ref}
                     className={cn(
-                        'overflow-hidden rounded-2xl border border-light-grey dark:border-light-grey-dark bg-white dark:bg-white-dark active:opacity-80',
+                        'overflow-hidden rounded-2xl border border-light-grey bg-white active:opacity-80 dark:border-light-grey-dark dark:bg-white-dark',
                         className
                     )}
                     style={width ? { width } : undefined}
@@ -222,11 +227,17 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                             <View className="p-4" style={width ? { width } : undefined}>
                                 <View className="mb-2 flex-row items-center gap-2">
                                     <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                    <Text className="font-geist text-xs text-grey dark:text-grey-dark" numberOfLines={1} ellipsizeMode="tail">
+                                    <Text
+                                        className="font-geist text-xs text-grey dark:text-grey-dark"
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail">
                                         {timestamp}
                                     </Text>
                                 </View>
-                                <Text className="font-geist-semibold text-base leading-6 text-black dark:text-black-dark" numberOfLines={3} ellipsizeMode="tail">
+                                <Text
+                                    className="font-geist-semibold text-base leading-6 text-black dark:text-black-dark"
+                                    numberOfLines={3}
+                                    ellipsizeMode="tail">
                                     {stripHtml(title)}
                                 </Text>
                             </View>
@@ -235,11 +246,17 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                         <View className="p-4" style={width ? { width } : undefined}>
                             <View className="mb-3 flex-row items-center gap-2">
                                 <View className="h-1.5 w-1.5 rounded-full bg-primary" />
-                                <Text className="font-geist text-xs text-grey dark:text-grey-dark" numberOfLines={1} ellipsizeMode="tail">
+                                <Text
+                                    className="font-geist text-xs text-grey dark:text-grey-dark"
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail">
                                     {timestamp}
                                 </Text>
                             </View>
-                            <Text className="mb-3 font-geist-semibold text-lg leading-6 text-black dark:text-black-dark" numberOfLines={3} ellipsizeMode="tail">
+                            <Text
+                                className="mb-3 font-geist-semibold text-lg leading-6 text-black dark:text-black-dark"
+                                numberOfLines={3}
+                                ellipsizeMode="tail">
                                 {stripHtml(title)}
                             </Text>
                             {description && (
@@ -270,7 +287,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 <Pressable
                     ref={ref}
                     className={cn(
-                        'flex-row gap-3 bg-white dark:bg-white-dark py-4',
+                        'flex-row gap-3 bg-white py-4 dark:bg-white-dark',
                         isRead && 'opacity-60',
                         className
                     )}
@@ -305,7 +322,9 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 <Text
                                     className={cn(
                                         'font-geist text-xs',
-                                        isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
+                                        isRead
+                                            ? 'text-grey dark:text-grey-dark'
+                                            : 'text-grey dark:text-grey-dark'
                                     )}
                                     numberOfLines={1}
                                     ellipsizeMode="tail"
@@ -317,9 +336,15 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                     <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
                                 )}
 
-                                <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+                                <Monicon
+                                    name="solar:clock-circle-linear"
+                                    size={14}
+                                    color="#90988B"
+                                />
 
-                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
+                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">
+                                    {timestamp}
+                                </Text>
                             </Pressable>
                         ) : (
                             <View className="mb-2 flex-row items-center gap-2">
@@ -366,7 +391,9 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 <Text
                                     className={cn(
                                         'font-geist text-xs',
-                                        isRead ? 'text-grey dark:text-grey-dark' : 'text-grey dark:text-grey-dark'
+                                        isRead
+                                            ? 'text-grey dark:text-grey-dark'
+                                            : 'text-grey dark:text-grey-dark'
                                     )}
                                     numberOfLines={1}
                                     ellipsizeMode="tail"
@@ -378,17 +405,25 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                     <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
                                 )}
 
-                                <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+                                <Monicon
+                                    name="solar:clock-circle-linear"
+                                    size={14}
+                                    color="#90988B"
+                                />
 
-                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">{timestamp}</Text>
+                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">
+                                    {timestamp}
+                                </Text>
                             </View>
                         )}
 
                         {/* Title */}
                         <Text
                             className={cn(
-                                'mb-2 font-geist-semibold tracking-tight text-base leading-5',
-                                isRead ? 'text-grey dark:text-grey-dark' : 'text-black dark:text-black-dark'
+                                'mb-2 font-geist-semibold text-base leading-5 tracking-tight',
+                                isRead
+                                    ? 'text-grey dark:text-grey-dark'
+                                    : 'text-black dark:text-black-dark'
                             )}
                             numberOfLines={3}>
                             {stripHtml(title)}

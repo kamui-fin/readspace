@@ -27,7 +27,15 @@ const DEFAULT_LANGUAGES: LanguageOption[] = [
 ];
 
 export const LanguagePicker = forwardRef<BottomSheet, LanguagePickerProps>(
-    ({ onLanguageChange, initialLanguage, languages = DEFAULT_LANGUAGES, title = 'Pick a language' }, ref) => {
+    (
+        {
+            onLanguageChange,
+            initialLanguage,
+            languages = DEFAULT_LANGUAGES,
+            title = 'Pick a language',
+        },
+        ref
+    ) => {
         const { colorScheme } = useColorScheme();
         const colors = COLORS[colorScheme ?? 'light'];
         // Use the first language's value as default if initialLanguage is not provided
@@ -70,10 +78,9 @@ export const LanguagePicker = forwardRef<BottomSheet, LanguagePickerProps>(
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
                 <BottomSheetScrollView
-                    className="flex-1 bg-white dark:bg-white-dark px-6"
+                    className="flex-1 bg-white px-6 dark:bg-white-dark"
                     contentContainerStyle={{ paddingBottom: 24 }}
-                    showsVerticalScrollIndicator={false}
-                >
+                    showsVerticalScrollIndicator={false}>
                     <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>

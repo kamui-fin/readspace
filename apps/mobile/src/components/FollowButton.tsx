@@ -42,7 +42,7 @@ export function FollowButton({
     const [optimisticFollowing, setOptimisticFollowing] = useState<boolean | null>(null);
 
     // Check if we're actually subscribed by looking at user's feed list
-    const actuallyFollowing = userFeeds?.some(feed => feed.id === feedId) ?? isFollowing;
+    const actuallyFollowing = userFeeds?.some((feed) => feed.id === feedId) ?? isFollowing;
 
     // Clear optimistic state when actual state catches up and matches it
     useEffect(() => {
@@ -118,7 +118,7 @@ export function FollowButton({
                 className={cn(
                     'flex-row items-center justify-center gap-2 rounded-2xl px-6 py-3',
                     displayFollowing
-                        ? 'border border-mid-grey dark:border-mid-grey-dark bg-white dark:bg-white-dark'
+                        ? 'border border-mid-grey bg-white dark:border-mid-grey-dark dark:bg-white-dark'
                         : 'bg-primary dark:bg-primary',
                     isLoading && 'opacity-50',
                     className
@@ -132,15 +132,17 @@ export function FollowButton({
                 <Text
                     className={cn(
                         'font-geist-semibold text-base',
-                        displayFollowing ? 'text-grey dark:text-grey-dark' : 'text-white dark:text-white'
+                        displayFollowing
+                            ? 'text-grey dark:text-grey-dark'
+                            : 'text-white dark:text-white'
                     )}>
                     {subscribeToFeed.isPending
                         ? 'Following...'
                         : deleteFeed.isPending
-                            ? 'Unfollowing...'
-                            : displayFollowing
-                                ? 'Unfollow'
-                                : 'Follow'}
+                          ? 'Unfollowing...'
+                          : displayFollowing
+                            ? 'Unfollow'
+                            : 'Follow'}
                 </Text>
             </Pressable>
         );
@@ -155,28 +157,27 @@ export function FollowButton({
                 'flex-row items-center gap-2 rounded-full border px-4 py-2',
                 displayFollowing
                     ? 'border-mid-grey dark:border-mid-grey-dark'
-                    : 'border-primary dark:border-primary bg-primary dark:bg-primary',
+                    : 'border-primary bg-primary dark:border-primary dark:bg-primary',
                 isLoading && 'opacity-50',
                 className
             )}>
             {isLoading && (
-                <ActivityIndicator
-                    size="small"
-                    color={displayFollowing ? '#90988B' : '#FFFFFF'}
-                />
+                <ActivityIndicator size="small" color={displayFollowing ? '#90988B' : '#FFFFFF'} />
             )}
             <Text
                 className={cn(
                     'font-geist-semibold text-sm',
-                    displayFollowing ? 'text-grey dark:text-grey-dark' : 'text-white dark:text-white'
+                    displayFollowing
+                        ? 'text-grey dark:text-grey-dark'
+                        : 'text-white dark:text-white'
                 )}>
                 {subscribeToFeed.isPending
                     ? 'Following...'
                     : deleteFeed.isPending
-                        ? 'Unfollowing...'
-                        : displayFollowing
-                            ? 'Following'
-                            : 'Follow'}
+                      ? 'Unfollowing...'
+                      : displayFollowing
+                        ? 'Following'
+                        : 'Follow'}
             </Text>
         </Pressable>
     );

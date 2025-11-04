@@ -25,10 +25,11 @@ export default function FeedRecommendationsStep() {
     const categoryList = categories ? categories.split(',') : [];
 
     // Fetch recommendations based on selected categories
-    const { data: recommendationsData, isLoading, error } = useGetRecommendations(
-        categoryList,
-        { limit: 20 }
-    );
+    const {
+        data: recommendationsData,
+        isLoading,
+        error,
+    } = useGetRecommendations(categoryList, { limit: 20 });
 
     const handleFollowRequest = async (feedUrl: string) => {
         const feed = recommendationsData?.results.find((f: any) => f.url === feedUrl);
@@ -38,7 +39,7 @@ export default function FeedRecommendationsStep() {
             // Subscribe to feed with default folder (backend will handle creating default folder)
             await subscribeToFeed.mutateAsync({
                 feedId: feed.id,
-                folderId: "default", // Backend will handle this
+                folderId: 'default', // Backend will handle this
             });
 
             // Track subscribed feed
@@ -109,11 +110,7 @@ export default function FeedRecommendationsStep() {
                     <Text className="mb-4 text-center font-geist text-base text-grey dark:text-grey-dark">
                         We couldn't load publications for your selected topics.
                     </Text>
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        fullWidth
-                        onPress={() => router.back()}>
+                    <Button variant="primary" size="lg" fullWidth onPress={() => router.back()}>
                         Go Back
                     </Button>
                 </View>
@@ -129,7 +126,7 @@ export default function FeedRecommendationsStep() {
             title="Picked for you"
             subtitle="Here are some top feeds based on your interests">
             <View className="flex-1">
-                <ScrollView className="flex-1 mb-2" showsVerticalScrollIndicator={false}>
+                <ScrollView className="mb-2 flex-1" showsVerticalScrollIndicator={false}>
                     {recommendationsData.results.map((feed: any) => (
                         <FeedListItem
                             key={feed.id}
@@ -149,7 +146,8 @@ export default function FeedRecommendationsStep() {
                 {subscribedFeeds.length > 0 && (
                     <View className="mb-4 mt-2">
                         <Text className="text-center font-geist text-sm text-grey dark:text-grey-dark">
-                            {subscribedFeeds.length} source{subscribedFeeds.length === 1 ? '' : 's'} added
+                            {subscribedFeeds.length} source{subscribedFeeds.length === 1 ? '' : 's'}{' '}
+                            added
                             {subscribedFeeds.length < minFollowCount &&
                                 ` • ${minFollowCount - subscribedFeeds.length} more to go`}
                         </Text>
@@ -174,4 +172,3 @@ export default function FeedRecommendationsStep() {
         </OnboardingLayout>
     );
 }
-

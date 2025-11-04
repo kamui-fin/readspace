@@ -32,7 +32,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
     ({ onSave, initialData }, ref) => {
         const { colorScheme } = useColorScheme();
         const colors = COLORS[colorScheme ?? 'light'];
-        
+
         const [apiUrl, setApiUrl] = useState(initialData?.apiUrl || '');
         const [supabaseUrl, setSupabaseUrl] = useState(initialData?.supabaseUrl || '');
         const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
@@ -172,7 +172,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
-                <BottomSheetView className="flex-1 bg-white dark:bg-white-dark px-6 py-4">
+                <BottomSheetView className="flex-1 bg-white px-6 py-4 dark:bg-white-dark">
                     <Text className="mb-2 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Self-hosted connection
                     </Text>
@@ -266,7 +266,9 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                     fontFamily: 'GeistMono_400Regular',
                                     color: colors.black,
                                     borderWidth: errors.supabaseAnonKey ? 2 : 0,
-                                    borderColor: errors.supabaseAnonKey ? colors.red : 'transparent',
+                                    borderColor: errors.supabaseAnonKey
+                                        ? colors.red
+                                        : 'transparent',
                                 }}
                             />
                             {errors.supabaseAnonKey && (

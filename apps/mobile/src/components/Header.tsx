@@ -88,7 +88,7 @@ export const Header = (props: HeaderProps) => {
 
         return (
             <View
-                className="mb-2 flex-row items-center gap-2 bg-white dark:bg-white-dark px-4 py-2"
+                className="mb-2 flex-row items-center gap-2 bg-white px-4 py-2 dark:bg-white-dark"
                 onLayout={(e) => setTabsHeight(e.nativeEvent.layout.height)}>
                 {tabs.map((tab, index) => (
                     <Tab
@@ -136,7 +136,9 @@ export const Header = (props: HeaderProps) => {
     // Render sticky variant
     if (variant === 'sticky') {
         return (
-            <View className={cn('w-full bg-white dark:bg-white-dark', className)} style={{ paddingTop: insets.top }}>
+            <View
+                className={cn('w-full bg-white dark:bg-white-dark', className)}
+                style={{ paddingTop: insets.top }}>
                 {renderForeground()}
             </View>
         );

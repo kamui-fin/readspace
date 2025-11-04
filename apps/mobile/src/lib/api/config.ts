@@ -55,8 +55,11 @@ export function configureApiClient(readspaceUrl?: string) {
                 // If token expires in less than 60 seconds, refresh it
                 if (timeUntilExpiry < 60) {
                     console.log('[ApiClient] Token expiring soon, refreshing...');
-                    const { data: { session: refreshedSession }, error } = await supabase.auth.refreshSession();
-                    
+                    const {
+                        data: { session: refreshedSession },
+                        error,
+                    } = await supabase.auth.refreshSession();
+
                     if (error) {
                         console.error('[ApiClient] Failed to refresh session:', error);
                         return session.access_token; // Return old token as fallback

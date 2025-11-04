@@ -4,7 +4,6 @@ import { ArticleReaderSkeleton } from '@/components/skeletons';
 import { COLORS } from '@/constants/Colors';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
-import { useFocusEffect } from '@react-navigation/native';
 import {
     fetchTranslation,
     useArticle,
@@ -14,7 +13,7 @@ import {
 } from '@readspace/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
@@ -69,10 +68,10 @@ export default function ArticleScreen() {
     } = useSummarizeArticle(
         id || '',
         contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
-            ? (article?.extracted_content || extractedData?.content) || undefined
+            ? article?.extracted_content || extractedData?.content || undefined
             : contentSource === 'translated' && translatedContent
-                ? translatedContent
-                : article?.content || undefined
+              ? translatedContent
+              : article?.content || undefined
     );
 
     // Sync contentSource with article.extracted_content (use useLayoutEffect to prevent flicker)
@@ -216,39 +215,43 @@ export default function ArticleScreen() {
         setAiSummary(undefined);
     }, []);
 
-    const handleTranslate = useCallback(async (languageCode: string) => {
-        if (!article) return;
+    const handleTranslate = useCallback(
+        async (languageCode: string) => {
+            if (!article) return;
 
-        menuModalRef.current?.dismiss();
-        setIsTranslating(true);
-        toast.loading('Translating article...', { id: 'translate' });
+            menuModalRef.current?.dismiss();
+            setIsTranslating(true);
+            toast.loading('Translating article...', { id: 'translate' });
 
-        try {
-            const currentContent =
-                contentSource === 'extracted' && (article.extracted_content || extractedData?.content)
-                    ? (article.extracted_content || extractedData?.content)
-                    : article.content;
+            try {
+                const currentContent =
+                    contentSource === 'extracted' &&
+                    (article.extracted_content || extractedData?.content)
+                        ? article.extracted_content || extractedData?.content
+                        : article.content;
 
-            const result = await fetchTranslation(
-                queryClient,
-                article.id,
-                languageCode,
-                currentContent || undefined
-            );
+                const result = await fetchTranslation(
+                    queryClient,
+                    article.id,
+                    languageCode,
+                    currentContent || undefined
+                );
 
-            if (result.translated_content) {
-                setTranslatedContent(result.translated_content);
-                setContentSource('translated');
-                toast.success('Article translated!', { id: 'translate' });
-            } else {
-                toast.error('Translation failed', { id: 'translate' });
+                if (result.translated_content) {
+                    setTranslatedContent(result.translated_content);
+                    setContentSource('translated');
+                    toast.success('Article translated!', { id: 'translate' });
+                } else {
+                    toast.error('Translation failed', { id: 'translate' });
+                }
+            } catch {
+                toast.error('Failed to translate article', { id: 'translate' });
+            } finally {
+                setIsTranslating(false);
             }
-        } catch {
-            toast.error('Failed to translate article', { id: 'translate' });
-        } finally {
-            setIsTranslating(false);
-        }
-    }, [article, contentSource, extractedData, queryClient]);
+        },
+        [article, contentSource, extractedData, queryClient]
+    );
 
     const handleWebModeChange = useCallback(
         async (enabled: boolean) => {
@@ -284,16 +287,16 @@ export default function ArticleScreen() {
     // Get the current content to display
     const displayContent =
         contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
-            ? (article?.extracted_content || extractedData?.content) || ''
+            ? article?.extracted_content || extractedData?.content || ''
             : contentSource === 'translated' && translatedContent
-                ? translatedContent
-                : article?.content || '';
+              ? translatedContent
+              : article?.content || '';
 
     if (isArticleLoading) {
         return (
             <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
                 {/* Top Action Bar Skeleton */}
-                <View className="flex-row items-center justify-between border-b border-light-grey dark:border-light-grey-dark px-4 py-3">
+                <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3 dark:border-light-grey-dark">
                     <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
                     <View className="flex-row items-center gap-3">
                         <View className="h-11 w-11 rounded-full bg-mid-grey dark:bg-mid-grey-dark" />
@@ -310,7 +313,9 @@ export default function ArticleScreen() {
         return (
             <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
                 <View className="flex-1 items-center justify-center px-6">
-                    <Text className="text-center text-base text-grey dark:text-grey-dark">Article not found</Text>
+                    <Text className="text-center text-base text-grey dark:text-grey-dark">
+                        Article not found
+                    </Text>
                 </View>
             </SafeAreaView>
         );
@@ -319,7 +324,7 @@ export default function ArticleScreen() {
     return (
         <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-white-dark">
             {/* Top Action Bar */}
-            <View className="flex-row items-center justify-between border-b border-light-grey dark:border-light-grey-dark px-4 py-3">
+            <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3 dark:border-light-grey-dark">
                 {/* Close Button */}
                 <Pressable
                     onPress={handleClose}
@@ -345,11 +350,17 @@ export default function ArticleScreen() {
                                 isClipped
                                     ? 'solar:check-circle-bold'
                                     : article.is_read_later
-                                        ? 'solar:bookmark-bold'
-                                        : 'solar:bookmark-linear'
+                                      ? 'solar:bookmark-bold'
+                                      : 'solar:bookmark-linear'
                             }
                             size={20}
-                            color={isClipped ? '#6A994E' : article.is_read_later ? '#FBBC04' : colors.black}
+                            color={
+                                isClipped
+                                    ? '#6A994E'
+                                    : article.is_read_later
+                                      ? '#FBBC04'
+                                      : colors.black
+                            }
                         />
                     </Pressable>
 

@@ -17,7 +17,10 @@ export interface OnboardingLayoutProps extends ViewProps {
 export const OnboardingLayout = forwardRef<React.ElementRef<typeof View>, OnboardingLayoutProps>(
     ({ currentStep, totalSteps, icon, title, subtitle, children, className, ...props }, ref) => {
         return (
-            <View ref={ref} className={cn('flex-1 bg-white dark:bg-white-dark', className)} {...props}>
+            <View
+                ref={ref}
+                className={cn('flex-1 bg-white dark:bg-white-dark', className)}
+                {...props}>
                 <View className="flex-1 justify-center px-6 py-16">
                     {/* Stepper */}
                     <Stepper totalSteps={totalSteps} currentStep={currentStep} className="mb-20" />
@@ -36,7 +39,9 @@ export const OnboardingLayout = forwardRef<React.ElementRef<typeof View>, Onboar
 
                     {/* Subtitle */}
                     {typeof subtitle === 'string' ? (
-                        <Text className="mb-8 font-geist text-base text-grey dark:text-grey-dark">{subtitle}</Text>
+                        <Text className="mb-8 font-geist text-base text-grey dark:text-grey-dark">
+                            {subtitle}
+                        </Text>
                     ) : (
                         <View className="mb-8">{subtitle}</View>
                     )}

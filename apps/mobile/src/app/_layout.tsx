@@ -5,7 +5,12 @@ import { useFonts } from '@/hooks/useFonts';
 import { useThemeStore } from '@/stores/theme';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+    focusManager,
+    onlineManager,
+    QueryClient,
+    QueryClientProvider,
+} from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as Network from 'expo-network';
 import * as SplashScreen from 'expo-splash-screen';
@@ -49,11 +54,13 @@ function RootLayoutNav() {
     // Setup network status listener
     useEffect(() => {
         onlineManager.setEventListener((setOnline) => {
-            const eventSubscription = Network.addNetworkStateListener((state: Network.NetworkState) => {
-                const online = !!state.isConnected;
-                setOnline(online);
-                setIsOnline(online);
-            });
+            const eventSubscription = Network.addNetworkStateListener(
+                (state: Network.NetworkState) => {
+                    const online = !!state.isConnected;
+                    setOnline(online);
+                    setIsOnline(online);
+                }
+            );
             return eventSubscription.remove;
         });
     }, []);
@@ -101,12 +108,15 @@ function RootLayoutNav() {
         } else if (isAuthenticated && needsOnboarding && !inOnboarding && onWelcome) {
             // Authenticated but needs onboarding and on welcome screen → redirect to onboarding
             // Only redirect from welcome screen to avoid navigation loops
-            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding from welcome)');
+            console.log(
+                '[RootLayoutNav] Redirecting to onboarding (needs onboarding from welcome)'
+            );
             router.replace('/onboarding/feeds/categories');
         } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
             // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
             // Exception: Don't redirect if on signup step-3 (email verification notice)
-            const onEmailVerification = segments.at(0) === 'onboarding' &&
+            const onEmailVerification =
+                segments.at(0) === 'onboarding' &&
                 segments.at(1) === 'signup' &&
                 segments.at(2) === 'step-3';
 
@@ -131,7 +141,9 @@ function RootLayoutNav() {
                     <Stack.Screen name="(tabs)" />
                 </Stack>
                 {!isOnline && (
-                    <View className="absolute top-0 left-0 right-0 z-50 bg-red dark:bg-red px-4 py-3" style={{ paddingTop: 50 }}>
+                    <View
+                        className="absolute left-0 right-0 top-0 z-50 bg-red px-4 py-3 dark:bg-red"
+                        style={{ paddingTop: 50 }}>
                         <Text className="text-center font-geist text-sm text-white">
                             No internet connection
                         </Text>
@@ -178,7 +190,8 @@ export default function RootLayout() {
                                         borderRadius: 8,
                                         paddingHorizontal: 20,
                                         paddingVertical: 16,
-                                        backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#F9F9F9',
+                                        backgroundColor:
+                                            colorScheme === 'dark' ? '#1C1C1E' : '#F9F9F9',
                                         shadowColor: colorScheme === 'dark' ? '#000000' : '#959DA5',
                                         shadowOffset: { width: 0, height: 2 },
                                         shadowOpacity: 0.2,

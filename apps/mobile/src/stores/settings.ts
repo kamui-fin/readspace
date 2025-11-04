@@ -85,7 +85,8 @@ export const useSettingsStore = create<SettingsStore>()(
                         instance_type: state.settings.instance_type,
                         readspace_url: state.settings.readspace_url,
                         supabase_url: state.settings.supabase_url,
-                        supabase_anon_key: state.settings.supabase_anon_key.substring(0, 50) + '...',
+                        supabase_anon_key:
+                            state.settings.supabase_anon_key.substring(0, 50) + '...',
                     });
 
                     // Reconfigure clients with rehydrated settings (lazy import to avoid circular dependency)

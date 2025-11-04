@@ -23,9 +23,8 @@ export type ThemeStore = ThemeState & ThemeActions;
 
 // Helper to apply theme immediately
 const applyTheme = (theme: Theme, systemColorScheme: ColorSchemeName) => {
-    const effectiveScheme = theme === 'system'
-        ? (systemColorScheme === 'dark' ? 'dark' : 'light')
-        : theme;
+    const effectiveScheme =
+        theme === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : theme;
     colorScheme.set(effectiveScheme);
 };
 

@@ -22,11 +22,7 @@ export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProp
     const shimmerTranslate = useSharedValue(-1);
 
     useEffect(() => {
-        shimmerTranslate.value = withRepeat(
-            withTiming(1, { duration: 1500 }),
-            -1,
-            false
-        );
+        shimmerTranslate.value = withRepeat(withTiming(1, { duration: 1500 }), -1, false);
     }, [shimmerTranslate]);
 
     const animatedStyle = useAnimatedStyle(() => {

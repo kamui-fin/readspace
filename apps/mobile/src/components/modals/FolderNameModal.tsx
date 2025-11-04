@@ -109,11 +109,13 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                         className={`items-center justify-center rounded-2xl py-4 transition-opacity ${
                             folderName.trim()
                                 ? 'bg-primary active:opacity-70'
-                                : 'bg-mid-grey dark:bg-mid-grey-dark opacity-50'
+                                : 'bg-mid-grey opacity-50 dark:bg-mid-grey-dark'
                         }`}>
                         <Text
                             className={`font-geist-semibold text-base ${
-                                folderName.trim() ? 'text-white dark:text-white-dark' : 'text-grey dark:text-grey-dark'
+                                folderName.trim()
+                                    ? 'text-white dark:text-white-dark'
+                                    : 'text-grey dark:text-grey-dark'
                             }`}>
                             {mode === 'create' ? 'Create' : 'Rename'}
                         </Text>

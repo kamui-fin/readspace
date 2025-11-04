@@ -46,9 +46,13 @@ export const BookCard = forwardRef<React.ElementRef<typeof Pressable>, BookCardP
                     {title}
                 </Text>
                 {isCompleted ? (
-                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">Completed</Text>
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                        Completed
+                    </Text>
                 ) : pagesLeft !== undefined ? (
-                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">{pagesLeft} p. left</Text>
+                    <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                        {pagesLeft} p. left
+                    </Text>
                 ) : null}
             </Pressable>
         );

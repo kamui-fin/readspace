@@ -12,7 +12,8 @@ const buttonVariants = cva(
                 secondary: 'bg-mid-grey dark:bg-mid-grey-dark',
                 black: 'bg-black dark:bg-black-dark',
                 neutral: 'bg-mid-grey dark:bg-mid-grey-dark',
-                outline: 'bg-transparent dark:bg-transparent border-2 border-black dark:border-black-dark',
+                outline:
+                    'bg-transparent dark:bg-transparent border-2 border-black dark:border-black-dark',
             },
             size: {
                 default: 'h-[52px] px-6',

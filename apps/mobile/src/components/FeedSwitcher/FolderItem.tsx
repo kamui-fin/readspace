@@ -97,10 +97,14 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                         onPress={handleChevronPress}
                         hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
                         className="transition-opacity active:opacity-70">
-                        <Monicon 
-                            name={isExpanded ? "solar:alt-arrow-down-linear" : "solar:alt-arrow-right-linear"} 
-                            size={20} 
-                            color="#90988B" 
+                        <Monicon
+                            name={
+                                isExpanded
+                                    ? 'solar:alt-arrow-down-linear'
+                                    : 'solar:alt-arrow-right-linear'
+                            }
+                            size={20}
+                            color="#90988B"
                         />
                     </Pressable>
                 )}

@@ -39,7 +39,9 @@ export default function FeedCategoriesStep() {
     const handleNext = () => {
         // Navigate to recommendations with selected categories
         const categoriesParam = selectedCategories.join(',');
-        router.push(`/onboarding/feeds/recommendations?categories=${encodeURIComponent(categoriesParam)}`);
+        router.push(
+            `/onboarding/feeds/recommendations?categories=${encodeURIComponent(categoriesParam)}`
+        );
     };
 
     const iconColor = colorScheme === 'dark' ? COLORS.dark.grey : COLORS.light.grey;
@@ -77,4 +79,3 @@ export default function FeedCategoriesStep() {
         </OnboardingLayout>
     );
 }
-

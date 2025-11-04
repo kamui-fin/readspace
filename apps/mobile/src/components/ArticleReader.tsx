@@ -385,7 +385,7 @@ export function ArticleReader({
             'GeistMono_600SemiBold',
             'GeistMono_700Bold',
             'serif',
-            ...Constants.systemFonts
+            ...Constants.systemFonts,
         ],
         []
     );
@@ -419,15 +419,24 @@ export function ArticleReader({
     }
 
     console.log('ArticleReader - Full article keys:', Object.keys(article));
-    console.log('ArticleReader - isClipped:', isClipped, 'feedId:', feedId, 'feedTitle:', feedTitle, 'article.feed:', article.feed);
+    console.log(
+        'ArticleReader - isClipped:',
+        isClipped,
+        'feedId:',
+        feedId,
+        'feedTitle:',
+        feedTitle,
+        'article.feed:',
+        article.feed
+    );
 
     // For clipped articles, show domain and use created_at as saved date
     const displaySource = isClipped ? extractDomain(article.link) : feedTitle;
     const displayDate = isClipped
         ? `Saved ${new Date(article.created_at).toLocaleDateString()}`
         : article.published_at
-            ? new Date(article.published_at).toLocaleDateString()
-            : 'Unknown date';
+          ? new Date(article.published_at).toLocaleDateString()
+          : 'Unknown date';
 
     // Get favicon URL for clipped articles
     const getFaviconUrl = (url: string): string => {
@@ -439,9 +448,8 @@ export function ArticleReader({
         }
     };
 
-    const displayFaviconUrl = isClipped && article.link
-        ? getFaviconUrl(article.link)
-        : feedImageUrl;
+    const displayFaviconUrl =
+        isClipped && article.link ? getFaviconUrl(article.link) : feedImageUrl;
 
     // Calculate reading time from content with proper CJK support
     const readTimeMinutes = useMemo(() => {
@@ -476,21 +484,27 @@ export function ArticleReader({
         });
 
         // Remove figure tags containing the featured image (do this first)
-        const figurePattern = /<figure[^>]*>[\s\S]*?<img[^>]*src=["'][^"']*["'][^>]*>[\s\S]*?<\/figure>/gi;
+        const figurePattern =
+            /<figure[^>]*>[\s\S]*?<img[^>]*src=["'][^"']*["'][^>]*>[\s\S]*?<\/figure>/gi;
         content = content.replace(figurePattern, (match) => {
             const normalizedMatch = normalizeUrl(match);
             return normalizedMatch.includes(normalizedImageUrl) ? '' : match;
         });
 
         // Clean up any empty figure tags left behind
-        content = content.replace(/<figure[^>]*>\s*<figcaption>\s*<\/figcaption>\s*<\/figure>/gi, '');
+        content = content.replace(
+            /<figure[^>]*>\s*<figcaption>\s*<\/figcaption>\s*<\/figure>/gi,
+            ''
+        );
         content = content.replace(/<figure[^>]*>\s*<\/figure>/gi, '');
 
         return content;
     }, [article.content, article.image_url]);
 
     return (
-        <ScrollView className="flex-1 bg-white dark:bg-white-dark" contentContainerStyle={{ paddingBottom: 80 }}>
+        <ScrollView
+            className="flex-1 bg-white dark:bg-white-dark"
+            contentContainerStyle={{ paddingBottom: 80 }}>
             {/* Featured Image with Galeria */}
             {article.image_url && (
                 <Galeria urls={[article.image_url]}>
@@ -508,7 +522,7 @@ export function ArticleReader({
             )}
 
             {/* Article Header */}
-            <View className="mx-6 mb-6 mt-6 border-b border-light-grey dark:border-light-grey-dark pb-6">
+            <View className="mx-6 mb-6 mt-6 border-b border-light-grey pb-6 dark:border-light-grey-dark">
                 {/* Source and Priority */}
                 {!isClipped && feedId ? (
                     <Pressable
@@ -588,7 +602,7 @@ export function ArticleReader({
 
                 {/* Note for clipped articles */}
                 {isClipped && article.note && (
-                    <View className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 border border-amber-200 dark:border-amber-800">
+                    <View className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800 dark:bg-amber-900/20">
                         <Text className="font-geist text-sm leading-relaxed text-grey dark:text-grey-dark">
                             {article.note}
                         </Text>
@@ -599,18 +613,28 @@ export function ArticleReader({
                 <View className="flex-row flex-wrap items-center gap-2">
                     {article.author && !isClipped && (
                         <>
-                            <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                            <Text
+                                className="flex-shrink font-geist text-sm text-grey dark:text-grey-dark"
+                                numberOfLines={1}>
                                 By {article.author}
                             </Text>
-                            <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>
+                            <Text className="font-geist text-sm text-grey dark:text-grey-dark">
+                                /
+                            </Text>
                         </>
                     )}
-                    <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                    <Text
+                        className="flex-shrink font-geist text-sm text-grey dark:text-grey-dark"
+                        numberOfLines={1}>
                         {displayDate}
                     </Text>
-                    {readTime && <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>}
                     {readTime && (
-                        <Text className="font-geist text-sm text-grey dark:text-grey-dark flex-shrink" numberOfLines={1}>
+                        <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>
+                    )}
+                    {readTime && (
+                        <Text
+                            className="flex-shrink font-geist text-sm text-grey dark:text-grey-dark"
+                            numberOfLines={1}>
                             {readTime}
                         </Text>
                     )}
