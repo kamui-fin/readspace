@@ -6,7 +6,7 @@ authors = [
     {name = "Kamui",email = "fin-kamui@pm.me"}
 ]
 readme = "README.md"
-requires-python = ">=3.10,<=3.13.7"
+requires-python = ">=3.10,<=3.13.9"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

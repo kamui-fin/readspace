@@ -4,7 +4,6 @@ import { ArticleReaderSkeleton } from '@/components/skeletons';
 import { COLORS } from '@/constants/Colors';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
-import { useFocusEffect } from '@react-navigation/native';
 import {
     fetchTranslation,
     useArticle,
@@ -14,7 +13,7 @@ import {
 } from '@readspace/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
