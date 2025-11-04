@@ -196,6 +196,7 @@ class FeedSimilarityService:
         try:
             # Explicitly load the deferred embedding field using undefer
             from sqlalchemy.orm import undefer
+
             stmt = select(Feed).options(undefer(Feed.embedding)).where(Feed.id == feed_id)
             result = await self.db.execute(stmt)
             return result.scalar_one_or_none()

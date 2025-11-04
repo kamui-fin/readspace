@@ -6,6 +6,7 @@ import structlog
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import FeedSubscriptionError
 from app.crud import crud_feed, crud_subscription
 from app.schemas.subscriptions import (
     SubscriptionCreate,
@@ -14,7 +15,6 @@ from app.schemas.subscriptions import (
 )
 from app.services.feeds.feed import FeedService
 from app.services.folder import FolderService
-from app.core.custom_exceptions import FeedSubscriptionError
 
 logger = structlog.get_logger(__name__)
 

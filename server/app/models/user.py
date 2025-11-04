@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, Text
+from sqlalchemy import Column, DateTime, ForeignKey, Text
+from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.db.base_class import Base

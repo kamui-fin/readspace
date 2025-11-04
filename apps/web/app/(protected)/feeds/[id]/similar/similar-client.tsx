@@ -31,7 +31,11 @@ export default function SimilarFeedsClient({
     const router = useRouter()
 
     // Query for similar feeds data (includes source feed)
-    const { data: similarData, error, isLoading } = useQuery<SimilarFeedsResponse>({
+    const {
+        data: similarData,
+        error,
+        isLoading,
+    } = useQuery<SimilarFeedsResponse>({
         queryKey: ["similarFeeds", feedId],
         queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
         staleTime: 5 * 60 * 1000, // 5 minutes
@@ -65,7 +69,9 @@ export default function SimilarFeedsClient({
                                             <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Back to feed</TooltipContent>
+                                    <TooltipContent>
+                                        Back to feed
+                                    </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
@@ -133,7 +139,9 @@ export default function SimilarFeedsClient({
                                             <ArrowLeft className="h-4 w-4 transition-transform duration-200 hover:-translate-x-1" />
                                         </Button>
                                     </TooltipTrigger>
-                                    <TooltipContent>Back to feed</TooltipContent>
+                                    <TooltipContent>
+                                        Back to feed
+                                    </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
@@ -155,7 +163,8 @@ export default function SimilarFeedsClient({
                                             <Image
                                                 src={sourceFeed.image_url}
                                                 alt={
-                                                    sourceFeed.title || "Feed image"
+                                                    sourceFeed.title ||
+                                                    "Feed image"
                                                 }
                                                 width={24}
                                                 height={24}
@@ -177,14 +186,17 @@ export default function SimilarFeedsClient({
                                 <Sparkles className="h-16 w-16 text-destructive/30" />
                             </div>
                             <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
-                                {error.message?.includes("404") || error.message?.includes("not found")
+                                {error.message?.includes("404") ||
+                                error.message?.includes("not found")
                                     ? "Feed not found"
                                     : "Error loading similar feeds"}
                             </h3>
                             <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                                {error.message?.includes("404") || error.message?.includes("not found")
+                                {error.message?.includes("404") ||
+                                error.message?.includes("not found")
                                     ? "The requested feed could not be found."
-                                    : error.message || "Please try again later."}
+                                    : error.message ||
+                                      "Please try again later."}
                             </p>
                         </div>
                     </div>
@@ -263,15 +275,17 @@ export default function SimilarFeedsClient({
                     <div>
                         {similarFeeds && similarFeeds.length > 0 ? (
                             <div className="space-y-4">
-                                {similarFeeds.map((feed: FeedDiscoveryResult) => (
-                                    <FeedCard
-                                        key={feed.id}
-                                        feed={feed}
-                                        showSimilarButton={false}
-                                        showPreviewButton={true}
-                                        showFollowButton={true}
-                                    />
-                                ))}
+                                {similarFeeds.map(
+                                    (feed: FeedDiscoveryResult) => (
+                                        <FeedCard
+                                            key={feed.id}
+                                            feed={feed}
+                                            showSimilarButton={false}
+                                            showPreviewButton={true}
+                                            showFollowButton={true}
+                                        />
+                                    )
+                                )}
                             </div>
                         ) : (
                             <div className="flex flex-col items-center justify-center py-16">
@@ -282,7 +296,8 @@ export default function SimilarFeedsClient({
                                     No similar feeds found
                                 </h3>
                                 <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                                    This feed might be unique, or similar feeds may not have embeddings yet.
+                                    This feed might be unique, or similar feeds
+                                    may not have embeddings yet.
                                 </p>
                             </div>
                         )}

@@ -35,8 +35,10 @@ import { LanguageSelector } from "./LanguageSelector"
 interface ArticleToolbarProps {
     article: Article
     isReadLater: boolean
-    contentSource?: 'original' | 'extracted' | 'translated'
-    onContentSourceChange?: (source: 'original' | 'extracted' | 'translated') => void
+    contentSource?: "original" | "extracted" | "translated"
+    onContentSourceChange?: (
+        source: "original" | "extracted" | "translated"
+    ) => void
     onToggleReadLater: () => void
     onMarkAsRead?: () => void
     onExtractFullText: () => Promise<void>
@@ -55,7 +57,7 @@ interface ArticleToolbarProps {
 export function ArticleToolbar({
     article,
     isReadLater,
-    contentSource = 'original',
+    contentSource = "original",
     onContentSourceChange,
     onToggleReadLater,
     onMarkAsRead,
@@ -103,7 +105,6 @@ export function ArticleToolbar({
         onTranslate(language)
     }
 
-
     return (
         <div
             className={`flex items-center ${isMobile && onBack ? "justify-between" : "justify-end"} ${hideBackground ? "gap-1" : "px-4 py-3 bg-background/95 backdrop-blur-sm border-b"}`}
@@ -138,9 +139,15 @@ export function ArticleToolbar({
                         <Tabs
                             value={contentSource}
                             onValueChange={(value) => {
-                                const newSource = value as 'original' | 'extracted' | 'translated'
+                                const newSource = value as
+                                    | "original"
+                                    | "extracted"
+                                    | "translated"
                                 // If switching to extracted and no content exists yet, trigger extraction
-                                if (newSource === 'extracted' && !article.extracted_content) {
+                                if (
+                                    newSource === "extracted" &&
+                                    !article.extracted_content
+                                ) {
                                     onExtractFullText()
                                 } else {
                                     onContentSourceChange(newSource)
@@ -149,10 +156,19 @@ export function ArticleToolbar({
                             className="w-auto inline-block"
                         >
                             <TabsList className="h-8">
-                                <TabsTrigger value="original" title="Original RSS content" className="h-7 px-2">
+                                <TabsTrigger
+                                    value="original"
+                                    title="Original RSS content"
+                                    className="h-7 px-2"
+                                >
                                     <FileText className="h-4 w-4" />
                                 </TabsTrigger>
-                                <TabsTrigger value="extracted" title="Full article content" className="h-7 px-2" disabled={isExtracting}>
+                                <TabsTrigger
+                                    value="extracted"
+                                    title="Full article content"
+                                    className="h-7 px-2"
+                                    disabled={isExtracting}
+                                >
                                     {isExtracting ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
@@ -160,7 +176,11 @@ export function ArticleToolbar({
                                     )}
                                 </TabsTrigger>
                                 {hasTranslatedContent && (
-                                    <TabsTrigger value="translated" title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ''}`} className="h-7 px-2">
+                                    <TabsTrigger
+                                        value="translated"
+                                        title={`Translated content${translatedLanguage ? ` (${translatedLanguage})` : ""}`}
+                                        className="h-7 px-2"
+                                    >
                                         <Languages className="h-4 w-4" />
                                     </TabsTrigger>
                                 )}
@@ -220,8 +240,8 @@ export function ArticleToolbar({
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
                                 : isReadLater
-                                    ? "Remove from Read Later"
-                                    : "Save for Later"}
+                                  ? "Remove from Read Later"
+                                  : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 

@@ -9,8 +9,6 @@ export interface CheckboxProps extends Omit<PressableProps, 'children'> {
     className?: string;
 }
 
-const AnimatedMonicon = Animated.createAnimatedComponent(Monicon);
-
 export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxProps>(
     ({ checked = false, className, ...props }, ref) => {
         const animatedStyle = useAnimatedStyle(() => {
@@ -31,7 +29,9 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
                     className
                 )}
                 {...props}>
-                <AnimatedMonicon name="lucide:check" size={14} color="#FFFFFF" style={animatedStyle} />
+                <Animated.View style={animatedStyle}>
+                    <Monicon name="lucide:check" size={14} color="#FFFFFF" />
+                </Animated.View>
             </Pressable>
         );
     }

@@ -506,12 +506,14 @@ export default function DesignSystem() {
                         </Text>
                         <View className="gap-3">
                             <FeedListItem
+                                feedId="demo-feed-1"
                                 title="Hacker News - Tech Discussions"
                                 description="A source for discussions on programming, startups, technology, and related topics..."
                                 isFollowing={false}
                                 onPress={() => toast('Feed pressed')}
                             />
                             <FeedListItem
+                                feedId="demo-feed-2"
                                 title="WIRED"
                                 description="WIRED is where tomorrow is realized. It is the essential source of information and ideas..."
                                 isFollowing={true}

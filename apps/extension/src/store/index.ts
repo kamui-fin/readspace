@@ -165,7 +165,9 @@ export const useExtensionStore = create<ExtensionState>()(
         try {
           // Read the Supabase session directly from chrome.storage
           // The background script manages the session, we just read it
-          const sessionData = await browser.storage.local.get('supabase-auth-token')
+          const sessionData = await browser.storage.local.get(
+            'supabase-auth-token'
+          )
           const sessionJson = sessionData['supabase-auth-token']
 
           if (!sessionJson || typeof sessionJson !== 'string') {
@@ -181,7 +183,9 @@ export const useExtensionStore = create<ExtensionState>()(
             // Update the token in the store if it's different from what we have
             const currentToken = settings.access_token
             if (currentToken !== accessToken) {
-              console.log('🔄 Found refreshed token from Supabase session, updating store')
+              console.log(
+                '🔄 Found refreshed token from Supabase session, updating store'
+              )
               await get().updateToken(accessToken)
             }
 

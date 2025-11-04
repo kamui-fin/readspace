@@ -21,8 +21,8 @@ from app.crud.article.article import (
 from app.crud.article.article import (
     update_article as crud_update_article,
 )
-from app.crud.article.unified_articles import crud_unified_articles
 from app.crud.article.article_transformer import ArticleTransformer
+from app.crud.article.unified_articles import crud_unified_articles
 from app.models import ClippedArticle, FeedArticle
 from app.schemas import (
     ArticleResponse,

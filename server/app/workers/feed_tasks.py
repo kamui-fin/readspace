@@ -433,36 +433,36 @@ async def _execute_compaction(db: AsyncSession, cutoff_date: datetime) -> dict[s
         Dictionary with deleted_articles count
     """
     # Create aliases for self-referencing subquery
-    FA = aliased(FeedArticle, name="fa")
-    AC = aliased(ArticleContent, name="ac")
-    FA2 = aliased(FeedArticle, name="fa2")
-    AC2 = aliased(ArticleContent, name="ac2")
+    fa = aliased(FeedArticle, name="fa")
+    ac = aliased(ArticleContent, name="ac")
+    fa2 = aliased(FeedArticle, name="fa2")
+    ac2 = aliased(ArticleContent, name="ac2")
 
     # Build the correlated subquery for top N articles per feed
     # This selects the IDs of the newest N articles for each feed
     top_n_subquery = (
-        select(FA2.id)
-        .join(AC2, FA2.content_id == AC2.id)
-        .where(FA2.feed_id == FA.feed_id)
-        .order_by(func.coalesce(AC2.published_at, FA2.created_at).desc())
+        select(fa2.id)
+        .join(ac2, fa2.content_id == ac2.id)
+        .where(fa2.feed_id == fa.feed_id)
+        .order_by(func.coalesce(ac2.published_at, fa2.created_at).desc())
         .limit(MIN_ARTICLES_PER_FEED)
-        .correlate(FA)
+        .correlate(fa)
         .scalar_subquery()
     )
 
     # Build the main query to find articles eligible for deletion
     eligible_articles_query = (
-        select(FA.id, FA.feed_id)
-        .join(AC, FA.content_id == AC.id)
+        select(fa.id, fa.feed_id)
+        .join(ac, fa.content_id == ac.id)
         .outerjoin(
             UserArticleState,
-            (UserArticleState.article_id == FA.id)
-            & ((UserArticleState.is_read_later == True) | (UserArticleState.is_favorite == True))  # noqa: E712
+            (UserArticleState.article_id == fa.id)
+            & ((UserArticleState.is_read_later == True) | (UserArticleState.is_favorite == True)),  # noqa: E712
         )
         .where(
-            func.coalesce(AC.published_at, FA.created_at) < cutoff_date,
+            func.coalesce(ac.published_at, fa.created_at) < cutoff_date,
             UserArticleState.id.is_(None),  # No saved states exist
-            FA.id.not_in(top_n_subquery),  # Not in top N newest articles
+            fa.id.not_in(top_n_subquery),  # Not in top N newest articles
         )
     )
 

@@ -19,22 +19,21 @@ from app.core.custom_exceptions import (
 )
 from app.core.decorators import require_resource_limit
 from app.core.dependencies import get_subscription_service
-from app.crud import crud_feed, crud_subscription
-from app.crud import crud_folder, crud_profile
+from app.crud import crud_feed, crud_folder, crud_profile, crud_subscription
 from app.db.session import get_db
 from app.models import ArticleContent, Feed, FeedArticle
 from app.schemas import FeedCreate, FeedUpdate
-from app.schemas.subscriptions import FeedResponse
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import (
+    FeedResponse,
     SubscriptionCreateByFeedId,
     SubscriptionResponse,
 )
-from app.services.user.auth import get_current_user
 from app.services.feeds.feed_management import FeedManagementService
-from app.services.user.resource_limits import ResourceLimitService
 from app.services.feeds.search.search_engine import RssSearchService
 from app.services.subscription import SubscriptionService
+from app.services.user.auth import get_current_user
+from app.services.user.resource_limits import ResourceLimitService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/feeds", tags=["RSS Feeds"])
@@ -1883,9 +1882,7 @@ async def mark_feed_all_read(
     from app.schemas.subscriptions import SubscriptionUpdate
 
     update_data = SubscriptionUpdate(last_read_cutoff=max_published_at)
-    updated_subscription = await crud_subscription.update_subscription(
-        db=db, subscription_db=subscription, subscription_in=update_data
-    )
+    await crud_subscription.update_subscription(db=db, subscription_db=subscription, subscription_in=update_data)
 
     logger.info(
         "Marked all articles as read for feed",

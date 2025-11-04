@@ -3,12 +3,11 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import and_, select, text, tuple_
+from sqlalchemy import and_, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.core.constants import BATCH_INSERT_THRESHOLD
 from app.crud.article.article_query_builder import ArticleQueryBuilder
 from app.models import (
     ArticleContent,
@@ -191,35 +190,14 @@ class ArticleCrudOperations:
             # Step 1: Bulk duplicate check - collect all (feed_id, guid) pairs
             feed_guid_pairs = [(article.feed_id, article.guid) for article in articles_data]
 
-            # OPTIMIZATION: For large batches (>100 items), use VALUES clause with JOIN for better performance
-            # This avoids generating huge IN clauses that don't use indexes optimally
-
-            if len(feed_guid_pairs) > BATCH_INSERT_THRESHOLD:
-                # Use VALUES clause approach for large batches - PostgreSQL optimizes this well
-
-                # Build VALUES clause with proper escaping
-                values_clause = ", ".join([f"('{pair[0]}'::uuid, '{pair[1]}')" for pair in feed_guid_pairs])
-
-                # Use INNER JOIN with VALUES clause for optimal index usage
-                query = text(  # noqa: S608
-                    f"""
-                    SELECT fa.feed_id, fa.guid
-                    FROM feed_articles fa
-                    INNER JOIN (VALUES {values_clause}) AS v(feed_id, guid)
-                        ON fa.feed_id = v.feed_id AND fa.guid = v.guid
-                    """
+            # Check for existing articles using IN clause
+            # This approach works well for all batch sizes and avoids SQL injection concerns
+            existing_result = await db.execute(
+                select(FeedArticle.feed_id, FeedArticle.guid).filter(
+                    tuple_(FeedArticle.feed_id, FeedArticle.guid).in_(feed_guid_pairs)
                 )
-
-                existing_result = await db.execute(query)
-                existing_pairs = {(row[0], row[1]) for row in existing_result.fetchall()}
-            else:
-                # For small batches (<= 100 items), use the IN clause approach (simpler and faster for small sets)
-                existing_result = await db.execute(
-                    select(FeedArticle.feed_id, FeedArticle.guid).filter(
-                        tuple_(FeedArticle.feed_id, FeedArticle.guid).in_(feed_guid_pairs)
-                    )
-                )
-                existing_pairs = {(row[0], row[1]) for row in existing_result.fetchall()}
+            )
+            existing_pairs = {(row[0], row[1]) for row in existing_result.fetchall()}
 
             # Step 2: Filter out duplicates
             new_articles = [

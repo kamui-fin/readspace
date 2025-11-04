@@ -26,8 +26,7 @@ from app.crud import crud_feed, crud_subscription
 from app.crud.article.article import create_articles_batch
 from app.models import ArticleContent, FeedArticle, FeedSubscription, UserArticleState
 from app.schemas import ArticleCreate, FeedUpdate
-from app.schemas.subscriptions import FeedResponse
-from app.schemas.subscriptions import SubscriptionResponse, SubscriptionUpdate
+from app.schemas.subscriptions import FeedResponse, SubscriptionResponse, SubscriptionUpdate
 from app.services.feeds.feed_creation import FeedCreationService
 from app.services.feeds.feed_fetcher import FeedFetcher, FetchResult
 from app.services.feeds.feed_parser import FeedParsingService

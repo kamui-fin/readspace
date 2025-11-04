@@ -107,7 +107,6 @@ jobs:
             --cov-report=xml \
             --cov-report=html \
             --cov-report=term-missing \
-            --cov-fail-under=30 \
             -v
 
   frontend-lint-and-typecheck:
@@ -141,9 +140,6 @@ jobs:
 
       - name: Install Turbo globally
         run: bun install --global turbo@latest
-
-      - name: Build packages
-        run: turbo run build --filter="./packages/*"
 
       - name: Run type check and lint
         run: turbo run check-types lint

@@ -7,7 +7,7 @@ import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ERROR_ARTICLE_NOT_FOUND, MAX_PAGE_SIZE
+from app.core.constants import ERROR_ARTICLE_NOT_FOUND
 from app.core.dependencies import get_user_service
 from app.db.session import get_db
 from app.schemas import (
@@ -15,14 +15,13 @@ from app.schemas import (
     ArticleUpdate,
     ClippedArticleResponse,
     ClippedArticleUpdate,
-    PaginatedResponse,
     SaveArticleRequest,
 )
 from app.schemas.auth import TokenData
 from app.services.articles.article_management import ArticleManagementService
+from app.services.articles.web_article import WebArticleService
 from app.services.user.auth import get_current_user
 from app.services.user.user import UserService
-from app.services.articles.web_article import WebArticleService
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["RSS Articles"])

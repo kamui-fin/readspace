@@ -263,7 +263,9 @@ export default function ImportStatusPage() {
                         </div>
                         <div className="flex gap-3 pt-2">
                             <Button asChild className="flex-1">
-                                <Link href="/import-opml">Start New Import</Link>
+                                <Link href="/import-opml">
+                                    Start New Import
+                                </Link>
                             </Button>
                             <Button asChild variant="outline">
                                 <Link href="/feeds">View Feeds</Link>
@@ -325,7 +327,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                            100
+                                                100
                                         )}
                                         %
                                     </span>

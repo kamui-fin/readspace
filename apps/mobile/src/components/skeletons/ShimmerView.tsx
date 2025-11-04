@@ -51,8 +51,8 @@ export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProp
     return (
         <View
             style={{
-                width,
-                height,
+                width: width as number | `${number}%`,
+                height: height as number | `${number}%`,
                 borderRadius,
                 backgroundColor: bgColor,
                 overflow: 'hidden',
@@ -66,7 +66,7 @@ export function ShimmerView({ width, height, borderRadius = 4 }: ShimmerViewProp
                     animatedStyle,
                 ]}>
                 <LinearGradient
-                    colors={gradientColors}
+                    colors={gradientColors as [string, string, ...string[]]}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 0 }}
                     style={{

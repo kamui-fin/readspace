@@ -26,7 +26,7 @@ import {
     type Feed,
     type Folder,
 } from '@readspace/shared';
-import type { FlashList } from '@shopify/flash-list';
+import { FlashList } from '@shopify/flash-list';
 import { usePathname, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
@@ -68,7 +68,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const renameFolderModalRef = useRef<BottomSheetModal>(null);
         const folderPickerRef = useRef<FolderPickerRef>(null);
         const confirmDeleteRef = useRef<BottomSheetModal>(null);
-        const flashListRef = useRef<FlashList<ListItem>>(null);
+        const flashListRef = useRef<any>(null);
 
         const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
         const [isEditMode, setIsEditMode] = useState(false);

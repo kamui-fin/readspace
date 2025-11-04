@@ -170,7 +170,11 @@ export function FeedDiscoveryCard({
               onClick={handleFollowClick}
               disabled={isUnfollowing || isPendingFollow}
               size="sm"
-              variant={isFollowing && !isUnfollowing && !isPendingFollow ? 'outline' : 'default'}
+              variant={
+                isFollowing && !isUnfollowing && !isPendingFollow
+                  ? 'outline'
+                  : 'default'
+              }
               className={`flex-shrink-0 min-w-[100px] ${
                 isFollowing && !isUnfollowing && !isPendingFollow
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'

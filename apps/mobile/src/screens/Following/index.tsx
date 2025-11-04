@@ -10,6 +10,7 @@ import { LegendList } from '@legendapp/list';
 import { Monicon } from '@monicon/native';
 import {
     type Article,
+    type CursorPaginatedResponse,
     formatRelativeDate,
     useCreateFeed,
     useFeed,
@@ -118,8 +119,9 @@ export default function FollowingScreen() {
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
-        if (!data?.pages || !Array.isArray(data.pages)) return [];
-        const articles = data.pages.flatMap((page: any) => page.items || []);
+        const infiniteData = data as any;
+        if (!infiniteData?.pages) return [];
+        const articles = infiniteData.pages.flatMap((page: CursorPaginatedResponse<Article>) => page.items || []);
         // Deduplicate articles by ID
         const uniqueArticles = new Map();
         for (const article of articles) {

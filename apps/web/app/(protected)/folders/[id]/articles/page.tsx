@@ -7,7 +7,5 @@ export default function FolderArticlesPage() {
     const params = useParams()
     const folderId = params.id as string
 
-    return (
-        <ArticlesView folderId={folderId} />
-    )
+    return <ArticlesView folderId={folderId} />
 }

@@ -18,7 +18,6 @@ export function useCurrentUser() {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) => {
-
             switch (event) {
                 case "INITIAL_SESSION":
                     setUser(session?.user ?? null)

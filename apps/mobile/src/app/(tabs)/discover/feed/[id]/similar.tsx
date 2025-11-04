@@ -1,7 +1,6 @@
 import { FeedListItem } from '@/components/FeedListItem';
-import { FolderPicker } from '@/components/FolderPicker';
+import { FolderPicker, type FolderPickerRef } from '@/components/FolderPicker';
 import { FeedListSkeleton } from '@/components/skeletons';
-import BottomSheet from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import { ApiClient, useCreateFeed, type SimilarFeedsResponse } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
@@ -14,7 +13,7 @@ import { toast } from 'sonner-native';
 export default function SimilarFeedsScreen() {
     const router = useRouter();
     const { id } = useLocalSearchParams<{ id: string }>();
-    const folderPickerRef = useRef<BottomSheet>(null);
+    const folderPickerRef = useRef<FolderPickerRef>(null);
     const [pendingFeedUrl, setPendingFeedUrl] = useState<string | null>(null);
 
     const createFeed = useCreateFeed();
@@ -39,7 +38,7 @@ export default function SimilarFeedsScreen() {
 
     const handleFeedFollowRequest = useCallback((feedUrl: string) => {
         setPendingFeedUrl(feedUrl);
-        folderPickerRef.current?.expand();
+        folderPickerRef.current?.present();
     }, []);
 
     const handleFolderSelect = useCallback((folderId: string | null) => {

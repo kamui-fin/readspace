@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.schemas.auth import TokenData
-from app.services.user.auth import get_current_user
 from app.services.feeds.search.feed_similarity import FeedSimilarityService
+from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/similar", tags=["RSS Similar Feeds"])
@@ -52,7 +52,9 @@ async def get_similar_feeds(
                 "description": source_feed.description,
                 "url": str(source_feed.url),
                 "link": similarity_service._normalize_url(str(source_feed.link) if source_feed.link else None),
-                "image_url": similarity_service._normalize_url(str(source_feed.image_url) if source_feed.image_url else None),
+                "image_url": similarity_service._normalize_url(
+                    str(source_feed.image_url) if source_feed.image_url else None
+                ),
             },
             "similar_feeds": similar_feeds,
         }

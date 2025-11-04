@@ -54,8 +54,8 @@ export function LanguageSelector({
                                 countryCode={language.countryCode}
                                 svg
                                 style={{
-                                    width: '1.2em',
-                                    height: '1.2em',
+                                    width: "1.2em",
+                                    height: "1.2em",
                                 }}
                                 title={language.name}
                             />

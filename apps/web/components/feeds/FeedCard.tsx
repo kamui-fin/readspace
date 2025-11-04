@@ -93,15 +93,18 @@ export function FeedCard({
     const handleSubscriptionSuccess = () => {
         // Optimistically update the feeds query data to reflect the new subscription
         // This prevents the need to refetch the entire feeds list
-        queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS], (old: Feed[] | undefined) => {
-            if (!old) return old
-            // Add the current feed to the subscribed feeds list if it's not already there
-            const feedExists = old.some(f => f.id === feed.id)
-            if (!feedExists) {
-                return [...old, feed as Feed]
+        queryClient.setQueryData(
+            [RSS_QUERY_KEYS.FEEDS],
+            (old: Feed[] | undefined) => {
+                if (!old) return old
+                // Add the current feed to the subscribed feeds list if it's not already there
+                const feedExists = old.some((f) => f.id === feed.id)
+                if (!feedExists) {
+                    return [...old, feed as Feed]
+                }
+                return old
             }
-            return old
-        })
+        )
     }
 
     const handleAdminDelete = () => {

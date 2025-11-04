@@ -127,23 +127,28 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
             })
 
             // Optimistically update the feeds query data to reflect the new subscription
-            queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS], (old: Feed[] | undefined) => {
-                if (!old) return old
-                // Add the current feed to the subscribed feeds list if it's not already there
-                const feedExists = old.some(f => normalizeUrl(f.url) === normalizeUrl(feed.url))
-                if (!feedExists) {
-                    // Create a proper Feed object from the preview feed - just use the essential properties
-                    const newFeed = {
-                        ...feed,
-                        url: feed.preview_url, // Use the preview URL as the actual feed URL
-                        folder_id: folderId,
-                        unread_count: 0,
-                        is_favorite: false,
-                    } as Feed
-                    return [...old, newFeed]
+            queryClient.setQueryData(
+                [RSS_QUERY_KEYS.FEEDS],
+                (old: Feed[] | undefined) => {
+                    if (!old) return old
+                    // Add the current feed to the subscribed feeds list if it's not already there
+                    const feedExists = old.some(
+                        (f) => normalizeUrl(f.url) === normalizeUrl(feed.url)
+                    )
+                    if (!feedExists) {
+                        // Create a proper Feed object from the preview feed - just use the essential properties
+                        const newFeed = {
+                            ...feed,
+                            url: feed.preview_url, // Use the preview URL as the actual feed URL
+                            folder_id: folderId,
+                            unread_count: 0,
+                            is_favorite: false,
+                        } as Feed
+                        return [...old, newFeed]
+                    }
+                    return old
                 }
-                return old
-            })
+            )
 
             toast.success("Successfully subscribed to feed")
             handleClose()

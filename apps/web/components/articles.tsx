@@ -42,7 +42,14 @@ import {
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
-import { CheckCheck, Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
+import {
+    CheckCheck,
+    Eye,
+    EyeOff,
+    Globe,
+    MoreVertical,
+    RefreshCw,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
@@ -185,17 +192,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-            ? "Read Later"
-            : isTodayMode
-                ? "Today"
-                : feedId && feedData?.title
-                    ? feedData.title
-                    : folderId && allFolders
-                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                            ?.name ||
-                        initialSidebarTitle ||
-                        "All Articles"
-                        : initialSidebarTitle || "All Articles"
+          ? "Read Later"
+          : isTodayMode
+            ? "Today"
+            : feedId && feedData?.title
+              ? feedData.title
+              : folderId && allFolders
+                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                      ?.name ||
+                  initialSidebarTitle ||
+                  "All Articles"
+                : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -230,7 +237,9 @@ export function ArticlesView({
             return currentFeed?.unread_count || 0
         } else if (folderId) {
             // Folder view: get unread count for this folder
-            const folderUnreadCounts = typedUnreadCounts?.unread_by_folder as Record<string, number> | undefined
+            const folderUnreadCounts = typedUnreadCounts?.unread_by_folder as
+                | Record<string, number>
+                | undefined
             return folderUnreadCounts?.[folderId] ?? 0
         } else {
             // All articles view: get total unread count
@@ -294,10 +303,10 @@ export function ArticlesView({
     const activeQuery = isTodayMode
         ? todayQuery
         : isRecentlyReadMode
-        ? recentlyReadQuery
-        : isReadLaterMode
-        ? readLaterQuery
-        : allArticlesQuery
+          ? recentlyReadQuery
+          : isReadLaterMode
+            ? readLaterQuery
+            : allArticlesQuery
 
     const {
         data,
@@ -318,7 +327,7 @@ export function ArticlesView({
 
     // Create a unique key for the current view to detect when we switch contexts
     const viewKey = useMemo(() => {
-        return `${feedId || 'all'}-${folderId || 'none'}-${mode}-${publishedSince || ''}-${publishedUntil || ''}`
+        return `${feedId || "all"}-${folderId || "none"}-${mode}-${publishedSince || ""}-${publishedUntil || ""}`
     }, [feedId, folderId, mode, publishedSince, publishedUntil])
 
     // Determine if we should show preview banner for feeds
@@ -356,7 +365,9 @@ export function ArticlesView({
 
             // Auto-mark as read on click (desktop only, not in preview mode)
             if (!isMobile && !shouldShowPreviewBanner) {
-                const article = allArticles.find((a: Article) => a.id === articleId)
+                const article = allArticles.find(
+                    (a: Article) => a.id === articleId
+                )
                 if (!isRecentlyReadMode && article && !article.is_read) {
                     // Optimistically update the UI immediately
                     queryClient.setQueriesData(
@@ -567,10 +578,14 @@ export function ArticlesView({
         try {
             if (feedId) {
                 await ApiClient.rss.markFeedAllRead(feedId)
-                toast.success("All articles marked as read!", { id: "mark-all-read" })
+                toast.success("All articles marked as read!", {
+                    id: "mark-all-read",
+                })
             } else if (folderId) {
                 await ApiClient.rss.markFolderAllRead(folderId)
-                toast.success("All articles in folder marked as read!", { id: "mark-all-read" })
+                toast.success("All articles in folder marked as read!", {
+                    id: "mark-all-read",
+                })
             }
 
             // Invalidate all relevant caches to force fresh fetch from server
@@ -621,7 +636,10 @@ export function ArticlesView({
                     })
                 })
                 .catch((error) => {
-                    console.error("[Preview Mode] Preview refresh failed:", error)
+                    console.error(
+                        "[Preview Mode] Preview refresh failed:",
+                        error
+                    )
                 })
                 .finally(() => {
                     setIsPreviewRefreshing(false)
@@ -659,17 +677,29 @@ export function ArticlesView({
 
         // Only auto-select if we have articles and no selection
         // Check both isArticlesLoading and isFetching to ensure data is stable
-        if (allArticles.length > 0 && !selectedArticleId && !showContent && !isArticlesLoading && !isFetching) {
+        if (
+            allArticles.length > 0 &&
+            !selectedArticleId &&
+            !showContent &&
+            !isArticlesLoading &&
+            !isFetching
+        ) {
             // Sort articles by published date (newest first) to match ArticlesList display order
-            const sortedArticles = [...allArticles].sort((a: Article, b: Article) => {
-                if (!a.published_at) return 1
-                if (!b.published_at) return -1
-                return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
-            })
+            const sortedArticles = [...allArticles].sort(
+                (a: Article, b: Article) => {
+                    if (!a.published_at) return 1
+                    if (!b.published_at) return -1
+                    return (
+                        new Date(b.published_at).getTime() -
+                        new Date(a.published_at).getTime()
+                    )
+                }
+            )
 
             // Select first article (or first unread if filter is on)
             const firstArticle = showUnreadOnly
-                ? sortedArticles.find((a: Article) => !a.is_read) || sortedArticles[0]
+                ? sortedArticles.find((a: Article) => !a.is_read) ||
+                  sortedArticles[0]
                 : sortedArticles[0]
 
             if (firstArticle?.id) {
@@ -813,25 +843,30 @@ export function ArticlesView({
                                     )}
 
                                     {/* Mark all as read button - only for feeds and folders */}
-                                    {(feedId || folderId) && !shouldShowPreviewBanner && (
-                                        <TooltipProvider>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={handleMarkAllAsRead}
-                                                        disabled={isMarkingAllRead}
-                                                    >
-                                                        <CheckCheck className="h-4 w-4" />
-                                                    </Button>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    Mark all as read
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    )}
+                                    {(feedId || folderId) &&
+                                        !shouldShowPreviewBanner && (
+                                            <TooltipProvider>
+                                                <Tooltip>
+                                                    <TooltipTrigger asChild>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={
+                                                                handleMarkAllAsRead
+                                                            }
+                                                            disabled={
+                                                                isMarkingAllRead
+                                                            }
+                                                        >
+                                                            <CheckCheck className="h-4 w-4" />
+                                                        </Button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent>
+                                                        Mark all as read
+                                                    </TooltipContent>
+                                                </Tooltip>
+                                            </TooltipProvider>
+                                        )}
 
                                     {/* Direct refresh button */}
                                     <TooltipProvider>
@@ -1003,18 +1038,21 @@ export function ArticlesView({
                                         )}
 
                                         {/* Mark all as read button - only for feeds and folders */}
-                                        {(feedId || folderId) && !shouldShowPreviewBanner && (
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                onClick={handleMarkAllAsRead}
-                                                disabled={isMarkingAllRead}
-                                                title="Mark all as read"
-                                            >
-                                                <CheckCheck className="h-4 w-4 transition-transform duration-200" />
-                                            </Button>
-                                        )}
+                                        {(feedId || folderId) &&
+                                            !shouldShowPreviewBanner && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                    onClick={
+                                                        handleMarkAllAsRead
+                                                    }
+                                                    disabled={isMarkingAllRead}
+                                                    title="Mark all as read"
+                                                >
+                                                    <CheckCheck className="h-4 w-4 transition-transform duration-200" />
+                                                </Button>
+                                            )}
 
                                         {/* Individual feeds: refresh and more actions */}
                                         {feedId ? (
@@ -1163,7 +1201,9 @@ export function ArticlesView({
                     feed={feedData}
                     onSuccess={() => {
                         // Update feed data to mark as subscribed (exit preview mode)
-                        setPreviewFeedData(prev => prev ? { ...prev, is_subscribed: true } : null)
+                        setPreviewFeedData((prev) =>
+                            prev ? { ...prev, is_subscribed: true } : null
+                        )
                     }}
                 />
             )}

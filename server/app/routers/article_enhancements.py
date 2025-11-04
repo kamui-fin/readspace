@@ -16,8 +16,8 @@ from app.schemas.auth import TokenData
 from app.schemas.enums import LanguageCode
 from app.services.ai.ai_service import get_ai_service
 from app.services.articles.article_management import ArticleManagementService
-from app.services.user.auth import get_current_user
 from app.services.articles.content_extraction import ContentExtractionService
+from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/articles", tags=["Article Enhancements"])

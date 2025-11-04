@@ -102,12 +102,16 @@ export function ArticleContent({
         article.is_read_later
     )
     // Content source selection ('original', 'extracted', or 'translated')
-    const [contentSource, setContentSource] = useState<'original' | 'extracted' | 'translated'>(
-        article.extracted_content ? 'extracted' : 'original'
-    )
+    const [contentSource, setContentSource] = useState<
+        "original" | "extracted" | "translated"
+    >(article.extracted_content ? "extracted" : "original")
     // Store translated content and language
-    const [translatedContent, setTranslatedContent] = useState<string | null>(null)
-    const [translatedLanguage, setTranslatedLanguage] = useState<string | null>(null)
+    const [translatedContent, setTranslatedContent] = useState<string | null>(
+        null
+    )
+    const [translatedLanguage, setTranslatedLanguage] = useState<string | null>(
+        null
+    )
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
@@ -116,14 +120,20 @@ export function ArticleContent({
     // This ensures proper cache key generation based on source content hash, not translated content
     // Note: Display content is computed inline in the render section based on contentSource
     const baseContentForAI =
-        contentSource === 'extracted' && article.extracted_content
+        contentSource === "extracted" && article.extracted_content
             ? article.extracted_content
             : article.content || article.description || ""
 
     // Only create AI hooks when we actually have a valid article ID to prevent unnecessary queries
     // Pass article URL to extraction hook for proper cache key generation
-    const extractFullText = useExtractFullText(article?.id || "skip", article?.link || undefined)
-    const summarizeArticle = useSummarizeArticle(article?.id || "skip", baseContentForAI)
+    const extractFullText = useExtractFullText(
+        article?.id || "skip",
+        article?.link || undefined
+    )
+    const summarizeArticle = useSummarizeArticle(
+        article?.id || "skip",
+        baseContentForAI
+    )
 
     // Sync optimistic state when article changes
     useEffect(() => {
@@ -132,7 +142,7 @@ export function ArticleContent({
 
     // Reset content source when article changes
     useEffect(() => {
-        setContentSource(article.extracted_content ? 'extracted' : 'original')
+        setContentSource(article.extracted_content ? "extracted" : "original")
         setTranslatedContent(null)
         setTranslatedLanguage(null)
     }, [article.id, article.extracted_content])
@@ -144,8 +154,8 @@ export function ArticleContent({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     // Extract priority for clipped articles
@@ -167,7 +177,7 @@ export function ArticleContent({
                 onContentChange(data.content, newKey)
                 onReadTimeChange(data.estimated_read_time_minutes || null)
                 // Automatically switch to extracted content after successful extraction
-                setContentSource('extracted')
+                setContentSource("extracted")
             } else if (data) {
                 toast.error(data.error || "Failed to extract content")
             }
@@ -204,9 +214,10 @@ export function ArticleContent({
         try {
             onTranslationChange(true)
             // Use the active content based on content source (but not translated content)
-            const contentToUse = contentSource === 'extracted' && article.extracted_content
-                ? article.extracted_content
-                : article.content || article.description || ""
+            const contentToUse =
+                contentSource === "extracted" && article.extracted_content
+                    ? article.extracted_content
+                    : article.content || article.description || ""
 
             // Check cache first
             const queryKey = createTranslationQueryKey(
@@ -233,7 +244,7 @@ export function ArticleContent({
                 setTranslatedLanguage(targetLanguage)
                 onContentChange(cachedData.translated_content, newKey)
                 // Switch to translated tab
-                setContentSource('translated')
+                setContentSource("translated")
                 toast.success(`Article translated successfully`)
                 return
             }
@@ -253,7 +264,7 @@ export function ArticleContent({
                 setTranslatedLanguage(targetLanguage)
                 onContentChange(data.translated_content, newKey)
                 // Switch to translated tab
-                setContentSource('translated')
+                setContentSource("translated")
                 toast.success(`Article translated successfully`)
             } else if (data) {
                 toast.error(data.error || "Failed to translate article")
@@ -452,7 +463,9 @@ export function ArticleContent({
                                     data: {
                                         is_read_later: newReadLaterState,
                                         // When saving for later, mark as unread to update sidebar count
-                                        is_read: newReadLaterState ? false : article.is_read
+                                        is_read: newReadLaterState
+                                            ? false
+                                            : article.is_read,
                                     },
                                     articleType: article.article_type,
                                 },
@@ -491,17 +504,17 @@ export function ArticleContent({
                                                                 // In read-later mode, remove this article entirely
                                                                 isReadLaterMode
                                                                     ? item.id !==
-                                                                    article.id
+                                                                      article.id
                                                                     : true
                                                         )
                                                         .map((item: Article) =>
                                                             item.id ===
-                                                                article.id
+                                                            article.id
                                                                 ? {
-                                                                    ...item,
-                                                                    is_read: true,
-                                                                    is_read_later: false,
-                                                                }
+                                                                      ...item,
+                                                                      is_read: true,
+                                                                      is_read_later: false,
+                                                                  }
                                                                 : item
                                                         ) || [],
                                             })
@@ -601,11 +614,11 @@ export function ArticleContent({
                                                     page.items?.map(
                                                         (item: Article) =>
                                                             item.id ===
-                                                                article.id
+                                                            article.id
                                                                 ? {
-                                                                    ...item,
-                                                                    is_read: true,
-                                                                }
+                                                                      ...item,
+                                                                      is_read: true,
+                                                                  }
                                                                 : item
                                                     ) || [],
                                             })
@@ -677,9 +690,15 @@ export function ArticleContent({
                                             article={article}
                                             isReadLater={optimisticReadLater}
                                             contentSource={contentSource}
-                                            onContentSourceChange={setContentSource}
-                                            hasTranslatedContent={!!translatedContent}
-                                            translatedLanguage={translatedLanguage}
+                                            onContentSourceChange={
+                                                setContentSource
+                                            }
+                                            hasTranslatedContent={
+                                                !!translatedContent
+                                            }
+                                            translatedLanguage={
+                                                translatedLanguage
+                                            }
                                             onToggleReadLater={() => {
                                                 const newReadLaterState =
                                                     !optimisticReadLater
@@ -701,7 +720,10 @@ export function ArticleContent({
                                                             is_read_later:
                                                                 newReadLaterState,
                                                             // When saving for later, mark as unread to update sidebar count
-                                                            is_read: newReadLaterState ? false : article.is_read
+                                                            is_read:
+                                                                newReadLaterState
+                                                                    ? false
+                                                                    : article.is_read,
                                                         },
                                                         articleType:
                                                             article.article_type,
@@ -756,7 +778,7 @@ export function ArticleContent({
                                                                                     // In read-later mode, remove this article entirely
                                                                                     isReadLaterMode
                                                                                         ? item.id !==
-                                                                                        article.id
+                                                                                          article.id
                                                                                         : true
                                                                             )
                                                                             .map(
@@ -764,12 +786,12 @@ export function ArticleContent({
                                                                                     item: Article
                                                                                 ) =>
                                                                                     item.id ===
-                                                                                        article.id
+                                                                                    article.id
                                                                                         ? {
-                                                                                            ...item,
-                                                                                            is_read: true,
-                                                                                            is_read_later: false,
-                                                                                        }
+                                                                                              ...item,
+                                                                                              is_read: true,
+                                                                                              is_read_later: false,
+                                                                                          }
                                                                                         : item
                                                                             ) ||
                                                                         [],
@@ -878,25 +900,29 @@ export function ArticleContent({
                                     hasValidSummary
                                 )
                             })() && (
-                                    <div className="mb-8">
-                                        <AiSummaryCard
-                                            summary={aiSummary!}
-                                            onDismiss={() => {
-                                                setAiSummary(null)
-                                                onSummaryChange(null, false)
-                                            }}
-                                        />
-                                    </div>
-                                )}
+                                <div className="mb-8">
+                                    <AiSummaryCard
+                                        summary={aiSummary!}
+                                        onDismiss={() => {
+                                            setAiSummary(null)
+                                            onSummaryChange(null, false)
+                                        }}
+                                    />
+                                </div>
+                            )}
 
                             {/* Article Content - Show based on selected source */}
                             {(() => {
                                 const displayContent =
-                                    contentSource === "translated" && translatedContent
+                                    contentSource === "translated" &&
+                                    translatedContent
                                         ? translatedContent
-                                        : contentSource === "extracted" && article.extracted_content
-                                            ? article.extracted_content
-                                            : article.content || article.description || ""
+                                        : contentSource === "extracted" &&
+                                            article.extracted_content
+                                          ? article.extracted_content
+                                          : article.content ||
+                                            article.description ||
+                                            ""
 
                                 return displayContent ? (
                                     <AnimatedContent
@@ -919,7 +945,8 @@ export function ArticleContent({
                                     </AnimatedContent>
                                 ) : (
                                     <div className="space-y-6">
-                                        {(article.description || article.note) && (
+                                        {(article.description ||
+                                            article.note) && (
                                             <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
                                                 <div
                                                     dangerouslySetInnerHTML={{
@@ -934,8 +961,8 @@ export function ArticleContent({
                                         <div className="flex flex-col items-center justify-center py-8 text-center">
                                             <div className="mx-auto max-w-md">
                                                 <p className="text-sm text-muted-foreground">
-                                                    This article doesn&apos;t have
-                                                    any content available.
+                                                    This article doesn&apos;t
+                                                    have any content available.
                                                 </p>
                                             </div>
                                         </div>

@@ -1,10 +1,10 @@
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
-from xml.etree import ElementTree as ET
 
 import structlog
 from celery.result import AsyncResult  # type: ignore[import-untyped]
+from defusedxml import ElementTree
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,8 +57,8 @@ def validate_opml_structure(content: str, filename: str) -> int:
         HTTPException: If XML is malformed or not a valid OPML file
     """
     try:
-        root = ET.fromstring(content)
-    except ET.ParseError as e:
+        root = ElementTree.fromstring(content)
+    except ElementTree.ParseError as e:
         logger.warning(
             "Failed to parse OPML XML",
             filename=filename,

@@ -412,10 +412,11 @@ export default function DiscoverPageClient({
                                 }
                                 value={searchQuery}
                                 onChange={handleSearchInputChange}
-                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${searchQuery
-                                    ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
-                                    : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
-                                    }`}
+                                className={`pl-6 pr-12 border-0 h-12 md:h-14 text-base md:text-lg w-full ${
+                                    searchQuery
+                                        ? "bg-[#F3F9EF] dark:bg-input placeholder:text-[#91998C] dark:placeholder:text-muted-foreground"
+                                        : "bg-[#F3F9EF] dark:bg-input placeholder:text-[#D8E5D0] dark:placeholder:text-muted-foreground/60"
+                                }`}
                                 style={{
                                     color: searchQuery ? "#91998C" : "#D8E5D0",
                                 }}
@@ -467,8 +468,7 @@ export default function DiscoverPageClient({
                                     <FeedCardSkeleton key={i} />
                                 ))}
                             </div>
-                        ) : searchError ||
-                            searchData?.results.length === 0 ? (
+                        ) : searchError || searchData?.results.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16">
                                 <div className="mb-6">
                                     <NextImage
@@ -504,7 +504,7 @@ export default function DiscoverPageClient({
                                         return (
                                             <div key={feed.id}>
                                                 {feed.is_preview &&
-                                                    feed.preview_url ? (
+                                                feed.preview_url ? (
                                                     <FeedPreviewCard
                                                         feed={{
                                                             ...feed,
@@ -515,9 +515,7 @@ export default function DiscoverPageClient({
                                                     />
                                                 ) : (
                                                     <FeedCard
-                                                        feed={
-                                                            discoveryResult
-                                                        }
+                                                        feed={discoveryResult}
                                                     />
                                                 )}
                                             </div>

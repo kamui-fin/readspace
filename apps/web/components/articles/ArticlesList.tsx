@@ -82,7 +82,11 @@ export function ArticlesList({
 
     // For virtualization, we need a flat list of all items
     const allRows = useMemo(() => {
-        if (isRecentlyReadMode || isTodayMode || filteredArticles.length === 0) {
+        if (
+            isRecentlyReadMode ||
+            isTodayMode ||
+            filteredArticles.length === 0
+        ) {
             return filteredArticles
         }
 
@@ -141,7 +145,10 @@ export function ArticlesList({
                 const sortedArticles = group.articles.sort((a, b) => {
                     if (!a.published_at) return 1
                     if (!b.published_at) return -1
-                    return parseISO(b.published_at).getTime() - parseISO(a.published_at).getTime()
+                    return (
+                        parseISO(b.published_at).getTime() -
+                        parseISO(a.published_at).getTime()
+                    )
                 })
                 rows.push(...sortedArticles)
             })

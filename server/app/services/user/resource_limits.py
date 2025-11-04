@@ -54,12 +54,6 @@ class ResourceLimitService:
             )
             return result.scalar_one()
 
-        elif resource == "max_books":
-            result = await self.db.execute(
-                select(func.count()).select_from(UserBookLibrary).where(UserBookLibrary.user_id == user_id)
-            )
-            return result.scalar_one()
-
         return 0
 
     def get_user_limits(self, user_role: str) -> dict[str, Any]:

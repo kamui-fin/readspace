@@ -58,7 +58,6 @@
     body {
         @apply bg-background text-foreground;
     }
-
 }
 
 .perspective-1000 {
