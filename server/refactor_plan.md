@@ -1,6 +1,0 @@
-- [ ] /api/rss -> /api
-- [ ] legacy code removal
-    - [ ] remove old offset based pagination
-- [ ] figure out alternative to "unified article" concept
-- [ ] standardize endpoints to be REST
-- [ ] make sure all constants are used
