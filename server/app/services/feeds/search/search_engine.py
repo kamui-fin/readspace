@@ -672,28 +672,17 @@ class RssSearchService:
                          0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) DESC
                     LIMIT 200
                 ),
-                -- Vector search results with ranks
+                -- Vector search results with ranks (only for feeds WITH embeddings)
                 vector_results AS (
                     SELECT
                         f.id,
-                        CASE
-                            WHEN f.embedding IS NOT NULL THEN 1 - (f.embedding <=> CAST(:embedding AS vector))
-                            ELSE 0.0
-                        END AS vector_score,
-                        ROW_NUMBER() OVER (ORDER BY
-                            CASE
-                                WHEN f.embedding IS NOT NULL THEN f.embedding <=> CAST(:embedding AS vector)
-                                ELSE 1.0
-                            END
-                        ) AS vector_rank
+                        1 - (f.embedding <=> CAST(:embedding AS vector)) AS vector_score,
+                        ROW_NUMBER() OVER (ORDER BY f.embedding <=> CAST(:embedding AS vector)) AS vector_rank
                     FROM feeds f
-                    WHERE (f.language = :language OR f.language IS NULL)
+                    WHERE f.embedding IS NOT NULL
+                      AND (f.language = :language OR f.language IS NULL)
                       {category_filter}
-                    ORDER BY
-                        CASE
-                            WHEN f.embedding IS NOT NULL THEN f.embedding <=> CAST(:embedding AS vector)
-                            ELSE 1.0
-                        END
+                    ORDER BY f.embedding <=> CAST(:embedding AS vector)
                     LIMIT 200
                 ),
                 -- Combined results with enhanced title/domain priority scoring

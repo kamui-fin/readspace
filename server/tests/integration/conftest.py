@@ -58,14 +58,8 @@ print(f"🔧 Using Redis: {settings.REDIS_URL}")
 print(f"🔧 Environment: {settings.ENVIRONMENT}")
 
 
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an instance of the default event loop for the test session."""
-    import asyncio
-
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
+# Removed custom event_loop fixture - pytest-asyncio provides its own
+# Session-scoped event loop fixtures conflict with pytest-asyncio's function-scoped loops
 
 
 @pytest_asyncio.fixture(scope="function")

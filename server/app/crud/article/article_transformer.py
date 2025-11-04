@@ -3,7 +3,7 @@
 from typing import Any
 from urllib.parse import urlparse
 
-from app.models import ClippedArticle, Feed, FeedArticle, UserArticleState
+from app.models import ClippedArticle, Feed, FeedArticle, FeedSubscription, UserArticleState
 from app.schemas import ArticleResponse
 
 
@@ -36,23 +36,51 @@ class ArticleTransformer:
 
         return truncated.rstrip(".,;:") + "..."
 
-    def feed_to_unified(self, feed_article: FeedArticle | tuple[FeedArticle, UserArticleState]) -> ArticleResponse:
-        """Convert FeedArticle to unified ArticleResponse."""
-        # Handle both single FeedArticle and tuple of (FeedArticle, UserArticleState)
+    def feed_to_unified(
+        self,
+        feed_article: (
+            FeedArticle
+            | tuple[FeedArticle, UserArticleState]
+            | tuple[FeedArticle, UserArticleState, FeedSubscription, bool]
+        ),
+    ) -> ArticleResponse:
+        """Convert FeedArticle to unified ArticleResponse.
+
+        Args:
+            feed_article: Can be:
+                - FeedArticle: Single article (legacy)
+                - tuple[FeedArticle, UserArticleState]: Article with user state
+                - tuple[FeedArticle, UserArticleState, FeedSubscription, bool]: Article with user state,
+                  subscription, and computed is_read value (recommended)
+        """
+        # Handle different tuple structures
         if isinstance(feed_article, tuple):
-            article, user_state = feed_article
-            # Handle case where user_state is None (from LEFT OUTER JOIN)
-            if user_state is not None:
-                is_read = user_state.is_read
-                is_read_later = user_state.is_read_later
-                is_favorite = user_state.is_favorite
-                read_at = user_state.read_at
+            if len(feed_article) == 4:
+                # New format: (FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
+                article, user_state, subscription, computed_is_read = feed_article
+                # Use computed is_read value which respects last_read_cutoff
+                is_read = computed_is_read
+                # Other user states still come from UserArticleState
+                is_read_later = user_state.is_read_later if user_state is not None else False
+                is_favorite = user_state.is_favorite if user_state is not None else False
+                read_at = user_state.read_at if user_state is not None else None
+            elif len(feed_article) == 2:
+                # Legacy format: (FeedArticle, UserArticleState)
+                article, user_state = feed_article
+                # Handle case where user_state is None (from LEFT OUTER JOIN)
+                if user_state is not None:
+                    is_read = user_state.is_read
+                    is_read_later = user_state.is_read_later
+                    is_favorite = user_state.is_favorite
+                    read_at = user_state.read_at
+                else:
+                    # Default values when no user state exists yet
+                    is_read = False
+                    is_read_later = False
+                    is_favorite = False
+                    read_at = None
             else:
-                # Default values when no user state exists yet
-                is_read = False
-                is_read_later = False
-                is_favorite = False
-                read_at = None
+                raise ValueError(f"Unexpected tuple length: {len(feed_article)}")
         else:
             # Single FeedArticle without user state
             article = feed_article
@@ -197,12 +225,18 @@ class ArticleTransformer:
             return None
 
     def to_unified(
-        self, article: FeedArticle | ClippedArticle | tuple[FeedArticle, UserArticleState]
+        self,
+        article: (
+            FeedArticle
+            | ClippedArticle
+            | tuple[FeedArticle, UserArticleState]
+            | tuple[FeedArticle, UserArticleState, FeedSubscription, bool]
+        ),
     ) -> ArticleResponse:
         """Convert any article type to unified ArticleResponse."""
         # Check the actual type to determine which transformer to use
         if isinstance(article, tuple):
-            # This is a tuple of (FeedArticle, UserArticleState)
+            # This is a tuple - could be 2 or 4 elements
             return self.feed_to_unified(article)
         elif isinstance(article, FeedArticle):
             # This is a FeedArticle

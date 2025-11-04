@@ -19,7 +19,7 @@ import {
 import {
     exportFeedsToOPML,
     fuzzySearch,
-    useDeleteFeed,
+    useBulkDeleteFeeds,
     useFeeds,
     useFolders,
     useUpdateFeed,
@@ -59,7 +59,7 @@ export default function ManageFeedsPageClient() {
 
     // Mutations
     const updateFeedMutation = useUpdateFeed()
-    const deleteFeedMutation = useDeleteFeed()
+    const bulkDeleteFeedsMutation = useBulkDeleteFeeds()
 
     // Type-safe folder data
     const typedFolders = (folders as Array<{ id: string; name: string }>) || []
@@ -152,6 +152,7 @@ export default function ManageFeedsPageClient() {
 
     /**
      * Handle bulk delete with confirmation
+     * Uses single API call for efficiency
      */
     const handleBulkDelete = () => {
         if (selectedFeedIds.length === 0) return
@@ -161,24 +162,19 @@ export default function ManageFeedsPageClient() {
                 `Are you sure you want to delete ${selectedFeedIds.length} feed(s)?`
             )
         ) {
-            const deletionPromises = selectedFeedIds.map((id) =>
-                deleteFeedMutation.mutateAsync({ feedId: id, silent: true })
+            bulkDeleteFeedsMutation.mutate(
+                { feedIds: selectedFeedIds },
+                {
+                    onSuccess: () => {
+                        setSelectedFeedIds([])
+                        // Toast handled by hook configuration
+                    },
+                    onError: () => {
+                        // Toast handled by hook configuration
+                        // Keep selection to allow retry
+                    },
+                }
             )
-
-            toast.promise(Promise.allSettled(deletionPromises), {
-                loading: "Deleting feeds...",
-                success: (results) => {
-                    const successful = results.filter(
-                        (r) => r.status === "fulfilled"
-                    ).length
-                    const failed = results.length - successful
-                    setSelectedFeedIds([])
-                    return `Deleted ${successful} feeds. ${
-                        failed > 0 ? `${failed} failed.` : ""
-                    }`
-                },
-                error: "An unexpected error occurred while deleting feeds.",
-            })
         }
     }
 

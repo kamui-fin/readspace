@@ -9,15 +9,6 @@ class Settings(BaseSettings):
     ENVIRONMENT: str = Field(default="development", pattern="^(development|staging|production|test)$")
     LOG_LEVEL: str = Field(default="INFO", pattern="^(DEBUG|INFO|WARNING|ERROR|CRITICAL)$")
 
-    # Observability Configuration
-    LOKI_URL: str = ""
-    SERVICE_NAME: str = "readspace-server"  # Can be overridden via env var
-
-    # OpenTelemetry Configuration
-    OTEL_SERVICE_NAME: str = "readspace-server"
-    OTEL_EXPORTER_OTLP_ENDPOINT: str = ""
-    OTEL_RESOURCE_ATTRIBUTES: str = ""
-
     # Supabase Configuration (validated URLs)
     SUPABASE_URL: AnyUrl
     SUPABASE_JWT_SECRET: SecretStr

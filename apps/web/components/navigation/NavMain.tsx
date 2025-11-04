@@ -76,7 +76,7 @@ export function FeedsNavigation({
 
     // Loading state
     const isSidebarLoading =
-        isFoldersLoading || isFeedsLoading || isUnreadCountsLoading
+        isFoldersLoading 
 
     // Navigation and mutations
     const pathname = usePathname()

@@ -73,11 +73,11 @@ class FeedSimilarityService:
                 min_similarity=min_similarity,
             )
 
-            # First, get the source feed and verify user has access
+            # First, get the source feed
             source_feed = await self._get_user_feed(feed_id)
             if not source_feed:
                 logger.warning(
-                    "Source feed not found or user has no access",
+                    "Source feed not found",
                     feed_id=feed_id,
                     user_id=self.user_id,
                 )
@@ -92,7 +92,6 @@ class FeedSimilarityService:
             # This eliminates the separate query for subscribed_feed_ids
             params = {
                 "source_feed_id": feed_id,
-                "user_id": self.user_id,
                 "limit": limit,
                 "min_similarity": min_similarity,
             }
@@ -103,11 +102,6 @@ class FeedSimilarityService:
                     FROM feeds
                     WHERE id = :source_feed_id
                     AND embedding IS NOT NULL
-                ),
-                subscribed_feeds AS (
-                    SELECT feed_id
-                    FROM feed_subscriptions
-                    WHERE user_id = :user_id
                 )
                 SELECT
                     f.id,
@@ -127,7 +121,6 @@ class FeedSimilarityService:
                 WHERE f.id != :source_feed_id  -- Exclude the source feed itself
                   AND f.embedding IS NOT NULL  -- Only consider feeds with embeddings
                   AND (1 - (f.embedding <=> sf.embedding)) >= :min_similarity  -- Similarity threshold
-                  AND f.id NOT IN (SELECT feed_id FROM subscribed_feeds)  -- Exclude user's subscribed feeds
                 ORDER BY f.embedding <=> sf.embedding  -- Order by cosine distance (ascending = most similar first)
                 LIMIT :limit
             """
@@ -201,7 +194,9 @@ class FeedSimilarityService:
     async def _get_user_feed(self, feed_id: UUID) -> Feed | None:
         """Get a feed by ID (doesn't require user subscription)."""
         try:
-            stmt = select(Feed).where(Feed.id == feed_id)
+            # Explicitly load the deferred embedding field using undefer
+            from sqlalchemy.orm import undefer
+            stmt = select(Feed).options(undefer(Feed.embedding)).where(Feed.id == feed_id)
             result = await self.db.execute(stmt)
             return result.scalar_one_or_none()
         except Exception as e:

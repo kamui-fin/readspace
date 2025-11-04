@@ -1362,8 +1362,10 @@ async def admin_update_feed(
         - Changes are applied to the global feed record
     """
     # Check if user is admin by fetching their profile
+    from app.models.enums import UserRole
+
     user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
-    if not user_profile or user_profile.role != "admin":
+    if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to update global feed",
             user_id=current_user.sub,
@@ -1518,8 +1520,10 @@ async def admin_delete_feed(
         - This action cannot be undone
     """
     # Check if user is admin by fetching their profile
+    from app.models.enums import UserRole
+
     user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
-    if not user_profile or user_profile.role != "admin":
+    if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to delete global feed",
             user_id=current_user.sub,

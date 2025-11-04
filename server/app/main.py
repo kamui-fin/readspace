@@ -1,4 +1,3 @@
-import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -7,17 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
@@ -29,47 +17,6 @@ from app.utils.logging_config import setup_logging
 # Configure structured logging first
 setup_logging()
 logger = structlog.get_logger(__name__)
-
-
-# Initialize OpenTelemetry
-def setup_tracing() -> None:
-    """Configure OpenTelemetry tracing"""
-    settings = get_settings()
-    service_name = settings.SERVICE_NAME
-    otel_endpoint = settings.OTEL_EXPORTER_OTLP_ENDPOINT
-
-    if not otel_endpoint:
-        logger.warning("OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping tracing setup")
-        return
-
-    # Configure resource with service information
-    resource = Resource.create(
-        {
-            SERVICE_NAME: service_name,
-            "service.instance.id": f"{service_name}-{os.getpid()}",
-        }
-    )
-
-    # Set up tracer provider
-    tracer_provider = TracerProvider(resource=resource)
-    trace.set_tracer_provider(tracer_provider)
-
-    # Configure OTLP exporter
-    otlp_exporter = OTLPSpanExporter(endpoint=f"{otel_endpoint}/v1/traces")
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    tracer_provider.add_span_processor(span_processor)
-
-    # Instrument libraries
-    LoggingInstrumentor().instrument()
-    HTTPXClientInstrumentor().instrument()
-    RedisInstrumentor().instrument()
-    SQLAlchemyInstrumentor().instrument()
-
-    logger.info("OpenTelemetry tracing configured", endpoint=otel_endpoint, service=service_name)
-
-
-# Initialize tracing after logging setup
-setup_tracing()
 
 
 # Lifespan context manager
@@ -143,13 +90,6 @@ app = FastAPI(
     lifespan=lifespan,
     **docs_config,
 )
-
-# Instrument FastAPI after app creation
-FastAPIInstrumentor.instrument_app(app)
-
-# Initialize Prometheus metrics
-instrumentator = Instrumentator()
-instrumentator.instrument(app).expose(app)
 
 # Add Request ID middleware (must be added before other middleware to ensure request_id is always available)
 app.add_middleware(RequestIdMiddleware)

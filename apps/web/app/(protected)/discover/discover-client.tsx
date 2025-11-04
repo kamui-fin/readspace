@@ -1,7 +1,7 @@
 "use client"
 
 import { useQuery } from "@tanstack/react-query"
-import { AnimatePresence, motion } from "framer-motion"
+
 import { Search, X } from "lucide-react"
 import NextImage from "next/image"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
@@ -442,185 +442,129 @@ export default function DiscoverPageClient({
                 </div>
 
                 {/* Content Section */}
-                <AnimatePresence mode="wait">
-                    {hasSearchParams ? (
-                        /* Search Results */
-                        <motion.div
-                            key="search-results"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                        >
-                            {/* Results Count and Clear Button */}
-                            {searchData && (
-                                <motion.div
-                                    className="flex items-center justify-between mb-6"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ delay: 0.05 }}
-                                >
-                                    <div className="text-[#91998C] dark:text-muted-foreground text-sm font-medium">
-                                        {searchData.total_count} results
-                                    </div>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={clearSearch}
-                                        className="h-6 w-6 p-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
-                                </motion.div>
-                            )}
-                            {isFetching || (hasSearchParams && !searchData) ? (
-                                <div className="space-y-4">
-                                    {Array.from({ length: 3 }).map((_, i) => (
-                                        <FeedCardSkeleton key={i} />
-                                    ))}
+                {hasSearchParams ? (
+                    /* Search Results */
+                    <div key="search-results">
+                        {/* Results Count and Clear Button */}
+                        {searchData && (
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="text-[#91998C] dark:text-muted-foreground text-sm font-medium">
+                                    {searchData.total_count} results
                                 </div>
-                            ) : searchError ||
-                                searchData?.results.length === 0 ? (
-                                <motion.div
-                                    className="flex flex-col items-center justify-center py-16"
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        ease: "easeOut",
-                                    }}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={clearSearch}
+                                    className="h-6 w-6 p-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
                                 >
-                                    <div className="mb-6">
-                                        <NextImage
-                                            src="/discover/Search.svg"
-                                            alt="No results found"
-                                            width={132}
-                                            height={128}
-                                            className="w-32 h-auto"
-                                        />
-                                    </div>
-                                    <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
-                                        {searchError
-                                            ? "Search failed"
-                                            : "No matching feeds found"}
-                                    </h3>
-                                    <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                                        {searchError
-                                            ? "Please try again later."
-                                            : "Try rephrasing your query."}
-                                    </p>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    className="space-y-4"
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    transition={{ duration: 0.15 }}
-                                >
-                                    {searchData?.results.map(
-                                        (
-                                            discoveryResult: FeedDiscoveryResult,
-                                            index: number
-                                        ) => {
-                                            const feed =
-                                                feedDiscoveryResultToFeed(
-                                                    discoveryResult
-                                                )
-                                            return (
-                                                <motion.div
-                                                    key={feed.id}
-                                                    initial={{
-                                                        opacity: 0,
-                                                        y: 30,
-                                                    }}
-                                                    animate={{
-                                                        opacity: 1,
-                                                        y: 0,
-                                                    }}
-                                                    transition={{
-                                                        duration: 0.2,
-                                                        delay: index * 0.05,
-                                                        ease: "easeOut",
-                                                    }}
-                                                >
-                                                    {feed.is_preview &&
-                                                        feed.preview_url ? (
-                                                        <FeedPreviewCard
-                                                            feed={{
-                                                                ...feed,
-                                                                is_preview: true,
-                                                                preview_url:
-                                                                    feed.preview_url,
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        <FeedCard
-                                                            feed={
-                                                                discoveryResult
-                                                            }
-                                                        />
-                                                    )}
-                                                </motion.div>
-                                            )
-                                        }
-                                    )}
-                                </motion.div>
-                            )}
-                        </motion.div>
-                    ) : (
-                        /* Categories */
-                        <motion.div
-                            key="categories"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.15, ease: "easeOut" }}
-                        >
-                            <div className="grid grid-cols-2 gap-2 justify-center mb-8 md:flex md:flex-wrap md:gap-3 md:justify-center">
-                                {[
-                                    "Technology & Programming",
-                                    "Artificial Intelligence",
-                                    "Design & Creativity",
-                                    "Business & Finance",
-                                    "News & Politics",
-                                    "Gaming & Entertainment",
-                                    "Science & Research",
-                                    "Lifestyle & Personal",
-                                    "Culture & Arts",
-                                    "Security & Privacy",
-                                    "Education & Learning",
-                                    "Miscellaneous",
-                                ].map((category, index) => (
-                                    <motion.div
-                                        key={category}
-                                        initial={{ opacity: 0, scale: 0.9 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{
-                                            duration: 0.15,
-                                            delay: index * 0.03,
-                                            ease: "easeOut",
-                                        }}
-                                    >
-                                        <CategoryBadge
-                                            category={getMobileCategoryName(
-                                                category
-                                            )}
-                                            iconKey={category}
-                                            onClick={() =>
-                                                handleCategoryClick(category)
-                                            }
-                                            className={
-                                                isMobile
-                                                    ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1"
-                                                    : ""
-                                            }
-                                        />
-                                    </motion.div>
+                                    <X className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        )}
+                        {isFetching || (hasSearchParams && !searchData) ? (
+                            <div className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <FeedCardSkeleton key={i} />
                                 ))}
                             </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                        ) : searchError ||
+                            searchData?.results.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16">
+                                <div className="mb-6">
+                                    <NextImage
+                                        src="/discover/Search.svg"
+                                        alt="No results found"
+                                        width={132}
+                                        height={128}
+                                        className="w-32 h-auto"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
+                                    {searchError
+                                        ? "Search failed"
+                                        : "No matching feeds found"}
+                                </h3>
+                                <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
+                                    {searchError
+                                        ? "Please try again later."
+                                        : "Try rephrasing your query."}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {searchData?.results.map(
+                                    (
+                                        discoveryResult: FeedDiscoveryResult,
+                                        index: number
+                                    ) => {
+                                        const feed =
+                                            feedDiscoveryResultToFeed(
+                                                discoveryResult
+                                            )
+                                        return (
+                                            <div key={feed.id}>
+                                                {feed.is_preview &&
+                                                    feed.preview_url ? (
+                                                    <FeedPreviewCard
+                                                        feed={{
+                                                            ...feed,
+                                                            is_preview: true,
+                                                            preview_url:
+                                                                feed.preview_url,
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <FeedCard
+                                                        feed={
+                                                            discoveryResult
+                                                        }
+                                                    />
+                                                )}
+                                            </div>
+                                        )
+                                    }
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ) : (
+                    /* Categories */
+                    <div key="categories">
+                        <div className="grid grid-cols-2 gap-2 justify-center mb-8 md:flex md:flex-wrap md:gap-3 md:justify-center">
+                            {[
+                                "Technology & Programming",
+                                "Artificial Intelligence",
+                                "Design & Creativity",
+                                "Business & Finance",
+                                "News & Politics",
+                                "Gaming & Entertainment",
+                                "Science & Research",
+                                "Lifestyle & Personal",
+                                "Culture & Arts",
+                                "Security & Privacy",
+                                "Education & Learning",
+                                "Miscellaneous",
+                            ].map((category, index) => (
+                                <div key={category}>
+                                    <CategoryBadge
+                                        category={getMobileCategoryName(
+                                            category
+                                        )}
+                                        iconKey={category}
+                                        onClick={() =>
+                                            handleCategoryClick(category)
+                                        }
+                                        className={
+                                            isMobile
+                                                ? "rounded-lg h-14 w-full text-xs justify-center px-2 py-3 flex-col gap-1"
+                                                : ""
+                                        }
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
         </DiscoverLayout>
     )

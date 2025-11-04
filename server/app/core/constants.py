@@ -87,7 +87,7 @@ UNREAD_RETENTION_DAYS = 30  # Auto-mark articles older than this as read
 INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new subscriptions
 
 # Article Compaction (Cleanup)
-ARTICLE_RETENTION_DAYS = 30  # Delete articles older than 30 days (beyond minimum retention)
+ARTICLE_RETENTION_DAYS = 7  # Delete articles older than 30 days (beyond minimum retention)
 MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
 
 # Content Extraction

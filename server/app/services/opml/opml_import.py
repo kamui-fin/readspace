@@ -99,17 +99,22 @@ class OpmlImportService:
         return folder_cache
 
     async def process_opml_import(
-        self, opml_content: str, default_folder_name: str = "Imported Feeds"
+        self, opml_content: str, default_folder_name: str = "Imported Feeds", test_mode: bool = False
     ) -> dict[str, Any]:
         """Process OPML import and return feed import results.
 
         This method encapsulates the business logic for OPML import orchestration,
         making it easier to test without Celery task complexity.
 
+        Args:
+            opml_content: OPML file content
+            default_folder_name: Default folder for feeds without a folder
+            test_mode: If True, import feeds directly instead of queuing Celery tasks
+
         Returns:
-            Dict with total_feeds, task_ids, and import results
+            Dict with total_feeds, task_ids/results, and import status
         """
-        from app.workers.opml_tasks import import_single_feed_task
+        from app.workers.opml_tasks import async_import_single_feed, import_single_feed_task
 
         # Extract feeds from OPML
         feeds_data = await self.extract_feeds_from_opml(
@@ -118,7 +123,30 @@ class OpmlImportService:
 
         total_feeds = len(feeds_data)
 
-        # Queue feed import tasks using Celery groups for better performance
+        if test_mode:
+            # Test mode: import feeds directly without Celery
+            import_results = []
+            for feed_data in feeds_data:
+                result = await async_import_single_feed(
+                    user_id=self.user_id,
+                    feed_url=feed_data["url"],
+                    folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
+                    tag_names=feed_data["tag_names"],
+                    feed_title=feed_data["title"],
+                    update_existing=True,
+                    db=self.db,
+                )
+                import_results.append(result)
+
+            imported_count = sum(1 for r in import_results if r.get("success"))
+            return {
+                "total_feeds": total_feeds,
+                "imported_count": imported_count,
+                "results": import_results,
+                "status": "completed",
+            }
+
+        # Production mode: Queue feed import tasks using Celery groups
         task_ids = []
         if feeds_data:
             # Use Celery group for efficient bulk task queuing
@@ -185,7 +213,7 @@ class OpmlImportService:
             return {
                 "success": True,
                 "url": feed_url,
-                "title": feed_response.title or feed_title,  # Prefer response title
+                "title": feed_response.custom_title or feed_response.feed.title or feed_title,
                 "status": status,
                 "feed_id": str(feed_response.id),
             }

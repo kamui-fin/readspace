@@ -246,7 +246,8 @@ def upgrade() -> None:
     """)
 
     # Backfill existing subscriptions with cutoff timestamp
-    # Set last_read_cutoff to the 10th most recent article's published_at
+    # Set last_read_cutoff to the 11th most recent article's published_at
+    # This ensures the top 10 articles are newer than the cutoff (published_at > last_read_cutoff)
     op.execute("""
         UPDATE feed_subscriptions fs
         SET last_read_cutoff = (
@@ -255,7 +256,7 @@ def upgrade() -> None:
             JOIN article_contents ac ON ac.id = fa.content_id
             WHERE fa.feed_id = fs.feed_id
             ORDER BY ac.published_at DESC
-            OFFSET 9 LIMIT 1
+            OFFSET 10 LIMIT 1
         )
         WHERE last_read_cutoff IS NULL
         AND EXISTS (

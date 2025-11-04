@@ -1,26 +1,11 @@
-import "@/lib/configure-api-client"
-import { getQueryClient } from "@/lib/get-query-client"
-import { ApiClient } from "@readspace/shared"
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
+"use client"
+
+import { useParams } from "next/navigation"
 import SimilarFeedsClient from "./similar-client"
 
-export default async function SimilarFeedsPage({
-    params,
-}: {
-    params: Promise<{ id: string }>
-}) {
-    const { id: feedId } = await params
-    const queryClient = getQueryClient()
+export default function SimilarFeedsPage() {
+    const params = useParams()
+    const feedId = params.id as string
 
-    // Prefetch similar feeds data (which includes source feed info)
-    await queryClient.prefetchQuery({
-        queryKey: ["similarFeeds", feedId],
-        queryFn: () => ApiClient.rss.getSimilarFeeds(feedId, { limit: 10 }),
-    })
-
-    return (
-        <HydrationBoundary state={dehydrate(queryClient)}>
-            <SimilarFeedsClient feedId={feedId} />
-        </HydrationBoundary>
-    )
+    return <SimilarFeedsClient feedId={feedId} />
 }

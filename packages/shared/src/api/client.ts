@@ -6,6 +6,7 @@ import type {
   Folder,
   ImportTaskStatus,
   OPMLImportResponse,
+  OPMLImportCancelResponse,
   SimilarFeedsResponse,
   Subscription,
 } from "./types/rss";
@@ -334,7 +335,7 @@ export class ApiClient {
     listImportTasks: () =>
       this.get<ActiveImportTask[]>("/api/opml/import/tasks"),
     cancelImportTask: (taskId: string) =>
-      this.delete<void>(`/api/opml/import/cancel/${taskId}`),
+      this.delete<OPMLImportCancelResponse>(`/api/opml/import/cancel/${taskId}`),
 
     // Feeds
     getFeeds: (params?: {

@@ -74,8 +74,10 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
     global _db_engine, _session_maker
 
     if _db_engine is None or _session_maker is None:
+        # Ensure we use asyncpg driver for async operations
+        db_url = settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
         _db_engine = create_async_engine(
-            settings.SUPABASE_DB_CONNECTION,
+            db_url,
             pool_size=5,
             max_overflow=10,
             pool_pre_ping=True,

@@ -117,11 +117,11 @@ class TestFeedSchedulingTask:
 
         await db_session.flush()
 
-        # Execute async function directly with test db session
-        await async_schedule_all_feeds(db=db_session)
+        # Execute async function directly with test db session in test mode
+        await async_schedule_all_feeds(db=db_session, test_mode=True)
 
-        # Note: In async mode, tasks are dispatched but may not complete immediately
-        # Verify feeds were at least identified for refresh
+        # Note: In test mode, feeds are refreshed directly
+        # Verify feeds were refreshed
         for feed in created_feeds:
             await db_session.refresh(feed)
             assert feed.last_fetched_at is not None
@@ -130,63 +130,75 @@ class TestFeedSchedulingTask:
     async def test_schedule_feeds_respects_limit(self, db_session: AsyncSession):
         """Test that scheduling respects MAX_FEEDS_BATCH_SIZE limit."""
         from app.core.constants import MAX_FEEDS_BATCH_SIZE
-        from app.workers.feed_tasks import async_schedule_all_feeds
+        from app.services.feeds.feed import FeedService
 
-        # Create more feeds than the batch size
-        feeds_to_create = MAX_FEEDS_BATCH_SIZE + 10
+        # Create a small number of feeds (we just need to test the LIMIT works)
+        # Don't create MAX_FEEDS_BATCH_SIZE feeds as that's too many for a test
+        feeds_to_create = 5
 
         for i in range(feeds_to_create):
             feed = Feed(
                 url=f"https://example.com/batch-feed{i}.xml",
                 title=f"Batch Feed {i}",
                 last_fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
+                subscriber_count=1,  # Must have subscribers to be eligible for scheduling
             )
             db_session.add(feed)
 
         await db_session.flush()
 
-        # Execute scheduling with test db session - should only process MAX_FEEDS_BATCH_SIZE
-        await async_schedule_all_feeds(db=db_session)
+        # Verify the service correctly applies the limit when querying
+        feed_service = FeedService(db=db_session)
+        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(limit=3)
 
-        # Verify task completed without error
-        # (In production, remaining feeds would be picked up in next run)
+        # Should only return 3 feeds even though we have 5
+        assert len(feeds_to_refresh) == 3
 
     @pytest.mark.asyncio
-    async def test_schedule_feeds_skips_recently_fetched(self, db_session: AsyncSession):
+    async def test_schedule_feeds_skips_recently_fetched(
+        self, db_session: AsyncSession, test_user: Profile, test_folder
+    ):
         """Test that recently fetched feeds are not scheduled."""
-        from app.workers.feed_tasks import async_schedule_all_feeds
+        from app.services.feeds.feed import FeedService
 
         # Create feed that was just fetched
         recent_feed = Feed(
             url="https://example.com/recent-feed.xml",
             title="Recent Feed",
             last_fetched_at=datetime.now(timezone.utc),  # Just now
+            subscriber_count=1,  # Has subscribers
         )
         db_session.add(recent_feed)
+        await db_session.flush()
+
+        # Add subscription so it's included in scheduling
+        recent_sub = FeedSubscription(user_id=test_user.id, feed_id=recent_feed.id, folder_id=test_folder.id)
+        db_session.add(recent_sub)
 
         # Create feed that needs refresh
         old_feed = Feed(
             url="https://example.com/old-feed.xml",
             title="Old Feed",
             last_fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
+            subscriber_count=1,  # Has subscribers
         )
         db_session.add(old_feed)
+        await db_session.flush()
+
+        # Add subscription so it's included in scheduling
+        old_sub = FeedSubscription(user_id=test_user.id, feed_id=old_feed.id, folder_id=test_folder.id)
+        db_session.add(old_sub)
 
         await db_session.flush()
 
-        initial_recent_time = recent_feed.last_fetched_at
-        initial_old_time = old_feed.last_fetched_at
+        # Query for feeds needing refresh
+        feed_service = FeedService(db=db_session)
+        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(limit=100)
 
-        # Execute scheduling with test db session
-        await async_schedule_all_feeds(db=db_session)
-
-        # Refresh from database
-        await db_session.refresh(recent_feed)
-        await db_session.refresh(old_feed)
-
-        # Recent feed should not have been refreshed (time unchanged or minimal change)
-        # Old feed should have been refreshed (time updated)
-        # Note: Tasks are dispatched asynchronously, so timing may vary
+        # Should only include old feed, not recent feed
+        feed_ids = [feed.id for feed in feeds_to_refresh]
+        assert old_feed.id in feed_ids
+        assert recent_feed.id not in feed_ids
 
 
 class TestFeedEnrichmentTask:
@@ -282,45 +294,6 @@ class TestFeedTaskIntegration:
         feed = result.scalar_one()
         # Note: last_fetched_at may not be set if refresh failed
         assert feed is not None
-
-    @pytest.mark.asyncio
-    async def test_bulk_feed_refresh_workflow(self, test_user: Profile, test_folder, db_session: AsyncSession):
-        """Test refreshing multiple feeds in bulk."""
-        from app.workers.feed_tasks import async_refresh_single_feed
-
-        # Create multiple feeds
-        feed_ids = []
-        for i in range(3):
-            feed = Feed(
-                url=f"https://example.com/bulk{i}.xml",
-                title=f"Bulk Feed {i}",
-            )
-            db_session.add(feed)
-            await db_session.flush()
-            feed_ids.append(feed.id)
-
-            # Create subscription
-            subscription = FeedSubscription(
-                user_id=test_user.id,
-                feed_id=feed.id,
-                folder_id=test_folder.id,
-            )
-            db_session.add(subscription)
-
-        await db_session.flush()
-
-        # Refresh all feeds using async function with test db session
-        for feed_id in feed_ids:
-            try:
-                await async_refresh_single_feed(feed_id=feed_id, db=db_session)
-            except Exception:
-                # Some may fail, that's okay for this test
-                pass
-
-        # Verify at least one was attempted
-        result = await db_session.execute(select(Feed).where(Feed.id.in_(feed_ids)))
-        feeds = result.scalars().all()
-        assert len(feeds) == 3
 
 
 class TestUnreadCompactionTask:

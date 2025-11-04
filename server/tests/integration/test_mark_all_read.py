@@ -440,3 +440,165 @@ async def test_subscription_with_fewer_articles_shows_all_as_unread(
 
     # Should have all 5 articles as unread
     assert unread_count == 5
+
+
+@pytest.mark.asyncio
+async def test_mark_feed_all_read_updates_article_list_is_read_field(
+    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+):
+    """Test that article list API returns is_read=true after mark all read."""
+    # Create a folder
+    folder = Folder(
+        id=uuid4(),
+        user_id=test_user.id,
+        name="Test Folder",
+    )
+    db_session.add(folder)
+
+    # Create a feed with 5 articles
+    feed = Feed(
+        id=uuid4(),
+        url="https://example.com/article-list-test.xml",
+        title="Article List Test Feed",
+    )
+    db_session.add(feed)
+    await db_session.flush()
+
+    now = datetime.now(timezone.utc)
+    article_ids = []
+    for i in range(5):
+        content = ArticleContent(
+            id=uuid4(),
+            title=f"Test Article {i}",
+            link=f"https://example.com/articlelist/{i}",
+            published_at=now - timedelta(days=i),
+        )
+        db_session.add(content)
+        await db_session.flush()
+
+        article = FeedArticle(
+            id=uuid4(),
+            feed_id=feed.id,
+            content_id=content.id,
+            guid=f"articlelist-{i}",
+        )
+        db_session.add(article)
+        await db_session.flush()
+        article_ids.append(str(article.id))
+
+    # Create subscription with no cutoff (all unread initially)
+    subscription = FeedSubscription(
+        id=uuid4(),
+        user_id=test_user.id,
+        feed_id=feed.id,
+        folder_id=folder.id,
+        is_favorite=False,
+        last_read_cutoff=None,
+    )
+    db_session.add(subscription)
+    await db_session.commit()
+
+    # Get articles before marking as read - should all be unread
+    response = await async_client.get(f"/api/articles/?feed_ids={feed.id}")
+    assert response.status_code == 200
+    data = response.json()
+    articles_before = data["items"]
+    assert len(articles_before) == 5
+    for article in articles_before:
+        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark all read"
+
+    # Mark all as read
+    response = await async_client.put(f"/api/feeds/{feed.id}/read-status")
+    assert response.status_code == 200
+
+    # Get articles after marking as read - should all be read
+    response = await async_client.get(f"/api/articles/?feed_ids={feed.id}")
+    assert response.status_code == 200
+    data = response.json()
+    articles_after = data["items"]
+    assert len(articles_after) == 5
+    for article in articles_after:
+        assert article["is_read"] is True, f"Article {article['id']} should be read after mark all read"
+
+
+@pytest.mark.asyncio
+async def test_mark_folder_all_read_updates_article_list_is_read_field(
+    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+):
+    """Test that article list API returns is_read=true after mark folder all read."""
+    # Create a folder
+    folder = Folder(
+        id=uuid4(),
+        user_id=test_user.id,
+        name="Test Folder for Article List",
+    )
+    db_session.add(folder)
+    await db_session.flush()
+
+    # Create 2 feeds with 3 articles each
+    now = datetime.now(timezone.utc)
+    all_article_ids = []
+
+    for feed_num in range(2):
+        feed = Feed(
+            id=uuid4(),
+            url=f"https://example.com/folder-article-list-{feed_num}.xml",
+            title=f"Folder Article List Feed {feed_num}",
+        )
+        db_session.add(feed)
+        await db_session.flush()
+
+        for i in range(3):
+            content = ArticleContent(
+                id=uuid4(),
+                title=f"Feed {feed_num} Article {i}",
+                link=f"https://example.com/folderlist/{feed_num}/{i}",
+                published_at=now - timedelta(days=i),
+            )
+            db_session.add(content)
+            await db_session.flush()
+
+            article = FeedArticle(
+                id=uuid4(),
+                feed_id=feed.id,
+                content_id=content.id,
+                guid=f"folder-articlelist-{feed_num}-{i}",
+            )
+            db_session.add(article)
+            await db_session.flush()
+            all_article_ids.append(str(article.id))
+
+        # Create subscription with no cutoff
+        subscription = FeedSubscription(
+            id=uuid4(),
+            user_id=test_user.id,
+            feed_id=feed.id,
+            folder_id=folder.id,
+            is_favorite=False,
+            last_read_cutoff=None,
+        )
+        db_session.add(subscription)
+
+    await db_session.commit()
+
+    # Get articles from folder before marking as read
+    response = await async_client.get(f"/api/articles/?folder_id={folder.id}")
+    assert response.status_code == 200
+    data = response.json()
+    articles_before = data["items"]
+    assert len(articles_before) == 6  # 2 feeds × 3 articles
+    for article in articles_before:
+        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark folder all read"
+
+    # Mark folder all as read
+    response = await async_client.put(f"/api/folders/{folder.id}/read-status")
+    assert response.status_code == 200
+
+    # Get articles after marking folder as read
+    response = await async_client.get(f"/api/articles/?folder_id={folder.id}")
+    assert response.status_code == 200
+    data = response.json()
+    articles_after = data["items"]
+    assert len(articles_after) == 6
+    for article in articles_after:
+        assert article["is_read"] is True, f"Article {article['id']} should be read after mark folder all read"

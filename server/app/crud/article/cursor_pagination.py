@@ -6,7 +6,7 @@ from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -80,13 +80,29 @@ async def get_articles_cursor_paginated(
     Returns:
         CursorPaginationResult with items and pagination metadata
     """
+    # Compute is_read dynamically based on UserArticleState.is_read and last_read_cutoff
+    # Logic: Article is read if:
+    # 1. Explicit read state is True, OR
+    # 2. Article published_at <= last_read_cutoff (and cutoff is not NULL)
+    computed_is_read = case(
+        (UserArticleState.is_read.is_(True), True),
+        (
+            and_(
+                FeedSubscription.last_read_cutoff.isnot(None),
+                ArticleContent.published_at <= FeedSubscription.last_read_cutoff,
+            ),
+            True,
+        ),
+        else_=False,
+    ).label("computed_is_read")
+
     # Build base query for feed articles
     # When filtering by specific feed_ids, use LEFT JOIN for subscription to support preview mode
     # Otherwise use INNER JOIN to only show subscribed feeds
     if feed_ids:
         # Preview mode: LEFT JOIN allows viewing unsubscribed feeds
         query = (
-            select(FeedArticle, UserArticleState)
+            select(FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
             .options(
                 selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
                 selectinload(FeedArticle.feed),
@@ -103,7 +119,7 @@ async def get_articles_cursor_paginated(
     else:
         # Normal mode: INNER JOIN ensures only subscribed feeds
         query = (
-            select(FeedArticle, UserArticleState)
+            select(FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
             .options(
                 selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
                 selectinload(FeedArticle.feed),
@@ -122,11 +138,9 @@ async def get_articles_cursor_paginated(
             query = query.where(FeedSubscription.folder_id == folder_id)
 
     # Apply status filters
+    # Use computed_is_read for filtering instead of raw UserArticleState.is_read
     if is_read is not None:
-        if is_read:
-            query = query.where(UserArticleState.is_read.is_(True))
-        else:
-            query = query.where(or_(UserArticleState.is_read.is_(False), UserArticleState.is_read.is_(None)))
+        query = query.where(computed_is_read.is_(is_read))
 
     if is_read_later is not None:
         query = query.where(UserArticleState.is_read_later.is_(is_read_later))
@@ -172,8 +186,8 @@ async def get_articles_cursor_paginated(
     result = await db.execute(query)
     rows = result.all()
 
-    # Convert Row objects to tuples
-    article_tuples = [(row[0], row[1]) for row in rows]
+    # Convert Row objects to tuples: (FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
+    article_tuples = [(row[0], row[1], row[2], row[3]) for row in rows]
 
     # Determine if there are more pages
     has_more = len(article_tuples) > params.limit

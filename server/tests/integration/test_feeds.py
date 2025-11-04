@@ -276,10 +276,13 @@ class TestFeedGet:
 
     @pytest.mark.asyncio
     async def test_get_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
-        """Test getting feed user is not subscribed to."""
+        """Test getting feed user is not subscribed to returns preview mode."""
         response = await async_client.get(f"/api/feeds/{test_feed.id}")
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(test_feed.id)
+        assert data["is_subscribed"] is False  # Preview mode
 
     @pytest.mark.asyncio
     async def test_get_feed_not_found(self, async_client: AsyncClient):
@@ -432,11 +435,14 @@ class TestFeedBulkOperations:
         self, async_client: AsyncClient, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test bulk deleting multiple feeds."""
-        # Create multiple feeds and subscriptions
-        feed_urls = ["https://hnrss.org/newest", "https://techcrunch.com/feed", "https://twobithistory.org/feed.xml"]
+        # Create multiple feeds and subscriptions with unique URLs
+        from uuid import uuid4
+
         feed_ids = []
-        for i, url in enumerate(feed_urls):
-            feed = Feed(url=url, title=f"Test Feed {i}")
+        for i in range(3):
+            # Use unique URLs to avoid constraint violations
+            url = f"https://example-bulk-delete-{uuid4().hex[:8]}.com/feed"
+            feed = Feed(url=url, title=f"Bulk Delete Feed {i}")
             db_session.add(feed)
             await db_session.flush()
 
@@ -446,7 +452,8 @@ class TestFeedBulkOperations:
 
         await db_session.flush()
 
-        response = await async_client.delete("/api/feeds/", json={"feed_ids": feed_ids})
+        # httpx.AsyncClient.delete() doesn't support json parameter, use request() instead
+        response = await async_client.request("DELETE", "/api/feeds/", json={"feed_ids": feed_ids})
 
         assert response.status_code == 200
         data = response.json()
@@ -464,11 +471,12 @@ class TestFeedBulkOperations:
         db_session.add(initial_folder)
         await db_session.flush()
 
-        # Create multiple feeds and subscriptions
-        feed_urls = ["https://hnrss.org/newest", "https://techcrunch.com/feed", "https://twobithistory.org/feed.xml"]
+        # Create multiple feeds and subscriptions with unique URLs
         feed_ids = []
-        for i, url in enumerate(feed_urls):
-            feed = Feed(url=url, title=f"Bulk Test Feed {i}")
+        for i in range(3):
+            # Use unique URLs to avoid constraint violations
+            url = f"https://example-bulk-update-{uuid4().hex[:8]}.com/feed"
+            feed = Feed(url=url, title=f"Bulk Update Feed {i}")
             db_session.add(feed)
             await db_session.flush()
 

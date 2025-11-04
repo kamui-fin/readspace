@@ -118,6 +118,15 @@ export type OPMLImportResponse = {
   };
 };
 
+export type OPMLImportCancelResponse = {
+  task_id: string;
+  message: string;
+  cancelled: boolean;
+  previous_state?: string;
+  cancelled_subtasks?: number;
+  redirect_url?: string;
+};
+
 export type ImportTaskStatus = {
   task_id: string;
   status: "pending" | "in_progress" | "completed" | "failed";

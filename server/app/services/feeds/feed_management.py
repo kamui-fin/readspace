@@ -24,7 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_subscription
 from app.crud.article.article import create_articles_batch
-from app.models import FeedArticle, UserArticleState
+from app.models import ArticleContent, FeedArticle, FeedSubscription, UserArticleState
 from app.schemas import ArticleCreate, FeedUpdate
 from app.schemas.subscriptions import FeedResponse
 from app.schemas.subscriptions import SubscriptionResponse, SubscriptionUpdate
@@ -383,6 +383,14 @@ class FeedManagementService:
     async def _get_unread_count(self, feed_id: UUID) -> int:
         unread_counts_stmt = (
             select(func.count(FeedArticle.id))
+            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
+            .join(
+                FeedSubscription,
+                and_(
+                    FeedSubscription.feed_id == FeedArticle.feed_id,
+                    FeedSubscription.user_id == self.user_id,
+                ),
+            )
             .outerjoin(
                 UserArticleState,
                 and_(
@@ -393,6 +401,12 @@ class FeedManagementService:
             .where(
                 and_(
                     FeedArticle.feed_id == feed_id,
+                    # Filter by last_read_cutoff: only count articles published after cutoff
+                    # If cutoff is NULL, count all articles (for feeds with <10 articles)
+                    or_(
+                        FeedSubscription.last_read_cutoff.is_(None),
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
+                    ),
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),
@@ -412,6 +426,14 @@ class FeedManagementService:
         # Single query to get unread counts for all feeds
         unread_counts_stmt = (
             select(FeedArticle.feed_id, func.count(FeedArticle.id).label("unread_count"))
+            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
+            .join(
+                FeedSubscription,
+                and_(
+                    FeedSubscription.feed_id == FeedArticle.feed_id,
+                    FeedSubscription.user_id == self.user_id,
+                ),
+            )
             .outerjoin(
                 UserArticleState,
                 and_(
@@ -422,6 +444,12 @@ class FeedManagementService:
             .where(
                 and_(
                     FeedArticle.feed_id.in_(feed_ids),
+                    # Filter by last_read_cutoff: only count articles published after cutoff
+                    # If cutoff is NULL, count all articles (for feeds with <10 articles)
+                    or_(
+                        FeedSubscription.last_read_cutoff.is_(None),
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
+                    ),
                     # Count as unread if no state record OR explicitly marked unread
                     or_(
                         UserArticleState.is_read.is_(None),

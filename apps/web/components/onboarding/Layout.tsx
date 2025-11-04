@@ -31,21 +31,6 @@ const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
     return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-muted px-4 py-8 animate-fade-in">
             <div className="w-full max-w-5xl">
-                <div className="flex justify-center mb-8">
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-gradient-to-br from-primary to-secondary rounded-2xl blur-lg opacity-20"></div>
-                        <div className="relative bg-card p-4 rounded-2xl shadow-sm border border-border">
-                            <Image
-                                src={ReadspaceLogo}
-                                alt="Readspace Logo"
-                                className="rounded-lg"
-                                width={48}
-                                height={48}
-                            />
-                        </div>
-                    </div>
-                </div>
-
                 <OnboardingProgress />
 
                 <div className="text-center mb-8 px-4">

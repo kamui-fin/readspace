@@ -79,12 +79,21 @@ export default function ImportStatusPage() {
 
     const handleCancelImport = async () => {
         try {
-            await ApiClient.rss.cancelImportTask(taskId)
-            toast.success("Import cancelled successfully")
+            const response = await ApiClient.rss.cancelImportTask(taskId)
 
-            // Force refresh the task status
-            const status = await ApiClient.rss.getImportTaskStatus(taskId)
-            setTaskStatus(status as ImportTaskStatus)
+            // Check if cancellation was successful
+            if (response.cancelled) {
+                toast.success("Import cancelled successfully")
+            } else {
+                toast.success(response.message || "Task was already completed")
+            }
+
+            // Redirect to import page as suggested by backend
+            if (response.redirect_url) {
+                router.push(response.redirect_url)
+            } else {
+                router.push("/import-opml")
+            }
         } catch (error) {
             console.error("Error cancelling import task:", error)
             toast.error(

@@ -1,14 +1,17 @@
 """Feed-related Celery tasks."""
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
 
 import structlog
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from app.core.celery_app import celery
-from app.core.constants import MAX_FEEDS_BATCH_SIZE
+from app.core.constants import ARTICLE_RETENTION_DAYS, MAX_FEEDS_BATCH_SIZE, MIN_ARTICLES_PER_FEED
+from app.models.article import ArticleContent, FeedArticle, UserArticleState
 from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
 from app.services.feeds.feed import FeedService
 from app.workers.common import ensure_uuid, get_task_event_loop, get_worker_db
@@ -44,7 +47,7 @@ async def async_refresh_single_feed(feed_id: UUID, db: AsyncSession | None = Non
         logger.info("Successfully refreshed feed", feed_id=str(feed_id))
 
 
-async def async_schedule_all_feeds(db: AsyncSession | None = None) -> None:
+async def async_schedule_all_feeds(db: AsyncSession | None = None, test_mode: bool = False) -> None:
     """Schedule all feeds needing refresh - async implementation.
 
     Uses Celery group() for parallel task dispatch, reducing overhead from 5-10ms per task
@@ -52,6 +55,8 @@ async def async_schedule_all_feeds(db: AsyncSession | None = None) -> None:
 
     Args:
         db: Optional database session. If not provided, creates a new session.
+        test_mode: If True, directly calls async functions instead of dispatching Celery tasks.
+                   This avoids hanging in tests when Celery workers aren't running.
     """
     from celery import group  # type: ignore[import-untyped]
 
@@ -66,6 +71,20 @@ async def async_schedule_all_feeds(db: AsyncSession | None = None) -> None:
 
         if feeds_to_check:
             feed_ids = [feed.id for feed in feeds_to_check]
+
+            # In test mode, call async functions directly instead of dispatching Celery tasks
+            if test_mode:
+                logger.info("Test mode: directly refreshing feeds", task_count=len(feed_ids))
+                for feed_id in feed_ids:
+                    try:
+                        await async_refresh_single_feed(feed_id=feed_id, db=db)
+                    except Exception as exc:
+                        logger.warning(
+                            "Feed refresh failed in test mode",
+                            feed_id=str(feed_id),
+                            error=str(exc),
+                        )
+                return
 
             try:
                 # Use Celery group for parallel task dispatch
@@ -359,149 +378,116 @@ def compact_unread_articles_task() -> dict[str, int]:
 # ============================================================================
 
 
-async def async_compact_old_articles(
-    dry_run: bool = False, db: AsyncSession | None = None, feed_ids: list[UUID] | None = None
-) -> dict[str, int]:
+async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str, int]:
     """Compact old articles by deleting articles beyond retention policy.
 
     Deletes old articles per feed while preserving:
     - At least the newest 50 articles per feed (MIN_ARTICLES_PER_FEED)
-    - Anything published within 30 days (ARTICLE_RETENTION_DAYS)
+    - Anything published within ARTICLE_RETENTION_DAYS
     - Anything the user has saved (is_read_later=true OR is_favorite=true)
 
     Uses COALESCE(published_at, created_at) to handle articles with NULL published dates.
     Cascade deletion to article_contents is handled automatically by database triggers.
 
     Args:
-        dry_run: If True, only count articles that would be deleted without actually deleting
         db: Optional database session. If not provided, creates a new session.
-        feed_ids: Optional list of feed IDs to limit compaction to (for testing)
 
     Returns:
-        Dictionary with deleted_articles count (or would_delete_count for dry_run)
+        Dictionary with deleted_articles count
     """
-    from datetime import datetime, timedelta, timezone
-
-    from sqlalchemy import delete, func, select, text
-
-    from app.core.constants import ARTICLE_RETENTION_DAYS, MIN_ARTICLES_PER_FEED
-    from app.models.article import FeedArticle
-
     logger.info(
         "Starting article compaction",
         retention_days=ARTICLE_RETENTION_DAYS,
         min_articles_per_feed=MIN_ARTICLES_PER_FEED,
-        dry_run=dry_run,
-        feed_filter=f"{len(feed_ids)} feeds" if feed_ids else "all feeds",
     )
 
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=ARTICLE_RETENTION_DAYS)
+
+    # Helper function to execute compaction logic
+    async def execute(session: AsyncSession) -> dict[str, int]:
+        return await _execute_compaction(session, cutoff_date)
 
     # Use provided session or create new one
     if db is not None:
         # Use the provided session directly (for testing)
         # The caller manages the transaction
-        return await _execute_compaction(db, cutoff_date, dry_run, feed_ids=feed_ids, auto_commit=False)
+        return await execute(db)
 
     # Create a new session (for production use)
-    # get_worker_db() context manager will auto-commit
+    result = None
     async for session in get_worker_db():
-        return await _execute_compaction(session, cutoff_date, dry_run, feed_ids=feed_ids, auto_commit=False)
+        result = await execute(session)
+        # Don't return here - let the context manager complete properly
+        break
+    return result
 
 
-async def _execute_compaction(
-    db: AsyncSession,
-    cutoff_date: datetime,
-    dry_run: bool,
-    feed_ids: list[UUID] | None = None,
-    auto_commit: bool = False,
-) -> dict[str, int]:
+async def _execute_compaction(db: AsyncSession, cutoff_date: datetime) -> dict[str, int]:
     """Execute the actual article compaction logic.
-
-    Extracted into a separate function to support both production and test usage.
 
     Args:
         db: Database session
         cutoff_date: Articles older than this date are eligible for deletion
-        dry_run: If True, only count articles without deleting
-        feed_ids: Optional list of feed IDs to limit compaction to (for testing)
-        auto_commit: If True, commit the transaction after deletion (not used currently)
 
     Returns:
-        Dictionary with deleted_articles count (or would_delete_count for dry_run)
+        Dictionary with deleted_articles count
     """
-    from sqlalchemy import delete, func, select, text
+    # Create aliases for self-referencing subquery
+    FA = aliased(FeedArticle, name="fa")
+    AC = aliased(ArticleContent, name="ac")
+    FA2 = aliased(FeedArticle, name="fa2")
+    AC2 = aliased(ArticleContent, name="ac2")
 
-    from app.core.constants import MIN_ARTICLES_PER_FEED
-    from app.models.article import FeedArticle
-
-    # Build feed filter clause if feed_ids provided
-    feed_filter = ""
-    if feed_ids:
-        feed_ids_str = ", ".join(f"'{feed_id}'" for feed_id in feed_ids)
-        feed_filter = f"AND fa.feed_id IN ({feed_ids_str})"
-
-    # Build the subquery to find articles eligible for deletion
-    # Using text() for the entire statement to execute as raw SQL
-    deletion_query_sql = f"""
-        SELECT fa.id
-        FROM feed_articles fa
-        JOIN article_contents ac ON fa.content_id = ac.id
-        LEFT JOIN user_article_states uas ON fa.id = uas.article_id
-            AND (uas.is_read_later = true OR uas.is_favorite = true)
-        WHERE COALESCE(ac.published_at, fa.created_at) < :cutoff_date
-            {feed_filter}
-            AND uas.id IS NULL  -- No saved states exist
-            AND fa.id NOT IN (
-                -- Subquery to get the 50 newest articles per feed
-                SELECT fa2.id
-                FROM feed_articles fa2
-                JOIN article_contents ac2 ON fa2.content_id = ac2.id
-                WHERE fa2.feed_id = fa.feed_id
-                ORDER BY COALESCE(ac2.published_at, fa2.created_at) DESC
-                LIMIT :min_articles
-            )
-    """
-
-    if dry_run:
-        # Dry run: just count what would be deleted
-        count_query_sql = f"""
-            SELECT COUNT(*) FROM ({deletion_query_sql}) AS deletable
-        """
-        result = await db.execute(
-            text(count_query_sql),
-            {
-                "cutoff_date": cutoff_date,
-                "min_articles": MIN_ARTICLES_PER_FEED,
-            },
-        )
-        would_delete = result.scalar() or 0
-
-        logger.info(
-            "Article compaction dry run completed",
-            would_delete_count=would_delete,
-            cutoff_date=cutoff_date.isoformat(),
-        )
-
-        return {"would_delete_count": would_delete}
-
-    # Execute the actual deletion
-    delete_sql = f"""
-        DELETE FROM feed_articles
-        WHERE id IN ({deletion_query_sql})
-    """
-
-    result = await db.execute(
-        text(delete_sql),
-        {
-            "cutoff_date": cutoff_date,
-            "min_articles": MIN_ARTICLES_PER_FEED,
-        },
+    # Build the correlated subquery for top N articles per feed
+    # This selects the IDs of the newest N articles for each feed
+    top_n_subquery = (
+        select(FA2.id)
+        .join(AC2, FA2.content_id == AC2.id)
+        .where(FA2.feed_id == FA.feed_id)
+        .order_by(func.coalesce(AC2.published_at, FA2.created_at).desc())
+        .limit(MIN_ARTICLES_PER_FEED)
+        .correlate(FA)
+        .scalar_subquery()
     )
+
+    # Build the main query to find articles eligible for deletion
+    eligible_articles_query = (
+        select(FA.id, FA.feed_id)
+        .join(AC, FA.content_id == AC.id)
+        .outerjoin(
+            UserArticleState,
+            (UserArticleState.article_id == FA.id)
+            & ((UserArticleState.is_read_later == True) | (UserArticleState.is_favorite == True))  # noqa: E712
+        )
+        .where(
+            func.coalesce(AC.published_at, FA.created_at) < cutoff_date,
+            UserArticleState.id.is_(None),  # No saved states exist
+            FA.id.not_in(top_n_subquery),  # Not in top N newest articles
+        )
+    )
+
+    # Fetch the IDs to delete (this ensures we evaluate the query)
+    eligible_ids_result = await db.execute(eligible_articles_query)
+    article_ids_to_delete = [row.id for row in eligible_ids_result]
+
+    logger.info(
+        "Identified articles for deletion",
+        article_count=len(article_ids_to_delete),
+    )
+
+    if not article_ids_to_delete:
+        logger.info("No articles to delete")
+        return {"deleted_articles": 0}
+
+    # Use ORM delete() with explicit list of IDs
+    delete_stmt = delete(FeedArticle).where(FeedArticle.id.in_(article_ids_to_delete))
+
+    result = await db.execute(delete_stmt)
     deleted_count = result.rowcount
-    # Note: Don't commit here if we're using a provided session (for testing)
-    # The caller will manage the transaction
-    # await db.commit()
+
+    # Explicitly flush and commit the transaction
+    await db.flush()
+    await db.commit()
 
     logger.info(
         "Article compaction completed",
@@ -513,17 +499,14 @@ async def _execute_compaction(
 
 
 @celery.task(name="app.workers.feed_tasks.compact_old_articles_task")
-def compact_old_articles_task(dry_run: bool = False) -> dict[str, int]:
+def compact_old_articles_task() -> dict[str, int]:
     """Celery task wrapper for compacting old articles.
 
     This task should be scheduled to run weekly via Celery Beat to keep
     the database size manageable while preserving important articles.
 
-    Args:
-        dry_run: If True, only count articles that would be deleted without actually deleting
-
     Returns:
-        Dictionary with deleted_articles count (or would_delete_count for dry_run)
+        Dictionary with deleted_articles count
     """
     loop = get_task_event_loop()
-    return loop.run_until_complete(async_compact_old_articles(dry_run=dry_run))
+    return loop.run_until_complete(async_compact_old_articles())

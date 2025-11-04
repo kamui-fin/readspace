@@ -24,9 +24,9 @@ from app.schemas import (
     OpmlTaskMetadata,
 )
 from app.schemas.auth import TokenData
-from app.services.user.auth import get_current_user
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.opml.opml_processor import OpmlProcessor
+from app.services.user.auth import get_current_user
 from app.workers.opml_tasks import import_opml_task  # Import the background task
 
 logger = structlog.get_logger(__name__)
@@ -401,6 +401,9 @@ async def import_opml_file(
             "status_page_url": f"/import-opml/status/{orchestration_task.id}",
         }
 
+    except HTTPException:
+        # Re-raise HTTP exceptions from validation functions without wrapping
+        raise
     except ValueError as e:
         logger.warning(
             "Failed to import OPML due to validation error",
@@ -642,7 +645,14 @@ async def get_import_status(
                         elif task_status in ["imported", "imported_or_updated"]:
                             successful_imports += 1
                         else:
-                            # Handle any other success statuses as successful
+                            # Log unexpected status for debugging
+                            logger.warning(
+                                "Unexpected success status during OPML import",
+                                task_id=feed_task_id,
+                                status=task_status,
+                                url=task_data.get("url"),
+                            )
+                            # Treat as successful import by default
                             successful_imports += 1
                     else:
                         failed_imports += 1

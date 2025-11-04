@@ -18,6 +18,26 @@ logger = structlog.get_logger(__name__)
 # ============================================================================
 
 
+async def _execute_single_feed_import(
+    session: AsyncSession,
+    user_id: UUID,
+    feed_url: str,
+    folder_id: str,
+    tag_names: list[str] | None,
+    feed_title: str | None,
+    update_existing: bool,
+) -> dict[str, Any]:
+    """Execute single feed import with provided session."""
+    opml_service = OpmlImportService(db=session, user_id=user_id)
+    return await opml_service.import_single_feed(
+        feed_url=feed_url,
+        folder_id=folder_id,
+        tag_names=tag_names,
+        feed_title=feed_title,
+        update_existing=update_existing,
+    )
+
+
 async def async_import_single_feed(
     user_id: UUID,
     feed_url: str,
@@ -52,27 +72,40 @@ async def async_import_single_feed(
             "error": "Task was cancelled by user",
         }
 
-    # Use provided session or create new one
     if db is not None:
-        opml_service = OpmlImportService(db=db, user_id=user_id)
-        return await opml_service.import_single_feed(
-            feed_url=feed_url,
-            folder_id=folder_id,
-            tag_names=tag_names,
-            feed_title=feed_title,
-            update_existing=update_existing,
+        return await _execute_single_feed_import(
+            db, user_id, feed_url, folder_id, tag_names, feed_title, update_existing
         )
 
-    # Create a new session (for production use)
     async for session in get_worker_db():
-        opml_service = OpmlImportService(db=session, user_id=user_id)
-        return await opml_service.import_single_feed(
-            feed_url=feed_url,
-            folder_id=folder_id,
-            tag_names=tag_names,
-            feed_title=feed_title,
-            update_existing=update_existing,
+        return await _execute_single_feed_import(
+            session, user_id, feed_url, folder_id, tag_names, feed_title, update_existing
         )
+
+
+async def _execute_opml_import(
+    session: AsyncSession, user_id: UUID, opml_content: str, default_folder_name: str, test_mode: bool = False
+) -> dict[str, Any]:
+    """Execute OPML import with provided session."""
+    opml_service = OpmlImportService(db=session, user_id=user_id)
+    result = await opml_service.process_opml_import(
+        opml_content=opml_content, default_folder_name=default_folder_name, test_mode=test_mode
+    )
+
+    if test_mode:
+        logger.info(
+            "Direct feed import completed",
+            imported_count=result.get("imported_count", 0),
+            total_feeds=result["total_feeds"],
+            user_id=str(user_id),
+        )
+    else:
+        logger.info(
+            "Bulk queued feed import tasks",
+            queued_tasks=result["queued_tasks"],
+            user_id=str(user_id),
+        )
+    return result
 
 
 async def async_import_opml(
@@ -81,6 +114,7 @@ async def async_import_opml(
     default_folder_name: str = "Imported Feeds",
     is_revoked: bool = False,
     db: AsyncSession | None = None,
+    test_mode: bool = False,
 ) -> dict[str, Any]:
     """Import OPML file - async implementation.
 
@@ -90,6 +124,7 @@ async def async_import_opml(
         default_folder_name: Default folder name for feeds without folders
         is_revoked: Whether the task was cancelled
         db: Optional database session. If not provided, creates a new session.
+        test_mode: If True, import feeds directly without queuing Celery tasks
 
     Returns:
         Import result dictionary
@@ -98,35 +133,13 @@ async def async_import_opml(
         logger.info("OPML import task was cancelled before starting", user_id=str(user_id))
         raise Exception("Task was cancelled by user")
 
-    logger.info("Starting OPML import orchestration", user_id=str(user_id))
+    logger.info("Starting OPML import orchestration", user_id=str(user_id), test_mode=test_mode)
 
-    # Use provided session or create new one
     if db is not None:
-        opml_service = OpmlImportService(db=db, user_id=user_id)
-        result = await opml_service.process_opml_import(
-            opml_content=opml_content, default_folder_name=default_folder_name
-        )
+        return await _execute_opml_import(db, user_id, opml_content, default_folder_name, test_mode=test_mode)
 
-        logger.info(
-            "Bulk queued feed import tasks",
-            queued_tasks=result["queued_tasks"],
-            user_id=str(user_id),
-        )
-        return result
-
-    # Create a new session (for production use)
     async for session in get_worker_db():
-        opml_service = OpmlImportService(db=session, user_id=user_id)
-        result = await opml_service.process_opml_import(
-            opml_content=opml_content, default_folder_name=default_folder_name
-        )
-
-        logger.info(
-            "Bulk queued feed import tasks",
-            queued_tasks=result["queued_tasks"],
-            user_id=str(user_id),
-        )
-        return result
+        return await _execute_opml_import(session, user_id, opml_content, default_folder_name, test_mode=test_mode)
 
 
 # ============================================================================

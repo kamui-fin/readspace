@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useUpdateFeed } from "@readspace/shared"
+import { useBulkUpdateFeedsFolder } from "@readspace/shared"
 
 interface BulkEditFolderModalProps {
     /** Whether the modal is open */
@@ -47,7 +47,7 @@ export function BulkEditFolderModal({
     const [targetBulkFolderId, setTargetBulkFolderId] = useState<string | null>(
         null
     )
-    const updateFeedMutation = useUpdateFeed()
+    const bulkUpdateFolderMutation = useBulkUpdateFeedsFolder()
 
     /**
      * Handle modal close with state cleanup
@@ -61,48 +61,29 @@ export function BulkEditFolderModal({
 
     /**
      * Handle bulk folder change
+     * Uses single API call for efficiency
      */
-    const handleBulkFolderChange = async () => {
+    const handleBulkFolderChange = () => {
         if (!targetBulkFolderId) {
             toast.error("Please select a target folder.")
             return
         }
 
-        const updates = selectedFeedIds.map((feedId) =>
-            updateFeedMutation.mutateAsync({
-                feedId,
-                data: {
-                    folder_id:
-                        targetBulkFolderId === "none"
-                            ? undefined
-                            : targetBulkFolderId,
-                },
-                silent: true, // Suppress individual toasts for bulk operation
-            })
-        )
-
-        try {
-            await toast.promise(Promise.allSettled(updates), {
-                loading: `Moving ${selectedFeedIds.length} feeds...`,
-                success: (results) => {
-                    const successfulCount = results.filter(
-                        (r) => r.status === "fulfilled"
-                    ).length
-                    const failedCount = results.length - successfulCount
-
+        bulkUpdateFolderMutation.mutate(
+            { feedIds: selectedFeedIds, folderId: targetBulkFolderId },
+            {
+                onSuccess: () => {
                     setTargetBulkFolderId(null)
                     onComplete?.()
                     handleClose(false)
-
-                    return `Moved ${successfulCount} feeds. ${
-                        failedCount > 0 ? `${failedCount} failed.` : ""
-                    }`
+                    // Toast handled by hook configuration
                 },
-                error: "An unexpected error occurred while moving feeds.",
-            })
-        } catch (error) {
-            console.error("Bulk folder change error:", error)
-        }
+                onError: () => {
+                    // Toast handled by hook configuration
+                    // Keep modal open to allow retry
+                },
+            }
+        )
     }
 
     /**
@@ -138,7 +119,6 @@ export function BulkEditFolderModal({
                             <SelectValue placeholder="Select new folder" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="none">No folder</SelectItem>
                             {folders.map((folder) => (
                                 <SelectItem key={folder.id} value={folder.id}>
                                     {folder.name}
@@ -152,7 +132,7 @@ export function BulkEditFolderModal({
                         type="button"
                         variant="outline"
                         onClick={handleCancel}
-                        disabled={updateFeedMutation.status === "pending"}
+                        disabled={bulkUpdateFolderMutation.status === "pending"}
                     >
                         Cancel
                     </Button>
@@ -160,10 +140,10 @@ export function BulkEditFolderModal({
                         onClick={handleBulkFolderChange}
                         disabled={
                             !targetBulkFolderId ||
-                            updateFeedMutation.status === "pending"
+                            bulkUpdateFolderMutation.status === "pending"
                         }
                     >
-                        {updateFeedMutation.status === "pending"
+                        {bulkUpdateFolderMutation.status === "pending"
                             ? "Moving..."
                             : "Move Feeds"}
                     </Button>

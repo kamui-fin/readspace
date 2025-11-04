@@ -245,22 +245,49 @@ export default function ImportOPMLPageClient() {
                 <div className="max-w-4xl mx-auto">
                     <div className="mb-8">
                         <h1 className="text-2xl sm:text-3xl font-bold mb-3">
-                            OPML Import
+                            {activeImports && activeImports.length > 0
+                                ? "Import Began"
+                                : "OPML Import"
+                            }
                         </h1>
                         <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                            Import feeds from an OPML file exported from another
-                            RSS reader.
+                            {activeImports && activeImports.length > 0
+                                ? "Your OPML import is currently running. Check the progress below."
+                                : "Import feeds from an OPML file exported from another RSS reader."
+                            }
                         </p>
                     </div>
 
-                    {/* Upload Section - Only show if no active imports */}
-                    {(!activeImports || activeImports.length === 0) && (
+                    {/* Show active import status or upload section */}
+                    {activeImports && activeImports.length > 0 && activeImports[0] ? (
+                        <Card>
+                            <CardContent className="p-6">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
+                                        <div>
+                                            <div className="font-medium">
+                                                {activeImports[0].filename}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {activeImports[0].estimated_feeds} feeds
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <Button asChild>
+                                        <a href={`/import-opml/status/${activeImports[0].task_id}`}>
+                                            View Progress
+                                        </a>
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
                         <Card
-                            className={`transition-colors duration-200 ${
-                                isDragging
-                                    ? "border-primary bg-primary/5"
-                                    : "border-dashed border-2"
-                            }`}
+                            className={`transition-colors duration-200 ${isDragging
+                                ? "border-primary bg-primary/5"
+                                : "border-dashed border-2"
+                                }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

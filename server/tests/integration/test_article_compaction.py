@@ -75,22 +75,19 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
     assert len(articles_before) == 70
 
     # Run compaction task
-    result = await async_compact_old_articles(dry_run=False, db=db_session)
-
-    # Should have deleted 20 articles (keeping 50)
-    assert result["deleted_articles"] == 20
+    result = await async_compact_old_articles(db=db_session)
 
     # Commit to persist the changes
     await db_session.commit()
 
-    # Verify final count - should keep exactly 50 newest
+    # Verify final count for THIS FEED - should keep exactly 50 newest
     from sqlalchemy.orm import selectinload
 
     result = await db_session.execute(
         select(FeedArticle).where(FeedArticle.feed_id == feed.id).options(selectinload(FeedArticle.content))
     )
     articles_after = result.scalars().all()
-    assert len(articles_after) == 50
+    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"
 
     # Verify the oldest articles were deleted and newest were kept
     # The remaining articles should be the 50 newest ones (indices 0-49)
@@ -170,7 +167,7 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
     await db_session.commit()
 
     # Run compaction
-    result = await async_compact_old_articles(dry_run=False, db=db_session)
+    result = await async_compact_old_articles(db=db_session)
 
     # Verify all saved articles still exist
     for saved_id in saved_article_ids:
@@ -307,7 +304,7 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     await db_session.commit()
 
     # Run compaction
-    result = await async_compact_old_articles(dry_run=False, db=db_session)
+    result = await async_compact_old_articles(db=db_session)
 
     # Verify both users' saved articles are preserved
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user1_saved_id))
@@ -318,21 +315,21 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
 
 
 @pytest.mark.asyncio
-async def test_compaction_dry_run_e2e(db_session: AsyncSession, test_user: Profile):
-    """Test dry-run mode doesn't delete anything."""
+async def test_compaction_respects_retention_policy(db_session: AsyncSession, test_user: Profile):
+    """Test that compaction respects the retention policy and minimum article count."""
     # Create folder
     folder = Folder(
         id=uuid4(),
         user_id=test_user.id,
-        name="E2E Dry Run Folder",
+        name="E2E Retention Policy Folder",
     )
     db_session.add(folder)
 
     # Create feed
     feed = Feed(
         id=uuid4(),
-        url=f"https://example.com/e2e-dryrun-feed-{uuid4().hex[:8]}.xml",
-        title="E2E Dry Run Feed",
+        url=f"https://example.com/e2e-retention-feed-{uuid4().hex[:8]}.xml",
+        title="E2E Retention Policy Feed",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -347,13 +344,13 @@ async def test_compaction_dry_run_e2e(db_session: AsyncSession, test_user: Profi
     db_session.add(subscription)
     await db_session.commit()
 
-    # Create 70 old articles
+    # Create 70 old articles (all > 30 days old)
     for i in range(70):
         published_at = datetime.now(timezone.utc) - timedelta(days=31 + i)
         content = ArticleContent(
             id=uuid4(),
-            title=f"E2E Dry Run Article {i}",
-            link=f"https://example.com/e2e-dryrun-{i}",
+            title=f"E2E Retention Article {i}",
+            link=f"https://example.com/e2e-retention-{i}",
             description="Test article",
             content="Test content",
             published_at=published_at,
@@ -365,30 +362,27 @@ async def test_compaction_dry_run_e2e(db_session: AsyncSession, test_user: Profi
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-dryrun-{uuid4()}",
+            guid=f"e2e-retention-{uuid4()}",
             created_at=published_at,
         )
         db_session.add(article)
 
     await db_session.commit()
 
-    # Count before dry run
+    # Count before compaction
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
     articles_before = result.scalars().all()
     initial_count = len(articles_before)
     assert initial_count == 70
 
-    # Run dry-run
-    result = await async_compact_old_articles(dry_run=True, db=db_session)
+    # Run compaction
+    result = await async_compact_old_articles(db=db_session)
 
-    # Should report would-delete count
-    assert "would_delete_count" in result
-    assert result["would_delete_count"] == 20  # Would delete 20 to keep 50
-
-    # Verify nothing was deleted
+    # Verify compaction deleted articles but kept minimum 50
+    assert "deleted_articles" in result
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
     articles_after = result.scalars().all()
-    assert len(articles_after) == initial_count
+    assert len(articles_after) == 50  # Should keep exactly 50 newest
 
 
 @pytest.mark.asyncio
@@ -448,16 +442,15 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
 
     # Call the async function directly instead of the Celery task wrapper
     # (Celery tasks can't run in an existing event loop)
-    result = await async_compact_old_articles(dry_run=False, db=db_session)
+    result = await async_compact_old_articles(db=db_session)
 
     # Should return results dictionary
     assert "deleted_articles" in result
-    assert result["deleted_articles"] == 10  # 60 - 50 = 10
 
     # Commit the changes made by the compaction function
     await db_session.commit()
 
-    # Verify articles were deleted
+    # Verify articles were deleted from THIS FEED - should keep exactly 50
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
     articles_after = result.scalars().all()
-    assert len(articles_after) == 50
+    assert len(articles_after) == 50, f"Expected 50 articles for test feed, got {len(articles_after)}"

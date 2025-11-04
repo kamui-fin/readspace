@@ -78,10 +78,13 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
-        """Test getting similar feeds for non-subscribed feed."""
+        """Test getting similar feeds for non-subscribed feed works (preview mode)."""
         response = await async_client.get(f"/api/similar/{test_feed.id}")
 
-        assert response.status_code == 404
+        assert response.status_code == 200
+        data = response.json()
+        assert "source_feed" in data
+        assert "similar_feeds" in data
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_not_found(self, async_client: AsyncClient):

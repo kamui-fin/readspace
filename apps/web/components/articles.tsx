@@ -42,7 +42,7 @@ import {
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
-import { Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
+import { CheckCheck, Eye, EyeOff, Globe, MoreVertical, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
@@ -117,6 +117,7 @@ export function ArticlesView({
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false)
     const [previewFeedData, setPreviewFeedData] = useState<Feed | null>(null)
+    const [isMarkingAllRead, setIsMarkingAllRead] = useState(false)
 
     // Ref to track if preview refresh has already been triggered for this feed
     const hasRefreshedPreview = useRef(false)
@@ -229,9 +230,8 @@ export function ArticlesView({
             return currentFeed?.unread_count || 0
         } else if (folderId) {
             // Folder view: get unread count for this folder
-            const folderUnreadCount =
-                typedUnreadCounts?.unread_by_folder?.[folderId] ?? 0
-            return folderUnreadCount
+            const folderUnreadCounts = typedUnreadCounts?.unread_by_folder as Record<string, number> | undefined
+            return folderUnreadCounts?.[folderId] ?? 0
         } else {
             // All articles view: get total unread count
             return typedUnreadCounts?.total_unread || 0
@@ -557,6 +557,45 @@ export function ArticlesView({
         setShowUnreadOnly((prev) => !prev)
     }
 
+    // Mark all articles as read (for feed or folder)
+    const handleMarkAllAsRead = async () => {
+        if (!feedId && !folderId) return
+
+        setIsMarkingAllRead(true)
+        toast.loading("Marking all as read...", { id: "mark-all-read" })
+
+        try {
+            if (feedId) {
+                await ApiClient.rss.markFeedAllRead(feedId)
+                toast.success("All articles marked as read!", { id: "mark-all-read" })
+            } else if (folderId) {
+                await ApiClient.rss.markFolderAllRead(folderId)
+                toast.success("All articles in folder marked as read!", { id: "mark-all-read" })
+            }
+
+            // Invalidate all relevant caches to force fresh fetch from server
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.ARTICLES],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            })
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.FEEDS],
+            })
+
+            // Refetch articles to update the view
+            await refetchArticles()
+        } catch (error) {
+            console.error("Mark all as read failed:", error)
+            toast.error("Failed to mark all as read. Please try again.", {
+                id: "mark-all-read",
+            })
+        } finally {
+            setIsMarkingAllRead(false)
+        }
+    }
+
     // Preview mode: refresh feed on mount to get latest articles
     // Only refresh once per feed per session (hasRefreshedPreview tracks this)
     useEffect(() => {
@@ -773,6 +812,27 @@ export function ArticlesView({
                                         </TooltipProvider>
                                     )}
 
+                                    {/* Mark all as read button - only for feeds and folders */}
+                                    {(feedId || folderId) && !shouldShowPreviewBanner && (
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={handleMarkAllAsRead}
+                                                        disabled={isMarkingAllRead}
+                                                    >
+                                                        <CheckCheck className="h-4 w-4" />
+                                                    </Button>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    Mark all as read
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    )}
+
                                     {/* Direct refresh button */}
                                     <TooltipProvider>
                                         <Tooltip>
@@ -939,6 +999,20 @@ export function ArticlesView({
                                                 ) : (
                                                     <EyeOff className="h-4 w-4 transition-transform duration-200" />
                                                 )}
+                                            </Button>
+                                        )}
+
+                                        {/* Mark all as read button - only for feeds and folders */}
+                                        {(feedId || folderId) && !shouldShowPreviewBanner && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                onClick={handleMarkAllAsRead}
+                                                disabled={isMarkingAllRead}
+                                                title="Mark all as read"
+                                            >
+                                                <CheckCheck className="h-4 w-4 transition-transform duration-200" />
                                             </Button>
                                         )}
 

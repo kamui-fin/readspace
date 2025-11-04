@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from typing import Any
 from uuid import UUID
 
@@ -8,16 +7,6 @@ from celery import Celery  # type: ignore[import-untyped]
 from celery.schedules import crontab  # type: ignore[import-untyped]
 from celery.signals import worker_process_init  # type: ignore[import-untyped]
 from kombu.serialization import register  # type: ignore[import-untyped]
-from opentelemetry import trace
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-from opentelemetry.instrumentation.celery import CeleryInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.redis import RedisInstrumentor
-from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
 from app.core.config import get_settings
 from app.utils.logging_config import setup_logging
@@ -55,48 +44,10 @@ register(
 )
 
 
-def setup_celery_tracing() -> None:
-    """Configure OpenTelemetry tracing for Celery"""
-    settings = get_settings()
-    service_name = settings.OTEL_SERVICE_NAME
-    otel_endpoint = settings.OTEL_EXPORTER_OTLP_ENDPOINT
-
-    if not otel_endpoint:
-        logger.info("OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping tracing setup for %s", service_name)
-        return
-
-    # Configure resource with service information
-    resource = Resource.create(
-        {
-            SERVICE_NAME: service_name,
-            "service.instance.id": f"{service_name}-{os.getpid()}",
-        }
-    )
-
-    # Set up tracer provider
-    tracer_provider = TracerProvider(resource=resource)
-    trace.set_tracer_provider(tracer_provider)
-
-    # Configure OTLP exporter
-    otlp_exporter = OTLPSpanExporter(endpoint=f"{otel_endpoint}/v1/traces")
-    span_processor = BatchSpanProcessor(otlp_exporter)
-    tracer_provider.add_span_processor(span_processor)
-
-    # Instrument libraries
-    LoggingInstrumentor().instrument()
-    HTTPXClientInstrumentor().instrument()
-    RedisInstrumentor().instrument()
-    SQLAlchemyInstrumentor().instrument()
-    CeleryInstrumentor().instrument()
-
-    logger.info("OpenTelemetry tracing configured for %s, endpoint: %s", service_name, otel_endpoint)
-
-
 @worker_process_init.connect
 def init_worker_logging(**_kwargs: Any) -> None:
-    """Initialize logging and tracing for Celery worker processes with service-specific tags."""
+    """Initialize logging for Celery worker processes."""
     setup_logging()
-    setup_celery_tracing()
 
 
 CELERY_BROKER_URL = settings.CELERY_BROKER_URL
