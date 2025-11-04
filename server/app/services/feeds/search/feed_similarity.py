@@ -146,13 +146,13 @@ class FeedSimilarityService:
                 # Access row data by index to avoid potential ORM lazy loading issues
                 feed_data = FeedDiscoveryResult(
                     id=str(row[0]),  # f.id
-                    title=row[1],    # f.title
+                    title=row[1],  # f.title
                     description=row[2],  # f.description
-                    url=str(row[3]),     # f.url
+                    url=str(row[3]),  # f.url
                     link=self._normalize_url(row[4]),  # f.link
                     image_url=self._normalize_url(row[5]),  # f.image_url
-                    tags=row[6] or [],   # f.tags
-                    language=row[7],     # f.language
+                    tags=row[6] or [],  # f.tags
+                    language=row[7],  # f.language
                     category=row[8] if row[8] else None,  # f.top_level_category
                     popularity_score=row[9] or 0.0,  # f.popularity_score
                     relevance=round(float(row[10]), 3),  # similarity_score
@@ -231,8 +231,7 @@ class FeedSimilarityService:
         """Check if the user is subscribed to a specific feed."""
         try:
             stmt = select(FeedSubscription).where(
-                FeedSubscription.user_id == self.user_id,
-                FeedSubscription.feed_id == feed_id
+                FeedSubscription.user_id == self.user_id, FeedSubscription.feed_id == feed_id
             )
             result = await self.db.execute(stmt)
             return result.scalar_one_or_none() is not None

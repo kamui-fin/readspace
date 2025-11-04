@@ -12,6 +12,7 @@ import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS } from "../query-keys";
 import type {
   Article,
+  CursorPaginatedResponse,
   Feed,
   Folder,
   ImportTaskStatus,
@@ -331,14 +332,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             if (!old) return old;
             // Remove folder-specific unread counts
             const newCounts = { ...old };
-            if (
-              newCounts.unread_by_folder &&
-              Array.isArray(newCounts.unread_by_folder)
-            ) {
-              newCounts.unread_by_folder = newCounts.unread_by_folder.filter(
-                (item: { folder_id: string; unread_count: number }) =>
-                  item.folder_id !== folderId,
-              );
+            if (newCounts.unread_by_folder) {
+              const { [folderId]: _, ...remainingFolders } = newCounts.unread_by_folder;
+              newCounts.unread_by_folder = remainingFolders;
             }
             return newCounts;
           },
@@ -670,6 +666,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   ) {
     const queryClient = useQueryClient();
     return useMutation({
+      // Add mutationKey for deduplication and caching
+      mutationKey: ["refreshFeed"],
       mutationFn: async ({
         feedId,
         forceRefetch = false,
@@ -679,6 +677,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       }) => {
         await ApiClient.rss.refreshFeed(feedId, forceRefetch);
       },
+      // Cache successful refreshes for 5 minutes to prevent duplicate calls
+      gcTime: 5 * 60 * 1000,
       onSuccess: (_, { feedId }) => {
         config.showSuccess?.(
           `Feed '${feedId.substring(0, 8)}...' refresh initiated.`,
@@ -705,27 +705,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
-  function useRefreshFolderFeeds(
-    options?: UseMutationOptions<unknown, unknown, string>,
-  ) {
-    return useMutation({
-      mutationFn: (folderId: string) =>
-        ApiClient.rss.refreshFolderFeeds(folderId),
-      onSuccess: (data) => {
-        config.showSuccess?.(
-          "Folder refresh started! Check status for progress.",
-        );
-        return data;
-      },
-      onError: (error: unknown) => {
-        const errorMessage =
-          (error as { response?: { data?: { detail?: string } } })?.response
-            ?.data?.detail || "Failed to start folder refresh.";
-        config.showError?.(errorMessage);
-      },
-      ...options,
-    });
-  }
 
   function useRefreshAllFeeds(
     options?: UseMutationOptions<unknown, unknown, void>,
@@ -851,21 +830,14 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
               feedBeingDeleted.folder_id &&
               feedBeingDeleted.unread_count
             ) {
-              updatedCounts.unread_by_folder =
-                updatedCounts.unread_by_folder.map(
-                  (folder: { folder_id: string; unread_count: number }) => {
-                    if (folder.folder_id === feedBeingDeleted.folder_id) {
-                      return {
-                        ...folder,
-                        unread_count: Math.max(
-                          0,
-                          folder.unread_count - feedBeingDeleted.unread_count,
-                        ),
-                      };
-                    }
-                    return folder;
-                  },
-                );
+              const currentFolderCount = updatedCounts.unread_by_folder[feedBeingDeleted.folder_id] || 0;
+              updatedCounts.unread_by_folder = {
+                ...updatedCounts.unread_by_folder,
+                [feedBeingDeleted.folder_id]: Math.max(
+                  0,
+                  currentFolderCount - feedBeingDeleted.unread_count,
+                ),
+              };
             }
 
             return updatedCounts;
@@ -1005,21 +977,14 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
               feedBeingDeleted.folder_id &&
               feedBeingDeleted.unread_count
             ) {
-              updatedCounts.unread_by_folder =
-                updatedCounts.unread_by_folder.map(
-                  (folder: { folder_id: string; unread_count: number }) => {
-                    if (folder.folder_id === feedBeingDeleted.folder_id) {
-                      return {
-                        ...folder,
-                        unread_count: Math.max(
-                          0,
-                          folder.unread_count - feedBeingDeleted.unread_count,
-                        ),
-                      };
-                    }
-                    return folder;
-                  },
-                );
+              const currentFolderCount = updatedCounts.unread_by_folder[feedBeingDeleted.folder_id] || 0;
+              updatedCounts.unread_by_folder = {
+                ...updatedCounts.unread_by_folder,
+                [feedBeingDeleted.folder_id]: Math.max(
+                  0,
+                  currentFolderCount - feedBeingDeleted.unread_count,
+                ),
+              };
             }
 
             return updatedCounts;
@@ -1153,16 +1118,12 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
                 }
               });
 
-              updatedCounts.unread_by_folder =
-                updatedCounts.unread_by_folder.map(
-                  (folder: { folder_id: string; unread_count: number }) => {
-                    const reduction = folderReductions[folder.folder_id] || 0;
-                    return {
-                      ...folder,
-                      unread_count: Math.max(0, folder.unread_count - reduction),
-                    };
-                  },
-                );
+              const newUnreadByFolder = { ...updatedCounts.unread_by_folder };
+              Object.entries(folderReductions).forEach(([folderId, reduction]) => {
+                const currentCount = newUnreadByFolder[folderId] || 0;
+                newUnreadByFolder[folderId] = Math.max(0, currentCount - reduction);
+              });
+              updatedCounts.unread_by_folder = newUnreadByFolder;
             }
 
             return updatedCounts;
@@ -1289,26 +1250,17 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   function useArticles(
     params: {
       feedIds?: string[];
-      folderId?: string;
+      cursor?: string;
+      limit?: number;
       isRead?: boolean;
       isReadLater?: boolean;
       isFavorite?: boolean;
-      feedIsFavorite?: boolean;
-      publishedSince?: string;
-      publishedUntil?: string;
-      searchQuery?: string;
-      sortBy?: string;
-      sortOrder?: string;
-      page?: number;
-      size?: number;
-      viewType?: string; // Add viewType for better cache distinction
-      viewId?: string; // Add viewId for unique identification
     },
     options?: Omit<
       UseQueryOptions<
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         Error,
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         [string, typeof params]
       >,
       "queryKey" | "queryFn"
@@ -1319,30 +1271,23 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       queryFn: () =>
         ApiClient.rss.getArticles({
           feed_ids: params.feedIds,
-          folder_id: params.folderId,
+          cursor: params.cursor,
+          limit: params.limit,
           is_read: params.isRead,
           is_read_later: params.isReadLater,
           is_favorite: params.isFavorite,
-          feed_is_favorite: params.feedIsFavorite,
-          published_since: params.publishedSince,
-          published_until: params.publishedUntil,
-          search_query: params.searchQuery,
-          sort_by: params.sortBy,
-          sort_order: params.sortOrder,
-          page: params.page,
-          size: params.size,
-        }) as Promise<PaginatedResponse<Article>>,
+        }),
       ...options,
     });
   }
 
   function useRecentlyReadArticles(
-    params: { page?: number; size?: number } = {},
+    params: { cursor?: string; limit?: number } = {},
     options?: Omit<
       UseQueryOptions<
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         Error,
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         [string, string, typeof params]
       >,
       "queryKey" | "queryFn"
@@ -1351,21 +1296,18 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, "recently_read", params],
       queryFn: () =>
-        ApiClient.rss.getRecentlyReadArticles(
-          params.page,
-          params.size,
-        ) as Promise<PaginatedResponse<Article>>,
+        ApiClient.rss.getRecentlyReadArticles(params),
       ...options,
     });
   }
 
   function useReadLaterArticles(
-    params: { page?: number; size?: number } = {},
+    params: { cursor?: string; limit?: number } = {},
     options?: Omit<
       UseQueryOptions<
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         Error,
-        PaginatedResponse<Article>,
+        CursorPaginatedResponse<Article>,
         [string, string, typeof params]
       >,
       "queryKey" | "queryFn"
@@ -1374,9 +1316,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     return useQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later", params],
       queryFn: () =>
-        ApiClient.rss.getReadLaterArticles(params.page, params.size) as Promise<
-          PaginatedResponse<Article>
-        >,
+        ApiClient.rss.getReadLaterArticles(params),
       ...options,
     });
   }
@@ -1446,8 +1386,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
         });
-        // Invalidate discover queries to update subscription status
-        queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0] === 'trending-feeds' || query.queryKey[0] === 'discover' });
+        // Don't invalidate discover queries to prevent search reload
+        // The feed cards will update their subscription status via their own useFeeds queries
       },
       onError: (error: unknown) => {
         let errorMessage = "Failed to subscribe to feed";
@@ -1594,14 +1534,25 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
         });
-        // Invalidate unread counts to update badges and counts
+        // Invalidate unread counts to update badges and counts (invalidate all variants with different folderIds)
         queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+          predicate: (query) =>
+            query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
           refetchType: "active",
         });
         // Invalidate all article lists to ensure consistency across views
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
+          refetchType: "active",
+        });
+        // Invalidate feeds to update individual feed unread counts
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+          refetchType: "active",
+        });
+        // Invalidate sidebar data to ensure navigation counts update
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
           refetchType: "active",
         });
       },
@@ -1614,66 +1565,50 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     params: {
       feedIds?: string[];
       folderId?: string;
+      limit?: number;
       isRead?: boolean;
       isReadLater?: boolean;
       isFavorite?: boolean;
-      feedIsFavorite?: boolean;
-      publishedSince?: string;
-      publishedUntil?: string;
-      searchQuery?: string;
-      sortBy?: string;
-      sortOrder?: string;
-      size?: number;
-      viewType?: string;
-      viewId?: string;
     },
     options?: UseInfiniteQueryOptions<
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       Error,
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       [string, string, typeof params],
-      number
+      string | null
     >,
   ) {
     return useInfiniteQuery({
       queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", params],
       queryFn: ({
         pageParam,
-      }: QueryFunctionContext<[string, string, typeof params], number>) =>
+      }: QueryFunctionContext<[string, string, typeof params], string | null>) =>
         ApiClient.rss.getArticles({
           feed_ids: params.feedIds,
           folder_id: params.folderId,
+          cursor: pageParam || undefined,
+          limit: params.limit || 25,
           is_read: params.isRead,
           is_read_later: params.isReadLater,
           is_favorite: params.isFavorite,
-          feed_is_favorite: params.feedIsFavorite,
-          published_since: params.publishedSince,
-          published_until: params.publishedUntil,
-          search_query: params.searchQuery,
-          sort_by: params.sortBy,
-          sort_order: params.sortOrder,
-          page: pageParam,
-          size: params.size || 25,
-        }) as Promise<PaginatedResponse<Article>>,
-      getNextPageParam: (lastPage: PaginatedResponse<Article>, allPages) => {
-        const currentPage = lastPage.page || 1;
-        const pageSize = lastPage.size || 25;
-        // If we got a full page of results, there might be more
-        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
+        }),
+      getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
+        // Use cursor from response
+        return lastPage.next_cursor;
       },
-      initialPageParam: 1,
+      initialPageParam: null,
       ...options,
     });
   }
 
   function useInfiniteRecentlyReadArticles(
-    params: { size?: number } = {},
+    params: { limit?: number } = {},
     options?: UseInfiniteQueryOptions<
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       Error,
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       [string, string, string, typeof params],
-      number
+      string | null
     >,
   ) {
     return useInfiniteQuery({
@@ -1682,30 +1617,28 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         pageParam,
       }: QueryFunctionContext<
         [string, string, string, typeof params],
-        number
+        string | null
       >) =>
-        ApiClient.rss.getRecentlyReadArticles(
-          pageParam,
-          params.size || 25,
-        ) as Promise<PaginatedResponse<Article>>,
-      getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const currentPage = lastPage.page || 1;
-        const pageSize = params.size || 25;
-        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
+        ApiClient.rss.getRecentlyReadArticles({
+          cursor: pageParam || undefined,
+          limit: params.limit || 25,
+        }),
+      getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
+        return lastPage.next_cursor;
       },
-      initialPageParam: 1,
+      initialPageParam: null,
       ...options,
     });
   }
 
   function useInfiniteReadLaterArticles(
-    params: { size?: number } = {},
+    params: { limit?: number } = {},
     options?: UseInfiniteQueryOptions<
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       Error,
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       [string, string, string, typeof params],
-      number
+      string | null
     >,
   ) {
     return useInfiniteQuery({
@@ -1714,30 +1647,28 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         pageParam,
       }: QueryFunctionContext<
         [string, string, string, typeof params],
-        number
+        string | null
       >) =>
-        ApiClient.rss.getReadLaterArticles(
-          pageParam,
-          params.size || 25,
-        ) as Promise<PaginatedResponse<Article>>,
-      getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const currentPage = lastPage.page || 1;
-        const pageSize = params.size || 25;
-        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
+        ApiClient.rss.getReadLaterArticles({
+          cursor: pageParam || undefined,
+          limit: params.limit || 25,
+        }),
+      getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
+        return lastPage.next_cursor;
       },
-      initialPageParam: 1,
+      initialPageParam: null,
       ...options,
     });
   }
 
   function useInfiniteTodayArticles(
-    params?: { size?: number },
+    params?: { limit?: number },
     options?: UseInfiniteQueryOptions<
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       Error,
-      PaginatedResponse<Article>,
+      CursorPaginatedResponse<Article>,
       [string, string, string, typeof params],
-      number
+      string | null
     >,
   ) {
     return useInfiniteQuery({
@@ -1746,18 +1677,16 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         pageParam,
       }: QueryFunctionContext<
         [string, string, string, typeof params],
-        number
+        string | null
       >) =>
         ApiClient.rss.getTodaysArticles({
-          page: pageParam,
-          size: params?.size || 25,
-        }) as Promise<PaginatedResponse<Article>>,
-      getNextPageParam: (lastPage: PaginatedResponse<Article>) => {
-        const currentPage = lastPage.page || 1;
-        const pageSize = params?.size || 25;
-        return lastPage.items.length === pageSize ? currentPage + 1 : undefined;
+          cursor: pageParam || undefined,
+          limit: params?.limit || 25,
+        }),
+      getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
+        return lastPage.next_cursor;
       },
-      initialPageParam: 1,
+      initialPageParam: null,
       ...options,
     });
   }
@@ -1831,7 +1760,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useCreateFeed,
     useUpdateFeed,
     useRefreshFeed,
-    useRefreshFolderFeeds,
     useRefreshAllFeeds,
     useRefreshStatus,
     useDeleteFeed,
@@ -1879,7 +1807,6 @@ export const {
   useCreateFeed,
   useUpdateFeed,
   useRefreshFeed,
-  useRefreshFolderFeeds,
   useRefreshAllFeeds,
   useRefreshStatus,
   useDeleteFeed,

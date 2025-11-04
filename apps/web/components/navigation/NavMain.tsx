@@ -37,7 +37,7 @@ import {
 } from "./items/RegularFeedItem"
 import { FeedModal } from "./modals/FeedModal"
 import { FolderModal } from "./modals/FolderModal"
-import { SidebarFeedsSkeleton, SidebarLibrarySkeleton } from "./SidebarSkeleton"
+import { SidebarFeedsSkeleton } from "./SidebarSkeleton"
 
 // Combined feed item type for rendering
 type FeedItem = CollapsibleFeedItemData | RegularFeedItemData
@@ -111,10 +111,7 @@ export function FeedsNavigation({
         () =>
             (unreadCounts as {
                 total_unread?: number
-                unread_by_folder?: Array<{
-                    folder_id: string
-                    unread_count: number
-                }>
+                unread_by_folder?: Record<string, number>
             }) || {},
         [unreadCounts]
     )
@@ -170,9 +167,7 @@ export function FeedsNavigation({
         typedFolders.forEach((folder) => {
             const folderFeeds = feedsByFolder[folder.id] || []
             const folderUnreadCount =
-                typedUnreadCounts?.unread_by_folder?.find(
-                    (item) => item.folder_id === folder.id
-                )?.unread_count || null
+                typedUnreadCounts?.unread_by_folder?.[folder.id] ?? null
 
             // Determine if this folder should be open
             const isViewingThisFolder =
@@ -325,38 +320,6 @@ export function FeedsNavigation({
 }
 
 /**
- * Library navigation component for displaying non-feed reading sources.
- */
-function LibraryNavigation() {
-    const pathname = usePathname()
-    const [isLoading] = useState(false) // Could add actual loading state if needed
-
-    if (isLoading) {
-        return <SidebarLibrarySkeleton />
-    }
-
-    return (
-        <SidebarGroup>
-            <SidebarGroupLabel>Other reading</SidebarGroupLabel>
-            <SidebarMenu>
-                <SidebarMenuItem>
-                    <SidebarLeftMenuButton
-                        asChild
-                        tooltip="Library"
-                        isActive={pathname === "/library"}
-                    >
-                        <Link href="/library" className="pl-2">
-                            <BookOpen className="h-4 w-4" />
-                            <span>Books</span>
-                        </Link>
-                    </SidebarLeftMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-        </SidebarGroup>
-    )
-}
-
-/**
  * Main navigation component that combines all navigation sections.
  * Provides a clean interface for RSS feed management and reading.
  */
@@ -380,7 +343,6 @@ export function NavMain() {
                 isMobile={isMobile}
                 toggleSidebar={toggleSidebar}
             />
-            <LibraryNavigation />
         </>
     )
 }

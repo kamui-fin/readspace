@@ -381,3 +381,4 @@ This distinction is critical in both:
 - Frontend types (`apps/web/lib/api/hooks/feeds.ts`)
 - Shared types (`packages/shared/src/types/`)
 - Use bun over npm or pnpm
+- Unit tests must NOT involve database interactions

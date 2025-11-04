@@ -1,6 +1,7 @@
 """E2E tests for article routes."""
 
-from datetime import UTC, datetime
+import random
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
@@ -24,6 +25,7 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     """Create a test article."""
     # Create a folder first
     from app.models import Folder
+
     folder = Folder(
         id=uuid4(),
         name="Test Folder",
@@ -31,7 +33,7 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     )
     db_session.add(folder)
     await db_session.flush()
-    
+
     # Create subscription with folder
     subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
     db_session.add(subscription)
@@ -228,6 +230,125 @@ class TestListArticles:
         assert "items" in data
         assert "has_more" in data
         assert "next_cursor" in data
+
+    @pytest.mark.asyncio
+    async def test_articles_sorted_by_published_date(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_feed: Feed, test_user: Profile
+    ):
+        """Test that articles are returned in sorted order by published date (newest first)."""
+        # Create a folder first
+        from app.models import Folder
+
+        folder = Folder(
+            id=uuid4(),
+            name="Test Folder for Sorting",
+            user_id=test_user.id,
+        )
+        db_session.add(folder)
+        await db_session.flush()
+
+        # Create subscription with folder
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=folder.id)
+        db_session.add(subscription)
+        await db_session.flush()
+
+        # Generate 20 random published dates over the past 30 days
+        base_date = datetime.now(UTC)
+        published_dates = []
+
+        for i in range(20):
+            # Random number of days ago (0-30)
+            days_ago = random.randint(0, 30)
+            # Random number of hours (0-23)
+            hours_ago = random.randint(0, 23)
+            # Random number of minutes (0-59)
+            minutes_ago = random.randint(0, 59)
+
+            published_date = base_date - timedelta(days=days_ago, hours=hours_ago, minutes=minutes_ago)
+            published_dates.append(published_date)
+
+        # Shuffle the dates to ensure they're in random order when created
+        random.shuffle(published_dates)
+
+        # Create 20 articles with random published dates
+        created_articles = []
+        for i, published_date in enumerate(published_dates):
+            # Create article content
+            content = ArticleContent(
+                title=f"Test Article {i + 1}",
+                link=f"https://example.com/article{i + 1}",
+                description=f"Test article {i + 1} description",
+                content=f"Full article {i + 1} content here",
+                published_at=published_date,
+            )
+            db_session.add(content)
+            await db_session.flush()
+
+            # Create feed article
+            article = FeedArticle(
+                feed_id=test_feed.id,
+                content_id=content.id,
+                guid=f"test-guid-{i + 1}",
+            )
+            db_session.add(article)
+            await db_session.flush()
+
+            # Create user article state
+            state = UserArticleState(
+                user_id=test_user.id,
+                article_id=article.id,
+                is_read=False,
+                is_read_later=False,
+                is_favorite=False,
+            )
+            db_session.add(state)
+            created_articles.append((article, content, published_date))
+
+        await db_session.flush()
+        await db_session.commit()
+
+        # Fetch articles via API
+        response = await async_client.get("/api/articles/?limit=20")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) >= 20  # Should have at least our 20 articles
+
+        # Extract the articles we created from the response
+        our_articles = []
+        for item in data["items"]:
+            # Check if this is one of our test articles
+            if item["title"].startswith("Test Article"):
+                our_articles.append(item)
+
+        # Should have found all 20 of our articles
+        assert len(our_articles) == 20
+
+        # Verify articles are sorted by published_at in descending order (newest first)
+        for i in range(len(our_articles) - 1):
+            current_published = datetime.fromisoformat(our_articles[i]["published_at"].replace("Z", "+00:00"))
+            next_published = datetime.fromisoformat(our_articles[i + 1]["published_at"].replace("Z", "+00:00"))
+
+            # Current article should be published after (newer than) the next article
+            assert current_published >= next_published, (
+                f"Articles not sorted correctly: "
+                f"Article at index {i} (published {current_published}) "
+                f"should be newer than article at index {i + 1} (published {next_published})"
+            )
+
+        # Additional verification: check that the sorted order matches expected descending order
+        expected_sorted_dates = sorted(published_dates, reverse=True)
+        actual_dates = [
+            datetime.fromisoformat(article["published_at"].replace("Z", "+00:00")) for article in our_articles
+        ]
+
+        # Convert to comparable format (remove microseconds for comparison)
+        expected_dates_normalized = [d.replace(microsecond=0) for d in expected_sorted_dates]
+        actual_dates_normalized = [d.replace(microsecond=0) for d in actual_dates]
+
+        assert actual_dates_normalized == expected_dates_normalized, (
+            "Articles are not returned in the expected sorted order by published date"
+        )
 
 
 class TestGetArticle:

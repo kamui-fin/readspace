@@ -1,4 +1,4 @@
-import type { ApiPaginatedResponse, PaginatedResponse } from "./api";
+import type { ApiPaginatedResponse, PaginatedResponse, CursorPaginatedResponse } from "./api";
 
 // Feed category enum - matches backend FeedCategory
 export const FEED_CATEGORIES = {
@@ -194,11 +194,13 @@ export type Article = {
 export type ArticlesPaginatedResponse = PaginatedResponse<Article>;
 
 // Ensure PaginatedResponse is also exported if it wasn't already
-export type { PaginatedResponse, ApiPaginatedResponse };
+export type { PaginatedResponse, ApiPaginatedResponse, CursorPaginatedResponse };
 
 export interface UnreadCounts {
   total_unread?: number;
-  unread_by_folder?: Array<{ folder_id: string; unread_count: number }>;
+  unread_by_folder?: Record<string, number>; // Dictionary with folder IDs as keys
+  read_later_count?: number;
+  today_count?: number;
 }
 
 // Discover/Search feed types - matches backend FeedDiscoveryResult

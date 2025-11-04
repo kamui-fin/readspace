@@ -8,11 +8,11 @@ Testing Strategy:
 1. EAGER MODE (default): Tasks execute synchronously in-process
    - Pros: Deterministic, fast, no worker needed
    - Cons: Doesn't test true async behavior, task serialization, or worker isolation
-   
+
 2. ASYNC MODE (optional): Tasks execute in real workers
    - Pros: Tests real production behavior, task queuing, worker isolation
    - Cons: Requires running workers, timing-dependent, slower
-   
+
 3. HYBRID: Use eager for most tests, async for critical workflow tests
 """
 
@@ -74,11 +74,11 @@ INVALID_XML = """<?xml version="1.0" encoding="UTF-8"?>
 def configure_celery_for_tests():
     """Configure Celery for test execution."""
     from app.core.celery_app import celery
-    
+
     # Store original config
     original_eager = celery.conf.task_always_eager
     original_propagate = celery.conf.task_eager_propagates
-    
+
     if CELERY_EAGER_MODE:
         # Eager mode: tasks execute synchronously in-process
         celery.conf.task_always_eager = True
@@ -87,9 +87,9 @@ def configure_celery_for_tests():
         # Async mode: tasks execute in real workers
         celery.conf.task_always_eager = False
         celery.conf.task_eager_propagates = False
-    
+
     yield
-    
+
     # Restore original config
     celery.conf.task_always_eager = original_eager
     celery.conf.task_eager_propagates = original_propagate
@@ -104,9 +104,7 @@ class TestOpmlImportEagerMode:
     ):
         """Test complete OPML import workflow with real task execution."""
         # Upload OPML file
-        files = {
-            "opml_file": ("test.opml", io.BytesIO(MINIMAL_OPML.encode()), "application/xml")
-        }
+        files = {"opml_file": ("test.opml", io.BytesIO(MINIMAL_OPML.encode()), "application/xml")}
         data = {"default_folder_name": "Imported Feeds"}
 
         response = await async_client.post("/api/opml/import/", files=files, data=data)
@@ -119,28 +117,26 @@ class TestOpmlImportEagerMode:
         # In eager mode, task completes immediately
         # Check status - should be completed
         status_response = await async_client.get(f"/api/opml/import/status/{task_id}")
-        
+
         assert status_response.status_code == 200
         status_data = status_response.json()
-        
+
         # In eager mode, orchestration task completes but we need to check feed tasks
         if status_data["status"] == "completed":
             # Verify the feed was actually imported
             assert "result" in status_data
             result_data = status_data["result"]
-            
+
             # Should have attempted to import 1 feed
             assert result_data["total_feeds"] == 1
-            
+
             # Check if import succeeded (may fail if feed is unreachable)
             if result_data["imported_count"] > 0:
                 # Verify feed exists in database
                 from sqlalchemy import select
-                
+
                 result = await db_session.execute(
-                    select(FeedSubscription).where(
-                        FeedSubscription.user_id == test_user.id
-                    )
+                    select(FeedSubscription).where(FeedSubscription.user_id == test_user.id)
                 )
                 subscriptions = result.scalars().all()
                 assert len(subscriptions) >= 1
@@ -150,28 +146,24 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test OPML import creates folders correctly."""
-        files = {
-            "opml_file": ("test.opml", io.BytesIO(VALID_OPML.encode()), "application/xml")
-        }
+        files = {"opml_file": ("test.opml", io.BytesIO(VALID_OPML.encode()), "application/xml")}
 
         response = await async_client.post("/api/opml/import/", files=files)
         assert response.status_code == 202
-        
+
         task_id = response.json()["task_id"]
-        
+
         # Check status
         status_response = await async_client.get(f"/api/opml/import/status/{task_id}")
         status_data = status_response.json()
-        
+
         # Verify folders were created
         from sqlalchemy import select
-        
-        result = await db_session.execute(
-            select(Folder).where(Folder.user_id == test_user.id)
-        )
+
+        result = await db_session.execute(select(Folder).where(Folder.user_id == test_user.id))
         folders = result.scalars().all()
         folder_names = {f.name for f in folders}
-        
+
         # Should have created Technology and News folders
         assert "Technology" in folder_names or "News" in folder_names
 
@@ -180,31 +172,30 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test individual feed import task executes correctly."""
-        from app.workers.opml_tasks import import_single_feed_task
-        
-        # Execute task directly (will run eagerly)
-        result = import_single_feed_task(
-            user_id=str(test_user.id),
+        from app.workers.opml_tasks import async_import_single_feed
+
+        # Execute async function directly with db session
+        result = await async_import_single_feed(
+            user_id=test_user.id,
             feed_url="https://hnrss.org/newest",
             folder_id=str(test_folder.id),
             tag_names=[],
             feed_title="Hacker News",
             update_existing=False,
+            db=db_session,
         )
-        
+
         # Verify result structure
         assert "success" in result
         assert "url" in result
         assert "status" in result
-        
+
         # If successful, verify in database
         if result["success"]:
             from sqlalchemy import select
-            
+
             db_result = await db_session.execute(
-                select(FeedSubscription).where(
-                    FeedSubscription.user_id == test_user.id
-                )
+                select(FeedSubscription).where(FeedSubscription.user_id == test_user.id)
             )
             subscriptions = db_result.scalars().all()
             assert len(subscriptions) >= 1
@@ -227,9 +218,7 @@ class TestOpmlImportValidation:
     async def test_import_opml_file_too_large(self, async_client: AsyncClient):
         """Test importing file that exceeds size limit."""
         large_content = "x" * (51 * 1024 * 1024)  # 51MB
-        files = {
-            "opml_file": ("large.opml", io.BytesIO(large_content.encode()), "application/xml")
-        }
+        files = {"opml_file": ("large.opml", io.BytesIO(large_content.encode()), "application/xml")}
 
         response = await async_client.post("/api/opml/import/", files=files)
 
@@ -239,9 +228,7 @@ class TestOpmlImportValidation:
     @pytest.mark.asyncio
     async def test_import_opml_invalid_xml(self, async_client: AsyncClient):
         """Test importing malformed XML."""
-        files = {
-            "opml_file": ("invalid.opml", io.BytesIO(INVALID_XML.encode()), "application/xml")
-        }
+        files = {"opml_file": ("invalid.opml", io.BytesIO(INVALID_XML.encode()), "application/xml")}
 
         response = await async_client.post("/api/opml/import/", files=files)
 
@@ -258,10 +245,8 @@ class TestOpmlImportValidation:
         <link>https://example.com</link>
     </channel>
 </rss>"""
-        
-        files = {
-            "opml_file": ("feed.xml", io.BytesIO(rss_content.encode()), "application/xml")
-        }
+
+        files = {"opml_file": ("feed.xml", io.BytesIO(rss_content.encode()), "application/xml")}
 
         response = await async_client.post("/api/opml/import/", files=files)
 
@@ -282,16 +267,14 @@ class TestOpmlImportStatus:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_get_import_status_unauthorized(
-        self, async_client: AsyncClient, test_user: Profile
-    ):
+    async def test_get_import_status_unauthorized(self, async_client: AsyncClient, test_user: Profile):
         """Test accessing another user's import task."""
         # Create a task for a different user
         from app.routers.opml import store_import_task_metadata
-        
+
         other_user_id = "different-user-id"
         task_id = "other-user-task"
-        
+
         await store_import_task_metadata(
             user_id=other_user_id,
             task_id=task_id,
@@ -380,9 +363,7 @@ class TestOpmlExport:
         db_session: AsyncSession,
     ):
         """Test exporting feeds organized in folders."""
-        subscription = FeedSubscription(
-            user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
-        )
+        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
         await db_session.flush()
 
@@ -421,11 +402,9 @@ class TestOpmlRoundtrip:
         await db_session.flush()
 
         # Re-import the exported OPML
-        files = {
-            "opml_file": ("export.opml", io.BytesIO(exported_opml.encode()), "application/xml")
-        }
+        files = {"opml_file": ("export.opml", io.BytesIO(exported_opml.encode()), "application/xml")}
         import_response = await async_client.post("/api/opml/import/", files=files)
-        
+
         assert import_response.status_code == 202
         task_id = import_response.json()["task_id"]
 

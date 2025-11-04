@@ -24,9 +24,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useArticlesQuery } from "@/hooks/useArticlesQuery"
 import { useIsMobile } from "@/hooks/useMobile"
-import { useClearPendingNavigation } from "@/hooks/useNavigationState"
 import type { Article, Feed, Folder } from "@readspace/shared"
 import {
     ApiClient,
@@ -37,6 +35,10 @@ import {
     useRefreshFeed,
     useUnreadCounts,
     useUpdateArticle,
+    useInfiniteArticles,
+    useInfiniteRecentlyReadArticles,
+    useInfiniteReadLaterArticles,
+    useInfiniteTodayArticles,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
@@ -116,12 +118,11 @@ export function ArticlesView({
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false)
     const [previewFeedData, setPreviewFeedData] = useState<Feed | null>(null)
 
-    // Ref to track if preview refresh has already been triggered
+    // Ref to track if preview refresh has already been triggered for this feed
     const hasRefreshedPreview = useRef(false)
 
     // Hooks
     const isMobile = useIsMobile()
-    const { clearPending } = useClearPendingNavigation()
     const queryClient = useQueryClient()
 
     // Data queries - optimized with conditional enabling
@@ -229,9 +230,7 @@ export function ArticlesView({
         } else if (folderId) {
             // Folder view: get unread count for this folder
             const folderUnreadCount =
-                typedUnreadCounts?.unread_by_folder?.find(
-                    (item) => item.folder_id === folderId
-                )?.unread_count || 0
+                typedUnreadCounts?.unread_by_folder?.[folderId] ?? 0
             return folderUnreadCount
         } else {
             // All articles view: get total unread count
@@ -247,22 +246,80 @@ export function ArticlesView({
         allUserFeeds,
     ])
 
-    // Articles query
+    // Build query params
+    const queryParams = useMemo(() => {
+        const params: {
+            feedIds?: string[]
+            folderId?: string
+            limit?: number
+            isRead?: boolean
+            isReadLater?: boolean
+            isFavorite?: boolean
+        } = {
+            limit: 25,
+        }
+
+        if (feedId) {
+            // Single feed view
+            params.feedIds = [feedId]
+        } else if (folderId) {
+            // Folder view - let backend filter by folder
+            params.folderId = folderId
+        }
+        // If no feedId or folderId, show all articles (no filter)
+
+        return params
+    }, [feedId, folderId])
+
+    // Use appropriate infinite query based on mode
+    const todayQuery = useInfiniteTodayArticles({ limit: 25 }, {
+        enabled: isTodayMode,
+    } as any)
+
+    const recentlyReadQuery = useInfiniteRecentlyReadArticles({ limit: 25 }, {
+        enabled: isRecentlyReadMode,
+    } as any)
+
+    const readLaterQuery = useInfiniteReadLaterArticles({ limit: 25 }, {
+        enabled: isReadLaterMode,
+    } as any)
+
+    const allArticlesQuery = useInfiniteArticles(queryParams, {
+        enabled: !isTodayMode && !isRecentlyReadMode && !isReadLaterMode,
+        staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+        gcTime: 30 * 60 * 1000, // Keep in cache for 30 minutes
+    } as any)
+
+    // Select the active query based on mode
+    const activeQuery = isTodayMode
+        ? todayQuery
+        : isRecentlyReadMode
+        ? recentlyReadQuery
+        : isReadLaterMode
+        ? readLaterQuery
+        : allArticlesQuery
+
     const {
-        articles: allArticles,
+        data,
         isLoading: isArticlesLoading,
         isFetching,
         isFetchingNextPage,
         fetchNextPage,
         hasNextPage,
         refetch: refetchArticles,
-    } = useArticlesQuery({
-        mode: mode || "allArticles",
-        feedId: feedId,
-        folderId: folderId,
-        publishedSince: publishedSince,
-        publishedUntil: publishedUntil,
-    })
+    } = activeQuery
+
+    // Flatten paginated data into a single array
+    const allArticles = useMemo(() => {
+        const infiniteData = data as any
+        if (!infiniteData?.pages) return []
+        return infiniteData.pages.flatMap((page: any) => page.items)
+    }, [data])
+
+    // Create a unique key for the current view to detect when we switch contexts
+    const viewKey = useMemo(() => {
+        return `${feedId || 'all'}-${folderId || 'none'}-${mode}-${publishedSince || ''}-${publishedUntil || ''}`
+    }, [feedId, folderId, mode, publishedSince, publishedUntil])
 
     // Determine if we should show preview banner for feeds
     const shouldShowPreviewBanner = !!(
@@ -299,7 +356,7 @@ export function ArticlesView({
 
             // Auto-mark as read on click (desktop only, not in preview mode)
             if (!isMobile && !shouldShowPreviewBanner) {
-                const article = allArticles.find((a) => a.id === articleId)
+                const article = allArticles.find((a: Article) => a.id === articleId)
                 if (!isRecentlyReadMode && article && !article.is_read) {
                     // Optimistically update the UI immediately
                     queryClient.setQueriesData(
@@ -419,7 +476,7 @@ export function ArticlesView({
     const handleArticleRemoved = () => {
         // Select next article or clear selection
         const currentIndex = allArticles.findIndex(
-            (a) => a.id === selectedArticleId
+            (a: Article) => a.id === selectedArticleId
         )
         if (currentIndex >= 0 && allArticles.length > 1) {
             const nextIndex =
@@ -501,15 +558,19 @@ export function ArticlesView({
     }
 
     // Preview mode: refresh feed on mount to get latest articles
+    // Only refresh once per feed per session (hasRefreshedPreview tracks this)
     useEffect(() => {
         if (shouldShowPreviewBanner && feedId && !hasRefreshedPreview.current) {
             hasRefreshedPreview.current = true
             setIsPreviewRefreshing(true)
 
+            console.log("[Preview Mode] Refreshing feed for preview:", feedId)
+
             // Call API directly with preview=true parameter
             ApiClient.rss
                 .refreshFeed(feedId, true, true)
                 .then((feed) => {
+                    console.log("[Preview Mode] Feed refresh successful")
                     // Store the feed data from refresh response
                     setPreviewFeedData(feed)
                     // Invalidate articles cache to trigger refetch
@@ -521,7 +582,7 @@ export function ArticlesView({
                     })
                 })
                 .catch((error) => {
-                    console.error("Preview refresh failed:", error)
+                    console.error("[Preview Mode] Preview refresh failed:", error)
                 })
                 .finally(() => {
                     setIsPreviewRefreshing(false)
@@ -542,11 +603,6 @@ export function ArticlesView({
         }
     }, [selectedArticleId, allArticles, feedId, folderId, isMobile])
 
-    // Clear pending navigation state when component mounts
-    useEffect(() => {
-        clearPending()
-    }, [feedId, folderId, mode, clearPending])
-
     // Reset selected article when view changes
     useEffect(() => {
         setSelectedArticleId(null)
@@ -555,34 +611,41 @@ export function ArticlesView({
         setCurrentReadTime(null)
         setIsShowingSummary(false)
         setIsTranslating(false)
-    }, [feedId, folderId, mode, publishedSince, publishedUntil])
+    }, [viewKey])
 
     // Auto-select first article when we have articles but no current selection (desktop only)
     useEffect(() => {
         // Skip auto-selection entirely on mobile
         if (isMobile) return
 
-        if (allArticles.length > 0 && !selectedArticleId && !showContent) {
-            // Use a small timeout to ensure data has stabilized
-            const timer = setTimeout(() => {
-                if (allArticles.length > 0 && !selectedArticleId && !isMobile) {
-                    const firstArticle = showUnreadOnly
-                        ? allArticles.find((a: Article) => !a.is_read) ||
-                        allArticles[0]
-                        : allArticles[0]
-                    setSelectedArticleId(firstArticle?.id || null)
-                }
-            }, 100)
+        // Only auto-select if we have articles and no selection
+        // Check both isArticlesLoading and isFetching to ensure data is stable
+        if (allArticles.length > 0 && !selectedArticleId && !showContent && !isArticlesLoading && !isFetching) {
+            // Sort articles by published date (newest first) to match ArticlesList display order
+            const sortedArticles = [...allArticles].sort((a: Article, b: Article) => {
+                if (!a.published_at) return 1
+                if (!b.published_at) return -1
+                return new Date(b.published_at).getTime() - new Date(a.published_at).getTime()
+            })
 
-            return () => clearTimeout(timer)
+            // Select first article (or first unread if filter is on)
+            const firstArticle = showUnreadOnly
+                ? sortedArticles.find((a: Article) => !a.is_read) || sortedArticles[0]
+                : sortedArticles[0]
+
+            if (firstArticle?.id) {
+                setSelectedArticleId(firstArticle.id)
+            }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
-        allArticles.length,
+        viewKey, // This ensures effect runs when view changes
+        allArticles,
         selectedArticleId,
         isMobile,
         showContent,
         showUnreadOnly,
+        isArticlesLoading,
+        isFetching, // Also check if data is being fetched
     ])
 
     // Show skeleton during initial loading, preview refresh, or when loading after preview
@@ -814,6 +877,7 @@ export function ArticlesView({
                                     showUnreadOnly={showUnreadOnly}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
+                                    isTodayMode={isTodayMode}
                                     fetchNextPage={fetchNextPage}
                                     onArticleSelect={handleArticleSelect}
                                 />
@@ -978,6 +1042,7 @@ export function ArticlesView({
                                     showUnreadOnly={showUnreadOnly}
                                     isRecentlyReadMode={isRecentlyReadMode}
                                     isReadLaterMode={isReadLaterMode}
+                                    isTodayMode={isTodayMode}
                                     fetchNextPage={fetchNextPage}
                                     onArticleSelect={handleArticleSelect}
                                 />

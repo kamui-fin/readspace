@@ -25,7 +25,8 @@ from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_subscription
 from app.crud.article.article import create_articles_batch
 from app.models import FeedArticle, UserArticleState
-from app.schemas import ArticleCreate, FeedResponse, FeedUpdate
+from app.schemas import ArticleCreate, FeedUpdate
+from app.schemas.subscriptions import FeedResponse
 from app.schemas.subscriptions import SubscriptionResponse, SubscriptionUpdate
 from app.services.feeds.feed_creation import FeedCreationService
 from app.services.feeds.feed_fetcher import FeedFetcher, FetchResult
@@ -99,16 +100,24 @@ class FeedManagementService:
         )
 
     async def get_feed(self, feed_id: UUID) -> FeedResponse | None:
-        """Get a specific feed by ID. Only returns feed if user is subscribed."""
-        # Check if user is subscribed to this feed first
+        """
+        Get a specific feed by ID for any authenticated user.
+
+        Returns feed data with subscription status. Any authenticated user can view
+        any feed, but subscription-specific data is only included for subscribed users.
+        """
+        # Check if user is subscribed to this feed
         subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
-        if not subscription_db:
-            return None
 
-        # Fetch the feed
-        feed_db = subscription_db.feed
+        # Fetch the feed - either from subscription or directly
+        if subscription_db:
+            feed_db = subscription_db.feed
+        else:
+            feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
+            if not feed_db:
+                return None
 
         # Base feed data (always present)
         feed_data = {
@@ -134,15 +143,16 @@ class FeedManagementService:
             "is_subscribed": subscription_db is not None,
         }
 
-        # Add subscription-specific data (user is always subscribed at this point)
-        feed_data.update(
-            {
-                "title": subscription_db.custom_title or feed_db.title,
-                "user_id": subscription_db.user_id,
-                "folder_id": subscription_db.folder_id,
-                "is_favorite": subscription_db.is_favorite,
-            }
-        )
+        # Add subscription-specific data if user is subscribed
+        if subscription_db:
+            feed_data.update(
+                {
+                    "title": subscription_db.custom_title or feed_db.title,
+                    "user_id": subscription_db.user_id,
+                    "folder_id": subscription_db.folder_id,
+                    "is_favorite": subscription_db.is_favorite,
+                }
+            )
 
         return FeedResponse(**feed_data)
 
@@ -151,7 +161,6 @@ class FeedManagementService:
         folder_id: UUID | None = None,
         tag_names: list[str] | None = None,
         is_favorite: bool | None = None,
-        search_query: str | None = None,
         skip: int = 0,
         limit: int = 100,
         include_unread_counts: bool = False,
@@ -169,7 +178,6 @@ class FeedManagementService:
             folder_id=folder_id,
             tag_names=tag_names,
             is_favorite=is_favorite,
-            search_query=search_query,
             skip=skip,
             limit=limit,
         )

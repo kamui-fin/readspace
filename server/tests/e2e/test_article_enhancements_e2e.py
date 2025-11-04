@@ -3,19 +3,20 @@
 from uuid import uuid4
 
 import pytest
-from fastapi.testclient import TestClient
+import pytest_asyncio
+from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Profile, UserArticleState
 
 
-@pytest.fixture
-async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, test_user: Profile):
+@pytest_asyncio.fixture
+async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, test_user: Profile, test_folder):
     """Create a test article with full content."""
     from datetime import UTC, datetime
 
-    # Create subscription
-    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id)
+    # Create subscription with folder (required by schema)
+    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
     db_session.add(subscription)
     await db_session.flush()
 
@@ -55,9 +56,11 @@ class TestExtractFullText:
     """Test extract full text endpoint with real extraction service."""
 
     @pytest.mark.asyncio
-    async def test_extract_full_text_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_extract_full_text_real_service(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test extracting full text using real extraction service."""
-        response = client.post(f"/api/articles/{test_article_with_content.id}/extract-full-text")
+        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/extract-full-text")
 
         assert response.status_code == 200
         data = response.json()
@@ -67,16 +70,18 @@ class TestExtractFullText:
             assert "content" in data
             assert "estimated_read_time_minutes" in data
 
-    def test_extract_full_text_not_found(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_extract_full_text_not_found(self, async_client: AsyncClient):
         """Test extracting from non-existent article."""
         fake_id = uuid4()
-        response = client.post(f"/api/articles/{fake_id}/extract-full-text")
+        response = await async_client.post(f"/api/articles/{fake_id}/extract-full-text")
 
         assert response.status_code == 404
 
-    def test_extract_full_text_invalid_uuid(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_extract_full_text_invalid_uuid(self, async_client: AsyncClient):
         """Test with invalid UUID."""
-        response = client.post("/api/articles/invalid-uuid/extract-full-text")
+        response = await async_client.post("/api/articles/invalid-uuid/extract-full-text")
 
         assert response.status_code == 422
 
@@ -85,9 +90,11 @@ class TestSummarizeArticle:
     """Test article summarization endpoint with real AI service."""
 
     @pytest.mark.asyncio
-    async def test_summarize_article_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_summarize_article_real_service(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test article summarization using real AI service."""
-        response = client.post(f"/api/articles/{test_article_with_content.id}/summarize")
+        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/summarize")
 
         assert response.status_code == 200
         data = response.json()
@@ -98,9 +105,11 @@ class TestSummarizeArticle:
             assert len(data["summary"]) > 0
 
     @pytest.mark.asyncio
-    async def test_summarize_with_custom_content(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_summarize_with_custom_content(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test summarizing custom content."""
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/summarize",
             json={"content": "Custom content to summarize for testing purposes."},
         )
@@ -109,10 +118,11 @@ class TestSummarizeArticle:
         data = response.json()
         assert "success" in data
 
-    def test_summarize_article_not_found(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_summarize_article_not_found(self, async_client: AsyncClient):
         """Test summarizing non-existent article."""
         fake_id = uuid4()
-        response = client.post(f"/api/articles/{fake_id}/summarize")
+        response = await async_client.post(f"/api/articles/{fake_id}/summarize")
 
         assert response.status_code == 404
 
@@ -121,9 +131,11 @@ class TestTranslateArticle:
     """Test article translation endpoint with real AI service."""
 
     @pytest.mark.asyncio
-    async def test_translate_article_real_service(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_translate_article_real_service(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test article translation using real AI service."""
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "es"},
         )
@@ -137,9 +149,11 @@ class TestTranslateArticle:
             assert "translated_content" in data
 
     @pytest.mark.asyncio
-    async def test_translate_with_custom_content(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_translate_with_custom_content(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test translating custom content."""
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "fr", "content": "Custom content to translate"},
         )
@@ -150,12 +164,14 @@ class TestTranslateArticle:
         assert data["target_language"] == "fr"
 
     @pytest.mark.asyncio
-    async def test_translate_multiple_languages(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_translate_multiple_languages(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test translating to different languages."""
         languages = ["es", "fr", "de", "zh"]
 
         for lang in languages:
-            response = client.post(
+            response = await async_client.post(
                 f"/api/articles/{test_article_with_content.id}/translate",
                 json={"target_language": lang},
             )
@@ -164,28 +180,35 @@ class TestTranslateArticle:
             data = response.json()
             assert data["target_language"] == lang
 
-    def test_translate_article_missing_language(self, client: TestClient, test_article_with_content: FeedArticle):
+    @pytest.mark.asyncio
+    async def test_translate_article_missing_language(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test translation without target language."""
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/translate",
             json={},
         )
 
         assert response.status_code == 422
 
-    def test_translate_article_invalid_language(self, client: TestClient, test_article_with_content: FeedArticle):
+    @pytest.mark.asyncio
+    async def test_translate_article_invalid_language(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test translation with invalid language code."""
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "invalid_lang_code_too_long"},
         )
 
         assert response.status_code == 422
 
-    def test_translate_article_not_found(self, client: TestClient):
+    @pytest.mark.asyncio
+    async def test_translate_article_not_found(self, async_client: AsyncClient):
         """Test translating non-existent article."""
         fake_id = uuid4()
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{fake_id}/translate",
             json={"target_language": "es"},
         )
@@ -197,39 +220,41 @@ class TestArticleEnhancementIntegration:
     """Integration tests for article enhancement features with real services."""
 
     @pytest.mark.asyncio
-    async def test_enhancement_workflow(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_enhancement_workflow(self, async_client: AsyncClient, test_article_with_content: FeedArticle):
         """Test complete enhancement workflow: extract -> summarize -> translate."""
         article_id = test_article_with_content.id
 
         # 1. Extract full text (real service)
-        extract_response = client.post(f"/api/articles/{article_id}/extract-full-text")
+        extract_response = await async_client.post(f"/api/articles/{article_id}/extract-full-text")
         assert extract_response.status_code == 200
 
         # 2. Summarize the content (real AI service)
-        summarize_response = client.post(f"/api/articles/{article_id}/summarize")
+        summarize_response = await async_client.post(f"/api/articles/{article_id}/summarize")
         assert summarize_response.status_code == 200
 
         # 3. Translate the content (real AI service)
-        translate_response = client.post(
+        translate_response = await async_client.post(
             f"/api/articles/{article_id}/translate",
             json={"target_language": "es"},
         )
         assert translate_response.status_code == 200
 
     @pytest.mark.asyncio
-    async def test_enhancement_with_custom_content(self, client: TestClient, test_article_with_content: FeedArticle):
+    async def test_enhancement_with_custom_content(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test enhancements with custom content."""
         custom_content = "This is custom content for testing enhancements."
 
         # Summarize custom content
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/summarize",
             json={"content": custom_content},
         )
         assert response.status_code == 200
 
         # Translate custom content
-        response = client.post(
+        response = await async_client.post(
             f"/api/articles/{test_article_with_content.id}/translate",
             json={"target_language": "es", "content": custom_content},
         )

@@ -82,6 +82,14 @@ ARTICLE_PRIORITIES = ["low", "medium", "high"]
 RECENT_READ_CUTOFF = timedelta(days=30)
 OLD_ARTICLE_CUTOFF = timedelta(days=90)
 
+# Unread Article Management
+UNREAD_RETENTION_DAYS = 30  # Auto-mark articles older than this as read
+INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new subscriptions
+
+# Article Compaction (Cleanup)
+ARTICLE_RETENTION_DAYS = 30  # Delete articles older than 30 days (beyond minimum retention)
+MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
+
 # Content Extraction
 MIN_CONTENT_LENGTH = 500  # Minimum character length to consider content complete
 AUTO_EXTRACT_ENABLED = True  # Enable automatic content extraction

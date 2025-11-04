@@ -39,8 +39,20 @@ def get_task_event_loop() -> asyncio.AbstractEventLoop:
 
     This reuses the same event loop across tasks to avoid overhead
     of creating/destroying event loops (1-5ms per task).
+
+    In test environments with an already running event loop (e.g., pytest-asyncio),
+    this returns the running loop to avoid event loop conflicts.
     """
     global _event_loop
+
+    # If there's already a running event loop (e.g., in tests), use it
+    try:
+        running_loop = asyncio.get_running_loop()
+        return running_loop
+    except RuntimeError:
+        # No running loop, create/reuse persistent loop
+        pass
+
     if _event_loop is None or _event_loop.is_closed():
         _event_loop = asyncio.new_event_loop()
         asyncio.set_event_loop(_event_loop)

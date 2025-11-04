@@ -1,5 +1,6 @@
 """CRUD operations for feed subscriptions."""
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import and_, delete, select, update
@@ -9,22 +10,68 @@ from sqlalchemy.orm import joinedload
 
 from app.crud import folder as crud_folder
 from app.crud.feed import feed as crud_feed
-from app.models import Feed, FeedSubscription
+from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription
 from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
 from app.utils.url_normalizer import get_protocol_variation, resolve_feed_url
 
 # Define minimal feed columns for subscription responses to prevent over-fetching
-# Excludes heavy fields: embedding (~3KB), description (~2KB), tags, RSS metadata
+# Excludes only heavy fields: embedding (~3KB)
+# Includes all other fields needed by FeedResponse schema
 SUBSCRIPTION_FEED_COLUMNS = [
     Feed.id,
     Feed.url,
     Feed.title,
+    Feed.description,
     Feed.link,
     Feed.language,
     Feed.image_url,
+    Feed.tags,
+    Feed.top_level_category,
+    Feed.popularity_score,
+    Feed.ttl,
+    Feed.skip_hours,
+    Feed.skip_days,
     Feed.last_fetched_at,
+    Feed.last_modified_header,
+    Feed.etag_header,
     Feed.last_article_published_at,
+    Feed.created_at,
+    Feed.updated_at,
 ]
+
+
+async def get_initial_cutoff_timestamp(
+    db: AsyncSession, *, feed_id: UUID, initial_unread_count: int = 10
+) -> datetime | None:
+    """Get the cutoff timestamp for initial subscription to limit unread articles.
+
+    Returns the published_at timestamp of the Nth most recent article in the feed,
+    where N is the initial_unread_count. Articles newer than this timestamp will
+    be shown as unread.
+
+    Args:
+        db: Database session
+        feed_id: ID of the feed to get cutoff for
+        initial_unread_count: Number of recent articles to show as unread (default: 10)
+
+    Returns:
+        Datetime of the Nth most recent article's published_at, or None if feed has < N articles
+    """
+    # Query for the (N+1)th most recent article to get its timestamp
+    # This ensures N articles are shown as unread (published_at > cutoff)
+    # Example: For initial_unread_count=10, OFFSET 10 gets the 11th item
+    # Articles 1-10 will have published_at > cutoff (11th article's timestamp)
+    result = await db.execute(
+        select(ArticleContent.published_at)
+        .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+        .where(FeedArticle.feed_id == feed_id)
+        .where(ArticleContent.published_at.is_not(None))
+        .order_by(ArticleContent.published_at.desc())
+        .offset(initial_unread_count)  # Changed from initial_unread_count - 1
+        .limit(1)
+    )
+    cutoff_timestamp = result.scalar_one_or_none()
+    return cutoff_timestamp
 
 
 async def get_subscription_by_id(db: AsyncSession, *, subscription_id: UUID, user_id: UUID) -> FeedSubscription | None:
@@ -186,6 +233,14 @@ async def create_subscription(
             feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
     # Feed exists, subscriber_count will be incremented automatically by database trigger
 
+    # Get initial cutoff timestamp to limit unread articles
+    # This ensures new subscriptions only show the N most recent articles as unread
+    from app.core.constants import INITIAL_UNREAD_COUNT
+
+    initial_cutoff = await get_initial_cutoff_timestamp(
+        db, feed_id=feed_db.id, initial_unread_count=INITIAL_UNREAD_COUNT
+    )
+
     # Create subscription
     subscription_data = {
         "user_id": user_id,
@@ -193,6 +248,7 @@ async def create_subscription(
         "folder_id": subscription_in.folder_id,
         "is_favorite": subscription_in.is_favorite or False,
         "custom_title": subscription_in.custom_title,
+        "last_read_cutoff": initial_cutoff,
     }
 
     db_subscription = FeedSubscription(**subscription_data)
@@ -240,7 +296,7 @@ async def update_subscription(
     # Tags are now handled as ARRAY field on feeds - no longer using tag_ids
 
     # Update subscription-specific fields
-    for field in ["is_favorite", "custom_title", "is_paused"]:
+    for field in ["is_favorite", "custom_title", "is_paused", "last_read_cutoff"]:
         if field in update_data:
             setattr(subscription_db, field, update_data[field])
 

@@ -200,7 +200,6 @@ async def get_feeds_by_user(
     folder_id: UUID | None = None,
     tag_names: list[str] | None = None,
     is_favorite: bool | None = None,
-    search_query: str | None = None,
     skip: int = 0,
     limit: int = 100,
 ) -> list[tuple[Feed, FeedSubscription]]:
@@ -212,7 +211,6 @@ async def get_feeds_by_user(
         folder_id: Optional folder ID to filter by
         tag_names: Optional list of tag names to filter by
         is_favorite: Optional boolean to filter favorites
-        search_query: Optional search query for feed titles
         skip: Number of items to skip for pagination
         limit: Maximum number of items to return (capped at MAX_FEEDS_PER_USER_QUERY)
 
@@ -243,9 +241,6 @@ async def get_feeds_by_user(
 
     # Tag filtering removed - feeds now use tags as ARRAY field
     # tag filtering would need to be adapted for ARRAY contains operations
-
-    if search_query:
-        stmt = stmt.filter(Feed.title.ilike(f"%{search_query}%"))
 
     stmt = stmt.order_by(Feed.title).offset(skip).limit(limit)
 

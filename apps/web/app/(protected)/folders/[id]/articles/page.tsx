@@ -1,6 +1,6 @@
 "use client"
 
-import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
+import { ArticlesView } from "@/components/articles"
 import { useParams } from "next/navigation"
 
 export default function FolderArticlesPage() {
@@ -8,6 +8,6 @@ export default function FolderArticlesPage() {
     const folderId = params.id as string
 
     return (
-        <ArticlesSuspenseWrapper showUnreadBadge={true} folderId={folderId} />
+        <ArticlesView folderId={folderId} />
     )
 }

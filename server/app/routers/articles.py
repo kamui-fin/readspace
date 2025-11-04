@@ -221,6 +221,7 @@ async def list_articles(
     cursor: str | None = Query(None, description="Cursor for pagination (article ID)"),
     limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
     feed_ids: list[UUID] | None = Query(None, description="Filter by specific feed IDs"),
+    folder_id: UUID | None = Query(None, description="Filter by folder ID (all feeds in folder)"),
     is_read: bool | None = Query(None, description="Filter by read status"),
     is_read_later: bool | None = Query(None, description="Filter by read later status"),
     is_favorite: bool | None = Query(None, description="Filter by article favorite status"),
@@ -238,6 +239,7 @@ async def list_articles(
         cursor: Optional cursor (article ID) for pagination
         limit: Number of items per page (default: 50, max: 200)
         feed_ids: Optional list of feed UUIDs to filter articles
+        folder_id: Optional folder UUID to filter articles from all feeds in that folder
         is_read: Optional boolean to filter by read status
         is_read_later: Optional boolean to filter articles marked for reading later
         is_favorite: Optional boolean to filter articles marked as favorites
@@ -256,6 +258,7 @@ async def list_articles(
     Note:
         - Cursor should be the ID of the last article from the previous page
         - Returns empty items list when no articles match filters
+        - feed_ids and folder_id are mutually exclusive (feed_ids takes precedence)
     """
     from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
 
@@ -268,6 +271,7 @@ async def list_articles(
         user_id=UUID(current_user.sub),
         params=params,
         feed_ids=feed_ids,
+        folder_id=folder_id,
         is_read=is_read,
         is_read_later=is_read_later,
         is_favorite=is_favorite,
@@ -275,16 +279,17 @@ async def list_articles(
 
     # Transform the tuples into ArticleResponse objects
     from app.crud.article.article_transformer import ArticleTransformer
+
     transformer = ArticleTransformer()
-    
+
     transformed_items = []
     for item in result.items:
         transformed_item = transformer.to_unified(item)
         transformed_items.append(transformed_item.model_dump())
-    
+
     return {
         "items": transformed_items,
-        "next_cursor": result.next_cursor,
+        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
         "has_more": result.has_more,
         "total_count": result.total_count,
     }
@@ -385,7 +390,22 @@ async def get_todays_articles(
         published_until=now_utc,
     )
 
-    return result.model_dump()
+    # Transform the tuples into ArticleResponse objects
+    from app.crud.article.article_transformer import ArticleTransformer
+
+    transformer = ArticleTransformer()
+
+    transformed_items = []
+    for item in result.items:
+        transformed_item = transformer.to_unified(item)
+        transformed_items.append(transformed_item.model_dump())
+
+    return {
+        "items": transformed_items,
+        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
+        "has_more": result.has_more,
+        "total_count": result.total_count,
+    }
 
 
 @router.get(
@@ -475,7 +495,22 @@ async def get_recently_read_articles(
         is_read=True,
     )
 
-    return result.model_dump()
+    # Transform the tuples into ArticleResponse objects
+    from app.crud.article.article_transformer import ArticleTransformer
+
+    transformer = ArticleTransformer()
+
+    transformed_items = []
+    for item in result.items:
+        transformed_item = transformer.to_unified(item)
+        transformed_items.append(transformed_item.model_dump())
+
+    return {
+        "items": transformed_items,
+        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
+        "has_more": result.has_more,
+        "total_count": result.total_count,
+    }
 
 
 @router.get(
@@ -564,7 +599,22 @@ async def get_read_later_articles(
         is_read_later=True,
     )
 
-    return result.model_dump()
+    # Transform the tuples into ArticleResponse objects
+    from app.crud.article.article_transformer import ArticleTransformer
+
+    transformer = ArticleTransformer()
+
+    transformed_items = []
+    for item in result.items:
+        transformed_item = transformer.to_unified(item)
+        transformed_items.append(transformed_item.model_dump())
+
+    return {
+        "items": transformed_items,
+        "next_cursor": str(result.next_cursor) if result.next_cursor else None,
+        "has_more": result.has_more,
+        "total_count": result.total_count,
+    }
 
 
 @router.get(
@@ -924,6 +974,3 @@ async def update_article(
         user_id=current_user.sub,
     )
     return updated_article
-
-
-

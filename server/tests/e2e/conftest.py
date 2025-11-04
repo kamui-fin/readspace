@@ -86,16 +86,16 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
     # Create a connection and transaction
     connection = await db_engine.connect()
     transaction = await connection.begin()
-    
+
     try:
         # Create session bound to the connection
         session = AsyncSession(bind=connection, expire_on_commit=False)
-        
+
         yield session
-        
+
         # Close the session
         await session.close()
-        
+
     finally:
         # Always rollback the transaction to clean up test data
         await transaction.rollback()
@@ -132,22 +132,19 @@ async def test_user(db_session: AsyncSession) -> Profile:
         ),
         {"user_id": user_id, "email": email},
     )
-    
+
     # Flush to make the user available in this transaction (trigger will fire)
     await db_session.flush()
-    
+
     # Now fetch the auto-created profile
-    result = await db_session.execute(
-        text("SELECT id, email FROM profiles WHERE id = :user_id"),
-        {"user_id": user_id}
-    )
+    result = await db_session.execute(text("SELECT id, email FROM profiles WHERE id = :user_id"), {"user_id": user_id})
     profile_row = result.fetchone()
-    
+
     if not profile_row:
         raise Exception(f"Profile was not auto-created for user {user_id}")
-    
+
     # Return a Profile object with the database default role
-    user = Profile(id=profile_row.id, email=profile_row.email, role="basic")
+    user = Profile(id=profile_row.id, email=profile_row.email, role="BASIC")
     return user
 
 
@@ -176,24 +173,20 @@ async def admin_user(db_session: AsyncSession) -> Profile:
         ),
         {"user_id": user_id, "email": email},
     )
-    
+
     # Flush so trigger fires
     await db_session.flush()
-    
+
     # Update the profile to have admin role
-    await db_session.execute(
-        text("UPDATE profiles SET role = 'admin' WHERE id = :user_id"),
-        {"user_id": user_id}
-    )
+    await db_session.execute(text("UPDATE profiles SET role = 'ADMIN' WHERE id = :user_id"), {"user_id": user_id})
     await db_session.flush()
-    
+
     # Fetch the updated profile
     result = await db_session.execute(
-        text("SELECT id, email, role FROM profiles WHERE id = :user_id"),
-        {"user_id": user_id}
+        text("SELECT id, email, role FROM profiles WHERE id = :user_id"), {"user_id": user_id}
     )
     profile_row = result.fetchone()
-    
+
     if not profile_row:
         raise Exception(f"Profile was not auto-created for admin user {user_id}")
 

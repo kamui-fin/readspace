@@ -492,12 +492,7 @@ class RssSearchService:
 
         # Regular text search (non-URL queries)
         if query:
-            # Use hybrid search if AI is enabled, otherwise use simple search
-            if self.settings.ENABLE_AI and self.ai_service:
-                return await self._hybrid_search(query, language, limit, category)
-            else:
-                logger.info("AI disabled, using FTS-only search", query=query)
-                return await self._simple_search(query, language, limit, category)
+            return await self._hybrid_search(query, language, limit, category)
         elif category:
             return await self._category_search(category, language, limit)
         else:
@@ -637,21 +632,22 @@ class RssSearchService:
                 "language": language,
                 "embedding": embedding_str,
                 "limit": limit,
-                "category": None,  # Default to NULL
             }
 
-            # Validate and set category parameter
+            # Handle category parameter - only add if not None to avoid type ambiguity
+            category_filter = ""
             if category:
                 try:
                     category_enum = FeedCategory(category)
-                    params["category"] = category_enum.value if hasattr(category_enum, "value") else category_enum
+                    category_value = category_enum.value if hasattr(category_enum, "value") else category_enum
+                    params["category"] = category_value
+                    category_filter = "AND f.top_level_category = :category"
                 except ValueError:
                     logger.warning(f"Invalid category provided: {category}")
-                    params["category"] = None
+                    category_filter = ""
 
-            # SQL query using named parameters with conditional category filtering
-            # Uses (:category IS NULL OR ...) pattern to handle optional filtering without f-string injection
-            sql_query = """
+            # SQL query using dynamic category filtering to avoid parameter type ambiguity
+            sql_query = f"""
                 WITH q AS (
                     SELECT websearch_to_tsquery('english', :query) AS query,
                            LOWER(:query) AS query_lower
@@ -670,7 +666,7 @@ class RssSearchService:
                     WHERE (f.tsv_title_link @@ (SELECT query FROM q)
                            OR f.tsv_desc_tags @@ (SELECT query FROM q))
                       AND (f.language = :language OR f.language IS NULL)
-                      AND (:category IS NULL OR f.top_level_category = :category)
+                      {category_filter}
                     ORDER BY
                         (0.7 * ts_rank_cd(f.tsv_title_link, (SELECT query FROM q)) +
                          0.3 * ts_rank_cd(f.tsv_desc_tags, (SELECT query FROM q))) DESC
@@ -692,7 +688,7 @@ class RssSearchService:
                         ) AS vector_rank
                     FROM feeds f
                     WHERE (f.language = :language OR f.language IS NULL)
-                      AND (:category IS NULL OR f.top_level_category = :category)
+                      {category_filter}
                     ORDER BY
                         CASE
                             WHEN f.embedding IS NOT NULL THEN f.embedding <=> CAST(:embedding AS vector)
@@ -816,19 +812,21 @@ class RssSearchService:
                 "query": query,
                 "language": language,
                 "limit": limit,
-                "category": None,  # Default to NULL
             }
 
-            # Validate and set category parameter
+            # Handle category parameter - only add if not None to avoid type ambiguity
+            category_filter = ""
             if category:
                 try:
                     category_enum = FeedCategory(category)
-                    params["category"] = category_enum.value
+                    category_value = category_enum.value
+                    params["category"] = category_value
+                    category_filter = "AND f.top_level_category = :category"
                 except ValueError:
-                    pass  # Ignore invalid category, keep as NULL
+                    pass  # Ignore invalid category
 
-            # Use FTS for ranking with parameterized category filtering
-            sql_query = """
+            # Use FTS for ranking with dynamic category filtering
+            sql_query = f"""
                 WITH q AS (
                     SELECT websearch_to_tsquery('english', :query) AS query
                 )
@@ -842,7 +840,7 @@ class RssSearchService:
                 WHERE (f.tsv_title_link @@ (SELECT query FROM q)
                        OR f.tsv_desc_tags @@ (SELECT query FROM q))
                   AND (f.language = :language OR f.language IS NULL)
-                  AND (:category IS NULL OR f.top_level_category = :category)
+                  {category_filter}
                 ORDER BY
                     relevance_score DESC,
                     f.popularity_score DESC NULLS LAST

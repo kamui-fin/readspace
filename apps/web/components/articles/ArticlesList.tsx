@@ -29,6 +29,8 @@ interface ArticlesListProps {
     isRecentlyReadMode?: boolean
     /** Whether in read later mode */
     isReadLaterMode?: boolean
+    /** Whether in today mode */
+    isTodayMode?: boolean
     /** Sidebar title for the current view */
     sidebarTitle?: string
     /** Feed ID for empty state */
@@ -55,6 +57,7 @@ export function ArticlesList({
     showUnreadOnly,
     isRecentlyReadMode = false,
     isReadLaterMode = false,
+    isTodayMode = false,
     feedId,
     folderId,
     fetchNextPage,
@@ -79,7 +82,7 @@ export function ArticlesList({
 
     // For virtualization, we need a flat list of all items
     const allRows = useMemo(() => {
-        if (isRecentlyReadMode || filteredArticles.length === 0) {
+        if (isRecentlyReadMode || isTodayMode || filteredArticles.length === 0) {
             return filteredArticles
         }
 
@@ -134,16 +137,22 @@ export function ArticlesList({
             })
             .forEach(([dateGroup, group]) => {
                 rows.push({ type: "header", label: group.label, dateGroup })
-                rows.push(...group.articles)
+                // Sort articles within each date group by published time (newest first)
+                const sortedArticles = group.articles.sort((a, b) => {
+                    if (!a.published_at) return 1
+                    if (!b.published_at) return -1
+                    return parseISO(b.published_at).getTime() - parseISO(a.published_at).getTime()
+                })
+                rows.push(...sortedArticles)
             })
 
         return rows
     }, [filteredArticles, isRecentlyReadMode])
 
     // Get sticky indexes (header positions)
-    // Only enable sticky headers when we actually have date headers (not in recently read mode)
+    // Only enable sticky headers when we actually have date headers (not in recently read or today mode)
     const stickyIndexes = useMemo(() => {
-        if (isRecentlyReadMode) return []
+        if (isRecentlyReadMode || isTodayMode) return []
 
         const indexes: number[] = []
         allRows.forEach((row, index) => {
@@ -152,7 +161,7 @@ export function ArticlesList({
             }
         })
         return indexes
-    }, [allRows, isRecentlyReadMode])
+    }, [allRows, isRecentlyReadMode, isTodayMode])
 
     // Helper functions for sticky behavior
     const isSticky = useCallback(
@@ -246,7 +255,9 @@ export function ArticlesList({
                         ? "recentlyRead"
                         : isReadLaterMode
                           ? "readLater"
-                          : "allArticles"
+                          : isTodayMode
+                            ? "today"
+                            : "allArticles"
                 }
                 feedId={feedId}
                 folderId={folderId}

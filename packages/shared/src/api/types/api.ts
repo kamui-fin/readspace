@@ -1,4 +1,6 @@
 // Base API response types
+
+// Offset-based pagination (legacy, used by some endpoints)
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
@@ -15,6 +17,14 @@ export interface ApiPaginatedResponse<T> {
   size: number;
   pages?: number;
   total_pages?: number;
+}
+
+// Cursor-based pagination (used by article endpoints)
+export interface CursorPaginatedResponse<T> {
+  items: T[];
+  next_cursor: string | null;
+  has_more: boolean;
+  total_count: number | null;
 }
 
 // Generic API Error Type (interface for error objects)

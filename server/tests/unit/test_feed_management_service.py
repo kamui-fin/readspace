@@ -4,7 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.schemas import FeedResponse, FeedUpdate
+from app.schemas import FeedUpdate
+from app.schemas.subscriptions import FeedResponse
 from app.services.feed_management_service import FeedManagementService
 
 

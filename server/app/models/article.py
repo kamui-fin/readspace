@@ -3,13 +3,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
 from sqlalchemy.orm import Mapped, deferred, mapped_column, relationship
 from sqlalchemy.sql import func
 
 from app.db.base_class import Base
+from app.models.enums import ArticlePriority
 
 
 class ArticleContent(Base):
@@ -135,20 +136,23 @@ class ClippedArticle(Base):
         SQLUUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
+        # Note: user_id index replaced by composite idx_clipped_user_created (user_id, created_at DESC)
     )
 
     # Clipped article specific fields
-    priority = Column(String(20), default="medium", nullable=False)
+    priority = Column(SQLEnum(ArticlePriority, name="articlepriority"), nullable=False, default=ArticlePriority.MEDIUM)
     note = Column(String(2000))
 
     # User interaction state
-    is_read = Column(Boolean, default=False, nullable=False, index=True)
+    # Note: is_read, is_read_later, is_favorite no longer indexed individually
+    # Queries filter by user_id first, making boolean indexes ineffective
+    is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime(timezone=True))
-    is_read_later = Column(Boolean, default=True, nullable=False, index=True)
-    is_favorite = Column(Boolean, default=False, nullable=False, index=True)
+    is_read_later = Column(Boolean, default=True, nullable=False)
+    is_favorite = Column(Boolean, default=False, nullable=False)
 
-    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
+    # Note: created_at index replaced by composite idx_clipped_user_created (user_id, created_at DESC)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Relationships
     content = relationship("ArticleContent", back_populates="clipped_articles")

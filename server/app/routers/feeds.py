@@ -4,7 +4,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FEEDS_BATCH_SIZE, MAX_PAGE_SIZE
@@ -22,8 +22,9 @@ from app.core.dependencies import get_subscription_service
 from app.crud import crud_feed, crud_subscription
 from app.crud import crud_folder, crud_profile
 from app.db.session import get_db
-from app.models import Feed
-from app.schemas import FeedCreate, FeedResponse, FeedUpdate
+from app.models import ArticleContent, Feed, FeedArticle
+from app.schemas import FeedCreate, FeedUpdate
+from app.schemas.subscriptions import FeedResponse
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import (
     SubscriptionCreateByFeedId,
@@ -414,10 +415,6 @@ async def list_feeds(
         description="Filter feeds by a list of tag names (case-insensitive, matches all provided tags)",
     ),
     is_favorite: bool | None = Query(None, description="Filter feeds by favorite status"),
-    search_query: str | None = Query(None, description="Search query for feed titles and descriptions"),
-    include_unread_counts: bool = Query(
-        False, description="Include unread article counts for each feed (single optimized query)"
-    ),
     skip: int = Query(0, ge=0, description="Number of feeds to skip for pagination"),
     limit: int = Query(100, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of feeds to return"),
     current_user: TokenData = Depends(get_current_user),
@@ -445,7 +442,6 @@ async def list_feeds(
     Filtering Examples:
         - Get feeds in specific folder: `?folder_id=123e4567-e89b-12d3-a456-426614174000`
         - Get favorite feeds only: `?is_favorite=true`
-        - Search by title: `?search_query=tech news`
         - Filter by tags: `?tag_names=technology&tag_names=programming`
         - Combine filters: `?folder_id=123&is_favorite=true&limit=50`
 
@@ -453,17 +449,15 @@ async def list_feeds(
         - Requires authentication
         - Returns only feeds the user is subscribed to
         - Tag filtering uses AND logic (all specified tags must match)
-        - Search is case-insensitive and searches titles and descriptions
     """
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     feeds = await feed_service.list_feeds(
         folder_id=folder_id,
         tag_names=tag_names,
         is_favorite=is_favorite,
-        search_query=search_query,
         skip=skip,
         limit=limit,
-        include_unread_counts=include_unread_counts,
+        include_unread_counts=True,  # Always include unread counts
     )
     return feeds
 
@@ -494,8 +488,9 @@ async def get_feed(
     Retrieve detailed information about a specific RSS feed.
 
     This endpoint returns comprehensive information about a single RSS feed,
-    including feed metadata, subscription details, and current status. The user
-    must be subscribed to the feed to access its details.
+    including feed metadata and subscription status. Any authenticated user can
+    view any feed, not just subscribed feeds. The response includes an
+    `is_subscribed` field indicating the user's subscription status.
 
     Args:
         feed_id: UUID of the feed to retrieve
@@ -503,23 +498,24 @@ async def get_feed(
         current_user: Authenticated user information
 
     Returns:
-        FeedResponse: Complete feed details including subscription metadata
+        FeedResponse: Complete feed details with subscription status
 
     Raises:
         HTTPException:
-            - 404: Feed not found or user is not subscribed to this feed
+            - 404: Feed not found
             - 422: Invalid UUID format for feed_id
 
     Note:
         - Requires authentication
-        - User must be subscribed to the feed to access its details
-        - Returns subscription-specific metadata like folder assignment
-        - Includes feed status information (last fetched, error state, etc.)
+        - Any authenticated user can view any feed
+        - Returns `is_subscribed: true` for subscribed feeds with subscription metadata
+        - Returns `is_subscribed: false` for unsubscribed feeds (preview mode)
+        - Subscription-specific fields (folder_id, is_favorite) only included when subscribed
     """
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     feed = await feed_service.get_feed(feed_id=feed_id)
     if not feed:
-        logger.warning("Feed not found or access denied", feed_id=feed_id, user_id=current_user.sub)
+        logger.warning("Feed not found", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
     return feed
 
@@ -1639,8 +1635,8 @@ async def delete_feed(
     return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
 
 
-@router.post(
-    "/bulk-delete",
+@router.delete(
+    "/",
     status_code=status.HTTP_200_OK,
     summary="Bulk delete feed subscriptions",
     description="Delete multiple feed subscriptions in a single operation",
@@ -1711,8 +1707,8 @@ async def bulk_delete_feeds(
     }
 
 
-@router.post(
-    "/bulk-update-folder",
+@router.patch(
+    "/folder",
     status_code=status.HTTP_200_OK,
     summary="Bulk move feeds to folder",
     description="Move multiple feed subscriptions to a different folder in a single operation",
@@ -1798,4 +1794,104 @@ async def bulk_update_feeds_folder(
         "updated_count": len(result["updated_ids"]),
         "updated_ids": [str(fid) for fid in result["updated_ids"]],
         "folder_id": str(folder_id),
+    }
+
+
+@router.put(
+    "/{feed_id}/read-status",
+    status_code=status.HTTP_200_OK,
+    summary="Mark all articles in a feed as read",
+    description="Update the last_read_cutoff timestamp to mark all current articles in the feed as read",
+    responses={
+        200: {
+            "description": "Successfully marked all articles as read",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "All articles marked as read",
+                        "feed_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "cutoff_timestamp": "2025-11-03T18:00:00Z",
+                    }
+                }
+            },
+        },
+        404: {"description": "Feed subscription not found"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def mark_feed_all_read(
+    *,
+    feed_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Mark all articles in a feed as read by updating the last_read_cutoff timestamp.
+
+    This operation updates the subscription's last_read_cutoff to the most recent
+    article's published_at timestamp, effectively marking all current articles as read.
+    New articles published after this timestamp will still appear as unread.
+
+    This is much more efficient than updating individual article states.
+
+    Args:
+        feed_id: UUID of the feed to mark as read
+        db: Database session dependency
+        current_user: Current authenticated user
+
+    Returns:
+        Dictionary containing:
+            - message: Success message
+            - feed_id: The feed ID
+            - cutoff_timestamp: The new cutoff timestamp
+
+    Raises:
+        HTTPException:
+            - 404: If feed subscription doesn't exist for this user
+            - 500: If database update fails
+    """
+    user_id = UUID(current_user.sub)
+
+    # Get the user's subscription to this feed
+    subscription = await crud_subscription.get_subscription_by_feed_id(db=db, feed_id=feed_id, user_id=user_id)
+
+    if not subscription:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Feed subscription not found",
+        )
+
+    # Get the most recent article's published_at timestamp for this feed
+    result = await db.execute(
+        select(func.max(ArticleContent.published_at))
+        .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+        .where(FeedArticle.feed_id == feed_id)
+    )
+    max_published_at = result.scalar_one_or_none()
+
+    # If feed has no articles, use current time
+    if max_published_at is None:
+        from datetime import datetime, timezone
+
+        max_published_at = datetime.now(timezone.utc)
+
+    # Update the subscription's last_read_cutoff
+    from app.schemas.subscriptions import SubscriptionUpdate
+
+    update_data = SubscriptionUpdate(last_read_cutoff=max_published_at)
+    updated_subscription = await crud_subscription.update_subscription(
+        db=db, subscription_db=subscription, subscription_in=update_data
+    )
+
+    logger.info(
+        "Marked all articles as read for feed",
+        feed_id=str(feed_id),
+        user_id=str(user_id),
+        cutoff_timestamp=str(max_published_at),
+    )
+
+    return {
+        "message": "All articles marked as read",
+        "feed_id": str(feed_id),
+        "cutoff_timestamp": max_published_at.isoformat() if max_published_at else None,
     }

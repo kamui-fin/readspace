@@ -18,3 +18,25 @@ class FeedCategory(Enum):
     ARTIFICIAL_INTELLIGENCE = "Artificial Intelligence"
     SECURITY_PRIVACY = "Security & Privacy"
     EDUCATION_LEARNING = "Education & Learning"
+
+
+class UserRole(str, Enum):
+    """User role levels for access control and feature gating.
+
+    Maps to PostgreSQL enum type 'userrole'.
+    """
+
+    BASIC = "BASIC"
+    PRO = "PRO"
+    ADMIN = "ADMIN"
+
+
+class ArticlePriority(str, Enum):
+    """Priority levels for manually clipped articles.
+
+    Maps to PostgreSQL enum type 'articlepriority'.
+    """
+
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"

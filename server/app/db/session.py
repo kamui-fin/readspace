@@ -16,6 +16,7 @@ engine = create_async_engine(
     max_overflow=40,  # Increased from 10 for better burst capacity
     pool_timeout=5,  # Connection acquisition timeout - fail fast to detect pool exhaustion
     pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
+    isolation_level="READ_COMMITTED",  # Prevent race conditions - set at engine level
     connect_args={
         # Enable statement caching for better performance (5-10ms improvement per query)
         "statement_cache_size": 100,
@@ -32,7 +33,6 @@ AsyncSessionLocal = async_sessionmaker(
     expire_on_commit=False,
     autocommit=False,
     autoflush=False,
-    isolation_level="READ COMMITTED",  # Prevent race conditions
 )
 
 

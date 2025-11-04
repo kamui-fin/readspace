@@ -1,9 +1,10 @@
-import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
+"use client"
+
+import { ArticlesView } from "@/components/articles"
 
 export default function TodayPage() {
     return (
-        <ArticlesSuspenseWrapper
-            showUnreadBadge={true}
+        <ArticlesView
             initialSidebarTitle="Today"
             mode="today"
         />

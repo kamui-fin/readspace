@@ -1,11 +1,15 @@
+from datetime import datetime, timezone
+from typing import Any
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
+from app.models import ArticleContent, FeedArticle, FeedSubscription
 from app.schemas import FolderCreate, FolderResponse, FolderUpdate
 from app.schemas.auth import TokenData
 from app.services.folder import FolderService
@@ -184,3 +188,102 @@ async def delete_folder(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while deleting the folder",
         ) from e
+
+
+@router.put(
+    "/{folder_id}/read-status",
+    status_code=status.HTTP_200_OK,
+    summary="Mark all articles in a folder as read",
+    description="Update the last_read_cutoff timestamp for all subscriptions in the folder",
+    responses={
+        200: {
+            "description": "Successfully marked all articles in folder as read",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "All articles in folder marked as read",
+                        "folder_id": "123e4567-e89b-12d3-a456-426614174000",
+                        "updated_subscriptions": 5,
+                    }
+                }
+            },
+        },
+        404: {"description": "Folder not found"},
+        500: {"description": "Internal server error"},
+    },
+)
+async def mark_folder_all_read(
+    *,
+    folder_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Mark all articles in all feeds within a folder as read.
+
+    This operation updates the last_read_cutoff for all subscriptions in the folder
+    to each feed's most recent article timestamp, effectively marking all current
+    articles in the folder as read. Much more efficient than updating individual
+    article states.
+
+    Args:
+        folder_id: UUID of the folder
+        db: Database session dependency
+        current_user: Current authenticated user
+
+    Returns:
+        Dictionary containing:
+            - message: Success message
+            - folder_id: The folder ID
+            - updated_subscriptions: Number of subscriptions updated
+
+    Raises:
+        HTTPException:
+            - 404: If folder doesn't exist for this user
+            - 500: If database update fails
+    """
+    user_id = UUID(current_user.sub)
+
+    # Verify folder exists and belongs to user
+    folder_service = FolderService(db=db, user_id=user_id)
+    folder = await folder_service.get_folder(folder_id=folder_id)
+    if not folder:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Folder not found",
+        )
+
+    # Update all subscriptions in this folder with a batch UPDATE
+    # For each subscription, set last_read_cutoff to its feed's most recent article
+    # Using a subquery to get max published_at for each feed
+    stmt = (
+        update(FeedSubscription)
+        .where(FeedSubscription.folder_id == folder_id)
+        .where(FeedSubscription.user_id == user_id)
+        .values(
+            last_read_cutoff=(
+                select(func.max(ArticleContent.published_at))
+                .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+                .where(FeedArticle.feed_id == FeedSubscription.feed_id)
+                .scalar_subquery()
+            )
+        )
+        .execution_options(synchronize_session="fetch")
+    )
+
+    result = await db.execute(stmt)
+    updated_count = result.rowcount
+    await db.commit()
+
+    logger.info(
+        "Marked all articles in folder as read",
+        folder_id=str(folder_id),
+        user_id=str(user_id),
+        updated_subscriptions=updated_count,
+    )
+
+    return {
+        "message": "All articles in folder marked as read",
+        "folder_id": str(folder_id),
+        "updated_subscriptions": updated_count,
+    }

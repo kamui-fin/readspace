@@ -354,7 +354,11 @@ class ArticleCrudOperations:
             # Handle clipped articles
             clipped_article_result = await db.execute(
                 select(ClippedArticle)
-                .options(selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content))
+                .options(
+                    selectinload(ClippedArticle.content)
+                    .undefer(ArticleContent.description)
+                    .undefer(ArticleContent.content)
+                )
                 .where(
                     and_(
                         ClippedArticle.id == article_id,
@@ -394,8 +398,10 @@ class ArticleCrudOperations:
                     ),
                 )
                 .options(
-                    selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
-                    selectinload(FeedArticle.feed)
+                    selectinload(FeedArticle.content)
+                    .undefer(ArticleContent.description)
+                    .undefer(ArticleContent.content),
+                    selectinload(FeedArticle.feed),
                 )
                 .where(
                     and_(
@@ -429,8 +435,10 @@ class ArticleCrudOperations:
             refreshed_result = await db.execute(
                 select(FeedArticle, UserArticleState)
                 .options(
-                    selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
-                    selectinload(FeedArticle.feed)
+                    selectinload(FeedArticle.content)
+                    .undefer(ArticleContent.description)
+                    .undefer(ArticleContent.content),
+                    selectinload(FeedArticle.feed),
                 )
                 .outerjoin(
                     UserArticleState,
@@ -442,10 +450,10 @@ class ArticleCrudOperations:
                 .where(FeedArticle.id == article_id)
             )
             result_tuple = refreshed_result.first()
-            
+
             if result_tuple:
                 feed_article, updated_user_state = result_tuple
                 # Return tuple for transformer compatibility
                 return (feed_article, updated_user_state)
-            
+
             return None

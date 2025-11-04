@@ -116,8 +116,6 @@ app = FastAPI(
     * **Article Processing** - Automatic content extraction and enhancement
     * **AI-Powered Features** - Content similarity and recommendations
     * **OPML Support** - Import/export feed collections
-    * **Highlights & Annotations** - Save and organize important content
-    * **Book Management** - Organize and track reading materials
     * **Search & Discovery** - Find new feeds and content
 
     ## Authentication
@@ -130,19 +128,17 @@ app = FastAPI(
     Some endpoints have resource limits to ensure fair usage and prevent abuse.
     """,
     version="1.0.0",
-    terms_of_service="https://readspace.app/terms",
     contact={
         "name": "Readspace Support",
-        "url": "https://github.com/readspace-app/readspace",
-        "email": "support@readspace.app",
+        "url": "https://github.com/kamui-fin/readspace",
+        "email": "support@readspace.ai",
     },
     license_info={
-        "name": "MIT License",
-        "url": "https://github.com/readspace-app/readspace/blob/main/LICENSE",
+        "name": "GPLv3 License",
+        "url": "https://github.com/kamui-fin/readspace/blob/main/LICENSE",
     },
     servers=[
-        {"url": "http://localhost:8008", "description": "Development server"},
-        {"url": "https://api.readspace.app", "description": "Production server"},
+        {"url": "https://api.readspace.ai", "description": "Production server"},
     ],
     lifespan=lifespan,
     **docs_config,

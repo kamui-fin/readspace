@@ -291,7 +291,7 @@ class TestFeedDiscoveryIntegration:
         # Preview might fail without proper mocking
 
         # 3. Subscribe to feed
-        subscribe_response = await async_client.post(f"/api/feeds/{feed_id}/subscribe", json={})
+        subscribe_response = await async_client.post(f"/api/feeds/{feed_id}/subscribe", json={"folder_id": "default"})
         assert subscribe_response.status_code in [201, 400]  # 400 if already subscribed
 
     @pytest.mark.asyncio

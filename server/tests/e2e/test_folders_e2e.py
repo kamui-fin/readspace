@@ -52,7 +52,9 @@ class TestFolderCreate:
         assert response.status_code == 422
 
     @pytest.mark.asyncio
-    async def test_create_folder_persists_to_db(self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession):
+    async def test_create_folder_persists_to_db(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
         """Test that created folder is persisted to database."""
         response = await async_client.post("/api/folders/", json={"name": "DB Test Folder"})
 
@@ -92,7 +94,9 @@ class TestFolderList:
         assert any(f["id"] == str(test_folder.id) for f in data)
 
     @pytest.mark.asyncio
-    async def test_list_folders_pagination(self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession):
+    async def test_list_folders_pagination(
+        self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
+    ):
         """Test folder listing pagination."""
         # Create multiple folders
         for i in range(5):
@@ -111,7 +115,9 @@ class TestFolderList:
         assert len(response.json()) == 3
 
     @pytest.mark.asyncio
-    async def test_list_folders_isolation(self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession):
+    async def test_list_folders_isolation(
+        self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession
+    ):
         """Test that users only see their own folders."""
         # Create another user with profile first
         from uuid import uuid4
@@ -119,7 +125,7 @@ class TestFolderList:
 
         other_user_id = str(uuid4())
         other_email = f"other-{uuid4().hex[:8]}@example.com"
-        
+
         # Create auth user and profile
         await db_session.execute(
             text(
@@ -140,7 +146,7 @@ class TestFolderList:
             {"user_id": other_user_id, "email": other_email},
         )
         await db_session.flush()
-        
+
         # Now create the folder
         other_folder = Folder(user_id=other_user_id, name="Other User Folder")
         db_session.add(other_folder)
@@ -194,7 +200,7 @@ class TestFolderGet:
         # Create another user with profile first
         other_user_id = str(uuid4())
         other_email = f"other-{uuid4().hex[:8]}@example.com"
-        
+
         # Create auth user and profile
         await db_session.execute(
             text(
@@ -275,7 +281,9 @@ class TestFolderUpdate:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_update_folder_persists(self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession):
+    async def test_update_folder_persists(
+        self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession
+    ):
         """Test that folder updates persist to database."""
         response = await async_client.put(f"/api/folders/{test_folder.id}", json={"name": "Persisted Name"})
 
@@ -294,7 +302,7 @@ class TestFolderUpdate:
         # Create another user with profile first
         other_user_id = str(uuid4())
         other_email = f"other-{uuid4().hex[:8]}@example.com"
-        
+
         # Create auth user and profile
         await db_session.execute(
             text(
@@ -328,7 +336,9 @@ class TestFolderDelete:
     """Test folder deletion endpoint."""
 
     @pytest.mark.asyncio
-    async def test_delete_folder_success(self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession):
+    async def test_delete_folder_success(
+        self, async_client: AsyncClient, test_folder: Folder, db_session: AsyncSession
+    ):
         """Test deleting a folder successfully."""
         folder_id = test_folder.id
         response = await async_client.delete(f"/api/folders/{folder_id}")
@@ -359,7 +369,7 @@ class TestFolderDelete:
         # Create another user with profile first
         other_user_id = str(uuid4())
         other_email = f"other-{uuid4().hex[:8]}@example.com"
-        
+
         # Create auth user and profile
         await db_session.execute(
             text(

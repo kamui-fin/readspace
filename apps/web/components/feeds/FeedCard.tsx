@@ -22,7 +22,9 @@ import {
     useFeeds,
     type Feed,
     type FeedDiscoveryResult,
+    RSS_QUERY_KEYS,
 } from "@readspace/shared"
+import { useQueryClient } from "@tanstack/react-query"
 import { MoreVertical, Pencil, Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import Link from "next/link"
@@ -47,7 +49,10 @@ export function FeedCard({
         {
             refetchOnMount: false,
             refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000, // 5 minutes
+            refetchOnReconnect: false,
+            staleTime: 10 * 60 * 1000, // 10 minutes
+            gcTime: 15 * 60 * 1000, // 15 minutes
+            refetchInterval: false,
         }
     )
 
@@ -59,6 +64,7 @@ export function FeedCard({
     const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] =
         useState(false)
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+    const queryClient = useQueryClient()
     const deleteFeed = useDeleteFeed()
     const adminDeleteFeed = useAdminDeleteFeed()
     const { isAdmin } = useUserRole()
@@ -85,8 +91,17 @@ export function FeedCard({
     }
 
     const handleSubscriptionSuccess = () => {
-        // No need to set local state - the subscription mutation should update the feeds query data
-        // which will cause useIsSubscribed to return the updated value
+        // Optimistically update the feeds query data to reflect the new subscription
+        // This prevents the need to refetch the entire feeds list
+        queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS], (old: Feed[] | undefined) => {
+            if (!old) return old
+            // Add the current feed to the subscribed feeds list if it's not already there
+            const feedExists = old.some(f => f.id === feed.id)
+            if (!feedExists) {
+                return [...old, feed as Feed]
+            }
+            return old
+        })
     }
 
     const handleAdminDelete = () => {

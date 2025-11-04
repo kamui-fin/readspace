@@ -387,7 +387,10 @@ Return a JSON object with exactly these keys:
 2. Be written in clear, engaging language
 3. Highlight any notable statistics, quotes, or findings
 4. Maintain the original tone and context
-5. Be slightly more concise than typical summaries (aim for 2-3 paragraphs maximum)
+5. Be CONCISE - scale with article length:
+   - Short articles (< 500 words): 1-2 sentences
+   - Medium articles (500-2000 words): 1 paragraph (3-4 sentences)
+   - Long articles (> 2000 words): 2 paragraphs maximum
 6. Focus on actionable insights or important implications
 7. CRITICAL: Write the summary in the SAME LANGUAGE as the original content, defaulting to English if unsure
 
@@ -402,7 +405,7 @@ Please provide a high-quality summary of this article that captures its main poi
             summary = await self.generate_text(
                 prompt=prompt,
                 system_prompt=system_prompt,
-                max_tokens=800,
+                max_tokens=400,
                 temperature=0.3,
             )
 

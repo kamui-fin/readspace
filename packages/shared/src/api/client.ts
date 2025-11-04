@@ -1,15 +1,6 @@
 import type {
-  BookMetadataCreate,
-  Highlight,
-  HighlightCreate,
-  HighlightUpdate,
-  UserBookLibrary,
-  UserBookLibraryUpdate,
-} from "./types/books";
-import type {
   ActiveImportTask,
   Article,
-  ArticlesPaginatedResponse,
   DiscoverSearchResponse,
   Feed,
   Folder,
@@ -69,15 +60,17 @@ async function fetchWithRetry<T>(
   // If we get a 401, try refreshing the token and retry once
   // But only if we had a token in the first place (user is logged in)
   if (response.status === 401) {
-    const hadToken = options.headers && 'Authorization' in (options.headers as Record<string, string>);
-    
+    const hadToken =
+      options.headers &&
+      "Authorization" in (options.headers as Record<string, string>);
+
     if (hadToken) {
       console.log("Received 401, attempting token refresh and retry");
 
       try {
         // Get a fresh token (this should trigger a refresh in Supabase)
         const freshHeaders = await getAuthHeaders(getAuthToken);
-        
+
         // Only retry if we got a fresh token
         if (freshHeaders.Authorization) {
           // Retry the request with fresh token
@@ -115,7 +108,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       const fileSizeError = validationErrors.find(
         (err: any) =>
           err.type === "less_than_equal" &&
-          err.loc?.includes("file_size_bytes")
+          err.loc?.includes("file_size_bytes"),
       );
 
       if (fileSizeError && fileSizeError.ctx?.le) {
@@ -133,9 +126,10 @@ async function handleResponse<T>(response: Response): Promise<T> {
     } else if (typeof error.detail === "string") {
       errorMessage = error.detail;
     } else if (error.message) {
-      errorMessage = typeof error.message === "string"
-        ? error.message
-        : JSON.stringify(error.message);
+      errorMessage =
+        typeof error.message === "string"
+          ? error.message
+          : JSON.stringify(error.message);
     } else {
       errorMessage = "An error occurred";
     }
@@ -166,8 +160,10 @@ export class ApiClient {
       const headers = await getAuthHeaders(this.config.getAuthToken);
 
       // Normalize URL to prevent double slashes
-      const baseUrl = this.config.baseUrl.replace(/\/$/, '');
-      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      const baseUrl = this.config.baseUrl.replace(/\/$/, "");
+      const normalizedEndpoint = endpoint.startsWith("/")
+        ? endpoint
+        : `/${endpoint}`;
 
       return await fetchWithRetry<T>(
         `${baseUrl}${normalizedEndpoint}`,
@@ -217,8 +213,28 @@ export class ApiClient {
     });
   }
 
-  static async delete<T>(endpoint: string, options?: RequestInit): Promise<T> {
-    return this.fetch<T>(endpoint, { ...options, method: "DELETE" });
+  static async patch<T>(
+    endpoint: string,
+    data?: unknown,
+    options?: RequestInit,
+  ): Promise<T> {
+    return this.fetch<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      body: data ? JSON.stringify(data) : undefined,
+    });
+  }
+
+  static async delete<T>(
+    endpoint: string,
+    data?: unknown,
+    options?: RequestInit,
+  ): Promise<T> {
+    return this.fetch<T>(endpoint, {
+      ...options,
+      method: "DELETE",
+      body: data ? JSON.stringify(data) : undefined,
+    });
   }
 
   static async uploadFile(
@@ -240,8 +256,10 @@ export class ApiClient {
 
     try {
       // Normalize URL to prevent double slashes
-      const baseUrl = this.config.baseUrl.replace(/\/$/, '');
-      const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+      const baseUrl = this.config.baseUrl.replace(/\/$/, "");
+      const normalizedEndpoint = endpoint.startsWith("/")
+        ? endpoint
+        : `/${endpoint}`;
       const url = `${baseUrl}${normalizedEndpoint}`;
 
       let response = await fetch(url, {
@@ -255,13 +273,15 @@ export class ApiClient {
       // But only if we had a token in the first place (user is logged in)
       if (response.status === 401) {
         const hadToken = uploadHeaders.Authorization;
-        
+
         if (hadToken) {
-          console.log("Upload received 401, attempting token refresh and retry");
+          console.log(
+            "Upload received 401, attempting token refresh and retry",
+          );
 
           try {
             const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
-            
+
             // Only retry if we got a fresh token
             if (freshHeaders.Authorization) {
               // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -331,6 +351,8 @@ export class ApiClient {
         queryParams.append("is_favorite", params.is_favorite.toString());
       if (params?.search_query)
         queryParams.append("search_query", params.search_query);
+      // Always include unread counts - we always need them for the UI
+      queryParams.append("include_unread_counts", "true");
 
       const queryString = queryParams.toString();
       return this.get<Feed[]>(
@@ -338,8 +360,15 @@ export class ApiClient {
       );
     },
     getFeed: (id: string) => this.get<Feed>(`/api/feeds/${id}`),
-    createFeed: (data: { url: string; folder_id?: string }, signal?: AbortSignal) =>
-      this.post<Subscription>("/api/feeds/", data, signal ? { signal } : undefined),
+    createFeed: (
+      data: { url: string; folder_id?: string },
+      signal?: AbortSignal,
+    ) =>
+      this.post<Subscription>(
+        "/api/feeds/",
+        data,
+        signal ? { signal } : undefined,
+      ),
     updateFeed: (
       id: string,
       data: {
@@ -374,25 +403,34 @@ export class ApiClient {
         `/api/feeds/${id}/refresh${queryString ? `?${queryString}` : ""}`,
       );
     },
-    refreshFolderFeeds: (folderId: string) =>
-      this.post(`/api/feeds/refresh_folder/${folderId}`),
     refreshAllFeeds: () => this.post("/api/feeds/refresh"),
     getRefreshStatus: (taskId: string) =>
       this.get(`/api/feeds/refresh-status/${taskId}`),
     deleteFeed: (id: string) => this.delete(`/api/feeds/${id}`),
-    adminDeleteFeed: (id: string) =>
-      this.delete(`/api/feeds/${id}/admin`),
+    adminDeleteFeed: (id: string) => this.delete(`/api/feeds/${id}/admin`),
     bulkDeleteFeeds: (feed_ids: string[]) =>
-      this.post<{
+      this.delete<{
         deleted_count: number;
         deleted_ids: string[];
-      }>("/api/feeds/bulk-delete", { feed_ids }),
+      }>("/api/feeds/", { feed_ids }),
     bulkUpdateFeedsFolder: (feed_ids: string[], folder_id: string) =>
-      this.post<{
+      this.patch<{
         updated_count: number;
         updated_ids: string[];
         folder_id: string;
-      }>("/api/feeds/bulk-update-folder", { feed_ids, folder_id }),
+      }>("/api/feeds/folder", { feed_ids, folder_id }),
+    markFeedAllRead: (feed_id: string) =>
+      this.put<{
+        message: string;
+        feed_id: string;
+        cutoff_timestamp: string;
+      }>(`/api/feeds/${feed_id}/read-status`),
+    markFolderAllRead: (folder_id: string) =>
+      this.put<{
+        message: string;
+        folder_id: string;
+        updated_subscriptions: number;
+      }>(`/api/folders/${folder_id}/read-status`),
     subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
       this.post(`/api/feeds/${feedId}/subscribe`, data),
     getSimilarFeeds: (
@@ -418,6 +456,7 @@ export class ApiClient {
       cursor?: string;
       limit?: number;
       feed_ids?: string[];
+      folder_id?: string;
       is_read?: boolean;
       is_read_later?: boolean;
       is_favorite?: boolean;
@@ -432,6 +471,7 @@ export class ApiClient {
       if (params.limit) queryParams.append("limit", params.limit.toString());
       if (params.feed_ids)
         params.feed_ids.forEach((id) => queryParams.append("feed_ids", id));
+      if (params.folder_id) queryParams.append("folder_id", params.folder_id);
       if (params.is_read !== undefined)
         queryParams.append("is_read", params.is_read.toString());
       if (params.is_read_later !== undefined)

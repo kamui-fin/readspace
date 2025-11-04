@@ -76,15 +76,12 @@ export default function FeedPreviewScreen() {
 
     // Fetch preview articles for the feed
     // Don't fetch articles until preview refresh is done (if in preview mode)
-    const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery<{
-        items: Article[];
-        total: number;
-    }>({
+    const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery({
         queryKey: ['feed-articles', id],
         queryFn: async () => {
             const response = await ApiClient.rss.getArticles({
                 feed_ids: [id],
-                size: 5,
+                limit: 5,
             });
             return response;
         },

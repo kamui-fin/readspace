@@ -4,6 +4,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.celery_app import celery
 from app.services.opml.opml_import import OpmlImportService
@@ -25,6 +26,7 @@ async def async_import_single_feed(
     feed_title: str | None = None,
     update_existing: bool = False,
     is_revoked: bool = False,
+    db: AsyncSession | None = None,
 ) -> dict[str, Any]:
     """Import a single feed - async implementation.
 
@@ -36,6 +38,7 @@ async def async_import_single_feed(
         feed_title: Optional feed title override
         update_existing: Whether to update existing feed
         is_revoked: Whether the task was cancelled
+        db: Optional database session. If not provided, creates a new session.
 
     Returns:
         Import result dictionary
@@ -49,8 +52,20 @@ async def async_import_single_feed(
             "error": "Task was cancelled by user",
         }
 
-    async for db in get_worker_db():
+    # Use provided session or create new one
+    if db is not None:
         opml_service = OpmlImportService(db=db, user_id=user_id)
+        return await opml_service.import_single_feed(
+            feed_url=feed_url,
+            folder_id=folder_id,
+            tag_names=tag_names,
+            feed_title=feed_title,
+            update_existing=update_existing,
+        )
+
+    # Create a new session (for production use)
+    async for session in get_worker_db():
+        opml_service = OpmlImportService(db=session, user_id=user_id)
         return await opml_service.import_single_feed(
             feed_url=feed_url,
             folder_id=folder_id,
@@ -65,6 +80,7 @@ async def async_import_opml(
     opml_content: str,
     default_folder_name: str = "Imported Feeds",
     is_revoked: bool = False,
+    db: AsyncSession | None = None,
 ) -> dict[str, Any]:
     """Import OPML file - async implementation.
 
@@ -73,6 +89,7 @@ async def async_import_opml(
         opml_content: OPML file content
         default_folder_name: Default folder name for feeds without folders
         is_revoked: Whether the task was cancelled
+        db: Optional database session. If not provided, creates a new session.
 
     Returns:
         Import result dictionary
@@ -83,8 +100,23 @@ async def async_import_opml(
 
     logger.info("Starting OPML import orchestration", user_id=str(user_id))
 
-    async for db in get_worker_db():
+    # Use provided session or create new one
+    if db is not None:
         opml_service = OpmlImportService(db=db, user_id=user_id)
+        result = await opml_service.process_opml_import(
+            opml_content=opml_content, default_folder_name=default_folder_name
+        )
+
+        logger.info(
+            "Bulk queued feed import tasks",
+            queued_tasks=result["queued_tasks"],
+            user_id=str(user_id),
+        )
+        return result
+
+    # Create a new session (for production use)
+    async for session in get_worker_db():
+        opml_service = OpmlImportService(db=session, user_id=user_id)
         result = await opml_service.process_opml_import(
             opml_content=opml_content, default_folder_name=default_folder_name
         )

@@ -8,10 +8,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import {
-    useNavigationState,
-    useOptimisticNavigation,
-} from "@/hooks/useNavigationState"
 import { useUnreadCounts } from "@readspace/shared"
 
 interface MainNavItem {
@@ -42,8 +38,6 @@ export function MainNavigationItems({
     toggleSidebar,
 }: MainNavigationItemsProps) {
     const pathname = usePathname()
-    const { handleOptimisticClick } = useOptimisticNavigation()
-    const { pendingPath } = useNavigationState()
 
     // Fetch unread counts for special items
     const { data: unreadCounts } = useUnreadCounts(undefined, {
@@ -77,9 +71,7 @@ export function MainNavigationItems({
             <SidebarMenu>
                 {items.map((item) => {
                     const count = getCountForItem(item.title)
-                    const isOptimisticallyActive = pendingPath === item.url
-                    const isActiveState =
-                        pathname === item.url || isOptimisticallyActive
+                    const isActive = pathname === item.url
 
                     return (
                         <SidebarMenuItem key={item.title}>
@@ -89,14 +81,11 @@ export function MainNavigationItems({
                                     tooltip={item.title}
                                     isMobile={isMobile}
                                     toggleSidebar={toggleSidebar}
-                                    isActive={isActiveState}
+                                    isActive={isActive}
                                     className="flex-1 pl-2"
                                 >
                                     <Link
                                         href={item.url}
-                                        onClick={() =>
-                                            handleOptimisticClick(item.url)
-                                        }
                                         aria-label={`Navigate to ${item.title}`}
                                     >
                                         <item.icon className="h-4 w-4" />

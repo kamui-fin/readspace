@@ -12,7 +12,12 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_success(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test getting similar feeds for a subscribed feed."""
         # Create subscription
@@ -30,7 +35,12 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_with_limit(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test limiting similar feed results."""
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
@@ -45,7 +55,12 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_get_similar_feeds_with_min_similarity(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test filtering by minimum similarity score."""
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
@@ -101,7 +116,12 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_similar_feeds_source_info(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test that source feed info is included in response."""
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
@@ -121,7 +141,12 @@ class TestGetSimilarFeeds:
 
     @pytest.mark.asyncio
     async def test_similar_feeds_result_structure(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_feed: Feed,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test structure of similar feed results."""
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)

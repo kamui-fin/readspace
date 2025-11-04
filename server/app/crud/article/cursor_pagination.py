@@ -1,6 +1,7 @@
 """Cursor-based pagination for articles."""
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
@@ -18,7 +19,7 @@ class CursorPaginationParams:
     """Parameters for cursor-based pagination."""
 
     limit: int = DEFAULT_CURSOR_LIMIT
-    cursor: UUID | None = None
+    cursor: str | None = None
 
     def __post_init__(self) -> None:
         """Validate and clamp limit to max value."""
@@ -28,16 +29,13 @@ class CursorPaginationParams:
         # Ensure minimum of 1
         if self.limit < 1:
             self.limit = 1
-        # Parse cursor if it's a string
-        if isinstance(self.cursor, str):
-            self.cursor = UUID(self.cursor)
 
 
 class CursorPaginationResult(BaseModel):
     """Result of cursor-based pagination."""
 
     items: list[Any] = Field(description="List of items for current page")
-    next_cursor: UUID | None = Field(description="Cursor for next page, None if no more pages")
+    next_cursor: str | None = Field(description="Cursor for next page, None if no more pages")
     has_more: bool = Field(description="Whether there are more pages available")
     total_count: int | None = Field(default=None, description="Total count of items (optional)")
 
@@ -52,6 +50,7 @@ async def get_articles_cursor_paginated(
     user_id: UUID,
     params: CursorPaginationParams,
     feed_ids: list[UUID] | None = None,
+    folder_id: UUID | None = None,
     is_read: bool | None = None,
     is_read_later: bool | None = None,
     is_favorite: bool | None = None,
@@ -62,14 +61,16 @@ async def get_articles_cursor_paginated(
     Get articles using cursor-based pagination for better performance.
 
     Cursor pagination avoids the performance issues of OFFSET-based pagination
-    by using the article_id as a cursor. This is more efficient for large datasets
-    and provides consistent results even when data is being inserted/updated.
+    by using a composite cursor of published_at timestamp and article_id. This is more
+    efficient for large datasets and provides consistent results even when data is
+    being inserted/updated.
 
     Args:
         db: Database session
         user_id: User ID to filter articles
         params: Pagination parameters (limit and cursor)
         feed_ids: Optional list of feed IDs to filter
+        folder_id: Optional folder ID to filter articles by folder
         is_read: Optional filter for read status
         is_read_later: Optional filter for read later status
         is_favorite: Optional filter for favorite status
@@ -79,24 +80,46 @@ async def get_articles_cursor_paginated(
     Returns:
         CursorPaginationResult with items and pagination metadata
     """
-    # Build base query for feed articles with subscriptions
-    query = (
-        select(FeedArticle, UserArticleState)
-        .options(
-            selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
-            selectinload(FeedArticle.feed)
-        )
-        .join(Feed, Feed.id == FeedArticle.feed_id)
-        .join(FeedSubscription, and_(FeedSubscription.feed_id == Feed.id, FeedSubscription.user_id == user_id))
-        .outerjoin(
-            UserArticleState,
-            and_(UserArticleState.article_id == FeedArticle.id, UserArticleState.user_id == user_id),
-        )
-    )
-
-    # Apply feed filter
+    # Build base query for feed articles
+    # When filtering by specific feed_ids, use LEFT JOIN for subscription to support preview mode
+    # Otherwise use INNER JOIN to only show subscribed feeds
     if feed_ids:
-        query = query.where(Feed.id.in_(feed_ids))
+        # Preview mode: LEFT JOIN allows viewing unsubscribed feeds
+        query = (
+            select(FeedArticle, UserArticleState)
+            .options(
+                selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                selectinload(FeedArticle.feed),
+            )
+            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
+            .join(Feed, Feed.id == FeedArticle.feed_id)
+            .outerjoin(FeedSubscription, and_(FeedSubscription.feed_id == Feed.id, FeedSubscription.user_id == user_id))
+            .outerjoin(
+                UserArticleState,
+                and_(UserArticleState.article_id == FeedArticle.id, UserArticleState.user_id == user_id),
+            )
+            .where(Feed.id.in_(feed_ids))
+        )
+    else:
+        # Normal mode: INNER JOIN ensures only subscribed feeds
+        query = (
+            select(FeedArticle, UserArticleState)
+            .options(
+                selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                selectinload(FeedArticle.feed),
+            )
+            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
+            .join(Feed, Feed.id == FeedArticle.feed_id)
+            .join(FeedSubscription, and_(FeedSubscription.feed_id == Feed.id, FeedSubscription.user_id == user_id))
+            .outerjoin(
+                UserArticleState,
+                and_(UserArticleState.article_id == FeedArticle.id, UserArticleState.user_id == user_id),
+            )
+        )
+
+        # Apply folder filter if not using feed_ids filter
+        if folder_id:
+            query = query.where(FeedSubscription.folder_id == folder_id)
 
     # Apply status filters
     if is_read is not None:
@@ -120,10 +143,27 @@ async def get_articles_cursor_paginated(
 
     # Apply cursor filter (articles after the cursor)
     if params.cursor:
-        query = query.where(FeedArticle.id > params.cursor)
+        try:
+            # Parse cursor: format is "timestamp_articleid"
+            cursor_parts = params.cursor.split("_")
+            if len(cursor_parts) == 2:
+                cursor_timestamp = datetime.fromisoformat(cursor_parts[0].replace("Z", "+00:00"))
+                cursor_article_id = UUID(cursor_parts[1])
 
-    # Order by FeedArticle.id for consistent cursor pagination
-    query = query.order_by(FeedArticle.id.asc())
+                # Filter for articles published before cursor timestamp,
+                # or same timestamp but with article ID greater than cursor
+                query = query.where(
+                    or_(
+                        ArticleContent.published_at < cursor_timestamp,
+                        and_(ArticleContent.published_at == cursor_timestamp, FeedArticle.id > cursor_article_id),
+                    )
+                )
+        except (ValueError, IndexError):
+            # Invalid cursor format, ignore and start from beginning
+            pass
+
+    # Order by published_at descending (newest first), then by FeedArticle.id ascending for consistent cursor pagination
+    query = query.order_by(ArticleContent.published_at.desc(), FeedArticle.id.asc())
 
     # Fetch one more than limit to check if there are more pages
     query = query.limit(params.limit + 1)
@@ -140,8 +180,13 @@ async def get_articles_cursor_paginated(
     if has_more:
         article_tuples = article_tuples[: params.limit]  # Remove the extra item
 
-    # Get next cursor (last item's ID)
-    next_cursor = article_tuples[-1][0].id if article_tuples and has_more else None
+    # Get next cursor (composite of timestamp and article ID)
+    next_cursor = None
+    if article_tuples and has_more:
+        last_article = article_tuples[-1][0]
+        # Format: "timestamp_articleid"
+        timestamp_str = last_article.content.published_at.isoformat().replace("+00:00", "Z")
+        next_cursor = f"{timestamp_str}_{last_article.id}"
 
     # Optionally get total count (can be expensive, so make it optional)
     # For now, we'll skip total count to keep it fast

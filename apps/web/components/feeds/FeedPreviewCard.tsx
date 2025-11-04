@@ -24,7 +24,9 @@ import {
     useFeeds,
     useFolders,
     type Feed,
+    RSS_QUERY_KEYS,
 } from "@readspace/shared"
+import { useQueryClient } from "@tanstack/react-query"
 import { AlertCircle, FolderPlus, Loader2, Rss, Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
@@ -53,11 +55,12 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
         {
             refetchOnMount: false,
             refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000, // 5 minutes
+            refetchOnReconnect: false,
+            staleTime: 10 * 60 * 1000, // 10 minutes
+            gcTime: 15 * 60 * 1000, // 15 minutes
+            refetchInterval: false,
         }
     )
-
-    console.log("feedsData", feedsData?.[0]?.url, feed.url)
 
     // Normalize URL function to handle www/non-www variations
     const normalizeUrl = (url: string) => {
@@ -70,9 +73,9 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
         feedsData?.some(
             (f) => normalizeUrl(f.url) === normalizeUrl(feed.url)
         ) ?? false
-    console.log("isFollowed", isFollowed)
 
     const { data: folders, isLoading: foldersLoading } = useFolders()
+    const queryClient = useQueryClient()
     const createFeed = useCreateFeed()
     const createFolder = useCreateFolder()
     const deleteFeed = useDeleteFeed()
@@ -121,6 +124,25 @@ export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
             await createFeed.mutateAsync({
                 url: feed.preview_url,
                 folder_id: folderId,
+            })
+
+            // Optimistically update the feeds query data to reflect the new subscription
+            queryClient.setQueryData([RSS_QUERY_KEYS.FEEDS], (old: Feed[] | undefined) => {
+                if (!old) return old
+                // Add the current feed to the subscribed feeds list if it's not already there
+                const feedExists = old.some(f => normalizeUrl(f.url) === normalizeUrl(feed.url))
+                if (!feedExists) {
+                    // Create a proper Feed object from the preview feed - just use the essential properties
+                    const newFeed = {
+                        ...feed,
+                        url: feed.preview_url, // Use the preview URL as the actual feed URL
+                        folder_id: folderId,
+                        unread_count: 0,
+                        is_favorite: false,
+                    } as Feed
+                    return [...old, newFeed]
+                }
+                return old
             })
 
             toast.success("Successfully subscribed to feed")

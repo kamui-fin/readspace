@@ -5,20 +5,20 @@ import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
 import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
 import { BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
-import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
 
 interface GetStartedCardsProps {
-    router: ReturnType<typeof useRouter>
+    // router prop no longer needed
 }
 
-function GetStartedCards({ router }: GetStartedCardsProps) {
+function GetStartedCards({}: GetStartedCardsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg mx-auto">
-            <div
+            <Link
+                href="/discover"
                 className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-                onClick={() => router.push("/discover")}
             >
                 <Rss className="mx-auto h-8 w-8 text-muted-foreground" />
                 <div className="space-y-1">
@@ -29,11 +29,11 @@ function GetStartedCards({ router }: GetStartedCardsProps) {
                         Discover feeds you&apos;ll love
                     </p>
                 </div>
-            </div>
+            </Link>
 
-            <div
+            <Link
+                href="/import-opml"
                 className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-4 text-center space-y-3 hover:border-muted-foreground/50 transition-colors cursor-pointer"
-                onClick={() => router.push("/import-opml")}
             >
                 <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
                 <div className="space-y-1">
@@ -44,7 +44,7 @@ function GetStartedCards({ router }: GetStartedCardsProps) {
                         Migrating from another reader?
                     </p>
                 </div>
-            </div>
+            </Link>
         </div>
     )
 }
@@ -62,7 +62,6 @@ export function ArticlesEmptyState({
     folderId,
     onRefresh,
 }: ArticlesEmptyStateProps) {
-    const router = useRouter()
     const [isRefreshing, setIsRefreshing] = useState(false)
     const isMobile = useIsMobile()
     const refreshFeed = useRefreshFeed()
@@ -129,12 +128,14 @@ export function ArticlesEmptyState({
                     icon: BookOpen,
                     action: (
                         <Button
+                            asChild
                             variant="outline"
-                            onClick={() => router.push("/today")}
                             className="transition-all duration-200 hover:scale-105 hover:shadow-md"
                         >
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            Browse Articles
+                            <Link href="/today">
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                Browse Articles
+                            </Link>
                         </Button>
                     ),
                 }
@@ -146,12 +147,14 @@ export function ArticlesEmptyState({
                     icon: BookOpen,
                     action: (
                         <Button
+                            asChild
                             variant="outline"
-                            onClick={() => router.push("/today")}
                             className="transition-all duration-200 hover:scale-105 hover:shadow-md"
                         >
-                            <BookOpen className="mr-2 h-4 w-4" />
-                            Browse Articles
+                            <Link href="/today">
+                                <BookOpen className="mr-2 h-4 w-4" />
+                                Browse Articles
+                            </Link>
                         </Button>
                     ),
                 }
@@ -221,7 +224,7 @@ export function ArticlesEmptyState({
                         <SidebarLeftTrigger />
                     </div>
                 )}
-                <GetStartedCards router={router} />
+                <GetStartedCards />
             </div>
         )
     }
@@ -234,7 +237,7 @@ export function ArticlesEmptyState({
                         <SidebarLeftTrigger />
                     </div>
                 )}
-                <GetStartedCards router={router} />
+                <GetStartedCards />
             </div>
         )
     }

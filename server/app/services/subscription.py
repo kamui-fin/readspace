@@ -195,8 +195,6 @@ class SubscriptionService:
         subscriptions_db = await crud_subscription.get_all_subscriptions_for_user(self.db, user_id=self.user_id)
         return [SubscriptionResponse.model_validate(sub) for sub in subscriptions_db]
 
-
-
     async def create_subscription_by_feed_id(
         self,
         *,

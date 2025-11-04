@@ -21,6 +21,7 @@ import {
     X,
     XCircle,
 } from "lucide-react"
+import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
@@ -96,7 +97,7 @@ export default function ImportStatusPage() {
     useEffect(() => {
         if (!taskId) return
 
-        let pollInterval: NodeJS.Timeout | null = null
+        let pollInterval: number | null = null
 
         const pollStatus = async () => {
             try {
@@ -252,17 +253,11 @@ export default function ImportStatusPage() {
                             </ul>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <Button
-                                onClick={() => router.push("/import-opml")}
-                                className="flex-1"
-                            >
-                                Start New Import
+                            <Button asChild className="flex-1">
+                                <Link href="/import-opml">Start New Import</Link>
                             </Button>
-                            <Button
-                                variant="outline"
-                                onClick={() => router.push("/feeds")}
-                            >
-                                View Feeds
+                            <Button asChild variant="outline">
+                                <Link href="/feeds">View Feeds</Link>
                             </Button>
                         </div>
                     </CardContent>
@@ -321,7 +316,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                                100
+                                            100
                                         )}
                                         %
                                     </span>
@@ -496,17 +491,11 @@ export default function ImportStatusPage() {
                             )}
 
                             <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                                <Button
-                                    onClick={() => router.push("/today")}
-                                    className="flex-1"
-                                >
-                                    View Articles
+                                <Button asChild className="flex-1">
+                                    <Link href="/today">View Articles</Link>
                                 </Button>
-                                <Button
-                                    variant="outline"
-                                    onClick={() => router.push("/import-opml")}
-                                >
-                                    Import More
+                                <Button asChild variant="outline">
+                                    <Link href="/import-opml">Import More</Link>
                                 </Button>
                             </div>
                         </CardContent>
@@ -612,11 +601,8 @@ export default function ImportStatusPage() {
                             </div>
                         </CardHeader>
                         <CardContent className="pt-0">
-                            <Button
-                                variant="outline"
-                                onClick={() => router.push("/import-opml")}
-                            >
-                                Try Again
+                            <Button asChild variant="outline">
+                                <Link href="/import-opml">Try Again</Link>
                             </Button>
                         </CardContent>
                     </Card>
@@ -630,13 +616,15 @@ export default function ImportStatusPage() {
             <div className="mb-8">
                 <div className="flex items-center gap-3 mb-2">
                     <Button
+                        asChild
                         variant="ghost"
                         size="sm"
-                        onClick={() => router.push("/import-opml")}
                         className="text-muted-foreground hover:text-foreground"
                     >
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Back to Import
+                        <Link href="/import-opml">
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Back to Import
+                        </Link>
                     </Button>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold">

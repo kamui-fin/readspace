@@ -3,10 +3,6 @@
 import * as React from "react"
 import Link from "next/link"
 import { SidebarLeftMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
-import {
-    useNavigationState,
-    useOptimisticNavigation,
-} from "@/hooks/useNavigationState"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
 import { Inbox } from "lucide-react"
 
@@ -38,12 +34,6 @@ interface RegularFeedItemProps {
  */
 export function RegularFeedItem({ feed }: RegularFeedItemProps) {
     const isAll = feed.id === "all"
-    const { handleOptimisticClick } = useOptimisticNavigation()
-    const { pendingPath } = useNavigationState()
-
-    // Determine active state including optimistic navigation
-    const isOptimisticallyActive = pendingPath === feed.url
-    const isActiveState = feed.isActive || isOptimisticallyActive
 
     return (
         <SidebarMenuItem>
@@ -51,11 +41,10 @@ export function RegularFeedItem({ feed }: RegularFeedItemProps) {
                 <SidebarLeftMenuButton
                     asChild
                     className="justify-start flex-1"
-                    isActive={isActiveState}
+                    isActive={feed.isActive}
                 >
                     <Link
                         href={feed.url}
-                        onClick={() => handleOptimisticClick(feed.url)}
                         aria-label={`Navigate to ${feed.title} feed`}
                     >
                         <div className="flex flex-grow items-center overflow-hidden pl-2">

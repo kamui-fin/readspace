@@ -131,6 +131,14 @@ celery.conf.beat_schedule = {
         "task": "app.workers.feed_tasks.schedule_all_feed_refreshes_task",
         "schedule": crontab(minute="*/30"),  # Every 30 minutes for frequent updates during dev/testing
     },
+    "compact-unread-articles-daily": {
+        "task": "app.workers.feed_tasks.compact_unread_articles_task",
+        "schedule": crontab(hour=2, minute=0),  # Run daily at 2 AM UTC
+    },
+    "compact-old-articles-weekly": {
+        "task": "app.workers.feed_tasks.compact_old_articles_task",
+        "schedule": crontab(day_of_week=0, hour=3, minute=0),  # Run weekly on Sunday at 3 AM UTC
+    },
 }
 
 if __name__ == "__main__":

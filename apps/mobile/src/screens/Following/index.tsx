@@ -84,14 +84,14 @@ export default function FollowingScreen() {
     const isViewingFeedOrFolder = activeTab === -1 && (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview');
 
     // Select the appropriate query hook based on active tab
-    const todayQuery = useInfiniteTodayArticles({ size: 25 }, { enabled: activeTab === 0 } as any);
-    const savedQuery = useInfiniteReadLaterArticles({ size: 25 }, {
+    const todayQuery = useInfiniteTodayArticles({ limit: 25 }, { enabled: activeTab === 0 } as any);
+    const savedQuery = useInfiniteReadLaterArticles({ limit: 25 }, {
         enabled: activeTab === 1,
     } as any);
-    const allQuery = useInfiniteArticles({ ...queryParams, size: 25 }, {
+    const allQuery = useInfiniteArticles({ ...queryParams, limit: 25 }, {
         enabled: activeTab === 2 || isViewingFeedOrFolder,
     } as any);
-    const recentQuery = useInfiniteRecentlyReadArticles({ size: 25 }, {
+    const recentQuery = useInfiniteRecentlyReadArticles({ limit: 25 }, {
         enabled: activeTab === 3,
     } as any);
 
@@ -139,7 +139,7 @@ export default function FollowingScreen() {
         const feeds = (feedsData as { id: string; unread_count?: number; folder_id?: string }[]) || [];
         const counts = unreadCounts as {
             total_unread?: number;
-            unread_by_folder?: { folder_id: string; unread_count: number }[]
+            unread_by_folder?: Record<string, number>
         };
 
         // For feed-specific view
@@ -150,10 +150,8 @@ export default function FollowingScreen() {
 
         // For folder-specific view
         if (viewType === 'folder' && selectedId) {
-            const folderUnread = counts?.unread_by_folder?.find(
-                (item) => item.folder_id === selectedId
-            );
-            return folderUnread?.unread_count || 0;
+            const folderUnread = counts?.unread_by_folder?.[selectedId] ?? 0;
+            return folderUnread;
         }
 
         // For tab-based views

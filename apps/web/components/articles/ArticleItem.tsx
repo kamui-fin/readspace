@@ -43,7 +43,7 @@ export function ArticleItem({
 
     const timeDisplay = publishedAtString
         ? isRecentlyReadMode && readAtString
-            ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
+            ? `${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
                   addSuffix: true,
               })

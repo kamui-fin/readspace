@@ -18,7 +18,6 @@ export function useCurrentUser() {
         const {
             data: { subscription },
         } = supabase.auth.onAuthStateChange((event, session) => {
-            console.log("Auth event:", event, session?.user?.email)
 
             switch (event) {
                 case "INITIAL_SESSION":
@@ -37,7 +36,6 @@ export function useCurrentUser() {
                 case "TOKEN_REFRESHED":
                     // Update user data with refreshed session
                     setUser(session?.user ?? null)
-                    console.log("Token refreshed successfully")
                     break
                 case "USER_UPDATED":
                     setUser(session?.user ?? null)

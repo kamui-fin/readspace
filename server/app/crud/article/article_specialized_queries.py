@@ -122,7 +122,13 @@ class ArticleSpecializedQueries:
             .filter(
                 and_(
                     FeedSubscription.user_id == user_id,
-                    # Count as unread if no state record OR explicitly marked unread
+                    # Hybrid unread logic:
+                    # 1. Article must be newer than cutoff (or cutoff is NULL)
+                    # 2. AND no explicit read state (or explicitly marked unread)
+                    or_(
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
+                        FeedSubscription.last_read_cutoff.is_(None),
+                    ),
                     or_(
                         UserArticleState.is_read.is_(None),
                         UserArticleState.is_read.is_(False),
@@ -194,6 +200,7 @@ class ArticleSpecializedQueries:
         """Count total unread articles for a user."""
         result = await db.execute(
             select(func.count(FeedArticle.id))
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
             .outerjoin(
                 UserArticleState,
@@ -205,7 +212,13 @@ class ArticleSpecializedQueries:
             .filter(
                 and_(
                     FeedSubscription.user_id == user_id,
-                    # Count as unread if no state record OR explicitly marked unread
+                    # Hybrid unread logic:
+                    # 1. Article must be newer than cutoff (or cutoff is NULL)
+                    # 2. AND no explicit read state (or explicitly marked unread)
+                    or_(
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
+                        FeedSubscription.last_read_cutoff.is_(None),
+                    ),
                     or_(
                         UserArticleState.is_read.is_(None),
                         UserArticleState.is_read.is_(False),
@@ -237,9 +250,10 @@ class ArticleSpecializedQueries:
 
         # Use raw SQL with CTE for optimal performance
         # OPTIMIZATION: Combine feed articles and clipped articles in single query using UNION ALL
+        # Hybrid unread logic: articles newer than last_read_cutoff AND not explicitly marked read
         query = text("""
             WITH unread_articles AS MATERIALIZED (
-                -- Feed articles
+                -- Feed articles with cutoff logic
                 SELECT
                     fs.folder_id,
                     fa.id as article_id,
@@ -255,10 +269,11 @@ class ArticleSpecializedQueries:
                     AND uas.user_id = :user_id
                 WHERE fs.user_id = :user_id
                   AND (uas.is_read IS NULL OR uas.is_read = FALSE)
+                  AND (ac.published_at > fs.last_read_cutoff OR fs.last_read_cutoff IS NULL)
 
                 UNION ALL
 
-                -- Clipped articles (unread only)
+                -- Clipped articles (unread only) - no cutoff logic for clipped articles
                 SELECT
                     NULL as folder_id,
                     ca.id as article_id,
@@ -353,11 +368,14 @@ class ArticleSpecializedQueries:
             FROM feed_articles fa
             INNER JOIN feed_subscriptions fs
                 ON fa.feed_id = fs.feed_id
+            INNER JOIN article_contents ac
+                ON fa.content_id = ac.id
             LEFT JOIN user_article_states uas
                 ON uas.article_id = fa.id
                 AND uas.user_id = :user_id
             WHERE fs.user_id = :user_id
               AND (uas.is_read IS NULL OR uas.is_read = FALSE)
+              AND (ac.published_at > fs.last_read_cutoff OR fs.last_read_cutoff IS NULL)
             GROUP BY fs.folder_id
         """)
 
@@ -371,6 +389,7 @@ class ArticleSpecializedQueries:
         """Count unread articles in a specific folder for a user."""
         result = await db.execute(
             select(func.count(FeedArticle.id))
+            .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
             .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
             .outerjoin(
                 UserArticleState,
@@ -383,7 +402,13 @@ class ArticleSpecializedQueries:
                 and_(
                     FeedSubscription.user_id == user_id,
                     FeedSubscription.folder_id == folder_id,
-                    # Count as unread if no state record OR explicitly marked unread
+                    # Hybrid unread logic:
+                    # 1. Article must be newer than cutoff (or cutoff is NULL)
+                    # 2. AND no explicit read state (or explicitly marked unread)
+                    or_(
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
+                        FeedSubscription.last_read_cutoff.is_(None),
+                    ),
                     or_(
                         UserArticleState.is_read.is_(None),
                         UserArticleState.is_read.is_(False),

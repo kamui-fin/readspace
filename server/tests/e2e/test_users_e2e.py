@@ -20,8 +20,8 @@ class TestUserProfile:
         data = response.json()
         assert data["id"] == str(test_user.id)
         assert data["email"] == test_user.email
-        # The database default role is "basic", not "user"
-        assert data["role"] == "basic"
+        # The database default role is "BASIC" (uppercase as per UserRole enum)
+        assert data["role"] == "BASIC"
         assert "created_at" in data
         assert "updated_at" in data
 

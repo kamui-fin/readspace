@@ -100,6 +100,11 @@ class FeedSubscription(Base):
     is_favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     custom_title: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
+    # Last read cutoff timestamp for efficient unread tracking
+    # Articles published after this timestamp are considered unread (unless explicitly marked as read)
+    # Used for "mark all read" functionality and initial subscription limiting
+    last_read_cutoff: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 

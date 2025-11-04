@@ -1,8 +1,10 @@
-import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
+"use client"
+
+import { ArticlesView } from "@/components/articles"
 
 export default function ReadLaterPage() {
     return (
-        <ArticlesSuspenseWrapper
+        <ArticlesView
             mode="readLater"
             initialSidebarTitle="Read Later"
         />

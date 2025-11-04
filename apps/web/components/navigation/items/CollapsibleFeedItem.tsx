@@ -14,10 +14,6 @@ import {
     SidebarMenuItem,
     SidebarMenuSub,
 } from "@/components/ui/sidebar"
-import {
-    useNavigationState,
-    useOptimisticNavigation,
-} from "@/hooks/useNavigationState"
 import { ChevronRight } from "lucide-react"
 import { SubFeedItem, type SubFeedItemData } from "./SubFeedItem"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
@@ -69,8 +65,6 @@ export function CollapsibleFeedItem({
     const [isOpen, setIsOpen] = useState(feed.isOpen || false)
     const router = useRouter()
     const pathname = usePathname()
-    const { handleOptimisticClick } = useOptimisticNavigation()
-    const { pendingPath } = useNavigationState()
 
     // Restore collapse state from localStorage
     useEffect(() => {
@@ -93,18 +87,14 @@ export function CollapsibleFeedItem({
      */
     const handleFolderClick = () => {
         const folderUrl = `/folders/${feed.id}/articles`
-        handleOptimisticClick(folderUrl)
         router.push(folderUrl)
         if (isMobile) {
             toggleSidebar()
         }
     }
 
-    // Determine active state including optimistic navigation
-    const isActivePath = pathname === `/folders/${feed.id}/articles`
-    const isOptimisticallyActive =
-        pendingPath === `/folders/${feed.id}/articles`
-    const isActiveState = isActivePath || isOptimisticallyActive
+    // Determine active state
+    const isActive = pathname === `/folders/${feed.id}/articles`
 
     return (
         <Collapsible open={isOpen} onOpenChange={handleToggle}>
@@ -137,7 +127,7 @@ export function CollapsibleFeedItem({
                     {/* Folder navigation button */}
                     <SidebarLeftMenuButton
                         className="justify-start flex-1"
-                        isActive={isActiveState}
+                        isActive={isActive}
                         aria-label={`Navigate to folder ${feed.title}`}
                         onClick={handleFolderClick}
                     >
@@ -155,7 +145,7 @@ export function CollapsibleFeedItem({
                     <div className="shrink-0 flex items-center pr-2">
                         <FeedDropdownMenu
                             isFolder={true}
-                            itemActive={isActivePath}
+                            itemActive={isActive}
                             folderId={feed.id}
                             itemId={feed.id}
                             itemTitle={feed.title}

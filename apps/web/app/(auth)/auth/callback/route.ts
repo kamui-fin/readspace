@@ -38,19 +38,6 @@ export async function GET(request: Request) {
                         ? `https://${host}`
                         : origin
 
-                console.log(
-                    subscriptions,
-                    subscriptionError,
-                    "isNewUser:",
-                    isNewUser,
-                    "user:",
-                    user.id,
-                    "redirectPath:",
-                    redirectPath,
-                    "targetOrigin:",
-                    targetOrigin
-                )
-
                 return NextResponse.redirect(`${targetOrigin}${redirectPath}`)
             }
         }

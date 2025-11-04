@@ -93,7 +93,6 @@ export function ArticleContent({
     onArticleRemoved,
     onBack,
 }: ArticleContentProps) {
-    console.log(article)
     const contentRef = useRef<HTMLDivElement>(null)
     const [hasMarkedRead, setHasMarkedRead] = useState(false)
     const [aiSummary, setAiSummary] = useState<string | null>(null)
@@ -450,7 +449,11 @@ export function ArticleContent({
                             updateArticle.mutate(
                                 {
                                     articleId: article.id,
-                                    data: { is_read_later: newReadLaterState },
+                                    data: {
+                                        is_read_later: newReadLaterState,
+                                        // When saving for later, mark as unread to update sidebar count
+                                        is_read: newReadLaterState ? false : article.is_read
+                                    },
                                     articleType: article.article_type,
                                 },
                                 {
@@ -697,6 +700,8 @@ export function ArticleContent({
                                                         data: {
                                                             is_read_later:
                                                                 newReadLaterState,
+                                                            // When saving for later, mark as unread to update sidebar count
+                                                            is_read: newReadLaterState ? false : article.is_read
                                                         },
                                                         articleType:
                                                             article.article_type,

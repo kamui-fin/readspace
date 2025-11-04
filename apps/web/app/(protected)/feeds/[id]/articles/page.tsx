@@ -1,11 +1,14 @@
-import { ArticlesSuspenseWrapper } from "@/components/articles/ArticlesSuspenseWrapper"
+"use client"
+
+import { ArticlesView } from "@/components/articles"
+import { use } from "react"
 
 interface PageProps {
     params: Promise<{ id: string }>
 }
 
-export default async function FeedArticlesPage({ params }: PageProps) {
-    const { id: feedId } = await params
+export default function FeedArticlesPage({ params }: PageProps) {
+    const { id: feedId } = use(params)
 
-    return <ArticlesSuspenseWrapper showUnreadBadge feedId={feedId} />
+    return <ArticlesView feedId={feedId} />
 }

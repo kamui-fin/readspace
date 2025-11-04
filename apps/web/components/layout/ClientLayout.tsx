@@ -69,10 +69,8 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
     return (
         <ThemeProvider>
             <SidebarLeftProvider>
-                <SidebarRightProvider>
-                    {children}
-                    <ThemedToaster />
-                </SidebarRightProvider>
+                {children}
+                <ThemedToaster />
             </SidebarLeftProvider>
         </ThemeProvider>
     )

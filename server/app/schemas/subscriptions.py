@@ -21,6 +21,13 @@ class FeedResponse(BaseModel):
     link: AnyUrl | None = None
     language: str | None = None
     image_url: str | None = None
+
+    # RSS dataset fields
+    tags: list[str] | None = None
+    top_level_category: str | None = None
+    popularity_score: float | None = None
+
+    # RSS-specific metadata
     ttl: int | None = None
     skip_hours: list[int] | None = None
     skip_days: list[str] | None = None
@@ -34,6 +41,13 @@ class FeedResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    # User-specific subscription fields (populated in list_feeds)
+    is_subscribed: bool | None = None
+    user_id: UUID | None = None
+    folder_id: UUID | None = None
+    is_favorite: bool | None = None
+    unread_count: int | None = None
 
     @field_validator("link", mode="before")
     @classmethod
@@ -100,6 +114,7 @@ class SubscriptionUpdate(BaseModel):
     is_favorite: bool | None = None
     custom_title: str | None = Field(None, max_length=500)
     is_paused: bool | None = None
+    last_read_cutoff: datetime | None = None
 
 
 class SubscriptionResponse(BaseModel):
@@ -125,6 +140,9 @@ class SubscriptionResponse(BaseModel):
     # User-specific feed settings (matching actual database model)
     is_favorite: bool
     custom_title: str | None = None
+
+    # Last read cutoff timestamp for efficient unread tracking
+    last_read_cutoff: datetime | None = None
 
     # Subscription metadata - matching the actual database model
     created_at: datetime
@@ -241,6 +259,3 @@ class ArticleWithStateResponse(BaseModel):
     custom_feed_title: str | None = None
     folder_id: UUID | None = None
     folder_name: str | None = None
-
-
-

@@ -15,7 +15,6 @@
 
 **Tired of digital noise? Readspace brings all your content into one clean, distraction-free inbox.**
 
-**RSS. Newsletters. Twitter. Reddit. Articles. Books.**
 All in one beautiful, modern UI, designed for focused reading.
 
 ![](./apps/web/public/demo.png)
@@ -26,7 +25,7 @@ All in one beautiful, modern UI, designed for focused reading.
 
 Readspace is an **open-source, privacy-first reading hub** that brings all your favorite content into one clean, distraction-free inbox—**no ads, algorithms, or trackers**.
 
-* **Unified Inbox:** RSS feeds, newsletters, saved articles, Twitter threads, Reddit posts, books—all in one place.
+* **Unified Inbox:** News feeds, your favorite blogs, saved articles, subreddits, all in one place.
 * **Chronological & Clean:** Feeds are delivered in order; you decide what stays and what goes.
 * **Privacy & Ownership:** Fully self-hostable, zero third‑party tracking, your data stays with you.
 * **Calm & Curated:** Leverage AI-powered summaries and noise filtering so you only see what matters, letting you focus on reading without overwhelm.
@@ -119,8 +118,5 @@ We're building Readspace transparently and collaboratively. Join our growing com
 ## What about the alternatives?
 
 * **Feedly** has pivoted to enterprise threat detection, offers a severely limited free tier, and suffers from declining reliability.
-* **Readwise Reader** is not really geared towards RSS, still in beta after years, proprietary and paywalled.
-
-**Readspace** offers a superior, transparent, and open-source alternative. We're built by readers, for readers, with a singular focus on an exceptional reading experience.
 
 We believe you'll feel the difference.

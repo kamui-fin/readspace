@@ -4,6 +4,7 @@ import { useOnboardingStore } from "@/stores/onboarding"
 import { ApiClient } from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
 import { motion } from "framer-motion"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
 import OnboardingLayout from "../Layout"
@@ -132,10 +133,10 @@ const StepTwo: React.FC = () => {
                             Go Back
                         </Button>
                         <Button
-                            onClick={() => router.push("/library")}
+                            asChild
                             className="flex-1 bg-primary hover:bg-primary-light"
                         >
-                            Continue Anyway
+                            <Link href="/today">Continue Anyway</Link>
                         </Button>
                     </div>
                 </div>

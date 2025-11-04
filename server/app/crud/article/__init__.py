@@ -6,6 +6,6 @@ from .feed_article import crud_feed_article
 
 __all__ = [
     "crud_article_content",
-    "crud_clipped_article", 
+    "crud_clipped_article",
     "crud_feed_article",
 ]

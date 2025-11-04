@@ -8,10 +8,6 @@ import {
     SidebarLeftMenuSubButton,
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
-import {
-    useNavigationState,
-    useOptimisticNavigation,
-} from "@/hooks/useNavigationState"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
 
 interface SubFeedItemData {
@@ -40,16 +36,10 @@ interface SubFeedItemProps {
 
 /**
  * Sub-feed item component for displaying individual feeds within folders.
- * Supports optimistic navigation, image fallbacks, and animated mounting.
+ * Supports image fallbacks and animated mounting.
  */
 export function SubFeedItem({ item, index }: SubFeedItemProps) {
     const [imageError, setImageError] = useState(false)
-    const { handleOptimisticClick } = useOptimisticNavigation()
-    const { pendingPath } = useNavigationState()
-
-    // Determine active state including optimistic navigation
-    const isOptimisticallyActive = pendingPath === item.url
-    const isActiveState = item.isActive || isOptimisticallyActive
 
     /**
      * Handle image load error by setting fallback state
@@ -69,13 +59,12 @@ export function SubFeedItem({ item, index }: SubFeedItemProps) {
                 <div className="flex items-center w-full group/item">
                     <SidebarLeftMenuSubButton
                         asChild
-                        isActive={isActiveState}
+                        isActive={item.isActive}
                         className="py-0 flex-1"
                     >
                         <Link
                             href={item.url}
                             className="flex w-full items-center"
-                            onClick={() => handleOptimisticClick(item.url)}
                             aria-label={`Navigate to ${item.title} feed`}
                         >
                             <div className="flex flex-grow items-center overflow-hidden pl-2">

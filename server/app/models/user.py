@@ -1,16 +1,10 @@
 from datetime import datetime, timezone
-from enum import Enum
 
-from sqlalchemy import Column, DateTime, ForeignKey, String, Text
+from sqlalchemy import Column, DateTime, Enum as SQLEnum, ForeignKey, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 
 from app.db.base_class import Base
-
-
-class UserRole(str, Enum):
-    BASIC = "basic"
-    PRO = "pro"
-    ADMIN = "admin"
+from app.models.enums import UserRole
 
 
 class AuthUser(Base):
@@ -25,7 +19,7 @@ class Profile(Base):
 
     id = Column(PGUUID, ForeignKey(AuthUser.id, ondelete="CASCADE"), primary_key=True)
     email = Column(Text, nullable=False)
-    role = Column(String(10), nullable=False, default=UserRole.BASIC.value)
+    role = Column(SQLEnum(UserRole, name="userrole"), nullable=False, default=UserRole.BASIC)
     created_at = Column(
         DateTime(timezone=True),
         nullable=False,
