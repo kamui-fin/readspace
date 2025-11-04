@@ -74,7 +74,7 @@ lingua-language-detector = "^2.1.1"
 pgvector = "^0.4.1"
 google-genai = "^1.35.0"
 trafilatura = "^1.12.2"
-python-json-logger = "^3.3.0"
+
 brotli = "^1.1.0"
 
 [tool.poetry.group.dev.dependencies]
