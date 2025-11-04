@@ -2,8 +2,9 @@
   <img src="./apps/web/public/wordmark.png" alt="Readspace Logo" width="300" />
 </div>
 
-
-# Readspace
+&nbsp;
+&nbsp;
+&nbsp;
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/kamui-fin/readspace/ci.yml)
 ![Discord](https://img.shields.io/discord/1349476822290530357?style=flat&logo=discord&label=discord&link=https%3A%2F%2Fdiscord.com%2Finvite%2F2Q5PtYwUQZ)

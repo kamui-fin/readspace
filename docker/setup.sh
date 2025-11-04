@@ -213,7 +213,7 @@ gen_hex() {
 
 # Encodes a string into URL-safe Base64.
 base64_url_encode() {
-  openssl enc -base64 -A | tr '+/' '-_' | tr -d '=' 
+  openssl enc -base64 -A | tr '+/' '-_' | tr -d '='
 }
 
 # --- JWT Generation ---

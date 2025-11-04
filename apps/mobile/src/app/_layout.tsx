@@ -106,9 +106,9 @@ function RootLayoutNav() {
         } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
             // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
             // Exception: Don't redirect if on signup step-3 (email verification notice)
-            const onEmailVerification = segments[0] === 'onboarding' &&
-                segments[1] === 'signup' &&
-                segments[2] === 'step-3';
+            const onEmailVerification = segments.at(0) === 'onboarding' &&
+                segments.at(1) === 'signup' &&
+                segments.at(2) === 'step-3';
 
             if (!onEmailVerification) {
                 console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
