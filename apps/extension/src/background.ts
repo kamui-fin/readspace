@@ -31,9 +31,70 @@ interface PageMetadataResponse {
   canonical_url?: string
 }
 
-// Note: ApiExtensionClient auto-configures itself from extension storage
+/**
+ * Background script token retrieval function.
+ * Reads the access token directly from Chrome storage since the background
+ * script runs in a different context than the popup and can't access Zustand store.
+ */
+async function getBackgroundAuthToken(): Promise<string | null> {
+  try {
+    const storageData = await browser.storage.local.get('readspace-extension')
+    let store: any = storageData['readspace-extension']
 
-// ApiExtensionClient will auto-configure on first use
+    // Parse if it's a JSON string
+    if (typeof store === 'string') {
+      store = JSON.parse(store)
+    }
+
+    const token = store?.state?.settings?.access_token || null
+
+    if (token) {
+      console.log('[Background Auth] Token retrieved successfully')
+    } else {
+      console.warn('[Background Auth] No token found in storage')
+    }
+
+    return token
+  } catch (error) {
+    console.error('[Background Auth] Failed to get auth token from storage:', error)
+    return null
+  }
+}
+
+/**
+ * Configure API client for background script context.
+ * This must be called to set up the background script's own API client configuration.
+ */
+async function configureBackgroundApiClient() {
+  try {
+    const storageData = await browser.storage.local.get('readspace-extension')
+    let store: any = storageData['readspace-extension']
+
+    if (typeof store === 'string') {
+      store = JSON.parse(store)
+    }
+
+    const baseUrl = store?.state?.settings?.readspace_url || 'https://api.readspace.ai'
+
+    ApiClient.configure({
+      baseUrl,
+      getAuthToken: getBackgroundAuthToken,
+    })
+
+    console.log('[Background] API client configured with base URL:', baseUrl)
+  } catch (error) {
+    console.error('[Background] Failed to configure API client:', error)
+
+    // Fallback configuration
+    ApiClient.configure({
+      baseUrl: 'https://api.readspace.ai',
+      getAuthToken: getBackgroundAuthToken,
+    })
+  }
+}
+
+// Configure API client when background script loads
+configureBackgroundApiClient()
 
 // Check if URL is supported (http/https)
 function isSupportedUrl(url: string): boolean {
@@ -346,7 +407,7 @@ async function initializeAuthListener() {
 // Initialize the auth listener when the background script loads
 initializeAuthListener()
 
-// Handle context menu clicks
+/* // Handle context menu clicks
 browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'save-to-readspace' && tab?.url) {
     // Determine the URL to save
@@ -364,7 +425,7 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
       })
     }
   }
-})
+}) */
 
 // Handle keyboard shortcuts
 browser.commands.onCommand.addListener((command: string) => {
@@ -671,18 +732,24 @@ async function handleEmailPasswordLogin(
     }
 
     // Update the settings in storage with the access token
+    // Zustand persist stores data as {state: {...}, version: 0}
     const updatedSettings = {
-      ...(store?.settings || {}),
+      ...(store?.state?.settings || {}),
       supabase_url: supabaseUrl,
       supabase_anon_key: supabaseAnonKey,
       access_token: data.session.access_token,
     }
 
-    await storage.set('readspace-extension', {
+    const updatedStore = {
       ...store,
-      settings: updatedSettings,
-      isAuthenticated: true,
-    })
+      state: {
+        ...(store?.state || {}),
+        settings: updatedSettings,
+        isAuthenticated: true,
+      },
+    }
+
+    await storage.set('readspace-extension', updatedStore)
 
     return {
       success: true,
@@ -800,19 +867,25 @@ async function handleGoogleOAuth(): Promise<{
     }
 
     // Update the settings in storage with the access token
+    // Zustand persist stores data as {state: {...}, version: 0}
     const updatedSettings = {
-      ...(store?.settings || {}),
+      ...(store?.state?.settings || {}),
       supabase_url: supabaseUrl,
       supabase_anon_key: supabaseAnonKey,
       google_client_id: googleClientId,
       access_token: data.session.access_token,
     }
 
-    await storage.set('readspace-extension', {
+    const updatedStore = {
       ...store,
-      settings: updatedSettings,
-      isAuthenticated: true,
-    })
+      state: {
+        ...(store?.state || {}),
+        settings: updatedSettings,
+        isAuthenticated: true,
+      },
+    }
+
+    await storage.set('readspace-extension', updatedStore)
 
     return {
       success: true,

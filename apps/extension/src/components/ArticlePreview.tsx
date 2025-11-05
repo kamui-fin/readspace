@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { extractDomain } from '@readspace/shared'
 import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
 import { BookOpen, Pencil, Flag, StickyNote, Check, Trash2 } from 'lucide-react'
 import { browser } from '@/lib/browser'
@@ -130,7 +129,10 @@ export function ArticlePreview({
             setCustomTitle(result.title)
           }
           const savedNote = result.note || ''
-          const savedPriority = (result.priority || 'low') as Priority
+          // Normalize priority to lowercase (backend returns uppercase)
+          const savedPriority = (
+            result.priority || 'LOW'
+          ).toLowerCase() as Priority
 
           setNote(savedNote)
           setPriority(savedPriority)
@@ -177,9 +179,6 @@ export function ArticlePreview({
   if (isMetadataLoading || !metadata) {
     return <ArticlePreviewSkeleton />
   }
-  const domain = metadata.canonical_url
-    ? extractDomain(metadata.canonical_url)
-    : ''
 
   const handleSave = async () => {
     if (isSaved && currentUrl) {
@@ -198,7 +197,7 @@ export function ArticlePreview({
           await ApiClient.rss.updateArticle(
             savedArticle.id,
             {
-              priority,
+              priority: priority.toUpperCase(), // Convert to uppercase for backend
               note, // Send the note as-is (empty string or text)
             },
             'clipped'
@@ -207,8 +206,12 @@ export function ArticlePreview({
           // Refresh the saved article data and update original values
           const updated = await checkArticleSaved(currentUrl)
           setSavedArticle(updated)
-          setOriginalNote(note)
-          setOriginalPriority(priority)
+          if (updated) {
+            // Update original values to match what we just saved
+            // Don't overwrite the current UI state - keep what user selected
+            setOriginalNote(note)
+            setOriginalPriority(priority)
+          }
         } catch (error) {
           console.error('Failed to update article:', error)
           toast.error(
@@ -256,8 +259,13 @@ export function ArticlePreview({
             const updated = await checkArticleSaved(currentUrl)
             if (updated) {
               setSavedArticle(updated)
+              // Normalize priority from backend (uppercase to lowercase)
+              const normalizedPriority = (
+                updated.priority || 'LOW'
+              ).toLowerCase() as Priority
               setOriginalNote(updated.note || '')
-              setOriginalPriority((updated.priority || 'low') as Priority)
+              setOriginalPriority(normalizedPriority)
+              setPriority(normalizedPriority)
               setOptimisticallySaved(false)
             }
           } catch (error) {
@@ -306,11 +314,7 @@ export function ArticlePreview({
             <h3 className="font-semibold text-sm text-secondary">
               Article read
             </h3>
-            <p className="text-xs text-muted-foreground">
-              {domain}
-              {readingTime && ` • ${readingTime} min read`}
-            </p>
-            <p className="text-xs text-secondary/80 font-medium mt-0.5">
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">
               Read on {formattedDate} at {formattedTime}
             </p>
           </div>
@@ -333,10 +337,11 @@ export function ArticlePreview({
           <h3 className="font-semibold text-sm">
             {isSaved ? 'Saved article' : 'Save article for later'}
           </h3>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {domain}
-            {readingTime && ` • ${readingTime} min read`}
-          </p>
+          {readingTime && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {readingTime} min read
+            </p>
+          )}
         </div>
 
         {/* Actions - aligned to match FeedDiscoveryCard */}

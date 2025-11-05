@@ -1529,7 +1529,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
 
         config.showError?.("Failed to update article");
       },
-      onSuccess: (_, { articleId }) => {
+      onSuccess: (_, { articleId, data }) => {
         // Only invalidate the specific article to ensure it's refreshed with server data
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
@@ -1538,22 +1538,29 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           predicate: (query) =>
             query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
-          refetchType: "active",
         });
         // Invalidate all article lists to ensure consistency across views
+        // Use refetchType: undefined (default) to invalidate both active and inactive queries
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
-          refetchType: "active",
         });
+
+        // If read_later status changed, explicitly reset the read-later query cache
+        // This ensures disabled queries are marked stale and will refetch when enabled
+        if (data.is_read_later !== undefined) {
+          queryClient.resetQueries({
+            queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
+            exact: false,
+          });
+        }
+
         // Invalidate feeds to update individual feed unread counts
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
-          refetchType: "active",
         });
         // Invalidate sidebar data to ensure navigation counts update
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-          refetchType: "active",
         });
       },
       ...options,
@@ -1742,6 +1749,49 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
+  function useSaveArticle(
+    options?: UseMutationOptions<
+      unknown,
+      unknown,
+      {
+        url: string;
+        title?: string;
+        content?: string;
+        metadata?: Record<string, string>;
+      }
+    >,
+  ) {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: (data: {
+        url: string;
+        title?: string;
+        content?: string;
+        metadata?: Record<string, string>;
+      }) => ApiClient.rss.saveArticle(data),
+      onSuccess: () => {
+        // Invalidate read-later queries to show the newly saved article
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later"],
+        });
+        // Also invalidate all articles queries to ensure it shows up everywhere
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
+        });
+      },
+      onError: (error: unknown) => {
+        const errorMessage =
+          (error as { response?: { data?: { detail?: string } } })?.response
+            ?.data?.detail || "Failed to save article";
+        config.showError?.(errorMessage);
+      },
+      ...options,
+    });
+  }
+
   // Return all hooks as an object
   return {
     // OPML hooks
@@ -1775,6 +1825,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useArticle,
     useSubscribeToFeed,
     useUpdateArticle,
+    useSaveArticle,
 
     // Infinite query hooks
     useInfiniteArticles,
@@ -1822,6 +1873,7 @@ export const {
   useArticle,
   useSubscribeToFeed,
   useUpdateArticle,
+  useSaveArticle,
 
   // Infinite query hooks
   useInfiniteArticles,

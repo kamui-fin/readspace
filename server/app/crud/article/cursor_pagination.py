@@ -209,3 +209,128 @@ async def get_articles_cursor_paginated(
     return CursorPaginationResult(
         items=list(article_tuples), next_cursor=next_cursor, has_more=has_more, total_count=total_count
     )
+
+
+async def get_combined_articles_cursor_paginated(
+    db: AsyncSession,
+    user_id: UUID,
+    params: CursorPaginationParams,
+    is_read: bool | None = None,
+    is_read_later: bool | None = None,
+    is_favorite: bool | None = None,
+) -> CursorPaginationResult:
+    """
+    Get combined articles from both RSS feeds and clipped articles using UNION.
+
+    This function queries both feed articles and clipped articles, combining them
+    into a single result set sorted by timestamp. This is used for views that need
+    to show both types of articles together (like read-later, favorites, etc.).
+
+    Args:
+        db: Database session
+        user_id: User ID to filter articles
+        params: Pagination parameters (limit and cursor)
+        is_read: Optional filter for read status
+        is_read_later: Optional filter for read later status
+        is_favorite: Optional filter for favorite status
+
+    Returns:
+        CursorPaginationResult with mixed article types (both FeedArticle and ClippedArticle)
+    """
+    from app.models import ClippedArticle
+
+    # First, get feed articles
+    feed_result = await get_articles_cursor_paginated(
+        db=db,
+        user_id=user_id,
+        params=params,
+        is_read=is_read,
+        is_read_later=is_read_later,
+        is_favorite=is_favorite,
+    )
+
+    # Then, get clipped articles
+    clipped_query = (
+        select(ClippedArticle)
+        .options(
+            selectinload(ClippedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+        )
+        .join(ArticleContent, ArticleContent.id == ClippedArticle.content_id)
+        .where(ClippedArticle.user_id == user_id)
+    )
+
+    # Apply status filters to clipped articles
+    if is_read is not None:
+        clipped_query = clipped_query.where(ClippedArticle.is_read.is_(is_read))
+
+    if is_read_later is not None:
+        clipped_query = clipped_query.where(ClippedArticle.is_read_later.is_(is_read_later))
+
+    if is_favorite is not None:
+        clipped_query = clipped_query.where(ClippedArticle.is_favorite.is_(is_favorite))
+
+    # Apply cursor filter if provided
+    if params.cursor:
+        try:
+            cursor_parts = params.cursor.split("_")
+            if len(cursor_parts) == 2:
+                cursor_timestamp = datetime.fromisoformat(cursor_parts[0].replace("Z", "+00:00"))
+                cursor_article_id = UUID(cursor_parts[1])
+
+                # For clipped articles, use created_at as the timestamp
+                clipped_query = clipped_query.where(
+                    or_(
+                        ClippedArticle.created_at < cursor_timestamp,
+                        and_(ClippedArticle.created_at == cursor_timestamp, ClippedArticle.id > cursor_article_id),
+                    )
+                )
+        except (ValueError, IndexError):
+            pass
+
+    # Order clipped articles by created_at
+    clipped_query = clipped_query.order_by(ClippedArticle.created_at.desc(), ClippedArticle.id.asc())
+
+    # Limit clipped query as well (we'll merge and re-sort)
+    clipped_query = clipped_query.limit(params.limit + 1)
+
+    # Execute clipped query
+    clipped_result = await db.execute(clipped_query)
+    clipped_articles = clipped_result.scalars().all()
+
+    # Now merge both result sets
+    # Feed items are tuples: (FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
+    # Clipped items are ClippedArticle objects
+    merged_items = []
+
+    # Add feed articles with their sort key
+    for feed_tuple in feed_result.items:
+        feed_article = feed_tuple[0]
+        # Use published_at for feed articles
+        sort_timestamp = feed_article.content.published_at
+        merged_items.append((sort_timestamp, feed_article.id, "feed", feed_tuple))
+
+    # Add clipped articles with their sort key
+    for clipped_article in clipped_articles:
+        # Use created_at for clipped articles
+        sort_timestamp = clipped_article.created_at
+        merged_items.append((sort_timestamp, clipped_article.id, "clipped", clipped_article))
+
+    # Sort by timestamp DESC (newest first), then by ID ASC for stability
+    merged_items.sort(key=lambda x: (x[0], x[1]), reverse=True)
+
+    # Apply pagination limit
+    has_more = len(merged_items) > params.limit
+    if has_more:
+        merged_items = merged_items[: params.limit]
+
+    # Compute next cursor
+    next_cursor = None
+    if merged_items and has_more:
+        last_timestamp, last_id, _, _ = merged_items[-1]
+        timestamp_str = last_timestamp.isoformat().replace("+00:00", "Z")
+        next_cursor = f"{timestamp_str}_{last_id}"
+
+    # Extract just the article objects (remove sort keys)
+    final_items = [item[3] for item in merged_items]
+
+    return CursorPaginationResult(items=final_items, next_cursor=next_cursor, has_more=has_more, total_count=None)

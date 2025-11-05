@@ -130,21 +130,10 @@ export function FeedDiscoveryCard({
     // which gets updated when loadUserData is called after subscription
   }
 
-  // Extract domain from feed URL
-  const getDomain = (url: string) => {
-    try {
-      const urlObj = new URL(url)
-      return urlObj.hostname.replace('www.', '')
-    } catch {
-      return url
-    }
-  }
-
-  const domain = getDomain(primaryFeed.url)
   const displayDescription =
     feeds.length > 1
       ? `${feeds.length} feeds available`
-      : primaryFeed.description
+      : 'Add to your Readspace feed'
 
   return (
     <>
@@ -159,8 +148,7 @@ export function FeedDiscoveryCard({
           <div className="flex-1 min-w-0 flex flex-col justify-center">
             <h3 className="font-semibold text-sm">Follow this site</h3>
             <p className="text-xs text-muted-foreground line-clamp-2">
-              {domain}
-              {displayDescription && ` • ${displayDescription}`}
+              {displayDescription}
             </p>
           </div>
 

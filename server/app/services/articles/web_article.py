@@ -7,6 +7,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import crud_article_content, crud_clipped_article
+from app.models.enums import ArticlePriority
 from app.schemas import (
     ArticleContentCreate,
     ClippedArticleCreate,
@@ -119,21 +120,28 @@ class WebArticleService:
                 )
 
             # Also update priority and note if provided
-            if priority and existing_clipped.priority != priority:
-                existing_clipped.priority = priority
-                needs_update = True
+            if priority:
+                # Convert string to ArticlePriority enum
+                priority_enum = ArticlePriority(priority.upper())
+                if existing_clipped.priority != priority_enum:
+                    existing_clipped.priority = priority_enum
+                    needs_update = True
             if note is not None and existing_clipped.note != note:
                 existing_clipped.note = note
                 needs_update = True
 
             if needs_update:
                 await self.db.commit()
-                await self.db.refresh(existing_clipped)
+                # Reload with content for response
+                existing_clipped = await crud_clipped_article.get_with_content(
+                    self.db,
+                    article_id=existing_clipped.id,  # type: ignore[arg-type]
+                )
                 logger.info(
                     "Article updated successfully",
-                    article_id=existing_clipped.id,
-                    is_read_later=existing_clipped.is_read_later,
-                    priority=existing_clipped.priority,
+                    article_id=existing_clipped.id if existing_clipped else None,
+                    is_read_later=existing_clipped.is_read_later if existing_clipped else None,
+                    priority=existing_clipped.priority if existing_clipped else None,
                 )
             else:
                 logger.info(
@@ -147,13 +155,15 @@ class WebArticleService:
             return ClippedArticleResponse.model_validate(existing_clipped)
 
         # Create clipped article with the extension-extracted content
+        # Convert priority string to enum (defaults to MEDIUM if not provided)
+        priority_enum = ArticlePriority(priority.upper()) if priority else ArticlePriority.MEDIUM
         clipped_article_create = ClippedArticleCreate(
             user_id=self.user_id,
             content_id=content_record.id,
-            priority=priority or "medium",
+            priority=priority_enum,
             note=note,
             is_read=False,
-            is_favorite=priority == "high",  # High priority articles become favorites
+            is_favorite=priority_enum == ArticlePriority.HIGH,  # High priority articles become favorites
         )
 
         # Save to database

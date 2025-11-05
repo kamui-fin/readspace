@@ -40,8 +40,14 @@ class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleC
 
     async def get_by_link_extracted_by_extension(self, db: AsyncSession, *, link: str) -> ArticleContent | None:
         """Get article content by URL that was extracted by chrome extension."""
-        # First get all content records with this URL
-        result = await db.execute(select(self.model).filter(self.model.link == link))
+        from sqlalchemy.orm import undefer
+
+        # Load all columns including deferred ones to avoid lazy loading in Python loop
+        result = await db.execute(
+            select(self.model)
+            .options(undefer(self.model.description), undefer(self.model.content))
+            .filter(self.model.link == link)
+        )
         all_content_with_url = result.scalars().all()
 
         # Filter in Python to find the one extracted by chrome extension

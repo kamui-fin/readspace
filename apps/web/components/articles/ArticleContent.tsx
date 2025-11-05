@@ -670,16 +670,6 @@ export function ArticleContent({
                                             </span>
                                         </>
                                     )}
-                                    {priority && (
-                                        <>
-                                            <span className="hidden sm:inline">
-                                                •
-                                            </span>
-                                            <span className="capitalize whitespace-nowrap">
-                                                {priority} priority
-                                            </span>
-                                        </>
-                                    )}
                                 </div>
 
                                 {/* Desktop Article Toolbar */}
