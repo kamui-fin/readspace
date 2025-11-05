@@ -5,13 +5,10 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
 from app.core.celery_app import celery
 from app.core.constants import ARTICLE_RETENTION_DAYS, MAX_FEEDS_BATCH_SIZE, MIN_ARTICLES_PER_FEED
-from app.models.article import ArticleContent, FeedArticle, UserArticleState
 from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
 from app.services.feeds.feed import FeedService
 from app.workers.common import ensure_uuid, get_task_event_loop, get_worker_db
@@ -299,7 +296,6 @@ async def async_compact_unread_articles(db: AsyncSession | None = None) -> dict[
     Returns:
         Dictionary with updated_subscriptions count
     """
-    from datetime import datetime, timedelta, timezone
 
     from sqlalchemy import func, update
 
@@ -382,7 +378,7 @@ async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str
     """Compact old articles by deleting articles beyond retention policy.
 
     Deletes old articles per feed while preserving:
-    - At least the newest 50 articles per feed (MIN_ARTICLES_PER_FEED)
+    - At least the newest MIN_ARTICLES_PER_FEED articles per feed
     - Anything published within ARTICLE_RETENTION_DAYS
     - Anything the user has saved (is_read_later=true OR is_favorite=true)
 
@@ -395,17 +391,71 @@ async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str
     Returns:
         Dictionary with deleted_articles count
     """
+    from sqlalchemy import text
+
     logger.info(
         "Starting article compaction",
         retention_days=ARTICLE_RETENTION_DAYS,
         min_articles_per_feed=MIN_ARTICLES_PER_FEED,
     )
 
-    cutoff_date = datetime.now(timezone.utc) - timedelta(days=ARTICLE_RETENTION_DAYS)
-
     # Helper function to execute compaction logic
     async def execute(session: AsyncSession) -> dict[str, int]:
-        return await _execute_compaction(session, cutoff_date)
+        # Set statement timeout to 15 minutes for safety
+        await session.execute(text("SET statement_timeout = '15min'"))
+
+        # Execute the deletion query using CTE for efficiency
+        # Note: INTERVAL must be constructed using MAKE_INTERVAL for parameterization
+        deletion_query = text("""
+            WITH ranked_articles AS (
+                SELECT
+                    fa.id AS article_id,
+                    fa.feed_id,
+                    COALESCE(ac.published_at, fa.created_at) AS published_or_created,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY fa.feed_id
+                        ORDER BY COALESCE(ac.published_at, fa.created_at) DESC
+                    ) AS rn
+                FROM feed_articles fa
+                JOIN article_contents ac ON fa.content_id = ac.id
+            ),
+            eligible_articles AS (
+                SELECT ra.article_id
+                FROM ranked_articles ra
+                LEFT JOIN user_article_states uas
+                    ON uas.article_id = ra.article_id
+                    AND (uas.is_read_later = TRUE OR uas.is_favorite = TRUE)
+                WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)
+                  AND uas.id IS NULL       -- no saved states
+                  AND ra.rn > :min_articles -- not in top N newest
+            )
+            DELETE FROM feed_articles
+            WHERE id IN (SELECT article_id FROM eligible_articles)
+        """)
+
+        result = await session.execute(
+            deletion_query,
+            {
+                "retention_days": ARTICLE_RETENTION_DAYS,
+                "min_articles": MIN_ARTICLES_PER_FEED,
+            },
+        )
+        deleted_count = result.rowcount
+
+        # Commit the transaction
+        await session.commit()
+
+        # Reset statement timeout to default
+        await session.execute(text("RESET statement_timeout"))
+
+        logger.info(
+            "Article compaction completed",
+            deleted_articles=deleted_count,
+            retention_days=ARTICLE_RETENTION_DAYS,
+            min_articles_per_feed=MIN_ARTICLES_PER_FEED,
+        )
+
+        return {"deleted_articles": deleted_count}
 
     # Use provided session or create new one
     if db is not None:
@@ -420,82 +470,6 @@ async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str
         # Don't return here - let the context manager complete properly
         break
     return result
-
-
-async def _execute_compaction(db: AsyncSession, cutoff_date: datetime) -> dict[str, int]:
-    """Execute the actual article compaction logic.
-
-    Args:
-        db: Database session
-        cutoff_date: Articles older than this date are eligible for deletion
-
-    Returns:
-        Dictionary with deleted_articles count
-    """
-    # Create aliases for self-referencing subquery
-    fa = aliased(FeedArticle, name="fa")
-    ac = aliased(ArticleContent, name="ac")
-    fa2 = aliased(FeedArticle, name="fa2")
-    ac2 = aliased(ArticleContent, name="ac2")
-
-    # Build the correlated subquery for top N articles per feed
-    # This selects the IDs of the newest N articles for each feed
-    top_n_subquery = (
-        select(fa2.id)
-        .join(ac2, fa2.content_id == ac2.id)
-        .where(fa2.feed_id == fa.feed_id)
-        .order_by(func.coalesce(ac2.published_at, fa2.created_at).desc())
-        .limit(MIN_ARTICLES_PER_FEED)
-        .correlate(fa)
-        .scalar_subquery()
-    )
-
-    # Build the main query to find articles eligible for deletion
-    eligible_articles_query = (
-        select(fa.id, fa.feed_id)
-        .join(ac, fa.content_id == ac.id)
-        .outerjoin(
-            UserArticleState,
-            (UserArticleState.article_id == fa.id)
-            & ((UserArticleState.is_read_later == True) | (UserArticleState.is_favorite == True)),  # noqa: E712
-        )
-        .where(
-            func.coalesce(ac.published_at, fa.created_at) < cutoff_date,
-            UserArticleState.id.is_(None),  # No saved states exist
-            fa.id.not_in(top_n_subquery),  # Not in top N newest articles
-        )
-    )
-
-    # Fetch the IDs to delete (this ensures we evaluate the query)
-    eligible_ids_result = await db.execute(eligible_articles_query)
-    article_ids_to_delete = [row.id for row in eligible_ids_result]
-
-    logger.info(
-        "Identified articles for deletion",
-        article_count=len(article_ids_to_delete),
-    )
-
-    if not article_ids_to_delete:
-        logger.info("No articles to delete")
-        return {"deleted_articles": 0}
-
-    # Use ORM delete() with explicit list of IDs
-    delete_stmt = delete(FeedArticle).where(FeedArticle.id.in_(article_ids_to_delete))
-
-    result = await db.execute(delete_stmt)
-    deleted_count = result.rowcount
-
-    # Explicitly flush and commit the transaction
-    await db.flush()
-    await db.commit()
-
-    logger.info(
-        "Article compaction completed",
-        deleted_articles=deleted_count,
-        cutoff_date=cutoff_date.isoformat(),
-    )
-
-    return {"deleted_articles": deleted_count}
 
 
 @celery.task(name="app.workers.feed_tasks.compact_old_articles_task")

@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import get_settings
 
+import uuid
+
 settings = get_settings()
 
 # Create async engine with Supabase PostgreSQL URL
@@ -16,13 +18,10 @@ engine = create_async_engine(
     max_overflow=40,  # Increased from 10 for better burst capacity
     pool_timeout=5,  # Connection acquisition timeout - fail fast to detect pool exhaustion
     pool_recycle=3600,  # Recycle connections after 1 hour to prevent stale connections
-    isolation_level="READ_COMMITTED",  # Prevent race conditions - set at engine level
     connect_args={
-        # Enable statement caching for better performance (5-10ms improvement per query)
-        "statement_cache_size": 100,
-        "prepared_statement_cache_size": 100,
-        "timeout": 10,  # Connection establishment timeout (10 seconds)
-        "command_timeout": 60,  # Increased from 30s for complex queries
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
     },
 )
 
