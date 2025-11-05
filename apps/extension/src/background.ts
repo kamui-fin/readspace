@@ -428,32 +428,32 @@ browser.contextMenus.onClicked.addListener(async (info, tab) => {
 }) */
 
 // Handle keyboard shortcuts
-browser.commands.onCommand.addListener((command: string) => {
-  browser.tabs
-    .query({ active: true, currentWindow: true })
-    .then((tabs: browser.Tabs.Tab[]) => {
-      const tab = tabs[0]
-      if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
-        browser.notifications.create('unsupported-shortcut', {
-          type: 'basic',
-          iconUrl: 'icons/icon-48.png',
-          title: 'Readspace',
-          message:
-            'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
-        })
-        return
-      }
+// browser.commands.onCommand.addListener((command: string) => {
+//   browser.tabs
+//     .query({ active: true, currentWindow: true })
+//     .then((tabs: browser.Tabs.Tab[]) => {
+//       const tab = tabs[0]
+//       if (!tab?.id || !tab.url || !isSupportedUrl(tab.url)) {
+//         browser.notifications.create('unsupported-shortcut', {
+//           type: 'basic',
+//           iconUrl: 'icons/icon-48.png',
+//           title: 'Readspace',
+//           message:
+//             'This page type is not supported. Readspace only works on websites (http:// and https:// pages).',
+//         })
+//         return
+//       }
 
-      switch (command) {
-        case 'save-current-page':
-          handleSaveToReadspace(tab.url || '', tab)
-          break
-        case 'open-readspace':
-          handleOpenReadspace()
-          break
-      }
-    })
-})
+//       switch (command) {
+//         case 'save-current-page':
+//           handleSaveToReadspace(tab.url || '', tab)
+//           break
+//         case 'open-readspace':
+//           handleOpenReadspace()
+//           break
+//       }
+//     })
+// })
 
 // Handle messages from content script and popup
 // Message request types
@@ -608,10 +608,10 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       ...trimmedData,
       metadata: trimmedData.metadata
         ? (Object.fromEntries(
-            Object.entries(trimmedData.metadata).filter(
-              ([_, value]) => value !== undefined
-            )
-          ) as Record<string, string>)
+          Object.entries(trimmedData.metadata).filter(
+            ([_, value]) => value !== undefined
+          )
+        ) as Record<string, string>)
         : undefined,
     }
 
@@ -679,10 +679,10 @@ async function handleDiscoverFeeds(tab?: browser.Tabs.Tab) {
   }
 }
 
-async function handleOpenReadspace() {
-  // Default to the main Readspace URL
-  browser.tabs.create({ url: 'https://api.readspace.ai' })
-}
+// async function handleOpenReadspace() {
+//   // Default to the main Readspace URL
+//   browser.tabs.create({ url: 'https://api.readspace.ai' })
+// }
 
 async function handleEmailPasswordLogin(
   email: string,
@@ -810,9 +810,9 @@ async function handleGoogleOAuth(): Promise<{
     if (!clientId) {
       throw new Error(
         'Google OAuth client ID not configured. ' +
-          (manifest.oauth2
-            ? 'Please set it in the manifest.'
-            : 'Please add it in Settings.')
+        (manifest.oauth2
+          ? 'Please set it in the manifest.'
+          : 'Please add it in Settings.')
       )
     }
 

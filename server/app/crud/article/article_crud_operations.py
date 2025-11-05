@@ -349,6 +349,11 @@ class ArticleCrudOperations:
             if not clipped_article:
                 return None
 
+            # Handle title update separately (it's stored in ArticleContent, not ClippedArticle)
+            title_to_update = update_data.pop("title", None)
+            if title_to_update and clipped_article.content:
+                clipped_article.content.title = title_to_update
+
             # Update clipped article directly (it stores its own state)
             for field, value in update_data.items():
                 if hasattr(clipped_article, field):

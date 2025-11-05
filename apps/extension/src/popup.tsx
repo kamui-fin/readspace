@@ -1,21 +1,21 @@
-import { useEffect, useState, useCallback } from 'react'
+import { browser } from '@/lib/browser'
+import type { PageMetadata, SaveOptions } from '@readspace/shared'
+import {
+  AlertTriangle,
+  ExternalLink,
+  Settings as SettingsIcon,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import toast, { Toaster } from 'react-hot-toast'
-import './index.css'
 import { ArticlePreview } from './components/ArticlePreview'
 import { FeedDiscoveryCard } from './components/FeedDiscoveryCard'
 import { LoginForm } from './components/LoginForm'
 import { Settings } from './components/Settings'
 import ThemeSwitcher from './components/ThemeSwitcher'
-import { useExtensionStore } from './store'
 import { Button } from './components/ui/button'
-import {
-  Settings as SettingsIcon,
-  ExternalLink,
-  AlertTriangle,
-} from 'lucide-react'
-import type { SaveOptions, PageMetadata } from '@readspace/shared'
-import { browser } from '@/lib/browser'
+import './index.css'
+import { useExtensionStore } from './store'
 
 function ThemedToaster() {
   const [mounted, setMounted] = useState(false)
@@ -253,17 +253,21 @@ export function Popup() {
   const handleSaveArticle = async (options?: Partial<SaveOptions>) => {
     if (!currentTab?.url) return
 
-    // Show instant success feedback
-    toast.success('Article saved!')
+    try {
+      // Show instant success feedback
+      toast.success('Article saved!')
 
-    // Save in background without blocking
-    saveArticle(currentTab.url, options).catch((error) => {
+      // Actually await the save so the article is cached before we return
+      const savedArticle = await saveArticle(currentTab.url, options)
+      return savedArticle
+    } catch (error) {
       console.error('Failed to save article:', error)
-      // Only show error if the background save fails
+      // Show error if the save fails
       toast.error(
         `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
-    })
+      throw error // Re-throw so ArticlePreview knows it failed
+    }
   }
 
   const openReadspace = () => {
@@ -298,7 +302,7 @@ export function Popup() {
             </div>
 
             {/* Embedded Login Form */}
-            <LoginForm />
+            <LoginForm onShowSelfHosted={() => setCurrentView('settings')} />
 
             {/* New to Readspace link */}
             <div className="text-center">
@@ -313,34 +317,6 @@ export function Popup() {
                   Create account
                 </button>
               </p>
-            </div>
-
-            {/* Instance info / settings link at bottom */}
-            <div className="pt-4 border-t">
-              {/* Check if using production settings */}
-              {settings.readspace_url === 'https://api.readspace.ai' &&
-              settings.supabase_url ===
-                'https://hnqyngkyugiamvlhqoaf.supabase.co' ? (
-                <button
-                  onClick={() => setCurrentView('settings')}
-                  className="text-sm text-muted-foreground hover:text-foreground underline w-full text-center"
-                >
-                  Have a self-hosted server?
-                </button>
-              ) : (
-                <div className="text-center space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Using instance:{' '}
-                    <span className="font-mono">{settings.readspace_url}</span>
-                  </p>
-                  <button
-                    onClick={() => setCurrentView('settings')}
-                    className="text-sm text-muted-foreground hover:text-foreground underline"
-                  >
-                    Change server settings
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         )}
@@ -397,7 +373,7 @@ export function Popup() {
               className="w-full h-full"
             />
           </div>
-          <h1 className="font-semibold">Readspace</h1>
+          <h1 className="font-semibold text-lg" style={{fontFamily: "Figtree"}}>readspace</h1>
         </div>
         <div className="flex items-center gap-2">
           <ThemeSwitcher />
@@ -430,12 +406,12 @@ export function Popup() {
           {(isFeedDataLoading ||
             (currentPageMetadata?.feeds &&
               currentPageMetadata.feeds.length > 0)) && (
-            <FeedDiscoveryCard
-              feeds={currentPageMetadata?.feeds}
-              websiteTitle={currentPageMetadata?.title}
-              isLoading={isFeedDataLoading}
-            />
-          )}
+              <FeedDiscoveryCard
+                feeds={currentPageMetadata?.feeds}
+                websiteTitle={currentPageMetadata?.title}
+                isLoading={isFeedDataLoading}
+              />
+            )}
 
           {/* Current Page Preview - Always show, with skeleton while loading */}
           <ArticlePreview

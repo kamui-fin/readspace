@@ -8,7 +8,11 @@ import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 
-export function LoginForm() {
+interface LoginFormProps {
+  onShowSelfHosted?: () => void
+}
+
+export function LoginForm({ onShowSelfHosted }: LoginFormProps = {}) {
   const { login, isConnecting } = useExtensionStore()
   const isCloudProd = useIsCloudProd()
   const [email, setEmail] = useState('')
@@ -177,6 +181,18 @@ export function LoginForm() {
           )}
         </Button>
       </form>
+
+      {/* Self-hosted link */}
+      {onShowSelfHosted && (
+        <div className="text-center pt-2">
+          <button
+            onClick={onShowSelfHosted}
+            className="text-xs text-muted-foreground hover:text-foreground underline"
+          >
+            Using a self-hosted server?
+          </button>
+        </div>
+      )}
     </div>
   )
 }

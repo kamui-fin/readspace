@@ -76,7 +76,7 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
         contentType.includes('xml') ||
         contentType.includes('rss') ||
         contentType.includes('atom') ||
-        contentType.includes('json') ||
+        // contentType.includes('json') || // Commented out - backend doesn't support JSON feeds yet
         contentType.includes('application/rss') ||
         contentType.includes('application/atom')
       )
@@ -97,8 +97,8 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
       [
         'link[rel="alternate"][type="application/rss+xml"]',
         'link[rel="alternate"][type="application/atom+xml"]',
-        'link[rel="alternate"][type="application/json"]',
-        'link[rel="alternate"][type="application/feed+json"]',
+        // 'link[rel="alternate"][type="application/json"]', // Commented out - backend doesn't support JSON feeds yet
+        // 'link[rel="alternate"][type="application/feed+json"]', // Commented out - backend doesn't support JSON feeds yet
         'link[type="application/rss+xml"]',
         'link[type="application/atom+xml"]',
       ].join(', ')
@@ -134,9 +134,9 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
           discoveredUrls.add(absoluteUrl)
           const feedType = type?.includes('atom')
             ? 'atom'
-            : type?.includes('json')
-              ? 'json'
-              : 'rss'
+            // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
+            //   ? 'json'
+            : 'rss'
 
           feeds.push({
             url: absoluteUrl,
@@ -404,7 +404,7 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
         contentType.includes('xml') ||
         contentType.includes('rss') ||
         contentType.includes('atom') ||
-        contentType.includes('json') ||
+        // contentType.includes('json') || // Commented out - backend doesn't support JSON feeds yet
         contentType.includes('application/rss') ||
         contentType.includes('application/atom')
 
@@ -432,8 +432,8 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
       [
         'link[type="application/rss+xml"]',
         'link[type="application/atom+xml"]',
-        'link[type="application/json"]',
-        'link[type="application/feed+json"]',
+        // 'link[type="application/json"]', // Commented out - backend doesn't support JSON feeds yet
+        // 'link[type="application/feed+json"]', // Commented out - backend doesn't support JSON feeds yet
         'link[rel="alternate"][type*="xml"]',
         'link[rel="alternate"][type*="rss"]',
         'link[rel="alternate"][type*="atom"]',
@@ -459,9 +459,9 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
           if (validation.isValid) {
             const feedType = type?.includes('atom')
               ? 'atom'
-              : type?.includes('json')
-                ? 'json'
-                : 'rss'
+              // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
+              //   ? 'json'
+              : 'rss'
 
             feeds.push({
               url: absoluteUrl,

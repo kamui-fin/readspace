@@ -44,6 +44,19 @@ class WebArticleService:
         if existing_extracted_content:
             # We have extension-extracted content, use it
             content_record = existing_extracted_content
+            
+            # Update title if a new one is provided and different from existing
+            if title and content_record.title != title:
+                old_title = content_record.title
+                content_record.title = title
+                await self.db.flush()  # Persist the title change
+                logger.info(
+                    "Updated existing content title",
+                    url=url,
+                    old_title=old_title,
+                    new_title=title,
+                )
+            
             logger.info(
                 "Found existing chrome extension extracted content",
                 url=url,
@@ -109,6 +122,8 @@ class WebArticleService:
         if existing_clipped:
             # If article exists but is_read_later is false, update it to true (re-save)
             needs_update = False
+            content_needs_update = False
+            
             if not existing_clipped.is_read_later:
                 existing_clipped.is_read_later = True
                 needs_update = True
@@ -129,8 +144,19 @@ class WebArticleService:
             if note is not None and existing_clipped.note != note:
                 existing_clipped.note = note
                 needs_update = True
+            
+            # Update title in content record if provided and different
+            if title and content_record.title != title:
+                content_record.title = title
+                content_needs_update = True
+                logger.info(
+                    "Updating article title",
+                    article_id=existing_clipped.id,
+                    old_title=content_record.title,
+                    new_title=title,
+                )
 
-            if needs_update:
+            if needs_update or content_needs_update:
                 await self.db.commit()
                 # Reload with content for response
                 existing_clipped = await crud_clipped_article.get_with_content(
@@ -142,6 +168,7 @@ class WebArticleService:
                     article_id=existing_clipped.id if existing_clipped else None,
                     is_read_later=existing_clipped.is_read_later if existing_clipped else None,
                     priority=existing_clipped.priority if existing_clipped else None,
+                    title_updated=content_needs_update,
                 )
             else:
                 logger.info(

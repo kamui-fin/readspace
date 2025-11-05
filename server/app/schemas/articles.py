@@ -104,6 +104,7 @@ class ClippedArticleCreate(ClippedArticleBase):
 class ClippedArticleUpdate(BaseModel):
     """Schema for updating clipped article."""
 
+    title: str | None = Field(None, max_length=1000)
     priority: ArticlePriority | None = None
     note: str | None = Field(None, max_length=2000)
     is_read: bool | None = None

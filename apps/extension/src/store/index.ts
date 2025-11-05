@@ -1,3 +1,9 @@
+import {
+  ApiClient,
+  configureExtensionApiClient,
+  setStoreGetter,
+} from '@/lib/api-client'
+import { browser } from '@/lib/browser'
 import { resetSupabaseClient } from '@/lib/supabase'
 import {
   Article,
@@ -9,15 +15,9 @@ import {
   SaveOptions,
   User,
 } from '@readspace/shared'
-import {
-  ApiClient,
-  configureExtensionApiClient,
-  setStoreGetter,
-} from '@/lib/api-client'
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
-import { persist, createJSONStorage, StateStorage } from 'zustand/middleware'
-import { browser } from '@/lib/browser'
+import { createJSONStorage, persist, StateStorage } from 'zustand/middleware'
 
 interface ExtensionState {
   // Settings
@@ -36,7 +36,7 @@ interface ExtensionState {
   folders: Folder[]
   feeds: Feed[]
   savedArticleUrls: Set<string>
-  savedArticleIds: Map<string, string> // Map URL to article ID
+  savedArticles: Map<string, Article> // Map URL to full article object (includes ID, priority, note, etc.)
   pendingSaveUrls: Set<string> // Track articles currently being saved
   pendingFollowUrls: Set<string> // Track feeds currently being followed
   followAbortControllers: Map<string, AbortController> // Track abort controllers for feed subscriptions
@@ -68,6 +68,7 @@ interface ExtensionState {
   ) => Promise<void>
   unsubscribeFromFeed: (feedId: string) => Promise<void>
   checkArticleSaved: (url: string) => Promise<Article | null>
+  getCachedArticle: (url: string) => Article | null
   isArticleSaved: (url: string) => boolean
   isArticlePendingSave: (url: string) => boolean
   unsaveArticle: (url: string) => Promise<void>
@@ -128,7 +129,7 @@ export const useExtensionStore = create<ExtensionState>()(
       folders: [],
       feeds: [],
       savedArticleUrls: new Set<string>(),
-      savedArticleIds: new Map<string, string>(),
+      savedArticles: new Map<string, Article>(),
       pendingSaveUrls: new Set<string>(),
       pendingFollowUrls: new Set<string>(),
       followAbortControllers: new Map<string, AbortController>(),
@@ -377,13 +378,13 @@ export const useExtensionStore = create<ExtensionState>()(
             saveRequest
           )) as Article
 
-          // Store the article ID for potential unsave later and remove from pending
-          const newSavedIds = new Map(get().savedArticleIds)
-          newSavedIds.set(url, article.id)
+          // Store the full article object for instant cache access and remove from pending
+          const newSavedArticles = new Map(get().savedArticles)
+          newSavedArticles.set(url, article)
           const newPendingSaveUrls = new Set(get().pendingSaveUrls)
           newPendingSaveUrls.delete(url)
           set({
-            savedArticleIds: newSavedIds,
+            savedArticles: newSavedArticles,
             pendingSaveUrls: newPendingSaveUrls,
           })
 
@@ -413,15 +414,15 @@ export const useExtensionStore = create<ExtensionState>()(
             url
           )) as Article | null
 
-          // Update local state if article is saved
+          // Update local state with full article object if saved
           if (article) {
             const newSavedUrls = new Set(get().savedArticleUrls)
             newSavedUrls.add(url)
-            const newSavedIds = new Map(get().savedArticleIds)
-            newSavedIds.set(url, article.id)
+            const newSavedArticles = new Map(get().savedArticles)
+            newSavedArticles.set(url, article)
             set({
               savedArticleUrls: newSavedUrls,
-              savedArticleIds: newSavedIds,
+              savedArticles: newSavedArticles,
             })
           }
 
@@ -430,6 +431,10 @@ export const useExtensionStore = create<ExtensionState>()(
           console.error('Failed to check if article is saved:', error)
           return null
         }
+      },
+
+      getCachedArticle: (url: string) => {
+        return get().savedArticles.get(url) || null
       },
 
       isArticleSaved: (url: string) => {
@@ -453,13 +458,13 @@ export const useExtensionStore = create<ExtensionState>()(
       },
 
       unsaveArticle: async (url: string) => {
-        const { isAuthenticated, savedArticleIds, savedArticleUrls } = get()
+        const { isAuthenticated, savedArticles, savedArticleUrls } = get()
         if (!isAuthenticated) throw new Error('Not authenticated')
 
-        const articleId = savedArticleIds.get(url)
-        if (!articleId) {
+        const article = savedArticles.get(url)
+        if (!article) {
           console.warn(
-            'Cannot unsave article: no article ID found for URL',
+            'Cannot unsave article: no article found for URL',
             url
           )
           return
@@ -468,14 +473,14 @@ export const useExtensionStore = create<ExtensionState>()(
         // Optimistically remove from saved state
         const newSavedUrls = new Set(savedArticleUrls)
         newSavedUrls.delete(url)
-        const newSavedIds = new Map(savedArticleIds)
-        newSavedIds.delete(url)
-        set({ savedArticleUrls: newSavedUrls, savedArticleIds: newSavedIds })
+        const newSavedArticles = new Map(savedArticles)
+        newSavedArticles.delete(url)
+        set({ savedArticleUrls: newSavedUrls, savedArticles: newSavedArticles })
 
         try {
           // Mark article as not read later to remove from read-later list
           await ApiClient.rss.updateArticle(
-            articleId,
+            article.id,
             { is_read_later: false },
             'clipped'
           )
@@ -484,9 +489,9 @@ export const useExtensionStore = create<ExtensionState>()(
           console.error('Failed to unsave article:', error)
           const rollbackUrls = new Set(get().savedArticleUrls)
           rollbackUrls.add(url)
-          const rollbackIds = new Map(get().savedArticleIds)
-          rollbackIds.set(url, articleId)
-          set({ savedArticleUrls: rollbackUrls, savedArticleIds: rollbackIds })
+          const rollbackArticles = new Map(get().savedArticles)
+          rollbackArticles.set(url, article)
+          set({ savedArticleUrls: rollbackUrls, savedArticles: rollbackArticles })
           throw error
         }
       },
@@ -643,7 +648,7 @@ export const useExtensionStore = create<ExtensionState>()(
         folders: state.folders,
         feeds: state.feeds,
         savedArticleUrls: Array.from(state.savedArticleUrls), // Convert Set to Array for storage
-        savedArticleIds: Array.from(state.savedArticleIds.entries()), // Convert Map to Array of entries
+        savedArticles: Array.from(state.savedArticles.entries()), // Convert Map to Array of entries
       }),
       onRehydrateStorage: () => (state) => {
         // Convert savedArticleUrls array back to Set after rehydration
@@ -653,11 +658,11 @@ export const useExtensionStore = create<ExtensionState>()(
           state.savedArticleUrls = new Set<string>() as any
         }
 
-        // Convert savedArticleIds array back to Map after rehydration
-        if (state && Array.isArray(state.savedArticleIds)) {
-          state.savedArticleIds = new Map(state.savedArticleIds) as any
+        // Convert savedArticles array back to Map after rehydration
+        if (state && Array.isArray(state.savedArticles)) {
+          state.savedArticles = new Map(state.savedArticles) as any
         } else if (state) {
-          state.savedArticleIds = new Map<string, string>() as any
+          state.savedArticles = new Map<string, Article>() as any
         }
 
         // Configure ApiClient after store is rehydrated
