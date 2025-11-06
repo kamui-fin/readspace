@@ -1084,8 +1084,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         // Get feeds being deleted for unread count updates
         const feedsBeingDeleted = Array.isArray(previousFeeds)
           ? (previousFeeds as Feed[]).filter((feed: Feed) =>
-              feedIds.includes(feed.id),
-            )
+            feedIds.includes(feed.id),
+          )
           : [];
 
         // Optimistically update unread counts

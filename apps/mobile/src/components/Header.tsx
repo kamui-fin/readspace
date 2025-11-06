@@ -1,7 +1,8 @@
 import { Badge } from '@/components/ui/Badge';
 import { Tab } from '@/components/ui/Tab';
 import { cn } from '@/utils/cn';
-import { useCallback, useEffect, useState } from 'react';
+import type { ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Text, View } from 'react-native';
 import Animated, {
     Extrapolation,
@@ -19,6 +20,7 @@ export interface TabConfig {
 interface BaseHeaderProps {
     title: string;
     className?: string;
+    rightAction?: ReactNode;
 }
 
 interface StickyHeaderProps extends BaseHeaderProps {
@@ -44,14 +46,14 @@ interface TabbedHeaderProps extends BaseHeaderProps {
 export type HeaderProps = StickyHeaderProps | TabbedHeaderProps;
 
 export const Header = (props: HeaderProps) => {
-    const { title, variant, className } = props;
+    const { title, variant, className, rightAction } = props;
     const insets = useSafeAreaInsets();
 
     const [foregroundHeight, setForegroundHeight] = useState(0);
     const [tabsHeight, setTabsHeight] = useState(0);
 
     // Extract tabbed-specific props if variant is tabbed
-    const tabs = variant === 'tabbed' ? props.tabs : [];
+    const tabs = useMemo(() => (variant === 'tabbed' ? props.tabs : []), [variant, props]);
     const activeTab = variant === 'tabbed' ? props.activeTab : 0;
     const onTabChange = variant === 'tabbed' ? props.onTabChange : undefined;
     const unreadCount = variant === 'tabbed' ? props.unreadCount : undefined;
@@ -70,17 +72,24 @@ export const Header = (props: HeaderProps) => {
     const renderForeground = useCallback(
         () => (
             <View
-                className="flex-row items-center gap-2 px-4 pb-3"
+                className="flex-row items-center justify-between gap-2 px-4 pb-3"
                 onLayout={(e) => setForegroundHeight(e.nativeEvent.layout.height)}>
-                <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
-                    {title}
-                </Text>
-                {unreadCount !== undefined && unreadCount > 0 && (
-                    <Badge label={unreadCount.toString()} />
+                <View className="flex-row items-center gap-2 flex-1">
+                    <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
+                        {title}
+                    </Text>
+                    {unreadCount !== undefined && unreadCount > 0 && (
+                        <Badge label={unreadCount.toString()} />
+                    )}
+                </View>
+                {rightAction && (
+                    <View className="ml-2">
+                        {rightAction}
+                    </View>
                 )}
             </View>
         ),
-        [title, unreadCount]
+        [title, unreadCount, rightAction]
     );
 
     const renderTabs = useCallback(() => {

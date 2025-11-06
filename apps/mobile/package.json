@@ -27,7 +27,7 @@
         "@readspace/shared": "workspace:*",
         "@shopify/flash-list": "^2.0.2",
         "@supabase/supabase-js": "^2.76.1",
-        "@tanstack/react-query": "^5.90.5",
+        "@tanstack/react-query": "5.90.7",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "expo": "54.0.21",
@@ -81,7 +81,8 @@
         "typescript": "~5.9.2"
     },
     "resolutions": {
-        "react-native-svg": "15.12.1"
+        "react-native-svg": "15.12.1",
+        "@tanstack/react-query": "5.90.7"
     },
     "main": "expo-router/entry",
     "private": true
