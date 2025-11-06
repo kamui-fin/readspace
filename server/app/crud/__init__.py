@@ -1,9 +1,9 @@
 # Import crud modules from subdirectories
 from . import folder as crud_folder
 from . import subscription as crud_subscription
-from .article import article_content as crud_article_content
-from .article import clipped_article as crud_clipped_article
-from .article import feed_article as crud_feed_article
+from .article.article_content import crud_article_content
+from .article.clipped_article import crud_clipped_article
+from .article.feed_article import crud_feed_article
 from .feed import feed as crud_feed
 from .profile import crud_profile
 

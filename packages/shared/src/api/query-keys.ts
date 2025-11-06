@@ -19,12 +19,6 @@ export const ARTICLE_ENHANCEMENT_QUERY_KEYS = {
   TRANSLATION: "article-translation",
 } as const;
 
-export const BOOK_QUERY_KEYS = {
-  BOOKS: "books",
-  BOOK: "book",
-  HIGHLIGHTS: "highlights",
-} as const;
-
 export const USER_QUERY_KEYS = {
   PROFILE: "user-profile",
 } as const;
@@ -32,5 +26,4 @@ export const USER_QUERY_KEYS = {
 export type QueryKey =
   | (typeof RSS_QUERY_KEYS)[keyof typeof RSS_QUERY_KEYS]
   | (typeof ARTICLE_ENHANCEMENT_QUERY_KEYS)[keyof typeof ARTICLE_ENHANCEMENT_QUERY_KEYS]
-  | (typeof BOOK_QUERY_KEYS)[keyof typeof BOOK_QUERY_KEYS]
   | (typeof USER_QUERY_KEYS)[keyof typeof USER_QUERY_KEYS];

@@ -26,7 +26,7 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { ActivityIndicator, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
@@ -57,6 +57,7 @@ export default function FollowingScreen() {
 
     const [headerHeight, setHeaderHeight] = useState(0);
     const [refreshing, setRefreshing] = useState(false);
+    const [unreadOnly, setUnreadOnly] = useState(false);
     const scrollY = useSharedValue(0);
     const folderPickerRef = useRef<FolderPickerRef>(null);
 
@@ -117,15 +118,7 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const {
-        data,
-        fetchNextPage,
-        hasNextPage,
-        isFetchingNextPage,
-        isLoading,
-        isFetching,
-        isSuccess,
-    } = activeQuery;
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = activeQuery;
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
@@ -141,8 +134,15 @@ export default function FollowingScreen() {
                 uniqueArticles.set(article.id, article);
             }
         }
-        return Array.from(uniqueArticles.values());
-    }, [data]);
+        let result = Array.from(uniqueArticles.values());
+
+        // Filter by unread only if enabled
+        if (unreadOnly) {
+            result = result.filter(article => !article.is_read);
+        }
+
+        return result;
+    }, [data, unreadOnly]);
 
     // Get unread counts - for feed/folder specific counts
     const { data: unreadCounts } = useUnreadCounts();
@@ -198,6 +198,21 @@ export default function FollowingScreen() {
         }
         return 'Following';
     }, [viewType, selectedName]);
+
+    // Toggle unread only button
+    const toggleUnreadButton = useMemo(() => (
+        <Pressable
+            onPress={() => setUnreadOnly(!unreadOnly)}
+            className="w-10 h-10 items-center justify-center rounded-lg active:opacity-70"
+            style={{ backgroundColor: unreadOnly ? colors['light-grey'] : 'transparent' }}
+        >
+            <Monicon
+                name={unreadOnly ? "solar:eye-bold" : "solar:eye-linear"}
+                size={24}
+                color={unreadOnly ? colors.secondary : colors.grey}
+            />
+        </Pressable>
+    ), [unreadOnly, colors]);
 
     // Handle following feed from preview banner
     const handleFollowFromPreview = useCallback(() => {
@@ -477,6 +492,7 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
+                    rightAction={toggleUnreadButton}
                 />
                 <ArticleListSkeleton count={6} className="mt-28" />
             </SafeAreaView>
@@ -495,6 +511,7 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
+                    rightAction={toggleUnreadButton}
                 />
                 <LegendList
                     data={listItems}

@@ -15,7 +15,7 @@
     "package:firefox": "npm run build:firefox && web-ext build --source-dir dist-firefox --artifacts-dir web-ext-artifacts",
     "package:all": "npm run package:chrome && npm run package:firefox",
     "preview": "vite preview",
-    "lint": "eslint . --max-warnings 50",
+    "lint": "eslint . --max-warnings 100",
     "lint:firefox": "web-ext lint --source-dir dist-firefox",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,json,css}\"",

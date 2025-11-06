@@ -1,9 +1,7 @@
 import logging
 import sys
-from typing import Any
 
 import structlog
-from pythonjsonlogger import jsonlogger
 
 from app.core.config import get_settings
 
@@ -20,89 +18,31 @@ def setup_logging(service_name: str = "api") -> None:
     if structlog.is_configured():
         return
 
-    # Check if running under Celery
-    is_celery_worker = "celery" in sys.argv[0] if sys.argv else False
+    # Configure structlog with consistent console logging for all environments
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.StackInfoRenderer(),
+            structlog.dev.set_exc_info,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        wrapper_class=structlog.stdlib.BoundLogger,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=False,
+    )
 
-    # Configure structlog
-    if settings.ENVIRONMENT == "production":
-        # Production: JSON output for console logs
-        if is_celery_worker:
-            # For Celery workers, use stdlib integration to avoid double JSON encoding
-            structlog.configure(
-                processors=[
-                    structlog.contextvars.merge_contextvars,
-                    structlog.processors.add_log_level,
-                    structlog.processors.TimeStamper(fmt="iso"),
-                    structlog.processors.StackInfoRenderer(),
-                    structlog.processors.format_exc_info,
-                    structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-                ],
-                wrapper_class=structlog.stdlib.BoundLogger,
-                context_class=dict,
-                logger_factory=structlog.stdlib.LoggerFactory(),
-                cache_logger_on_first_use=True,
-            )
-            # Use ProcessorFormatter for Celery to properly handle structlog messages
-            console_formatter: Any = structlog.stdlib.ProcessorFormatter(
-                processor=structlog.processors.JSONRenderer(),
-                foreign_pre_chain=[
-                    structlog.contextvars.merge_contextvars,
-                    structlog.processors.add_log_level,
-                    structlog.processors.TimeStamper(fmt="iso"),
-                ],
-            )
-        else:
-            # Production: JSON output for both console and structured logs
-            structlog.configure(
-                processors=[
-                    structlog.contextvars.merge_contextvars,
-                    structlog.processors.add_log_level,
-                    structlog.processors.TimeStamper(fmt="iso"),
-                    structlog.processors.StackInfoRenderer(),
-                    structlog.processors.format_exc_info,
-                    structlog.processors.JSONRenderer(),
-                ],
-                wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
-                context_class=dict,
-                logger_factory=structlog.PrintLoggerFactory(),
-                cache_logger_on_first_use=True,
-            )
-            # JSON formatter for standard library logs using python-json-logger
-            console_formatter = jsonlogger.JsonFormatter(
-                "%(asctime)s %(name)s %(levelname)s %(message)s",
-                rename_fields={
-                    "asctime": "timestamp",
-                    "name": "logger",
-                    "levelname": "level",
-                    "message": "event",
-                },
-            )
-    else:
-        # Development: Use stdlib integration for human-readable console output
-        structlog.configure(
-            processors=[
-                structlog.contextvars.merge_contextvars,
-                structlog.processors.add_log_level,
-                structlog.processors.StackInfoRenderer(),
-                structlog.dev.set_exc_info,
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
-                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-            ],
-            wrapper_class=structlog.stdlib.BoundLogger,
-            context_class=dict,
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            cache_logger_on_first_use=False,
-        )
-
-        # Human-readable formatter for console
-        console_formatter = structlog.stdlib.ProcessorFormatter(
-            processor=structlog.dev.ConsoleRenderer(),
-            foreign_pre_chain=[
-                structlog.contextvars.merge_contextvars,
-                structlog.processors.add_log_level,
-                structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
-            ],
-        )
+    # Human-readable formatter for console
+    console_formatter = structlog.stdlib.ProcessorFormatter(
+        processor=structlog.dev.ConsoleRenderer(),
+        foreign_pre_chain=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+        ],
+    )
 
     # Configure root logger
     root_logger = logging.getLogger()

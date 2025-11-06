@@ -2,50 +2,53 @@
   "manifest_version": 3,
   "name": "Readspace",
   "version": "1.1.1",
-  "description": "Save articles to Readspace, your calm inbox for reading RSS, newsletters, threads, and books.",
+  "description": "Save articles to Readspace, your calm inbox for reading news articles, blogs, newsletters, and more.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "storage", "notifications", "identity"],
-  "host_permissions": ["http://*/*", "https://*/*"],
+  "permissions": [
+    "activeTab",
+    "storage",
+    "notifications",
+    "identity"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
   "action": {
     "default_popup": "index.html",
     "default_title": "Save to Readspace"
   },
   "background": {
-    "scripts": ["src/background.ts"],
+    "scripts": [
+      "src/background.ts"
+    ],
     "persistent": false,
     "type": "module"
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
-      "js": ["src/content.ts"]
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "src/content.ts"
+      ]
     }
   ],
-  "commands": {
-    "save-current-page": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+S",
-        "mac": "Command+Shift+S"
-      },
-      "description": "Save current page to Readspace"
-    },
-    "open-readspace": {
-      "suggested_key": {
-        "default": "Ctrl+Shift+R",
-        "mac": "Command+Shift+R"
-      },
-      "description": "Open Readspace"
-    }
-  },
   "web_accessible_resources": [
     {
-      "resources": ["assets/readspace.svg"],
-      "matches": ["*://*/*"]
+      "resources": [
+        "assets/readspace.svg"
+      ],
+      "matches": [
+        "*://*/*"
+      ]
     }
   ],
   "browser_specific_settings": {

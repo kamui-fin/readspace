@@ -5,14 +5,9 @@ import { useFonts } from '@/hooks/useFonts';
 import { useThemeStore } from '@/stores/theme';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import {
-    focusManager,
-    onlineManager,
-    QueryClient,
-    QueryClientProvider,
-} from '@tanstack/react-query';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Network from 'expo-network';
+import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
@@ -174,11 +169,11 @@ export default function RootLayout() {
     }
 
     return (
-        <GestureHandlerRootView style={{ flex: 1 }}>
-            <SafeAreaProvider>
-                <ThemeProvider>
-                    <AuthProvider>
-                        <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <SafeAreaProvider>
+                    <ThemeProvider>
+                        <AuthProvider>
                             <AuthQueryManager />
                             <RootLayoutNav />
                             <Toaster
@@ -210,10 +205,10 @@ export default function RootLayout() {
                                     },
                                 }}
                             />
-                        </QueryClientProvider>
-                    </AuthProvider>
-                </ThemeProvider>
-            </SafeAreaProvider>
-        </GestureHandlerRootView>
+                        </AuthProvider>
+                    </ThemeProvider>
+                </SafeAreaProvider>
+            </GestureHandlerRootView>
+        </QueryClientProvider>
     );
 }

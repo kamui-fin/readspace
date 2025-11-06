@@ -561,7 +561,7 @@ async def get_read_later_articles(
 
     This endpoint returns the user's "read later" list - articles they have
     specifically saved to read at a later time. This includes both articles
-    from RSS feeds and manually saved web articles.
+    from RSS feeds and manually saved web articles (clipped articles).
 
     Args:
         db: Database session dependency
@@ -582,23 +582,24 @@ async def get_read_later_articles(
 
     Note:
         - Only includes articles where is_read_later flag is True
-        - Includes both RSS feed articles and manually saved web articles
+        - Includes both RSS feed articles and manually saved web articles (clipped articles)
+        - Articles are sorted by timestamp (published_at for RSS, created_at for clipped)
         - Articles remain in this list until explicitly marked as read or removed
     """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+    from app.crud.article.cursor_pagination import CursorPaginationParams, get_combined_articles_cursor_paginated
 
     # Create pagination parameters
     params = CursorPaginationParams(limit=limit, cursor=cursor)
 
-    # Get read later articles using cursor pagination
-    result = await get_articles_cursor_paginated(
+    # Get read later articles from both feed and clipped sources
+    result = await get_combined_articles_cursor_paginated(
         db=db,
         user_id=UUID(current_user.sub),
         params=params,
         is_read_later=True,
     )
 
-    # Transform the tuples into ArticleResponse objects
+    # Transform the mixed items into ArticleResponse objects
     from app.crud.article.article_transformer import ArticleTransformer
 
     transformer = ArticleTransformer()

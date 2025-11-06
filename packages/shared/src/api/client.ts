@@ -5,8 +5,8 @@ import type {
   Feed,
   Folder,
   ImportTaskStatus,
-  OPMLImportResponse,
   OPMLImportCancelResponse,
+  OPMLImportResponse,
   SimilarFeedsResponse,
   Subscription,
 } from "./types/rss";
@@ -549,6 +549,7 @@ export class ApiClient {
         is_favorite?: boolean;
         priority?: string;
         note?: string | null;
+        title?: string;
       },
       articleType: "feed" | "clipped" = "feed",
     ) => this.put(`/api/articles/${id}?article_type=${articleType}`, data),
@@ -579,7 +580,7 @@ export class ApiClient {
       title?: string;
       content?: string;
       metadata?: Record<string, string>;
-    }) => this.post("/api/articles", data),
+    }) => this.post("/api/articles/", data),
 
     checkArticleSaved: (url: string) => {
       const queryParams = new URLSearchParams();

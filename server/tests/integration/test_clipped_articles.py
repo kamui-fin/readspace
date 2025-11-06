@@ -1,0 +1,363 @@
+"""Integration tests for clipped articles (saved web articles)."""
+
+from datetime import UTC, datetime
+from uuid import uuid4
+
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models import ArticleContent, ClippedArticle, Profile
+
+
+@pytest_asyncio.fixture
+async def test_clipped_article(db_session: AsyncSession, test_user: Profile):
+    """Create a test clipped article for the user."""
+    from app.models.enums import ArticlePriority
+
+    # Create article content
+    content = ArticleContent(
+        title="Test Clipped Article",
+        link="https://example.com/test-clipped-article",
+        description="A test clipped article description",
+        content="<p>Full HTML content of the article</p>",
+        published_at=datetime.now(UTC),
+        custom_metadata={"extracted_by": "chrome_extension"},
+    )
+    db_session.add(content)
+    await db_session.flush()
+
+    # Create clipped article
+    clipped = ClippedArticle(
+        user_id=test_user.id,
+        content_id=content.id,
+        priority=ArticlePriority.MEDIUM,
+        is_read=False,
+        is_read_later=True,
+        is_favorite=False,
+    )
+    db_session.add(clipped)
+    await db_session.flush()
+
+    return clipped
+
+
+class TestSaveWebArticle:
+    """Test saving web articles."""
+
+    @pytest.mark.asyncio
+    async def test_save_article_success(self, async_client: AsyncClient):
+        """Test successfully saving a web article."""
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": "https://example.com/new-article",
+                "title": "New Article",
+                "content": "<p>Article content goes here</p>",
+                "metadata": {
+                    "author": "Test Author",
+                    "description": "Test description",
+                },
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert "id" in data
+        assert data["is_read_later"] is True
+        assert data["priority"] == "MEDIUM"  # Enum is serialized as uppercase
+        assert "content" in data
+        assert data["content"]["title"] == "New Article"
+
+    @pytest.mark.asyncio
+    async def test_save_article_without_content_fails(self, async_client: AsyncClient):
+        """Test saving article without content should fail."""
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": "https://example.com/article-without-content",
+                "title": "Article Without Content",
+            },
+        )
+
+        assert response.status_code == 400
+        assert "No content provided" in response.json()["detail"]
+
+    @pytest.mark.asyncio
+    async def test_save_article_with_priority(self, async_client: AsyncClient):
+        """Test saving article with custom priority."""
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": "https://example.com/high-priority-article",
+                "title": "High Priority Article",
+                "content": "<p>Important content</p>",
+                "priority": "high",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["priority"] == "HIGH"  # Enum is serialized as uppercase
+        assert data["is_favorite"] is True  # High priority articles become favorites
+
+    @pytest.mark.asyncio
+    async def test_save_article_with_note(self, async_client: AsyncClient):
+        """Test saving article with a note."""
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": "https://example.com/article-with-note",
+                "title": "Article With Note",
+                "content": "<p>Article content</p>",
+                "note": "This is my personal note about this article",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["note"] == "This is my personal note about this article"
+
+    @pytest.mark.asyncio
+    async def test_save_duplicate_article_updates_read_later(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle, db_session: AsyncSession
+    ):
+        """Test saving an already clipped article re-enables is_read_later."""
+        # First, mark the existing article as NOT read later
+        test_clipped_article.is_read_later = False
+        await db_session.commit()
+
+        # Try to save the same URL again
+        response = await async_client.post(
+            "/api/articles/",
+            json={
+                "url": "https://example.com/test-clipped-article",
+                "title": "Re-saved Article",
+                "content": "<p>Re-saved content</p>",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["is_read_later"] is True  # Should be re-enabled
+
+
+class TestCheckArticleSaved:
+    """Test checking if an article is already saved."""
+
+    @pytest.mark.asyncio
+    async def test_check_saved_article_exists(self, async_client: AsyncClient, test_clipped_article: ClippedArticle):
+        """Test checking a saved article returns the article data."""
+        response = await async_client.get(
+            "/api/articles/check-saved",
+            params={"url": "https://example.com/test-clipped-article"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == str(test_clipped_article.id)
+        assert data["is_read_later"] is True
+        assert "content" in data
+
+    @pytest.mark.asyncio
+    async def test_check_saved_article_not_exists(self, async_client: AsyncClient):
+        """Test checking a non-saved article returns null."""
+        response = await async_client.get(
+            "/api/articles/check-saved",
+            params={"url": "https://example.com/non-existent-article"},
+        )
+
+        assert response.status_code == 200
+        # FastAPI returns null as None in JSON
+        assert response.json() is None
+
+
+class TestUpdateClippedArticle:
+    """Test updating clipped article properties."""
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_priority(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test updating the priority of a clipped article."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"priority": "high"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["priority"] == "HIGH"  # Enum is serialized as uppercase
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_note(self, async_client: AsyncClient, test_clipped_article: ClippedArticle):
+        """Test updating the note of a clipped article."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"note": "Updated note content"},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["note"] == "Updated note content"
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_read_status(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test marking a clipped article as read."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"is_read": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_read"] is True
+        assert data["read_at"] is not None
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_read_later(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test toggling read_later status on a clipped article."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"is_read_later": False},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_read_later"] is False
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_favorite(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test marking a clipped article as favorite."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={"is_favorite": True},
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["is_favorite"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_clipped_article_multiple_fields(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test updating multiple fields at once."""
+        response = await async_client.put(
+            f"/api/articles/{test_clipped_article.id}?article_type=clipped",
+            json={
+                "priority": "low",
+                "note": "New comprehensive note",
+                "is_favorite": True,
+                "is_read": True,
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["priority"] == "LOW"  # Enum is serialized as uppercase
+        assert data["note"] == "New comprehensive note"
+        assert data["is_favorite"] is True
+        assert data["is_read"] is True
+
+
+class TestReadLaterEndpoint:
+    """Test the /read-later endpoint that combines feed and clipped articles."""
+
+    @pytest.mark.asyncio
+    async def test_read_later_empty(self, async_client: AsyncClient):
+        """Test read-later endpoint with no articles."""
+        response = await async_client.get("/api/articles/read-later")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"] == []
+        assert data["has_more"] is False
+        assert data["next_cursor"] is None
+
+    @pytest.mark.asyncio
+    async def test_read_later_with_clipped_article(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+    ):
+        """Test read-later endpoint includes clipped articles."""
+        response = await async_client.get("/api/articles/read-later")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) >= 1
+
+        # Find our test clipped article
+        clipped_item = next((item for item in data["items"] if item["id"] == str(test_clipped_article.id)), None)
+        assert clipped_item is not None
+        assert clipped_item["article_type"] == "clipped"
+        assert clipped_item["is_read_later"] is True
+
+    @pytest.mark.asyncio
+    async def test_read_later_excludes_non_read_later_articles(
+        self, async_client: AsyncClient, test_clipped_article: ClippedArticle, db_session: AsyncSession
+    ):
+        """Test that read-later endpoint only includes articles marked as read_later."""
+        # Mark the test article as NOT read later
+        test_clipped_article.is_read_later = False
+        await db_session.commit()
+
+        response = await async_client.get("/api/articles/read-later")
+
+        assert response.status_code == 200
+        data = response.json()
+
+        # The test article should NOT be in the results
+        article_ids = [item["id"] for item in data["items"]]
+        assert str(test_clipped_article.id) not in article_ids
+
+    @pytest.mark.asyncio
+    async def test_read_later_pagination(self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
+        """Test pagination in read-later endpoint."""
+        # Create multiple clipped articles
+        for i in range(5):
+            content = ArticleContent(
+                title=f"Article {i}",
+                link=f"https://example.com/article-{i}",
+                content=f"<p>Content {i}</p>",
+                published_at=datetime.now(UTC),
+            )
+            db_session.add(content)
+            await db_session.flush()
+
+            clipped = ClippedArticle(
+                id=uuid4(),
+                user_id=test_user.id,
+                content_id=content.id,
+                is_read_later=True,
+            )
+            db_session.add(clipped)
+
+        await db_session.commit()
+
+        # Test pagination with limit
+        response = await async_client.get("/api/articles/read-later?limit=3")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["items"]) == 3
+        assert data["has_more"] is True
+        assert data["next_cursor"] is not None
+
+        # Test fetching next page
+        next_response = await async_client.get(f"/api/articles/read-later?limit=3&cursor={data['next_cursor']}")
+
+        assert next_response.status_code == 200
+        next_data = next_response.json()
+        assert len(next_data["items"]) >= 1
+
+        # Ensure no duplicates between pages
+        first_page_ids = {item["id"] for item in data["items"]}
+        second_page_ids = {item["id"] for item in next_data["items"]}
+        assert first_page_ids.isdisjoint(second_page_ids)

@@ -3110,37 +3110,6 @@ pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
 
 [[package]]
-name = "prometheus-client"
-version = "0.21.1"
-description = "Python client for the Prometheus monitoring system."
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "prometheus_client-0.21.1-py3-none-any.whl", hash = "sha256:594b45c410d6f4f8888940fe80b5cc2521b305a1fafe1c58609ef715a001f301"},
-    {file = "prometheus_client-0.21.1.tar.gz", hash = "sha256:252505a722ac04b0456be05c05f75f45d760c2911ffc45f2a06bcaed9f3ae3fb"},
-]
-
-[package.extras]
-twisted = ["twisted"]
-
-[[package]]
-name = "prometheus-fastapi-instrumentator"
-version = "7.1.0"
-description = "Instrument your FastAPI app with Prometheus metrics"
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "prometheus_fastapi_instrumentator-7.1.0-py3-none-any.whl", hash = "sha256:978130f3c0bb7b8ebcc90d35516a6fe13e02d2eb358c8f83887cdef7020c31e9"},
-    {file = "prometheus_fastapi_instrumentator-7.1.0.tar.gz", hash = "sha256:be7cd61eeea4e5912aeccb4261c6631b3f227d8924542d79eaf5af3f439cbe5e"},
-]
-
-[package.dependencies]
-prometheus-client = ">=0.8.0,<1.0.0"
-starlette = ">=0.30.0,<1.0.0"
-
-[[package]]
 name = "prompt-toolkit"
 version = "3.0.52"
 description = "Library for building powerful interactive command lines in Python"
@@ -3687,22 +3656,6 @@ files = [
 dev = ["backports.zoneinfo ; python_version < \"3.9\"", "black", "build", "freezegun", "mdx_truly_sane_lists", "mike", "mkdocs", "mkdocs-awesome-pages-plugin", "mkdocs-gen-files", "mkdocs-literate-nav", "mkdocs-material (>=8.5)", "mkdocstrings[python]", "msgspec ; implementation_name != \"pypy\"", "mypy", "orjson ; implementation_name != \"pypy\"", "pylint", "pytest", "tzdata", "validate-pyproject[all]"]
 
 [[package]]
-name = "python-logging-loki"
-version = "0.3.1"
-description = "Python logging handler for Grafana Loki."
-optional = false
-python-versions = ">=3.6"
-groups = ["main"]
-files = [
-    {file = "python-logging-loki-0.3.1.tar.gz", hash = "sha256:b83610c8a3adc99fbab072493b91dfb25ced69be4874fefe3ab457b391adbf60"},
-    {file = "python_logging_loki-0.3.1-py3-none-any.whl", hash = "sha256:8a9131db037fbea3d390089c4c32dbe7ed233944905079615a9fb6f669b0f4e6"},
-]
-
-[package.dependencies]
-requests = "*"
-rfc3339 = ">=6.1"
-
-[[package]]
 name = "python-multipart"
 version = "0.0.20"
 description = "A streaming multipart parser for Python"
@@ -3981,18 +3934,6 @@ files = [
 
 [package.dependencies]
 requests = ">=1.0.0"
-
-[[package]]
-name = "rfc3339"
-version = "6.2"
-description = "Format dates according to the RFC 3339."
-optional = false
-python-versions = "*"
-groups = ["main"]
-files = [
-    {file = "rfc3339-6.2-py3-none-any.whl", hash = "sha256:f44316b21b21db90a625cde04ebb0d46268f153e6093021fa5893e92a96f58a3"},
-    {file = "rfc3339-6.2.tar.gz", hash = "sha256:d53c3b5eefaef892b7240ba2a91fef012e86faa4d0a0ca782359c490e00ad4d0"},
-]
 
 [[package]]
 name = "rich"
@@ -5611,5 +5552,5 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.10,<=3.13.7"
-content-hash = "7b2655cb3cabe80fc4f88d4889d95b14d1af2f498f3647860ec14e9c86565158"
+python-versions = ">=3.10,<=3.13.9"
+content-hash = "2bf8b74a4eff27abd13c6a493da0134e1db295f386bb09f3b720ecb193033131"

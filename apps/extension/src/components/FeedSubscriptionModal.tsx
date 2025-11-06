@@ -23,7 +23,9 @@ interface FeedSubscriptionModalProps {
   feeds: DiscoveredFeed[]
   isOpen: boolean
   onClose: () => void
+  onSubscribeStart?: () => void
   onSuccess?: () => void
+  onError?: () => void
 }
 
 interface DeleteConfirmationDialogProps {
@@ -82,7 +84,9 @@ export function FeedSubscriptionModal({
   feeds,
   isOpen,
   onClose,
+  onSubscribeStart,
   onSuccess,
+  onError,
 }: FeedSubscriptionModalProps) {
   const {
     subscribeToFeed,
@@ -244,9 +248,11 @@ export function FeedSubscriptionModal({
     // Capture the feed URL before closing modal to prevent stale closure
     const feedUrlToSubscribe = selectedFeed.url
 
+    // Notify parent that subscription is starting
+    onSubscribeStart?.()
+
     // Optimistic update - show success immediately and close modal
     toast.success('Successfully subscribed to RSS feed!')
-    onSuccess?.()
     onClose()
 
     // Start the API call synchronously (don't await) so AbortController is created immediately
@@ -258,6 +264,7 @@ export function FeedSubscriptionModal({
       .then(async () => {
         // Reload user data to get the feed ID
         await loadUserData()
+        onSuccess?.()
       })
       .catch((error) => {
         console.error('Failed to subscribe to RSS feed:', error)
@@ -267,6 +274,7 @@ export function FeedSubscriptionModal({
         toast.error(`Feed subscription failed: ${errorMessage}`, {
           duration: 5000, // Show longer since user might miss it
         })
+        onError?.()
       })
   }
 

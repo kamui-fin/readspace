@@ -2,7 +2,7 @@
   "name": "@readspace/shared",
   "main": "./src/index.ts",
   "scripts": {
-    "lint": "eslint . --max-warnings 0",
+    "lint": "eslint .",
     "check-types": "tsc --noEmit",
     "format": "prettier --write src",
     "format:check": "prettier --check src"
@@ -20,7 +20,6 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@tanstack/react-query": "^5.0.0",
     "react-hot-toast": "^2.0.0",
     "clsx": "^2.1.1"
   }

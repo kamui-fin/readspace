@@ -1,17 +1,16 @@
-import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { extractDomain } from '@readspace/shared'
-import type { PageMetadata, Priority, SaveOptions } from '@readspace/shared'
-import { BookOpen, Pencil, Flag, StickyNote, Check, Trash2 } from 'lucide-react'
+import { ApiClient } from '@/lib/api-client'
 import { browser } from '@/lib/browser'
 import { useExtensionStore } from '@/store'
-import { ApiClient } from '@/lib/api-client'
+import type { Article, PageMetadata, Priority, SaveOptions } from '@readspace/shared'
+import { BookOpen, Check, Flag, Pencil, StickyNote, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 
 interface ArticlePreviewProps {
   metadata?: PageMetadata
   isMetadataLoading?: boolean
-  onSave: (options?: Partial<SaveOptions>) => void
+  onSave: (options?: Partial<SaveOptions>) => Promise<Article | undefined>
   readingTime?: number
   currentUrl?: string
 }
@@ -85,66 +84,128 @@ export function ArticlePreview({
   const checkArticleSaved = useExtensionStore(
     (state) => state.checkArticleSaved
   )
+  const getCachedArticle = useExtensionStore((state) => state.getCachedArticle)
   const isArticlePendingSave = useExtensionStore(
     (state) => state.isArticlePendingSave
   )
   const unsaveArticle = useExtensionStore((state) => state.unsaveArticle)
   const cancelSave = useExtensionStore((state) => state.cancelSave)
 
-  const [savedArticle, setSavedArticle] = useState<any | null>(null)
-  const [optimisticallySaved, setOptimisticallySaved] = useState(false)
-  const isSaved =
-    (!!savedArticle && savedArticle.is_read_later !== false) ||
-    optimisticallySaved
+  const [savedArticle, setSavedArticle] = useState<Article | null>(null)
+  const isSaved = !!savedArticle && savedArticle.is_read_later !== false
   const isPending = currentUrl ? isArticlePendingSave(currentUrl) : false
   const [isUnsaving, setIsUnsaving] = useState(false)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [skipNextCheck, setSkipNextCheck] = useState(false)
 
   // Track original saved values to detect changes
   const [originalNote, setOriginalNote] = useState('')
   const [originalPriority, setOriginalPriority] = useState<Priority>('low')
+  const [originalTitle, setOriginalTitle] = useState('')
 
-  // Check if user has made changes to note or priority
+  // Check if user has made changes to title, note, or priority
   const hasUnsavedChanges =
-    savedArticle && (note !== originalNote || priority !== originalPriority)
+    savedArticle && (
+      customTitle !== originalTitle ||
+      note !== originalNote ||
+      priority !== originalPriority
+    )
 
   // Check if article is already saved when URL changes
   useEffect(() => {
     const checkIfSaved = async () => {
       if (!currentUrl) {
         setSavedArticle(null)
-        setOptimisticallySaved(false)
+        // Reset form fields when URL clears
+        setCustomTitle('')
+        setNote('')
+        setPriority('low')
+        setOriginalNote('')
+        setOriginalPriority('low')
         return
       }
 
+      // Skip this check if we just updated/saved (to prevent overwriting with stale data)
+      if (skipNextCheck) {
+        setSkipNextCheck(false)
+        return
+      }
+
+      // First check cache for instant display
+      const cachedArticle = getCachedArticle(currentUrl)
+      if (cachedArticle && cachedArticle.is_read_later !== false) {
+        setSavedArticle(cachedArticle)
+
+        // Prefill form fields from cache immediately
+        // For clipped articles, title is in content.title
+        const savedTitle = (cachedArticle as any).content?.title || cachedArticle.title || ''
+        const savedNote = cachedArticle.note || ''
+        // Normalize priority to lowercase (backend returns uppercase)
+        const savedPriority = (
+          cachedArticle.priority || 'LOW'
+        ).toLowerCase() as Priority
+
+        setCustomTitle(savedTitle)
+        setNote(savedNote)
+        setPriority(savedPriority)
+
+        // Store original values to track changes
+        setOriginalTitle(savedTitle)
+        setOriginalNote(savedNote)
+        setOriginalPriority(savedPriority)
+      } else {
+        // No cached article or it's not in read-later, reset form
+        setSavedArticle(null)
+        setCustomTitle('')
+        setNote('')
+        setPriority('low')
+        setOriginalTitle('')
+        setOriginalNote('')
+        setOriginalPriority('low')
+      }
+
+      // Then refresh from API in background to ensure we have latest data
       try {
         const result = await checkArticleSaved(currentUrl)
-        setSavedArticle(result)
-        // Clear optimistic state if we have real data
-        if (result) {
-          setOptimisticallySaved(false)
-        }
 
-        // Prefill form fields if article is already saved
-        if (result) {
-          if (result.title && !customTitle) {
-            setCustomTitle(result.title)
-          }
+        // Only update if article is in read-later list
+        if (result && result.is_read_later !== false) {
+          setSavedArticle(result)
+
+          // Update form fields with API data
+          // For clipped articles, title is in content.title
+          const savedTitle = (result as any).content?.title || result.title || ''
           const savedNote = result.note || ''
-          const savedPriority = (result.priority || 'low') as Priority
+          // Normalize priority to lowercase (backend returns uppercase)
+          const savedPriority = (
+            result.priority || 'LOW'
+          ).toLowerCase() as Priority
 
+          setCustomTitle(savedTitle)
           setNote(savedNote)
           setPriority(savedPriority)
 
           // Store original values to track changes
+          setOriginalTitle(savedTitle)
           setOriginalNote(savedNote)
           setOriginalPriority(savedPriority)
+        } else {
+          // Article not in read-later, reset everything
+          setSavedArticle(null)
+          setCustomTitle('')
+          setNote('')
+          setPriority('low')
+          setOriginalTitle('')
+          setOriginalNote('')
+          setOriginalPriority('low')
         }
       } catch (error) {
         console.error('Failed to check if article is saved:', error)
       }
     }
     checkIfSaved()
-  }, [currentUrl, checkArticleSaved])
+
+  }, [currentUrl, getCachedArticle])
 
   // Load expanded state from storage on mount
   useEffect(() => {
@@ -177,9 +238,6 @@ export function ArticlePreview({
   if (isMetadataLoading || !metadata) {
     return <ArticlePreviewSkeleton />
   }
-  const domain = metadata.canonical_url
-    ? extractDomain(metadata.canonical_url)
-    : ''
 
   const handleSave = async () => {
     if (isSaved && currentUrl) {
@@ -187,33 +245,68 @@ export function ArticlePreview({
       if (isPending) {
         // Cancel the pending save
         cancelSave(currentUrl)
-        setOptimisticallySaved(false)
         toast.success('Article removed')
         return
       }
 
       // If article is already saved, update it if there are changes
       if (savedArticle && hasUnsavedChanges) {
+        setIsUpdating(true)
         try {
           await ApiClient.rss.updateArticle(
             savedArticle.id,
             {
-              priority,
-              note, // Send the note as-is (empty string or text)
+              // If customTitle is empty, reset to metadata title; otherwise use customTitle
+              title: customTitle || metadata?.title || undefined,
+              priority: priority.toUpperCase(), // Convert to uppercase for backend
+              note: note || undefined, // Send undefined if note is empty to clear it
             },
             'clipped'
           )
           toast.success('Article updated')
-          // Refresh the saved article data and update original values
-          const updated = await checkArticleSaved(currentUrl)
-          setSavedArticle(updated)
+
+          // Update the saved article with the new values we just sent
+          const updatedArticle: any = {
+            ...savedArticle,
+            note: note || '',
+            priority: priority.toUpperCase(),
+          }
+
+          // For clipped articles, update content.title; for feed articles, update title
+          // If customTitle is empty, use metadata title to reset it
+          const titleToUse = customTitle || metadata?.title || ''
+          if (savedArticle.article_type === 'clipped' && updatedArticle.content) {
+            updatedArticle.content = {
+              ...updatedArticle.content,
+              title: titleToUse,
+            }
+          } else {
+            updatedArticle.title = titleToUse
+          }
+          setSavedArticle(updatedArticle)
+
+          // Update the store's cache manually
+          const savedArticles = new Map(useExtensionStore.getState().savedArticles)
+          savedArticles.set(currentUrl, updatedArticle)
+          useExtensionStore.setState({ savedArticles })
+
+          // Update original values to match what we just saved
+          // If customTitle was empty, we reset to metadata title
+          const finalTitle = customTitle || metadata?.title || ''
+          setCustomTitle(finalTitle)
+          setOriginalTitle(finalTitle)
           setOriginalNote(note)
           setOriginalPriority(priority)
+
+          // Skip the next useEffect check to prevent overwriting
+          setSkipNextCheck(true)
         } catch (error) {
           console.error('Failed to update article:', error)
           toast.error(
             `Failed to update article: ${error instanceof Error ? error.message : 'Unknown error'}`
           )
+        } finally {
+          setIsUpdating(false)
         }
         return
       }
@@ -223,10 +316,14 @@ export function ArticlePreview({
         setIsUnsaving(true)
         try {
           await unsaveArticle(currentUrl)
-          // Update saved article to reflect is_read_later = false
-          // This keeps the article data but marks it as not in read-later list
-          setSavedArticle({ ...savedArticle, is_read_later: false })
-          setOptimisticallySaved(false) // Clear optimistic state
+          // Clear saved article and reset form to defaults
+          setSavedArticle(null)
+          setCustomTitle('')
+          setNote('')
+          setPriority('low')
+          setOriginalTitle('')
+          setOriginalNote('')
+          setOriginalPriority('low')
           toast.success('Article removed')
         } catch (error) {
           console.error('Failed to unsave article:', error)
@@ -239,31 +336,43 @@ export function ArticlePreview({
         return
       }
     } else {
-      // Save article - set optimistic state immediately
-      setOptimisticallySaved(true)
+      // Save article - prepare options with custom title, note, and priority
       const options: Partial<SaveOptions> = {
         title: customTitle || undefined,
         note: note || undefined,
         priority, // Always include priority (defaults to 'low')
       }
-      onSave(options)
 
-      // Refresh saved article state after save to get updated is_read_later status
-      // This handles the re-save case where article exists with is_read_later=false
-      if (currentUrl) {
-        setTimeout(async () => {
-          try {
-            const updated = await checkArticleSaved(currentUrl)
-            if (updated) {
-              setSavedArticle(updated)
-              setOriginalNote(updated.note || '')
-              setOriginalPriority((updated.priority || 'low') as Priority)
-              setOptimisticallySaved(false)
-            }
-          } catch (error) {
-            console.error('Failed to refresh article state after save:', error)
-          }
-        }, 1000) // Give the backend time to process the save
+      // Call onSave and wait for it to complete
+      // The store's saveArticle returns the saved article directly
+      try {
+        const savedArticleFromApi = await onSave(options)
+
+        if (savedArticleFromApi && savedArticleFromApi.is_read_later !== false) {
+          setSavedArticle(savedArticleFromApi)
+
+          // Update displayed values and original values to match what was actually saved
+          // For clipped articles, title is in content.title
+          const savedTitle = (savedArticleFromApi as any).content?.title || savedArticleFromApi.title || ''
+          const savedNote = savedArticleFromApi.note || ''
+          const normalizedPriority = (
+            savedArticleFromApi.priority || 'LOW'
+          ).toLowerCase() as Priority
+
+          setCustomTitle(savedTitle)
+          setNote(savedNote)
+          setPriority(normalizedPriority)
+
+          setOriginalTitle(savedTitle)
+          setOriginalNote(savedNote)
+          setOriginalPriority(normalizedPriority)
+
+          // Skip the next useEffect check to prevent overwriting
+          setSkipNextCheck(true)
+        }
+      } catch (error) {
+        // Error is already handled by onSave, but we log it here too
+        console.error('Failed to save article:', error)
       }
     }
   }
@@ -306,11 +415,7 @@ export function ArticlePreview({
             <h3 className="font-semibold text-sm text-secondary">
               Article read
             </h3>
-            <p className="text-xs text-muted-foreground">
-              {domain}
-              {readingTime && ` • ${readingTime} min read`}
-            </p>
-            <p className="text-xs text-secondary/80 font-medium mt-0.5">
+            <p className="text-xs text-muted-foreground font-medium mt-0.5">
               Read on {formattedDate} at {formattedTime}
             </p>
           </div>
@@ -333,29 +438,34 @@ export function ArticlePreview({
           <h3 className="font-semibold text-sm">
             {isSaved ? 'Saved article' : 'Save article for later'}
           </h3>
-          <p className="text-xs text-muted-foreground line-clamp-2">
-            {domain}
-            {readingTime && ` • ${readingTime} min read`}
-          </p>
+          {readingTime && (
+            <p className="text-xs text-muted-foreground line-clamp-2">
+              {readingTime} min read
+            </p>
+          )}
         </div>
 
         {/* Actions - aligned to match FeedDiscoveryCard */}
         <div className="flex items-center gap-1 flex-shrink-0">
           <Button
             onClick={handleSave}
-            disabled={isUnsaving}
+            disabled={isUnsaving || isUpdating}
             size="sm"
             variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
-            className={`flex-shrink-0 w-[100px] ${
-              isSaved && !hasUnsavedChanges
-                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                : ''
-            }`}
+            className={`flex-shrink-0 w-[100px] ${isSaved && !hasUnsavedChanges
+              ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+              : ''
+              }`}
           >
             {isUnsaving ? (
+              <div className="px-2 flex items-center justify-center">
+                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
+                <span>Removing</span>
+              </div>
+            ) : isUpdating ? (
               <div className="flex items-center justify-center">
                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
-                <span>Removing...</span>
+                <span>Updating</span>
               </div>
             ) : isSaved && !hasUnsavedChanges ? (
               <div className="flex items-center justify-center">
@@ -368,17 +478,7 @@ export function ArticlePreview({
               'Save'
             )}
           </Button>
-          {/* <button
-            onClick={handleToggleExpanded}
-            className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded hover:bg-muted flex items-center justify-center"
-            title={isExpanded ? "Hide options" : "Show options"}
-          >
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button> */}
+
         </div>
       </div>
 
@@ -444,10 +544,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('low')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'low'
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'low'
+                      ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -460,10 +559,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('medium')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'medium'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'medium'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -476,10 +574,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('high')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'high'
-                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'high'
+                      ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >

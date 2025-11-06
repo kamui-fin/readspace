@@ -6,6 +6,8 @@ from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
+from app.models.enums import ArticlePriority
+
 
 # ========= Article Content Schemas =========
 class ArticleContentBase(BaseModel):
@@ -85,7 +87,7 @@ class FeedArticleResponse(FeedArticleBase):
 class ClippedArticleBase(BaseModel):
     """Base schema for clipped articles."""
 
-    priority: str = Field("medium", pattern="^(low|medium|high)$")
+    priority: ArticlePriority = ArticlePriority.MEDIUM
     note: str | None = Field(None, max_length=2000)
     is_read: bool = False
     is_read_later: bool = True
@@ -102,7 +104,8 @@ class ClippedArticleCreate(ClippedArticleBase):
 class ClippedArticleUpdate(BaseModel):
     """Schema for updating clipped article."""
 
-    priority: str | None = Field(None, pattern="^(low|medium|high)$")
+    title: str | None = Field(None, max_length=1000)
+    priority: ArticlePriority | None = None
     note: str | None = Field(None, max_length=2000)
     is_read: bool | None = None
     is_read_later: bool | None = None
