@@ -64,19 +64,41 @@ First off, thank you for considering contributing to Readspace! It's people like
 
 ## Development Environment Setup
 
-Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis) while you run the application services (Web, API, Extension) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
+Our recommended development setup uses Docker to run the core infrastructure (Supabase, Redis, RSSHub, Celery workers) while you run the application services (Web, API, Extension, Mobile) directly on your host machine. This gives you the best of both worlds: a stable backend foundation and a fast, hot-reloading development loop for the parts you're actively working on.
 
 ### 1. Start Core Infrastructure
 
-First, start the Supabase stack and Redis in Docker.
+First, configure your environment for development mode:
 
 ```bash
-./docker/launch.sh
+./docker/setup.sh
 ```
 
--   **Supabase Studio:** You can access the local dashboard at [http://localhost:18000](http://localhost:18000). Log in with email `supabase` and password `not_being_used`.
+Select option **3) Development mode** when prompted. This will configure localhost URLs and disable AI support for local development.
+
+Then start the infrastructure services in development mode:
+
+```bash
+./docker/launch.sh --dev
+```
+
+This starts:
+- Supabase (with Studio and Analytics)
+- Redis
+- RSSHub
+- Celery worker and beat scheduler
+
+**Supabase Studio:** Access the local dashboard at [http://localhost:18000](http://localhost:18000).
 
 Wait a minute for the services to initialize. You can check their status with `docker ps`.
+
+**Resetting Supabase:** If you need to completely reset your local Supabase database:
+
+```bash
+./docker/supabase/reset.sh
+```
+
+This will wipe all data and reinitialize the database.
 
 ### 2. Run Application Services
 
@@ -100,10 +122,11 @@ poetry run poe start
 ```
 The backend API will be available at `http://localhost:8008`.
 
-#### Chrome Extension
+#### Browser Extension
 
-The extension is built with Vite and uses the same monorepo setup.
+The extension is built with Vite and supports both Chrome and Firefox.
 
+**For Chrome:**
 1.  **Start the development server:**
     ```bash
     cd apps/extension
@@ -116,53 +139,80 @@ The extension is built with Vite and uses the same monorepo setup.
     -   Click "Load unpacked".
     -   Select the `apps/extension/dist` directory.
 
+**For Firefox:**
+```bash
+cd apps/extension
+bun dev:firefox:watch # in one terminal
+bun dev:firefox # in another terminal
+```
+
+This will automatically build, launch Firefox with the extension, and reload on changes.
+
 Changes to the source code will be automatically rebuilt.
+
+#### Mobile App (React Native)
+
+The mobile app is built with Expo and React Native.
+
+```bash
+cd apps/mobile
+bun install
+bun ios # or bun android
+```
+
+Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or physical device.
 
 ### Working on Background Tasks (Celery)
 
-Our backend uses Celery to manage asynchronous tasks. The architecture consists of two main components that run alongside the main API server:
+Our backend uses Celery to manage asynchronous tasks. The architecture consists of two main components:
 
--   **`worker`**: This service executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
--   **`beat`**: This is a scheduler. It periodically adds tasks to the queue for the workers to execute based on a defined schedule (e.g., "fetch this feed every hour").
+-   **`worker`**: Executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
+-   **`beat`**: A scheduler that periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
 
-If you need to work on features involving background jobs, you'll need to run the `worker` and `beat` services. Make sure Redis is running first (see the hybrid setup), then launch them using Docker Compose:
+When running `./docker/launch.sh --dev`, the worker and beat services are automatically started in Docker.
+
+**For active Celery development**, it's better to run them directly on your host machine for faster iteration:
 
 ```bash
-# Ensure redis is running, then start the worker and beat services
-docker compose up -d worker beat
+cd server
+
+# Run the beat scheduler
+poetry run celery -A app.core.celery_app beat -l info
+
+# In another terminal, run the worker
+poetry run celery -A app.core.celery_app worker -l info -P gevent -c 1
 ```
 
-You can view their logs using `docker compose logs -f worker beat`.
+This gives you immediate feedback and easier debugging compared to running in Docker.
 
 ### Database Migrations (Alembic)
 
 When you make changes to the database schema (i.e., by modifying the SQLAlchemy models in `server/app/models/`), you must create a new migration file. We use Alembic to manage schema changes.
 
-1.  **Ensure your services are running:**
-    Use either the full Docker setup (`./start_docker.sh`) or the hybrid setup. The `api` container must be running.
+1.  **Ensure Supabase is running:**
+    Make sure you've started the infrastructure with `./docker/launch.sh --dev`.
 
 2.  **Generate a new migration:**
-    Run the `alembic revision` command inside the `api` container.
+    Run the `alembic revision` command from the `server` directory:
 
     ```bash
-    docker compose exec api alembic revision --autogenerate -m "Your descriptive migration message"
+    cd server
+    alembic revision --autogenerate -m "Your descriptive migration message"
     ```
 
 3.  **Review the generated migration:**
     A new migration script will be created in `server/alembic/versions/`. Please inspect this file to ensure it accurately reflects your intended changes.
 
 4.  **Apply the migration:**
-    Migrations are automatically applied when the `api` container starts. To apply them manually while services are running, use:
-
     ```bash
-    docker compose exec api alembic upgrade head
+    alembic upgrade head
     ```
 
 ### Linting and Formatting
 
 To maintain code quality and consistency, please run the linters and formatters before submitting a pull request. Each part of the monorepo has its own scripts.
 
-#### Backend (Server)
+#### Backend
 
 We use `ruff` for both linting and formatting. `lint` also runs `mypy` for type checking.
 
@@ -175,7 +225,7 @@ poe lint
 poe format
 ```
 
-#### Frontend (Web) and Browser Extension
+#### Frontend (Web, Extension, Mobile)
 
 We use ESLint for linting and Prettier for formatting.
 
@@ -188,6 +238,14 @@ bun run format
 
 # Type check all projects
 bun run check-types
+```
+
+**Stopping Services:**
+
+When you're done developing, stop the infrastructure services:
+
+```bash
+./docker/down.sh --dev
 ```
 
 ## Submitting a Pull Request

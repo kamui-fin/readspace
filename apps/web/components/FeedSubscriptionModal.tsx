@@ -88,12 +88,6 @@ export function FeedSubscriptionModal({
                 folderId = newFolder.id
             }
 
-            // Create the subscription
-            await subscribeToFeed.mutateAsync({
-                feedId: feed.id,
-                folderId: folderId,
-            })
-
             // Then refresh the feed to get latest articles
             setIsRefreshing(true)
 
@@ -103,6 +97,12 @@ export function FeedSubscriptionModal({
             })
 
             setIsRefreshing(false)
+
+            // Create the subscription
+            await subscribeToFeed.mutateAsync({
+                feedId: feed.id,
+                folderId: folderId,
+            })
 
             toast.success("Successfully subscribed to feed")
             onSuccess?.()

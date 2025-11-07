@@ -55,7 +55,7 @@ echo "👑 Promoting user to admin..."
 
 # Update user's role to admin
 docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" exec -T db psql -U postgres -d postgres -c \
-    "UPDATE profiles SET role = 'admin' WHERE id = '$USER_ID';"
+    "UPDATE profiles SET role = 'ADMIN' WHERE id = '$USER_ID';"
 
 echo ""
 echo "✅ Successfully promoted $EMAIL to admin!"

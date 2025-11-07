@@ -5,6 +5,12 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
+# Check for dev mode flag
+DEV_MODE=false
+if [ "$1" = "--dev" ] || [ "$1" = "-d" ]; then
+    DEV_MODE=true
+fi
+
 # Function to print colored output
 print_info() {
     printf "\n\033[1;34m%s\033[0m\n" "$1"
@@ -19,13 +25,23 @@ print_error() {
 }
 
 # --- Docker Compose Launch ---
-print_info "› Starting Supabase services with Docker Compose..."
-# Start the core Supabase stack first
-if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
-    print_error "Failed to start core Supabase services. Check Docker and the logs."
-    exit 1
+if [ "$DEV_MODE" = true ]; then
+    print_info "› Starting Supabase services in DEVELOPMENT mode..."
+    # Start with dev compose file for additional services (studio, analytics, etc.)
+    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" -f "$SCRIPT_DIR/supabase/docker-compose.dev.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
+        print_error "Failed to start Supabase services in dev mode. Check Docker and the logs."
+        exit 1
+    fi
+    print_success "✓ Supabase stack with dev tools is starting in the background."
+else
+    print_info "› Starting Supabase services with Docker Compose..."
+    # Start the core Supabase stack first
+    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
+        print_error "Failed to start core Supabase services. Check Docker and the logs."
+        exit 1
+    fi
+    print_success "✓ Core Supabase stack is starting in the background."
 fi
-print_success "✓ Core Supabase stack is starting in the background."
 
 # Start any other services (like your custom web/server containers)
 if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
@@ -66,9 +82,16 @@ echo "You can access the services at the following URLs:"
 echo ""
 print_success "Readspace Web App: http://localhost:18042"
 echo ""
-echo "For developers, you can access:"
-print_success "Supabase Dashboard: http://localhost:18000"
-print_success "RSShub API: http://localhost:1200"
+if [ "$DEV_MODE" = true ]; then
+    echo "Development tools are available at:"
+    print_success "Supabase Studio: http://localhost:18000"
+    print_success "Analytics Dashboard: http://localhost:4000"
+    print_success "RSShub API: http://localhost:1200"
+else
+    echo "For developers, you can access:"
+    print_success "Supabase Dashboard: http://localhost:18000"
+    print_success "RSShub API: http://localhost:1200"
+fi
 echo ""
 echo "It may take a few minutes for all services to become fully available."
 echo "Use 'docker compose logs -f' to monitor the startup process."

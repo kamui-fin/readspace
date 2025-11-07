@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Get the project root (parent of the docker directory)
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Check for dev mode flag
+DEV_MODE=false
+if [ "$1" = "--dev" ] || [ "$1" = "-d" ]; then
+    DEV_MODE=true
+fi
+
 # Function to print colored output
 print_info() {
     printf "\n\033[1;34m%s\033[0m\n" "$1"
@@ -46,12 +52,21 @@ else
 fi
 
 # Stop core Supabase stack
-print_info "› Stopping Supabase services..."
-if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
-    print_error "Failed to stop core Supabase services."
-    exit 1
+if [ "$DEV_MODE" = true ]; then
+    print_info "› Stopping Supabase services (dev mode)..."
+    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" -f "$SCRIPT_DIR/supabase/docker-compose.dev.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
+        print_error "Failed to stop Supabase services in dev mode."
+        exit 1
+    fi
+    print_success "✓ Supabase stack with dev tools stopped."
+else
+    print_info "› Stopping Supabase services..."
+    if ! docker compose -f "$SCRIPT_DIR/supabase/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
+        print_error "Failed to stop core Supabase services."
+        exit 1
+    fi
+    print_success "✓ Core Supabase stack stopped."
 fi
-print_success "✓ Core Supabase stack stopped."
 
 # --- Final Output ---
 print_info "🎉 --- Readspace Shutdown Complete! --- 🎉"

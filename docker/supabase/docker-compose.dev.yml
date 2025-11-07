@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   vector:
     container_name: supabase-vector

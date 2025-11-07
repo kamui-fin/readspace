@@ -2,7 +2,7 @@
 
 A powerful browser extension to save articles to Readspace for later reading. Works on both Chrome and Firefox.
 
-## 🌐 Cross-Browser Support
+## Cross-Browser Support
 
 This extension supports both Chrome and Firefox using the WebExtensions API with automatic browser detection and compatibility handling.
 
@@ -13,84 +13,74 @@ This extension supports both Chrome and Firefox using the WebExtensions API with
 - **Edge**: Compatible (same as Chrome)
 - **Other Chromium browsers**: Compatible
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and npm (or pnpm)
+- Node.js 18+ and Bun
 - Chrome and/or Firefox for testing
 
 ### Installation
 
 ```bash
-# Install dependencies (this project uses pnpm)
-pnpm install
+# Install dependencies
+bun install
 
 # Build for Chrome (default)
-npm run build
+bun run build
 
 # Build for Firefox
-npm run build:firefox
+bun run build:firefox
 
 # Build for both browsers
-npm run build:all
+bun run build:all
 ```
 
-## 📦 Build Commands
+## Build Commands
 
 ### Development
 
 ```bash
 # Chrome development (with hot reload)
-npm run dev
+bun run dev
 
 # Firefox development (with auto-reload and temporary profile)
-npm run dev:firefox
+bun run dev:firefox:watch
 ```
+
+The `dev:firefox:watch` command will:
+- Build the extension for Firefox
+- Launch Firefox with the extension loaded
+- Watch for changes and automatically rebuild
+- Reload the extension in Firefox on changes
 
 ### Building
 
 ```bash
 # Build Chrome extension
-npm run build:chrome
+bun run build:chrome
 
 # Build Firefox extension  
-npm run build:firefox
+bun run build:firefox
 
 # Build both browsers
-npm run build:all
+bun run build:all
 ```
 
 ### Packaging
 
 ```bash
 # Package Chrome extension (creates .zip ready for Chrome Web Store)
-npm run package:chrome
+bun run package:chrome
 
 # Package Firefox extension (creates .xpi using web-ext)
-npm run package:firefox
+bun run package:firefox
 
 # Package for both browsers
-npm run package:all
+bun run package:all
 ```
 
-### Using the Build Script
-
-```bash
-# Build Chrome extension
-node scripts/build.js chrome
-
-# Build Firefox extension
-node scripts/build.js firefox
-
-# Build both browsers
-node scripts/build.js all
-
-# Build and package
-node scripts/build.js firefox --package
-```
-
-## 🛠 Development
+## Development
 
 ### Project Structure
 
@@ -169,10 +159,10 @@ The project includes proper TypeScript support for both browsers:
 
 ### Firefox
 
-1. **Development**: Use `npm run dev:firefox` (recommended)
+1. **Development**: Use `bun run dev:firefox:watch` (recommended)
    - Automatically builds and launches Firefox with the extension
    - Creates a temporary profile
-   - Auto-reloads on changes
+   - Watches for changes and auto-reloads
 2. **Manual loading**:
    - Open `about:debugging`
    - Click "This Firefox"
@@ -182,17 +172,17 @@ The project includes proper TypeScript support for both browsers:
 ### Firefox with web-ext
 
 ```bash
-# Run in temporary Firefox profile
-npm run dev:firefox
+# Run in temporary Firefox profile with auto-reload
+bun run dev:firefox:watch
 
 # Lint Firefox extension
-npm run lint:firefox
+bun run lint:firefox
 
 # Package for Firefox
-npm run package:firefox
+bun run package:firefox
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### web-ext Configuration
 
@@ -217,27 +207,13 @@ The build system automatically:
 - Sets the appropriate output directory (`dist/` vs `dist-firefox/`)
 - Defines `__BROWSER__` constant for runtime detection
 
-## 📋 Deployment
-
-### Chrome Web Store
-
-1. Build: `npm run package:chrome`
-2. Upload `dist.zip` to Chrome Web Store
-3. Fill out store listing and submit for review
-
-### Firefox Add-ons
-
-1. Build: `npm run package:firefox`
-2. Upload the `.zip` file from `web-ext-artifacts/` to Firefox Add-ons
-3. Submit for review
-
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
 **webextension-polyfill not found**: 
 ```bash
-pnpm install
+bun install
 ```
 
 **Build fails with manifest errors**:
@@ -245,10 +221,14 @@ pnpm install
 - Verify JSON syntax
 
 **Firefox extension won't load**:
-- Use `npm run lint:firefox` to check for issues
+- Use `bun run lint:firefox` to check for issues
 - Check browser console for errors
 - Ensure minimum Firefox version (109+)
 - If you see "service_worker is disabled" error, this is expected - Firefox uses `background.scripts`
+
+**Firefox watch mode not working**:
+- Ensure Firefox is installed and in your PATH
+- Try running `bun run dev:firefox` for a one-time launch without watch mode
 
 **Chrome extension manifest errors**:
 - Verify Manifest V3 compatibility
@@ -263,21 +243,14 @@ pnpm install
 2. **Test on both browsers** during development
 3. **Use proper TypeScript types** from webextension-polyfill
 4. **Check browser-specific features** and provide fallbacks if needed
-5. **Firefox development**: Use `npm run dev:firefox` for the best experience
+5. **Firefox development**: Use `bun run dev:firefox:watch` for the best experience with auto-reload
 
-## 📚 Resources
-
-- [WebExtensions API Documentation](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
-- [Chrome Extension Documentation](https://developer.chrome.com/docs/extensions/)
-- [web-ext Documentation](https://extensionworkshop.com/documentation/develop/web-ext-command-reference/)
-- [webextension-polyfill](https://github.com/mozilla/webextension-polyfill)
-
-## 🤝 Contributing
+## Contributing
 
 When contributing:
 
 1. Test changes on both Chrome and Firefox
 2. Use the browser compatibility layer for new API calls
 3. Update both manifest files if adding new permissions
-4. Run `npm run lint:firefox` before submitting
-5. Use `pnpm` for dependency management (this project uses pnpm-lock.yaml) 
+4. Run `bun run lint:firefox` before submitting
+5. Use `bun` for dependency management 

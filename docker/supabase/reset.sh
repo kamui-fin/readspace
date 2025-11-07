@@ -26,19 +26,4 @@ for DIR in "${BIND_MOUNTS[@]}"; do
   fi
 done
 
-echo "Resetting .env file..."
-if [ -f ".env" ]; then
-  echo "Removing existing .env file..."
-  rm -f .env
-else
-  echo "No .env file found. Skipping .env removal step..."
-fi
-
-if [ -f ".env.example" ]; then
-  echo "Copying .env.example to .env..."
-  cp .env.example .env
-else
-  echo ".env.example file not found. Skipping .env reset step..."
-fi
-
 echo "Cleanup complete!"
