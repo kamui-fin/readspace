@@ -12,12 +12,14 @@ import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS } from "../query-keys";
 import type {
   Article,
+  CheckArticleSavedResponse,
   CursorPaginatedResponse,
   Feed,
   Folder,
   ImportTaskStatus,
   OPMLImportResponse,
   PaginatedResponse,
+  SaveArticleResponse,
   SidebarData,
   Subscription,
   UnreadCounts
@@ -1424,6 +1426,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           read_at?: string;
           is_read_later?: boolean;
           is_favorite?: boolean;
+          priority?: string;
+          note?: string | null;
+          title?: string;
         };
         articleType?: "feed" | "clipped";
       },
@@ -1436,6 +1441,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           read_at?: string;
           is_read_later?: boolean;
           is_favorite?: boolean;
+          priority?: string;
+          note?: string | null;
+          title?: string;
         };
       }
     >,
@@ -1453,6 +1461,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           read_at?: string;
           is_read_later?: boolean;
           is_favorite?: boolean;
+          priority?: string;
+          note?: string | null;
+          title?: string;
         };
         articleType?: "feed" | "clipped";
       }): Promise<void> => {
@@ -1534,6 +1545,15 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
         });
+        
+        // Invalidate all check queries (for extension popup)
+        queryClient.invalidateQueries({
+          predicate: (query) =>
+            query.queryKey[0] === RSS_QUERY_KEYS.ARTICLE &&
+            typeof query.queryKey[1] === 'string' &&
+            query.queryKey[1].startsWith('check-'),
+        });
+        
         // Invalidate unread counts to update badges and counts (invalidate all variants with different folderIds)
         queryClient.invalidateQueries({
           predicate: (query) =>
@@ -1749,15 +1769,33 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     });
   }
 
+  function useCheckArticleSaved(
+    url: string | undefined,
+    options?: Omit<
+      UseQueryOptions<CheckArticleSavedResponse, Error, CheckArticleSavedResponse, [string, string]>,
+      "queryKey" | "queryFn"
+    >,
+  ) {
+    return useQuery({
+      queryKey: [RSS_QUERY_KEYS.ARTICLE, `check-${url}`],
+      queryFn: () => ApiClient.rss.checkArticleSaved(url!),
+      enabled: !!url,
+      staleTime: 0, // Always check fresh
+      ...options,
+    });
+  }
+
   function useSaveArticle(
     options?: UseMutationOptions<
-      unknown,
+      SaveArticleResponse,
       unknown,
       {
         url: string;
         title?: string;
         content?: string;
         metadata?: Record<string, string>;
+        priority?: string;
+        note?: string;
       }
     >,
   ) {
@@ -1768,16 +1806,20 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         title?: string;
         content?: string;
         metadata?: Record<string, string>;
+        priority?: string;
+        note?: string;
       }) => ApiClient.rss.saveArticle(data),
-      onSuccess: () => {
-        // Invalidate read-later queries to show the newly saved article
+      onSettled: async (_article, _error, variables) => {
+        // Invalidate to refetch and show the real data
+        await queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLE, `check-${variables.url}`],
+        });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
         });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later"],
         });
-        // Also invalidate all articles queries to ensure it shows up everywhere
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
         });
@@ -1786,6 +1828,42 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         const errorMessage =
           (error as { response?: { data?: { detail?: string } } })?.response
             ?.data?.detail || "Failed to save article";
+        config.showError?.(errorMessage);
+      },
+      ...options,
+    });
+  }
+
+  function useUnsaveArticle(
+    options?: UseMutationOptions<
+      void,
+      unknown,
+      { articleId: string; url: string }
+    >,
+  ) {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: ({ articleId }: { articleId: string; url: string }) =>
+        ApiClient.rss.updateArticle(articleId, { is_read_later: false }, 'clipped') as Promise<void>,
+      onSettled: async (_data, _error, variables) => {
+        // Invalidate to refetch and show the real data
+        await queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLE, `check-${variables.url}`],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "read_later"],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES],
+        });
+      },
+      onError: (error: unknown) => {
+        const errorMessage =
+          (error as { response?: { data?: { detail?: string } } })?.response
+            ?.data?.detail || "Failed to unsave article";
         config.showError?.(errorMessage);
       },
       ...options,
@@ -1825,7 +1903,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useArticle,
     useSubscribeToFeed,
     useUpdateArticle,
+    useCheckArticleSaved,
     useSaveArticle,
+    useUnsaveArticle,
 
     // Infinite query hooks
     useInfiniteArticles,
@@ -1873,7 +1953,9 @@ export const {
   useArticle,
   useSubscribeToFeed,
   useUpdateArticle,
+  useCheckArticleSaved,
   useSaveArticle,
+  useUnsaveArticle,
 
   // Infinite query hooks
   useInfiniteArticles,

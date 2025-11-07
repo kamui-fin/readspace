@@ -26,6 +26,7 @@
         "@readspace/shared": "workspace:*",
         "@supabase/supabase-js": "^2.39.3",
         "@tailwindcss/vite": "^4.1.8",
+        "@tanstack/react-query-persist-client": "^5.90.9",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "defuddle": "^0.6.4",
@@ -1422,7 +1423,11 @@
 
     "@tanstack/query-core": ["@tanstack/query-core@5.90.7", "", {}, "sha512-6PN65csiuTNfBMXqQUxQhCNdtm1rV+9kC9YwWAIKcaxAauq3Wu7p18j3gQY3YIBJU70jT/wzCCZ2uqto/vQgiQ=="],
 
+    "@tanstack/query-persist-client-core": ["@tanstack/query-persist-client-core@5.91.6", "", { "dependencies": { "@tanstack/query-core": "5.90.7" } }, "sha512-VDnWKhXn4YD8fosh35oSEkwqvsO9vveOyswp4bL/L8SZuQukPFRjyNIq4xGHO/olQneudLt57MdA4mYLAp5P5g=="],
+
     "@tanstack/react-query": ["@tanstack/react-query@5.90.7", "", { "dependencies": { "@tanstack/query-core": "5.90.7" }, "peerDependencies": { "react": "^18 || ^19" } }, "sha512-wAHc/cgKzW7LZNFloThyHnV/AX9gTg3w5yAv0gvQHPZoCnepwqCMtzbuPbb2UvfvO32XZ46e8bPOYbfZhzVnnQ=="],
+
+    "@tanstack/react-query-persist-client": ["@tanstack/react-query-persist-client@5.90.9", "", { "dependencies": { "@tanstack/query-persist-client-core": "5.91.6" }, "peerDependencies": { "@tanstack/react-query": "^5.90.7", "react": "^18 || ^19" } }, "sha512-rNisr2kq/WUvO8vBhNkfeK/QmLJ8w4cP1vVPB04ENFMW863Y9kDUuI21ryRheZBefFzicuBzOIQq9XdhzBRfGw=="],
 
     "@tanstack/react-virtual": ["@tanstack/react-virtual@3.13.12", "", { "dependencies": { "@tanstack/virtual-core": "3.13.12" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-Gd13QdxPSukP8ZrkbgS2RwoZseTTbQPLnQEn7HY/rqtM+8Zt95f7xKC7N0EsKs7aoz0WzZ+fditZux+F8EzYxA=="],
 

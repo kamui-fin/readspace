@@ -254,6 +254,30 @@ export interface SimilarFeedsResponse {
   similar_feeds: FeedDiscoveryResult[];
 }
 
+// Article save/check response types
+export interface SaveArticleResponse {
+  success: boolean;
+  article_id: string;
+}
+
+export type CheckArticleSavedResponse =
+  | {
+      is_saved: true;
+      article_id: string;
+      // Include metadata fields needed by extension (without heavy content)
+      id: string;
+      title: string | null;
+      note: string | null;
+      priority: string | null;
+      is_read: boolean;
+      is_read_later: boolean;
+      read_at: string | null;
+    }
+  | {
+      is_saved: false;
+      article_id: null;
+    };
+
 // Helper function to convert FeedDiscoveryResult to Feed
 export function feedDiscoveryResultToFeed(
   discoveryResult: FeedDiscoveryResult,

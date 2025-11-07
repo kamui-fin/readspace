@@ -105,43 +105,18 @@ function isSupportedUrl(url: string): boolean {
 async function updateFeedBadge(tabId: number, feedCount: number) {
   try {
     if (feedCount > 0) {
-      // Try MV3 action API first (Chrome)
-      try {
-        await browser.action.setBadgeText({
-          text: feedCount.toString(),
-          tabId,
-        })
-        await browser.action.setBadgeBackgroundColor({
-          color: '#FF6B35', // Orange color for RSS
-          tabId,
-        })
-      } catch {
-        // Fallback to MV2 browserAction API (Firefox)
-        await browser.browserAction.setBadgeText({
-          text: feedCount.toString(),
-          tabId,
-        })
-        await browser.browserAction.setBadgeBackgroundColor({
-          color: '#FF6B35', // Orange color for RSS
-          tabId,
-        })
-        // Firefox supports text color
-        try {
-          await browser.browserAction.setBadgeTextColor({
-            color: '#FFFFFF',
-            tabId,
-          })
-        } catch {
-          // Some versions might not support this
-        }
-      }
+      // Use MV3 action API (both Chrome and Firefox MV3)
+      await browser.action.setBadgeText({
+        text: feedCount.toString(),
+        tabId,
+      })
+      await browser.action.setBadgeBackgroundColor({
+        color: '#FF6B35', // Orange color for RSS
+        tabId,
+      })
     } else {
       // Clear badge
-      try {
-        await browser.action.setBadgeText({ text: '', tabId })
-      } catch {
-        await browser.browserAction.setBadgeText({ text: '', tabId })
-      }
+      await browser.action.setBadgeText({ text: '', tabId })
     }
   } catch (error) {
     console.error('Failed to update badge:', error)

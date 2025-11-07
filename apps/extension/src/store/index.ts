@@ -6,13 +6,11 @@ import {
 import { browser } from '@/lib/browser'
 import { resetSupabaseClient } from '@/lib/supabase'
 import {
-  Article,
   DiscoveredFeed,
   ExtensionSettings,
   Feed,
   Folder,
   PageMetadata,
-  SaveOptions,
   User,
 } from '@readspace/shared'
 import toast from 'react-hot-toast'
@@ -35,16 +33,12 @@ interface ExtensionState {
   // Data
   folders: Folder[]
   feeds: Feed[]
-  savedArticleUrls: Set<string>
-  savedArticles: Map<string, Article> // Map URL to full article object (includes ID, priority, note, etc.)
-  pendingSaveUrls: Set<string> // Track articles currently being saved
   pendingFollowUrls: Set<string> // Track feeds currently being followed
   followAbortControllers: Map<string, AbortController> // Track abort controllers for feed subscriptions
 
   // Loading states
   isLoading: boolean
   isConnecting: boolean
-  isSaving: boolean
 
   // Current page data
   currentPageMetadata: PageMetadata | null
@@ -52,12 +46,10 @@ interface ExtensionState {
   // Actions
   setLoading: (loading: boolean) => void
   setConnecting: (connecting: boolean) => void
-  setSaving: (saving: boolean) => void
   setCurrentPageMetadata: (metadata: PageMetadata | null) => void
 
   // API calls
   loadUserData: () => Promise<void>
-  saveArticle: (url: string, options?: Partial<SaveOptions>) => Promise<Article>
   subscribeToFeed: (
     feedUrl: string,
     options?: { folder_id?: string }
@@ -67,12 +59,6 @@ interface ExtensionState {
     options?: { folder_id?: string }
   ) => Promise<void>
   unsubscribeFromFeed: (feedId: string) => Promise<void>
-  checkArticleSaved: (url: string) => Promise<Article | null>
-  getCachedArticle: (url: string) => Article | null
-  isArticleSaved: (url: string) => boolean
-  isArticlePendingSave: (url: string) => boolean
-  unsaveArticle: (url: string) => Promise<void>
-  cancelSave: (url: string) => void
   isFeedPendingFollow: (url: string) => boolean
   cancelFollow: (url: string) => void
 }
@@ -128,14 +114,10 @@ export const useExtensionStore = create<ExtensionState>()(
       isAuthenticated: false,
       folders: [],
       feeds: [],
-      savedArticleUrls: new Set<string>(),
-      savedArticles: new Map<string, Article>(),
-      pendingSaveUrls: new Set<string>(),
       pendingFollowUrls: new Set<string>(),
       followAbortControllers: new Map<string, AbortController>(),
       isLoading: false,
       isConnecting: false,
-      isSaving: false,
       currentPageMetadata: null,
 
       // Settings
@@ -262,7 +244,6 @@ export const useExtensionStore = create<ExtensionState>()(
       // Loading states
       setLoading: (loading) => set({ isLoading: loading }),
       setConnecting: (connecting) => set({ isConnecting: connecting }),
-      setSaving: (saving) => set({ isSaving: saving }),
       setCurrentPageMetadata: (metadata) =>
         set({ currentPageMetadata: metadata }),
 
@@ -284,215 +265,6 @@ export const useExtensionStore = create<ExtensionState>()(
           toast.error('Failed to load user data. Please try again.')
         } finally {
           set({ isLoading: false })
-        }
-      },
-
-      saveArticle: async (url: string, options = {}) => {
-        const {
-          isAuthenticated,
-          currentPageMetadata,
-          savedArticleUrls,
-          pendingSaveUrls,
-        } = get()
-        if (!isAuthenticated) throw new Error('Not authenticated')
-
-        // Mark as pending save
-        const newPendingSaveUrls = new Set(pendingSaveUrls)
-        newPendingSaveUrls.add(url)
-
-        // Immediately mark as saved optimistically
-        const newSavedUrls = new Set(savedArticleUrls)
-        newSavedUrls.add(url)
-        set({
-          savedArticleUrls: newSavedUrls,
-          pendingSaveUrls: newPendingSaveUrls,
-          isSaving: true,
-        })
-
-        try {
-          // First, try to get cached content from persistent cache
-          let extractedContent = null
-
-          try {
-            const cachedContent = await chrome.runtime.sendMessage({
-              action: 'getCachedContentByUrl',
-              url,
-            })
-
-            if (cachedContent) {
-              extractedContent = cachedContent
-            }
-          } catch {
-            // No cached content available, will extract fresh
-          }
-
-          // If no cached content, extract from the current page
-          if (!extractedContent) {
-            try {
-              // Get current tab to extract content
-              const tabs = await chrome.tabs.query({
-                active: true,
-                currentWindow: true,
-              })
-              if (tabs[0]?.id) {
-                extractedContent = await chrome.tabs.sendMessage(tabs[0].id, {
-                  action: 'extractContent',
-                  url,
-                })
-              }
-            } catch (error) {
-              console.error('Failed to extract content from page:', error)
-            }
-          }
-
-          // Build metadata object with only defined string values
-          const metadata: Record<string, string> = {}
-          const description =
-            extractedContent?.description || currentPageMetadata?.description
-          const author = extractedContent?.author || currentPageMetadata?.author
-          const published_at =
-            extractedContent?.published_at || currentPageMetadata?.published_at
-          const image_url =
-            extractedContent?.image_url || currentPageMetadata?.image_url
-          const favicon = currentPageMetadata?.favicon
-
-          if (description) metadata.description = description
-          if (author) metadata.author = author
-          if (published_at) metadata.published_at = published_at
-          if (image_url) metadata.image_url = image_url
-          if (favicon) metadata.favicon = favicon
-
-          const saveRequest = {
-            url,
-            title:
-              options.title ||
-              extractedContent?.title ||
-              currentPageMetadata?.title,
-            content: extractedContent?.content, // Include the extracted HTML content
-            metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-            priority: options.priority,
-            note: options.note,
-          }
-
-          const article = (await ApiClient.rss.saveArticle(
-            saveRequest
-          )) as Article
-
-          // Store the full article object for instant cache access and remove from pending
-          const newSavedArticles = new Map(get().savedArticles)
-          newSavedArticles.set(url, article)
-          const newPendingSaveUrls = new Set(get().pendingSaveUrls)
-          newPendingSaveUrls.delete(url)
-          set({
-            savedArticles: newSavedArticles,
-            pendingSaveUrls: newPendingSaveUrls,
-          })
-
-          return article
-        } catch (error) {
-          // Remove from both savedArticleUrls and pendingSaveUrls if save failed
-          const rollbackUrls = new Set(get().savedArticleUrls)
-          rollbackUrls.delete(url)
-          const newPendingSaveUrls = new Set(get().pendingSaveUrls)
-          newPendingSaveUrls.delete(url)
-          set({
-            savedArticleUrls: rollbackUrls,
-            pendingSaveUrls: newPendingSaveUrls,
-          })
-          throw error
-        } finally {
-          set({ isSaving: false })
-        }
-      },
-
-      checkArticleSaved: async (url: string) => {
-        const { isAuthenticated } = get()
-        if (!isAuthenticated) return null
-
-        try {
-          const article = (await ApiClient.rss.checkArticleSaved(
-            url
-          )) as Article | null
-
-          // Update local state with full article object if saved
-          if (article) {
-            const newSavedUrls = new Set(get().savedArticleUrls)
-            newSavedUrls.add(url)
-            const newSavedArticles = new Map(get().savedArticles)
-            newSavedArticles.set(url, article)
-            set({
-              savedArticleUrls: newSavedUrls,
-              savedArticles: newSavedArticles,
-            })
-          }
-
-          return article
-        } catch (error) {
-          console.error('Failed to check if article is saved:', error)
-          return null
-        }
-      },
-
-      getCachedArticle: (url: string) => {
-        return get().savedArticles.get(url) || null
-      },
-
-      isArticleSaved: (url: string) => {
-        return get().savedArticleUrls.has(url)
-      },
-
-      isArticlePendingSave: (url: string) => {
-        return get().pendingSaveUrls.has(url)
-      },
-
-      cancelSave: (url: string) => {
-        // Cancel the pending save by removing from both sets
-        const newSavedUrls = new Set(get().savedArticleUrls)
-        newSavedUrls.delete(url)
-        const newPendingSaveUrls = new Set(get().pendingSaveUrls)
-        newPendingSaveUrls.delete(url)
-        set({
-          savedArticleUrls: newSavedUrls,
-          pendingSaveUrls: newPendingSaveUrls,
-        })
-      },
-
-      unsaveArticle: async (url: string) => {
-        const { isAuthenticated, savedArticles, savedArticleUrls } = get()
-        if (!isAuthenticated) throw new Error('Not authenticated')
-
-        const article = savedArticles.get(url)
-        if (!article) {
-          console.warn(
-            'Cannot unsave article: no article found for URL',
-            url
-          )
-          return
-        }
-
-        // Optimistically remove from saved state
-        const newSavedUrls = new Set(savedArticleUrls)
-        newSavedUrls.delete(url)
-        const newSavedArticles = new Map(savedArticles)
-        newSavedArticles.delete(url)
-        set({ savedArticleUrls: newSavedUrls, savedArticles: newSavedArticles })
-
-        try {
-          // Mark article as not read later to remove from read-later list
-          await ApiClient.rss.updateArticle(
-            article.id,
-            { is_read_later: false },
-            'clipped'
-          )
-        } catch (error) {
-          // Rollback on error
-          console.error('Failed to unsave article:', error)
-          const rollbackUrls = new Set(get().savedArticleUrls)
-          rollbackUrls.add(url)
-          const rollbackArticles = new Map(get().savedArticles)
-          rollbackArticles.set(url, article)
-          set({ savedArticleUrls: rollbackUrls, savedArticles: rollbackArticles })
-          throw error
         }
       },
 
@@ -647,24 +419,8 @@ export const useExtensionStore = create<ExtensionState>()(
         isAuthenticated: state.isAuthenticated,
         folders: state.folders,
         feeds: state.feeds,
-        savedArticleUrls: Array.from(state.savedArticleUrls), // Convert Set to Array for storage
-        savedArticles: Array.from(state.savedArticles.entries()), // Convert Map to Array of entries
       }),
       onRehydrateStorage: () => (state) => {
-        // Convert savedArticleUrls array back to Set after rehydration
-        if (state && Array.isArray(state.savedArticleUrls)) {
-          state.savedArticleUrls = new Set(state.savedArticleUrls) as any
-        } else if (state) {
-          state.savedArticleUrls = new Set<string>() as any
-        }
-
-        // Convert savedArticles array back to Map after rehydration
-        if (state && Array.isArray(state.savedArticles)) {
-          state.savedArticles = new Map(state.savedArticles) as any
-        } else if (state) {
-          state.savedArticles = new Map<string, Article>() as any
-        }
-
         // Configure ApiClient after store is rehydrated
         configureExtensionApiClient()
 

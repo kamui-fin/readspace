@@ -1,5 +1,7 @@
 import { browser } from '@/lib/browser'
-import type { PageMetadata, SaveOptions } from '@readspace/shared'
+import type { PageMetadata} from '@readspace/shared'
+import { QueryClient } from '@tanstack/react-query'
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
   AlertTriangle,
   ExternalLink,
@@ -7,7 +9,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import toast, { Toaster } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast'
 import { ArticlePreview } from './components/ArticlePreview'
 import { FeedDiscoveryCard } from './components/FeedDiscoveryCard'
 import { LoginForm } from './components/LoginForm'
@@ -15,7 +17,25 @@ import { Settings } from './components/Settings'
 import ThemeSwitcher from './components/ThemeSwitcher'
 import { Button } from './components/ui/button'
 import './index.css'
+import { createChromeStoragePersister } from './lib/query-persister'
 import { useExtensionStore } from './store'
+
+// Create a client with persistence-friendly settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 60 * 24, // 24 hours - must be >= maxAge for persistence
+      retry: 1,
+    },
+  },
+})
+
+// Create the Chrome storage persister
+const persister = createChromeStoragePersister('readspace-query-cache', {
+  throttleTime: 2000, // Throttle writes to every 2 seconds
+  debug: false, // Set to true for debugging
+})
 
 function ThemedToaster() {
   const [mounted, setMounted] = useState(false)
@@ -73,13 +93,12 @@ function ThemedToaster() {
   )
 }
 
-export function Popup() {
+function PopupContent() {
   const {
     isAuthenticated,
     settings,
     currentPageMetadata,
     setCurrentPageMetadata,
-    saveArticle,
     checkExistingSession,
     loadUserData,
   } = useExtensionStore()
@@ -250,26 +269,6 @@ export function Popup() {
     })
   }, [checkExistingSession, extractPageMetadata, isAuthenticated, loadUserData])
 
-  const handleSaveArticle = async (options?: Partial<SaveOptions>) => {
-    if (!currentTab?.url) return
-
-    try {
-      // Show instant success feedback
-      toast.success('Article saved!')
-
-      // Actually await the save so the article is cached before we return
-      const savedArticle = await saveArticle(currentTab.url, options)
-      return savedArticle
-    } catch (error) {
-      console.error('Failed to save article:', error)
-      // Show error if the save fails
-      toast.error(
-        `Failed to save article: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
-      throw error // Re-throw so ArticlePreview knows it failed
-    }
-  }
-
   const openReadspace = () => {
     // Use the app URL, not the API URL
     const appUrl =
@@ -417,7 +416,6 @@ export function Popup() {
           <ArticlePreview
             metadata={currentPageMetadata || undefined}
             isMetadataLoading={isMetadataLoading}
-            onSave={handleSaveArticle}
             readingTime={readingTime}
             currentUrl={currentTab?.url}
           />
@@ -427,14 +425,26 @@ export function Popup() {
   )
 }
 
+// Wrapper component to use PersistQueryClientProvider
+export function Popup() {
+  return <PopupContent />
+}
+
 // Initialize the popup
 const container = document.getElementById('root')
 if (container) {
   const root = createRoot(container)
   root.render(
-    <>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={{
+        persister,
+        maxAge: 1000 * 60 * 60 * 24, // 24 hours
+        buster: '', // Can be used for cache invalidation on extension updates
+      }}
+    >
       <Popup />
       <ThemedToaster />
-    </>
+    </PersistQueryClientProvider>
   )
 }

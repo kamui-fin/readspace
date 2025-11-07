@@ -1,5 +1,13 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { ApiClient } from '@/lib/api-client'
 import { useExtensionStore } from '@/store'
@@ -40,43 +48,34 @@ function DeleteConfirmationDialog({
   onCancel,
 }: DeleteConfirmationDialogProps) {
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4">
-      <div className="bg-background rounded-lg shadow-xl max-w-sm w-full border border-border">
-        {/* Header */}
-        <div className="p-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">
-            Delete Folder
-          </h3>
-        </div>
-
-        {/* Content */}
-        <div className="p-4 space-y-3">
-          <p className="text-sm text-muted-foreground">
+    <Dialog open={true} onOpenChange={(open) => !open && onCancel()}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Delete Folder</DialogTitle>
+          <DialogDescription>
             Are you sure you want to delete{' '}
             <span className="font-semibold text-foreground">
               "{folderName}"
             </span>
             ?
+          </DialogDescription>
+        </DialogHeader>
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+          <p className="text-sm text-destructive font-medium">
+            ⚠️ This will permanently delete all feeds in this folder
           </p>
-          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-            <p className="text-sm text-destructive font-medium">
-              ⚠️ This will permanently delete all feeds in this folder
-            </p>
-          </div>
         </div>
-
-        {/* Actions */}
-        <div className="p-4 border-t border-border flex gap-2">
-          <Button variant="outline" onClick={onCancel} className="flex-1">
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
             Cancel
           </Button>
-          <Button variant="destructive" onClick={onConfirm} className="flex-1">
+          <Button variant="destructive" onClick={onConfirm}>
             <Trash2 className="w-3.5 h-3.5 mr-2" />
             Delete
           </Button>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -278,8 +277,6 @@ export function FeedSubscriptionModal({
       })
   }
 
-  if (!isOpen) return null
-
   return (
     <>
       {/* Delete Confirmation Dialog */}
@@ -291,23 +288,14 @@ export function FeedSubscriptionModal({
         />
       )}
 
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-background rounded-lg shadow-lg max-w-md w-full max-h-[90vh] flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-            <h2 className="text-lg font-semibold">Subscribe to Feed</h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onClose}
-              className="h-8 w-8 p-0"
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
+      <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle>Subscribe to Feed</DialogTitle>
+          </DialogHeader>
 
           {/* Content */}
-          <div className="p-4 space-y-4 overflow-y-auto flex-1">
+          <div className="px-6 pb-6 space-y-4 overflow-y-auto flex-1">
             {/* Feed Preview */}
             <div className="bg-accent/50 dark:bg-accent border border-border rounded-lg p-3">
               <div className="flex items-center gap-2">
@@ -407,11 +395,10 @@ export function FeedSubscriptionModal({
                   {folders.map((folder) => (
                     <div
                       key={folder.id}
-                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
-                        selectedFolderId === folder.id
+                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${selectedFolderId === folder.id
                           ? 'bg-primary/10 border-primary/40 shadow-sm'
                           : 'hover:bg-accent/50 border-border hover:border-border/60'
-                      }`}
+                        }`}
                       onClick={() =>
                         !editingFolderId && setSelectedFolderId(folder.id)
                       }
@@ -460,11 +447,10 @@ export function FeedSubscriptionModal({
                       ) : (
                         <>
                           <div
-                            className={`rounded p-1 flex-shrink-0 transition-colors ${
-                              selectedFolderId === folder.id
+                            className={`rounded p-1 flex-shrink-0 transition-colors ${selectedFolderId === folder.id
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground'
-                            }`}
+                              }`}
                           >
                             <FolderIcon className="w-3.5 h-3.5" />
                           </div>
@@ -550,28 +536,26 @@ export function FeedSubscriptionModal({
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-2">
+              <DialogFooter className="pt-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={onClose}
-                  className="flex-1"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={!selectedFolderId}
-                  className="flex-1"
                 >
                   <BellPlus className="w-3 h-3 mr-2" />
                   Subscribe
                 </Button>
-              </div>
+              </DialogFooter>
             </form>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

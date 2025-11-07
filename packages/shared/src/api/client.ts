@@ -1,12 +1,14 @@
 import type {
   ActiveImportTask,
   Article,
+  CheckArticleSavedResponse,
   DiscoverSearchResponse,
   Feed,
   Folder,
   ImportTaskStatus,
   OPMLImportCancelResponse,
   OPMLImportResponse,
+  SaveArticleResponse,
   SimilarFeedsResponse,
   Subscription,
 } from "./types/rss";
@@ -580,12 +582,14 @@ export class ApiClient {
       title?: string;
       content?: string;
       metadata?: Record<string, string>;
-    }) => this.post("/api/articles/", data),
+    }) => this.post<SaveArticleResponse>("/api/articles/", data),
 
     checkArticleSaved: (url: string) => {
       const queryParams = new URLSearchParams();
       queryParams.append("url", url);
-      return this.get(`/api/articles/check-saved?${queryParams.toString()}`);
+      return this.get<CheckArticleSavedResponse>(
+        `/api/articles/check-saved?${queryParams.toString()}`
+      );
     },
 
     // Discover endpoints

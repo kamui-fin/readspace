@@ -56,14 +56,13 @@ def validate_timezone(timezone: str | None) -> str | None:
 
 @router.post(
     "/",
-    response_model=ClippedArticleResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Save web article",
     description="Save a web article from URL for read-later functionality",
     responses={
         201: {
             "description": "Article successfully saved",
-            "model": ClippedArticleResponse,
+            "content": {"application/json": {"example": {"success": True, "article_id": "uuid-string"}}},
         },
         400: {
             "description": "Bad request - invalid URL, validation error, or connection error",
@@ -92,7 +91,7 @@ async def save_web_article(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
     user_service: UserService = Depends(get_user_service),
-) -> ClippedArticleResponse:
+) -> dict[str, Any]:
     """
     Save a web article from URL for read-later functionality.
 
@@ -142,7 +141,9 @@ async def save_web_article(
             user_id=current_user.sub,
             url=str(request.url),
         )
-        return article
+        
+        # Return minimal response for extension
+        return {"success": True, "article_id": str(article.id)}
 
     except ValueError as e:
         logger.warning(
@@ -224,6 +225,7 @@ async def list_articles(
     is_read: bool | None = Query(None, description="Filter by read status"),
     is_read_later: bool | None = Query(None, description="Filter by read later status"),
     is_favorite: bool | None = Query(None, description="Filter by article favorite status"),
+    exclude_content: bool = Query(True, description="Exclude article content for lighter responses (default: true)"),
 ) -> dict:
     """
     Retrieve articles using cursor-based pagination for better performance.
@@ -284,7 +286,17 @@ async def list_articles(
     transformed_items = []
     for item in result.items:
         transformed_item = transformer.to_unified(item)
-        transformed_items.append(transformed_item.model_dump())
+        item_dict = transformed_item.model_dump()
+        
+        # Exclude heavy content fields if requested (default behavior)
+        if exclude_content:
+            item_dict.pop('content', None)
+            item_dict.pop('extracted_content', None)
+            # Keep description_preview but remove full description if it's large
+            if item_dict.get('description') and len(item_dict['description']) > 500:
+                item_dict['description'] = item_dict['description'][:500] + '...'
+        
+        transformed_items.append(item_dict)
 
     return {
         "items": transformed_items,
@@ -710,14 +722,17 @@ async def get_unread_article_counts(
 
 @router.get(
     "/check-saved",
-    response_model=ClippedArticleResponse | None,
     status_code=status.HTTP_200_OK,
     summary="Check if article is saved by URL",
-    description="Check if an article URL has been saved and retrieve its metadata",
+    description="Check if an article URL has been saved",
     responses={
         200: {
-            "description": "Article check result (null if not saved, article data if saved)",
-            "model": ClippedArticleResponse,
+            "description": "Article check result",
+            "content": {
+                "application/json": {
+                    "example": {"is_saved": True, "article_id": "uuid-string"}
+                }
+            },
         },
         422: {
             "description": "Validation error in query parameters",
@@ -735,13 +750,12 @@ async def check_article_saved(
     url: str = Query(..., description="URL of the article to check"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> ClippedArticleResponse | None:
+) -> dict[str, Any]:
     """
-    Check if an article URL has been saved and retrieve its metadata.
+    Check if an article URL has been saved.
 
     This endpoint allows the extension to check if a user has already saved
-    an article by its URL, and retrieve existing metadata like priority, note,
-    read status, and read timestamp.
+    an article by its URL.
 
     Args:
         url: The URL of the article to check
@@ -749,7 +763,7 @@ async def check_article_saved(
         current_user: Authenticated user token data
 
     Returns:
-        ClippedArticleResponse | None: The saved article with metadata if it exists, None otherwise
+        dict: {"is_saved": bool, "article_id": str | None}
 
     Raises:
         HTTPException:
@@ -758,14 +772,28 @@ async def check_article_saved(
     Note:
         - Queries both clipped_articles and article_contents tables
         - Joins on content_id to find article by URL
-        - Returns full article metadata including priority, note, read status, and timestamps
-        - Returns None if the article has never been saved by this user
+        - Returns minimal response for extension efficiency
     """
     web_service = WebArticleService(db=db, user_id=UUID(current_user.sub))
 
     try:
         article = await web_service.get_article_by_url(url)
-        return article
+        
+        if article:
+            # Return minimal metadata without heavy content
+            return {
+                "is_saved": True,
+                "article_id": str(article.id),
+                "id": str(article.id),
+                "title": article.content.title if article.content else None,
+                "note": article.note,
+                "priority": article.priority.value if article.priority else None,
+                "is_read": article.is_read,
+                "is_read_later": article.is_read_later,
+                "read_at": article.read_at.isoformat() if article.read_at else None,
+            }
+        else:
+            return {"is_saved": False, "article_id": None}
     except Exception as e:
         logger.error(
             "Error checking if article is saved",
@@ -773,7 +801,7 @@ async def check_article_saved(
             user_id=current_user.sub,
             url=url,
         )
-        return None
+        return {"is_saved": False, "article_id": None}
 
 
 @router.get(
