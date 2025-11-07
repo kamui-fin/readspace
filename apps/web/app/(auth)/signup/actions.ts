@@ -38,9 +38,6 @@ export async function signUp(
                 data: {
                     display_name: validatedData.username,
                 },
-                ...(isCloudProd && {
-                    emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/onboarding`,
-                }),
             },
         })
 

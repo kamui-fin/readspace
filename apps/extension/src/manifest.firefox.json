@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Readspace",
-  "version": "1.1.1",
-  "description": "Save articles to Readspace, your calm inbox for reading news articles, blogs, newsletters, and more.",
+  "version": "1.1.2",
+  "description": "Save articles and follow sites instantly — bring everything you read into your calm, distraction-free Readspace inbox.",
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",

@@ -1,7 +1,7 @@
 {
   "name": "@readspace/extension",
   "version": "1.1.1",
-  "description": "A powerful browser companion for Readspace to save articles and subscribe to feeds for later reading",
+  "description": "Save articles and follow sites instantly — bring everything you read into your calm, distraction-free Readspace inbox.",
   "type": "module",
   "scripts": {
     "dev": "vite",
