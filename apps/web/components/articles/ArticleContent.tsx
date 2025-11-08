@@ -158,11 +158,6 @@ export function ArticleContent({
               })
         : "Date unknown"
 
-    // Extract priority for clipped articles
-    const priority =
-        article.article_type === "clipped" && article.priority
-            ? article.priority
-            : null
 
     /**
      * Handles extraction of full text content from article URL
@@ -351,87 +346,6 @@ export function ArticleContent({
         onMarkAsRead,
         updateArticle,
         queryClient,
-    ])
-
-    // Handle scroll completion for read later mode
-    useEffect(() => {
-        if (!isReadLaterMode || !contentRef.current || hasMarkedRead) return
-        const el = contentRef.current
-        const handleScroll = () => {
-            if (el.scrollHeight - el.scrollTop - el.clientHeight <= 1) {
-                if (!hasMarkedRead) {
-                    // Set optimistic UI update first
-                    setHasMarkedRead(true)
-
-                    // Show toast asking about removal from read later
-                    toast(
-                        (t) => (
-                            <div className="flex flex-col gap-2">
-                                <span>
-                                    Article finished! What would you like to do?
-                                </span>
-                                <div className="flex gap-2">
-                                    <Button
-                                        size="sm"
-                                        onClick={() => {
-                                            updateArticle.mutate({
-                                                articleId: article.id,
-                                                data: {
-                                                    is_read: true,
-                                                    is_read_later: false,
-                                                },
-                                                articleType:
-                                                    article.article_type,
-                                            })
-                                            toast.dismiss(t.id)
-                                            onArticleRemoved?.()
-                                        }}
-                                    >
-                                        Mark as Read
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => {
-                                            toast.success(
-                                                "Article removed from Read Later"
-                                            )
-                                            updateArticle.mutate({
-                                                articleId: article.id,
-                                                data: { is_read_later: false },
-                                                articleType:
-                                                    article.article_type,
-                                            })
-                                            toast.dismiss(t.id)
-                                            onArticleRemoved?.()
-                                        }}
-                                    >
-                                        Remove from Read Later
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        onClick={() => toast.dismiss(t.id)}
-                                    >
-                                        Keep
-                                    </Button>
-                                </div>
-                            </div>
-                        ),
-                        { duration: 0 }
-                    )
-                }
-            }
-        }
-        el.addEventListener("scroll", handleScroll)
-        return () => el.removeEventListener("scroll", handleScroll)
-    }, [
-        article.id,
-        article.article_type,
-        hasMarkedRead,
-        updateArticle,
-        isReadLaterMode,
-        onArticleRemoved,
     ])
 
     return (

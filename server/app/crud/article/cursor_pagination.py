@@ -167,22 +167,18 @@ async def get_articles_cursor_paginated(
 
                 # Filter for articles published before cursor timestamp,
                 # or same timestamp but with article ID greater than cursor
-                # Use COALESCE to handle NULL published_at (fall back to created_at)
-                sort_timestamp = sql_func.coalesce(ArticleContent.published_at, ArticleContent.created_at)
                 query = query.where(
                     or_(
-                        sort_timestamp < cursor_timestamp,
-                        and_(sort_timestamp == cursor_timestamp, FeedArticle.id > cursor_article_id),
+                        ArticleContent.published_at < cursor_timestamp,
+                        and_(ArticleContent.published_at == cursor_timestamp, FeedArticle.id > cursor_article_id),
                     )
                 )
         except (ValueError, IndexError):
             # Invalid cursor format, ignore and start from beginning
             pass
 
-    # Order by published_at descending (newest first), with nulls last, then by FeedArticle.id ascending for consistent cursor pagination
-    # Use COALESCE to fall back to created_at when published_at is NULL
-    sort_timestamp = sql_func.coalesce(ArticleContent.published_at, ArticleContent.created_at)
-    query = query.order_by(sort_timestamp.desc(), FeedArticle.id.asc())
+    # Order by published_at descending (newest first), then by FeedArticle.id ascending for consistent cursor pagination
+    query = query.order_by(ArticleContent.published_at.desc(), FeedArticle.id.asc())
 
     # Fetch one more than limit to check if there are more pages
     query = query.limit(params.limit + 1)
@@ -204,8 +200,7 @@ async def get_articles_cursor_paginated(
     if article_tuples and has_more:
         last_article = article_tuples[-1][0]
         # Format: "timestamp_articleid"
-        # Use published_at if available, otherwise fall back to created_at
-        cursor_timestamp = last_article.content.published_at or last_article.content.created_at
+        cursor_timestamp = last_article.content.published_at
         timestamp_str = cursor_timestamp.isoformat().replace("+00:00", "Z")
         next_cursor = f"{timestamp_str}_{last_article.id}"
 

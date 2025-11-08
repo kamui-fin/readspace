@@ -421,9 +421,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       queryFn: () =>
         ApiClient.rss.getFeeds({
           folder_id: params?.folderId,
-          tag_names: params?.tagNames,
-          is_favorite: params?.isFavorite,
-          search_query: params?.searchQuery,
         }) as Promise<Feed[]>,
       ...options,
     });

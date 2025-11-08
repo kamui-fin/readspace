@@ -342,19 +342,10 @@ export class ApiClient {
     // Feeds
     getFeeds: (params?: {
       folder_id?: string;
-      tag_names?: string[];
-      is_favorite?: boolean;
-      search_query?: string;
     }) => {
       const queryParams = new URLSearchParams();
       if (params?.folder_id) queryParams.append("folder_id", params.folder_id);
-      if (params?.tag_names)
-        params.tag_names.forEach((tag) => queryParams.append("tag_names", tag));
-      if (params?.is_favorite !== undefined)
-        queryParams.append("is_favorite", params.is_favorite.toString());
-      if (params?.search_query)
-        queryParams.append("search_query", params.search_query);
-      // Always include unread counts - we always need them for the UI
+
       queryParams.append("include_unread_counts", "true");
 
       const queryString = queryParams.toString();

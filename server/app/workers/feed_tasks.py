@@ -382,7 +382,6 @@ async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str
     - Anything published within ARTICLE_RETENTION_DAYS
     - Anything the user has saved (is_read_later=true OR is_favorite=true)
 
-    Uses COALESCE(published_at, created_at) to handle articles with NULL published dates.
     Cascade deletion to article_contents is handled automatically by database triggers.
 
     Args:
@@ -411,10 +410,10 @@ async def async_compact_old_articles(db: AsyncSession | None = None) -> dict[str
                 SELECT
                     fa.id AS article_id,
                     fa.feed_id,
-                    COALESCE(ac.published_at, fa.created_at) AS published_or_created,
+                    ac.published_at AS published_or_created,
                     ROW_NUMBER() OVER (
                         PARTITION BY fa.feed_id
-                        ORDER BY COALESCE(ac.published_at, fa.created_at) DESC
+                        ORDER BY ac.published_at DESC
                     ) AS rn
                 FROM feed_articles fa
                 JOIN article_contents ac ON fa.content_id = ac.id
