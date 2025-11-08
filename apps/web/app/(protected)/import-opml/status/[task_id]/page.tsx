@@ -106,7 +106,7 @@ export default function ImportStatusPage() {
     useEffect(() => {
         if (!taskId) return
 
-        let pollInterval: number | null = null
+        let pollInterval: ReturnType<typeof setInterval> | null = null
 
         const pollStatus = async () => {
             try {
@@ -327,7 +327,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                                100
+                                            100
                                         )}
                                         %
                                     </span>

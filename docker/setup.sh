@@ -13,7 +13,9 @@
 # Usage:
 # 1. Navigate to the docker/ directory
 # 2. Make it executable: chmod +x setup.sh
-# 3. Run it: ./setup.sh
+# 3. Run it:
+#    - For production with custom domain: ./setup.sh
+#    - For local development: ./setup.sh --dev
 #
 # It will create the following files:
 # - docker/supabase/.env (Supabase secrets and config)
@@ -28,98 +30,111 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # --- Access Configuration ---
-echo ""
-echo "🌐 Access Configuration"
-echo "Choose how you'll access Readspace:"
-echo ""
-echo "1) IP address with ports (e.g., http://192.168.1.100:18042)"
-echo "   └─ For local development or private network access"
-echo ""
-echo "2) Custom domain with reverse proxy (e.g., https://app.example.com)"
-echo "   └─ For production deployment with your own reverse proxy"
-echo ""
-echo "3) Development mode (localhost with dev tools)"
-echo "   └─ For local development with Supabase Studio and analytics"
-echo ""
-read -p "Select option [1/2/3] (default: 1): " ACCESS_TYPE
-ACCESS_TYPE=${ACCESS_TYPE:-1}
-
-if [ "$ACCESS_TYPE" = "2" ]; then
-    echo ""
-    echo "📋 Domain Configuration"
-    echo "Enter the full URLs for each service (including http:// or https://)"
-    echo ""
-    read -p "Web app URL (e.g., https://app.example.com): " WEB_URL
-    read -p "API URL (e.g., https://api.example.com): " API_URL
-    read -p "Supabase URL (e.g., https://supabase.example.com): " SUPABASE_PUBLIC_URL
-
-    echo ""
-    echo "✅ Domain configuration:"
-    echo "   Web:      ${WEB_URL}"
-    echo "   API:      ${API_URL}"
-    echo "   Supabase: ${SUPABASE_PUBLIC_URL}"
-elif [ "$ACCESS_TYPE" = "3" ]; then
-    echo ""
-    echo "📋 Development Mode Configuration"
+# Check if --dev flag is provided
+if [ "$1" = "--dev" ]; then
+    ACCESS_TYPE="dev"
     API_HOST="localhost"
     
     WEB_URL="http://localhost:18042"
     API_URL="http://localhost:18008"
     SUPABASE_PUBLIC_URL="http://localhost:18000"
     
-    echo "✅ Using development mode with localhost"
+    echo ""
+    echo "🌐 Development Mode"
+    echo "✅ Auto-configured for localhost development"
 else
     echo ""
-    echo "📋 IP Address Configuration"
-    read -p "API Host (default: 0.0.0.0): " API_HOST
-    API_HOST=${API_HOST:-"0.0.0.0"}
+    echo "🌐 Production Configuration"
+    echo "Choose how you'll access Readspace:"
+    echo ""
+    echo "1) IP address with ports (e.g., http://192.168.1.100:18042)"
+    echo "   └─ For private network access"
+    echo ""
+    echo "2) Custom domain with reverse proxy (e.g., https://app.example.com)"
+    echo "   └─ For production deployment with your own reverse proxy"
+    echo ""
+    read -p "Select option [1/2] (default: 1): " ACCESS_TYPE
+    ACCESS_TYPE=${ACCESS_TYPE:-1}
 
-    WEB_URL="http://${API_HOST}:18042"
-    API_URL="http://${API_HOST}:18008"
-    SUPABASE_PUBLIC_URL="http://${API_HOST}:18000"
+    if [ "$ACCESS_TYPE" = "2" ]; then
+        echo ""
+        echo "📋 Domain Configuration"
+        echo "Enter the full URLs for each service (including http:// or https://)"
+        echo ""
+        read -p "Web app URL (e.g., https://app.example.com): " WEB_URL
+        read -p "API URL (e.g., https://api.example.com): " API_URL
+        read -p "Supabase URL (e.g., https://supabase.example.com): " SUPABASE_PUBLIC_URL
 
-    echo "✅ Using IP:PORT access"
+        echo ""
+        echo "✅ Domain configuration:"
+        echo "   Web:      ${WEB_URL}"
+        echo "   API:      ${API_URL}"
+        echo "   Supabase: ${SUPABASE_PUBLIC_URL}"
+    else
+        echo ""
+        echo "📋 IP Address Configuration"
+        echo "Enter your machine's IP address (e.g., 192.168.1.100)"
+        echo ""
+        read -p "IP Address: " API_HOST
+        
+        if [ -z "$API_HOST" ]; then
+            echo "❌ Error: IP address is required" >&2
+            exit 1
+        fi
+
+        WEB_URL="http://${API_HOST}:18042"
+        API_URL="http://${API_HOST}:18008"
+        SUPABASE_PUBLIC_URL="http://${API_HOST}:18000"
+
+        echo "✅ Using IP:PORT access"
+    fi
 fi
 
 # --- RSSHub Configuration ---
-echo ""
-echo "📡 RSSHub Configuration"
-echo "RSSHub generates RSS feeds for websites that don't natively provide them."
-echo "You can use a local instance (included with setup) or an external one."
-echo ""
-read -p "Use local RSSHub instance? [Y/n]: " USE_LOCAL_RSSHUB_INPUT
-USE_LOCAL_RSSHUB_INPUT=${USE_LOCAL_RSSHUB_INPUT:-"Y"}
-
-if [[ "$USE_LOCAL_RSSHUB_INPUT" =~ ^[Yy]$ ]]; then
-    # For domain mode, RSSHub is accessed via Docker network; for dev/IP mode use the configured host
-    if [ "$ACCESS_TYPE" = "2" ]; then
-        RSSHUB_URL="http://rsshub:1200"
-    else
-        RSSHUB_URL="http://${API_HOST}:1200"
-    fi
-    echo "✅ Local RSSHub instance will be used at ${RSSHUB_URL}"
+if [ "$ACCESS_TYPE" = "dev" ]; then
+    # Dev mode: always use local RSSHub
+    RSSHUB_URL="http://localhost:1200"
+    echo ""
+    echo "📡 RSSHub: Using local instance at ${RSSHUB_URL}"
 else
     echo ""
-    read -p "Enter your external RSSHub URL: " EXTERNAL_RSSHUB_URL
-    if [ -n "$EXTERNAL_RSSHUB_URL" ]; then
-        RSSHUB_URL="$EXTERNAL_RSSHUB_URL"
-        echo "✅ External RSSHub configured: ${RSSHUB_URL}"
-    else
+    echo "📡 RSSHub Configuration"
+    echo "RSSHub generates RSS feeds for websites that don't natively provide them."
+    echo "You can use a local instance (included with setup) or an external one."
+    echo ""
+    read -p "Use local RSSHub instance? [Y/n]: " USE_LOCAL_RSSHUB_INPUT
+    USE_LOCAL_RSSHUB_INPUT=${USE_LOCAL_RSSHUB_INPUT:-"Y"}
+
+    if [[ "$USE_LOCAL_RSSHUB_INPUT" =~ ^[Yy]$ ]]; then
+        # For domain mode, RSSHub is accessed via Docker network; for IP mode use the configured host
         if [ "$ACCESS_TYPE" = "2" ]; then
             RSSHUB_URL="http://rsshub:1200"
         else
             RSSHUB_URL="http://${API_HOST}:1200"
         fi
-        echo "⚠️  No URL provided, defaulting to local instance: ${RSSHUB_URL}"
+        echo "✅ Local RSSHub instance will be used at ${RSSHUB_URL}"
+    else
+        echo ""
+        read -p "Enter your external RSSHub URL: " EXTERNAL_RSSHUB_URL
+        if [ -n "$EXTERNAL_RSSHUB_URL" ]; then
+            RSSHUB_URL="$EXTERNAL_RSSHUB_URL"
+            echo "✅ External RSSHub configured: ${RSSHUB_URL}"
+        else
+            if [ "$ACCESS_TYPE" = "2" ]; then
+                RSSHUB_URL="http://rsshub:1200"
+            else
+                RSSHUB_URL="http://${API_HOST}:1200"
+            fi
+            echo "⚠️  No URL provided, defaulting to local instance: ${RSSHUB_URL}"
+        fi
     fi
 fi
 
 # --- AI Configuration ---
-# Skip AI configuration in dev mode
-if [ "$ACCESS_TYPE" = "3" ]; then
+if [ "$ACCESS_TYPE" = "dev" ]; then
+    # Dev mode: disable AI by default
     ENABLE_AI="false"
     GEMINI_API_KEY=""
-    echo ""
     echo "🤖 AI Support: Disabled in development mode"
 else
     echo ""
@@ -216,8 +231,12 @@ fi
 
 echo "✅ All required ports are available."
 
-# Set domain to localhost for local development
-DOMAIN="localhost"
+# Set domain based on access type
+if [ "$ACCESS_TYPE" = "2" ]; then
+    DOMAIN="localhost"
+else
+    DOMAIN="${API_HOST}"
+fi
 # Default value for auto-confirmation, can be 'true' or 'false'
 AUTO_CONFIRM_EMAIL="true"
 
@@ -334,7 +353,7 @@ echo "📝 Creating server/.env file..."
 mkdir -p "$PROJECT_ROOT/server"
 
 # In dev mode, use localhost URLs for direct access outside Docker
-if [ "$ACCESS_TYPE" = "3" ]; then
+if [ "$ACCESS_TYPE" = "dev" ]; then
 cat <<EOF > "$PROJECT_ROOT/server/.env"
 # This file was auto-generated by setup.sh (Development Mode)
 
@@ -344,11 +363,8 @@ SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 SUPABASE_DB_CONNECTION=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/postgres
 
-# AI Configuration (disabled in dev mode)
-ENABLE_AI=${ENABLE_AI}
-GEMINI_API_KEY=${GEMINI_API_KEY}
-GEMINI_MODEL=gemini-2.5-flash-lite
-GEMINI_EMBEDDING_MODEL=text-embedding-004
+# AI Configuration
+ENABLE_AI=false
 
 # RSShub Configuration
 RSSHUB_URL=${RSSHUB_URL}
@@ -386,13 +402,13 @@ echo "  • apps/web/.env"
 echo "  • server/.env"
 echo ""
 echo "📋 Summary:"
-if [ "$ACCESS_TYPE" = "2" ]; then
+if [ "$ACCESS_TYPE" = "dev" ]; then
+    echo "  • Mode:         Development"
+    echo "  • API Host:     localhost"
+elif [ "$ACCESS_TYPE" = "2" ]; then
     echo "  • Web URL:      ${WEB_URL}"
     echo "  • API URL:      ${API_URL}"
     echo "  • Supabase URL: ${SUPABASE_PUBLIC_URL}"
-elif [ "$ACCESS_TYPE" = "3" ]; then
-    echo "  • Mode:         Development"
-    echo "  • API Host:     localhost"
 else
     echo "  • API Host:     $API_HOST"
 fi
@@ -419,7 +435,7 @@ if [ "$ACCESS_TYPE" = "2" ]; then
 fi
 
 echo "Next steps:"
-if [ "$ACCESS_TYPE" = "3" ]; then
+if [ "$ACCESS_TYPE" = "dev" ]; then
     echo "1. Run docker/launch.sh --dev to start services in development mode."
 else
     echo "1. Run docker/launch.sh to start the services."
@@ -432,15 +448,15 @@ fi
 echo "3. Run docker/promote-admin.sh <email> to make your account an admin."
 echo ""
 
-if [ "$ACCESS_TYPE" = "1" ]; then
+if [ "$ACCESS_TYPE" = "dev" ]; then
+    echo "📱 Development Access URLs:"
+    echo "  • Web App:    http://localhost:18042"
+    echo "  • API Server: http://localhost:18008"
+    echo "  • Supabase:   http://localhost:18000"
+    echo "  • RSSHub:     http://localhost:1200"
+elif [ "$ACCESS_TYPE" = "1" ]; then
     echo "📱 Access URLs:"
     echo "  • Web App:    http://${API_HOST}:18042"
     echo "  • API Server: http://${API_HOST}:18008"
     echo "  • Supabase:   http://${API_HOST}:18000"
-elif [ "$ACCESS_TYPE" = "3" ]; then
-    echo "📱 Development Access URLs:"
-    echo "  • Web App:         http://localhost:18042"
-    echo "  • API Server:      http://localhost:18008"
-    echo "  • Supabase Studio: http://localhost:18000"
-    echo "  • RSSHub:          http://localhost:1200"
 fi
