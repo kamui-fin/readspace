@@ -157,7 +157,7 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } =
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isSuccess } =
         activeQuery;
 
     // Flatten paginated articles and deduplicate by ID
@@ -366,8 +366,9 @@ export default function FollowingScreen() {
     }, [allArticles]);
 
     // Show skeleton during initial load until we have items ready to render
-    // Keep skeleton visible if we're loading AND don't have any items yet
-    const isInitialLoading = (isLoading || isFetching) && listItems.length === 0;
+    // Only show skeleton if we're loading AND haven't successfully loaded data yet AND have no data
+    // This prevents the blank flash during refetch by keeping the old data visible
+    const isInitialLoading = (isLoading || isFetching) && !isSuccess && !data;
 
     const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
         scrollY.value = event.nativeEvent.contentOffset.y;
