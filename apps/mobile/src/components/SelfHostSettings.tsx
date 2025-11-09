@@ -13,10 +13,29 @@ import { toast } from 'sonner-native';
 import { z } from 'zod';
 import { validateSupabaseConnection } from '@/lib/supabase/client';
 
+// Validate JWT format (3 parts separated by dots)
+const isValidJWT = (token: string): boolean => {
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+
+    // Check that each part is base64url encoded (alphanumeric, -, _)
+    const base64urlPattern = /^[A-Za-z0-9_-]+$/;
+    return parts.every(part => part.length > 0 && base64urlPattern.test(part));
+};
+
 const selfHostSchema = z.object({
-    apiUrl: z.string().url('Invalid API URL'),
-    supabaseUrl: z.string().url('Invalid Supabase URL'),
-    supabaseAnonKey: z.string().min(1, 'Supabase Anonymous Key is required'),
+    apiUrl: z
+        .string()
+        .min(1, 'API URL is required')
+        .url('Please enter a valid URL (e.g., http://localhost:18008)'),
+    supabaseUrl: z
+        .string()
+        .min(1, 'Supabase URL is required')
+        .url('Please enter a valid URL (e.g., http://localhost:18000)'),
+    supabaseAnonKey: z
+        .string()
+        .min(1, 'Supabase Anonymous Key is required')
+        .refine(isValidJWT, 'Invalid JWT format - should have three parts separated by dots'),
 });
 
 export interface SelfHostSettingsProps {
@@ -38,8 +57,50 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
         const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
         const [errors, setErrors] = useState<Record<string, string>>({});
         const [isValidating, setIsValidating] = useState(false);
+        const [touched, setTouched] = useState<Record<string, boolean>>({});
 
         const snapPoints = useMemo(() => ['90%'], []);
+
+        // Validate individual field with Zod
+        const validateField = useCallback(
+            (field: 'apiUrl' | 'supabaseUrl' | 'supabaseAnonKey', value: string) => {
+                try {
+                    // Validate just this field
+                    selfHostSchema.shape[field].parse(value);
+                    // Clear error if valid
+                    setErrors((prev) => {
+                        const newErrors = { ...prev };
+                        delete newErrors[field];
+                        return newErrors;
+                    });
+                } catch (error) {
+                    if (error instanceof z.ZodError) {
+                        // Set the first error message for this field
+                        setErrors((prev) => ({
+                            ...prev,
+                            [field]: error.issues[0]?.message || 'Invalid value',
+                        }));
+                    }
+                }
+            },
+            []
+        );
+
+        // Handle field change - validate in real-time if field has been touched
+        const handleFieldChange = useCallback(
+            (
+                field: 'apiUrl' | 'supabaseUrl' | 'supabaseAnonKey',
+                value: string,
+                setter: (value: string) => void
+            ) => {
+                setter(value);
+                // Only validate if field has been touched (user has interacted with it)
+                if (touched[field]) {
+                    validateField(field, value);
+                }
+            },
+            [touched, validateField]
+        );
 
         // Validate form
         const isValid = useMemo(() => {
@@ -56,16 +117,34 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
         }, [apiUrl, supabaseUrl, supabaseAnonKey]);
 
         const handleSave = useCallback(async () => {
+            // Mark all fields as touched
+            setTouched({ apiUrl: true, supabaseUrl: true, supabaseAnonKey: true });
+
             setIsValidating(true);
-            setErrors({});
 
             try {
-                // Validate form schema first
-                const data = selfHostSchema.parse({
+                // Validate form schema first with detailed error messages
+                const validationResult = selfHostSchema.safeParse({
                     apiUrl,
                     supabaseUrl,
                     supabaseAnonKey,
                 });
+
+                if (!validationResult.success) {
+                    // Extract and set all field errors
+                    const newErrors: Record<string, string> = {};
+                    validationResult.error.issues.forEach((issue) => {
+                        if (issue.path[0]) {
+                            newErrors[issue.path[0] as string] = issue.message;
+                        }
+                    });
+                    setErrors(newErrors);
+                    toast.error('Please fix validation errors', { duration: 3000 });
+                    setIsValidating(false);
+                    return;
+                }
+
+                const data = validationResult.data;
 
                 // Test API endpoint
                 toast.loading('Validating API endpoint...', { id: 'validation' });
@@ -83,7 +162,9 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 } catch (error) {
                     toast.dismiss('validation');
                     const errorMsg =
-                        error instanceof Error ? error.message : 'Failed to connect to API';
+                        error instanceof Error
+                            ? error.message
+                            : 'Unable to connect to API endpoint';
                     toast.error(errorMsg, { duration: 4000 });
                     setErrors((prev) => ({ ...prev, apiUrl: errorMsg }));
                     setIsValidating(false);
@@ -99,11 +180,13 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 
                 if (!supabaseValidation.valid) {
                     toast.dismiss('validation');
-                    const supabaseError = supabaseValidation.error || 'Connection failed';
+                    const supabaseError =
+                        supabaseValidation.error || 'Unable to connect to Supabase';
                     toast.error(supabaseError, { duration: 4000 });
                     setErrors((prev) => ({
                         ...prev,
                         supabaseUrl: supabaseError,
+                        supabaseAnonKey: supabaseError,
                     }));
                     setIsValidating(false);
                     return;
@@ -118,15 +201,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                 }
             } catch (error) {
                 toast.dismiss('validation');
-                if (error instanceof z.ZodError) {
-                    const newErrors: Record<string, string> = {};
-                    error.issues.forEach((err: z.ZodIssue) => {
-                        if (err.path[0]) {
-                            newErrors[err.path[0] as string] = err.message;
-                        }
-                    });
-                    setErrors(newErrors);
-                }
+                toast.error('An unexpected error occurred', { duration: 3000 });
             } finally {
                 setIsValidating(false);
             }
@@ -144,20 +219,14 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
             []
         );
 
-        // Clear errors when values change
-        useEffect(() => {
-            if (errors.apiUrl && apiUrl) setErrors((prev) => ({ ...prev, apiUrl: '' }));
-        }, [apiUrl, errors.apiUrl]);
-
-        useEffect(() => {
-            if (errors.supabaseUrl && supabaseUrl)
-                setErrors((prev) => ({ ...prev, supabaseUrl: '' }));
-        }, [supabaseUrl, errors.supabaseUrl]);
-
-        useEffect(() => {
-            if (errors.supabaseAnonKey && supabaseAnonKey)
-                setErrors((prev) => ({ ...prev, supabaseAnonKey: '' }));
-        }, [supabaseAnonKey, errors.supabaseAnonKey]);
+        // Handle field blur - validate only if field has been touched
+        const handleFieldBlur = useCallback(
+            (field: 'apiUrl' | 'supabaseUrl' | 'supabaseAnonKey', value: string) => {
+                setTouched((prev) => ({ ...prev, [field]: true }));
+                validateField(field, value);
+            },
+            [validateField]
+        );
 
         return (
             <BottomSheetModal
@@ -183,11 +252,14 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                     <View style={{ gap: 16 }}>
                         <View>
                             <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
-                                API Url
+                                API URL
                             </Text>
                             <BottomSheetTextInput
                                 value={apiUrl}
-                                onChangeText={setApiUrl}
+                                onChangeText={(value) =>
+                                    handleFieldChange('apiUrl', value, setApiUrl)
+                                }
+                                onBlur={() => handleFieldBlur('apiUrl', apiUrl)}
                                 placeholder="http://localhost:18008"
                                 placeholderTextColor={colors.grey}
                                 keyboardType="url"
@@ -207,7 +279,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                 }}
                             />
                             {errors.apiUrl && (
-                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
+                                <Text className="mt-2 font-geist text-sm text-red dark:text-red">
                                     {errors.apiUrl}
                                 </Text>
                             )}
@@ -215,11 +287,14 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
 
                         <View>
                             <Text className="mb-2 font-geist-medium text-sm text-black dark:text-black-dark">
-                                Supabase Url
+                                Supabase URL
                             </Text>
                             <BottomSheetTextInput
                                 value={supabaseUrl}
-                                onChangeText={setSupabaseUrl}
+                                onChangeText={(value) =>
+                                    handleFieldChange('supabaseUrl', value, setSupabaseUrl)
+                                }
+                                onBlur={() => handleFieldBlur('supabaseUrl', supabaseUrl)}
                                 placeholder="http://localhost:18000"
                                 placeholderTextColor={colors.grey}
                                 keyboardType="url"
@@ -239,7 +314,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                 }}
                             />
                             {errors.supabaseUrl && (
-                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
+                                <Text className="mt-2 font-geist text-sm text-red dark:text-red">
                                     {errors.supabaseUrl}
                                 </Text>
                             )}
@@ -251,7 +326,12 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                             </Text>
                             <BottomSheetTextInput
                                 value={supabaseAnonKey}
-                                onChangeText={setSupabaseAnonKey}
+                                onChangeText={(value) =>
+                                    handleFieldChange('supabaseAnonKey', value, setSupabaseAnonKey)
+                                }
+                                onBlur={() =>
+                                    handleFieldBlur('supabaseAnonKey', supabaseAnonKey)
+                                }
                                 placeholder="Your anonymous key"
                                 placeholderTextColor={colors.grey}
                                 autoCapitalize="none"
@@ -272,7 +352,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                 }}
                             />
                             {errors.supabaseAnonKey && (
-                                <Text className="mt-1 font-geist text-xs text-red dark:text-red">
+                                <Text className="mt-2 font-geist text-sm text-red dark:text-red">
                                     {errors.supabaseAnonKey}
                                 </Text>
                             )}

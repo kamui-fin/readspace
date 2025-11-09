@@ -1,8 +1,9 @@
+import { Button } from '@/components/ui/Button';
 import { COLORS } from '@/constants/Colors';
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetView } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 export interface ConfirmationModalProps {
     title: string;
@@ -68,21 +69,16 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                     </Text>
 
                     <View className="flex-row gap-3">
-                        <Pressable
+                        <Button
+                            variant="secondary"
                             onPress={handleCancel}
-                            className="flex-1 items-center justify-center rounded-2xl bg-mid-grey py-4 transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
-                            <Text className="font-geist-semibold text-base text-grey dark:text-grey-dark">
-                                {cancelText}
-                            </Text>
-                        </Pressable>
+                            className="flex-1 rounded-2xl">
+                            {cancelText}
+                        </Button>
 
-                        <Pressable
-                            onPress={handleConfirm}
-                            className="flex-1 items-center justify-center rounded-2xl bg-primary py-4 transition-opacity active:opacity-70">
-                            <Text className="font-geist-semibold text-base text-white dark:text-white-dark">
-                                {confirmText}
-                            </Text>
-                        </Pressable>
+                        <Button variant="primary" onPress={handleConfirm} className="flex-1 rounded-2xl">
+                            {confirmText}
+                        </Button>
                     </View>
                 </BottomSheetView>
             </BottomSheetModal>

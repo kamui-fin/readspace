@@ -432,6 +432,11 @@ export class ApiClient {
         folder_id: string;
         updated_subscriptions: number;
       }>(`/api/folders/${folder_id}/read-status`),
+    bulkMarkFeedsRead: (feed_ids: string[]) =>
+      this.patch<{
+        updated_count: number;
+        updated_ids: string[];
+      }>("/api/feeds/read-status", { feed_ids }),
     subscribeToFeed: (feedId: string, data: { folder_id: string }) =>
       this.post(`/api/feeds/${feedId}/subscribe`, data),
     getSimilarFeeds: (

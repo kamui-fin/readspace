@@ -26,11 +26,6 @@ export function FeedListSkeleton({ count = 5 }: FeedListSkeletonProps) {
                         {/* Follow Button */}
                         <ShimmerView width={80} height={32} borderRadius={16} />
                     </View>
-
-                    {/* Divider */}
-                    {index < count - 1 && (
-                        <View className="h-[0.5px] bg-light-grey dark:bg-mid-grey-dark" />
-                    )}
                 </View>
             ))}
         </View>

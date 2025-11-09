@@ -4,7 +4,9 @@ import { cn } from '@/utils/cn';
 import { Monicon } from '@monicon/native';
 import type { Folder } from '@readspace/shared';
 import { forwardRef } from 'react';
-import { Pressable, Text, type PressableProps } from 'react-native';
+import { Pressable, Text, View, type PressableProps } from 'react-native';
+import { COLORS } from '@/constants/Colors';
+import { useColorScheme } from 'nativewind';
 
 export interface FolderItemProps extends Omit<PressableProps, 'children'> {
     folder: Folder;
@@ -13,6 +15,7 @@ export interface FolderItemProps extends Omit<PressableProps, 'children'> {
     isEditMode?: boolean;
     isSelected?: boolean;
     isEmpty?: boolean;
+    isCurrentlyViewing?: boolean;
     onPress?: () => void;
     onToggleExpand?: () => void;
     onLongPress?: () => void;
@@ -28,6 +31,7 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
             isEditMode = false,
             isSelected = false,
             isEmpty = false,
+            isCurrentlyViewing = false,
             onPress,
             onToggleExpand,
             onLongPress,
@@ -36,6 +40,9 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
         },
         ref
     ) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
+
         const handlePress = () => {
             if (isEditMode) {
                 onPress?.();
@@ -76,9 +83,13 @@ export const FolderItem = forwardRef<React.ElementRef<typeof Pressable>, FolderI
                     className
                 )}
                 {...props}>
-                {/* Icon or Checkbox */}
+                {/* Icon, Checkbox, or Checkmark */}
                 {isEditMode ? (
-                    <Checkbox checked={isSelected} />
+                    <View pointerEvents="none">
+                        <Checkbox checked={isSelected} />
+                    </View>
+                ) : isCurrentlyViewing ? (
+                    <Monicon name="lucide:check" size={24} color={colors.secondary} />
                 ) : (
                     <Monicon name={getFolderIcon()} size={24} color="#6A994E" />
                 )}

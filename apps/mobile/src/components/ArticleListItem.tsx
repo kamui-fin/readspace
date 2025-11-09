@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-    runOnJS,
     useAnimatedStyle,
     useSharedValue,
     withSpring,
@@ -138,6 +137,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
          * Trigger bookmark action with haptic feedback
          */
         const triggerBookmark = useCallback(() => {
+            'worklet';
             if (onBookmark) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                 onBookmark();
@@ -148,6 +148,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
          * Trigger mark as read/unread action
          */
         const triggerToggleRead = useCallback(() => {
+            'worklet';
             if (onToggleRead) {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 onToggleRead();
@@ -189,10 +190,10 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 if (absTranslation >= SWIPE_ACTIVATION_THRESHOLD) {
                     if (event.translationX > 0) {
                         // Swipe right - bookmark
-                        runOnJS(triggerBookmark)();
+                        triggerBookmark();
                     } else {
                         // Swipe left - mark as read
-                        runOnJS(triggerToggleRead)();
+                        triggerToggleRead();
                     }
                 }
 
@@ -304,7 +305,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             <Pressable
                 ref={ref}
                 className={cn(
-                    'flex-row gap-3 bg-white py-4 dark:bg-white-dark',
+                    'flex-row gap-3 py-4',
                     isRead && 'opacity-60',
                     className
                 )}
@@ -348,10 +349,6 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 style={{ flexShrink: 1 }}>
                                 {displaySource}
                             </Text>
-
-                            {isSaved && articleType === 'feed' && (
-                                <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
-                            )}
 
                             <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
 
@@ -414,10 +411,6 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                                 {displaySource}
                             </Text>
 
-                            {isSaved && articleType === 'feed' && (
-                                <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
-                            )}
-
                             <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
 
                             <Text className="font-geist text-xs text-grey dark:text-grey-dark">
@@ -467,11 +460,11 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         }
 
         return (
-            <View className="relative overflow-hidden bg-white dark:bg-white-dark">
+            <View className="relative overflow-hidden">
                 {/* Left action background (bookmark) */}
                 <Animated.View
                     style={[leftActionAnimatedStyle]}
-                    className="absolute left-0 top-0 h-full w-[120px] flex-row items-center bg-[#FBBC04] pl-4">
+                    className="absolute left-0 top-0 h-full w-full flex-row items-center bg-[#FBBC04] pl-4">
                     <Animated.View style={[leftIconAnimatedStyle]}>
                         <Monicon name="solar:bookmark-bold" size={24} color="#FFFFFF" />
                     </Animated.View>
@@ -480,7 +473,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 {/* Right action background (mark as read) */}
                 <Animated.View
                     style={[rightActionAnimatedStyle]}
-                    className="absolute right-0 top-0 h-full w-[120px] flex-row items-center justify-end bg-[#6A994E] pr-4">
+                    className="absolute right-0 top-0 h-full w-full flex-row items-center justify-end bg-[#6A994E] pr-4">
                     <Animated.View style={[rightIconAnimatedStyle]}>
                         <Monicon name="solar:check-read-bold" size={24} color="#FFFFFF" />
                     </Animated.View>
@@ -488,7 +481,9 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
 
                 {/* Main content with gesture */}
                 <GestureDetector gesture={panGesture}>
-                    <Animated.View style={[contentAnimatedStyle]}>{horizontalContent}</Animated.View>
+                    <Animated.View style={[contentAnimatedStyle]} className="bg-white dark:bg-white-dark">
+                        {horizontalContent}
+                    </Animated.View>
                 </GestureDetector>
             </View>
         );

@@ -7,7 +7,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useMemo, useState } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Text } from 'react-native';
+import { Button } from '@/components/ui/Button';
 
 export interface FolderNameModalProps {
     onCreateFolder?: (name: string) => void;
@@ -103,23 +104,13 @@ export const FolderNameModal = forwardRef<BottomSheetModal, FolderNameModalProps
                         onSubmitEditing={handleSubmit}
                     />
 
-                    <Pressable
+                    <Button
                         onPress={handleSubmit}
                         disabled={!folderName.trim()}
-                        className={`items-center justify-center rounded-2xl py-4 transition-opacity ${
-                            folderName.trim()
-                                ? 'bg-primary active:opacity-70'
-                                : 'bg-mid-grey opacity-50 dark:bg-mid-grey-dark'
-                        }`}>
-                        <Text
-                            className={`font-geist-semibold text-base ${
-                                folderName.trim()
-                                    ? 'text-white dark:text-white-dark'
-                                    : 'text-grey dark:text-grey-dark'
-                            }`}>
-                            {mode === 'create' ? 'Create' : 'Rename'}
-                        </Text>
-                    </Pressable>
+                        variant={folderName.trim() ? 'primary' : 'secondary'}
+                        fullWidth>
+                        {mode === 'create' ? 'Create' : 'Rename'}
+                    </Button>
                 </BottomSheetView>
             </BottomSheetModal>
         );

@@ -72,7 +72,7 @@ export const LanguagePicker = forwardRef<BottomSheet, LanguagePickerProps>(
             <BottomSheet
                 ref={ref}
                 index={-1}
-                snapPoints={snapPoints}
+                enableDynamicSizing
                 enablePanDownToClose
                 backdropComponent={renderBackdrop}
                 backgroundStyle={{ backgroundColor: colors.white }}

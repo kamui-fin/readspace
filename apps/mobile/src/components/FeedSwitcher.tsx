@@ -5,6 +5,7 @@ import { ConfirmationModal } from '@/components/modals/ConfirmationModal';
 import { FolderNameModal } from '@/components/modals/FolderNameModal';
 import { Button } from '@/components/ui/Button';
 import { COLORS } from '@/constants/Colors';
+import { useFeedSwitcherStore } from '@/stores/feed-switcher';
 import { useFeedViewStore } from '@/stores/feed-view';
 import {
     BottomSheetBackdrop,
@@ -14,6 +15,8 @@ import {
 } from '@gorhom/bottom-sheet';
 import { Monicon } from '@monicon/native';
 import {
+    ApiClient,
+    RSS_QUERY_KEYS,
     useBulkDeleteFeeds,
     useBulkUpdateFeedsFolder,
     useCreateFolder,
@@ -26,6 +29,7 @@ import {
     type Feed,
     type Folder,
 } from '@readspace/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
 import { usePathname, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -38,7 +42,7 @@ import {
     useRef,
     useState,
 } from 'react';
-import { BackHandler, Pressable, Text, View } from 'react-native';
+import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native';
 import { toast } from 'sonner-native';
 
 export interface FeedSwitcherRef {
@@ -68,22 +72,30 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const pathname = usePathname();
         const selectFeed = useFeedViewStore((state) => state.selectFeed);
         const selectFolder = useFeedViewStore((state) => state.selectFolder);
+        const viewType = useFeedViewStore((state) => state.viewType);
+        const selectedId = useFeedViewStore((state) => state.selectedId);
         const { colorScheme } = useColorScheme();
         const colors = COLORS[colorScheme ?? 'light'];
+        const queryClient = useQueryClient();
 
         const bottomSheetRef = useRef<BottomSheetModal>(null);
         const folderNameModalRef = useRef<BottomSheetModal>(null);
         const renameFolderModalRef = useRef<BottomSheetModal>(null);
         const folderPickerRef = useRef<FolderPickerRef>(null);
         const confirmDeleteRef = useRef<BottomSheetModal>(null);
+        const confirmMarkReadRef = useRef<BottomSheetModal>(null);
         const flashListRef = useRef<any>(null);
 
-        const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+        // Use persisted store for expanded folders
+        const expandedFolders = useFeedSwitcherStore((state) => state.expandedFolders);
+        const toggleFolderInStore = useFeedSwitcherStore((state) => state.toggleFolder);
+
         const [isEditMode, setIsEditMode] = useState(false);
         const [selectedFeedIds, setSelectedFeedIds] = useState<Set<string>>(new Set());
         const [selectedFolderIds, setSelectedFolderIds] = useState<Set<string>>(new Set());
         const [folderToRename, setFolderToRename] = useState<Folder | null>(null);
         const [currentIndex, setCurrentIndex] = useState<number>(-1);
+        const [isMarkingAllRead, setIsMarkingAllRead] = useState(false);
 
         const snapPoints = useMemo(() => ['80%'], []);
 
@@ -140,6 +152,15 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             }
         }, [currentIndex]);
 
+        // Reset edit mode when bottom sheet is dismissed
+        useEffect(() => {
+            if (currentIndex === -1 && isEditMode) {
+                setIsEditMode(false);
+                setSelectedFeedIds(new Set());
+                setSelectedFolderIds(new Set());
+            }
+        }, [currentIndex, isEditMode]);
+
         const renderBackdrop = useCallback(
             (props: any) => (
                 <BottomSheetBackdrop
@@ -194,20 +215,16 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             return items;
         }, [folders, feeds, expandedFolders, selectedFolderIds, selectedFeedIds]);
 
-        const toggleFolderExpand = useCallback((folderId: string) => {
-            // Prepare FlashList for layout animation with Reanimated
-            flashListRef.current?.prepareForLayoutAnimationRender();
+        const toggleFolderExpand = useCallback(
+            (folderId: string) => {
+                // Prepare FlashList for layout animation with Reanimated
+                flashListRef.current?.prepareForLayoutAnimationRender();
 
-            setExpandedFolders((prev) => {
-                const next = new Set(prev);
-                if (next.has(folderId)) {
-                    next.delete(folderId);
-                } else {
-                    next.add(folderId);
-                }
-                return next;
-            });
-        }, []);
+                // Toggle in persisted store
+                toggleFolderInStore(folderId);
+            },
+            [toggleFolderInStore]
+        );
 
         const handleFeedPress = useCallback(
             (feedId: string) => {
@@ -335,6 +352,59 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             confirmDeleteRef.current?.present();
         }, []);
 
+        const handleMarkAllReadPress = useCallback(() => {
+            confirmMarkReadRef.current?.present();
+        }, []);
+
+        const handleConfirmMarkAllRead = useCallback(async () => {
+            // Get the selected feed IDs from edit mode
+            const feedsToMarkRead = Array.from(selectedFeedIds);
+
+            if (feedsToMarkRead.length === 0) {
+                toast.error('No feeds selected');
+                return;
+            }
+
+            setIsMarkingAllRead(true);
+            toast.loading('Marking all as read...', { id: 'mark-all-read' });
+
+            try {
+                // Use bulk mark as read endpoint
+                await ApiClient.rss.bulkMarkFeedsRead(feedsToMarkRead);
+
+                const count = feedsToMarkRead.length;
+                toast.success(
+                    `Marked ${count} feed${count > 1 ? 's' : ''} as read!`,
+                    {
+                        id: 'mark-all-read',
+                    }
+                );
+
+                // Invalidate all relevant caches to force fresh fetch from server
+                queryClient.invalidateQueries({
+                    queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                });
+                queryClient.invalidateQueries({
+                    queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                });
+                queryClient.invalidateQueries({
+                    queryKey: [RSS_QUERY_KEYS.FEEDS],
+                });
+
+                // Exit edit mode and clear selections
+                setIsEditMode(false);
+                setSelectedFeedIds(new Set());
+                setSelectedFolderIds(new Set());
+            } catch (error) {
+                console.error('Mark all as read failed:', error);
+                toast.error('Failed to mark all as read. Please try again.', {
+                    id: 'mark-all-read',
+                });
+            } finally {
+                setIsMarkingAllRead(false);
+            }
+        }, [selectedFeedIds, queryClient]);
+
         const handleConfirmDelete = useCallback(async () => {
             const feedsToDelete = Array.from(selectedFeedIds);
             const foldersToDelete = Array.from(selectedFolderIds);
@@ -417,6 +487,8 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
         const renderItem = useCallback(
             ({ item }: { item: ListItem }) => {
                 if (item.type === 'folder' && item.folder) {
+                    const isCurrentlyViewing =
+                        viewType === 'folder' && selectedId === item.folder.id;
                     return (
                         <FolderItem
                             folder={item.folder}
@@ -425,17 +497,20 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                             isEditMode={isEditMode}
                             isSelected={item.isSelected || false}
                             isEmpty={item.isEmpty || false}
+                            isCurrentlyViewing={isCurrentlyViewing}
                             onPress={() => handleFolderPress(item.folder!.id)}
                             onToggleExpand={() => toggleFolderExpand(item.folder!.id)}
                             onLongPress={() => toggleFolderExpand(item.folder!.id)}
                         />
                     );
                 } else if (item.type === 'feed' && item.feed) {
+                    const isCurrentlyViewing = viewType === 'feed' && selectedId === item.feed.id;
                     return (
                         <FeedItem
                             feed={item.feed}
                             isEditMode={isEditMode}
                             isSelected={item.isSelected || false}
+                            isCurrentlyViewing={isCurrentlyViewing}
                             onPress={() => handleFeedPress(item.feed!.id)}
                             isNested
                         />
@@ -443,14 +518,21 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 }
                 return null;
             },
-            [isEditMode, handleFolderPress, toggleFolderExpand, handleFeedPress]
+            [
+                isEditMode,
+                handleFolderPress,
+                toggleFolderExpand,
+                handleFeedPress,
+                viewType,
+                selectedId,
+            ]
         );
 
         const keyExtractor = useCallback((item: ListItem) => item.id, []);
 
         const renderHeader = useCallback(
             () => (
-                <View className="mb-4 flex-row items-center justify-between px-6">
+                <View className="mb-4 flex-row items-center justify-between">
                     <Text className="font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         {isEditMode ? `${selectedCount} selected` : 'My Feeds'}
                     </Text>
@@ -474,11 +556,23 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                 {/* Action buttons - only show when items are selected */}
                                 {selectedCount > 0 && (
                                     <>
+                                        {/* Mark all as read button */}
+                                        <Pressable
+                                            onPress={handleMarkAllReadPress}
+                                            disabled={isMarkingAllRead || selectedFeedIds.size === 0}
+                                            className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 disabled:opacity-40 dark:bg-mid-grey-dark">
+                                            <Monicon
+                                                name="solar:check-read-linear"
+                                                size={24}
+                                                color={colors.black}
+                                            />
+                                        </Pressable>
+
                                         {/* Rename button - only show when exactly 1 folder is selected */}
                                         {selectedFolderIds.size === 1 && (
                                             <Pressable
                                                 onPress={handleRenameFolderPress}
-                                                className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                                className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
                                                 <Monicon
                                                     name="solar:pen-2-linear"
                                                     size={24}
@@ -491,7 +585,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                         {selectedFeedIds.size > 0 && (
                                             <Pressable
                                                 onPress={handleMoveToFolder}
-                                                className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                                className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
                                                 <Monicon
                                                     name="solar:move-to-folder-linear"
                                                     size={24}
@@ -503,7 +597,7 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                         {/* Delete button - always show when items are selected */}
                                         <Pressable
                                             onPress={handleDeletePress}
-                                            className="h-12 w-12 items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
+                                            className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 dark:bg-mid-grey-dark">
                                             <Monicon
                                                 name="solar:trash-bin-minimalistic-2-linear"
                                                 size={24}
@@ -562,11 +656,14 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 selectedCount,
                 selectedFeedIds,
                 selectedFolderIds,
+                isMarkingAllRead,
+                colors.black,
                 handleNewFolderPress,
                 toggleEditMode,
                 handleRenameFolderPress,
                 handleMoveToFolder,
                 handleDeletePress,
+                handleMarkAllReadPress,
             ]
         );
 
@@ -574,10 +671,10 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
             <>
                 <BottomSheetModal
                     key="feed-switcher-main"
+                    style={styles.container}
                     ref={bottomSheetRef}
-                    snapPoints={snapPoints}
                     enablePanDownToClose
-                    enableDynamicSizing={false}
+                    enableDynamicSizing={true}
                     enableDismissOnClose={true}
                     footerComponent={renderFooter}
                     backdropComponent={renderBackdrop}
@@ -630,9 +727,23 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                     confirmText="Yes, delete"
                     onConfirm={handleConfirmDelete}
                 />
+                <ConfirmationModal
+                    key="confirm-mark-read-switcher"
+                    ref={confirmMarkReadRef}
+                    title="Mark all as read?"
+                    message={`All articles in ${selectedFeedIds.size} selected feed${selectedFeedIds.size > 1 ? 's' : ''} will be marked as read.`}
+                    confirmText="Mark as read"
+                    onConfirm={handleConfirmMarkAllRead}
+                />
             </>
         );
     }
 );
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  }
+})
 
 FeedSwitcher.displayName = 'FeedSwitcher';

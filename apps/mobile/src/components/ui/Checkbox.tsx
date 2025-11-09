@@ -2,7 +2,6 @@ import { cn } from '@/utils/cn';
 import { Monicon } from '@monicon/native';
 import { forwardRef } from 'react';
 import { Pressable, type PressableProps } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
 export interface CheckboxProps extends Omit<PressableProps, 'children'> {
     checked?: boolean;
@@ -11,15 +10,6 @@ export interface CheckboxProps extends Omit<PressableProps, 'children'> {
 
 export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxProps>(
     ({ checked = false, className, ...props }, ref) => {
-        const animatedStyle = useAnimatedStyle(() => {
-            return {
-                transform: [
-                    { scale: withSpring(checked ? 1 : 0.8, { damping: 15, stiffness: 150 }) },
-                ],
-                opacity: withSpring(checked ? 1 : 0, { damping: 15, stiffness: 150 }),
-            };
-        });
-
         return (
             <Pressable
                 ref={ref}
@@ -31,9 +21,7 @@ export const Checkbox = forwardRef<React.ElementRef<typeof Pressable>, CheckboxP
                     className
                 )}
                 {...props}>
-                <Animated.View style={animatedStyle}>
-                    <Monicon name="lucide:check" size={14} color="#FFFFFF" />
-                </Animated.View>
+                {checked && <Monicon name="lucide:check" size={14} color="#FFFFFF" />}
             </Pressable>
         );
     }

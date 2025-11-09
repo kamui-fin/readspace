@@ -35,7 +35,6 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
         const [selectedFolderId, setSelectedFolderId] = useState<string | null>(
             initialFolderId ?? null
         );
-        const snapPoints = useMemo(() => ['70%', '90%'], []);
         const { data: folders } = useFolders();
 
         const typedFolders = (folders as { id: string; name: string }[]) || [];
@@ -63,10 +62,32 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
             []
         );
 
-        const renderFooter = useCallback(
-            (props: any) => (
-                <BottomSheetFooter {...props}>
-                    <View className="border-t border-light-grey bg-white px-6 pb-6 pt-4 dark:border-light-grey-dark dark:bg-white-dark">
+        return (
+            <BottomSheetModal
+                ref={bottomSheetRef}
+                enableDynamicSizing
+                enablePanDownToClose
+                enableDismissOnClose={true}
+                backdropComponent={renderBackdrop}
+                // footerComponent={renderFooter}
+                backgroundStyle={{ backgroundColor: colors.white }}
+                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
+                <BottomSheetScrollView showsVerticalScrollIndicator={false}>
+                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark px-6">
+                        Select Folder
+                    </Text>
+                    <View className="gap-3 pb-4 px-6">
+                        {/* Folder Options */}
+                        {typedFolders.map((folder) => (
+                            <Radio
+                                key={folder.id}
+                                label={folder.name}
+                                selected={selectedFolderId === folder.id}
+                                onPress={() => handleSelect(folder.id)}
+                            />
+                        ))}
+                    </View>
+                    <View className="px-6 pb-6 pt-4">
                         <Button
                             variant="primary"
                             fullWidth
@@ -77,39 +98,7 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
                             </Text>
                         </Button>
                     </View>
-                </BottomSheetFooter>
-            ),
-            [handleConfirm, selectedFolderId]
-        );
-
-        return (
-            <BottomSheetModal
-                ref={bottomSheetRef}
-                snapPoints={snapPoints}
-                enablePanDownToClose
-                enableDismissOnClose={true}
-                backdropComponent={renderBackdrop}
-                footerComponent={renderFooter}
-                backgroundStyle={{ backgroundColor: colors.white }}
-                handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
-                <View className="flex-1 px-6">
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
-                        Select Folder
-                    </Text>
-                    <BottomSheetScrollView showsVerticalScrollIndicator={false}>
-                        <View className="gap-3 pb-4">
-                            {/* Folder Options */}
-                            {typedFolders.map((folder) => (
-                                <Radio
-                                    key={folder.id}
-                                    label={folder.name}
-                                    selected={selectedFolderId === folder.id}
-                                    onPress={() => handleSelect(folder.id)}
-                                />
-                            ))}
-                        </View>
-                    </BottomSheetScrollView>
-                </View>
+                </BottomSheetScrollView>
             </BottomSheetModal>
         );
     }

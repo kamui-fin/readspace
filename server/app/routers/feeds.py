@@ -4,7 +4,7 @@ from uuid import UUID
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FEEDS_BATCH_SIZE, MAX_PAGE_SIZE
@@ -21,7 +21,7 @@ from app.core.decorators import require_resource_limit
 from app.core.dependencies import get_subscription_service
 from app.crud import crud_feed, crud_folder, crud_profile, crud_subscription
 from app.db.session import get_db
-from app.models import ArticleContent, Feed, FeedArticle
+from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription
 from app.schemas import FeedCreate, FeedUpdate
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import (
@@ -1797,6 +1797,97 @@ async def bulk_update_feeds_folder(
         "updated_count": len(result["updated_ids"]),
         "updated_ids": [str(fid) for fid in result["updated_ids"]],
         "folder_id": str(folder_id),
+    }
+
+
+@router.patch(
+    "/read-status",
+    status_code=status.HTTP_200_OK,
+    summary="Bulk mark feeds as read",
+    description="Mark all articles in multiple feeds as read in a single operation",
+    responses={
+        200: {
+            "description": "Bulk mark as read completed",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "updated_count": 5,
+                        "updated_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
+                    }
+                }
+            },
+        },
+        400: {"description": "Invalid request - empty feed_ids list"},
+        422: {"description": "Validation error in request body"},
+    },
+)
+async def bulk_mark_feeds_read(
+    *,
+    feed_ids: list[UUID] = Body(..., embed=True, description="List of feed IDs to mark as read"),
+    db: AsyncSession = Depends(get_db),
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, Any]:
+    """
+    Mark all articles in multiple feeds as read in a single operation.
+
+    This endpoint allows bulk mark as read for feeds, similar to bulk delete/move operations.
+    Only subscriptions owned by the authenticated user will be updated.
+
+    Args:
+        feed_ids: List of feed UUIDs to mark as read
+        db: Database session dependency
+        current_user: Authenticated user information
+
+    Returns:
+        Dictionary containing:
+            - updated_count: Number of feeds successfully marked as read
+            - updated_ids: List of feed IDs that were updated
+
+    Raises:
+        HTTPException:
+            - 400: If feed_ids list is empty
+            - 422: If feed_ids format is invalid
+
+    Note:
+        - Only user's own subscriptions are updated (user_id verified)
+        - Non-existent feed IDs are silently ignored
+        - Single SQL UPDATE with subquery for optimal performance
+    """
+    if not feed_ids:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
+
+    user_id = UUID(current_user.sub)
+
+    # Single bulk UPDATE using subquery - same pattern as mark_folder_all_read
+    # For each subscription in feed_ids, set last_read_cutoff to its feed's most recent article
+    stmt = (
+        update(FeedSubscription)
+        .where(FeedSubscription.feed_id.in_(feed_ids))
+        .where(FeedSubscription.user_id == user_id)
+        .values(
+            last_read_cutoff=(
+                select(func.max(ArticleContent.published_at))
+                .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+                .where(FeedArticle.feed_id == FeedSubscription.feed_id)
+                .scalar_subquery()
+            )
+        )
+        .execution_options(synchronize_session="fetch")
+    )
+
+    result = await db.execute(stmt)
+    updated_count = result.rowcount
+    await db.commit()
+
+    logger.info(
+        "Bulk mark feeds as read completed",
+        updated_count=updated_count,
+        user_id=current_user.sub,
+    )
+
+    return {
+        "updated_count": updated_count,
+        "updated_ids": [str(fid) for fid in feed_ids[:updated_count]],
     }
 
 

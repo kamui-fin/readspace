@@ -1,16 +1,20 @@
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
 import { cn } from '@/utils/cn';
+import { Monicon } from '@monicon/native';
 import type { Feed } from '@readspace/shared';
 import { forwardRef, useEffect } from 'react';
 import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
 import Animated, { FadeInDown, FadeOutUp, useSharedValue } from 'react-native-reanimated';
+import { COLORS } from '@/constants/Colors';
+import { useColorScheme } from 'nativewind';
 
 export interface FeedItemProps extends Omit<PressableProps, 'children'> {
     feed: Feed;
     isEditMode?: boolean;
     isSelected?: boolean;
     isNested?: boolean;
+    isCurrentlyViewing?: boolean;
     onPress?: () => void;
     className?: string;
 }
@@ -22,12 +26,16 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
             isEditMode = false,
             isSelected = false,
             isNested = false,
+            isCurrentlyViewing = false,
             onPress,
             className,
             ...props
         },
         ref
     ) => {
+        const { colorScheme } = useColorScheme();
+        const colors = COLORS[colorScheme ?? 'light'];
+
         // Reset animation when feed id changes (view recycling)
         const animKey = useSharedValue(feed.id);
 
@@ -49,9 +57,15 @@ export const FeedItem = forwardRef<React.ElementRef<typeof Pressable>, FeedItemP
                         className
                     )}
                     {...props}>
-                    {/* Icon or Checkbox */}
+                    {/* Icon, Checkbox, or Checkmark */}
                     {isEditMode ? (
-                        <Checkbox checked={isSelected} />
+                        <View pointerEvents="none">
+                            <Checkbox checked={isSelected} />
+                        </View>
+                    ) : isCurrentlyViewing ? (
+                        <View className="h-8 w-8 items-center justify-center">
+                            <Monicon name="lucide:check" size={24} color={colors.secondary} />
+                        </View>
                     ) : (
                         <View className="h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-mid-grey dark:bg-mid-grey-dark">
                             {feed.image_url ? (
