@@ -76,8 +76,11 @@ export const Header = (props: HeaderProps) => {
                 className="flex-row items-center justify-between gap-2 px-4 pb-2"
                 onLayout={(e) => setForegroundHeight(e.nativeEvent.layout.height)}>
                 {leftAction && <View className="mr-2">{leftAction}</View>}
-                <View className="flex-1 flex-row items-center gap-2">
-                    <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
+                <View className="flex-1 flex-row items-center gap-2 overflow-hidden">
+                    <Text
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                        className="flex-shrink font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>
                     {unreadCount !== undefined && unreadCount > 0 && (
@@ -152,8 +155,8 @@ export const Header = (props: HeaderProps) => {
     // Render tabbed variant
     return (
         <Animated.View
-            className={cn('absolute z-10 w-full bg-white dark:bg-white-dark', className)}
-            style={[{ paddingTop: insets.top }, animatedHeaderStyle]}>
+            className={cn('absolute w-full bg-white dark:bg-white-dark', className)}
+            style={[{ paddingTop: insets.top, zIndex: 10 }, animatedHeaderStyle]}>
             <Animated.View style={animatedForegroundStyle}>{renderForeground()}</Animated.View>
             {renderTabs()}
         </Animated.View>

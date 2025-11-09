@@ -1,20 +1,40 @@
 import { FeedSwitcher, type FeedSwitcherRef } from '@/components/FeedSwitcher';
 import { BottomNav } from '@/components/ui/BottomNav';
 import { FolderPickerProvider } from '@/contexts/FolderPickerContext';
+import { TabActionsProvider, useTabActions } from '@/contexts/TabActionsContext';
 import { Tabs } from 'expo-router';
 import { useCallback, useRef } from 'react';
 
-export default function TabsLayout() {
+function TabsContent() {
     const feedSwitcherRef = useRef<FeedSwitcherRef>(null);
+    const { triggerTodayScrollToTop, triggerDiscoverFocusSearch, triggerExitPreviewToToday } =
+        useTabActions();
 
     const handleExplorePress = useCallback(() => {
         feedSwitcherRef.current?.present();
     }, []);
 
+    const handleTodayPress = useCallback(() => {
+        // First exit preview mode and return to Today tab
+        triggerExitPreviewToToday();
+        // Then scroll to top
+        triggerTodayScrollToTop();
+    }, [triggerExitPreviewToToday, triggerTodayScrollToTop]);
+
+    const handleDiscoverFocusSearch = useCallback(() => {
+        triggerDiscoverFocusSearch();
+    }, [triggerDiscoverFocusSearch]);
+
     return (
-        <FolderPickerProvider>
+        <>
             <Tabs
-                tabBar={(props) => <BottomNav onExplorePress={handleExplorePress} />}
+                tabBar={(props) => (
+                    <BottomNav
+                        onExplorePress={handleExplorePress}
+                        onTodayPress={handleTodayPress}
+                        onDiscoverFocusSearch={handleDiscoverFocusSearch}
+                    />
+                )}
                 screenOptions={{
                     headerShown: false,
                 }}>
@@ -40,6 +60,16 @@ export default function TabsLayout() {
 
             {/* Feed Switcher Bottom Sheet */}
             <FeedSwitcher ref={feedSwitcherRef} />
+        </>
+    );
+}
+
+export default function TabsLayout() {
+    return (
+        <FolderPickerProvider>
+            <TabActionsProvider>
+                <TabsContent />
+            </TabActionsProvider>
         </FolderPickerProvider>
     );
 }

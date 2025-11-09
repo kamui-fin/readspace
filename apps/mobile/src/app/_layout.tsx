@@ -7,11 +7,9 @@ import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import {
     focusManager,
-    onlineManager,
     QueryClient,
     QueryClientProvider,
 } from '@tanstack/react-query';
-import * as Network from 'expo-network';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -49,21 +47,6 @@ function RootLayoutNav() {
     const segments = useSegments();
     const router = useRouter();
     const { colorScheme } = useColorScheme();
-    const [isOnline, setIsOnline] = useState(true);
-
-    // Setup network status listener
-    useEffect(() => {
-        onlineManager.setEventListener((setOnline) => {
-            const eventSubscription = Network.addNetworkStateListener(
-                (state: Network.NetworkState) => {
-                    const online = !!state.isConnected;
-                    setOnline(online);
-                    setIsOnline(online);
-                }
-            );
-            return eventSubscription.remove;
-        });
-    }, []);
 
     // Setup app focus listener
     useEffect(() => {
@@ -140,15 +123,6 @@ function RootLayoutNav() {
                     <Stack.Screen name="welcome" />
                     <Stack.Screen name="(tabs)" />
                 </Stack>
-                {!isOnline && (
-                    <View
-                        className="absolute left-0 right-0 top-0 z-50 bg-red px-4 py-3 dark:bg-red"
-                        style={{ paddingTop: 50 }}>
-                        <Text className="text-center font-geist text-sm text-white">
-                            No internet connection
-                        </Text>
-                    </View>
-                )}
             </BottomSheetModalProvider>
         </>
     );

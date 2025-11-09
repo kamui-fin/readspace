@@ -30,6 +30,7 @@ import { ActivityIndicator, BackHandler, Pressable, RefreshControl, Text, View }
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
+import { useTabActions } from '@/contexts/TabActionsContext';
 
 interface ListItem {
     type: 'section' | 'article' | 'divider';
@@ -61,8 +62,45 @@ export default function FollowingScreen() {
     const [unreadOnly, setUnreadOnly] = useState(false);
     const scrollY = useSharedValue(0);
     const folderPickerRef = useRef<FolderPickerRef>(null);
+    const listRef = useRef<any>(null);
 
     const colors = COLORS[colorScheme ?? 'light'];
+
+    const { registerTodayScrollToTop, registerExitPreviewToToday } = useTabActions();
+
+    // Register the scroll-to-top callback when component mounts
+    useEffect(() => {
+        const scrollToTop = () => {
+            listRef.current?.scrollToOffset({ offset: 0, animated: true });
+        };
+
+        registerTodayScrollToTop(scrollToTop);
+    }, [registerTodayScrollToTop]);
+
+    // Register the exit preview to today callback
+    useEffect(() => {
+        const exitPreviewToToday = () => {
+            const { clearView } = useFeedViewStore.getState();
+            clearView();
+        };
+
+        registerExitPreviewToToday(exitPreviewToToday);
+    }, [registerExitPreviewToToday]);
+
+    // Reset scroll position when view context changes
+    useEffect(() => {
+        scrollY.value = 0;
+        listRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }, [activeTab, viewType, selectedId, isPreviewMode, scrollY]);
+
+    // Handle header height changes to prevent intermediate scroll states
+    useEffect(() => {
+        if (headerHeight > 0 && scrollY.value > 0 && scrollY.value < headerHeight) {
+            // Snap to either fully scrolled up or down to avoid partial states
+            const shouldCollapse = scrollY.value > headerHeight / 2;
+            scrollY.value = shouldCollapse ? headerHeight : 0;
+        }
+    }, [headerHeight, scrollY]);
 
     // Fetch feed data for preview mode banner
     const { data: feedData } = useFeed(selectedId || '', {
@@ -218,55 +256,21 @@ export default function FollowingScreen() {
         [unreadOnly, colors]
     );
 
-    // Back button for preview mode
-    const handleBackPress = useCallback(() => {
-        // If we have a source route stored, navigate back to it
-        if (previewSourceRoute) {
-            const { clearView } = useFeedViewStore.getState();
-            clearView();
-            router.push(previewSourceRoute as any);
-        } else if (router.canGoBack()) {
-            // Fallback to native back if available
-            router.back();
-        } else {
-            // Last resort: just clear the preview state
-            const { clearView } = useFeedViewStore.getState();
-            clearView();
-        }
-    }, [router, previewSourceRoute]);
-
-    // Handle hardware back button in preview mode
+    // Handle hardware back button for feed/folder/preview views
     useEffect(() => {
         const onHardwareBackPress = () => {
-            if (isPreviewMode) {
-                handleBackPress();
+            // If viewing a specific feed, folder, or in preview mode, return to Today tab
+            if (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview') {
+                const { clearView } = useFeedViewStore.getState();
+                clearView();
                 return true; // Prevent default back behavior
             }
             return false; // Allow default back behavior
         };
 
-        if (isPreviewMode) {
-            const subscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
-            return () => subscription.remove();
-        }
-    }, [isPreviewMode, handleBackPress]);
-
-    const backButton = useMemo(
-        () =>
-            isPreviewMode ? (
-                <Pressable
-                    onPress={handleBackPress}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    className="h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
-                    <Monicon
-                        name="solar:arrow-left-linear"
-                        size={24}
-                        color={colorScheme === 'dark' ? '#FFFFFF' : '#232222'}
-                    />
-                </Pressable>
-            ) : null,
-        [isPreviewMode, handleBackPress, colorScheme]
-    );
+        const subscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
+        return () => subscription.remove();
+    }, [viewType]);
 
     // Handle following feed from preview banner
     const handleFollowFromPreview = useCallback(() => {
@@ -552,7 +556,6 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
-                    leftAction={backButton}
                     rightAction={toggleUnreadButton}
                 />
                 <ArticleListSkeleton count={6} className="mt-28" />
@@ -572,10 +575,10 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
-                    leftAction={backButton}
                     rightAction={toggleUnreadButton}
                 />
                 <LegendList
+                    ref={listRef}
                     data={listItems}
                     renderItem={renderItem}
                     estimatedItemSize={120}
@@ -609,7 +612,6 @@ export default function FollowingScreen() {
                             progressBackgroundColor={colors.white}
                             tintColor="#6A994E"
                             colors={['#6A994E']}
-                            progressViewOffset={headerHeight}
                         />
                     }
                 />

@@ -14,10 +14,11 @@ import {
     type Feed,
 } from '@readspace/shared';
 import { useQuery } from '@tanstack/react-query';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, ScrollView, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTabActions } from '@/contexts/TabActionsContext';
 
 // Feed categories from RSS dataset
 const CATEGORIES = [
@@ -48,6 +49,17 @@ export default function DiscoverScreen() {
     const languagePickerRef = useRef<BottomSheet>(null);
     const searchBarRef = useRef<any>(null);
     const categoryScrollRef = useRef<ScrollView>(null);
+
+    const { registerDiscoverFocusSearch } = useTabActions();
+
+    // Register the focus search callback when component mounts
+    useEffect(() => {
+        const focusSearch = () => {
+            searchBarRef.current?.focus();
+        };
+
+        registerDiscoverFocusSearch(focusSearch);
+    }, [registerDiscoverFocusSearch]);
 
     const { searches: recentSearches, addSearch } = useSearchHistory();
 
@@ -227,7 +239,10 @@ export default function DiscoverScreen() {
                 <View className="mt-4 flex-1">
                     {viewState === 'focused' ? (
                         /* Recent Searches / Search Focus View */
-                        <ScrollView showsVerticalScrollIndicator={false} className="px-6">
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            className="px-6"
+                            keyboardShouldPersistTaps="handled">
                             {recentSearches.length > 0 ? (
                                 <>
                                     <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">

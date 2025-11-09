@@ -16,11 +16,13 @@ interface BottomNavItem {
 
 interface BottomNavProps {
     onExplorePress?: () => void;
+    onTodayPress?: () => void;
+    onDiscoverFocusSearch?: () => void;
 }
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function BottomNav({ onExplorePress }: BottomNavProps) {
+export function BottomNav({ onExplorePress, onTodayPress, onDiscoverFocusSearch }: BottomNavProps) {
     const router = useRouter();
     const pathname = usePathname();
     const insets = useSafeAreaInsets();
@@ -76,10 +78,41 @@ export function BottomNav({ onExplorePress }: BottomNavProps) {
     };
 
     const handlePress = (item: BottomNavItem) => {
+        // If item has a custom onPress handler, use it
         if (item.onPress) {
             item.onPress();
-        } else if (item.route) {
-            router.push(item.route as any);
+            return;
+        }
+
+        // If item has a route
+        if (item.route) {
+            const active = isActive(item);
+
+            // Handle Today tab press - always trigger to exit preview mode if needed
+            if (item.id === 'today') {
+                onTodayPress?.();
+                // Only navigate if not already active
+                if (!active) {
+                    router.push(item.route as any);
+                }
+                return;
+            }
+
+            // If already on this route, handle smart navigation
+            if (active) {
+                switch (item.id) {
+                    case 'discover':
+                        // Focus search bar if callback is provided
+                        onDiscoverFocusSearch?.();
+                        break;
+                    // Settings and other tabs don't need special handling
+                    default:
+                        break;
+                }
+            } else {
+                // Navigate to the route if not already there
+                router.push(item.route as any);
+            }
         }
     };
 
