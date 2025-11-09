@@ -3,9 +3,8 @@ import { stripHtml } from '@/utils/html';
 import { Monicon } from '@monicon/native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
-import { forwardRef, useCallback, useRef } from 'react';
+import { forwardRef, useCallback } from 'react';
 import {
-    Animated,
     Image,
     Pressable,
     Text,
@@ -13,7 +12,14 @@ import {
     type PressableProps,
     useColorScheme,
 } from 'react-native';
-import { Swipeable } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+    runOnJS,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
 
 export interface ArticleListItemProps extends PressableProps {
     source: string;
@@ -37,7 +43,10 @@ export interface ArticleListItemProps extends PressableProps {
     disableGestures?: boolean;
 }
 
-const SWIPE_THRESHOLD = 0.8; // 40% of item width
+// Swipe thresholds
+const SWIPE_ACTIVATION_THRESHOLD = 80; // Distance to trigger action
+const MAX_SWIPE_DISTANCE = 120; // Maximum swipe distance for visual feedback
+const VERTICAL_THRESHOLD = 15; // Vertical movement tolerance before canceling horizontal swipe
 
 export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, ArticleListItemProps>(
     (
@@ -66,9 +75,12 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         ref
     ) => {
         const router = useRouter();
-        const swipeableRef = useRef<Swipeable>(null);
-        const hasTriggeredHaptic = useRef(false);
         const colorScheme = useColorScheme();
+
+        // Shared values for gesture animations
+        const translateX = useSharedValue(0);
+        const leftActionScale = useSharedValue(0);
+        const rightActionScale = useSharedValue(0);
 
         /**
          * Extract domain from URL for display
@@ -122,90 +134,102 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         // Prioritize note over description for clipped articles
         const displayDescription = articleType === 'clipped' && note ? note : description;
 
-        // Render left action (bookmark)
-        const renderLeftActions = useCallback(
-            (progress: Animated.AnimatedInterpolation<number>) => {
-                const scale = progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1],
-                    extrapolate: 'clamp',
-                });
+        /**
+         * Trigger bookmark action with haptic feedback
+         */
+        const triggerBookmark = useCallback(() => {
+            if (onBookmark) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                onBookmark();
+            }
+        }, [onBookmark]);
 
-                return (
-                    <View className="flex-row items-center justify-start pl-4">
-                        <Animated.View
-                            style={{
-                                transform: [{ scale }],
-                                backgroundColor: '#FBBC04',
-                                width: 56,
-                                height: 56,
-                                borderRadius: 28,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}>
-                            <Monicon name="solar:bookmark-bold" size={24} color="#FFFFFF" />
-                        </Animated.View>
-                    </View>
+        /**
+         * Trigger mark as read/unread action
+         */
+        const triggerToggleRead = useCallback(() => {
+            if (onToggleRead) {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                onToggleRead();
+            }
+        }, [onToggleRead]);
+
+        /**
+         * Pan gesture for swipe actions
+         */
+        const panGesture = Gesture.Pan()
+            .activeOffsetX([-10, 10]) // Require 10px horizontal movement to activate
+            .failOffsetY([-VERTICAL_THRESHOLD, VERTICAL_THRESHOLD]) // Cancel if vertical movement > threshold
+            .onUpdate((event) => {
+                // Clamp translation to MAX_SWIPE_DISTANCE
+                const clampedTranslation = Math.max(
+                    -MAX_SWIPE_DISTANCE,
+                    Math.min(MAX_SWIPE_DISTANCE, event.translationX)
                 );
-            },
-            []
-        );
+                translateX.value = clampedTranslation;
 
-        // Render right action (mark as read/unread)
-        const renderRightActions = useCallback(
-            (progress: Animated.AnimatedInterpolation<number>) => {
-                const scale = progress.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0, 1],
-                    extrapolate: 'clamp',
-                });
+                // Update action scales based on swipe distance
+                if (event.translationX > 0) {
+                    // Swiping right (bookmark action)
+                    leftActionScale.value = Math.min(1, event.translationX / SWIPE_ACTIVATION_THRESHOLD);
+                    rightActionScale.value = 0;
+                } else {
+                    // Swiping left (mark as read action)
+                    rightActionScale.value = Math.min(
+                        1,
+                        Math.abs(event.translationX) / SWIPE_ACTIVATION_THRESHOLD
+                    );
+                    leftActionScale.value = 0;
+                }
+            })
+            .onEnd((event) => {
+                const absTranslation = Math.abs(event.translationX);
 
-                return (
-                    <View className="flex-row items-center justify-end pr-4">
-                        <Animated.View
-                            style={{
-                                transform: [{ scale }],
-                                backgroundColor: '#6A994E',
-                                width: 56,
-                                height: 56,
-                                borderRadius: 28,
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                            }}>
-                            <Monicon name="solar:check-read-bold" size={24} color="#FFFFFF" />
-                        </Animated.View>
-                    </View>
-                );
-            },
-            []
-        );
-
-        // Handle swipe completion
-        const handleSwipeableOpen = useCallback(
-            (direction: 'left' | 'right') => {
-                // Use setTimeout to avoid state update during render
-                setTimeout(() => {
-                    if (direction === 'left' && onBookmark) {
-                        // Swipe right reveals left action (bookmark)
-                        if (!hasTriggeredHaptic.current) {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                            hasTriggeredHaptic.current = true;
-                        }
-                        onBookmark();
-                    } else if (direction === 'right' && onToggleRead) {
-                        // Swipe left reveals right action (mark as read)
-                        onToggleRead();
+                // Check if threshold was reached
+                if (absTranslation >= SWIPE_ACTIVATION_THRESHOLD) {
+                    if (event.translationX > 0) {
+                        // Swipe right - bookmark
+                        runOnJS(triggerBookmark)();
+                    } else {
+                        // Swipe left - mark as read
+                        runOnJS(triggerToggleRead)();
                     }
+                }
 
-                    // Close swipeable after action
-                    setTimeout(() => {
-                        swipeableRef.current?.close();
-                        hasTriggeredHaptic.current = false;
-                    }, 300);
-                }, 0);
-            },
-            [onBookmark, onToggleRead]
-        );
+                // Animate back to center with smoother, less bouncy spring
+                translateX.value = withSpring(0, {
+                    damping: 30,
+                    stiffness: 400,
+                    mass: 0.5,
+                });
+                leftActionScale.value = withTiming(0, { duration: 150 });
+                rightActionScale.value = withTiming(0, { duration: 150 });
+            });
+
+        // Animated styles for the content
+        const contentAnimatedStyle = useAnimatedStyle(() => ({
+            transform: [{ translateX: translateX.value }],
+        }));
+
+        // Animated styles for left action (bookmark) - also controls background visibility
+        const leftActionAnimatedStyle = useAnimatedStyle(() => ({
+            opacity: leftActionScale.value,
+        }));
+
+        // Animated styles for left icon
+        const leftIconAnimatedStyle = useAnimatedStyle(() => ({
+            transform: [{ scale: leftActionScale.value }],
+        }));
+
+        // Animated styles for right action (mark as read) - also controls background visibility
+        const rightActionAnimatedStyle = useAnimatedStyle(() => ({
+            opacity: rightActionScale.value,
+        }));
+
+        // Animated styles for right icon
+        const rightIconAnimatedStyle = useAnimatedStyle(() => ({
+            transform: [{ scale: rightActionScale.value }],
+        }));
 
         // Card variant - no swipeable
         if (variant === 'card') {
@@ -443,17 +467,30 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         }
 
         return (
-            <Swipeable
-                ref={swipeableRef}
-                renderLeftActions={renderLeftActions}
-                renderRightActions={renderRightActions}
-                onSwipeableOpen={handleSwipeableOpen}
-                overshootLeft={false}
-                overshootRight={false}
-                leftThreshold={SWIPE_THRESHOLD * 100}
-                rightThreshold={SWIPE_THRESHOLD * 100}>
-                {horizontalContent}
-            </Swipeable>
+            <View className="relative overflow-hidden bg-white dark:bg-white-dark">
+                {/* Left action background (bookmark) */}
+                <Animated.View
+                    style={[leftActionAnimatedStyle]}
+                    className="absolute left-0 top-0 h-full w-[120px] flex-row items-center bg-[#FBBC04] pl-4">
+                    <Animated.View style={[leftIconAnimatedStyle]}>
+                        <Monicon name="solar:bookmark-bold" size={24} color="#FFFFFF" />
+                    </Animated.View>
+                </Animated.View>
+
+                {/* Right action background (mark as read) */}
+                <Animated.View
+                    style={[rightActionAnimatedStyle]}
+                    className="absolute right-0 top-0 h-full w-[120px] flex-row items-center justify-end bg-[#6A994E] pr-4">
+                    <Animated.View style={[rightIconAnimatedStyle]}>
+                        <Monicon name="solar:check-read-bold" size={24} color="#FFFFFF" />
+                    </Animated.View>
+                </Animated.View>
+
+                {/* Main content with gesture */}
+                <GestureDetector gesture={panGesture}>
+                    <Animated.View style={[contentAnimatedStyle]}>{horizontalContent}</Animated.View>
+                </GestureDetector>
+            </View>
         );
     }
 );
