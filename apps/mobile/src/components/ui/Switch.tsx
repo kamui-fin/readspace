@@ -1,6 +1,6 @@
 import { cn } from '@/utils/cn';
 import { forwardRef, useEffect } from 'react';
-import { Pressable, type PressableProps, View } from 'react-native';
+import { Pressable, type PressableProps, View, useColorScheme } from 'react-native';
 import Animated, {
     interpolate,
     interpolateColor,
@@ -24,6 +24,8 @@ export const Switch = forwardRef<View, SwitchProps>(
         const switchValue = useSharedValue(value ? 1 : 0);
         const height = useSharedValue(0);
         const width = useSharedValue(0);
+        const colorScheme = useColorScheme();
+        const isDark = colorScheme === 'dark';
 
         useEffect(() => {
             switchValue.value = value ? 1 : 0;
@@ -33,7 +35,7 @@ export const Switch = forwardRef<View, SwitchProps>(
             const color = interpolateColor(
                 switchValue.value,
                 [0, 1],
-                ['#D1DBCD', '#6A994E'] // green-grey to secondary
+                [isDark ? '#2a2a2a' : '#D1DBCD', '#6A994E'] // mid-grey-dark/green-grey to secondary
             );
             const colorValue = withTiming(color, { duration });
 

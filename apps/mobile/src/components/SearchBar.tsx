@@ -1,7 +1,7 @@
 import { cn } from '@/utils/cn';
 import { Monicon } from '@monicon/native';
 import { forwardRef, useState } from 'react';
-import { Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, Pressable, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing'> {
     onLanguagePress?: () => void;
@@ -44,7 +44,7 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
             <View className="flex-row items-center gap-3">
                 <View
                     className={cn(
-                        'flex-1 flex-row items-center gap-3 rounded-2xl bg-mid-grey px-4 py-1 dark:bg-mid-grey-dark',
+                        'flex-1 flex-row items-center gap-3 rounded-2xl bg-mid-grey px-4 py-3 dark:bg-mid-grey-dark',
                         isFocused && 'border-2 border-primary dark:border-primary',
                         containerClassName
                     )}>
@@ -67,6 +67,11 @@ export const SearchBar = forwardRef<TextInput, SearchBarProps>(
                         }}
                         onSubmitEditing={() => handleSubmit()}
                         returnKeyType="search"
+                        style={{
+                            padding: 0,
+                            margin: 0,
+                            textAlignVertical: 'center',
+                        }}
                         {...props}
                     />
 

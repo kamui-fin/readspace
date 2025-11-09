@@ -224,7 +224,7 @@ export default function DiscoverScreen() {
                 </Animated.View>
 
                 {/* Content Area */}
-                <View className="mt-6 flex-1">
+                <View className="mt-4 flex-1">
                     {viewState === 'focused' ? (
                         /* Recent Searches / Search Focus View */
                         <ScrollView showsVerticalScrollIndicator={false} className="px-6">
@@ -263,8 +263,8 @@ export default function DiscoverScreen() {
                             )}
                         </ScrollView>
                     ) : viewState === 'default' ? (
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            {/* Categories */}
+                        <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+                            {/* Categories - Always visible */}
                             <View>
                                 <View className="mb-4 flex-row items-center justify-between px-6">
                                     <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
@@ -317,107 +317,54 @@ export default function DiscoverScreen() {
                                 </ScrollView>
                             </View>
 
-                            {/* Trending */}
-                            <View className="mt-8 px-6">
-                                <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">
+                            {/* Trending Section Header - Always visible */}
+                            <View className="mb-4 mt-8 px-6">
+                                <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
                                     Trending
                                 </Text>
-                                {showTrendingSkeleton ? (
+                            </View>
+
+                            {/* Trending Section - Conditional skeleton/content */}
+                            {showTrendingSkeleton ? (
+                                <View className="px-6">
                                     <FeedListSkeleton count={5} />
-                                ) : trendingError ? (
-                                    <View className="py-8">
-                                        <Text className="text-red-600 mb-2 text-center text-base">
-                                            Error loading trending feeds
-                                        </Text>
-                                        <Text className="text-center text-sm text-grey dark:text-grey-dark">
-                                            {trendingError.message}
-                                        </Text>
-                                    </View>
-                                ) : trendingData && trendingData.length > 0 ? (
-                                    <LegendList
-                                        data={trendingData}
-                                        estimatedItemSize={80}
-                                        renderItem={({ item: feed }: { item: Feed }) => (
-                                            <FeedListItem
-                                                feedId={feed.id}
-                                                title={feed.title || 'Untitled Feed'}
-                                                description={feed.description || ''}
-                                                iconUrl={feed.image_url || undefined}
-                                                isFollowing={feed.is_subscribed || false}
-                                                isPreview={feed.is_preview}
-                                            />
-                                        )}
-                                        keyExtractor={(item: Feed) => item.id}
-                                    />
-                                ) : (
-                                    <Text className="py-8 text-center text-grey dark:text-grey-dark">
+                                </View>
+                            ) : trendingError ? (
+                                <View className="items-center justify-center px-6 py-12">
+                                    <Text className="text-red-600 mb-2 text-center text-base">
+                                        Error loading trending feeds
+                                    </Text>
+                                    <Text className="text-center text-sm text-grey dark:text-grey-dark">
+                                        {trendingError.message}
+                                    </Text>
+                                </View>
+                            ) : trendingData && trendingData.length > 0 ? (
+                                <View className="pb-2 px-6">
+                                    {trendingData.map((feed) => (
+                                        <FeedListItem
+                                            key={feed.id}
+                                            feedId={feed.id}
+                                            title={feed.title || 'Untitled Feed'}
+                                            description={feed.description || ''}
+                                            iconUrl={feed.image_url || undefined}
+                                            isFollowing={feed.is_subscribed || false}
+                                            isPreview={feed.is_preview}
+                                        />
+                                    ))}
+                                </View>
+                            ) : (
+                                <View className="items-center justify-center px-6 py-12">
+                                    <Text className="text-center text-grey dark:text-grey-dark">
                                         No trending feeds available
                                     </Text>
-                                )}
-                            </View>
+                                </View>
+                            )}
                         </ScrollView>
                     ) : (
                         /* Feed List (for category or search view) */
                         <View className="flex-1">
-                            {/* Show categories when filtering */}
-                            {selectedCategory && (
-                                <View className="mb-6">
-                                    <View className="mb-4 flex-row items-center justify-between px-6">
-                                        <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
-                                            Categories
-                                        </Text>
-                                        <Pressable
-                                            onPress={() => {
-                                                setViewState('default');
-                                                setSelectedCategory(null);
-                                            }}
-                                            className="transition-opacity active:opacity-60">
-                                            <Text className="font-geist-medium text-sm text-secondary">
-                                                Clear
-                                            </Text>
-                                        </Pressable>
-                                    </View>
-
-                                    {/* Combined scrollable categories - both rows scroll together */}
-                                    <ScrollView
-                                        ref={categoryScrollRef}
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        className="pl-6">
-                                        <View className="gap-2 pr-6">
-                                            {/* First row */}
-                                            <View className="flex-row gap-2">
-                                                {categoriesRow1.map((category) => (
-                                                    <Chip
-                                                        key={category}
-                                                        label={category}
-                                                        selected={selectedCategory === category}
-                                                        onPress={() =>
-                                                            handleCategoryPress(category)
-                                                        }
-                                                    />
-                                                ))}
-                                            </View>
-                                            {/* Second row */}
-                                            <View className="flex-row gap-2">
-                                                {categoriesRow2.map((category) => (
-                                                    <Chip
-                                                        key={category}
-                                                        label={category}
-                                                        selected={selectedCategory === category}
-                                                        onPress={() =>
-                                                            handleCategoryPress(category)
-                                                        }
-                                                    />
-                                                ))}
-                                            </View>
-                                        </View>
-                                    </ScrollView>
-                                </View>
-                            )}
-
                             {showSearchSkeleton ? (
-                                <View className="flex-1 px-6 py-4">
+                                <View className="flex-1 px-6">
                                     <FeedListSkeleton count={8} />
                                 </View>
                             ) : searchData?.results && searchData.results.length > 0 ? (
@@ -437,6 +384,73 @@ export default function DiscoverScreen() {
                                     )}
                                     keyExtractor={(item) => item.id}
                                     showsVerticalScrollIndicator={false}
+                                    ListHeaderComponent={
+                                        selectedCategory ? (
+                                            <View>
+                                                <View className="mb-4 flex-row items-center justify-between px-6">
+                                                    <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                                                        Categories
+                                                    </Text>
+                                                    <Pressable
+                                                        onPress={() => {
+                                                            setViewState('default');
+                                                            setSelectedCategory(null);
+                                                        }}
+                                                        className="transition-opacity active:opacity-60">
+                                                        <Text className="font-geist-medium text-sm text-secondary">
+                                                            Clear
+                                                        </Text>
+                                                    </Pressable>
+                                                </View>
+
+                                                {/* Combined scrollable categories - both rows scroll together */}
+                                                <ScrollView
+                                                    ref={categoryScrollRef}
+                                                    horizontal
+                                                    showsHorizontalScrollIndicator={false}
+                                                    className="mb-6 pl-6">
+                                                    <View className="gap-2 pr-6">
+                                                        {/* First row */}
+                                                        <View className="flex-row gap-2">
+                                                            {categoriesRow1.map((category) => (
+                                                                <Chip
+                                                                    key={category}
+                                                                    label={category}
+                                                                    selected={
+                                                                        selectedCategory ===
+                                                                        category
+                                                                    }
+                                                                    onPress={() =>
+                                                                        handleCategoryPress(
+                                                                            category
+                                                                        )
+                                                                    }
+                                                                />
+                                                            ))}
+                                                        </View>
+                                                        {/* Second row */}
+                                                        <View className="flex-row gap-2">
+                                                            {categoriesRow2.map((category) => (
+                                                                <Chip
+                                                                    key={category}
+                                                                    label={category}
+                                                                    selected={
+                                                                        selectedCategory ===
+                                                                        category
+                                                                    }
+                                                                    onPress={() =>
+                                                                        handleCategoryPress(
+                                                                            category
+                                                                        )
+                                                                    }
+                                                                />
+                                                            ))}
+                                                        </View>
+                                                    </View>
+                                                </ScrollView>
+                                            </View>
+                                        ) : undefined
+                                    }
                                 />
                             ) : (
                                 <View className="flex-1 items-center justify-center px-6 py-12">

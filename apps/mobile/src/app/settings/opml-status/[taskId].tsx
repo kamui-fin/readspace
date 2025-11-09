@@ -21,7 +21,7 @@ import { toast } from 'sonner-native';
 // Animated ticker component for counting animations
 const AnimatedTicker = ({
     value,
-    duration = 800,
+    duration = 600,
     color,
     fontSize = 16,
     fontWeight = '600',
@@ -35,8 +35,12 @@ const AnimatedTicker = ({
     const animatedValue = useSharedValue(value);
 
     useEffect(() => {
-        animatedValue.value = withTiming(value, { duration });
-    }, [value, duration, animatedValue]);
+        // Use spring animation to match the progress bar
+        animatedValue.value = withSpring(value, {
+            damping: 20,
+            stiffness: 100,
+        });
+    }, [value, animatedValue]);
 
     const animatedProps = useAnimatedStyle(() => ({
         opacity: 1,
@@ -351,9 +355,13 @@ export default function OPMLStatusPage() {
     const progress = status === 'in_progress' ? progressData : result?.summary;
     const errors = result?.errors || [];
 
-    const totalProcessed = progress
-        ? progress.successful + progress.already_existed + (progress.failed || 0)
-        : 0;
+    // Use the completed field directly from progressData when in progress
+    const totalProcessed =
+        status === 'in_progress' && progressData
+            ? progressData.completed
+            : progress
+              ? progress.successful + progress.already_existed + (progress.failed || 0)
+              : 0;
     const totalFeeds =
         status === 'in_progress'
             ? progressData?.total || 0

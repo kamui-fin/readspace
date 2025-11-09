@@ -5,7 +5,12 @@ import { useFonts } from '@/hooks/useFonts';
 import { useThemeStore } from '@/stores/theme';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { focusManager, onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import {
+    focusManager,
+    onlineManager,
+    QueryClient,
+    QueryClientProvider,
+} from '@tanstack/react-query';
 import * as Network from 'expo-network';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';

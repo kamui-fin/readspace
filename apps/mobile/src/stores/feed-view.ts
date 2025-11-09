@@ -8,13 +8,15 @@ interface FeedViewState {
     selectedName: string | null;
     activeTab: number; // 0=Today, 1=Saved, 2=All, 3=Recent, -1=none when feed/folder selected
     isPreviewMode: boolean; // True when viewing an unsubscribed feed
+    previewSourceRoute: string | null; // Route to return to when exiting preview mode
 }
 
 interface FeedViewActions {
     selectFeed: (feedId: string, feedName: string) => void;
     selectFolder: (folderId: string, folderName: string) => void;
-    selectFeedPreview: (feedId: string, feedName: string) => void;
+    selectFeedPreview: (feedId: string, feedName: string, sourceRoute?: string) => void;
     selectTab: (tabIndex: number) => void;
+    clearView: () => void;
     reset: () => void;
 }
 
@@ -26,6 +28,7 @@ const initialState: FeedViewState = {
     selectedName: null,
     activeTab: 0, // Default to "Today"
     isPreviewMode: false,
+    previewSourceRoute: null,
 };
 
 export const useFeedViewStore = create<FeedViewStore>((set) => ({
@@ -49,13 +52,14 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
             isPreviewMode: false,
         }),
 
-    selectFeedPreview: (feedId, feedName) =>
+    selectFeedPreview: (feedId, feedName, sourceRoute) =>
         set({
             viewType: 'feedPreview',
             selectedId: feedId,
             selectedName: feedName,
             activeTab: -1, // Deselect tabs when feed preview is selected
             isPreviewMode: true,
+            previewSourceRoute: sourceRoute ?? null,
         }),
 
     selectTab: (tabIndex) =>
@@ -65,6 +69,17 @@ export const useFeedViewStore = create<FeedViewStore>((set) => ({
             selectedName: null,
             activeTab: tabIndex,
             isPreviewMode: false,
+            previewSourceRoute: null,
+        }),
+
+    clearView: () =>
+        set({
+            viewType: 'following',
+            selectedId: null,
+            selectedName: null,
+            activeTab: 0,
+            isPreviewMode: false,
+            previewSourceRoute: null,
         }),
 
     reset: () => set(initialState),

@@ -20,6 +20,7 @@ export interface TabConfig {
 interface BaseHeaderProps {
     title: string;
     className?: string;
+    leftAction?: ReactNode;
     rightAction?: ReactNode;
 }
 
@@ -46,7 +47,7 @@ interface TabbedHeaderProps extends BaseHeaderProps {
 export type HeaderProps = StickyHeaderProps | TabbedHeaderProps;
 
 export const Header = (props: HeaderProps) => {
-    const { title, variant, className, rightAction } = props;
+    const { title, variant, className, leftAction, rightAction } = props;
     const insets = useSafeAreaInsets();
 
     const [foregroundHeight, setForegroundHeight] = useState(0);
@@ -72,9 +73,10 @@ export const Header = (props: HeaderProps) => {
     const renderForeground = useCallback(
         () => (
             <View
-                className="flex-row items-center justify-between gap-2 px-4 pb-3"
+                className="flex-row items-center justify-between gap-2 px-4 pb-2"
                 onLayout={(e) => setForegroundHeight(e.nativeEvent.layout.height)}>
-                <View className="flex-row items-center gap-2 flex-1">
+                {leftAction && <View className="mr-2">{leftAction}</View>}
+                <View className="flex-1 flex-row items-center gap-2">
                     <Text className="font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
                         {title}
                     </Text>
@@ -82,14 +84,10 @@ export const Header = (props: HeaderProps) => {
                         <Badge label={unreadCount.toString()} />
                     )}
                 </View>
-                {rightAction && (
-                    <View className="ml-2">
-                        {rightAction}
-                    </View>
-                )}
+                {rightAction && <View className="ml-2">{rightAction}</View>}
             </View>
         ),
-        [title, unreadCount, rightAction]
+        [title, unreadCount, leftAction, rightAction]
     );
 
     const renderTabs = useCallback(() => {
@@ -145,9 +143,7 @@ export const Header = (props: HeaderProps) => {
     // Render sticky variant
     if (variant === 'sticky') {
         return (
-            <View
-                className={cn('w-full bg-white dark:bg-white-dark', className)}
-                style={{ paddingTop: insets.top }}>
+            <View className={cn('w-full bg-white dark:bg-white-dark', className)}>
                 {renderForeground()}
             </View>
         );

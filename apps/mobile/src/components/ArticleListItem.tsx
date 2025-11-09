@@ -34,6 +34,7 @@ export interface ArticleListItemProps extends PressableProps {
     note?: string;
     articleUrl?: string;
     feedId?: string;
+    disableGestures?: boolean;
 }
 
 const SWIPE_THRESHOLD = 0.8; // 40% of item width
@@ -59,6 +60,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             note,
             articleUrl,
             feedId,
+            disableGestures = false,
             ...props
         },
         ref
@@ -273,7 +275,173 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
             );
         }
 
-        // Horizontal variant - with swipeable
+        // Horizontal variant content
+        const horizontalContent = (
+            <Pressable
+                ref={ref}
+                className={cn(
+                    'flex-row gap-3 bg-white py-4 dark:bg-white-dark',
+                    isRead && 'opacity-60',
+                    className
+                )}
+                {...props}>
+                {/* Content */}
+                <View className="flex-1">
+                    {/* Header */}
+                    {articleType === 'feed' && feedId ? (
+                        <Pressable
+                            onPress={() => {
+                                console.log('Navigating to feed from list:', feedId);
+                                router.push(`/discover/feed/${feedId}`);
+                            }}
+                            style={{
+                                marginBottom: 8,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 8,
+                            }}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                            {/* Favicon */}
+                            {faviconUrl ? (
+                                <Image
+                                    source={{ uri: faviconUrl }}
+                                    className="h-4 w-4 rounded-sm"
+                                />
+                            ) : (
+                                <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
+                            )}
+
+                            {/* Feed name with truncation */}
+                            <Text
+                                className={cn(
+                                    'font-geist text-xs',
+                                    isRead
+                                        ? 'text-grey dark:text-grey-dark'
+                                        : 'text-grey dark:text-grey-dark'
+                                )}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                style={{ flexShrink: 1 }}>
+                                {displaySource}
+                            </Text>
+
+                            {isSaved && articleType === 'feed' && (
+                                <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
+                            )}
+
+                            <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+
+                            <Text className="font-geist text-xs text-grey dark:text-grey-dark">
+                                {timestamp}
+                            </Text>
+                        </Pressable>
+                    ) : (
+                        <View className="mb-2 flex-row items-center gap-2">
+                            {/* Priority badge for clipped articles */}
+                            {articleType === 'clipped' && priority && (
+                                <View
+                                    style={{
+                                        backgroundColor: getPriorityBgColor(priority),
+                                        borderRadius: 12,
+                                        paddingHorizontal: 6,
+                                        paddingVertical: 2,
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 3,
+                                    }}>
+                                    <Monicon
+                                        name="solar:paperclip-bold"
+                                        size={10}
+                                        color={getPriorityColor(priority)}
+                                    />
+                                    <Text
+                                        style={{
+                                            fontSize: 9,
+                                            fontWeight: '600',
+                                            color: getPriorityColor(priority),
+                                            textTransform: 'capitalize',
+                                        }}>
+                                        {priority}
+                                    </Text>
+                                </View>
+                            )}
+
+                            {/* Favicon */}
+                            {faviconUrl ? (
+                                <Image
+                                    source={{ uri: faviconUrl }}
+                                    className="h-4 w-4 rounded-sm"
+                                />
+                            ) : (
+                                <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
+                            )}
+
+                            {/* Feed name with truncation */}
+                            <Text
+                                className={cn(
+                                    'font-geist text-xs',
+                                    isRead
+                                        ? 'text-grey dark:text-grey-dark'
+                                        : 'text-grey dark:text-grey-dark'
+                                )}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                style={{ flexShrink: 1 }}>
+                                {displaySource}
+                            </Text>
+
+                            {isSaved && articleType === 'feed' && (
+                                <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
+                            )}
+
+                            <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
+
+                            <Text className="font-geist text-xs text-grey dark:text-grey-dark">
+                                {timestamp}
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Title */}
+                    <Text
+                        className={cn(
+                            'mb-2 font-geist-semibold text-base leading-5 tracking-tight',
+                            isRead
+                                ? 'text-grey dark:text-grey-dark'
+                                : 'text-black dark:text-black-dark'
+                        )}
+                        numberOfLines={3}>
+                        {stripHtml(title)}
+                    </Text>
+
+                    {/* Description or Note */}
+                    {displayDescription && (
+                        <Text
+                            className="font-geist text-sm leading-5 text-grey dark:text-grey-dark"
+                            numberOfLines={2}>
+                            {stripHtml(displayDescription)}
+                        </Text>
+                    )}
+                </View>
+
+                {/* Thumbnail - positioned to the right */}
+                {imageUrl && (
+                    <View className="h-24 w-24 overflow-hidden rounded-xl bg-mid-grey dark:bg-mid-grey-dark">
+                        <Image
+                            source={{ uri: imageUrl }}
+                            className="h-full w-full"
+                            resizeMode="cover"
+                        />
+                    </View>
+                )}
+            </Pressable>
+        );
+
+        // Horizontal variant - with or without swipeable based on disableGestures
+        if (disableGestures) {
+            return horizontalContent;
+        }
+
         return (
             <Swipeable
                 ref={swipeableRef}
@@ -284,172 +452,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 overshootRight={false}
                 leftThreshold={SWIPE_THRESHOLD * 100}
                 rightThreshold={SWIPE_THRESHOLD * 100}>
-                <Pressable
-                    ref={ref}
-                    className={cn(
-                        'flex-row gap-3 bg-white py-4 dark:bg-white-dark',
-                        isRead && 'opacity-60',
-                        className
-                    )}
-                    {...props}>
-                    {/* Content */}
-                    <View className="flex-1">
-                        {/* Header */}
-                        {articleType === 'feed' && feedId ? (
-                            <Pressable
-                                onPress={() => {
-                                    console.log('Navigating to feed from list:', feedId);
-                                    router.push(`/discover/feed/${feedId}`);
-                                }}
-                                style={{
-                                    marginBottom: 8,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 8,
-                                }}
-                                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-                                {/* Favicon */}
-                                {faviconUrl ? (
-                                    <Image
-                                        source={{ uri: faviconUrl }}
-                                        className="h-4 w-4 rounded-sm"
-                                    />
-                                ) : (
-                                    <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
-                                )}
-
-                                {/* Feed name with truncation */}
-                                <Text
-                                    className={cn(
-                                        'font-geist text-xs',
-                                        isRead
-                                            ? 'text-grey dark:text-grey-dark'
-                                            : 'text-grey dark:text-grey-dark'
-                                    )}
-                                    numberOfLines={1}
-                                    ellipsizeMode="tail"
-                                    style={{ flexShrink: 1 }}>
-                                    {displaySource}
-                                </Text>
-
-                                {isSaved && articleType === 'feed' && (
-                                    <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
-                                )}
-
-                                <Monicon
-                                    name="solar:clock-circle-linear"
-                                    size={14}
-                                    color="#90988B"
-                                />
-
-                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">
-                                    {timestamp}
-                                </Text>
-                            </Pressable>
-                        ) : (
-                            <View className="mb-2 flex-row items-center gap-2">
-                                {/* Priority badge for clipped articles */}
-                                {articleType === 'clipped' && priority && (
-                                    <View
-                                        style={{
-                                            backgroundColor: getPriorityBgColor(priority),
-                                            borderRadius: 12,
-                                            paddingHorizontal: 6,
-                                            paddingVertical: 2,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            gap: 3,
-                                        }}>
-                                        <Monicon
-                                            name="solar:paperclip-bold"
-                                            size={10}
-                                            color={getPriorityColor(priority)}
-                                        />
-                                        <Text
-                                            style={{
-                                                fontSize: 9,
-                                                fontWeight: '600',
-                                                color: getPriorityColor(priority),
-                                                textTransform: 'capitalize',
-                                            }}>
-                                            {priority}
-                                        </Text>
-                                    </View>
-                                )}
-
-                                {/* Favicon */}
-                                {faviconUrl ? (
-                                    <Image
-                                        source={{ uri: faviconUrl }}
-                                        className="h-4 w-4 rounded-sm"
-                                    />
-                                ) : (
-                                    <View className="h-4 w-4 rounded-sm bg-mid-grey dark:bg-mid-grey-dark" />
-                                )}
-
-                                {/* Feed name with truncation */}
-                                <Text
-                                    className={cn(
-                                        'font-geist text-xs',
-                                        isRead
-                                            ? 'text-grey dark:text-grey-dark'
-                                            : 'text-grey dark:text-grey-dark'
-                                    )}
-                                    numberOfLines={1}
-                                    ellipsizeMode="tail"
-                                    style={{ flexShrink: 1 }}>
-                                    {displaySource}
-                                </Text>
-
-                                {isSaved && articleType === 'feed' && (
-                                    <Monicon name="solar:bookmark-bold" size={16} color="#FBBC04" />
-                                )}
-
-                                <Monicon
-                                    name="solar:clock-circle-linear"
-                                    size={14}
-                                    color="#90988B"
-                                />
-
-                                <Text className="font-geist text-xs text-grey dark:text-grey-dark">
-                                    {timestamp}
-                                </Text>
-                            </View>
-                        )}
-
-                        {/* Title */}
-                        <Text
-                            className={cn(
-                                'mb-2 font-geist-semibold text-base leading-5 tracking-tight',
-                                isRead
-                                    ? 'text-grey dark:text-grey-dark'
-                                    : 'text-black dark:text-black-dark'
-                            )}
-                            numberOfLines={3}>
-                            {stripHtml(title)}
-                        </Text>
-
-                        {/* Description or Note */}
-                        {displayDescription && (
-                            <Text
-                                className="font-geist text-sm leading-5 text-grey dark:text-grey-dark"
-                                numberOfLines={2}>
-                                {stripHtml(displayDescription)}
-                            </Text>
-                        )}
-                    </View>
-
-                    {/* Thumbnail - positioned to the right */}
-                    {imageUrl && (
-                        <View className="h-24 w-24 overflow-hidden rounded-xl bg-mid-grey dark:bg-mid-grey-dark">
-                            <Image
-                                source={{ uri: imageUrl }}
-                                className="h-full w-full"
-                                resizeMode="cover"
-                            />
-                        </View>
-                    )}
-                </Pressable>
+                {horizontalContent}
             </Swipeable>
         );
     }

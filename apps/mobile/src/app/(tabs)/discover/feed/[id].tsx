@@ -28,6 +28,7 @@ import {
     Pressable,
     ScrollView,
     Text,
+    useColorScheme,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,6 +46,7 @@ export default function FeedPreviewScreen() {
     const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false);
     const [previewFeedData, setPreviewFeedData] = useState<FeedDiscoveryResult | null>(null);
+    const colorScheme = useColorScheme();
 
     // Local state to track subscription status for immediate UI updates
     const [localIsSubscribed, setLocalIsSubscribed] = useState<boolean | null>(null);
@@ -205,6 +207,18 @@ export default function FeedPreviewScreen() {
                             pendingSimilarFeedUrl ? 'Following feed!' : `Following ${feed?.title}`
                         );
                         setPendingSimilarFeedUrl(null);
+
+                        // If we just followed the current feed (not a similar feed)
+                        if (!pendingSimilarFeedUrl && feed?.id) {
+                            // Invalidate the feed cache to ensure the Following screen gets updated data
+                            queryClient.invalidateQueries({
+                                queryKey: ['feeds', feed.id],
+                            });
+
+                            // Update the feed view store to exit preview mode
+                            const { selectFeed } = useFeedViewStore.getState();
+                            selectFeed(feed.id, feed.title || 'Feed');
+                        }
                     },
                     onError: (error: any) => {
                         toast.error(error?.message || 'Failed to follow feed');
@@ -218,7 +232,7 @@ export default function FeedPreviewScreen() {
                 }
             );
         },
-        [feed, createFeed, pendingSimilarFeedUrl]
+        [feed, createFeed, pendingSimilarFeedUrl, queryClient]
     );
 
     const handleUrlPress = useCallback(async () => {
@@ -280,7 +294,11 @@ export default function FeedPreviewScreen() {
                         <Pressable
                             onPress={handleBack}
                             className="mb-6 h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
-                            <Monicon name="solar:alt-arrow-left-linear" size={24} color="#232222" />
+                            <Monicon
+                                name="solar:arrow-left-linear"
+                                size={24}
+                                color={colorScheme === 'dark' ? '#FFFFFF' : '#232222'}
+                            />
                         </Pressable>
 
                         {/* Feed Icon */}
@@ -317,24 +335,32 @@ export default function FeedPreviewScreen() {
                         {/* Feed Description */}
                         {feed.description && (
                             <View className="mb-4">
-                                <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
-                                    {isDescriptionExpanded
-                                        ? feed.description
-                                        : `${feed.description.slice(0, 80)}... `}
-                                    {!isDescriptionExpanded && (
-                                        <Text
-                                            onPress={toggleDescription}
-                                            className="font-geist-medium text-base text-black dark:text-black-dark">
-                                            more
+                                {feed.description.length > 80 ? (
+                                    <>
+                                        <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
+                                            {isDescriptionExpanded
+                                                ? feed.description
+                                                : `${feed.description.slice(0, 80)}... `}
+                                            {!isDescriptionExpanded && (
+                                                <Text
+                                                    onPress={toggleDescription}
+                                                    className="font-geist-medium text-base text-black dark:text-black-dark">
+                                                    more
+                                                </Text>
+                                            )}
                                         </Text>
-                                    )}
-                                </Text>
-                                {isDescriptionExpanded && (
-                                    <Pressable onPress={toggleDescription}>
-                                        <Text className="mt-1 font-geist-medium text-base text-black dark:text-black-dark">
-                                            less
-                                        </Text>
-                                    </Pressable>
+                                        {isDescriptionExpanded && (
+                                            <Pressable onPress={toggleDescription}>
+                                                <Text className="mt-1 font-geist-medium text-base text-black dark:text-black-dark">
+                                                    less
+                                                </Text>
+                                            </Pressable>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
+                                        {feed.description}
+                                    </Text>
                                 )}
                             </View>
                         )}
@@ -345,7 +371,7 @@ export default function FeedPreviewScreen() {
                                 onPress={handleUrlPress}
                                 className="mb-4 flex-row items-center gap-2">
                                 <Monicon
-                                    name="solar:link-circle-linear"
+                                    name="lucide:link"
                                     size={20}
                                     color="#386641"
                                 />
@@ -363,17 +389,13 @@ export default function FeedPreviewScreen() {
                                 {feed.tags.slice(0, 5).map((tag, index) => {
                                     const tagName =
                                         typeof tag === 'string' ? tag : (tag as any)?.name || 'Tag';
+                                    const formattedTag = tagName.replace(/\s+/g, '-');
                                     return (
                                         <View
                                             key={`${tagName}-${index}`}
                                             className="flex-row items-center gap-1.5 rounded-full bg-mid-grey px-3 py-1.5 dark:bg-mid-grey-dark">
-                                            <Monicon
-                                                name="solar:tag-linear"
-                                                size={14}
-                                                color="#90988B"
-                                            />
                                             <Text className="font-geist text-xs text-grey dark:text-grey-dark">
-                                                {tagName}
+                                                #{formattedTag}
                                             </Text>
                                         </View>
                                     );
@@ -419,66 +441,8 @@ export default function FeedPreviewScreen() {
                         </Button>
                     </View>
 
-                    {/* Divider */}
-                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
-
-                    {/* You might also like */}
-                    <View className="px-6 pb-8">
-                        <View className="mb-5 flex-row items-center justify-between">
-                            <Text
-                                style={{ letterSpacing: -0.36 }}
-                                className="font-geist-bold text-lg text-black dark:text-black-dark">
-                                You might also like
-                            </Text>
-                            <Pressable
-                                onPress={handleSeeAllSimilar}
-                                className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60 dark:bg-mid-grey-dark">
-                                <Monicon
-                                    name="solar:alt-arrow-right-linear"
-                                    size={18}
-                                    color="#90988B"
-                                />
-                            </Pressable>
-                        </View>
-
-                        {isSimilarLoading ? (
-                            <View className="space-y-4">
-                                {Array.from({ length: 3 }).map((_, index) => (
-                                    <View key={index} className="flex-row gap-3 py-3">
-                                        <ShimmerView width={56} height={56} borderRadius={8} />
-                                        <View className="flex-1 gap-2">
-                                            <ShimmerView width="75%" height={16} borderRadius={4} />
-                                            <ShimmerView
-                                                width="100%"
-                                                height={12}
-                                                borderRadius={4}
-                                            />
-                                        </View>
-                                    </View>
-                                ))}
-                            </View>
-                        ) : similarFeeds.length > 0 ? (
-                            <View>
-                                {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
-                                    <FeedListItem
-                                        key={suggestedFeed.id}
-                                        feedId={suggestedFeed.id}
-                                        feedUrl={suggestedFeed.url}
-                                        title={suggestedFeed.title || 'Untitled Feed'}
-                                        description={suggestedFeed.description || ''}
-                                        iconUrl={suggestedFeed.image_url || undefined}
-                                        isFollowing={suggestedFeed.is_subscribed || false}
-                                        onFollowRequest={handleSimilarFeedFollowRequest}
-                                    />
-                                ))}
-                            </View>
-                        ) : null}
-                    </View>
-
-                    {/* Divider */}
-                    <View className="mb-6 h-2 bg-light-grey dark:bg-light-grey-dark" />
                     {/* Recent Articles */}
-                    <View className="mb-6">
+                    <View className="mb-8 mt-8">
                         <View className="mb-5 flex-row items-center justify-between px-6">
                             <Text
                                 style={{ letterSpacing: -0.36 }}
@@ -488,11 +452,17 @@ export default function FeedPreviewScreen() {
                             {feed && (
                                 <Pressable
                                     onPress={() => {
-                                        if (shouldShowPreviewBanner) {
+                                        // Use isFollowing state which reflects the current subscription status
+                                        if (!isFollowing) {
                                             // Navigate to Following screen with feed preview mode
                                             const { selectFeedPreview } =
                                                 useFeedViewStore.getState();
-                                            selectFeedPreview(feed.id, feed.title || 'Feed');
+                                            // Store the current route to return to when back is pressed
+                                            selectFeedPreview(
+                                                feed.id,
+                                                feed.title || 'Feed',
+                                                `/discover/feed/${feed.id}`
+                                            );
                                         } else {
                                             // Navigate to Following screen with feed selected
                                             const { selectFeed } = useFeedViewStore.getState();
@@ -566,6 +536,9 @@ export default function FeedPreviewScreen() {
                                 horizontal
                                 showsHorizontalScrollIndicator={false}
                                 contentContainerStyle={{ paddingHorizontal: 24 }}
+                                snapToInterval={CARD_WIDTH + CARD_SPACING}
+                                snapToAlignment="start"
+                                decelerationRate="fast"
                                 renderItem={({ item: article }) => (
                                     <ArticleListItem
                                         variant="card"
@@ -592,6 +565,59 @@ export default function FeedPreviewScreen() {
                                 </Text>
                             </View>
                         )}
+                    </View>
+
+                    {/* You might also like */}
+                    <View className="px-6 pb-8">
+                        <View className="mb-2 flex-row items-center justify-between">
+                            <Text
+                                style={{ letterSpacing: -0.36 }}
+                                className="font-geist-bold text-lg text-black dark:text-black-dark">
+                                You might also like
+                            </Text>
+                            <Pressable
+                                onPress={handleSeeAllSimilar}
+                                className="h-9 w-9 items-center justify-center rounded-full bg-mid-grey active:opacity-60 dark:bg-mid-grey-dark">
+                                <Monicon
+                                    name="solar:alt-arrow-right-linear"
+                                    size={18}
+                                    color="#90988B"
+                                />
+                            </Pressable>
+                        </View>
+
+                        {isSimilarLoading ? (
+                            <View className="space-y-4">
+                                {Array.from({ length: 3 }).map((_, index) => (
+                                    <View key={index} className="flex-row gap-3 py-3">
+                                        <ShimmerView width={56} height={56} borderRadius={8} />
+                                        <View className="flex-1 gap-2">
+                                            <ShimmerView width="75%" height={16} borderRadius={4} />
+                                            <ShimmerView
+                                                width="100%"
+                                                height={12}
+                                                borderRadius={4}
+                                            />
+                                        </View>
+                                    </View>
+                                ))}
+                            </View>
+                        ) : similarFeeds.length > 0 ? (
+                            <View>
+                                {similarFeeds.map((suggestedFeed: FeedDiscoveryResult) => (
+                                    <FeedListItem
+                                        key={suggestedFeed.id}
+                                        feedId={suggestedFeed.id}
+                                        feedUrl={suggestedFeed.url}
+                                        title={suggestedFeed.title || 'Untitled Feed'}
+                                        description={suggestedFeed.description || ''}
+                                        iconUrl={suggestedFeed.image_url || undefined}
+                                        isFollowing={suggestedFeed.is_subscribed || false}
+                                        onFollowRequest={handleSimilarFeedFollowRequest}
+                                    />
+                                ))}
+                            </View>
+                        ) : null}
                     </View>
                 </ScrollView>
             </SafeAreaView>

@@ -29,7 +29,7 @@ export function FeedListSkeleton({ count = 5 }: FeedListSkeletonProps) {
 
                     {/* Divider */}
                     {index < count - 1 && (
-                        <View className="h-[0.5px] bg-green-grey dark:bg-light-grey-dark" />
+                        <View className="h-[0.5px] bg-light-grey dark:bg-mid-grey-dark" />
                     )}
                 </View>
             ))}

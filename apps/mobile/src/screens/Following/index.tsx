@@ -24,9 +24,9 @@ import {
 } from '@readspace/shared';
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { ActivityIndicator, Pressable, RefreshControl, Text, View } from 'react-native';
+import { ActivityIndicator, BackHandler, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
@@ -53,6 +53,7 @@ export default function FollowingScreen() {
     const selectedName = useFeedViewStore((state) => state.selectedName);
     const activeTab = useFeedViewStore((state) => state.activeTab);
     const isPreviewMode = useFeedViewStore((state) => state.isPreviewMode);
+    const previewSourceRoute = useFeedViewStore((state) => state.previewSourceRoute);
     const selectTab = useFeedViewStore((state) => state.selectTab);
 
     const [headerHeight, setHeaderHeight] = useState(0);
@@ -118,7 +119,8 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } = activeQuery;
+    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching } =
+        activeQuery;
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
@@ -138,7 +140,7 @@ export default function FollowingScreen() {
 
         // Filter by unread only if enabled
         if (unreadOnly) {
-            result = result.filter(article => !article.is_read);
+            result = result.filter((article) => !article.is_read);
         }
 
         return result;
@@ -200,19 +202,71 @@ export default function FollowingScreen() {
     }, [viewType, selectedName]);
 
     // Toggle unread only button
-    const toggleUnreadButton = useMemo(() => (
-        <Pressable
-            onPress={() => setUnreadOnly(!unreadOnly)}
-            className="w-10 h-10 items-center justify-center rounded-lg active:opacity-70"
-            style={{ backgroundColor: unreadOnly ? colors['light-grey'] : 'transparent' }}
-        >
-            <Monicon
-                name={unreadOnly ? "solar:eye-bold" : "solar:eye-linear"}
-                size={24}
-                color={unreadOnly ? colors.secondary : colors.grey}
-            />
-        </Pressable>
-    ), [unreadOnly, colors]);
+    const toggleUnreadButton = useMemo(
+        () => (
+            <Pressable
+                onPress={() => setUnreadOnly(!unreadOnly)}
+                className="h-10 w-10 items-center justify-center rounded-lg active:opacity-70"
+                style={{ backgroundColor: unreadOnly ? colors['light-grey'] : 'transparent' }}>
+                <Monicon
+                    name={unreadOnly ? 'solar:eye-bold' : 'solar:eye-linear'}
+                    size={24}
+                    color={unreadOnly ? colors.secondary : colors.grey}
+                />
+            </Pressable>
+        ),
+        [unreadOnly, colors]
+    );
+
+    // Back button for preview mode
+    const handleBackPress = useCallback(() => {
+        // If we have a source route stored, navigate back to it
+        if (previewSourceRoute) {
+            const { clearView } = useFeedViewStore.getState();
+            clearView();
+            router.push(previewSourceRoute as any);
+        } else if (router.canGoBack()) {
+            // Fallback to native back if available
+            router.back();
+        } else {
+            // Last resort: just clear the preview state
+            const { clearView } = useFeedViewStore.getState();
+            clearView();
+        }
+    }, [router, previewSourceRoute]);
+
+    // Handle hardware back button in preview mode
+    useEffect(() => {
+        const onHardwareBackPress = () => {
+            if (isPreviewMode) {
+                handleBackPress();
+                return true; // Prevent default back behavior
+            }
+            return false; // Allow default back behavior
+        };
+
+        if (isPreviewMode) {
+            const subscription = BackHandler.addEventListener('hardwareBackPress', onHardwareBackPress);
+            return () => subscription.remove();
+        }
+    }, [isPreviewMode, handleBackPress]);
+
+    const backButton = useMemo(
+        () =>
+            isPreviewMode ? (
+                <Pressable
+                    onPress={handleBackPress}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    className="h-10 w-10 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
+                    <Monicon
+                        name="solar:arrow-left-linear"
+                        size={24}
+                        color={colorScheme === 'dark' ? '#FFFFFF' : '#232222'}
+                    />
+                </Pressable>
+            ) : null,
+        [isPreviewMode, handleBackPress, colorScheme]
+    );
 
     // Handle following feed from preview banner
     const handleFollowFromPreview = useCallback(() => {
@@ -266,7 +320,10 @@ export default function FollowingScreen() {
             return firstArticleB.date.getTime() - firstArticleA.date.getTime();
         });
 
-        for (const [sectionTitle, articles] of sortedSections) {
+        for (let sectionIndex = 0; sectionIndex < sortedSections.length; sectionIndex++) {
+            const [sectionTitle, articles] = sortedSections[sectionIndex];
+            const isLastSection = sectionIndex === sortedSections.length - 1;
+
             // Add section header
             items.push({
                 type: 'section',
@@ -292,11 +349,13 @@ export default function FollowingScreen() {
                 }
             }
 
-            // Add divider after section (before next section)
-            items.push({
-                type: 'divider',
-                id: `divider-${dividerCounter++}`,
-            });
+            // Add divider after section (before next section) only if not the last section
+            if (!isLastSection) {
+                items.push({
+                    type: 'divider',
+                    id: `divider-${dividerCounter++}`,
+                });
+            }
         }
 
         return items;
@@ -438,6 +497,7 @@ export default function FollowingScreen() {
                     note={article.note || undefined}
                     articleUrl={article.link}
                     feedId={feedId || undefined}
+                    disableGestures={isPreviewMode}
                     onPress={() => router.push(`/articles/${article.id}`)}
                     onBookmark={() =>
                         handleBookmark(
@@ -492,6 +552,7 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
+                    leftAction={backButton}
                     rightAction={toggleUnreadButton}
                 />
                 <ArticleListSkeleton count={6} className="mt-28" />
@@ -511,6 +572,7 @@ export default function FollowingScreen() {
                     unreadCount={isPreviewMode ? 0 : unreadCount}
                     scrollY={scrollY}
                     onHeaderHeightChange={setHeaderHeight}
+                    leftAction={backButton}
                     rightAction={toggleUnreadButton}
                 />
                 <LegendList
