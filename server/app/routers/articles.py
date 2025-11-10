@@ -13,7 +13,6 @@ from app.db.session import get_db
 from app.schemas import (
     ArticleResponse,
     ArticleUpdate,
-    ClippedArticleResponse,
     ClippedArticleUpdate,
     SaveArticleRequest,
 )
@@ -141,7 +140,7 @@ async def save_web_article(
             user_id=current_user.sub,
             url=str(request.url),
         )
-        
+
         # Return minimal response for extension
         return {"success": True, "article_id": str(article.id)}
 
@@ -287,15 +286,15 @@ async def list_articles(
     for item in result.items:
         transformed_item = transformer.to_unified(item)
         item_dict = transformed_item.model_dump()
-        
+
         # Exclude heavy content fields if requested (default behavior)
         if exclude_content:
-            item_dict.pop('content', None)
-            item_dict.pop('extracted_content', None)
+            item_dict.pop("content", None)
+            item_dict.pop("extracted_content", None)
             # Keep description_preview but remove full description if it's large
-            if item_dict.get('description') and len(item_dict['description']) > 500:
-                item_dict['description'] = item_dict['description'][:500] + '...'
-        
+            if item_dict.get("description") and len(item_dict["description"]) > 500:
+                item_dict["description"] = item_dict["description"][:500] + "..."
+
         transformed_items.append(item_dict)
 
     return {
@@ -464,11 +463,13 @@ async def get_recently_read_articles(
     limit: int = Query(50, ge=1, le=200, description="Number of items per page"),
 ) -> dict:
     """
-    Retrieve articles that have been recently read by the user using cursor-based pagination.
+    Retrieve articles that have been explicitly read by the user using cursor-based pagination.
 
-    This endpoint returns articles that the user has marked as read, sorted by
-    when they were read (most recently read first). Useful for creating
-    reading history or "continue reading" functionality.
+    This endpoint returns articles that the user has explicitly marked as read
+    (is_read=True in UserArticleState), sorted by publication date (most recent first).
+    It does NOT include articles that are automatically considered "read" due to the
+    feed's last_read_cutoff timestamp. Useful for creating reading history or
+    "continue reading" functionality.
 
     Args:
         db: Database session dependency
@@ -488,10 +489,10 @@ async def get_recently_read_articles(
         }
 
     Note:
-        - Only includes articles explicitly marked as read by the user
-        - Articles are sorted by read_at timestamp in descending order
-        - The definition of "recent" is configurable (typically within the last 30 days)
-        - Includes articles from both RSS feeds and saved web articles
+        - Only includes articles explicitly marked as read by the user (UserArticleState.is_read = True)
+        - Excludes articles automatically marked as read via last_read_cutoff
+        - Articles are sorted by published_at timestamp in descending order
+        - Only includes articles from RSS feeds, not saved web articles
     """
     from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
 
@@ -499,11 +500,14 @@ async def get_recently_read_articles(
     params = CursorPaginationParams(limit=limit, cursor=cursor)
 
     # Get recently read articles using cursor pagination
+    # Use explicit_read_only=True to only return articles explicitly marked as read,
+    # ignoring the last_read_cutoff automatic read logic
     result = await get_articles_cursor_paginated(
         db=db,
         user_id=UUID(current_user.sub),
         params=params,
         is_read=True,
+        explicit_read_only=True,
     )
 
     # Transform the tuples into ArticleResponse objects
@@ -728,11 +732,7 @@ async def get_unread_article_counts(
     responses={
         200: {
             "description": "Article check result",
-            "content": {
-                "application/json": {
-                    "example": {"is_saved": True, "article_id": "uuid-string"}
-                }
-            },
+            "content": {"application/json": {"example": {"is_saved": True, "article_id": "uuid-string"}}},
         },
         422: {
             "description": "Validation error in query parameters",
@@ -778,7 +778,7 @@ async def check_article_saved(
 
     try:
         article = await web_service.get_article_by_url(url)
-        
+
         if article:
             # Return minimal metadata without heavy content
             return {

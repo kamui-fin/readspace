@@ -8,7 +8,6 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import func as sql_func
 from sqlalchemy.orm import selectinload
 
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
@@ -57,6 +56,7 @@ async def get_articles_cursor_paginated(
     is_favorite: bool | None = None,
     published_since: Any | None = None,
     published_until: Any | None = None,
+    explicit_read_only: bool = False,
 ) -> CursorPaginationResult:
     """
     Get articles using cursor-based pagination for better performance.
@@ -77,6 +77,8 @@ async def get_articles_cursor_paginated(
         is_favorite: Optional filter for favorite status
         published_since: Optional filter for articles published after this date
         published_until: Optional filter for articles published before this date
+        explicit_read_only: If True and is_read=True, only return articles explicitly marked as read,
+                           ignoring the last_read_cutoff logic
 
     Returns:
         CursorPaginationResult with items and pagination metadata
@@ -139,9 +141,14 @@ async def get_articles_cursor_paginated(
             query = query.where(FeedSubscription.folder_id == folder_id)
 
     # Apply status filters
-    # Use computed_is_read for filtering instead of raw UserArticleState.is_read
+    # Use computed_is_read for filtering, unless explicit_read_only is True
     if is_read is not None:
-        query = query.where(computed_is_read.is_(is_read))
+        if explicit_read_only and is_read:
+            # Only return articles explicitly marked as read, ignore cutoff logic
+            query = query.where(UserArticleState.is_read.is_(True))
+        else:
+            # Use computed_is_read which includes cutoff logic
+            query = query.where(computed_is_read.is_(is_read))
 
     if is_read_later is not None:
         query = query.where(UserArticleState.is_read_later.is_(is_read_later))

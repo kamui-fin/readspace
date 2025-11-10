@@ -44,7 +44,7 @@ class WebArticleService:
         if existing_extracted_content:
             # We have extension-extracted content, use it
             content_record = existing_extracted_content
-            
+
             # Update title if a new one is provided and different from existing
             if title and content_record.title != title:
                 old_title = content_record.title
@@ -56,7 +56,7 @@ class WebArticleService:
                     old_title=old_title,
                     new_title=title,
                 )
-            
+
             logger.info(
                 "Found existing chrome extension extracted content",
                 url=url,
@@ -123,7 +123,7 @@ class WebArticleService:
             # If article exists but is_read_later is false, update it to true (re-save)
             needs_update = False
             content_needs_update = False
-            
+
             if not existing_clipped.is_read_later:
                 existing_clipped.is_read_later = True
                 needs_update = True
@@ -144,7 +144,7 @@ class WebArticleService:
             if note is not None and existing_clipped.note != note:
                 existing_clipped.note = note
                 needs_update = True
-            
+
             # Update title in content record if provided and different
             if title and content_record.title != title:
                 content_record.title = title
