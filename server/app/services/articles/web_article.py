@@ -72,17 +72,19 @@ class WebArticleService:
                 title=title,
             )
 
-            # Parse published date from metadata if provided
-            published_at = None
+            # Parse published date from metadata if provided, default to current time
+            published_at = datetime.now(timezone.utc)
             if metadata and metadata.get("published_at"):
                 published_override = metadata["published_at"]
                 if isinstance(published_override, str):
-                    published_at = self._parse_datetime_string(published_override)
-                    logger.debug(
-                        "Parsed metadata published_at",
-                        original=published_override,
-                        parsed=published_at,
-                    )
+                    parsed_date = self._parse_datetime_string(published_override)
+                    if parsed_date:
+                        published_at = parsed_date
+                        logger.debug(
+                            "Parsed metadata published_at",
+                            original=published_override,
+                            parsed=published_at,
+                        )
                 else:
                     published_at = published_override
 

@@ -16,7 +16,7 @@ def require_resource_limit(resource: str) -> Callable[[Callable[..., Awaitable[A
     """Decorator to check resource limits before action.
 
     Args:
-        resource: Resource type to check (e.g., 'max_subscriptions', 'max_books')
+        resource: Resource type to check (e.g., 'max_subscriptions')
     """
 
     def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:

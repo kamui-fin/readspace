@@ -8,7 +8,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.core.constants import MAX_FEEDS_PER_USER_QUERY
 from app.core.redis_cache import get_redis_cache
 from app.models import Feed, FeedSubscription
 from app.schemas import FeedBase
@@ -201,7 +200,7 @@ async def get_feeds_by_user(
     tag_names: list[str] | None = None,
     is_favorite: bool | None = None,
     skip: int = 0,
-    limit: int = 100,
+    limit: int | None = None,
 ) -> list[tuple[Feed, FeedSubscription]]:
     """Get feeds for a specific user with extensive filtering.
 
@@ -212,17 +211,11 @@ async def get_feeds_by_user(
         tag_names: Optional list of tag names to filter by
         is_favorite: Optional boolean to filter favorites
         skip: Number of items to skip for pagination
-        limit: Maximum number of items to return (capped at MAX_FEEDS_PER_USER_QUERY)
+        limit: Optional maximum number of items to return. If None, returns all feeds.
 
     Returns:
         List of tuples containing (Feed, FeedSubscription) pairs
-
-    Raises:
-        ValueError: If limit exceeds MAX_FEEDS_PER_USER_QUERY
     """
-    # Validate and cap limit to prevent unbounded queries
-    if limit > MAX_FEEDS_PER_USER_QUERY:
-        raise ValueError(f"Limit cannot exceed {MAX_FEEDS_PER_USER_QUERY}")
 
     # Use joinedload for folder to load it in the main query (single query)
     # This is more efficient than selectinload which issues a separate query per subscription
@@ -242,7 +235,11 @@ async def get_feeds_by_user(
     # Tag filtering removed - feeds now use tags as ARRAY field
     # tag filtering would need to be adapted for ARRAY contains operations
 
-    stmt = stmt.order_by(Feed.title).offset(skip).limit(limit)
+    stmt = stmt.order_by(Feed.title).offset(skip)
+
+    # Only apply limit if provided
+    if limit is not None:
+        stmt = stmt.limit(limit)
 
     result = await db.execute(stmt)
     rows = result.unique().all()

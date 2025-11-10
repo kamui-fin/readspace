@@ -251,7 +251,7 @@ class FeedCreationService:
         )
 
         # Trigger background feed enrichment
-        self._trigger_feed_enrichment(db_feed.id)
+        await self._trigger_feed_enrichment(db_feed.id)
 
         return SubscriptionResponse.model_validate(subscription)
 
@@ -441,7 +441,7 @@ class FeedCreationService:
 
         return skip_days_value
 
-    def _trigger_feed_enrichment(self, feed_id: UUID) -> None:
+    async def _trigger_feed_enrichment(self, feed_id: UUID) -> None:
         """Trigger background feed enrichment task if AI is enabled."""
         settings = get_settings()
         if not settings.ENABLE_AI:
@@ -452,10 +452,8 @@ class FeedCreationService:
             from app.workers.feed_tasks import enrich_feed_task
 
             # Queue the enrichment task with a small delay to ensure feed is committed
-            enrich_feed_task.apply_async(
-                args=[feed_id],
-                countdown=5,  # 5 second delay
-            )
+            # In Taskiq, delays are set using labels
+            await enrich_feed_task.kicker().with_labels(delay=5).kiq(feed_id)
 
             logger.info(
                 "Feed enrichment task queued",

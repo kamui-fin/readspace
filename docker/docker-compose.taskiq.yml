@@ -1,13 +1,13 @@
-# Only for coolify deployment
-# Temporary, need to find a better consolidated solution
+# For Coolify deployment
+# Taskiq worker and scheduler services
 
 services:
   worker:
     build:
       context: ../server
-      dockerfile: Dockerfile.celery
+      dockerfile: Dockerfile
     container_name: readspace_worker
-    command: celery -A app.core.celery_app  worker -l info
+    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
@@ -15,12 +15,12 @@ services:
     networks:
       - coolify
 
-  beat:
+  scheduler:
     build:
       context: ../server
-      dockerfile: Dockerfile.celery
-    container_name: readspace_beat
-    command: celery -A app.core.celery_app beat -l info
+      dockerfile: Dockerfile
+    container_name: readspace_scheduler
+    command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1

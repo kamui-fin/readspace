@@ -59,12 +59,12 @@ sqlalchemy = {extras = ["asyncio"], version = "^2.0.28"}
 alembic = "^1.13.1"
 opml = "^0.5"
 feedparser = "^6.0.11"
-celery = {extras = ["redis"], version = "^5.5.2"}
+taskiq = "^0.11.8"
+taskiq-redis = "^1.0.2"
 pytest = "^8.3.5"
 pytest-cov = "^6.1.1"
 factory-boy = "^3.3.3"
 sqlalchemy-utils = "^0.41.2"
-gevent = "^25.5.1"
 bs4 = "^0.0.2"
 psycopg2-binary = "^2.9.10"
 beautifulsoup4 = "^4.13.4"
@@ -74,8 +74,9 @@ lingua-language-detector = "^2.1.1"
 pgvector = "^0.4.1"
 google-genai = "^1.35.0"
 trafilatura = "^1.12.2"
-
+defusedxml = "^0.7.1"
 brotli = "^1.1.0"
+taskiq-aio-pika = "^0.4.4"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

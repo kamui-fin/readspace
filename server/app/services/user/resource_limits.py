@@ -21,7 +21,7 @@ class ResourceLimitService:
 
         Args:
             user_id: User UUID
-            resource: Resource type (e.g., 'max_subscriptions', 'max_books')
+            resource: Resource type (e.g., 'max_subscriptions')
             user_role: User's role (basic, pro, admin)
 
         Returns:
@@ -60,12 +60,14 @@ class ResourceLimitService:
         """Get all limits for user role.
 
         Args:
-            user_role: User's role
+            user_role: User's role (can be 'basic', 'BASIC', or 'UserRole.BASIC')
 
         Returns:
             Dictionary of resource limits
         """
-        return RESOURCE_LIMITS.get(user_role, RESOURCE_LIMITS["basic"])
+        # Normalize role string - handle both "UserRole.BASIC" and "BASIC" formats
+        normalized_role = user_role.lower().replace("userrole.", "")
+        return RESOURCE_LIMITS.get(normalized_role, RESOURCE_LIMITS["basic"])
 
 
 class ResourceLimitError(Exception):

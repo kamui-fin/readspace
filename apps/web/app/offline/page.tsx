@@ -1,5 +1,6 @@
 "use client"
 
+import { Button } from "@/components/ui/button"
 import {
     Card,
     CardContent,
@@ -7,8 +8,7 @@ import {
     CardHeader,
     CardTitle,
 } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { WifiOff, RefreshCw, ArrowLeft } from "lucide-react"
+import { ArrowLeft, RefreshCw, WifiOff } from "lucide-react"
 
 export default function OfflinePage() {
     return (
@@ -27,7 +27,7 @@ export default function OfflinePage() {
                 </CardHeader>
                 <CardContent className="text-center space-y-4">
                     <p className="text-sm text-muted-foreground">
-                        Your previously loaded articles and books are still
+                        Your previously loaded articles are still
                         available to read.
                     </p>
                     <Button

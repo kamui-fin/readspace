@@ -5,7 +5,7 @@ Application constants
 from datetime import timedelta
 
 # RSS Feed Constants
-DEFAULT_RSS_TIMEOUT = 180  # seconds
+DEFAULT_RSS_TIMEOUT = 30  # seconds - reduced from 180s to prevent connection exhaustion
 DEFAULT_CACHE_TTL_SECONDS = 15 * 60  # 15 minutes
 OPML_IMPORT_TIMEOUT_SECONDS = 8  # seconds
 MIN_ARTICLE_COUNT = 1  # Minimum articles required for valid feed

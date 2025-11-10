@@ -161,7 +161,7 @@ class FeedManagementService:
         tag_names: list[str] | None = None,
         is_favorite: bool | None = None,
         skip: int = 0,
-        limit: int = 100,
+        limit: int | None = None,
         include_unread_counts: bool = False,
     ) -> list[FeedResponse]:
         """

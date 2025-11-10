@@ -362,10 +362,10 @@ class ArticleCrudOperations:
             # Note: Commit is handled by the dependency injection layer (get_db)
             await db.flush()  # Ensure changes are persisted
 
-            # Refresh the object
-            await db.refresh(clipped_article)
+            # Don't refresh - we already have the object with eager-loaded relationships
+            # Refreshing can lose the eager loading and cause MissingGreenlet errors
 
-            # Return the clipped article
+            # Return the clipped article with already-loaded content relationship
             return clipped_article
 
         else:

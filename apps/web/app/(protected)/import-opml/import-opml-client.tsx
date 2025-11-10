@@ -12,6 +12,7 @@ import {
 import {
     ActiveImportTask,
     ApiClient,
+    ApiError,
     opml,
     RSS_QUERY_KEYS,
 } from "@readspace/shared"
@@ -186,6 +187,44 @@ export default function ImportOPMLPageClient() {
                 )
             } catch (error) {
                 console.error("Error uploading OPML file:", error)
+
+                // Handle resource limit errors (429) with user-friendly message
+                if (error instanceof ApiError && error.status === 429) {
+                    const errorMessage = error.message
+
+                    // Parse the error message to extract key information
+                    const feedCountMatch = errorMessage.match(/Cannot import (\d+) feeds/)
+                    const remainingMatch = errorMessage.match(/(\d+) subscription slots remaining/)
+                    const usageMatch = errorMessage.match(/current: (\d+)\/(\d+)/)
+
+                    if (feedCountMatch && remainingMatch && usageMatch) {
+                        const feedCount = feedCountMatch[1]
+                        const remaining = remainingMatch[1]
+                        const currentUsage = usageMatch[1]
+                        const maxLimit = usageMatch[2]
+
+                        // Show comprehensive, actionable error message
+                        toast.error(
+                            `Your OPML file contains ${feedCount} feeds, but you only have ${remaining} subscription slots available (currently using ${currentUsage}/${maxLimit}). Please upgrade your plan, remove some existing feeds, or import a smaller OPML file.`,
+                            { duration: 8000 }
+                        )
+                    } else {
+                        // Fallback if parsing fails - show the full error message from backend
+                        toast.error(errorMessage, { duration: 8000 })
+                    }
+
+                    setIsUploading(false)
+                    return
+                }
+
+                // Handle other API errors with their specific messages
+                if (error instanceof ApiError) {
+                    toast.error(error.message)
+                    setIsUploading(false)
+                    return
+                }
+
+                // Generic error handling for unknown errors
                 toast.error("Failed to import OPML file. Please try again.")
                 setIsUploading(false)
             }

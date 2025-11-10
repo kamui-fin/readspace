@@ -62,24 +62,45 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: readspace_rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+      - RABBITMQ_DEFAULT_VHOST=/
+
   worker:
     build:
       context: ../server
       dockerfile: Dockerfile
     container_name: readspace_worker
-    command: celery -A app.core.celery_app  worker -l info
+    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
     volumes:
       - ../server:/app
     depends_on:
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
@@ -88,34 +109,36 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
-  beat:
+  scheduler:
     build:
       context: ../server
       dockerfile: Dockerfile
-    container_name: readspace_beat
-    command: celery -A app.core.celery_app beat -l info
+    container_name: readspace_scheduler
+    command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
     volumes:
       - ../server:/app
     depends_on:
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
       - PYTHONPATH=/app
-      - CELERY_BROKER_URL=redis://redis:6379/0
-      - CELERY_RESULT_BACKEND=redis://redis:6379/1
       - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - CORS_ORIGIN=http://web:8042
       - SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
-      - SUPABASE_URL=http://kong:18000
+      - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
 volumes:
     redis-data:
+    rabbitmq-data:
 
 networks:
   default:

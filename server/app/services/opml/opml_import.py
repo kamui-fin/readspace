@@ -1,10 +1,10 @@
 """Service for OPML import operations."""
 
+import asyncio
 from typing import Any
 from uuid import UUID
 
 import structlog
-from celery import group  # type: ignore[import-untyped]
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.feeds.feed_management import FeedManagementService
@@ -12,6 +12,9 @@ from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
 
 logger = structlog.get_logger(__name__)
+
+# Maximum number of concurrent feed imports to prevent overwhelming the system
+MAX_CONCURRENT_FEED_IMPORTS = 100
 
 
 class OpmlImportService:
@@ -103,19 +106,17 @@ class OpmlImportService:
     ) -> dict[str, Any]:
         """Process OPML import and return feed import results.
 
-        This method encapsulates the business logic for OPML import orchestration,
-        making it easier to test without Celery task complexity.
+        This method now processes all feeds directly using asyncio.gather() with concurrency
+        limiting, leveraging gevent's greenlets for efficient I/O handling.
 
         Args:
             opml_content: OPML file content
             default_folder_name: Default folder for feeds without a folder
-            test_mode: If True, import feeds directly instead of queuing Celery tasks
+            test_mode: Legacy parameter, no longer used (kept for compatibility)
 
         Returns:
-            Dict with total_feeds, task_ids/results, and import status
+            Dict with total_feeds, imported_count, results, and import status
         """
-        from app.workers.opml_tasks import async_import_single_feed, import_single_feed_task
-
         # Extract feeds from OPML
         feeds_data = await self.extract_feeds_from_opml(
             opml_content=opml_content, default_folder_name=default_folder_name
@@ -123,52 +124,73 @@ class OpmlImportService:
 
         total_feeds = len(feeds_data)
 
-        if test_mode:
-            # Test mode: import feeds directly without Celery
-            import_results = []
-            for feed_data in feeds_data:
-                result = await async_import_single_feed(
-                    user_id=self.user_id,
+        if not feeds_data:
+            return {
+                "total_feeds": 0,
+                "imported_count": 0,
+                "results": [],
+                "status": "completed",
+            }
+
+        logger.info(
+            "Starting OPML feed imports with concurrency limit",
+            total_feeds=total_feeds,
+            max_concurrent=MAX_CONCURRENT_FEED_IMPORTS,
+            user_id=self.user_id,
+        )
+
+        # Process feeds with concurrency limiting using semaphore
+        semaphore = asyncio.Semaphore(MAX_CONCURRENT_FEED_IMPORTS)
+
+        async def import_with_semaphore(feed_data: dict[str, Any]) -> dict[str, Any]:
+            """Import a single feed with semaphore limiting."""
+            async with semaphore:
+                return await self.import_single_feed(
                     feed_url=feed_data["url"],
                     folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
                     tag_names=feed_data["tag_names"],
                     feed_title=feed_data["title"],
                     update_existing=True,
-                    db=self.db,
                 )
-                import_results.append(result)
 
-            imported_count = sum(1 for r in import_results if r.get("success"))
-            return {
-                "total_feeds": total_feeds,
-                "imported_count": imported_count,
-                "results": import_results,
-                "status": "completed",
-            }
+        # Process all feeds concurrently with gather
+        import_results = await asyncio.gather(
+            *[import_with_semaphore(feed_data) for feed_data in feeds_data],
+            return_exceptions=True,  # Don't fail entire import if one feed fails
+        )
 
-        # Production mode: Queue feed import tasks using Celery groups
-        task_ids = []
-        if feeds_data:
-            # Use Celery group for efficient bulk task queuing
-            task_group = group(
-                import_single_feed_task.s(
-                    user_id=str(self.user_id),
-                    feed_url=feed_data["url"],
-                    folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
-                    tag_names=feed_data["tag_names"],
-                    feed_title=feed_data["title"],
-                    update_existing=True,  # Enable seamless updating of existing feeds
+        # Convert exceptions to error results
+        processed_results = []
+        for i, result in enumerate(import_results):
+            if isinstance(result, Exception):
+                feed_data = feeds_data[i]
+                processed_results.append(
+                    {
+                        "success": False,
+                        "url": feed_data["url"],
+                        "title": feed_data["title"] or "Unknown",
+                        "status": "unknown_error",
+                        "error": str(result),
+                    }
                 )
-                for feed_data in feeds_data
-            )
-            group_result = task_group.apply_async()
-            task_ids = [result.task_id for result in group_result.results]
+            else:
+                processed_results.append(result)
+
+        imported_count = sum(1 for r in processed_results if r.get("success"))
+
+        logger.info(
+            "OPML feed imports completed",
+            total_feeds=total_feeds,
+            imported_count=imported_count,
+            failed_count=total_feeds - imported_count,
+            user_id=self.user_id,
+        )
 
         return {
             "total_feeds": total_feeds,
-            "queued_tasks": len(task_ids),
-            "task_ids": task_ids,
-            "status": "tasks_queued",
+            "imported_count": imported_count,
+            "results": processed_results,
+            "status": "completed",
         }
 
     async def import_single_feed(

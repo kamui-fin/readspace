@@ -45,31 +45,3 @@ export interface MutationResponse<T = unknown> {
   error?: string;
   success: boolean;
 }
-
-// Function Parameter Types
-export interface UpdateProgressParams {
-  bookId: string;
-  page: number;
-}
-
-export interface AddHighlightParams {
-  user_book_lib_id: string;
-  original_text: string;
-  color: "YELLOW" | "GREEN" | "BLUE" | "PINK" | "PURPLE";
-  note?: string | null;
-  html_range?: import("./books").SerializedRangeJson | null;
-  chapter_idx?: number | null;
-  chapter_href?: string | null;
-  chapter_title?: string | null;
-  page?: number | null;
-  pdf_rect_position?: Record<string, unknown> | null;
-}
-
-export interface DeleteHighlightParams {
-  text: string;
-}
-
-export interface AddAnnotationParams {
-  note: string;
-  text: string;
-}

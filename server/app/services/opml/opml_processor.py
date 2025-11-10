@@ -1,14 +1,18 @@
 """OPML processing service for import and export operations."""
 
-import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ElementTree
 from typing import Any
 
 import structlog
+from defusedxml import ElementTree as DefusedET
 
 from app.core.custom_exceptions import ValidationError
 from app.schemas import FeedResponse
 
 logger = structlog.get_logger(__name__)
+
+# Maximum OPML file size to prevent DoS attacks (10MB)
+MAX_OPML_SIZE_BYTES = 10 * 1024 * 1024
 
 
 class OpmlProcessor:
@@ -27,14 +31,22 @@ class OpmlProcessor:
             List of dictionaries containing feed and folder information
 
         Raises:
-            ValidationError: If OPML content is invalid
+            ValidationError: If OPML content is invalid or too large
         """
+        # Check size before parsing to prevent DoS
+        content_size = len(content.encode("utf-8"))
+        if content_size > MAX_OPML_SIZE_BYTES:
+            raise ValidationError(
+                f"OPML file is too large ({content_size / 1024 / 1024:.1f}MB). "
+                f"Maximum allowed size is {MAX_OPML_SIZE_BYTES / 1024 / 1024:.0f}MB."
+            )
+
         # Validate OPML content first
         self.validate_opml_content(content)
 
         try:
-            root = ET.fromstring(content)  # noqa: S314
-        except ET.ParseError as e:
+            root = DefusedET.fromstring(content)
+        except DefusedET.ParseError as e:
             raise ValidationError(
                 f"Invalid XML format: {str(e)}. Please check that you've uploaded a valid OPML file."
             ) from e
@@ -98,7 +110,7 @@ class OpmlProcessor:
 
     def _process_outline_element(
         self,
-        outline: ET.Element,
+        outline: ElementTree.Element,
         parent_folder: str | None = None,
         default_folder_name: str | None = None,
         max_depth: int = 2,
@@ -181,22 +193,22 @@ class OpmlProcessor:
         Returns:
             OPML XML string
         """
-        # Create root OPML structure
-        opml = ET.Element("opml", version="2.0")
+        # Create root OPML structure (use standard ElementTree for creation - it's safe)
+        opml = ElementTree.Element("opml", version="2.0")
 
         # Add head element
-        head = ET.SubElement(opml, "head")
-        title = ET.SubElement(head, "title")
+        head = ElementTree.SubElement(opml, "head")
+        title = ElementTree.SubElement(head, "title")
         title.text = "Readspace Feeds Export"
 
         # Add creation date
         from datetime import UTC, datetime
 
-        date_created = ET.SubElement(head, "dateCreated")
+        date_created = ElementTree.SubElement(head, "dateCreated")
         date_created.text = datetime.now(UTC).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         # Add body element
-        body = ET.SubElement(opml, "body")
+        body = ElementTree.SubElement(opml, "body")
 
         # Group feeds by folder
         folders_dict: dict[str, list[FeedResponse]] = {}
@@ -219,7 +231,7 @@ class OpmlProcessor:
         for folder_name, folder_feeds in folders_dict.items():
             if len(folders_dict) > 1 or folder_name != "Uncategorized":
                 # Create folder outline if we have multiple folders or named folder
-                folder_outline = ET.SubElement(body, "outline", text=folder_name, title=folder_name)
+                folder_outline = ElementTree.SubElement(body, "outline", text=folder_name, title=folder_name)
                 parent_element = folder_outline
             else:
                 # Put feeds directly in body if only uncategorized
@@ -237,16 +249,16 @@ class OpmlProcessor:
                 if feed.link:
                     feed_attrs["htmlUrl"] = str(feed.link)
 
-                ET.SubElement(parent_element, "outline", **feed_attrs)  # type: ignore[arg-type]
+                ElementTree.SubElement(parent_element, "outline", **feed_attrs)  # type: ignore[arg-type]
 
         # Convert to string with proper formatting
         self._indent_xml(opml)
-        xml_str = ET.tostring(opml, encoding="unicode", method="xml")
+        xml_str = ElementTree.tostring(opml, encoding="unicode", method="xml")
 
         # Add XML declaration
         return f'<?xml version="1.0" encoding="UTF-8"?>\n{xml_str}'
 
-    def _indent_xml(self, elem: ET.Element, level: int = 0) -> None:
+    def _indent_xml(self, elem: ElementTree.Element, level: int = 0) -> None:
         """Add indentation to XML elements for pretty printing.
 
         Args:
@@ -296,14 +308,14 @@ class OpmlProcessor:
             )
 
         try:
-            root = ET.fromstring(content)  # noqa: S314
-        except ET.ParseError as e:
+            root = DefusedET.fromstring(content)
+        except DefusedET.ParseError as e:
             # Try to wrap content in a root element if it might be missing
             wrapped_content = f"<opml>{content}</opml>"
             try:
-                root = ET.fromstring(wrapped_content)  # noqa: S314
+                root = DefusedET.fromstring(wrapped_content)
                 logger.info("Successfully parsed OPML by adding root element wrapper")
-            except ET.ParseError:
+            except DefusedET.ParseError:
                 raise ValidationError(
                     f"Invalid XML format: {str(e)}. "
                     "Please check that you've uploaded a valid OPML file exported from your RSS reader."

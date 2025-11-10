@@ -308,8 +308,6 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
 - **`routers/`** - FastAPI route handlers (API endpoints)
   - `rss_feeds.py` - RSS feed management endpoints
   - `rss_articles.py` - Article management endpoints
-  - `books.py` - Book/library management
-  - `highlights.py` - Article highlights and annotations
   - `rss_opml.py` - OPML import/export functionality
   - `users.py` - User management endpoints
 
@@ -325,11 +323,8 @@ The `docker/setup.sh` script generates these files with appropriate defaults for
 - **`models/`** - SQLAlchemy database models
   - `rss_models.py` - RSS feed and article models
   - `user_models.py` - User-related models
-  - `book_models.py` - Book and library models
 - **`repositories/`** - Data access layer (repository pattern)
   - `base.py` - Base repository implementation
-  - `books.py` - Book data access
-  - `highlights.py` - Highlights data access
   - `supabase.py` - Supabase integration
 
 #### Background Processing

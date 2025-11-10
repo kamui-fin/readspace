@@ -85,8 +85,9 @@ Then start the infrastructure services in development mode:
 This starts:
 - Supabase (with Studio and Analytics)
 - Redis
+- RabbitMQ (message broker with management UI)
 - RSSHub
-- Celery worker and beat scheduler
+- Taskiq worker and scheduler
 
 **Supabase Studio:** Access the local dashboard at [http://localhost:18000](http://localhost:18000).
 
@@ -162,28 +163,30 @@ bun ios # or bun android
 
 Follow the Expo CLI instructions to run on iOS simulator, Android emulator, or physical device.
 
-### Working on Background Tasks (Celery)
+### Working on Background Tasks (Taskiq)
 
-Our backend uses Celery to manage asynchronous tasks. The architecture consists of two main components:
+Our backend uses Taskiq to manage asynchronous tasks. The architecture consists of two main components:
 
 -   **`worker`**: Executes background tasks, such as fetching RSS feeds, processing articles, or sending notifications.
--   **`beat`**: A scheduler that periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
+-   **`scheduler`**: Periodically adds tasks to the queue based on a defined schedule (e.g., "fetch this feed every hour").
 
-When running `./docker/launch.sh --dev`, the worker and beat services are automatically started in Docker.
+When running `./docker/launch.sh --dev`, the worker and scheduler services are automatically started in Docker.
 
-**For active Celery development**, it's better to run them directly on your host machine for faster iteration:
+**For active Taskiq development**, it's better to run them directly on your host machine for faster iteration:
 
 ```bash
 cd server
 
-# Run the beat scheduler
-poetry run celery -A app.core.celery_app beat -l info
+# Run the scheduler
+poetry run taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
 
 # In another terminal, run the worker
-poetry run celery -A app.core.celery_app worker -l info -P gevent -c 1
+poetry run taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
 ```
 
 This gives you immediate feedback and easier debugging compared to running in Docker.
+
+**RabbitMQ Management UI**: Access the management interface at [http://localhost:15672](http://localhost:15672) (username: `guest`, password: `guest`) to monitor task queues and message flow.
 
 ### Database Migrations (Alembic)
 

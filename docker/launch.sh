@@ -86,10 +86,12 @@ if [ "$DEV_MODE" = true ]; then
     echo "Development tools are available at:"
     print_success "Supabase Studio: http://localhost:18000"
     print_success "Analytics Dashboard: http://localhost:4000"
+    print_success "RabbitMQ Management: http://localhost:15672 (guest/guest)"
     print_success "RSShub API: http://localhost:1200"
 else
     echo "For developers, you can access:"
     print_success "Supabase Dashboard: http://localhost:18000"
+    print_success "RabbitMQ Management: http://localhost:15672 (guest/guest)"
     print_success "RSShub API: http://localhost:1200"
 fi
 echo ""

@@ -23,9 +23,8 @@ class Settings(BaseSettings):
     # Redis Configuration (validated URL)
     REDIS_URL: str = "redis://localhost:6379/0"
 
-    # Celery Configuration (validated URLs)
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/1"
+    # RabbitMQ Configuration for Taskiq
+    RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672/"
 
     # AI Configuration
     ENABLE_AI: bool = True  # Master switch for all AI functionality
@@ -58,12 +57,20 @@ class Settings(BaseSettings):
             raise ValueError("SUPABASE_DB_CONNECTION must be a valid PostgreSQL connection string")
         return v
 
-    @field_validator("REDIS_URL", "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND")
+    @field_validator("REDIS_URL")
     @classmethod
     def validate_redis_url(cls, v: str) -> str:
         """Validate Redis URL format."""
         if not v.startswith("redis://"):
             raise ValueError(f"Redis URL must start with 'redis://': {v}")
+        return v
+
+    @field_validator("RABBITMQ_URL")
+    @classmethod
+    def validate_rabbitmq_url(cls, v: str) -> str:
+        """Validate RabbitMQ URL format."""
+        if not v.startswith("amqp://"):
+            raise ValueError(f"RabbitMQ URL must start with 'amqp://': {v}")
         return v
 
     @field_validator("RSSHUB_URL")

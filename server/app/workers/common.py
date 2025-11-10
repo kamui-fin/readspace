@@ -1,6 +1,5 @@
-"""Common utilities for Celery workers."""
+"""Common utilities for Taskiq workers."""
 
-import asyncio
 from collections.abc import AsyncGenerator
 from uuid import UUID
 
@@ -14,10 +13,9 @@ settings = get_settings()
 
 
 def ensure_uuid(value: UUID | str) -> UUID:
-    """
-    Convert string to UUID if needed.
+    """Convert string to UUID if needed.
 
-    Celery serialization converts UUIDs to strings, so tasks need to convert them back.
+    Taskiq serialization may convert UUIDs to strings, so tasks need to convert them back.
 
     Args:
         value: UUID or string representation of UUID
@@ -28,43 +26,16 @@ def ensure_uuid(value: UUID | str) -> UUID:
     return UUID(value) if isinstance(value, str) else value
 
 
-# Module-level persistent event loop and database engine for Celery workers
-_event_loop: asyncio.AbstractEventLoop | None = None
+# Module-level persistent database engine for Taskiq workers
 _db_engine: AsyncEngine | None = None
 _session_maker: async_sessionmaker[AsyncSession] | None = None
 
 
-def get_task_event_loop() -> asyncio.AbstractEventLoop:
-    """Get or create persistent event loop for Celery tasks.
-
-    This reuses the same event loop across tasks to avoid overhead
-    of creating/destroying event loops (1-5ms per task).
-
-    In test environments with an already running event loop (e.g., pytest-asyncio),
-    this returns the running loop to avoid event loop conflicts.
-    """
-    global _event_loop
-
-    # If there's already a running event loop (e.g., in tests), use it
-    try:
-        running_loop = asyncio.get_running_loop()
-        return running_loop
-    except RuntimeError:
-        # No running loop, create/reuse persistent loop
-        pass
-
-    if _event_loop is None or _event_loop.is_closed():
-        _event_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(_event_loop)
-        logger.info("Created persistent event loop for Celery worker")
-    return _event_loop
-
-
 async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
-    """Get or create persistent database engine and session maker for Celery tasks.
+    """Get or create persistent database engine and session maker for Taskiq tasks.
 
     This maintains a connection pool that is reused across tasks, providing:
-    - 10x faster connections (no setup/teardown overhead)
+    - Fast connections (no setup/teardown overhead)
     - Better resource utilization
     - Automatic connection health checking with pool_pre_ping
 
@@ -75,7 +46,10 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
 
     if _db_engine is None or _session_maker is None:
         # Ensure we use asyncpg driver for async operations
-        db_url = settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
+        db_url = settings.SUPABASE_DB_CONNECTION
+        if not db_url.startswith("postgresql+asyncpg://"):
+            db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
+
         _db_engine = create_async_engine(
             db_url,
             pool_size=5,
@@ -90,14 +64,13 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             autoflush=False,
             expire_on_commit=False,
         )
-        logger.info("Initialized persistent DB engine for Celery worker", pool_size=5, max_overflow=10)
+        logger.info("Initialized persistent DB engine for Taskiq worker", pool_size=5, max_overflow=10)
 
     return _db_engine, _session_maker
 
 
 async def get_worker_db_session() -> AsyncSession:
-    """
-    Get database session for Celery worker tasks with connection pooling.
+    """Get database session for Taskiq worker tasks with connection pooling.
 
     Returns a session from the persistent connection pool. Callers are responsible
     for committing or rolling back transactions and closing the session.
@@ -115,11 +88,10 @@ async def get_worker_db_session() -> AsyncSession:
 
 
 async def get_worker_db() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Get database session for Celery worker tasks with automatic transaction management.
+    """Get database session for Taskiq worker tasks with automatic transaction management.
 
-    This provides the same auto-commit/rollback behavior as the FastAPI get_db() dependency,
-    ensuring consistent transaction handling across the application.
+    This provides auto-commit/rollback behavior, ensuring consistent transaction handling
+    across the application.
 
     Yields:
         Database session that automatically commits on success or rolls back on exception

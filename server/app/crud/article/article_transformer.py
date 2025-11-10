@@ -151,6 +151,7 @@ class ArticleTransformer:
             is_read=clipped_article.is_read,
             is_read_later=clipped_article.is_read_later,
             is_favorite=clipped_article.is_favorite,
+            read_at=clipped_article.read_at,  # Include read_at timestamp
             feed_id=None,  # No feed for clipped articles
             priority=getattr(clipped_article, "priority", None),
             note=getattr(clipped_article, "note", None),

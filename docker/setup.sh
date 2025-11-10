@@ -363,6 +363,9 @@ SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 SUPABASE_DB_CONNECTION=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:5432/postgres
 
+# RabbitMQ Configuration for Taskiq
+RABBITMQ_URL=amqp://guest:guest@localhost:5672/
+
 # AI Configuration
 ENABLE_AI=false
 
@@ -380,6 +383,9 @@ SUPABASE_URL=http://kong:8000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
 SUPABASE_DB_CONNECTION=postgresql://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+
+# RabbitMQ Configuration for Taskiq
+RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
 
 # AI Configuration
 ENABLE_AI=${ENABLE_AI}

@@ -1,6 +1,8 @@
-"""Worker module initialization with centralized task exports."""
+"""Taskiq worker tasks."""
 
 from app.workers.feed_tasks import (
+    compact_old_articles_task,
+    compact_unread_articles_task,
     enrich_feed_task,
     refresh_single_feed_task,
     schedule_all_feed_refreshes_task,
@@ -8,11 +10,11 @@ from app.workers.feed_tasks import (
 from app.workers.opml_tasks import import_opml_task, import_single_feed_task
 
 __all__ = [
-    # Feed tasks
     "refresh_single_feed_task",
     "schedule_all_feed_refreshes_task",
     "enrich_feed_task",
-    # OPML tasks
+    "compact_unread_articles_task",
+    "compact_old_articles_task",
     "import_single_feed_task",
     "import_opml_task",
 ]

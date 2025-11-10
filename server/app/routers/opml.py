@@ -3,7 +3,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from celery.result import AsyncResult  # type: ignore[import-untyped]
+# AsyncResult is no longer needed with Taskiq
 from defusedxml import ElementTree
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
 from fastapi.responses import PlainTextResponse
@@ -16,6 +16,7 @@ from app.core.constants import (
     SUPPORTED_OPML_EXTENSIONS,
 )
 from app.core.redis_cache import RedisCache
+from app.crud.profile import crud_profile
 from app.db.session import get_db
 from app.schemas import (
     OpmlImportCancelResponse,
@@ -27,6 +28,7 @@ from app.schemas.auth import TokenData
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.opml.opml_processor import OpmlProcessor
 from app.services.user.auth import get_current_user
+from app.services.user.resource_limits import ResourceLimitService
 from app.workers.opml_tasks import import_opml_task  # Import the background task
 
 logger = structlog.get_logger(__name__)
@@ -244,6 +246,16 @@ async def cleanup_completed_task(user_id: str, task_id: str) -> None:
             "content": {"application/json": {"example": {"detail": "File too large. Maximum size is 50MB."}}},
         },
         422: {"description": "Validation error"},
+        429: {
+            "description": "Subscription limit exceeded",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Cannot import 100 feeds. You have 25 subscription slots remaining (current: 0/25). Please upgrade your plan or remove some feeds before importing."
+                    }
+                }
+            },
+        },
         500: {"description": "Internal server error during import"},
     },
 )
@@ -366,6 +378,38 @@ async def import_opml_file(
         # Validate OPML structure and count feeds properly
         feed_count = validate_opml_structure(content_str, opml_file.filename or "unknown.opml")
 
+        # Check resource limits before importing
+        profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+        if not profile:
+            raise HTTPException(status_code=404, detail="User profile not found")
+
+        resource_service = ResourceLimitService(db)
+        current_usage = await resource_service.get_current_usage(UUID(current_user.sub), "max_subscriptions")
+        limits = resource_service.get_user_limits(str(profile.role))
+        max_limit = limits.get("max_subscriptions", 0)
+
+        # Admin users have unlimited (-1)
+        if max_limit != -1:
+            remaining_capacity = max_limit - current_usage
+            if feed_count > remaining_capacity:
+                logger.warning(
+                    "OPML import would exceed subscription limit",
+                    feed_count=feed_count,
+                    current_usage=current_usage,
+                    max_limit=max_limit,
+                    remaining_capacity=remaining_capacity,
+                    user_id=current_user.sub,
+                    user_role=str(profile.role),
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=(
+                        f"Cannot import {feed_count} feeds. You have {remaining_capacity} subscription slots "
+                        f"remaining (current: {current_usage}/{max_limit}). Please upgrade your plan or "
+                        f"remove some feeds before importing."
+                    ),
+                )
+
         # Queue orchestration task
         logger.info(
             "Queuing OPML import orchestration task",
@@ -375,7 +419,7 @@ async def import_opml_file(
             user_id=current_user.sub,
         )
 
-        orchestration_task = import_opml_task.delay(
+        orchestration_task = await import_opml_task.kiq(
             user_id=current_user.sub,
             opml_content=content_str,
             default_folder_name=default_folder_name,
@@ -384,21 +428,21 @@ async def import_opml_file(
         # Store task metadata in Redis for persistence and auth
         await store_import_task_metadata(
             user_id=current_user.sub,
-            task_id=orchestration_task.id,
+            task_id=orchestration_task.task_id,
             estimated_feeds=feed_count,
             filename=opml_file.filename or "unknown.opml",
         )
 
         return {
             "processing_mode": "background",
-            "task_id": orchestration_task.id,
+            "task_id": orchestration_task.task_id,
             "message": (
                 f"OPML file ({file_size_mb:.1f}MB) queued for processing. "
                 "New feeds will be imported and existing feeds will be updated/reorganized as needed."
             ),
             "estimated_feeds": feed_count,
-            "check_status_url": f"/api/rss/opml/import/status/{orchestration_task.id}",
-            "status_page_url": f"/import-opml/status/{orchestration_task.id}",
+            "check_status_url": f"/api/rss/opml/import/status/{orchestration_task.task_id}",
+            "status_page_url": f"/import-opml/status/{orchestration_task.task_id}",
         }
 
     except HTTPException:

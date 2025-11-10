@@ -28,8 +28,7 @@ def test_settings():
         "SUPABASE_SERVICE_ROLE_KEY": "test-service-role-key",
         "SUPABASE_DB_CONNECTION": "postgresql://postgres:postgres@localhost:54322/postgres",
         "REDIS_URL": "redis://localhost:6379/0",
-        "CELERY_BROKER_URL": "redis://localhost:6379/0",
-        "CELERY_RESULT_BACKEND": "redis://localhost:6379/1",
+        "RABBITMQ_URL": "amqp://guest:guest@localhost:5672/",
         "ENVIRONMENT": "test",
     }
 
@@ -55,11 +54,10 @@ def mock_redis():
 
 
 @pytest.fixture
-def mock_celery():
-    """Mock Celery for background task tests."""
+def mock_taskiq():
+    """Mock Taskiq for background task tests."""
     mock = Mock()
-    mock.delay = Mock(return_value=Mock(id="test-task-id"))
-    mock.apply_async = Mock(return_value=Mock(id="test-task-id"))
+    mock.kiq = AsyncMock(return_value=Mock(task_id="test-task-id"))
     return mock
 
 
@@ -146,53 +144,3 @@ async def create_test_user(session: AsyncSession, user_id: str = None, email: st
     user = await session.merge(user)
     await session.flush()
     return user
-
-
-async def create_test_book(session: AsyncSession, **kwargs):
-    """Create a test book metadata."""
-    import uuid
-    from datetime import datetime, timezone
-
-    from app.models.book_models import BookFormat, BookMetadata
-
-    defaults = {
-        "id": uuid.uuid4(),
-        "title": "Test Book",
-        "author": "Test Author",
-        "description": "Test description",
-        "cover_url": "https://example.com/cover.jpg",
-        "file_url": "https://example.com/book.pdf",
-        "format": BookFormat.PDF,
-        "num_pages": 100,
-        "file_size_bytes": 1024 * 1024,
-        "created_at": datetime.now(timezone.utc),
-    }
-    defaults.update(kwargs)
-
-    book = BookMetadata(**defaults)
-    session.add(book)
-    await session.flush()
-    return book
-
-
-async def create_test_user_book(session: AsyncSession, user: Profile, book, **kwargs):
-    """Create a test user book library entry."""
-    import uuid
-    from datetime import datetime, timezone
-
-    from app.models.book_models import UserBookLibrary
-
-    defaults = {
-        "id": uuid.uuid4(),
-        "user_id": user.id,
-        "book_metadata_id": book.id,
-        "date_added": datetime.now(timezone.utc),
-        "epub_progress": None,
-        "pdf_current_page": 1,
-    }
-    defaults.update(kwargs)
-
-    user_book = UserBookLibrary(**defaults)
-    session.add(user_book)
-    await session.flush()
-    return user_book

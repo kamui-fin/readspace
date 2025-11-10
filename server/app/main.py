@@ -53,17 +53,7 @@ if settings.ENVIRONMENT not in SHOW_DOCS_ENVIRONMENTS:
 app = FastAPI(
     title="Readspace API",
     description="""
-    **Readspace** is an open-source, privacy-first reading hub that brings RSS feeds,
-    newsletters, saved articles, Twitter threads, Reddit posts, and books into one clean,
-    distraction-free inbox.
-
-    ## Features
-
-    * **RSS Feed Management** - Subscribe to and manage RSS feeds
-    * **Article Processing** - Automatic content extraction and enhancement
-    * **AI-Powered Features** - Content similarity and recommendations
-    * **OPML Support** - Import/export feed collections
-    * **Search & Discovery** - Find new feeds and content
+    A privacy-focused open-source RSS reader to follow all the blogs, publications, newsletters, and writers you care about.
 
     ## Authentication
 

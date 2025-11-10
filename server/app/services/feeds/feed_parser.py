@@ -18,6 +18,11 @@ from app.utils.reading_time import calculate_reading_time_from_html
 
 logger = structlog.get_logger(__name__)
 
+# Resource limits to prevent DoS attacks
+MAX_FEED_CONTENT_SIZE_MB = 10
+MAX_FEED_CONTENT_SIZE_BYTES = MAX_FEED_CONTENT_SIZE_MB * 1024 * 1024
+MAX_ARTICLES_PER_FEED = 100
+
 
 class FeedParsingService:
     """Isolated feed parsing logic that doesn't depend on database or external services"""
@@ -26,7 +31,29 @@ class FeedParsingService:
         self.default_wpm = default_wpm
 
     def parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
-        """Parse RSS/Atom feed content and validate its structure"""
+        """Parse RSS/Atom feed content and validate its structure
+
+        Args:
+            feed_content_text: Raw feed content
+            url: Feed URL for logging
+
+        Raises:
+            FeedParsingError: If feed is too large or cannot be parsed
+        """
+        # Check feed size before parsing to prevent DoS
+        content_size = len(feed_content_text.encode("utf-8"))
+        if content_size > MAX_FEED_CONTENT_SIZE_BYTES:
+            logger.warning(
+                "Feed content too large, rejecting",
+                url=url,
+                size_mb=content_size / 1024 / 1024,
+                max_mb=MAX_FEED_CONTENT_SIZE_MB,
+            )
+            raise FeedParsingError(
+                f"Feed content too large ({content_size / 1024 / 1024:.1f}MB). "
+                f"Maximum allowed size is {MAX_FEED_CONTENT_SIZE_MB}MB."
+            )
+
         try:
             parsed_feed = feedparser.parse(feed_content_text)
         except Exception as e:
@@ -375,12 +402,31 @@ class FeedParsingService:
     def validate_feed_quality(
         self, parsed_feed: feedparser.FeedParserDict, min_article_count: int = 1
     ) -> dict[str, Any]:
-        """Validate if feed has acceptable quality and content"""
+        """Validate if feed has acceptable quality and content
+
+        Args:
+            parsed_feed: Parsed feed dictionary
+            min_article_count: Minimum number of valid articles required
+
+        Returns:
+            Dictionary with validation results including truncation info
+        """
         total_entries = len(parsed_feed.entries)
+
+        # Limit number of articles processed to prevent spam attacks
+        entries_to_process = parsed_feed.entries[:MAX_ARTICLES_PER_FEED]
+        was_truncated = total_entries > MAX_ARTICLES_PER_FEED
+
+        if was_truncated:
+            logger.warning(
+                "Feed has too many entries, truncating",
+                total_entries=total_entries,
+                max_articles=MAX_ARTICLES_PER_FEED,
+            )
 
         # Extract valid articles
         valid_articles = []
-        for entry in parsed_feed.entries:
+        for entry in entries_to_process:
             article_data = self.extract_article_data(entry)
             if article_data:
                 valid_articles.append(article_data)

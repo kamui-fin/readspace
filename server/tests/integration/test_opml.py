@@ -1,23 +1,15 @@
-"""E2E tests for OPML import/export with real Celery execution.
+"""E2E tests for OPML import/export with Taskiq.
 
-This test suite uses Celery's eager mode for deterministic testing while still
-exercising the full task execution path. For true async testing, set CELERY_ALWAYS_EAGER=False
-and ensure workers are running.
+This test suite exercises OPML import/export functionality by calling
+async helper functions directly, avoiding Taskiq task dispatching overhead.
 
 Testing Strategy:
-1. EAGER MODE (default): Tasks execute synchronously in-process
-   - Pros: Deterministic, fast, no worker needed
-   - Cons: Doesn't test true async behavior, task serialization, or worker isolation
-
-2. ASYNC MODE (optional): Tasks execute in real workers
-   - Pros: Tests real production behavior, task queuing, worker isolation
-   - Cons: Requires running workers, timing-dependent, slower
-
-3. HYBRID: Use eager for most tests, async for critical workflow tests
+- Call async_* helper functions directly with test database session
+- Tests the actual business logic without Taskiq overhead
+- More reliable and faster than dispatching tasks
 """
 
 import io
-import os
 from datetime import datetime, timezone
 from unittest.mock import patch
 
@@ -26,9 +18,6 @@ from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Feed, FeedSubscription, Folder, Profile
-
-# Determine test mode from environment
-CELERY_EAGER_MODE = os.getenv("CELERY_ALWAYS_EAGER", "true").lower() == "true"
 
 # Sample OPML content for testing
 VALID_OPML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -68,31 +57,6 @@ INVALID_XML = """<?xml version="1.0" encoding="UTF-8"?>
         <outline type="rss" text="Test" xmlUrl="https://example.com/feed.xml"/>
     </body>
 </opml>"""
-
-
-@pytest.fixture(scope="function", autouse=True)
-def configure_celery_for_tests():
-    """Configure Celery for test execution."""
-    from app.core.celery_app import celery
-
-    # Store original config
-    original_eager = celery.conf.task_always_eager
-    original_propagate = celery.conf.task_eager_propagates
-
-    if CELERY_EAGER_MODE:
-        # Eager mode: tasks execute synchronously in-process
-        celery.conf.task_always_eager = True
-        celery.conf.task_eager_propagates = True
-    else:
-        # Async mode: tasks execute in real workers
-        celery.conf.task_always_eager = False
-        celery.conf.task_eager_propagates = False
-
-    yield
-
-    # Restore original config
-    celery.conf.task_always_eager = original_eager
-    celery.conf.task_eager_propagates = original_propagate
 
 
 class TestOpmlImportEagerMode:

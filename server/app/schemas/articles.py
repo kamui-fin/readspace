@@ -112,6 +112,16 @@ class ClippedArticleUpdate(BaseModel):
     is_favorite: bool | None = None
     read_at: datetime | None = None
 
+    @field_validator("priority", mode="before")
+    @classmethod
+    def convert_priority_to_uppercase(cls, v: str | ArticlePriority | None) -> ArticlePriority | None:
+        """Convert priority string to uppercase enum value."""
+        if v is None or isinstance(v, ArticlePriority):
+            return v
+        if isinstance(v, str):
+            return ArticlePriority(v.upper())
+        return v
+
 
 class ClippedArticleResponse(ClippedArticleBase):
     """Schema for clipped article responses."""
