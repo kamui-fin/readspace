@@ -1,6 +1,5 @@
 """Service for OPML import operations."""
 
-import asyncio
 from typing import Any
 from uuid import UUID
 
@@ -12,9 +11,6 @@ from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
 
 logger = structlog.get_logger(__name__)
-
-# Maximum number of concurrent feed imports to prevent overwhelming the system
-MAX_CONCURRENT_FEED_IMPORTS = 100
 
 
 class OpmlImportService:
@@ -101,21 +97,105 @@ class OpmlImportService:
 
         return folder_cache
 
-    async def process_opml_import(
-        self, opml_content: str, default_folder_name: str = "Imported Feeds", test_mode: bool = False
-    ) -> dict[str, Any]:
-        """Process OPML import and return feed import results.
+    async def _dispatch_feed_tasks(self, feeds_data: list[dict[str, Any]], parent_task_id: str | None) -> dict[str, Any]:
+        """Dispatch individual Taskiq tasks for each feed.
 
-        This method now processes all feeds directly using asyncio.gather() with concurrency
-        limiting, leveraging gevent's greenlets for efficient I/O handling.
+        Args:
+            feeds_data: List of feed data dictionaries
+            parent_task_id: Parent orchestration task ID for cancellation checking
+
+        Returns:
+            Dict with total_feeds, task_ids, and status
+        """
+        from app.workers.opml_tasks import import_single_feed_task
+
+        total_feeds = len(feeds_data)
+        task_ids = []
+
+        logger.info(
+            "Dispatching individual feed import tasks",
+            total_feeds=total_feeds,
+            user_id=self.user_id,
+            parent_task_id=parent_task_id,
+        )
+
+        # Check for cancellation before dispatching
+        if parent_task_id:
+            from app.routers.opml import check_import_cancellation_flag
+
+            is_cancelled = await check_import_cancellation_flag(parent_task_id)
+            if is_cancelled:
+                logger.info(
+                    "OPML import cancelled before dispatching tasks",
+                    parent_task_id=parent_task_id,
+                    user_id=self.user_id,
+                )
+                return {
+                    "total_feeds": total_feeds,
+                    "task_ids": [],
+                    "status": "cancelled",
+                    "message": "Import was cancelled before tasks were dispatched",
+                }
+
+        # Dispatch a Taskiq task for each feed
+        for feed_data in feeds_data:
+            try:
+                task = await import_single_feed_task.kiq(
+                    user_id=str(self.user_id),
+                    feed_url=feed_data["url"],
+                    folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
+                    tag_names=feed_data["tag_names"],
+                    feed_title=feed_data["title"],
+                    update_existing=True,
+                    parent_task_id=parent_task_id,  # Pass parent for cancellation checks
+                )
+                task_ids.append(task.task_id)
+                
+                logger.debug(
+                    "Dispatched feed import task",
+                    feed_url=feed_data["url"],
+                    task_id=task.task_id,
+                    parent_task_id=parent_task_id,
+                )
+            except Exception as e:
+                logger.error(
+                    "Failed to dispatch feed import task",
+                    feed_url=feed_data["url"],
+                    error=str(e),
+                    exc_info=True,
+                )
+                # Continue dispatching other tasks even if one fails
+
+        logger.info(
+            "Feed import tasks dispatched",
+            total_dispatched=len(task_ids),
+            total_feeds=total_feeds,
+            user_id=self.user_id,
+            parent_task_id=parent_task_id,
+        )
+
+        return {
+            "total_feeds": total_feeds,
+            "task_ids": task_ids,
+            "status": "dispatched",
+            "message": f"Dispatched {len(task_ids)} feed import tasks to queue",
+        }
+
+    async def process_opml_import(
+        self,
+        opml_content: str,
+        default_folder_name: str = "Imported Feeds",
+        task_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Process OPML import by dispatching individual Taskiq tasks for each feed.
 
         Args:
             opml_content: OPML file content
             default_folder_name: Default folder for feeds without a folder
-            test_mode: Legacy parameter, no longer used (kept for compatibility)
+            task_id: Optional task ID for cancellation checking
 
         Returns:
-            Dict with total_feeds, imported_count, results, and import status
+            Dict with total_feeds, task_ids, and status
         """
         # Extract feeds from OPML
         feeds_data = await self.extract_feeds_from_opml(
@@ -127,71 +207,12 @@ class OpmlImportService:
         if not feeds_data:
             return {
                 "total_feeds": 0,
-                "imported_count": 0,
-                "results": [],
+                "task_ids": [],
                 "status": "completed",
             }
 
-        logger.info(
-            "Starting OPML feed imports with concurrency limit",
-            total_feeds=total_feeds,
-            max_concurrent=MAX_CONCURRENT_FEED_IMPORTS,
-            user_id=self.user_id,
-        )
-
-        # Process feeds with concurrency limiting using semaphore
-        semaphore = asyncio.Semaphore(MAX_CONCURRENT_FEED_IMPORTS)
-
-        async def import_with_semaphore(feed_data: dict[str, Any]) -> dict[str, Any]:
-            """Import a single feed with semaphore limiting."""
-            async with semaphore:
-                return await self.import_single_feed(
-                    feed_url=feed_data["url"],
-                    folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
-                    tag_names=feed_data["tag_names"],
-                    feed_title=feed_data["title"],
-                    update_existing=True,
-                )
-
-        # Process all feeds concurrently with gather
-        import_results = await asyncio.gather(
-            *[import_with_semaphore(feed_data) for feed_data in feeds_data],
-            return_exceptions=True,  # Don't fail entire import if one feed fails
-        )
-
-        # Convert exceptions to error results
-        processed_results = []
-        for i, result in enumerate(import_results):
-            if isinstance(result, Exception):
-                feed_data = feeds_data[i]
-                processed_results.append(
-                    {
-                        "success": False,
-                        "url": feed_data["url"],
-                        "title": feed_data["title"] or "Unknown",
-                        "status": "unknown_error",
-                        "error": str(result),
-                    }
-                )
-            else:
-                processed_results.append(result)
-
-        imported_count = sum(1 for r in processed_results if r.get("success"))
-
-        logger.info(
-            "OPML feed imports completed",
-            total_feeds=total_feeds,
-            imported_count=imported_count,
-            failed_count=total_feeds - imported_count,
-            user_id=self.user_id,
-        )
-
-        return {
-            "total_feeds": total_feeds,
-            "imported_count": imported_count,
-            "results": processed_results,
-            "status": "completed",
-        }
+        # Dispatch individual Taskiq tasks for each feed
+        return await self._dispatch_feed_tasks(feeds_data, task_id)
 
     async def import_single_feed(
         self,

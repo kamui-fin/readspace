@@ -50,7 +50,7 @@ else:
 # Create schedule source for dynamic scheduling (skip for tests)
 if env not in ("test", "pytest"):
     schedule_source = ListRedisScheduleSource(
-        redis_url=settings.REDIS_URL,
+        url=settings.REDIS_URL,
         prefix="taskiq:schedule",
     )
 

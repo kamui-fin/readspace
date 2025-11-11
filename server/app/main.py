@@ -10,6 +10,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
 from app.core.redis_cache import RedisCache
+from app.core.taskiq_app import broker
 from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, RequestIdMiddleware
 from app.routers import router as api_router  # Import the main router
 from app.utils.logging_config import setup_logging
@@ -25,9 +26,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI lifespan context manager for startup/shutdown."""
     # Startup: Initialize Redis connection pool
     await RedisCache.get_pool()
+    
+    # Startup: Initialize Taskiq broker
+    await broker.startup()
+    
     logger.info("Application startup complete")
 
     yield
+
+    # Shutdown: Close Taskiq broker
+    await broker.shutdown()
 
     # Shutdown: Close Redis connection pool
     await RedisCache.close_pool()

@@ -33,11 +33,15 @@ test-integration = "pytest -c pytest.integration.ini"
 test-coverage = "pytest tests/ --cov=app --cov-report=html:htmlcov --cov-report=term-missing"
 test-coverage-unit = "pytest tests/unit/ -m unit --cov=app --cov-report=html:htmlcov/unit --cov-report=term-missing"
 test-coverage-integration = "pytest tests/integration/ -m integration --cov=app --cov-report=html:htmlcov/integration --cov-report=term-missing"
+# Taskiq commands
+worker = "taskiq worker app.core.taskiq_startup:broker"
+scheduler = "taskiq scheduler app.core.taskiq_startup:scheduler"
 # Other commands
 type-check = "mypy app/"
 lint = "ruff check app --fix"
 format = "ruff format app"
 migrate = "alembic upgrade head"
+trigger = "python scripts/trigger_task.py"
 
 [tool.poetry.dependencies]
 fastapi = {extras = ["all"], version = "^0.115.12"}

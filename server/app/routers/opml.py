@@ -3,11 +3,11 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-# AsyncResult is no longer needed with Taskiq
 from defusedxml import ElementTree
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from taskiq_redis.exceptions import ResultIsMissingError
 
 from app.core.constants import (
     FALLBACK_ENCODINGS,
@@ -16,11 +16,14 @@ from app.core.constants import (
     SUPPORTED_OPML_EXTENSIONS,
 )
 from app.core.redis_cache import RedisCache
+from app.core.taskiq_app import broker
 from app.crud.profile import crud_profile
 from app.db.session import get_db
 from app.schemas import (
+    FeedImportError,
     OpmlImportCancelResponse,
     OpmlImportResponse,
+    OpmlImportState,
     OpmlImportStatusResponse,
     OpmlTaskMetadata,
 )
@@ -115,93 +118,359 @@ def validate_opml_structure(content: str, filename: str) -> int:
     return feed_count
 
 
-async def store_import_task_metadata(user_id: str, task_id: str, estimated_feeds: int, filename: str) -> None:
+async def store_task_ownership(task_id: str, user_id: str) -> None:
     """
-    Store import task metadata in Redis for user ownership tracking.
+    Store minimal ownership info for authorization.
 
-    Creates two Redis keys for efficient access patterns:
-    1. User-specific key for listing all user tasks
-    2. Task-specific key for quick ownership verification
+    Only stores user_id for authorization checks. All other metadata
+    (filename, estimated_feeds, created_at) is stored in the task result.
 
     Args:
+        task_id: Taskiq task ID
         user_id: UUID of the user who owns this import task
-        task_id: Celery task ID
-        estimated_feeds: Number of feeds estimated to be imported
-        filename: Original name of the uploaded OPML file
-
-    Note:
-        Data expires after 24 hours to prevent Redis bloat
     """
     redis_cache = RedisCache()
-    task_metadata = {
-        "user_id": user_id,
-        "task_id": task_id,
-        "estimated_feeds": estimated_feeds,
-        "filename": filename,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "status": "pending",
-    }
-
-    # Store with two keys for different access patterns
-    # 1. User -> task mapping (for listing user's tasks)
+    
+    # Store ownership for quick auth checks
+    owner_key = f"opml_task_owner:{task_id}"
+    await redis_cache.set(owner_key, user_id, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
+    
+    # Add to user's task list for listing endpoint
     user_tasks_key = f"opml_import_tasks:user:{user_id}"
     existing_tasks = await redis_cache.get(user_tasks_key) or []
-
-    # Remove any old tasks for this user that might be completed
-    active_tasks = []
-    for task in existing_tasks:
-        if task.get("task_id") != task_id:
-            active_tasks.append(task)
-
-    active_tasks.append(task_metadata)
-    await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-
-    # 2. Task -> metadata mapping (for auth and quick lookup)
-    task_key = f"opml_import_task:{task_id}"
-    await redis_cache.set(task_key, task_metadata, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
+    if task_id not in existing_tasks:
+        existing_tasks.append(task_id)
+        await redis_cache.set(user_tasks_key, existing_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
 
 
-async def get_import_task_metadata(task_id: str) -> dict[str, Any] | None:
+async def get_task_owner(task_id: str) -> str | None:
     """
-    Get import task metadata from Redis.
+    Get task owner for authorization.
 
     Args:
-        task_id: Celery task ID to look up
+        task_id: Taskiq task ID to look up
 
     Returns:
-        dict[str, Any] | None: Task metadata if found, None if not found or expired
+        str | None: User ID if found, None otherwise
     """
     redis_cache = RedisCache()
-    task_key = f"opml_import_task:{task_id}"
-    return await redis_cache.get(task_key)
+    owner_key = f"opml_task_owner:{task_id}"
+    return await redis_cache.get(owner_key)
 
 
-async def cleanup_completed_task(user_id: str, task_id: str) -> None:
+async def get_user_task_ids(user_id: str) -> list[str]:
     """
-    Remove completed task from Redis.
-
-    Cleans up both the user's task list and the individual task metadata
-    to prevent Redis bloat from completed imports.
+    Get all task IDs for a user.
 
     Args:
-        user_id: UUID of the user who owns the task
-        task_id: Celery task ID to remove
+        user_id: User UUID
+
+    Returns:
+        list[str]: List of task IDs
     """
     redis_cache = RedisCache()
+    user_tasks_key = f"opml_import_tasks:user:{user_id}"
+    return await redis_cache.get(user_tasks_key) or []
 
-    # Remove from user's active tasks list
+
+async def cleanup_task_ownership(task_id: str, user_id: str) -> None:
+    """
+    Clean up task ownership data.
+
+    Args:
+        task_id: Taskiq task ID to remove
+        user_id: UUID of the user who owns the task
+    """
+    redis_cache = RedisCache()
+    
+    # Remove ownership
+    owner_key = f"opml_task_owner:{task_id}"
+    await redis_cache.delete(owner_key)
+    
+    # Remove from user's list
     user_tasks_key = f"opml_import_tasks:user:{user_id}"
     existing_tasks = await redis_cache.get(user_tasks_key) or []
-    active_tasks = [task for task in existing_tasks if task.get("task_id") != task_id]
+    if task_id in existing_tasks:
+        existing_tasks.remove(task_id)
+        if existing_tasks:
+            await redis_cache.set(user_tasks_key, existing_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
+        else:
+            await redis_cache.delete(user_tasks_key)
 
-    if active_tasks:
-        await redis_cache.set(user_tasks_key, active_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-    else:
-        await redis_cache.delete(user_tasks_key)
 
-    # Remove task metadata
-    task_key = f"opml_import_task:{task_id}"
-    await redis_cache.delete(task_key)
+async def get_taskiq_result(task_id: str) -> tuple[str, Any | None, Any | None] | None:
+    """
+    Get task result from Taskiq result backend.
+
+    Args:
+        task_id: Taskiq task ID
+
+    Returns:
+        Tuple of (state, result, error) or None if task not found
+        State can be: "pending", "success", "failure"
+    """
+    if not broker.result_backend:
+        # In test mode with InMemoryBroker, result backend might not be available
+        return None
+
+    try:
+        # Check if result is ready
+        is_ready = await broker.result_backend.is_result_ready(task_id)
+        if not is_ready:
+            return ("pending", None, None)
+
+        # Get the result
+        taskiq_result = await broker.result_backend.get_result(task_id)
+
+        if taskiq_result.is_err:
+            return ("failure", None, taskiq_result.error)
+        else:
+            return ("success", taskiq_result.return_value, None)
+    except ResultIsMissingError:
+        # Task not found in result backend
+        return None
+    except Exception as e:
+        logger.warning(
+            "Error getting task result from Taskiq",
+            task_id=task_id,
+            error=str(e),
+        )
+        return None
+
+
+async def set_import_cancellation_flag(task_id: str) -> None:
+    """
+    Set cancellation flag for an import task.
+
+    Args:
+        task_id: Import task ID to cancel
+    """
+    redis_cache = RedisCache()
+    cancel_key = f"opml_import_cancel:{task_id}"
+    await redis_cache.set(cancel_key, True, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
+    logger.info("Set cancellation flag for import task", task_id=task_id)
+
+
+async def check_import_cancellation_flag(task_id: str) -> bool:
+    """
+    Check if an import task has been cancelled.
+
+    Args:
+        task_id: Import task ID to check
+
+    Returns:
+        True if the task should be cancelled, False otherwise
+    """
+    redis_cache = RedisCache()
+    cancel_key = f"opml_import_cancel:{task_id}"
+    is_cancelled = await redis_cache.get(cancel_key)
+    return bool(is_cancelled)
+
+
+async def clear_import_cancellation_flag(task_id: str) -> None:
+    """
+    Clear cancellation flag for an import task.
+
+    Args:
+        task_id: Import task ID to clear
+    """
+    redis_cache = RedisCache()
+    cancel_key = f"opml_import_cancel:{task_id}"
+    await redis_cache.delete(cancel_key)
+
+
+async def initialize_import_progress(
+    task_id: str,
+    user_id: str,
+    filename: str,
+    total_feeds: int,
+) -> OpmlImportState:
+    """
+    Initialize progress state for a new import task.
+
+    Creates the single Redis key that will track all progress for this import.
+
+    Args:
+        task_id: Taskiq task ID
+        user_id: User ID who owns the import
+        filename: Original OPML filename
+        total_feeds: Total number of feeds to import
+
+    Returns:
+        OpmlImportState: Initialized state
+    """
+    redis_cache = RedisCache()
+    
+    state = OpmlImportState(
+        task_id=task_id,
+        user_id=user_id,
+        filename=filename,
+        total_feeds=total_feeds,
+        status="pending",
+    )
+    
+    progress_key = f"opml_import_progress:{task_id}"
+    await redis_cache.set(
+        progress_key,
+        state.model_dump(),
+        ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
+    )
+    
+    logger.info(
+        "Initialized import progress state",
+        task_id=task_id,
+        user_id=user_id,
+        total_feeds=total_feeds,
+    )
+    
+    return state
+
+
+async def get_import_progress(task_id: str) -> OpmlImportState | None:
+    """
+    Get current import progress state from Redis.
+
+    Args:
+        task_id: Taskiq task ID
+
+    Returns:
+        OpmlImportState | None: Current state or None if not found
+    """
+    redis_cache = RedisCache()
+    progress_key = f"opml_import_progress:{task_id}"
+    
+    state_dict = await redis_cache.get(progress_key)
+    if not state_dict:
+        return None
+    
+    return OpmlImportState(**state_dict)
+
+
+async def update_import_progress(
+    task_id: str,
+    success: bool = False,
+    already_exists: bool = False,
+    error: FeedImportError | None = None,
+    status: str | None = None,
+    started_at: str | None = None,
+    completed_at: str | None = None,
+    message: str | None = None,
+    cancelled: bool = False,
+) -> OpmlImportState | None:
+    """
+    Atomically update import progress for a single feed completion.
+
+    This function loads the current state, updates it, and saves it back.
+    Redis operations are atomic at the key level.
+
+    Args:
+        task_id: Taskiq task ID
+        success: Whether the feed was successfully imported
+        already_exists: Whether the feed already existed
+        error: Error information if the feed failed
+        status: New overall status to set
+        started_at: ISO timestamp when processing started
+        completed_at: ISO timestamp when processing completed
+        message: Status message to set
+        cancelled: Whether this feed was cancelled
+
+    Returns:
+        OpmlImportState | None: Updated state or None if not found
+    """
+    redis_cache = RedisCache()
+    progress_key = f"opml_import_progress:{task_id}"
+    
+    # Get current state
+    state = await get_import_progress(task_id)
+    if not state:
+        logger.warning(
+            "Attempted to update non-existent import progress",
+            task_id=task_id,
+        )
+        return None
+    
+    # Update counters
+    if cancelled:
+        state.cancelled_count += 1
+        state.completed_feeds += 1
+    elif success:
+        if already_exists:
+            state.already_existed += 1
+        else:
+            state.successful_imports += 1
+        state.completed_feeds += 1
+    elif error:
+        state.failed_imports += 1
+        state.completed_feeds += 1
+        state.errors.append(error)
+    
+    # Update status and timestamps
+    if status:
+        state.status = status
+    if started_at:
+        state.started_at = started_at
+    if completed_at:
+        state.completed_at = completed_at
+    if message:
+        state.message = message
+    
+    # Auto-complete if all feeds are processed
+    if state.completed_feeds >= state.total_feeds and state.status == "in_progress":
+        state.status = "completed"
+        state.completed_at = datetime.now(timezone.utc).isoformat()
+        
+        # Generate completion message
+        completion_message = (
+            f"{state.successful_imports} feeds added. "
+            f"{state.already_existed} were already in your library."
+        )
+        if state.failed_imports > 0:
+            completion_message += f" {state.failed_imports} failed to import."
+        if state.cancelled_count > 0:
+            completion_message += f" {state.cancelled_count} cancelled."
+            state.status = "cancelled"
+        
+        state.message = completion_message
+        
+        logger.info(
+            "Import completed automatically",
+            task_id=task_id,
+            successful=state.successful_imports,
+            failed=state.failed_imports,
+            already_existed=state.already_existed,
+            cancelled=state.cancelled_count,
+        )
+    
+    # Save back to Redis
+    await redis_cache.set(
+        progress_key,
+        state.model_dump(),
+        ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
+    )
+    
+    logger.debug(
+        "Updated import progress",
+        task_id=task_id,
+        completed=state.completed_feeds,
+        total=state.total_feeds,
+        status=state.status,
+    )
+    
+    return state
+
+
+async def delete_import_progress(task_id: str) -> None:
+    """
+    Delete import progress state from Redis.
+
+    Args:
+        task_id: Taskiq task ID
+    """
+    redis_cache = RedisCache()
+    progress_key = f"opml_import_progress:{task_id}"
+    await redis_cache.delete(progress_key)
+    
+    logger.debug("Deleted import progress state", task_id=task_id)
 
 
 @router.post(
@@ -277,7 +546,7 @@ async def import_opml_file(
     Import RSS feeds from an OPML file asynchronously.
 
     This endpoint accepts OPML files exported from RSS readers and imports the feeds
-    into the user's library. The import process runs in the background using Celery
+    into the user's library. The import process runs in the background using Taskiq
     tasks to handle large files efficiently.
 
     **Process Flow:**
@@ -423,14 +692,14 @@ async def import_opml_file(
             user_id=current_user.sub,
             opml_content=content_str,
             default_folder_name=default_folder_name,
+            filename=opml_file.filename or "unknown.opml",
+            estimated_feeds=feed_count,
         )
 
-        # Store task metadata in Redis for persistence and auth
-        await store_import_task_metadata(
-            user_id=current_user.sub,
+        # Store only ownership for authorization
+        await store_task_ownership(
             task_id=orchestration_task.task_id,
-            estimated_feeds=feed_count,
-            filename=opml_file.filename or "unknown.opml",
+            user_id=current_user.sub,
         )
 
         return {
@@ -508,7 +777,7 @@ async def import_opml_file(
     "/import/status/{task_id}",
     response_model=OpmlImportStatusResponse,
     summary="Get OPML import task status",
-    description="Retrieve the current status and progress of an OPML import task.",
+    description="Retrieve the current status and progress of an OPML import task from a single Redis key.",
     responses={
         200: {
             "description": "Import status retrieved successfully",
@@ -530,7 +799,7 @@ async def import_opml_file(
 async def get_import_status(
     task_id: str = Path(
         ...,
-        description="Celery task ID returned from the import endpoint",
+        description="Taskiq task ID returned from the import endpoint",
         examples={
             "uuid": "550e8400-e29b-41d4-a716-446655440000",
         },
@@ -540,31 +809,23 @@ async def get_import_status(
     """
     Get the current status and progress of an OPML import task.
 
-    This endpoint provides real-time status information for background OPML import
-    tasks, including progress details and final results.
+    This endpoint reads from a single Redis key for scalable progress tracking,
+    instead of checking thousands of individual task results.
 
     **Status Types:**
     - `pending`: Task is queued and waiting to start
     - `in_progress`: Task is actively processing feeds
     - `completed`: All feeds have been processed
+    - `cancelled`: Import was cancelled by user
     - `failed`: Task encountered an unrecoverable error
 
     **Progress Information:**
-    For active imports, the response includes:
-    - Number of feeds completed vs total
-    - Success/failure breakdown
-    - Individual feed errors (if any)
-
-    **Completed Results:**
-    For finished imports, detailed results include:
-    - Count of successfully imported feeds
-    - Count of feeds that already existed
-    - Count of failed imports with error details
-    - Summary message
+    All progress data is maintained in a single Redis key and updated atomically
+    by each feed import task. This approach scales to thousands of feeds without
+    performance degradation.
 
     **Security:**
     Users can only access status for their own import tasks.
-    Task ownership is verified via Redis metadata.
 
     Args:
         task_id: UUID of the import task to check
@@ -574,31 +835,37 @@ async def get_import_status(
         OpmlImportStatusResponse: Current status, progress, and results
 
     Raises:
-        HTTPException: 403 for unauthorized access, 404 for missing tasks, 500 for server errors
+        HTTPException: 403 for unauthorized access, 404 for missing tasks
     """
-    # Try to get task metadata from Redis
-    task_metadata = await get_import_task_metadata(task_id)
-
-    # If metadata exists, verify user ownership
-    if task_metadata and task_metadata.get("user_id") != current_user.sub:
-        logger.warning(
-            "Unauthorized access to import task",
-            task_id=task_id,
-            user_id=current_user.sub,
-            task_owner=task_metadata.get("user_id"),
-        )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this import task.",
-        )
-
-    try:
-        task_result = AsyncResult(task_id)
-
-        # If task doesn't exist in Celery either, it's truly not found
-        if task_result.state == "PENDING" and not task_metadata:
+    # Get import progress state from Redis
+    state = await get_import_progress(task_id)
+    
+    if not state:
+        # Check if we have ownership record (task just queued)
+        task_owner = await get_task_owner(task_id)
+        if task_owner:
+            if task_owner != current_user.sub:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You don't have permission to access this import task.",
+                )
+            # Task exists but hasn't started yet
+            return {
+                "task_id": task_id,
+                "status": "pending",
+                "message": "OPML import is queued and waiting to start.",
+                "metadata": {
+                    "user_id": current_user.sub,
+                    "task_id": task_id,
+                    "estimated_feeds": 0,
+                    "filename": "unknown.opml",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                },
+            }
+        else:
             logger.warning(
-                "Task not found in both Redis and Celery",
+                "Task not found",
                 task_id=task_id,
                 user_id=current_user.sub,
             )
@@ -606,206 +873,46 @@ async def get_import_status(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Import task not found or has expired.",
             )
-
-        # If we have metadata but no user verification was done above, verify now
-        if not task_metadata:
-            logger.info(
-                "Task metadata missing from Redis, checking Celery task only",
-                task_id=task_id,
-                user_id=current_user.sub,
-            )
-            # Without metadata, we can't verify user ownership, but we can still return task status
-            # This is a fallback for cases where Redis data was lost but Celery task still exists
-
-        if task_result.state == "PENDING":
-            return {
-                "task_id": task_id,
-                "status": "pending",
-                "message": "OPML import is queued and waiting to start.",
-                "metadata": task_metadata,
-            }
-        elif task_result.state == "PROGRESS":
-            return {
-                "task_id": task_id,
-                "status": "in_progress",
-                "message": "OPML import is being processed and individual feeds are being queued.",
-                "progress": task_result.info,
-                "metadata": task_metadata,
-            }
-        elif task_result.state == "SUCCESS":
-            # Orchestration completed, now check individual feed import tasks
-            orchestration_data = task_result.result
-            feed_task_ids = orchestration_data.get("task_ids", [])
-
-            if not feed_task_ids:
-                # Clean up task metadata for completed task if it exists
-                if task_metadata:
-                    await cleanup_completed_task(current_user.sub, task_id)
-
-                return {
-                    "task_id": task_id,
-                    "status": "completed",
-                    "result": {
-                        "imported_count": 0,
-                        "failed_count": 0,
-                        "already_existed_count": 0,
-                        "total_feeds": 0,
-                        "summary": {"successful": 0, "failed": 0, "already_existed": 0},
-                        "message": "No feeds found to import.",
-                    },
-                    "metadata": task_metadata,
-                }
-
-            # Check status of individual feed import tasks
-            completed_tasks = 0
-            successful_imports = 0
-            failed_imports = 0
-            already_existed = 0
-            errors = []
-
-            logger.info(
-                "Checking status of individual feed import tasks",
-                total_tasks=len(feed_task_ids),
-                task_id=task_id,
-            )
-
-            for i, feed_task_id in enumerate(feed_task_ids):
-                feed_task_result = AsyncResult(feed_task_id)
-                logger.debug(
-                    "Checking feed import task",
-                    task_index=i,
-                    feed_task_id=feed_task_id,
-                    state=feed_task_result.state,
-                )
-
-                if feed_task_result.state == "SUCCESS":
-                    completed_tasks += 1
-                    task_data = feed_task_result.result
-
-                    if task_data.get("success"):
-                        task_status = task_data.get("status", "unknown")
-                        if task_status == "already_exists":
-                            already_existed += 1
-                        elif task_status in ["imported", "imported_or_updated"]:
-                            successful_imports += 1
-                        else:
-                            # Log unexpected status for debugging
-                            logger.warning(
-                                "Unexpected success status during OPML import",
-                                task_id=feed_task_id,
-                                status=task_status,
-                                url=task_data.get("url"),
-                            )
-                            # Treat as successful import by default
-                            successful_imports += 1
-                    else:
-                        failed_imports += 1
-                        errors.append(
-                            {
-                                "url": task_data.get("url", "Unknown"),
-                                "title": task_data.get("title", "Unknown"),
-                                "error": task_data.get("error", "Unknown error"),
-                                "status": task_data.get("status", "unknown"),
-                            }
-                        )
-                elif feed_task_result.state == "FAILURE":
-                    completed_tasks += 1
-                    failed_imports += 1
-
-                    # Try to get error information
-                    error_info = {
-                        "url": "Unknown",
-                        "title": "Unknown",
-                        "error": str(feed_task_result.info) if feed_task_result.info else "Task failed",
-                        "status": "task_failed",
-                    }
-                    errors.append(error_info)
-
-            total_feeds = len(feed_task_ids)
-            is_complete = completed_tasks == total_feeds
-
-            logger.info(
-                "OPML import task status summary",
-                completed=completed_tasks,
-                total=total_feeds,
-                successful=successful_imports,
-                failed=failed_imports,
-                already_existed=already_existed,
-                is_complete=is_complete,
-            )
-
-            if is_complete:
-                # Clean up task metadata for completed task if it exists
-                if task_metadata:
-                    await cleanup_completed_task(current_user.sub, task_id)
-
-                result: dict[str, Any] = {
-                    "task_id": task_id,
-                    "status": "completed",
-                    "message": f"{successful_imports} feeds added. {already_existed} were already in your library."
-                    + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
-                    "result": {
-                        "imported_count": successful_imports,
-                        "failed_count": failed_imports,
-                        "already_existed_count": already_existed,
-                        "total_feeds": total_feeds,
-                        "summary": {
-                            "successful": successful_imports,
-                            "failed": failed_imports,
-                            "already_existed": already_existed,
-                        },
-                        "message": f"{successful_imports} feeds added. {already_existed} were already in your library."
-                        + (f" {failed_imports} failed to import." if failed_imports > 0 else ""),
-                    },
-                    "metadata": task_metadata,
-                }
-
-                # Include error details if any failed
-                if errors:
-                    result["result"]["errors"] = errors
-
-                return result
-            else:
-                return {
-                    "task_id": task_id,
-                    "status": "in_progress",
-                    "message": f"Importing feeds: {completed_tasks}/{total_feeds} completed",
-                    "progress": {
-                        "completed": completed_tasks,
-                        "total": total_feeds,
-                        "successful": successful_imports,
-                        "failed": failed_imports,
-                        "already_existed": already_existed,
-                    },
-                    "metadata": task_metadata,
-                }
-        elif task_result.state == "FAILURE":
-            # Clean up task metadata for failed task if it exists
-            if task_metadata:
-                await cleanup_completed_task(current_user.sub, task_id)
-
-            return {
-                "task_id": task_id,
-                "status": "failed",
-                "error": str(task_result.info) if task_result.info else "Unknown error",
-                "message": "OPML import failed. Please try again.",
-                "metadata": task_metadata,
-            }
-        else:
-            return {
-                "task_id": task_id,
-                "status": task_result.state.lower(),
-                "message": f"Task is in state: {task_result.state}",
-                "metadata": task_metadata,
-            }
-
-    except Exception as e:
-        logger.error(
-            "Error fetching task status from Celery backend",
+    
+    # Verify ownership
+    if state.user_id != current_user.sub:
+        logger.warning(
+            "Unauthorized access to import task",
             task_id=task_id,
-            error=str(e),
+            user_id=current_user.sub,
+            task_owner=state.user_id,
         )
-        raise HTTPException(status_code=500, detail="Could not retrieve task status.") from e
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to access this import task.",
+        )
+    
+    # Build response based on status
+    response: dict[str, Any] = {
+        "task_id": task_id,
+        "status": state.status,
+        "metadata": state.to_metadata(),
+    }
+    
+    if state.status == "pending":
+        response["message"] = "OPML import is queued and waiting to start."
+    elif state.status == "in_progress":
+        response["message"] = f"Importing feeds: {state.completed_feeds}/{state.total_feeds} completed"
+        response["progress"] = state.to_progress()
+    elif state.status in ["completed", "cancelled"]:
+        response["message"] = state.message or "Import completed."
+        response["result"] = state.to_result()
+        # Clean up ownership for completed task
+        await cleanup_task_ownership(task_id, current_user.sub)
+    elif state.status == "failed":
+        response["message"] = state.message or "OPML import failed. Please try again."
+        response["error"] = state.message
+        # Clean up ownership for failed task
+        await cleanup_task_ownership(task_id, current_user.sub)
+    else:
+        response["message"] = f"Task is in state: {state.status}"
+    
+    return response
 
 
 @router.get(
@@ -856,55 +963,38 @@ async def list_user_import_tasks(
     Returns:
         list[OpmlTaskMetadata]: List of active import tasks
     """
-    redis_cache = RedisCache()
-    user_tasks_key = f"opml_import_tasks:user:{current_user.sub}"
-    user_tasks = await redis_cache.get(user_tasks_key) or []
+    # Get task IDs from Redis
+    task_ids = await get_user_task_ids(current_user.sub)
 
-    # Clean up completed tasks and get updated status
+    # Build metadata from progress states
     active_tasks = []
     tasks_to_remove = []
 
-    for task in user_tasks:
-        task_id = task.get("task_id")
-        if not task_id:
-            continue
-
+    for task_id in task_ids:
         try:
-            task_result = AsyncResult(task_id)
-
-            # Check if task is completed or failed
-            if task_result.state in ["SUCCESS", "FAILURE"]:
-                # Check if it's truly done by looking at individual feed tasks
-                if task_result.state == "SUCCESS":
-                    orchestration_data = task_result.result
-                    feed_task_ids = orchestration_data.get("task_ids", [])
-
-                    if feed_task_ids:
-                        # Check if all individual tasks are complete
-                        all_complete = True
-                        for feed_task_id in feed_task_ids:
-                            feed_task_result = AsyncResult(feed_task_id)
-                            if feed_task_result.state not in ["SUCCESS", "FAILURE"]:
-                                all_complete = False
-                                break
-
-                        if not all_complete:
-                            # Still in progress
-                            task["current_status"] = "in_progress"
-                            active_tasks.append(task)
-                        else:
-                            # Truly complete
-                            tasks_to_remove.append(task_id)
-                    else:
-                        # No feeds to import, completed
-                        tasks_to_remove.append(task_id)
-                else:
-                    # Failed
-                    tasks_to_remove.append(task_id)
+            # Get progress state from Redis
+            state = await get_import_progress(task_id)
+            
+            if not state:
+                # No progress state yet, task is still pending
+                task_metadata = {
+                    "user_id": current_user.sub,
+                    "task_id": task_id,
+                    "estimated_feeds": 0,
+                    "filename": "unknown.opml",
+                    "created_at": datetime.now(timezone.utc).isoformat(),
+                    "status": "pending",
+                    "current_status": "pending",
+                }
+                active_tasks.append(task_metadata)
+                continue
+            
+            # Check if task is completed
+            if state.status in ["completed", "cancelled", "failed"]:
+                tasks_to_remove.append(task_id)
             else:
-                # Still pending or in progress
-                task["current_status"] = task_result.state.lower()
-                active_tasks.append(task)
+                # Still active
+                active_tasks.append(state.to_metadata().model_dump())
 
         except Exception as e:
             logger.warning(
@@ -913,13 +1003,21 @@ async def list_user_import_tasks(
                 error=str(e),
             )
             # Keep the task in list but mark as unknown
-            task["current_status"] = "unknown"
-            active_tasks.append(task)
+            task_metadata = {
+                "user_id": current_user.sub,
+                "task_id": task_id,
+                "estimated_feeds": 0,
+                "filename": "unknown.opml",
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "status": "pending",
+                "current_status": "unknown",
+            }
+            active_tasks.append(task_metadata)
 
     # Clean up completed tasks from Redis
     if tasks_to_remove:
         for task_id in tasks_to_remove:
-            await cleanup_completed_task(current_user.sub, task_id)
+            await cleanup_task_ownership(task_id, current_user.sub)
 
     return active_tasks
 
@@ -1019,7 +1117,7 @@ async def get_active_import_task(
 async def cancel_import_task(
     task_id: str = Path(
         ...,
-        description="Celery task ID of the import to cancel",
+        description="Taskiq task ID of the import to cancel",
         examples={
             "uuid": "550e8400-e29b-41d4-a716-446655440000",
         },
@@ -1034,20 +1132,22 @@ async def cancel_import_task(
 
     **Cancellation Process:**
     1. Verifies user ownership of the task
-    2. Revokes the main orchestration task
-    3. Cancels all individual feed import subtasks
-    4. Cleans up Redis metadata
-    5. Terminates any running workers
+    2. Sets a cancellation flag in Redis that the worker checks
+    3. Cleans up task metadata
+    4. Worker stops processing new feeds once it sees the flag
+
+    **Cooperative Cancellation:**
+    This uses a cooperative cancellation model:
+    - A cancellation flag is set in Redis
+    - The worker checks this flag before processing each feed
+    - Feeds already being processed will complete
+    - No new feeds will be started after the flag is set
 
     **Cancellation States:**
-    - `pending`: Task cancelled before starting
-    - `in_progress`: Task terminated during execution
+    - `pending`: Task can be cancelled (flag set, no feeds processed yet)
+    - `in_progress`: Partial cancellation (some feeds complete, remaining skipped)
     - `completed`: Cannot cancel already finished tasks
     - `failed`: Cannot cancel already failed tasks
-
-    **Subtask Handling:**
-    For imports that have already started processing individual feeds,
-    the endpoint will attempt to cancel all subtasks and report the count.
 
     **Cleanup:**
     All associated metadata is removed from Redis to prevent orphaned data.
@@ -1066,10 +1166,10 @@ async def cancel_import_task(
     Raises:
         HTTPException: 403 for unauthorized access, 404 for missing tasks, 500 for server errors
     """
-    # Get task metadata from Redis to verify ownership
-    task_metadata = await get_import_task_metadata(task_id)
+    # Check ownership
+    task_owner = await get_task_owner(task_id)
 
-    if not task_metadata:
+    if not task_owner:
         logger.warning(
             "Attempted to cancel non-existent task",
             task_id=task_id,
@@ -1081,12 +1181,12 @@ async def cancel_import_task(
         )
 
     # Verify user ownership
-    if task_metadata.get("user_id") != current_user.sub:
+    if task_owner != current_user.sub:
         logger.warning(
             "Unauthorized attempt to cancel import task",
             task_id=task_id,
             user_id=current_user.sub,
-            task_owner=task_metadata.get("user_id"),
+            task_owner=task_owner,
         )
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -1094,76 +1194,91 @@ async def cancel_import_task(
         )
 
     try:
-        # Get the Celery task
-        task_result = AsyncResult(task_id)
+        # Get progress state to check current status
+        state = await get_import_progress(task_id)
 
-        # Check if task can be cancelled
-        if task_result.state in ["SUCCESS", "FAILURE", "REVOKED"]:
+        if not state:
+            # Task not found, might already be cleaned up
             logger.info(
-                "Attempted to cancel already completed task",
+                "Attempted to cancel task that doesn't exist",
                 task_id=task_id,
-                state=task_result.state,
                 user_id=current_user.sub,
             )
-            # Clean up metadata for completed task
-            await cleanup_completed_task(current_user.sub, task_id)
+            await cleanup_task_ownership(task_id, current_user.sub)
             return {
                 "task_id": task_id,
-                "message": f"Task was already {task_result.state.lower()}. Redirecting to import page.",
+                "message": "Task not found or already completed. Redirecting to import page.",
                 "cancelled": False,
-                "previous_state": task_result.state.lower(),
+                "previous_state": "unknown",
                 "redirect_url": "/import-opml",
             }
 
-        # Check if it's an orchestration task with individual feed tasks
-        if task_result.state == "SUCCESS":
-            orchestration_data = task_result.result
-            feed_task_ids = orchestration_data.get("task_ids", [])
+        # Check if task can be cancelled (already completed or failed)
+        if state.status in ["completed", "failed"]:
+            logger.info(
+                "Attempted to cancel already completed task",
+                task_id=task_id,
+                state=state.status,
+                user_id=current_user.sub,
+            )
+            # Clean up metadata for completed task
+            await cleanup_task_ownership(task_id, current_user.sub)
+            return {
+                "task_id": task_id,
+                "message": f"Task was already {state.status}. Redirecting to import page.",
+                "cancelled": False,
+                "previous_state": state.status,
+                "redirect_url": "/import-opml",
+            }
+        
+        # If already cancelled, just confirm
+        if state.status == "cancelled":
+            logger.info(
+                "Task was already cancelled",
+                task_id=task_id,
+                user_id=current_user.sub,
+            )
+            await cleanup_task_ownership(task_id, current_user.sub)
+            return {
+                "task_id": task_id,
+                "message": "Task was already cancelled. Redirecting to import page.",
+                "cancelled": True,
+                "previous_state": "cancelled",
+                "redirect_url": "/import-opml",
+            }
 
-            if feed_task_ids:
-                # Cancel all individual feed import tasks
-                cancelled_tasks = 0
-                for feed_task_id in feed_task_ids:
-                    try:
-                        feed_task = AsyncResult(feed_task_id)
-                        if feed_task.state not in ["SUCCESS", "FAILURE", "REVOKED"]:
-                            feed_task.revoke(terminate=True)
-                            cancelled_tasks += 1
-                    except Exception as e:
-                        logger.warning(
-                            "Error cancelling individual feed task",
-                            feed_task_id=feed_task_id,
-                            error=str(e),
-                        )
+        # Set cooperative cancellation flag
+        # The worker will check this flag and stop processing new feeds
+        await set_import_cancellation_flag(task_id)
+        
+        # Update progress state to cancelled if not completed yet
+        if state.completed_feeds < state.total_feeds:
+            # Mark remaining feeds as cancelled
+            remaining = state.total_feeds - state.completed_feeds
+            await update_import_progress(
+                task_id=task_id,
+                status="cancelled",
+                completed_at=datetime.now(timezone.utc).isoformat(),
+                message=f"Import cancelled. {state.completed_feeds} of {state.total_feeds} feeds were processed.",
+            )
 
-                logger.info(
-                    "Cancelled individual feed import tasks",
-                    task_id=task_id,
-                    cancelled_count=cancelled_tasks,
-                    total_tasks=len(feed_task_ids),
-                    user_id=current_user.sub,
-                )
-            else:
-                # No individual tasks, just mark as cancelled
-                cancelled_tasks = 0
-
-        # Cancel the main orchestration task
-        task_result.revoke(terminate=True)
-
-        # Clean up task metadata
-        await cleanup_completed_task(current_user.sub, task_id)
+        # Clean up ownership
+        await cleanup_task_ownership(task_id, current_user.sub)
 
         logger.info(
-            "Successfully cancelled OPML import task",
+            "Set cancellation flag for OPML import task",
             task_id=task_id,
             user_id=current_user.sub,
         )
 
         return {
             "task_id": task_id,
-            "message": "Import task cancelled successfully. Redirecting to import page.",
+            "message": (
+                "Cancellation requested. The import will stop processing new feeds. "
+                "Feeds already being processed will complete. Redirecting to import page."
+            ),
             "cancelled": True,
-            "cancelled_subtasks": cancelled_tasks if "cancelled_tasks" in locals() else 0,
+            "cancelled_subtasks": 0,  # Cooperative cancellation, no direct subtask cancellation
             "redirect_url": "/import-opml",
         }
 

@@ -40,6 +40,7 @@ from app.schemas.feeds import (
 )
 from app.schemas.folders import FolderBase, FolderCreate, FolderResponse, FolderUpdate
 from app.schemas.opml import (
+    FeedImportError,
     OpmlExport,
     OpmlExportResponse,
     OpmlImportCancelResponse,
@@ -47,6 +48,7 @@ from app.schemas.opml import (
     OpmlImportRequest,
     OpmlImportResponse,
     OpmlImportResult,
+    OpmlImportState,
     OpmlImportStatusResponse,
     OpmlOutline,
     OpmlTaskMetadata,
@@ -103,10 +105,12 @@ __all__ = [
     "OpmlImportResponse",
     "OpmlTaskMetadata",
     "OpmlImportProgress",
+    "OpmlImportState",
     "OpmlImportResult",
     "OpmlImportStatusResponse",
     "OpmlImportCancelResponse",
     "OpmlExportResponse",
+    "FeedImportError",
     # Discovery
     "DiscoverSearchRequest",
     "RecommendationsRequest",
