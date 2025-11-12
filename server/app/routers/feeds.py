@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_FEEDS_BATCH_SIZE, MAX_PAGE_SIZE
+from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_PAGE_SIZE
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,

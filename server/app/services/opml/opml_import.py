@@ -6,9 +6,11 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud import crud_profile
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
+from app.services.user.resource_limits import ResourceLimitService
 
 logger = structlog.get_logger(__name__)
 
@@ -97,7 +99,9 @@ class OpmlImportService:
 
         return folder_cache
 
-    async def _dispatch_feed_tasks(self, feeds_data: list[dict[str, Any]], parent_task_id: str | None) -> dict[str, Any]:
+    async def _dispatch_feed_tasks(
+        self, feeds_data: list[dict[str, Any]], parent_task_id: str | None
+    ) -> dict[str, Any]:
         """Dispatch individual Taskiq tasks for each feed.
 
         Args:
@@ -150,7 +154,7 @@ class OpmlImportService:
                     parent_task_id=parent_task_id,  # Pass parent for cancellation checks
                 )
                 task_ids.append(task.task_id)
-                
+
                 logger.debug(
                     "Dispatched feed import task",
                     feed_url=feed_data["url"],
@@ -202,8 +206,6 @@ class OpmlImportService:
             opml_content=opml_content, default_folder_name=default_folder_name
         )
 
-        total_feeds = len(feeds_data)
-
         if not feeds_data:
             return {
                 "total_feeds": 0,
@@ -231,6 +233,36 @@ class OpmlImportService:
             Dict with success status, error details, and feed information
         """
         try:
+            # Check subscription limit before attempting to add feed
+            profile = await crud_profile.get_by_id(self.db, user_id=self.user_id)
+            if profile:
+                resource_service = ResourceLimitService(self.db)
+                can_proceed = await resource_service.check_limit(
+                    self.user_id, "max_subscriptions", str(profile.role), lock=False
+                )
+
+                if not can_proceed:
+                    limits = resource_service.get_user_limits(str(profile.role))
+                    current_usage = await resource_service.get_current_usage(
+                        self.user_id, "max_subscriptions", lock=False
+                    )
+
+                    logger.warning(
+                        "Subscription limit reached during OPML import, skipping feed",
+                        feed_url=feed_url,
+                        user_id=str(self.user_id),
+                        current_usage=current_usage,
+                        limit=limits.get("max_subscriptions", 0),
+                    )
+
+                    return {
+                        "success": False,
+                        "url": feed_url,
+                        "title": feed_title or "Unknown",
+                        "status": "limit_exceeded",
+                        "error": f"Subscription limit reached ({current_usage}/{limits.get('max_subscriptions', 0)})",
+                    }
+
             if folder_id:
                 folder_uuid = UUID(folder_id)
             else:

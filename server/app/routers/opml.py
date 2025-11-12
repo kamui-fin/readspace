@@ -130,11 +130,11 @@ async def store_task_ownership(task_id: str, user_id: str) -> None:
         user_id: UUID of the user who owns this import task
     """
     redis_cache = RedisCache()
-    
+
     # Store ownership for quick auth checks
     owner_key = f"opml_task_owner:{task_id}"
     await redis_cache.set(owner_key, user_id, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-    
+
     # Add to user's task list for listing endpoint
     user_tasks_key = f"opml_import_tasks:user:{user_id}"
     existing_tasks = await redis_cache.get(user_tasks_key) or []
@@ -182,11 +182,11 @@ async def cleanup_task_ownership(task_id: str, user_id: str) -> None:
         user_id: UUID of the user who owns the task
     """
     redis_cache = RedisCache()
-    
+
     # Remove ownership
     owner_key = f"opml_task_owner:{task_id}"
     await redis_cache.delete(owner_key)
-    
+
     # Remove from user's list
     user_tasks_key = f"opml_import_tasks:user:{user_id}"
     existing_tasks = await redis_cache.get(user_tasks_key) or []
@@ -300,7 +300,7 @@ async def initialize_import_progress(
         OpmlImportState: Initialized state
     """
     redis_cache = RedisCache()
-    
+
     state = OpmlImportState(
         task_id=task_id,
         user_id=user_id,
@@ -308,21 +308,21 @@ async def initialize_import_progress(
         total_feeds=total_feeds,
         status="pending",
     )
-    
+
     progress_key = f"opml_import_progress:{task_id}"
     await redis_cache.set(
         progress_key,
         state.model_dump(),
         ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
     )
-    
+
     logger.info(
         "Initialized import progress state",
         task_id=task_id,
         user_id=user_id,
         total_feeds=total_feeds,
     )
-    
+
     return state
 
 
@@ -338,11 +338,11 @@ async def get_import_progress(task_id: str) -> OpmlImportState | None:
     """
     redis_cache = RedisCache()
     progress_key = f"opml_import_progress:{task_id}"
-    
+
     state_dict = await redis_cache.get(progress_key)
     if not state_dict:
         return None
-    
+
     return OpmlImportState(**state_dict)
 
 
@@ -356,6 +356,7 @@ async def update_import_progress(
     completed_at: str | None = None,
     message: str | None = None,
     cancelled: bool = False,
+    skipped_limit: bool = False,
 ) -> OpmlImportState | None:
     """
     Atomically update import progress for a single feed completion.
@@ -373,13 +374,14 @@ async def update_import_progress(
         completed_at: ISO timestamp when processing completed
         message: Status message to set
         cancelled: Whether this feed was cancelled
+        skipped_limit: Whether this feed was skipped due to subscription limit
 
     Returns:
         OpmlImportState | None: Updated state or None if not found
     """
     redis_cache = RedisCache()
     progress_key = f"opml_import_progress:{task_id}"
-    
+
     # Get current state
     state = await get_import_progress(task_id)
     if not state:
@@ -388,10 +390,13 @@ async def update_import_progress(
             task_id=task_id,
         )
         return None
-    
+
     # Update counters
     if cancelled:
         state.cancelled_count += 1
+        state.completed_feeds += 1
+    elif skipped_limit:
+        state.skipped_limit += 1
         state.completed_feeds += 1
     elif success:
         if already_exists:
@@ -403,7 +408,7 @@ async def update_import_progress(
         state.failed_imports += 1
         state.completed_feeds += 1
         state.errors.append(error)
-    
+
     # Update status and timestamps
     if status:
         state.status = status
@@ -413,25 +418,26 @@ async def update_import_progress(
         state.completed_at = completed_at
     if message:
         state.message = message
-    
+
     # Auto-complete if all feeds are processed
     if state.completed_feeds >= state.total_feeds and state.status == "in_progress":
         state.status = "completed"
         state.completed_at = datetime.now(timezone.utc).isoformat()
-        
+
         # Generate completion message
         completion_message = (
-            f"{state.successful_imports} feeds added. "
-            f"{state.already_existed} were already in your library."
+            f"{state.successful_imports} feeds added. {state.already_existed} were already in your library."
         )
         if state.failed_imports > 0:
             completion_message += f" {state.failed_imports} failed to import."
+        if state.skipped_limit > 0:
+            completion_message += f" {state.skipped_limit} skipped due to subscription limit."
         if state.cancelled_count > 0:
             completion_message += f" {state.cancelled_count} cancelled."
             state.status = "cancelled"
-        
+
         state.message = completion_message
-        
+
         logger.info(
             "Import completed automatically",
             task_id=task_id,
@@ -440,14 +446,14 @@ async def update_import_progress(
             already_existed=state.already_existed,
             cancelled=state.cancelled_count,
         )
-    
+
     # Save back to Redis
     await redis_cache.set(
         progress_key,
         state.model_dump(),
         ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
     )
-    
+
     logger.debug(
         "Updated import progress",
         task_id=task_id,
@@ -455,7 +461,7 @@ async def update_import_progress(
         total=state.total_feeds,
         status=state.status,
     )
-    
+
     return state
 
 
@@ -469,7 +475,7 @@ async def delete_import_progress(task_id: str) -> None:
     redis_cache = RedisCache()
     progress_key = f"opml_import_progress:{task_id}"
     await redis_cache.delete(progress_key)
-    
+
     logger.debug("Deleted import progress state", task_id=task_id)
 
 
@@ -520,7 +526,7 @@ async def delete_import_progress(task_id: str) -> None:
             "content": {
                 "application/json": {
                     "example": {
-                        "detail": "Cannot import 100 feeds. You have 25 subscription slots remaining (current: 0/25). Please upgrade your plan or remove some feeds before importing."
+                        "detail": "Importing this would exceed your feed subscription limit (25/100 left)"
                     }
                 }
             },
@@ -672,11 +678,7 @@ async def import_opml_file(
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=(
-                        f"Cannot import {feed_count} feeds. You have {remaining_capacity} subscription slots "
-                        f"remaining (current: {current_usage}/{max_limit}). Please upgrade your plan or "
-                        f"remove some feeds before importing."
-                    ),
+                    detail=f"Importing this would exceed your feed subscription limit ({remaining_capacity}/{max_limit} left)",
                 )
 
         # Queue orchestration task
@@ -839,7 +841,7 @@ async def get_import_status(
     """
     # Get import progress state from Redis
     state = await get_import_progress(task_id)
-    
+
     if not state:
         # Check if we have ownership record (task just queued)
         task_owner = await get_task_owner(task_id)
@@ -873,7 +875,7 @@ async def get_import_status(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Import task not found or has expired.",
             )
-    
+
     # Verify ownership
     if state.user_id != current_user.sub:
         logger.warning(
@@ -886,14 +888,14 @@ async def get_import_status(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have permission to access this import task.",
         )
-    
+
     # Build response based on status
     response: dict[str, Any] = {
         "task_id": task_id,
         "status": state.status,
         "metadata": state.to_metadata(),
     }
-    
+
     if state.status == "pending":
         response["message"] = "OPML import is queued and waiting to start."
     elif state.status == "in_progress":
@@ -911,7 +913,7 @@ async def get_import_status(
         await cleanup_task_ownership(task_id, current_user.sub)
     else:
         response["message"] = f"Task is in state: {state.status}"
-    
+
     return response
 
 
@@ -974,7 +976,7 @@ async def list_user_import_tasks(
         try:
             # Get progress state from Redis
             state = await get_import_progress(task_id)
-            
+
             if not state:
                 # No progress state yet, task is still pending
                 task_metadata = {
@@ -988,7 +990,7 @@ async def list_user_import_tasks(
                 }
                 active_tasks.append(task_metadata)
                 continue
-            
+
             # Check if task is completed
             if state.status in ["completed", "cancelled", "failed"]:
                 tasks_to_remove.append(task_id)
@@ -1230,7 +1232,7 @@ async def cancel_import_task(
                 "previous_state": state.status,
                 "redirect_url": "/import-opml",
             }
-        
+
         # If already cancelled, just confirm
         if state.status == "cancelled":
             logger.info(
@@ -1250,11 +1252,10 @@ async def cancel_import_task(
         # Set cooperative cancellation flag
         # The worker will check this flag and stop processing new feeds
         await set_import_cancellation_flag(task_id)
-        
+
         # Update progress state to cancelled if not completed yet
         if state.completed_feeds < state.total_feeds:
             # Mark remaining feeds as cancelled
-            remaining = state.total_feeds - state.completed_feeds
             await update_import_progress(
                 task_id=task_id,
                 status="cancelled",

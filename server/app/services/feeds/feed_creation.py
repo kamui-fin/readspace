@@ -2,13 +2,13 @@
 
 from datetime import datetime, timezone
 from typing import Any
+from urllib.parse import urlparse
 from uuid import UUID
 
 import feedparser  # type: ignore
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
 from app.core.custom_exceptions import (
     FeedConnectionError,
     FeedParsingError,
@@ -19,7 +19,7 @@ from app.core.custom_exceptions import (
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_folder, crud_subscription
 from app.crud.article.article import create_articles_batch
-from app.schemas import ArticleCreate
+from app.schemas import ArticleCreate, FeedBase
 from app.schemas.subscriptions import SubscriptionCreate, SubscriptionResponse
 from app.services.articles.article import ArticleBusinessLogic
 from app.services.articles.article_extractor import ArticleExtractor
@@ -171,8 +171,8 @@ class FeedCreationService:
             subscription_id=subscription.id,
         )
 
-        # Note: No enrichment trigger here since feed already exists
-        # Enrichment should only happen for newly created feeds
+        # Note: Feed enrichment is now handled by weekly batch task
+        # No need to trigger individual enrichment tasks
 
         return SubscriptionResponse.model_validate(subscription)
 
@@ -249,9 +249,6 @@ class FeedCreationService:
             user_id=self.user_id,
             feed_db=db_feed,  # Pass the feed object directly
         )
-
-        # Trigger background feed enrichment
-        await self._trigger_feed_enrichment(db_feed.id)
 
         return SubscriptionResponse.model_validate(subscription)
 
@@ -441,33 +438,6 @@ class FeedCreationService:
 
         return skip_days_value
 
-    async def _trigger_feed_enrichment(self, feed_id: UUID) -> None:
-        """Trigger background feed enrichment task if AI is enabled."""
-        settings = get_settings()
-        if not settings.ENABLE_AI:
-            logger.info("AI disabled, skipping feed enrichment", feed_id=feed_id)
-            return
-
-        try:
-            from app.workers.feed_tasks import enrich_feed_task
-
-            # Queue the enrichment task with a small delay to ensure feed is committed
-            # In Taskiq, delays are set using labels
-            await enrich_feed_task.kicker().with_labels(delay=5).kiq(feed_id)
-
-            logger.info(
-                "Feed enrichment task queued",
-                feed_id=feed_id,
-            )
-
-        except Exception as e:
-            logger.error(
-                "Failed to queue feed enrichment task",
-                feed_id=feed_id,
-                error=str(e),
-            )
-            # Don't fail feed creation if enrichment task fails to queue
-
     async def _fetch_feed_content(
         self,
         url: str,
@@ -551,8 +521,6 @@ class FeedCreationService:
 
     def _extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> Any:
         """Extract feed metadata using FeedValidator service."""
-        from app.schemas import FeedBase
-
         # Use FeedValidator to extract and clean metadata
         metadata = self.feed_validator.extract_feed_metadata(parsed_feed)
 
@@ -563,8 +531,6 @@ class FeedCreationService:
         # If no image is found and we have a link, use favicon from the link domain
         if not image_url and metadata["link"]:
             try:
-                from urllib.parse import urlparse
-
                 parsed_url = urlparse(metadata["link"])
                 domain = f"{parsed_url.scheme}://{parsed_url.netloc}"
                 image_url = f"{domain}/favicon.ico"

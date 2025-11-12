@@ -190,29 +190,7 @@ export default function ImportOPMLPageClient() {
 
                 // Handle resource limit errors (429) with user-friendly message
                 if (error instanceof ApiError && error.status === 429) {
-                    const errorMessage = error.message
-
-                    // Parse the error message to extract key information
-                    const feedCountMatch = errorMessage.match(/Cannot import (\d+) feeds/)
-                    const remainingMatch = errorMessage.match(/(\d+) subscription slots remaining/)
-                    const usageMatch = errorMessage.match(/current: (\d+)\/(\d+)/)
-
-                    if (feedCountMatch && remainingMatch && usageMatch) {
-                        const feedCount = feedCountMatch[1]
-                        const remaining = remainingMatch[1]
-                        const currentUsage = usageMatch[1]
-                        const maxLimit = usageMatch[2]
-
-                        // Show comprehensive, actionable error message
-                        toast.error(
-                            `Your OPML file contains ${feedCount} feeds, but you only have ${remaining} subscription slots available (currently using ${currentUsage}/${maxLimit}). Please upgrade your plan, remove some existing feeds, or import a smaller OPML file.`,
-                            { duration: 8000 }
-                        )
-                    } else {
-                        // Fallback if parsing fails - show the full error message from backend
-                        toast.error(errorMessage, { duration: 8000 })
-                    }
-
+                    toast.error(error.message, { duration: 8000 })
                     setIsUploading(false)
                     return
                 }
@@ -297,8 +275,8 @@ export default function ImportOPMLPageClient() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                    activeImports.length > 0 &&
-                    activeImports[0] ? (
+                        activeImports.length > 0 &&
+                        activeImports[0] ? (
                         <Card>
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
@@ -329,11 +307,10 @@ export default function ImportOPMLPageClient() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${
-                                isDragging
-                                    ? "border-primary bg-primary/5"
-                                    : "border-dashed border-2"
-                            }`}
+                            className={`transition-colors duration-200 ${isDragging
+                                ? "border-primary bg-primary/5"
+                                : "border-dashed border-2"
+                                }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

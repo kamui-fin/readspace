@@ -293,7 +293,10 @@ class FeedManagementService:
     async def refresh_feed(
         self, feed_id: UUID, force_refetch: bool = False, preview_mode: bool = False
     ) -> FeedResponse | None:
-        """Refresh a specific feed by fetching latest content."""
+        """Refresh a specific feed by fetching latest content.
+
+        Any authenticated user can refresh any feed in the system.
+        """
         logger.info(
             "Refreshing feed",
             feed_id=feed_id,
@@ -308,19 +311,10 @@ class FeedManagementService:
             logger.warning("Feed not found for refresh", feed_id=feed_id)
             return None
 
-        # For preview mode, we don't require a subscription
-        subscription_db = None
-        if not preview_mode:
-            subscription_db = await crud_subscription.get_subscription_by_feed_id(
-                db=self.db, feed_id=feed_id, user_id=self.user_id
-            )
-            if not subscription_db:
-                logger.warning(
-                    "Subscription not found for refresh",
-                    feed_id=feed_id,
-                    user_id=self.user_id,
-                )
-                return None
+        # Get subscription if user has one (for response construction)
+        subscription_db = await crud_subscription.get_subscription_by_feed_id(
+            db=self.db, feed_id=feed_id, user_id=self.user_id
+        )
 
         try:
             # Fetch and parse the feed content
@@ -338,7 +332,7 @@ class FeedManagementService:
                 )
                 logger.info("Feed not modified, refresh skipped", feed_id=feed_id)
                 # Construct FeedResponse with current data
-                if preview_mode:
+                if preview_mode or not subscription_db:
                     return self._construct_feed_response_preview(feed_db)
                 else:
                     unread_count = await self._get_unread_count(feed_id)
@@ -351,7 +345,7 @@ class FeedManagementService:
                     status=fetch_result.status_code,
                 )
                 # Return current state with correct user-specific data
-                if preview_mode:
+                if preview_mode or not subscription_db:
                     return self._construct_feed_response_preview(feed_db)
                 else:
                     unread_count = await self._get_unread_count(feed_id)
@@ -368,7 +362,7 @@ class FeedManagementService:
 
             logger.info("Feed refreshed successfully", feed_id=feed_id)
             if refreshed_feed:
-                if preview_mode:
+                if preview_mode or not subscription_db:
                     return self._construct_feed_response_preview(refreshed_feed)
                 else:
                     unread_count = await self._get_unread_count(feed_id)

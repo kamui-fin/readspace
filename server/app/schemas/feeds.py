@@ -98,13 +98,9 @@ class FeedWithArticlesResponse(FeedResponse):
 class FeedEnrichmentResponse(BaseModel):
     """Schema for structured AI response during feed enrichment."""
 
-    refined_title: str = Field(
-        ...,
-        min_length=3,
-        max_length=120,
-        description="Clean title without RSS/Feed words",
+    enhanced_description: str = Field(
+        ..., max_length=300, description="Enhanced/expanded description for better context"
     )
-    refined_description: str = Field(..., max_length=300, description="What the feed offers generally")
     tags: list[str] = Field(..., min_length=1, max_length=10, description="Specific keywords and topics")
     category: str = Field(..., description="One of the 12 predefined categories")
     popularity_estimate: int = Field(..., ge=1, le=100, description="Popularity estimate on scale 1-100")

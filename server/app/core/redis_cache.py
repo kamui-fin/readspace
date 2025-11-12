@@ -1,5 +1,9 @@
 import json
+from datetime import date, datetime
+from decimal import Decimal
+from enum import Enum
 from typing import Any
+from uuid import UUID
 
 import redis.asyncio as redis
 import structlog
@@ -10,6 +14,45 @@ from app.core.config import get_settings
 logger = structlog.get_logger(__name__)
 
 
+class ExtendedJSONEncoder(json.JSONEncoder):
+    """JSON encoder that handles datetime, UUID, Enum, Pydantic models, and other non-serializable types.
+
+    This encoder extends the standard JSONEncoder to handle common Python types
+    that are not natively JSON serializable:
+    - datetime/date objects → ISO format strings (e.g., "2025-01-15T10:30:00Z")
+    - UUID objects → string representation
+    - Enum objects → their values
+    - Decimal objects → float conversion
+    - Pydantic BaseModel → model_dump(mode="json")
+
+    This is consistent with Pydantic's JSON serialization approach.
+    """
+
+    def default(self, obj: Any) -> Any:
+        """Convert non-serializable objects to JSON-compatible types.
+
+        Args:
+            obj: Object to serialize
+
+        Returns:
+            JSON-serializable representation of the object
+
+        Raises:
+            TypeError: If object cannot be serialized
+        """
+        if isinstance(obj, datetime | date):
+            return obj.isoformat()
+        if isinstance(obj, UUID):
+            return str(obj)
+        if isinstance(obj, Enum):
+            return obj.value
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, BaseModel):
+            return obj.model_dump(mode="json")
+        return super().default(obj)
+
+
 def _serialize_value(value: Any) -> str:
     """
     Serialize value to JSON string with optimized Pydantic handling.
@@ -17,6 +60,9 @@ def _serialize_value(value: Any) -> str:
     This function is optimized to minimize runtime type checking overhead
     by using isinstance() checks in order of likelihood and caching type
     information where possible.
+
+    Uses ExtendedJSONEncoder to handle datetime, UUID, Enum, and other
+    non-serializable types automatically.
 
     Args:
         value: Value to serialize (dict, Pydantic model, or JSON-serializable type)
@@ -34,9 +80,9 @@ def _serialize_value(value: Any) -> str:
     # Handle Pydantic models (check once with isinstance)
     if isinstance(value, BaseModel):
         # Use Pydantic's model_dump with mode="json" to properly serialize URL objects
-        return json.dumps(value.model_dump(mode="json"))
+        return json.dumps(value.model_dump(mode="json"), cls=ExtendedJSONEncoder)
 
-    # Handle dictionaries (may contain Pydantic models)
+    # Handle dictionaries (may contain Pydantic models or datetime objects)
     if isinstance(value, dict):
         # Check if any values are Pydantic models
         has_pydantic = False
@@ -50,24 +96,24 @@ def _serialize_value(value: Any) -> str:
             serializable_dict = {
                 k: v.model_dump(mode="json") if isinstance(v, BaseModel) else v for k, v in value.items()
             }
-            return json.dumps(serializable_dict)
+            return json.dumps(serializable_dict, cls=ExtendedJSONEncoder)
         else:
-            # No Pydantic models, serialize directly
-            return json.dumps(value)
+            # No Pydantic models, serialize with custom encoder for datetime/UUID/etc
+            return json.dumps(value, cls=ExtendedJSONEncoder)
 
-    # Handle lists (may contain Pydantic models)
+    # Handle lists (may contain Pydantic models or datetime objects)
     if isinstance(value, list | tuple):
         has_pydantic = any(isinstance(item, BaseModel) for item in value)
         if has_pydantic:
             serializable_list = [
                 item.model_dump(mode="json") if isinstance(item, BaseModel) else item for item in value
             ]
-            return json.dumps(serializable_list)
+            return json.dumps(serializable_list, cls=ExtendedJSONEncoder)
         else:
-            return json.dumps(value)
+            return json.dumps(value, cls=ExtendedJSONEncoder)
 
-    # Fallback for other types
-    return json.dumps(value)
+    # Fallback for other types (datetime, UUID, Enum, etc)
+    return json.dumps(value, cls=ExtendedJSONEncoder)
 
 
 class RedisCache:

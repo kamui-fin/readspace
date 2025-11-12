@@ -1,11 +1,16 @@
 """AI Service for OpenAI-compatible API interactions."""
 
 import hashlib
+import json
+import os
 import re
+import tempfile
+import time
 from typing import Any
 
 import structlog
 from google import genai
+from google.genai import types
 
 from app.core.config import get_settings
 from app.core.constants import AI_CACHE_TTL
@@ -193,112 +198,333 @@ class AIService:
             logger.error("Error generating batch embeddings", error=str(e), exc_info=True)
             return [None] * len(texts)
 
-    async def enrich_feed_with_gemini(
+    async def enrich_feeds_batch(
         self,
-        title: str,
-        description: str,
-        domain: str,
-        existing_tag: str,
-        sample_articles: list[str],
-        language: str = "en",
-    ) -> FeedEnrichmentResponse | None:
+        feed_data_list: list[dict[str, Any]],
+    ) -> list[FeedEnrichmentResponse | None]:
         """
-        Use Gemini AI to enrich feed metadata with structured output.
+        Use Gemini Batch API to enrich multiple feeds with structured output using file-based approach.
 
         Args:
-            title: Feed title
-            description: Feed description
-            domain: Feed domain
-            existing_tag: Existing tag for the feed
-            sample_articles: Sample article titles
-            language: Feed language
+            feed_data_list: List of dicts with keys: title, description, domain, sample_articles, language
 
         Returns:
-            FeedEnrichmentResponse or None if enrichment fails
+            List of FeedEnrichmentResponse or None for failed enrichments
+        """
+        self._check_availability()
+
+        if not feed_data_list:
+            return []
+
+        return await self._enrich_feeds_batch_internal(feed_data_list)
+
+    async def _enrich_feeds_batch_internal(
+        self,
+        feed_data_list: list[dict[str, Any]],
+    ) -> list[FeedEnrichmentResponse | None]:
+        """
+        Internal method to process a single batch of feeds.
+
+        Args:
+            feed_data_list: List of dicts with keys: title, description, domain, sample_articles, language
+
+        Returns:
+            List of FeedEnrichmentResponse or None for failed enrichments
         """
 
         try:
-            # Language-specific instructions
-            lang_instruction = ""
-            if language == "zh":
-                lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
-            elif language != "en":
-                lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
+           # Create a temporary JSONL file for batch requests
+           temp_file = None
+           uploaded_file = None
 
-            articles_text = "\n".join(sample_articles[:5]) if sample_articles else "No articles available"
+           try:
+               # Build batch requests in JSONL format
+               batch_requests = []
+               for idx, feed_data in enumerate(feed_data_list):
+                   title = feed_data.get("title", "")
+                   description = feed_data.get("description", "")
+                   domain = feed_data.get("domain", "")
+                   language = feed_data.get("language", "en")
 
-            prompt = f"""Analyze this RSS feed and provide refined content.
+                   # Language-specific instructions
+                   lang_instruction = ""
+                   if language == "zh":
+                       lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
+                   elif language != "en":
+                       lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
+
+                   prompt = f"""Analyze this RSS feed and provide enrichment metadata.
 {lang_instruction}Return ONLY a valid JSON object with no markdown formatting.
 
 Feed Information:
 Title: {title}
 Description: {description}
 Domain: {domain}
-Existing Tag: {existing_tag}
-Sample Articles: {articles_text}
 
-IMPORTANT:
-- Focus on what the FEED offers in general, not individual articles
-- REMOVE words "RSS", "Atom", and "Feed" from the title
-- AVOID generic words like "Insights", "Updates", "News", "Blog" in titles
-- Tags should be SPECIFIC keywords (e.g. "javascript", "machine learning")
-- Category should be ONE of the 12 predefined options exactly
+IMPORTANT: Use your existing knowledge of this website/publication (if you have any) to provide accurate enrichment. 
 
-Rate the popularity and influence of this RSS feed on a scale of 1–100. Consider these factors:
-- How widely read or shared is this feed likely to be?
-- Does it have a large, active audience (e.g., global news site, major online community, widely followed blog)?
-- Is it frequently referenced, cited, or reposted across the web?
-- How influential is it within its niche or community?
-- Does it appear to be a personal/hobby blog, a niche resource, or a publication with significant reach?
-- When refining title and description, use your own knowledge of the website too.
+Your task is to:
+1. Generate an ENHANCED description that expands on the existing one (if present) to make it more complete and useful for unfamiliar readers. Use your existing knowledge of this website/publication along with the provided information. If the original description is empty or very short, create a helpful description. Keep it concise (max 200 chars).
 
-Scoring Guidelines:
-90–100: Extremely popular & influential, widely read across the internet
-        (e.g., CNN Top Stories, Hacker News frontpage, TechCrunch main feed).
-80–89: Very popular, well-established with strong reach in its category (e.g., Ars Technica, Wired, The Verge).
-70–79: Popular within its niche, recognized by many enthusiasts/professionals
-        (e.g., Smashing Magazine, popular subreddits, regional news).
-60–69: Moderately popular, steady readership but limited outside its niche (e.g., smaller but established blogs or company feeds with loyal audiences).  # noqa: E501
-50–59: Some recognition, has an audience but not widely known (e.g., mid-sized blogs, specialized communities).
-40–49: Limited reach, small following, niche content.
-30–39: Very small audience, niche/hobbyist blogs.
-20–29: Minimal recognition, unknown outside a tiny circle.
-10–19: Barely read, obscure or inactive.
-1–9: Effectively no audience or visibility.
+2. Extract 5-10 SPECIFIC tags/keywords that describe the FEED'S GENERAL THEMES. Use your existing knowledge of this website/publication to identify its typical topics and focus areas. Tags should be:
+   - Based on what this feed typically covers (use your knowledge of the source)
+   - Specific enough to be useful (e.g., "javascript", "machine-learning", "climate-science", "indie-games")
+   - General enough to apply to most content from this feed
+   - Representative of the feed's core focus areas
+   - Avoid overly specific article topics that may not generalize
+   - Avoid generic terms like "news", "blog", "updates"
+
+3. Categorize the feed into ONE of these 12 categories (use your knowledge of the source):
+   - Technology & Programming
+   - Artificial Intelligence
+   - Design & Creativity
+   - Business & Finance
+   - News & Politics
+   - Gaming & Entertainment
+   - Science & Research
+   - Lifestyle & Personal
+   - Culture & Arts
+   - Security & Privacy
+   - Education & Learning
+   - Miscellaneous
+
+4. Rate the popularity and influence of this RSS feed on a scale of 1–100 (use your knowledge of the source's reach and reputation):
+   90–100: Extremely popular & influential (e.g., CNN, Hacker News, TechCrunch)
+   80–89: Very popular, well-established (e.g., Ars Technica, Wired, The Verge)
+   70–79: Popular within niche (e.g., Smashing Magazine, popular subreddits)
+   60–69: Moderately popular, steady readership
+   50–59: Some recognition, mid-sized audience
+   40–49: Limited reach, small following
+   30–39: Very small audience
+   20–29: Minimal recognition
+   10–19: Barely read, obscure
+   1–9: Effectively no audience
 
 Return a JSON object with exactly these keys:
-{{"refined_title": "Clean title without RSS/Feed words, max 80 chars", "refined_description": "What the feed offers generally, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "Choose ONE: Technology & Programming, Artificial Intelligence, Design & Creativity, Business & Finance, News & Politics, Gaming & Entertainment, Science & Research, Lifestyle & Personal, Culture & Arts, Security & Privacy, Education & Learning, Miscellaneous", "popularity_estimate": numeric_score_1_to_100}}"""  # noqa: E501
+{{"enhanced_description": "Enhanced/expanded description, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "ONE of the 12 categories above", "popularity_estimate": numeric_score_1_to_100}}"""  # noqa: E501
 
-            # Use the new SDK API for content generation
-            response = self.gemini_client.models.generate_content(
-                model=self.settings.GEMINI_MODEL,
-                contents=prompt,
-                config=genai.types.GenerateContentConfig(
-                    temperature=0.2,
-                    max_output_tokens=400,
-                    response_mime_type="application/json",
-                    response_schema=FeedEnrichmentResponse.model_json_schema(),
-                ),
-            )
+                   # Create JSONL entry with key and request
+                   # Note: File-based batch requests use REST API format (camelCase for field names)
+                   # Python SDK uses snake_case, but JSONL files go to REST API
+                   batch_requests.append(
+                       {
+                           "key": f"feed-{idx}",
+                           "request": {
+                               "contents": [{"parts": [{"text": prompt}]}],
+                               "generationConfig": {
+                                   "temperature": 0.2,
+                                   "maxOutputTokens": 400,
+                                   "responseMimeType": "application/json",
+                                   "responseJsonSchema": FeedEnrichmentResponse.model_json_schema(),
+                               },
+                           },
+                       }
+                   )
 
-            # Parse and validate the structured response
-            if not response.text:
-                logger.warning("Empty response from Gemini feed enrichment")
-                return None
-            result = FeedEnrichmentResponse.model_validate_json(response.text)
+               # Write to temporary JSONL file
+               temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
+               for request in batch_requests:
+                   temp_file.write(json.dumps(request) + "\n")
+               temp_file.close()
 
-            logger.debug(
-                "Gemini feed enrichment completed",
-                title=result.refined_title,
-                category=result.category,
-                popularity=result.popularity_estimate,
-            )
+               logger.info(
+                   "Created batch request file",
+                   file_path=temp_file.name,
+                   batch_size=len(batch_requests),
+               )
 
-            return result
+               # Upload file to Gemini File API
+               uploaded_file = self.gemini_client.files.upload(
+                   file=temp_file.name,
+                   config=types.UploadFileConfig(
+                       display_name=f"feed-enrichment-batch-{len(batch_requests)}",
+                       mime_type="jsonl",
+                   ),
+               )
+
+               logger.info(
+                   "Uploaded batch file to Gemini",
+                   file_name=uploaded_file.name,
+                   batch_size=len(batch_requests),
+               )
+
+               # Create batch job with uploaded file (with retry logic for quota errors)
+               max_retries = 3
+               retry_delay = 60  # Start with 60 seconds
+
+               for attempt in range(max_retries):
+                   try:
+                       batch_job = self.gemini_client.batches.create(
+                           model=self.settings.GEMINI_MODEL,
+                           src=uploaded_file.name,
+                           config={"display_name": f"feed-enrichment-batch-{len(batch_requests)}"},
+                       )
+                       break  # Success, exit retry loop
+                   except Exception as e:
+                       error_str = str(e)
+                       if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                           if attempt < max_retries - 1:
+                               logger.warning(
+                                   "Quota exceeded, retrying after delay",
+                                   attempt=attempt + 1,
+                                   retry_delay=retry_delay,
+                                   error=error_str,
+                               )
+                               time.sleep(retry_delay)
+                               retry_delay *= 2  # Exponential backoff
+                           else:
+                               logger.error(
+                                   "Quota exceeded after all retries",
+                                   attempts=max_retries,
+                                   error=error_str,
+                               )
+                               raise
+                       else:
+                           # Not a quota error, raise immediately
+                           raise
+
+               logger.info(
+                   "Batch enrichment job created",
+                   job_name=batch_job.name,
+                   batch_size=len(batch_requests),
+               )
+
+               # Poll for completion (with timeout)
+               max_wait_seconds = 24 * 3600  # 24 hours max wait
+               poll_interval = 2 * 60  # Poll every 2 minutes
+               elapsed = 0
+
+               completed_states = {
+                   "JOB_STATE_SUCCEEDED",
+                   "JOB_STATE_FAILED",
+                   "JOB_STATE_CANCELLED",
+                   "JOB_STATE_EXPIRED",
+               }
+
+               while elapsed < max_wait_seconds:
+                   batch_status = self.gemini_client.batches.get(name=batch_job.name)
+
+                   if batch_status.state.name in completed_states:
+                       break
+
+                   logger.debug(
+                       "Batch job still running",
+                       job_name=batch_job.name,
+                       state=batch_status.state.name,
+                       elapsed_seconds=elapsed,
+                   )
+
+                   time.sleep(poll_interval)
+                   elapsed += poll_interval
+
+               # Get final status
+               batch_status = self.gemini_client.batches.get(name=batch_job.name)
+
+               if batch_status.state.name != "JOB_STATE_SUCCEEDED":
+                   logger.error(
+                       "Batch job did not succeed",
+                       job_name=batch_job.name,
+                       state=batch_status.state.name,
+                       error=getattr(batch_status, "error", None),
+                   )
+                   return [None] * len(feed_data_list)
+
+               # Download and parse results from file
+               results: list[FeedEnrichmentResponse | None] = [None] * len(feed_data_list)
+
+               if batch_status.dest and batch_status.dest.file_name:
+                   result_file_name = batch_status.dest.file_name
+                   logger.info("Downloading batch results", file_name=result_file_name)
+
+                   # Download result file
+                   file_content = self.gemini_client.files.download(file=result_file_name)
+                   result_text = file_content.decode("utf-8")
+
+                   # Parse JSONL results
+                   for line in result_text.strip().split("\n"):
+                       if not line:
+                           continue
+
+                       try:
+                           result_obj = json.loads(line)
+
+                           # Extract index from key (e.g., "feed-0" -> 0)
+                           key = result_obj.get("key", "")
+                           if key.startswith("feed-"):
+                               idx = int(key.split("-")[1])
+
+                               # Check if response succeeded
+                               if "response" in result_obj:
+                                   # Extract text from nested response structure
+                                   # Structure: response -> candidates[0] -> content -> parts[0] -> text
+                                   try:
+                                       response_text = (
+                                           result_obj["response"]
+                                           .get("candidates", [{}])[0]
+                                           .get("content", {})
+                                           .get("parts", [{}])[0]
+                                           .get("text", "")
+                                       )
+                                       if response_text:
+                                           enrichment = FeedEnrichmentResponse.model_validate_json(response_text)
+                                           results[idx] = enrichment
+                                       else:
+                                           logger.warning(
+                                               "Empty response text in batch result",
+                                               key=key,
+                                           )
+                                   except (KeyError, IndexError, TypeError) as e:
+                                       logger.warning(
+                                           "Failed to extract text from batch response",
+                                           key=key,
+                                           error=str(e),
+                                       )
+                               elif "error" in result_obj:
+                                   logger.warning(
+                                       "Batch request failed",
+                                       key=key,
+                                       error=result_obj["error"],
+                                   )
+                               else:
+                                   logger.warning(
+                                       "Unexpected batch result structure",
+                                       key=key,
+                                       result_keys=list(result_obj.keys()),
+                                   )
+                       except Exception as e:
+                           logger.warning("Failed to parse batch result line", error=str(e), line=line[:100])
+
+               else:
+                   logger.error("No result file in batch response")
+
+               logger.info(
+                   "Batch enrichment completed",
+                   total_requests=len(feed_data_list),
+                   successful_results=sum(1 for r in results if r is not None),
+               )
+
+               return results
+
+           finally:
+               # Cleanup temporary file
+               if temp_file and os.path.exists(temp_file.name):
+                   try:
+                       os.unlink(temp_file.name)
+                       logger.debug("Cleaned up temporary batch file", file_path=temp_file.name)
+                   except Exception as e:
+                       logger.warning("Failed to cleanup temp file", error=str(e))
+
+               # Optionally delete uploaded file from Gemini (to save storage)
+               if uploaded_file:
+                   try:
+                       self.gemini_client.files.delete(name=uploaded_file.name)
+                       logger.debug("Deleted uploaded batch file", file_name=uploaded_file.name)
+                   except Exception as e:
+                       logger.warning("Failed to delete uploaded file", error=str(e))
 
         except Exception as e:
-            logger.error("Error in Gemini feed enrichment", error=str(e), exc_info=True)
-            return None
+            logger.error("Error in batch feed enrichment", error=str(e), exc_info=True)
+            return [None] * len(feed_data_list)
 
     async def generate_embedding_with_gemini(self, text: str) -> list[float] | None:
         """

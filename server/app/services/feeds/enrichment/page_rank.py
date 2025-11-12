@@ -25,7 +25,8 @@ class PageRankService:
         """Load the merged PageRank dataset."""
         try:
             # Look for merged dataset in app/data/
-            dataset_path = Path(__file__).parent.parent / "data" / "merged_pagerank.json"
+            # Path: server/app/services/feeds/enrichment/page_rank.py -> server/app/data/
+            dataset_path = Path(__file__).parent.parent.parent.parent / "data" / "merged_pagerank.json"
 
             if dataset_path.exists():
                 with dataset_path.open(encoding="utf-8") as f:

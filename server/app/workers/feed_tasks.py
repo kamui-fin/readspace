@@ -5,12 +5,19 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import func, text, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import ARTICLE_RETENTION_DAYS, MAX_FEEDS_BATCH_SIZE, MIN_ARTICLES_PER_FEED, UNREAD_RETENTION_DAYS
+from app.core.config import get_settings
+from app.core.constants import (
+    ARTICLE_RETENTION_DAYS,
+    MAX_FEEDS_BATCH_SIZE,
+    MIN_ARTICLES_PER_FEED,
+    UNREAD_RETENTION_DAYS,
+)
 from app.core.taskiq_app import broker
-from app.models import FeedSubscription
+from app.models import Feed, FeedCategory, FeedSubscription
+from app.services.ai.ai_service import get_ai_service
 from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
 from app.services.feeds.feed import FeedService
 from app.workers.common import ensure_uuid, get_worker_db
@@ -68,48 +75,205 @@ async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) ->
         )
 
 
-async def async_enrich_feed(feed_id: UUID, db: AsyncSession) -> dict[str, Any]:
-    """Enrich a feed with AI metadata - async implementation for testing.
+async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
+    """Batch enrich all feeds without embeddings using Gemini Batch API.
 
     Args:
-        feed_id: Feed UUID
         db: Database session
 
     Returns:
-        Enrichment result dictionary
+        Dictionary with enrichment statistics
     """
-    logger.info("Starting feed enrichment", feed_id=str(feed_id))
+    logger.info("Starting batch feed enrichment")
 
     try:
+        settings = get_settings()
+
+        # Check if AI is enabled
+        if not settings.ENABLE_AI:
+            logger.info("AI disabled, skipping batch enrichment")
+            return {"success": True, "enriched_count": 0, "message": "AI disabled"}
+
+        # Get feeds without embeddings (not yet enriched)
+        result = await db.execute(select(Feed).where(Feed.embedding.is_(None)).limit(MAX_FEEDS_BATCH_SIZE))
+        feeds_to_enrich = result.scalars().all()
+
+        if not feeds_to_enrich:
+            logger.info("No feeds to enrich")
+            return {"success": True, "enriched_count": 0, "message": "No feeds need enrichment"}
+
+        logger.info("Found feeds to enrich", feed_count=len(feeds_to_enrich))
+
+        # Initialize services
+        ai_service = get_ai_service()
         enrichment_service = FeedEnrichmentService(db=db)
-        result = await enrichment_service.enrich_feed(str(feed_id))
 
-        if result.get("success"):
-            logger.info(
-                "Feed enrichment completed",
-                feed_id=str(feed_id),
-                enrichment_data=result.get("enrichment_data", {}),
-            )
-        else:
-            logger.error(
-                "Feed enrichment failed",
-                feed_id=str(feed_id),
-                error=result.get("error"),
-            )
+        # Prepare feed data for batch processing
+        feed_data_list = []
+        feed_objects = []
 
-        return result
-    except Exception as exc:
-        logger.error(
-            "Feed enrichment task failed",
-            feed_id=str(feed_id),
-            error=str(exc),
-            exc_info=True,
+        for feed in feeds_to_enrich:
+            # Detect language if not set
+            language = feed.language
+            if not language:
+                language = enrichment_service._detect_language(feed)
+
+            # Extract domain
+            domain = enrichment_service._extract_domain_from_url(feed.link or feed.url)
+
+            feed_data_list.append(
+                {
+                    "title": feed.title or "Unknown Feed",
+                    "description": feed.description or "",
+                    "domain": domain,
+                    "language": language,
+                }
+            )
+            feed_objects.append(feed)
+
+        # Batch LLM enrichment
+        logger.info("Starting batch LLM enrichment", batch_size=len(feed_data_list))
+        llm_results = await ai_service.enrich_feeds_batch(feed_data_list)
+
+        # Prepare texts for batch embedding
+        embedding_texts = []
+        for i, feed in enumerate(feed_objects):
+            llm_result = llm_results[i]
+
+            # Build composite text for embedding
+            components = []
+
+            # Always use original title
+            if feed.title:
+                components.append(feed.title)
+
+            # Use enhanced description if available, otherwise original
+            description = llm_result.enhanced_description if llm_result else feed.description
+            if description:
+                components.append(description)
+
+            if llm_result and llm_result.tags:
+                components.append(", ".join(llm_result.tags))
+
+            domain = enrichment_service._extract_domain_from_url(feed.link or feed.url)
+            if domain:
+                domain_clean = domain.replace("www.", "").replace(".com", "").replace(".org", "")
+                components.append(domain_clean)
+
+            composite_text = " | ".join(components)
+            if len(composite_text) > 1000:
+                composite_text = composite_text[:1000] + "..."
+
+            embedding_texts.append(composite_text)
+
+        # Batch embedding generation (chunk into batches of 100 due to API limit)
+        logger.info("Starting batch embedding generation", batch_size=len(embedding_texts))
+        embeddings = []
+        batch_size = 100
+        for i in range(0, len(embedding_texts), batch_size):
+            batch = embedding_texts[i : i + batch_size]
+            logger.debug(f"Processing embedding batch {i // batch_size + 1}", batch_size=len(batch))
+            batch_embeddings = await ai_service.generate_embeddings_batch(batch)
+            embeddings.extend(batch_embeddings)
+
+        # Prepare bulk updates using SQLAlchemy ORM
+        enriched_count = 0
+        failed_count = 0
+        bulk_update_mappings = []
+
+        for i, feed in enumerate(feed_objects):
+            try:
+                llm_result = llm_results[i]
+                embedding = embeddings[i]
+
+                # Build update mapping for this feed
+                update_mapping = {
+                    "id": feed.id,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+
+                # Add language
+                if feed_data_list[i]["language"]:
+                    update_mapping["language"] = feed_data_list[i]["language"]
+
+                # Add LLM enrichment data
+                if llm_result:
+                    update_mapping["tags"] = llm_result.tags
+
+                    # Convert category string to enum
+                    try:
+                        category_enum = FeedCategory(llm_result.category)
+                        update_mapping["top_level_category"] = category_enum
+                    except ValueError:
+                        logger.warning("Invalid category", category=llm_result.category, feed_id=feed.id)
+                        update_mapping["top_level_category"] = FeedCategory.MISCELLANEOUS
+
+                    if llm_result.enhanced_description:
+                        update_mapping["description"] = llm_result.enhanced_description
+
+                    # Calculate hybrid popularity score
+                    popularity_data = enrichment_service._calculate_hybrid_popularity_score(
+                        feed, {"popularity_estimate": llm_result.popularity_estimate}
+                    )
+                    update_mapping.update(
+                        {
+                            "popularity_score": float(popularity_data.get("popularity_score", 0.5)),
+                            "llm_popularity_score": popularity_data.get("llm_popularity_score"),
+                            "domain_authority_score": popularity_data.get("domain_authority_score"),
+                            "quality_score": popularity_data.get("quality_score"),
+                        }
+                    )
+
+                # Extract image if not set
+                if not feed.image_url:
+                    image_data = await enrichment_service._extract_image_url(feed)
+                    if image_data:
+                        update_mapping.update(image_data)
+
+                # Add embedding via raw SQL (vector type requires special handling)
+                if embedding:
+                    await db.execute(
+                        text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
+                        {"embedding": str(embedding), "feed_id": feed.id},
+                    )
+
+                bulk_update_mappings.append(update_mapping)
+                enriched_count += 1
+
+            except Exception as e:
+                logger.error("Failed to prepare feed enrichment", feed_id=str(feed.id), error=str(e), exc_info=True)
+                failed_count += 1
+
+        # Bulk update all feeds using SQLAlchemy ORM
+        if bulk_update_mappings:
+            try:
+                await db.execute(update(Feed), bulk_update_mappings)
+                await db.commit()
+                logger.info("Bulk updated feed enrichment data", count=len(bulk_update_mappings))
+            except Exception as e:
+                logger.error("Failed to bulk update feeds", error=str(e), exc_info=True)
+                await db.rollback()
+                raise
+
+        logger.info(
+            "Batch feed enrichment completed",
+            total_feeds=len(feeds_to_enrich),
+            enriched_count=enriched_count,
+            failed_count=failed_count,
         )
+
+        return {
+            "success": True,
+            "total_feeds": len(feeds_to_enrich),
+            "enriched_count": enriched_count,
+            "failed_count": failed_count,
+        }
+
+    except Exception as e:
+        logger.error("Batch feed enrichment failed", error=str(e), exc_info=True)
         return {
             "success": False,
-            "feed_id": feed_id,
-            "error": str(exc),
-            "status": "task_failed",
+            "error": str(e),
         }
 
 
@@ -166,7 +330,7 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
     )
 
     # Set statement timeout to 15 minutes for safety
-    await db.execute(text("SET statement_timeout = '15min'"))
+    await db.execute(text("SET statement_timeout = '60min'"))
 
     # Execute the deletion query using CTE for efficiency
     deletion_query = text("""
@@ -254,23 +418,19 @@ async def schedule_all_feed_refreshes_task() -> None:
 
 
 @broker.task(
-    task_name="feed_tasks.enrich_feed",
+    task_name="feed_tasks.batch_enrich_feeds",
+    schedule=[{"cron": "0 4 * * 0"}],  # Run weekly on Sunday at 4 AM UTC
     retry_on_error=True,
-    max_retries=2,
+    max_retries=1,
 )
-async def enrich_feed_task(feed_id: UUID | str) -> dict[str, Any]:
-    """Enrich a feed with AI metadata - Taskiq task wrapper.
-
-    Args:
-        feed_id: Feed UUID (may be string from serialization)
+async def batch_enrich_feeds_task() -> dict[str, Any]:
+    """Batch enrich all feeds without embeddings - Taskiq task wrapper.
 
     Returns:
-        Enrichment result dictionary
+        Dictionary with enrichment statistics
     """
-    feed_id = ensure_uuid(feed_id)
-
     async for session in get_worker_db():
-        return await async_enrich_feed(feed_id=feed_id, db=session)
+        return await async_batch_enrich_feeds(db=session)
 
 
 @broker.task(

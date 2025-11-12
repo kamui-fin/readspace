@@ -11,6 +11,7 @@ import feedparser  # type: ignore[import-untyped]
 import structlog
 from bs4 import BeautifulSoup
 
+from app.core.constants import MIN_VALID_PUBLISHED_YEAR
 from app.core.custom_exceptions import FeedParsingError
 from app.schemas import FeedBase
 from app.utils.language_normalizer import normalize_language_code
@@ -208,7 +209,18 @@ class FeedParsingService:
         published_dt: datetime | None = None
         if "published_parsed" in entry and entry.published_parsed:
             try:
-                published_dt = datetime(*entry.published_parsed[:6]).replace(tzinfo=timezone.utc)
+                parsed_date = datetime(*entry.published_parsed[:6]).replace(tzinfo=timezone.utc)
+                # Validate that the date is within reasonable bounds
+                if parsed_date.year >= MIN_VALID_PUBLISHED_YEAR:
+                    published_dt = parsed_date
+                else:
+                    logger.warning(
+                        "Published date year is before minimum valid year, using current time",
+                        guid=guid,
+                        parsed_year=parsed_date.year,
+                        min_year=MIN_VALID_PUBLISHED_YEAR,
+                    )
+                    published_dt = datetime.now(timezone.utc)
             except Exception:
                 logger.warning(
                     "Failed to parse published_parsed",
@@ -217,13 +229,28 @@ class FeedParsingService:
                 )
         elif "updated_parsed" in entry and entry.updated_parsed:
             try:
-                published_dt = datetime(*entry.updated_parsed[:6]).replace(tzinfo=timezone.utc)
+                parsed_date = datetime(*entry.updated_parsed[:6]).replace(tzinfo=timezone.utc)
+                # Validate that the date is within reasonable bounds
+                if parsed_date.year >= MIN_VALID_PUBLISHED_YEAR:
+                    published_dt = parsed_date
+                else:
+                    logger.warning(
+                        "Updated date year is before minimum valid year, using current time",
+                        guid=guid,
+                        parsed_year=parsed_date.year,
+                        min_year=MIN_VALID_PUBLISHED_YEAR,
+                    )
+                    published_dt = datetime.now(timezone.utc)
             except Exception:
                 logger.warning(
                     "Failed to parse updated_parsed",
                     guid=guid,
                     updated_parsed=entry.updated_parsed,
                 )
+
+        # If no valid date was found, use current timestamp as fallback
+        if published_dt is None:
+            published_dt = datetime.now(timezone.utc)
 
         # Skip articles that have no meaningful content
         if not title and not content and not description:

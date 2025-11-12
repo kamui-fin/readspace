@@ -26,10 +26,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI lifespan context manager for startup/shutdown."""
     # Startup: Initialize Redis connection pool
     await RedisCache.get_pool()
-    
+
     # Startup: Initialize Taskiq broker
     await broker.startup()
-    
+
     logger.info("Application startup complete")
 
     yield
@@ -61,7 +61,8 @@ if settings.ENVIRONMENT not in SHOW_DOCS_ENVIRONMENTS:
 app = FastAPI(
     title="Readspace API",
     description="""
-    A privacy-focused open-source RSS reader to follow all the blogs, publications, newsletters, and writers you care about.
+    A privacy-focused open-source RSS reader to follow all the blogs, publications, newsletters,
+    and writers you care about.
 
     ## Authentication
 

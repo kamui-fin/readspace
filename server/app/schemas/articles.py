@@ -1,5 +1,6 @@
 """Article schema definitions."""
 
+import json
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -239,8 +240,6 @@ class SaveArticleRequest(BaseModel):
             return v
 
         # Limit total metadata size by serialized JSON length
-        import json
-
         serialized = json.dumps(v)
         if len(serialized) > 100_000:  # 100KB limit for metadata JSON
             raise ValueError("Metadata too large - maximum 100KB when serialized")

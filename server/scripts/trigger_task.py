@@ -29,6 +29,7 @@ from app.workers.common import get_worker_db
 from app.workers.feed_tasks import (
     async_compact_old_articles,
     async_compact_unread_articles,
+    async_batch_enrich_feeds,
     async_schedule_all_feeds,
 )
 
@@ -66,11 +67,22 @@ async def trigger_compact_old() -> None:
     logger.info("Completed: Compact old articles", **result)
     print(f"\nResult: {result}")
 
+async def trigger_batch_enrich() -> None:
+    """Trigger compact old articles task."""
+    logger.info("Triggering: Compact old articles")
+
+    async for session in get_worker_db():
+        result = await async_batch_enrich_feeds(db=session)
+
+    logger.info("Completed: Compact old articles", **result)
+    print(f"\nResult: {result}")
+
 
 TASKS = {
     "refresh-all": trigger_refresh_all,
     "compact-unread": trigger_compact_unread,
     "compact-old": trigger_compact_old,
+    "batch-enrich": trigger_batch_enrich,
 }
 
 
@@ -81,6 +93,7 @@ def print_usage() -> None:
     print("  refresh-all    - Schedule all feeds needing refresh")
     print("  compact-unread - Compact unread articles")
     print("  compact-old    - Delete old articles")
+    print("  batch-enrich   - Batch enrich feeds")
     print("\nExample:")
     print("  python scripts/trigger_task.py refresh-all")
     print("  poe trigger refresh-all")

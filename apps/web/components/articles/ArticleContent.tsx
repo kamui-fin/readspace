@@ -290,6 +290,7 @@ export function ArticleContent({
         if (
             isRecentlyReadMode ||
             isReadLaterMode ||
+            shouldShowPreviewBanner ||
             !contentRef.current ||
             hasMarkedRead ||
             (typeof window !== "undefined" && window.innerWidth < 768) // Disable on mobile
@@ -343,6 +344,7 @@ export function ArticleContent({
         hasMarkedRead,
         isRecentlyReadMode,
         isReadLaterMode,
+        shouldShowPreviewBanner,
         onMarkAsRead,
         updateArticle,
         queryClient,
@@ -507,6 +509,7 @@ export function ArticleContent({
                     if (
                         !isRecentlyReadMode &&
                         !isReadLaterMode &&
+                        !shouldShowPreviewBanner &&
                         !article.is_read &&
                         typeof window !== "undefined" &&
                         window.innerWidth >= 768 // Desktop only

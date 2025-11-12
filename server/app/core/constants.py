@@ -82,6 +82,9 @@ ARTICLE_PRIORITIES = ["low", "medium", "high"]
 RECENT_READ_CUTOFF = timedelta(days=30)
 OLD_ARTICLE_CUTOFF = timedelta(days=90)
 
+# Date Validation
+MIN_VALID_PUBLISHED_YEAR = 1990  # Minimum year for valid article publication dates
+
 # Unread Article Management
 UNREAD_RETENTION_DAYS = 30  # Auto-mark articles older than this as read
 INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new subscriptions

@@ -16,13 +16,14 @@ class ResourceLimitService:
     def __init__(self, db: AsyncSession):
         self.db = db
 
-    async def check_limit(self, user_id: UUID, resource: str, user_role: str) -> bool:
+    async def check_limit(self, user_id: UUID, resource: str, user_role: str, lock: bool = True) -> bool:
         """Check if user can perform action within limits.
 
         Args:
             user_id: User UUID
             resource: Resource type (e.g., 'max_subscriptions')
             user_role: User's role (basic, pro, admin)
+            lock: If True, acquire row-level lock to prevent race conditions (default: True)
 
         Returns:
             True if action is allowed, False if limit exceeded
@@ -33,26 +34,35 @@ class ResourceLimitService:
         if limits.get(resource, 0) == -1:
             return True
 
-        current_usage = await self.get_current_usage(user_id, resource)
+        current_usage = await self.get_current_usage(user_id, resource, lock=lock)
         limit: int = limits.get(resource, 0)
 
         return current_usage < limit
 
-    async def get_current_usage(self, user_id: UUID, resource: str) -> int:
+    async def get_current_usage(self, user_id: UUID, resource: str, lock: bool = False) -> int:
         """Get current usage count for resource.
 
         Args:
             user_id: User UUID
             resource: Resource type
+            lock: If True, acquire row-level lock to prevent race conditions (use within transaction)
 
         Returns:
             Current usage count
         """
         if resource == "max_subscriptions":
-            result = await self.db.execute(
-                select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
-            )
-            return result.scalar_one()
+            if lock:
+                # PostgreSQL doesn't allow FOR UPDATE with aggregate functions
+                # So we select the IDs with lock, then count them
+                query = select(FeedSubscription.id).where(FeedSubscription.user_id == user_id).with_for_update()
+                result = await self.db.execute(query)
+                rows = result.all()
+                return len(rows)
+            else:
+                # Without lock, we can use the more efficient COUNT query
+                query = select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
+                result = await self.db.execute(query)
+                return result.scalar_one()
 
         return 0
 

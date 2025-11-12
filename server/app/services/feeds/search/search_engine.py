@@ -1058,8 +1058,8 @@ class RssSearchService:
                     "popularity_score": feed.popularity_score or 0.0,
                     "relevance": round(relevance, 3),
                     "search_metadata": {"search_type": "trending", "rank": i + 1},
-                    "created_at": feed.created_at,
-                    "updated_at": feed.updated_at,
+                    "created_at": feed.created_at.isoformat() if feed.created_at else None,
+                    "updated_at": feed.updated_at.isoformat() if feed.updated_at else None,
                 }
                 feeds.append(feed_data)
 

@@ -47,7 +47,7 @@ async def async_import_single_feed(
     """
     from app.routers.opml import update_import_progress
     from app.schemas import FeedImportError
-    
+
     logger.info("Starting feed import", user_id=str(user_id), feed_url=feed_url)
 
     try:
@@ -66,17 +66,23 @@ async def async_import_single_feed(
             feed_url=feed_url,
             success=result.get("success", False),
         )
-        
+
         # Update progress state if we have a parent task
         if parent_task_id:
             status = result.get("status", "unknown")
-            
+
             if result.get("success"):
                 # Successful import or already exists
                 await update_import_progress(
                     task_id=parent_task_id,
                     success=True,
                     already_exists=(status == "already_exists"),
+                )
+            elif status == "limit_exceeded":
+                # Skipped due to subscription limit
+                await update_import_progress(
+                    task_id=parent_task_id,
+                    skipped_limit=True,
                 )
             else:
                 # Failed import
@@ -100,7 +106,7 @@ async def async_import_single_feed(
             error=str(exc),
             exc_info=True,
         )
-        
+
         result = {
             "success": False,
             "url": feed_url,
@@ -108,12 +114,12 @@ async def async_import_single_feed(
             "status": "task_failed",
             "error": str(exc),
         }
-        
+
         # Update progress state if we have a parent task
         if parent_task_id:
             from app.routers.opml import update_import_progress
             from app.schemas import FeedImportError
-            
+
             error = FeedImportError(
                 url=feed_url,
                 title=feed_title or "Unknown",
@@ -124,7 +130,7 @@ async def async_import_single_feed(
                 task_id=parent_task_id,
                 error=error,
             )
-        
+
         return result
 
 
@@ -156,7 +162,7 @@ async def async_import_opml(
         initialize_import_progress,
         update_import_progress,
     )
-    
+
     logger.info("Starting OPML import orchestration", user_id=str(user_id), task_id=task_id)
 
     # Check for cancellation at the start
@@ -175,15 +181,15 @@ async def async_import_opml(
 
     try:
         opml_service = OpmlImportService(db=db, user_id=user_id)
-        
+
         # Extract feeds first to get the count
         feeds_data = await opml_service.extract_feeds_from_opml(
             opml_content=opml_content,
             default_folder_name=default_folder_name,
         )
-        
+
         total_feeds = len(feeds_data)
-        
+
         # Initialize progress state in Redis if we have a task_id
         if task_id:
             await initialize_import_progress(
@@ -192,14 +198,14 @@ async def async_import_opml(
                 filename=filename or "unknown.opml",
                 total_feeds=total_feeds,
             )
-            
+
             # Mark as started
             await update_import_progress(
                 task_id=task_id,
                 status="in_progress",
                 started_at=datetime.now(timezone.utc).isoformat(),
             )
-        
+
         if not feeds_data:
             if task_id:
                 await update_import_progress(
@@ -212,10 +218,10 @@ async def async_import_opml(
                 "status": "completed",
                 "message": "No feeds found to import",
             }
-        
+
         # Dispatch individual tasks
         result = await opml_service._dispatch_feed_tasks(feeds_data, task_id)
-        
+
         logger.info(
             "OPML import orchestration completed",
             dispatched_tasks=len(result.get("task_ids", [])),
@@ -232,18 +238,18 @@ async def async_import_opml(
             error=str(exc),
             exc_info=True,
         )
-        
+
         # Mark as failed in progress state
         if task_id:
             from app.routers.opml import update_import_progress
-            
+
             await update_import_progress(
                 task_id=task_id,
                 status="failed",
                 completed_at=datetime.now(timezone.utc).isoformat(),
                 message=f"Import failed: {str(exc)}",
             )
-        
+
         raise exc
 
 
@@ -294,13 +300,13 @@ async def import_single_feed_task(
                 parent_task_id=parent_task_id,
                 user_id=str(user_id_uuid),
             )
-            
+
             # Update progress to reflect cancellation
             await update_import_progress(
                 task_id=parent_task_id,
                 cancelled=True,
             )
-            
+
             return {
                 "success": False,
                 "url": feed_url,
