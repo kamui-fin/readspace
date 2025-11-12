@@ -85,7 +85,7 @@ services:
   worker:
     build:
       context: ../server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
     command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
     volumes:
@@ -112,7 +112,7 @@ services:
   scheduler:
     build:
       context: ../server
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.taskiq
     container_name: readspace_scheduler
     command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
     volumes:
