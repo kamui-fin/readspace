@@ -1,4 +1,3 @@
-import uuid
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -13,7 +12,7 @@ def _create_engine():
 
     Configuration adapts based on environment:
     - Local/Development: Session mode (5432), 10+10 pool, prepared statements enabled
-    - Supabase Cloud: Transaction mode (6543), 10+20 pool, prepared statements disabled
+    - Production: Transaction mode (6543), 10+20 pool, prepared statements disabled
 
     API uses larger pool than workers to handle bursty user traffic.
     """
@@ -21,8 +20,8 @@ def _create_engine():
     if not db_url.startswith("postgresql+asyncpg://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
-    # Detect environment and connection mode
-    is_transaction_mode = settings.use_transaction_mode
+    # Production always uses transaction mode, development uses session mode
+    is_production = settings.is_production
     is_local = not settings.is_supabase_cloud
 
     # Environment-specific pool sizing
@@ -53,13 +52,14 @@ def _create_engine():
         }
     }
 
-    # Disable prepared statements for Transaction Mode (required by PgBouncer)
-    if is_transaction_mode:
-        connect_args.update({
-            "statement_cache_size": 0,
-            "prepared_statement_cache_size": 0,
-            "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
-        })
+    # Disable prepared statements for production (required by PgBouncer transaction mode)
+    if is_production:
+        connect_args.update(
+            {
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+            }
+        )
 
     return create_async_engine(
         db_url,

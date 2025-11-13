@@ -41,7 +41,7 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
 
     Configuration adapts based on environment:
     - Local/Development: Larger pool (5+5=10), session mode, prepared statements enabled
-    - Supabase Cloud: Smaller pool (2+3=5), transaction mode, prepared statements disabled
+    - Production: Smaller pool (2+3=5), transaction mode, prepared statements disabled
     - Multiple workers scale horizontally (4 workers × 5 = 20 total in production)
 
     Returns:
@@ -55,8 +55,8 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
         if not db_url.startswith("postgresql+asyncpg://"):
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
-        # Detect environment and connection mode
-        is_transaction_mode = settings.use_transaction_mode
+        # Production always uses transaction mode, development uses session mode
+        is_production = settings.is_production
         is_local = not settings.is_supabase_cloud
 
         # Environment-specific pool sizing
@@ -87,12 +87,14 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             }
         }
 
-        # Disable prepared statements for Transaction Mode (required by PgBouncer)
-        if is_transaction_mode:
-            connect_args.update({
-                "statement_cache_size": 0,
-                "prepared_statement_cache_size": 0,
-            })
+        # Disable prepared statements for production (required by PgBouncer transaction mode)
+        if is_production:
+            connect_args.update(
+                {
+                    "statement_cache_size": 0,
+                    "prepared_statement_cache_size": 0,
+                }
+            )
 
         _db_engine = create_async_engine(
             db_url,
@@ -111,7 +113,7 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             "Initialized persistent DB engine for Taskiq worker",
             environment=settings.ENVIRONMENT,
             is_supabase_cloud=settings.is_supabase_cloud,
-            transaction_mode=is_transaction_mode,
+            is_production=is_production,
             **pool_config,
         )
 

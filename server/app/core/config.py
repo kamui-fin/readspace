@@ -96,23 +96,6 @@ class Settings(BaseSettings):
         """Detect if using Supabase Cloud by URL pattern."""
         return ".pooler.supabase.com" in self.SUPABASE_DB_CONNECTION or ".supabase.co" in self.SUPABASE_DB_CONNECTION
 
-    @property
-    def use_transaction_mode(self) -> bool:
-        """
-        Determine if transaction mode should be used for connection pooling.
-
-        Transaction mode (port 6543) is used for Supabase Cloud as it:
-        - Releases connections between queries (better for high concurrency)
-        - Supports more concurrent clients
-        - Is optimal for short-lived transactions
-
-        Session mode (port 5432) is used for local development as it:
-        - Allows prepared statements
-        - Provides better debugging
-        - Has no connection restrictions
-        """
-        return self.is_supabase_cloud and ":6543/" in self.SUPABASE_DB_CONNECTION
-
 
 @cache
 def get_settings() -> Settings:
