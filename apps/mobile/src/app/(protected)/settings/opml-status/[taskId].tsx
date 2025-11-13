@@ -140,13 +140,13 @@ const TickProgressBar = ({
 
         return (
             <ProgressTick
-                key={i}
-                tickProgress={tickProgress}
-                progressValue={progressValue}
-                colors={colors}
+                key={`tick-${i.toString()}-${tickProgress}`}
+            tickProgress={tickProgress}
+            progressValue={progressValue}
+            colors={colors}
             />
         );
-    });
+    }, []);
 
     return (
         <View
@@ -242,7 +242,7 @@ const MOCK_STATES = {
     },
 };
 
-export default function OPMLStatusPage() {
+const OPMLStatusPage = () => {
     const { taskId } = useLocalSearchParams<{ taskId: string }>();
     const router = useRouter();
     const { colorScheme } = useColorScheme();
@@ -631,7 +631,7 @@ export default function OPMLStatusPage() {
                                                     index: number
                                                 ) => (
                                                     <View
-                                                        key={index}
+                                                        key={`error-${index.toString()}-${err.url}`}
                                                         className="rounded-2xl bg-white p-3 dark:bg-white-dark">
                                                         <Text className="mb-1 font-geist-semibold text-sm text-black dark:text-black-dark">
                                                             {err.title || 'Unknown feed'}
@@ -695,3 +695,5 @@ export default function OPMLStatusPage() {
         </SafeAreaView>
     );
 }
+
+export default OPMLStatusPage;

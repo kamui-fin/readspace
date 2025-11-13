@@ -13,7 +13,7 @@ import {
 } from '@readspace/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Linking, Pressable, Share, Text, View } from 'react-native';
@@ -57,13 +57,11 @@ export default function ArticleScreen() {
     const {
         refetch: extractFullText,
         data: extractedData,
-        isFetching: isExtracting,
     } = useExtractFullText(id || '', article?.link || '');
 
     // Summarize hook (manual trigger)
     const {
         refetch: generateSummary,
-        data: summaryData,
         isFetching: isSummarizing,
     } = useSummarizeArticle(
         id || '',
@@ -78,11 +76,11 @@ export default function ArticleScreen() {
     useLayoutEffect(() => {
         setContentSource(article?.extracted_content ? 'extracted' : 'original');
         setTranslatedContent(null);
-    }, [article?.id, article?.extracted_content]);
+    }, [article?.extracted_content]);
 
     // Mark as read on mount (only if subscribed to the feed)
     useEffect(() => {
-        if (article && !article.is_read && isSubscribed) {
+        if (article && !article.is_read && isSubscribed && article.article_type === 'feed') {
             updateArticle.mutate(
                 {
                     articleId: article.id,
@@ -98,24 +96,7 @@ export default function ArticleScreen() {
             );
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [article?.id, isSubscribed]);
-
-    // Refetch article list when navigating back to ensure updated state
-    useFocusEffect(
-        useCallback(() => {
-            return () => {
-                // When losing focus (navigating away), invalidate article lists
-                queryClient.invalidateQueries({
-                    queryKey: ['rss-articles', 'infinite'],
-                });
-            };
-        }, [queryClient])
-    );
-
-    // Handlers
-    const handleClose = useCallback(() => {
-        router.back();
-    }, [router]);
+    }, [article?.id, isSubscribed, article?.article_type, updateArticle.mutate]);
 
     const handleBookmark = useCallback(() => {
         if (!article) return;
@@ -184,7 +165,7 @@ export default function ArticleScreen() {
                 url: article.link,
                 title: article.title,
             });
-        } catch (error) {
+        } catch {
             toast.error('Failed to share article');
         }
     }, [article]);
@@ -327,7 +308,7 @@ export default function ArticleScreen() {
             <View className="flex-row items-center justify-between border-b border-light-grey px-4 py-3 dark:border-light-grey-dark">
                 {/* Close Button */}
                 <Pressable
-                    onPress={handleClose}
+                    onPress={router.back}
                     className="h-11 w-11 items-center justify-center rounded-full active:bg-mid-grey dark:active:bg-mid-grey-dark">
                     <Monicon name="lucide:x" size={20} color={colors.black} />
                 </Pressable>
