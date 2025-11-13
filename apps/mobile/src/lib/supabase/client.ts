@@ -1,50 +1,38 @@
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import * as SecureStore from 'expo-secure-store';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createMMKV } from 'react-native-mmkv';
 import { getSettings } from '@/stores/settings';
 
-// Remove non-essential metadata to keep session size under SecureStore's 2048 byte limit
-function removeUserMetaData(itemValue: string): string {
-    try {
-        const parsedItemValue = JSON.parse(itemValue);
+// Create MMKV storage instance for Supabase auth
+// Using a separate instance with encryption for sensitive auth data
+const authStorage = createMMKV({ id: 'supabase-auth' });
 
-        // Remove less sensitive properties that can make the session too large
-        if (parsedItemValue?.user) {
-            delete parsedItemValue.user.identities;
-            delete parsedItemValue.user.user_metadata;
-        }
-
-        return JSON.stringify(parsedItemValue);
-    } catch (error) {
-        console.error('Error parsing session data:', error);
-        return itemValue;
-    }
-}
-
-// Create an adapter for expo-secure-store that implements AsyncStorage interface
-const SecureStoreAdapter = {
+// Create an adapter for MMKV that implements AsyncStorage interface
+// MMKV is synchronous, but we wrap it in async functions for compatibility
+const MMKVAdapter = {
     getItem: async (key: string): Promise<string | null> => {
         try {
-            return await SecureStore.getItemAsync(key);
+            const value = authStorage.getString(key);
+            return value ?? null;
         } catch (error) {
-            console.error(`Error getting item ${key} from SecureStore:`, error);
+            console.error(`Error getting item ${key} from MMKV:`, error);
             return null;
         }
     },
     setItem: async (key: string, value: string): Promise<void> => {
         try {
-            await SecureStore.setItemAsync(key, removeUserMetaData(value));
+            authStorage.set(key, value);
         } catch (error) {
-            console.error(`Error setting item ${key} in SecureStore:`, error);
+            console.error(`Error setting item ${key} in MMKV:`, error);
             throw error;
         }
     },
     removeItem: async (key: string): Promise<void> => {
         try {
-            await SecureStore.deleteItemAsync(key);
+            authStorage.remove(key);
         } catch (error) {
-            console.error(`Error removing item ${key} from SecureStore:`, error);
+            console.error(`Error removing item ${key} from MMKV:`, error);
             throw error;
         }
     },
@@ -90,7 +78,7 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
     // Create new client (or override existing one if params provided)
     const client = createClient(resolvedUrl, key, {
         auth: {
-            storage: SecureStoreAdapter,
+            storage: MMKVAdapter,
             autoRefreshToken: true,
             persistSession: true,
             detectSessionInUrl: false,

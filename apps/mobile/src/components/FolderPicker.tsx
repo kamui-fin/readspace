@@ -73,10 +73,10 @@ export const FolderPicker = forwardRef<FolderPickerRef, FolderPickerProps>(
                 backgroundStyle={{ backgroundColor: colors.white }}
                 handleIndicatorStyle={{ backgroundColor: colors.green_grey }}>
                 <BottomSheetScrollView showsVerticalScrollIndicator={false}>
-                    <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark px-6">
+                    <Text className="mb-6 px-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
                         Select Folder
                     </Text>
-                    <View className="gap-3 pb-4 px-6">
+                    <View className="gap-3 px-6 pb-4">
                         {/* Folder Options */}
                         {typedFolders.map((folder) => (
                             <Radio

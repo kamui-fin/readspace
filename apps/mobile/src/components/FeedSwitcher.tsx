@@ -373,12 +373,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                 await ApiClient.rss.bulkMarkFeedsRead(feedsToMarkRead);
 
                 const count = feedsToMarkRead.length;
-                toast.success(
-                    `Marked ${count} feed${count > 1 ? 's' : ''} as read!`,
-                    {
-                        id: 'mark-all-read',
-                    }
-                );
+                toast.success(`Marked ${count} feed${count > 1 ? 's' : ''} as read!`, {
+                    id: 'mark-all-read',
+                });
 
                 // Invalidate all relevant caches to force fresh fetch from server
                 queryClient.invalidateQueries({
@@ -559,7 +556,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
                                         {/* Mark all as read button */}
                                         <Pressable
                                             onPress={handleMarkAllReadPress}
-                                            disabled={isMarkingAllRead || selectedFeedIds.size === 0}
+                                            disabled={
+                                                isMarkingAllRead || selectedFeedIds.size === 0
+                                            }
                                             className="h-[52px] w-[52px] items-center justify-center rounded-2xl bg-light-grey transition-opacity active:opacity-70 disabled:opacity-40 dark:bg-mid-grey-dark">
                                             <Monicon
                                                 name="solar:check-read-linear"
@@ -741,9 +740,9 @@ export const FeedSwitcher = forwardRef<FeedSwitcherRef, FeedSwitcherProps>(
 );
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  }
-})
+    container: {
+        flex: 1,
+    },
+});
 
 FeedSwitcher.displayName = 'FeedSwitcher';

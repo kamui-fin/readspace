@@ -26,7 +26,14 @@ import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
-import { ActivityIndicator, BackHandler, Pressable, RefreshControl, Text, View } from 'react-native';
+import {
+    ActivityIndicator,
+    BackHandler,
+    Pressable,
+    RefreshControl,
+    Text,
+    View,
+} from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toast } from 'sonner-native';
@@ -157,8 +164,15 @@ export default function FollowingScreen() {
         }
     }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
 
-    const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isFetching, isSuccess } =
-        activeQuery;
+    const {
+        data,
+        fetchNextPage,
+        hasNextPage,
+        isFetchingNextPage,
+        isLoading,
+        isFetching,
+        isSuccess,
+    } = activeQuery;
 
     // Flatten paginated articles and deduplicate by ID
     const allArticles = useMemo(() => {
@@ -503,7 +517,7 @@ export default function FollowingScreen() {
                     articleUrl={article.link}
                     feedId={feedId || undefined}
                     disableGestures={isPreviewMode}
-                    onPress={() => router.push(`/articles/${article.id}`)}
+                    onPress={() => router.push(`/(protected)/articles/${article.id}`)}
                     onBookmark={() =>
                         handleBookmark(
                             article.id,

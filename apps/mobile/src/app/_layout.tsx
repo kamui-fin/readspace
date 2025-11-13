@@ -5,17 +5,13 @@ import { useFonts } from '@/hooks/useFonts';
 import { useThemeStore } from '@/stores/theme';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import {
-    focusManager,
-    QueryClient,
-    QueryClientProvider,
-} from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useColorScheme } from 'nativewind';
-import { useEffect, useState } from 'react';
-import { AppState, Platform, Text, View, type AppStateStatus } from 'react-native';
+import { useEffect } from 'react';
+import { AppState, Platform, type AppStateStatus } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Toaster } from 'sonner-native';
@@ -71,7 +67,8 @@ function RootLayoutNav() {
             return;
         }
 
-        const inAuthGroup = segments[0] === '(tabs)';
+        const inProtectedGroup = segments[0] === '(protected)';
+        const inAuthGroup = segments[0] === '(auth)';
         const inOnboarding = segments[0] === 'onboarding';
         const onWelcome = segments[0] === 'welcome';
 
@@ -79,38 +76,56 @@ function RootLayoutNav() {
             isAuthenticated,
             needsOnboarding,
             currentSegment: segments[0],
+            inProtectedGroup,
             inAuthGroup,
             inOnboarding,
             onWelcome,
         });
 
-        if (!isAuthenticated && inAuthGroup) {
-            // Not authenticated but trying to access protected routes → redirect to welcome
+        // Not authenticated but trying to access protected routes → redirect to welcome
+        if (!isAuthenticated && (inProtectedGroup || inOnboarding)) {
             console.log('[RootLayoutNav] Redirecting to welcome (not authenticated)');
             router.replace('/welcome');
-        } else if (isAuthenticated && needsOnboarding && !inOnboarding && onWelcome) {
-            // Authenticated but needs onboarding and on welcome screen → redirect to onboarding
-            // Only redirect from welcome screen to avoid navigation loops
-            console.log(
-                '[RootLayoutNav] Redirecting to onboarding (needs onboarding from welcome)'
-            );
-            router.replace('/onboarding/feeds/categories');
-        } else if (isAuthenticated && !needsOnboarding && (onWelcome || inOnboarding)) {
-            // Authenticated, doesn't need onboarding, but on welcome/onboarding → redirect to tabs
-            // Exception: Don't redirect if on signup step-3 (email verification notice)
-            const onEmailVerification =
-                segments.at(0) === 'onboarding' &&
-                segments.at(1) === 'signup' &&
-                segments.at(2) === 'step-3';
-
-            if (!onEmailVerification) {
-                console.log('[RootLayoutNav] Redirecting to tabs (authenticated and onboarded)');
-                router.replace('/(tabs)');
-            }
+            return;
         }
+
+        // Exception: Don't redirect if on signup step-3 (email verification notice)
+        // Check this first before other redirects
+        // When inAuthGroup is true, segments[0] is "(auth)", segments[1] is "signup", segments[2] is "step-3"
+        const onEmailVerification =
+            inAuthGroup && segments[1] === 'signup' && segments[2] === 'step-3';
+
+        // Authenticated but on welcome/auth screens → redirect based on onboarding status
+        // Exception: Don't redirect if on signup step-3 (email verification notice)
+        if (isAuthenticated && (onWelcome || inAuthGroup) && !onEmailVerification) {
+            if (needsOnboarding) {
+                console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
+                router.replace('/onboarding/feeds/categories');
+            } else {
+                console.log(
+                    '[RootLayoutNav] Redirecting to protected (authenticated and onboarded)'
+                );
+                router.replace('/(protected)/(tabs)');
+            }
+            return;
+        }
+
+        // Authenticated but needs onboarding and not on onboarding → redirect to onboarding
+        if (isAuthenticated && needsOnboarding && !inOnboarding && !inAuthGroup) {
+            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
+            router.replace('/onboarding/feeds/categories');
+            return;
+        }
+
+        // Authenticated, doesn't need onboarding, but on onboarding → redirect to protected
+        if (isAuthenticated && !needsOnboarding && inOnboarding) {
+            console.log('[RootLayoutNav] Redirecting to protected (authenticated and onboarded)');
+            router.replace('/(protected)/(tabs)');
+            return;
+        }
+
         // router is stable in Expo Router and doesn't need to be in deps
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAuthenticated, segments, loading, needsOnboarding]);
+    }, [isAuthenticated, segments, loading, needsOnboarding, router]);
 
     return (
         <>
@@ -121,7 +136,9 @@ function RootLayoutNav() {
                         headerShown: false,
                     }}>
                     <Stack.Screen name="welcome" />
-                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="(auth)" />
+                    <Stack.Screen name="onboarding" />
+                    <Stack.Screen name="(protected)" />
                 </Stack>
             </BottomSheetModalProvider>
         </>

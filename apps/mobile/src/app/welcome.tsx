@@ -74,11 +74,11 @@ export default function WelcomeScreen() {
     };
 
     const handleSignUp = () => {
-        router.push('/onboarding/signup/step-1');
+        router.push('/(auth)/signup/step-1');
     };
 
     const handleLogIn = () => {
-        router.push('/onboarding/login/step-1');
+        router.push('/(auth)/login/step-1');
     };
 
     return (

@@ -76,7 +76,10 @@ export const ConfirmationModal = forwardRef<BottomSheetModal, ConfirmationModalP
                             {cancelText}
                         </Button>
 
-                        <Button variant="primary" onPress={handleConfirm} className="flex-1 rounded-2xl">
+                        <Button
+                            variant="primary"
+                            onPress={handleConfirm}
+                            className="flex-1 rounded-2xl">
                             {confirmText}
                         </Button>
                     </View>

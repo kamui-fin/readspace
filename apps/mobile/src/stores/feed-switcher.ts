@@ -22,8 +22,7 @@ export const useFeedSwitcherStore = create<FeedSwitcherStore>()(
                     }
                     return { expandedFolders: next };
                 }),
-            setExpandedFolders: (folders: Set<string>) =>
-                set({ expandedFolders: folders }),
+            setExpandedFolders: (folders: Set<string>) => set({ expandedFolders: folders }),
         }),
         {
             name: 'readspace-feed-switcher-state',

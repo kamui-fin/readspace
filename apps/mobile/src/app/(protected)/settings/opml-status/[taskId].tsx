@@ -311,7 +311,7 @@ export default function OPMLStatusPage() {
     };
 
     const handleBackToBrowsing = () => {
-        router.push('/(tabs)');
+        router.push('/(protected)/(tabs)');
     };
 
     if (isLoading && !mockMode) {
@@ -682,7 +682,7 @@ export default function OPMLStatusPage() {
                             </View>
 
                             <Button
-                                onPress={() => router.push('/(tabs)/settings')}
+                                onPress={() => router.push('/(protected)/(tabs)/settings')}
                                 variant="primary"
                                 size="lg"
                                 fullWidth>

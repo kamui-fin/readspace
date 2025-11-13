@@ -20,7 +20,7 @@ const isValidJWT = (token: string): boolean => {
 
     // Check that each part is base64url encoded (alphanumeric, -, _)
     const base64urlPattern = /^[A-Za-z0-9_-]+$/;
-    return parts.every(part => part.length > 0 && base64urlPattern.test(part));
+    return parts.every((part) => part.length > 0 && base64urlPattern.test(part));
 };
 
 const selfHostSchema = z.object({
@@ -329,9 +329,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
                                 onChangeText={(value) =>
                                     handleFieldChange('supabaseAnonKey', value, setSupabaseAnonKey)
                                 }
-                                onBlur={() =>
-                                    handleFieldBlur('supabaseAnonKey', supabaseAnonKey)
-                                }
+                                onBlur={() => handleFieldBlur('supabaseAnonKey', supabaseAnonKey)}
                                 placeholder="Your anonymous key"
                                 placeholderTextColor={colors.grey}
                                 autoCapitalize="none"

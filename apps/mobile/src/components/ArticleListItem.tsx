@@ -4,14 +4,7 @@ import { Monicon } from '@monicon/native';
 import * as Haptics from 'expo-haptics';
 import { useRouter } from 'expo-router';
 import { forwardRef, useCallback } from 'react';
-import {
-    Image,
-    Pressable,
-    Text,
-    View,
-    type PressableProps,
-    useColorScheme,
-} from 'react-native';
+import { Image, Pressable, Text, View, type PressableProps, useColorScheme } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     useAnimatedStyle,
@@ -172,7 +165,10 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
                 // Update action scales based on swipe distance
                 if (event.translationX > 0) {
                     // Swiping right (bookmark action)
-                    leftActionScale.value = Math.min(1, event.translationX / SWIPE_ACTIVATION_THRESHOLD);
+                    leftActionScale.value = Math.min(
+                        1,
+                        event.translationX / SWIPE_ACTIVATION_THRESHOLD
+                    );
                     rightActionScale.value = 0;
                 } else {
                     // Swiping left (mark as read action)
@@ -304,11 +300,7 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
         const horizontalContent = (
             <Pressable
                 ref={ref}
-                className={cn(
-                    'flex-row gap-3 py-4',
-                    isRead && 'opacity-60',
-                    className
-                )}
+                className={cn('flex-row gap-3 py-4', isRead && 'opacity-60', className)}
                 {...props}>
                 {/* Content */}
                 <View className="flex-1">
@@ -481,7 +473,9 @@ export const ArticleListItem = forwardRef<React.ElementRef<typeof Pressable>, Ar
 
                 {/* Main content with gesture */}
                 <GestureDetector gesture={panGesture}>
-                    <Animated.View style={[contentAnimatedStyle]} className="bg-white dark:bg-white-dark">
+                    <Animated.View
+                        style={[contentAnimatedStyle]}
+                        className="bg-white dark:bg-white-dark">
                         {horizontalContent}
                     </Animated.View>
                 </GestureDetector>
