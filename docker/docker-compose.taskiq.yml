@@ -28,16 +28,27 @@ services:
     build:
       context: ../server
       dockerfile: Dockerfile
-    container_name: readspace_worker
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
+    # Container name removed to allow multiple replicas
+    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks 200
     depends_on:
       rabbitmq:
         condition: service_healthy
+    deploy:
+      # Scale to 4 workers for production (4 × 200 = 800 concurrent tasks)
+      # For local dev, this is ignored - only 1 worker runs
+      replicas: 4
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
     environment:
       - PYTHONPATH=/app
       - PYTHONUNBUFFERED=1
       - ENVIRONMENT=production
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      # SUPABASE_DB_CONNECTION configured via Coolify dashboard
+      # Production (Supabase Cloud): Use port 6543 (transaction mode)
+      # Local/Self-hosted: Use port 5432 (session mode)
     networks:
       - coolify
 

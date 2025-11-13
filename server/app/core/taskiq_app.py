@@ -42,7 +42,7 @@ else:
         url=rabbitmq_url,
         queue_name="taskiq_tasks",
         max_priority=10,  # Enable task priorities
-        qos=10,  # Prefetch up to 10 messages
+        qos=50,  # Prefetch 50 messages per worker (with 200 max async tasks, this allows good parallelism)
         declare_exchange=True,
         exchange_name="taskiq_exchange",
     ).with_result_backend(result_backend)

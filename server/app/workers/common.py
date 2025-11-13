@@ -39,6 +39,11 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
     - Better resource utilization
     - Automatic connection health checking with pool_pre_ping
 
+    Configuration adapts based on environment:
+    - Local/Development: Larger pool (5+5=10), session mode, prepared statements enabled
+    - Supabase Cloud: Smaller pool (2+3=5), transaction mode, prepared statements disabled
+    - Multiple workers scale horizontally (4 workers × 5 = 20 total in production)
+
     Returns:
         Tuple of (engine, session_maker)
     """
@@ -50,13 +55,51 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
         if not db_url.startswith("postgresql+asyncpg://"):
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
+        # Detect environment and connection mode
+        is_transaction_mode = settings.use_transaction_mode
+        is_local = not settings.is_supabase_cloud
+
+        # Environment-specific pool sizing
+        if is_local:
+            # Local development: Direct PostgreSQL connection
+            # Larger pool is fine as there's no connection limit from pooler
+            pool_config = {
+                "pool_size": 5,
+                "max_overflow": 5,  # Total 10 connections per worker
+                "pool_recycle": 3600,  # 1 hour
+                "pool_timeout": 30,  # More generous timeout for dev
+            }
+        else:
+            # Supabase Cloud: Transaction mode with PgBouncer
+            # Smaller pool per worker, scale horizontally instead
+            pool_config = {
+                "pool_size": 2,
+                "max_overflow": 3,  # Total 5 connections per worker
+                "pool_recycle": 1800,  # 30 minutes
+                "pool_timeout": 10,  # Fail fast on pool exhaustion
+            }
+
+        # Base connection arguments
+        connect_args = {
+            "server_settings": {
+                "application_name": f"readspace_worker_{settings.ENVIRONMENT}",
+                "statement_timeout": "300000",  # 5 minute query timeout for long-running tasks
+            }
+        }
+
+        # Disable prepared statements for Transaction Mode (required by PgBouncer)
+        if is_transaction_mode:
+            connect_args.update({
+                "statement_cache_size": 0,
+                "prepared_statement_cache_size": 0,
+            })
+
         _db_engine = create_async_engine(
             db_url,
-            pool_size=5,
-            max_overflow=10,
-            pool_pre_ping=True,
-            pool_recycle=3600,
+            **pool_config,
+            pool_pre_ping=True,  # Health check connections before use
             echo=False,
+            connect_args=connect_args,
         )
         _session_maker = async_sessionmaker(
             _db_engine,
@@ -64,7 +107,13 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             autoflush=False,
             expire_on_commit=False,
         )
-        logger.info("Initialized persistent DB engine for Taskiq worker", pool_size=5, max_overflow=10)
+        logger.info(
+            "Initialized persistent DB engine for Taskiq worker",
+            environment=settings.ENVIRONMENT,
+            is_supabase_cloud=settings.is_supabase_cloud,
+            transaction_mode=is_transaction_mode,
+            **pool_config,
+        )
 
     return _db_engine, _session_maker
 
