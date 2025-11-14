@@ -2,6 +2,7 @@
   "manifest_version": 3,
   "name": "Readspace",
   "version": "1.1.2",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtdVFHTv0NFr9mWcqq+PCzPdtYKnsjFlq1VC4GTD6j+heh21pmegyWoMmfsVhPRfsOAmlcB+4/gLYryeEdXd8LoTuPsO+UiKlOaJ+iKvYUZy8sSJbB248Z8hBLLCPkvACWgY9+RSdKBPWEwiqMXJvGcjJGyDp88/TxaLdOD7UmKv2YztgAW6A9M2OMDw3I7ayAtJa+vSKNeeUI+s5jSil92gUvJSyk7od99lPcSWwp5Ub4O7BQoUXSCsO5mVUiB+waF9iXGab4Ygz/KZFI64dmN8EmOKoXLvNlYsXM935NBkdQLCmHAWaaXzFDY4GcTQyoL4d139K13ganZR/AsXhowIDAQAB",
   "description": "Save articles and follow sites instantly — bring everything you read into your calm, distraction-free Readspace inbox.",
   "icons": {
     "16": "icons/icon16.png",
@@ -20,7 +21,7 @@
     "https://*/*"
   ],
   "oauth2": {
-    "client_id": "618963664803-1lje5c1pegivgnktc3ecu67t1ld77hq3.apps.googleusercontent.com",
+    "client_id": "618963664803-flhs0b3rd4d974kglkf0gshfhk461rqq.apps.googleusercontent.com",
     "scopes": [
       "openid",
       "email",
