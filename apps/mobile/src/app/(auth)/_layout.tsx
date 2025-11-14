@@ -1,17 +1,29 @@
 import { Stack } from 'expo-router';
 
+export const unstable_settings = {
+  initialRouteName: 'index',
+};
+
 export default function AuthLayout() {
-    return (
-        <Stack
-            screenOptions={{
-                headerShown: false,
-            }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="login/step-1" />
-            <Stack.Screen name="login/step-2" />
-            <Stack.Screen name="signup/step-1" />
-            <Stack.Screen name="signup/step-2" />
-            <Stack.Screen name="signup/step-3" />
-        </Stack>
-    );
+  return (
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        animation: 'fade',
+      }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen
+        name="login/index"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+      <Stack.Screen
+        name="signup/index"
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
+    </Stack>
+  );
 }

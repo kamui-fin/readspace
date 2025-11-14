@@ -1,164 +1,197 @@
-# Readspace Mobile App
+# CLAUDE.md — Readspace Mobile
 
-Ok so we are building the readspace mobile app in expo react native that accompanies the web version. All API hooks are in the packages/shared directory so use that rather than build your own hooks. 
+**Scope:** rules and conventions for AI-driven code changes in the Readspace Expo / React Native mobile app located in `apps/mobile` (monorepo root). This file is intended to guide automated coding assistants and humans working with them.
 
-# Web
-
-So the full readspace web product is already built out (next.js tailwind shadcn typescript) in apps/web so you may look at that if you ever need some inspiration on functionality stuff.
-
-# Logo
-
-I have the svg in readspace.svg
-
-# Lists
-
-Use legend-list (https://www.legendapp.com/open-source/list/v2/getting-started/) for highly performant lists esp. for the article list.
-
-# Styling
-
-Use nativewind + clsx + cva (for re-usable primitives)
-
-# Icons
-
-Use monicons (https://github.com/mikaeljorhult/monicons) with lucide for icons.
-
-# Routing
-
-Expo router.
-
-# Code Quality
-
-VERY IMPORTANT. We must maintain a top-notch, pristine codebase. AVOID massive files or components. Try to keep things modular, have files be dedicated to 1 component. 
-
-Always keep an eye out for code smells and when you see a need to refactor, DO IT. A file structure like this maybe:
-├── assets/
-├── scripts/
-├── src/
-│   ├── app/
-│   │   ├── api/                    # API routes in a separate folder
-│   │   │   ├── event+api.ts
-│   │   │   └── user+api.ts
-│   │   ├── _layout.tsx
-│   │   ├── index.tsx
-│   │   ├── events.tsx
-│   │   └── settings.tsx
-│   ├── components/
-│   │   ├── Table/
-│   │   │   ├── Cell.tsx
-│   │   │   └── index.tsx
-│   │   ├── BarChart.tsx
-│   │   └── Button.tsx
-│   ├── screens/
-│   │   ├── Home/
-│   │   │   ├── Card.tsx            # component only used in the home page
-│   │   │   └── index.tsx           # returned from /src/app/index.tsx
-│   │   ├── Events.tsx              # returned from /src/app/events.tsx
-│   │   └── Settings.tsx            # returned from /src/app/settings.tsx
-│   ├── server/                     # code used in /api
-│   │   ├── auth.ts
-│   │   └── db.ts
-│   ├── utils/                      # reusable utilities
-│   │   ├── formatDate.ts
-│   │   ├── formatDate.test.ts      # unit test next to the file being tested
-│   │   └── pluralize.ts
-│   ├── hooks/
-│   │   ├── useAppState.ts
-│   │   └── useTheme.ts
-├── app.json
-├── eas.json
-└── package.json
-
-# Typography
-
-Main: Geist Sans
-
-Headings: -2% letter spacing
-
-Logo: Figtree
-
-EB Garamond: Article or book reading font
-
-Refer to https://docs.expo.dev/develop/user-interface/fonts/ to setup fonts but also check mobile-old for reference.
-
-# Readspace Color Pallete
-
-primary: #386641
 ---
-- default button bg
 
+## 1. Quick links (reference docs)
 
-secondary: #6A994E
+- Expo docs (fonts, assets, config): [https://docs.expo.dev](https://docs.expo.dev)
+- NativeWind: [https://www.nativewind.dev](https://www.nativewind.dev)
+- Legend List: [https://www.legendapp.com/open-source/list/v2/getting-started/](https://www.legendapp.com/open-source/list/v2/getting-started/)
+- Monicons + Solar: [https://github.com/mikaeljorhult/monicons](https://github.com/mikaeljorhult/monicons) and [https://icones.js.org/collection/solar](https://icones.js.org/collection/solar)
+- React Native Reanimated: [https://docs.swmansion.com/react-native-reanimated](https://docs.swmansion.com/react-native-reanimated)
+- TanStack Query: [https://tanstack.com/query](https://tanstack.com/query)
+- Sonner Native: [https://github.com/sonner-toast/sonner-native](https://github.com/sonner-toast/sonner-native)
+- Expo Router: [https://expo.github.io/router](https://expo.github.io/router)
+
+Include these links when giving the model follow-up instructions that require deeper reading.
+
 ---
-- active states for switch, chip, radio, check, bottom nav item, progress bar, slider
-- link color
 
+## 2. What this applies to
 
-mid-grey: #F3F3F3
+- Code under `apps/mobile`;
+- Shared packages referenced by the mobile app (e.g. `packages/shared`);
+- Any Auto-generated commits or patches produced by the assistant for this app.
+
+This file does _not_ authorize any automated pushes to remote repositories. Humans must review and push.
+
 ---
-- bg for inputs, chips, radio items, 
 
+## 3. Code discovery & navigation
 
-grey: #90988B
+- Use repository-level search tools first (e.g. `rg`, `git grep`) to find relevant files. Prefer structural search by folder (`apps/mobile`, `packages/shared`, `apps/web`).
+- Before editing any file, trace the call graph or usage in the repo: open the component, then scan siblings and parent routes.
+- When referencing web app behavior for parity, inspect `apps/web` for feature flow and API usage patterns.
+
 ---
-- main fg for "muted" text (e.g. input placeholder)
-    - especially when sitting on another lighter grey
 
+## 4. Editing rules
 
-red: #EA4335
-----
-- cancel and logout button text
-- error text
+- **One component per file.** If a file grows > 250 lines, split it into smaller components.
+- Keep components small: prefer composition over large `if/else` rendering logic.
+- Name folders with `snake-case` (note the hyphen, not underscore) for components (each component should have `index.tsx` file with implementation of component), `camelCase` for hooks/utils.
+- Exports: prefer named exports for components and hooks, default export only for `pages`/route components when required by router conventions.
+- For any API call, use hooks in `packages/shared` — do not create new fetch hooks unless strictly necessary and agreed by reviewer.
+- Imports should follow the format designated by the paths in `apps/universal/tsconfig.json` for concision and consistency, i.e., `@components/button`.
 
-
-green-grey: #D1DBCD
 ---
-- switch off state bg
 
+## 5. Styling conventions
 
-light-grey: #F9F9F9
+- Use `nativewind` + `clsx` + `class-variance-authority (cva)` for reusable primitives.
+- Avoid inline style objects unless animated with Reanimated worklets.
+- Extract style variants with `cva` for shared components (button, chip, toast).
+- Dark mode: follow NativeWind's `dark` strategy. Ensure both `light` and `dark` variants are present for UI-critical components.
+
+**Tailwind config snippet** (already present in repo) should be used as the single source of truth for colors and fonts. Do not duplicate the palette elsewhere — import from a central file when needed.
+
 ---
-- card bg
-- <hr> divider color
 
-white: #FFFFFF
-----
-- main screen bg
-- bottom sheet bg
+## 6. Color palette
 
+Consolidate colors under a single module that re-exports the Tailwind tokens. Use Tailwind tokens in JSX with `className`/`class` whenever possible. Note that colors used for this app are in `lib/constants/colors.ts`. And the tailwind config is at the root of `universal/` at `tailwind.config.js` for styling reference.
 
-black: #232222
+Primary colors (examples):
+
+- `primary: #386641`
+- `secondary: #6A994E`
+- `red: #EA4335`
+- `green-grey: #D1DBCD`
+- `grey6: "rgb(247, 247, 247)"`,
+- `grey5: "rgb(237, 237, 237)"`,
+- `grey4: "rgb(226, 227, 227)"`,
+- `grey3: "rgb(211, 212, 211)"`,
+- `grey2: "rgb(180, 182, 180)"`,
+- `grey: "rgb(159, 162, 160)"`,
+- `white: #FFFFFF`
+- `black: #232222`
+
+When making palette changes, update the Tailwind config and run a quick scan for usages.
+
 ---
-- light theme default fg for all text
-- alternate button bg (e.g. for google sign-in)
 
-This color pallete is VERY important. Set it up properly with nativewind config, global.css, etc. 
+## 7. Fonts & typography
 
-# Animations
+- Main: Geist Sans (via `@expo-google-fonts/geist`)
+- Headings: letterSpacing `-0.02em` (Tailwind `heading` token)
+- Logo: Figtree
+- Reading: EB Garamond
 
-Would love for the app to be quite fluid, especially like a native app. Use react-native-reanimated.
+Load fonts via Expo recommended pattern (`expo-font` + `useFonts`) at app entry. Keep font tokens in the central `tailwind.config`.
 
-# Dark mode
+---
 
-Make sure all the components you build support dark mode with the way nativewind expects it (consult the docs)
+## 8. Lists & performance
 
-# Consulting documentation
+- Use `@legendapp/list` for article lists and other high-throughput lists. Prefer virtualization and `keyExtractor` usage.
+- Keep renderItem lean: avoid anonymous closures allocating heavy logic per render.
 
-Your knowledge may not be up-to-date with the latest versions of the libraries i'm mentioning. This is why you MUST use context7 or if that doesn't work then web search for it. 
+---
 
-React native / expo ecosystem is changing fast and the last thing we want is outdated code.
+## 9. State & storage
 
-# Other stuff
+- Persisted key/value storage: use `react-native-mmkv` or the designated key-value helper in `packages/shared`.
+- Local UI/global app state: use `zustand` per existing patterns.
+- Keep transient UI state in component-level `useState`, global data in zustand or TanStack Query cache.
 
-Check README.md of repo root level to understand what readspace is. But basically we're building a modern RSS feed reader + e-reader in one. 
+---
 
-# Toasts
+## 10. Data fetching
 
-Use sonner-native
+- Use TanStack Query (`@tanstack/react-query`) and the hooks already in `packages/shared`. Do **not** implement new data fetching hooks that duplicate shared functionality.
+- Query keys must be deterministic and named clearly (e.g. `['articles', { feedId }]`).
 
-# Data fetching 
+---
 
-Obviously, use tanstack query like we have in the shared api code and web app. I believe it was already setup in mobile-old. 
+## 11. Animations
 
-# Bun
+- Use `react-native-reanimated` for primary interactive animations. Keep worklets pure and small.
+- For micro-interactions, `moti` is acceptable (already in deps). Coordinate with Reanimated when mixing.
 
-Use /home/kamui/.bun/bin/bun to run bun commands.
+---
+
+## 12. Routing
+
+- Use `expo-router`. Route files go under `src/app` following the router conventions used in `apps/web` where applicable.
+- Avoid complicated per-route logic in layout files. Keep route-specific UI in route components.
+
+---
+
+## 13. Icons & images
+
+- Use `@monicon/native` + solar icons. Centralize icon mappings in `src/components/Icon/index.tsx`.
+- Logo is `readspace.svg` — wrap in a small `Logo` component that selects the correct font family (Figtree) when rendering text-based variants.
+
+---
+
+## 14. Toasts & feedback
+
+- Use `components/toast` for toasts and ephemeral messages.
+
+---
+
+## 15. Tests, lint, format
+
+- Run `yo lint`, `yo format`, `yo test` locally before creating patches.
+- Unit tests should live next to implementation files (e.g. `formatDate.test.ts`).
+- Keep test scope focused: mock network calls and keep deterministic results.
+
+---
+
+## 16. Git & commit rules
+
+- Do not perform git operations automatically. Create patches/PRs only when requested.
+- Commit title format: `<area>: <short-description>` (e.g. `ui: add article card skeleton`).
+- Include concise description and link to related Asana/Slack threads if available.
+- Run `yo proofread` against commit message.
+
+---
+
+## 17. When to ask for human input
+
+Ask a human reviewer if any of the following apply:
+
+- The change touches auth, payments, or core data migration behavior.
+- You need to add or upgrade a native dependency (pod changes / native build changes).
+- The component or change will affect performance-critical code paths (lists, rendering loops).
+
+---
+
+## 18. Dependency & environment notes
+
+The mobile app relies on the following notable packages (partial list):
+`nativewind`, `cva`, `clsx`, `react-native-reanimated`, `@legendapp/list`, `zustand`, `react-native-mmkv`, `@tanstack/react-query`, `expo-router`, `sonner-native`, `@monicon/native`.
+
+If a dependency needs upgrading, provide a short migration plan and a human must approve.
+
+---
+
+## 19. Failure cases & remediation (short)
+
+- If fonts fail to load: fall back to system font and create an issue linking to Expo fonts docs.
+- If list jank appears: audit renderItem allocations and use Legend List virtualization.
+- If TanStack Query key collisions occur: make keys more specific (include type + id objects).
+
+---
+
+## 20. Appendix: example commands
+
+- Local run (dev): `bun <command>` or `expo start` (follow repo README)
+- Lint & format: `yo lint`, `yo format`
+- Tests: `yo test`
+
+---
+
+_This CLAUDE.md is intentionally concise. When in doubt, prefer small, testable changes and ask a human reviewer._

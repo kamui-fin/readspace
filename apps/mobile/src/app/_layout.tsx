@@ -1,210 +1,114 @@
-import { GOOGLE_WEB_CLIENT_ID } from '@/constants/Config';
-import { AuthProvider, AuthQueryManager, useAuth } from '@/contexts/AuthProvider';
-import { ThemeProvider } from '@/contexts/ThemeProvider';
-import { useFonts } from '@/hooks/useFonts';
-import { useThemeStore } from '@/stores/theme';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
-import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useColorScheme } from 'nativewind';
-import { useEffect } from 'react';
-import { AppState, Platform, type AppStateStatus } from 'react-native';
+import 'global.css';
+import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Toaster } from 'sonner-native';
-import '../../global.css';
+import { useFonts } from 'expo-font';
+import {
+  Geist_400Regular,
+  Geist_500Medium,
+  Geist_600SemiBold,
+  Geist_700Bold,
+} from '@expo-google-fonts/geist';
+import {
+  GeistMono_400Regular,
+  GeistMono_500Medium,
+  GeistMono_600SemiBold,
+  GeistMono_700Bold,
+} from '@expo-google-fonts/geist-mono';
+import {
+  EBGaramond_400Regular,
+  EBGaramond_500Medium,
+  EBGaramond_600SemiBold,
+  EBGaramond_700Bold,
+} from '@expo-google-fonts/eb-garamond';
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+} from '@expo-google-fonts/figtree';
+import * as SplashScreen from 'expo-splash-screen';
+import { useEffect } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@contexts/toast-provider';
+import { SessionProvider } from '@contexts/auth-context';
+import { SplashScreenController } from '@components/screens/splash';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
 // Import API client to initialize it
-import '@/lib/api/client';
+import '@lib/api/client';
+import { configureApiClient } from '@lib/api/config';
 
-// Prevent the splash screen from auto-hiding
+// Keep the splash screen visible while we fetch resources
 SplashScreen.preventAutoHideAsync();
-
-// Configure Google Sign-In
-GoogleSignin.configure({
-    webClientId: GOOGLE_WEB_CLIENT_ID,
-    offlineAccess: true,
-});
 
 // Create QueryClient instance
 const queryClient = new QueryClient({
-    defaultOptions: {
-        queries: {
-            retry: 2,
-            staleTime: 5 * 60 * 1000,
-        },
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 5 * 60 * 1000, // 5 minutes
     },
+  },
 });
 
-function RootLayoutNav() {
-    const { isAuthenticated, loading, needsOnboarding } = useAuth();
-    const segments = useSegments();
-    const router = useRouter();
-    const { colorScheme } = useColorScheme();
+export default function RootLayout() {
+  // Configure API client on app startup
+  useEffect(() => {
+    configureApiClient();
+  }, []);
 
-    // Setup app focus listener
-    useEffect(() => {
-        function onAppStateChange(status: AppStateStatus) {
-            if (Platform.OS !== 'web') {
-                focusManager.setFocused(status === 'active');
-            }
-        }
-
-        const subscription = AppState.addEventListener('change', onAppStateChange);
-        return () => subscription.remove();
-    }, []);
-
-    useEffect(() => {
-        // Wait for both auth loading and onboarding status check
-        if (loading || (isAuthenticated && needsOnboarding === null)) {
-            console.log('[RootLayoutNav] Waiting for auth/onboarding status:', {
-                loading,
-                isAuthenticated,
-                needsOnboarding,
-            });
-            return;
-        }
-
-        const inProtectedGroup = segments[0] === '(protected)';
-        const inAuthGroup = segments[0] === '(auth)';
-        const inOnboarding = segments[0] === 'onboarding';
-        const onWelcome = segments[0] === 'welcome';
-
-        console.log('[RootLayoutNav] Navigation check:', {
-            isAuthenticated,
-            needsOnboarding,
-            currentSegment: segments[0],
-            inProtectedGroup,
-            inAuthGroup,
-            inOnboarding,
-            onWelcome,
-        });
-
-        // Not authenticated but trying to access protected routes → redirect to welcome
-        if (!isAuthenticated && (inProtectedGroup || inOnboarding)) {
-            console.log('[RootLayoutNav] Redirecting to welcome (not authenticated)');
-            router.replace('/welcome');
-            return;
-        }
-
-        // Exception: Don't redirect if on signup step-3 (email verification notice)
-        // Check this first before other redirects
-        // When inAuthGroup is true, segments[0] is "(auth)", segments[1] is "signup", segments[2] is "step-3"
-        const onEmailVerification =
-            inAuthGroup && segments[1] === 'signup' && segments[2] === 'step-3';
-
-        // Authenticated but on welcome/auth screens → redirect based on onboarding status
-        // Exception: Don't redirect if on signup step-3 (email verification notice)
-        if (isAuthenticated && (onWelcome || inAuthGroup) && !onEmailVerification) {
-            if (needsOnboarding) {
-                console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
-                router.replace('/onboarding/feeds/categories');
-            } else {
-                console.log(
-                    '[RootLayoutNav] Redirecting to protected (authenticated and onboarded)'
-                );
-                router.replace('/(protected)/(tabs)');
-            }
-            return;
-        }
-
-        // Authenticated but needs onboarding and not on onboarding → redirect to onboarding
-        if (isAuthenticated && needsOnboarding && !inOnboarding && !inAuthGroup) {
-            console.log('[RootLayoutNav] Redirecting to onboarding (needs onboarding)');
-            router.replace('/onboarding/feeds/categories');
-            return;
-        }
-
-        // Authenticated, doesn't need onboarding, but on onboarding → redirect to protected
-        if (isAuthenticated && !needsOnboarding && inOnboarding) {
-            console.log('[RootLayoutNav] Redirecting to protected (authenticated and onboarded)');
-            router.replace('/(protected)/(tabs)');
-            return;
-        }
-
-        // router is stable in Expo Router and doesn't need to be in deps
-    }, [isAuthenticated, segments, loading, needsOnboarding, router]);
-
-    return (
-        <>
-            <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-            <BottomSheetModalProvider>
-                <Stack
-                    screenOptions={{
-                        headerShown: false,
-                    }}>
-                    <Stack.Screen name="welcome" />
-                    <Stack.Screen name="(auth)" />
-                    <Stack.Screen name="onboarding" />
-                    <Stack.Screen name="(protected)" />
-                </Stack>
-            </BottomSheetModalProvider>
-        </>
-    );
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <SplashScreenController />
+        <RootNavigator />
+      </SessionProvider>
+    </QueryClientProvider>
+  );
 }
 
-export default function RootLayout() {
-    const { loaded, error } = useFonts();
-    const { colorScheme } = useColorScheme();
-    const isThemeHydrated = useThemeStore((state) => state.isHydrated);
+function RootNavigator() {
+  const [fontsLoaded, fontError] = useFonts({
+    Geist_400Regular,
+    Geist_500Medium,
+    Geist_600SemiBold,
+    Geist_700Bold,
+    GeistMono_400Regular,
+    GeistMono_500Medium,
+    GeistMono_600SemiBold,
+    GeistMono_700Bold,
+    EBGaramond_400Regular,
+    EBGaramond_500Medium,
+    EBGaramond_600SemiBold,
+    EBGaramond_700Bold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+  });
 
-    useEffect(() => {
-        if (error) throw error;
-    }, [error]);
-
-    useEffect(() => {
-        if (loaded && isThemeHydrated) {
-            SplashScreen.hideAsync();
-        }
-    }, [loaded, isThemeHydrated]);
-
-    if (!loaded || !isThemeHydrated) {
-        return null;
+  useEffect(() => {
+    if (fontsLoaded || fontError) {
+      // Hide the splash screen after the fonts have loaded (or an error was returned)
+      SplashScreen.hideAsync();
     }
+  }, [fontsLoaded, fontError]);
 
-    return (
-        <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-                <SafeAreaProvider>
-                    <ThemeProvider>
-                        <AuthProvider>
-                            <AuthQueryManager />
-                            <RootLayoutNav />
-                            <Toaster
-                                theme={colorScheme === 'dark' ? 'dark' : 'light'}
-                                position="top-center"
-                                offset={48}
-                                toastOptions={{
-                                    style: {
-                                        borderRadius: 8,
-                                        paddingHorizontal: 20,
-                                        paddingVertical: 16,
-                                        backgroundColor:
-                                            colorScheme === 'dark' ? '#1C1C1E' : '#F9F9F9',
-                                        shadowColor: colorScheme === 'dark' ? '#000000' : '#959DA5',
-                                        shadowOffset: { width: 0, height: 2 },
-                                        shadowOpacity: 0.2,
-                                        shadowRadius: 4,
-                                        elevation: 2,
-                                    },
-                                    titleStyle: {
-                                        fontFamily: 'Geist_500Medium',
-                                        fontSize: 15,
-                                        color: colorScheme === 'dark' ? '#FFFFFF' : '#232222',
-                                    },
-                                    descriptionStyle: {
-                                        fontFamily: 'Geist_400Regular',
-                                        fontSize: 14,
-                                        color: colorScheme === 'dark' ? '#A0A0A0' : '#90988B',
-                                    },
-                                }}
-                            />
-                        </AuthProvider>
-                    </ThemeProvider>
-                </SafeAreaProvider>
-            </GestureHandlerRootView>
-        </QueryClientProvider>
-    );
+  // Prevent rendering until the fonts have loaded (or errored)
+  if (!fontsLoaded && !fontError) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <BottomSheetModalProvider>
+        <ToastProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(protected)" />
+            <Stack.Screen name="(auth)" />
+          </Stack>
+        </ToastProvider>
+      </BottomSheetModalProvider>
+    </GestureHandlerRootView>
+  );
 }

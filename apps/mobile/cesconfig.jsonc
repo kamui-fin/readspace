@@ -2,7 +2,7 @@
 // It is safe to delete this file as it does not affect the functionality of your application.
 {
   "cesVersion": "2.20.1",
-  "projectName": "my-expo-app",
+  "projectName": "universal",
   "packages": [
     {
       "name": "nativewind",
@@ -20,12 +20,12 @@
   },
   "packageManager": {
     "type": "bun",
-    "version": "1.2.22"
+    "version": "1.2.0"
   },
   "os": {
-    "type": "Linux",
-    "platform": "linux",
-    "arch": "x64",
-    "kernelVersion": "6.17.5-arch1-1"
+    "type": "Darwin",
+    "platform": "darwin",
+    "arch": "arm64",
+    "kernelVersion": "25.1.0"
   }
 }

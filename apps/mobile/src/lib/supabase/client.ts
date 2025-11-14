@@ -2,49 +2,49 @@ import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createMMKV } from 'react-native-mmkv';
-import { getSettings } from '@/stores/settings';
+import { getSettings } from '@stores/settings';
 
 // Create MMKV storage instance for Supabase auth
-// Using a separate instance with encryption for sensitive auth data
+// Using a separate instance for auth data
 const authStorage = createMMKV({ id: 'supabase-auth' });
 
 // Create an adapter for MMKV that implements AsyncStorage interface
 // MMKV is synchronous, but we wrap it in async functions for compatibility
 const MMKVAdapter = {
-    getItem: async (key: string): Promise<string | null> => {
-        try {
-            const value = authStorage.getString(key);
-            return value ?? null;
-        } catch (error) {
-            console.error(`Error getting item ${key} from MMKV:`, error);
-            return null;
-        }
-    },
-    setItem: async (key: string, value: string): Promise<void> => {
-        try {
-            authStorage.set(key, value);
-        } catch (error) {
-            console.error(`Error setting item ${key} in MMKV:`, error);
-            throw error;
-        }
-    },
-    removeItem: async (key: string): Promise<void> => {
-        try {
-            authStorage.remove(key);
-        } catch (error) {
-            console.error(`Error removing item ${key} from MMKV:`, error);
-            throw error;
-        }
-    },
+  getItem: async (key: string): Promise<string | null> => {
+    try {
+      const value = authStorage.getString(key);
+      return value ?? null;
+    } catch (error) {
+      console.error(`Error getting item ${key} from MMKV:`, error);
+      return null;
+    }
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    try {
+      authStorage.set(key, value);
+    } catch (error) {
+      console.error(`Error setting item ${key} in MMKV:`, error);
+      throw error;
+    }
+  },
+  removeItem: async (key: string): Promise<void> => {
+    try {
+      authStorage.remove(key);
+    } catch (error) {
+      console.error(`Error removing item ${key} from MMKV:`, error);
+      throw error;
+    }
+  },
 };
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
-    const _url = new URL(url);
-    if (_url.hostname === 'localhost' && Platform.OS === 'android') {
-        _url.hostname = '10.0.2.2';
-    }
-    return _url.toString();
+  const _url = new URL(url);
+  if (_url.hostname === 'localhost' && Platform.OS === 'android') {
+    _url.hostname = '10.0.2.2';
+  }
+  return _url.toString();
 };
 
 // Singleton Supabase client
@@ -56,43 +56,46 @@ let supabaseClient: SupabaseClient | null = null;
  * If url and key are provided, they override the settings store (useful for validation).
  */
 export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string): SupabaseClient {
-    // If client exists and no override params provided, return existing client
-    if (supabaseClient && !supabaseUrl && !supabaseAnonKey) {
-        return supabaseClient;
-    }
+  // If client exists and no override params provided, return existing client
+  if (supabaseClient && !supabaseUrl && !supabaseAnonKey) {
+    return supabaseClient;
+  }
 
-    // Get settings from store if not provided
-    const settings = getSettings();
-    const url = supabaseUrl || settings.supabase_url;
-    const key = supabaseAnonKey || settings.supabase_anon_key;
+  // Get settings from store if not provided
+  const settings = getSettings();
+  const url = supabaseUrl || settings.supabase_url;
+  const key = supabaseAnonKey || settings.supabase_anon_key;
 
-    if (!url || !key) {
-        throw new Error('Missing Supabase configuration. Please configure your instance settings.');
-    }
+  if (!url || !key) {
+    throw new Error('Missing Supabase configuration. Please configure your instance settings.');
+  }
 
-    const resolvedUrl = resolveHostname(url);
+  const resolvedUrl = resolveHostname(url);
 
-    console.log('[Supabase] Creating client with URL:', resolvedUrl.substring(0, 30) + '...');
-    console.log('[Supabase] Using anon key:', key.substring(0, 50) + '...');
+  console.log('[Supabase] Creating client with URL:', resolvedUrl);
+  console.log('[Supabase] Platform:', Platform.OS);
+  console.log('[Supabase] Using anon key:', key.substring(0, 50) + '...');
 
-    // Create new client (or override existing one if params provided)
-    const client = createClient(resolvedUrl, key, {
-        auth: {
-            storage: MMKVAdapter,
-            autoRefreshToken: true,
-            persistSession: true,
-            detectSessionInUrl: false,
-            // Use instance-specific storage key to prevent session leakage
-            storageKey: `supabase-auth-${settings.instance_type}`,
-        },
-    });
+  // Create new client (or override existing one if params provided)
+  const client = createClient(resolvedUrl, key, {
+    auth: {
+      storage: MMKVAdapter,
+      autoRefreshToken: !supabaseUrl, // Don't auto-refresh for validation clients
+      persistSession: !supabaseUrl, // Don't persist for validation clients
+      detectSessionInUrl: false,
+      // Use instance-specific storage key to prevent session leakage
+      storageKey: supabaseUrl
+        ? 'supabase-auth-validation'
+        : `supabase-auth-${settings.instance_type}`,
+    },
+  });
 
-    // Only set as singleton if using settings (not overriding)
-    if (!supabaseUrl && !supabaseAnonKey) {
-        supabaseClient = client;
-    }
+  // Only set as singleton if using settings (not overriding)
+  if (!supabaseUrl && !supabaseAnonKey) {
+    supabaseClient = client;
+  }
 
-    return client;
+  return client;
 }
 
 /**
@@ -101,12 +104,10 @@ export function getSupabaseClient(supabaseUrl?: string, supabaseAnonKey?: string
  * Note: This will invalidate any active subscriptions!
  */
 export function resetSupabaseClient() {
-    console.log('[Supabase] Resetting client (this will invalidate subscriptions)');
-    if (supabaseClient) {
-        // Don't stop auto-refresh if there's an active session
-        // as it will be picked up by the new client
-        supabaseClient = null;
-    }
+  console.log('[Supabase] Resetting client (this will invalidate subscriptions)');
+  if (supabaseClient) {
+    supabaseClient = null;
+  }
 }
 
 /**
@@ -114,26 +115,33 @@ export function resetSupabaseClient() {
  * Returns true if connection is successful, false otherwise.
  */
 export async function validateSupabaseConnection(
-    supabaseUrl: string,
-    supabaseAnonKey: string
+  supabaseUrl: string,
+  supabaseAnonKey: string
 ): Promise<{ valid: boolean; error?: string }> {
-    try {
-        const testClient = getSupabaseClient(supabaseUrl, supabaseAnonKey);
+  try {
+    console.log('[Supabase] Starting validation for URL:', supabaseUrl);
+    const testClient = getSupabaseClient(supabaseUrl, supabaseAnonKey);
 
-        // Test connection with a simple query
-        const { error } = await testClient.auth.getSession();
+    console.log('[Supabase] Test client created, calling getSession...');
+    // Test connection with a simple query
+    const { data, error } = await testClient.auth.getSession();
 
-        if (error) {
-            return { valid: false, error: error.message };
-        }
+    console.log('[Supabase] getSession response:', { hasData: !!data, error: error?.message });
 
-        return { valid: true };
-    } catch (error) {
-        return {
-            valid: false,
-            error: error instanceof Error ? error.message : 'Connection failed',
-        };
+    if (error) {
+      console.log('[Supabase] Validation failed with error:', error);
+      return { valid: false, error: error.message };
     }
+
+    console.log('[Supabase] Validation successful');
+    return { valid: true };
+  } catch (error) {
+    console.log('[Supabase] Validation caught exception:', error);
+    return {
+      valid: false,
+      error: error instanceof Error ? error.message : 'Connection failed',
+    };
+  }
 }
 
 // Initialize default client on module load
@@ -142,14 +150,14 @@ getSupabaseClient();
 
 // Auto-refresh session when app becomes active
 AppState.addEventListener('change', (state) => {
-    const client = supabaseClient;
-    if (!client) return;
+  const client = supabaseClient;
+  if (!client) return;
 
-    if (state === 'active') {
-        client.auth.startAutoRefresh();
-    } else {
-        client.auth.stopAutoRefresh();
-    }
+  if (state === 'active') {
+    client.auth.startAutoRefresh();
+  } else {
+    client.auth.stopAutoRefresh();
+  }
 });
 
 // Backward compatibility export
