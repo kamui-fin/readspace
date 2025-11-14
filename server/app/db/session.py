@@ -33,7 +33,9 @@ def _create_engine():
     connect_args = {
         "server_settings": {
             "application_name": f"readspace_api_{settings.ENVIRONMENT}",
-            "statement_timeout": "60000",  # 60 second timeout for API queries
+            # NOTE: Cannot set statement_timeout here when using PgBouncer in transaction mode
+            # PgBouncer doesn't forward startup parameters to PostgreSQL
+            # Use "SET LOCAL statement_timeout" in SQL queries if needed
         },
         # CRITICAL: Disable prepared statements for PgBouncer transaction mode
         # Transaction mode doesn't support prepared statements

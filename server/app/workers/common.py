@@ -69,7 +69,9 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
         connect_args = {
             "server_settings": {
                 "application_name": f"readspace_worker_{settings.ENVIRONMENT}",
-                "statement_timeout": "300000",  # 5 minute query timeout for long-running tasks
+                # NOTE: Cannot set statement_timeout here when using PgBouncer in transaction mode
+                # PgBouncer doesn't forward startup parameters to PostgreSQL
+                # Use "SET LOCAL statement_timeout" in SQL queries if needed (see feed_tasks.py)
             },
             # CRITICAL: Disable prepared statements for PgBouncer transaction mode
             # Transaction mode doesn't support prepared statements
