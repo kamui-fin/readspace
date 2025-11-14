@@ -401,15 +401,24 @@ class ArticleCrudOperations:
             feed_article: FeedArticle
             feed_article, subscription, user_state = result_tuple
 
-            if user_state:
-                # Update existing state
-                for field, value in update_data.items():
-                    if hasattr(user_state, field):
-                        setattr(user_state, field, value)
-            else:
-                # Create new state
-                user_state = UserArticleState(user_id=user_id, article_id=article_id, **update_data)
-                db.add(user_state)
+            # Use PostgreSQL UPSERT to handle race conditions atomically
+            # This prevents duplicate key violations when concurrent requests
+            # try to create the same user_article_state
+            from sqlalchemy.dialects.postgresql import insert
+
+            stmt = insert(UserArticleState).values(
+                user_id=user_id,
+                article_id=article_id,
+                **update_data
+            )
+
+            # On conflict, update the existing row with new values
+            stmt = stmt.on_conflict_do_update(
+                index_elements=['user_id', 'article_id'],
+                set_=update_data
+            )
+
+            await db.execute(stmt)
 
             # Note: Commit is handled by the dependency injection layer (get_db)
             await db.flush()  # Ensure changes are persisted

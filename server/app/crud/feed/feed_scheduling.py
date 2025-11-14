@@ -142,20 +142,35 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
 
 
 async def update_feed_error(db: AsyncSession, *, feed_db: Feed, error_message: str) -> Feed:
-    """Update feed error count and message after a failed fetch."""
-    feed_db.fetch_error_count += 1
-    feed_db.last_error_message = error_message
-    feed_db.updated_at = datetime.now(timezone.utc)
+    """Update feed error count and message after a failed fetch.
 
-    db.add(feed_db)
+    Uses explicit UPDATE statement to avoid greenlet errors from lazy-loading
+    attributes on potentially detached ORM objects.
+    """
+    from sqlalchemy import update
+
+    # Use explicit UPDATE statement instead of ORM attribute access
+    # This prevents greenlet errors when feed_db is detached after a failed transaction
+    stmt = (
+        update(Feed)
+        .where(Feed.id == feed_db.id)
+        .values(
+            fetch_error_count=Feed.fetch_error_count + 1,
+            last_error_message=error_message,
+            updated_at=datetime.now(timezone.utc),
+        )
+        .returning(Feed)
+    )
+
+    result = await db.execute(stmt)
     await db.commit()
-    await db.refresh(feed_db)
+    updated_feed = result.scalar_one()
 
     logger.warning(
         "Feed error count updated",
-        feed_id=feed_db.id,
-        error_count=feed_db.fetch_error_count,
+        feed_id=updated_feed.id,
+        error_count=updated_feed.fetch_error_count,
         error_message=error_message,
     )
 
-    return feed_db
+    return updated_feed

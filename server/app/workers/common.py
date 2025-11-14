@@ -55,46 +55,27 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
         if not db_url.startswith("postgresql+asyncpg://"):
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
-        # Production always uses transaction mode, development uses session mode
-        is_production = settings.is_production
-        is_local = not settings.is_supabase_cloud
+        # Worker pool configuration for transaction mode
+        # Workers process feeds concurrently, need sufficient connections per worker
+        # Scale horizontally with multiple worker replicas (4 workers × 15 = 60 total)
+        pool_config = {
+            "pool_size": 5,
+            "max_overflow": 10,  # Total 15 connections per worker
+            "pool_recycle": 1800,  # 30 minutes - prevent stale connections
+            "pool_timeout": 10,  # Fail fast on pool exhaustion
+        }
 
-        # Environment-specific pool sizing
-        if is_local:
-            # Local development: Direct PostgreSQL connection
-            # Larger pool is fine as there's no connection limit from pooler
-            pool_config = {
-                "pool_size": 5,
-                "max_overflow": 5,  # Total 10 connections per worker
-                "pool_recycle": 3600,  # 1 hour
-                "pool_timeout": 30,  # More generous timeout for dev
-            }
-        else:
-            # Supabase Cloud: Transaction mode with PgBouncer
-            # Smaller pool per worker, scale horizontally instead
-            pool_config = {
-                "pool_size": 2,
-                "max_overflow": 3,  # Total 5 connections per worker
-                "pool_recycle": 1800,  # 30 minutes
-                "pool_timeout": 10,  # Fail fast on pool exhaustion
-            }
-
-        # Base connection arguments
+        # Connection arguments for PgBouncer transaction mode
         connect_args = {
             "server_settings": {
                 "application_name": f"readspace_worker_{settings.ENVIRONMENT}",
                 "statement_timeout": "300000",  # 5 minute query timeout for long-running tasks
-            }
+            },
+            # CRITICAL: Disable prepared statements for PgBouncer transaction mode
+            # Transaction mode doesn't support prepared statements
+            "statement_cache_size": 0,
+            "prepared_statement_cache_size": 0,
         }
-
-        # Disable prepared statements for production (required by PgBouncer transaction mode)
-        if is_production:
-            connect_args.update(
-                {
-                    "statement_cache_size": 0,
-                    "prepared_statement_cache_size": 0,
-                }
-            )
 
         _db_engine = create_async_engine(
             db_url,

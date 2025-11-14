@@ -1,11 +1,11 @@
 """AI Service for OpenAI-compatible API interactions."""
 
+import asyncio
 import hashlib
 import json
 import os
 import re
 import tempfile
-import time
 from typing import Any
 
 import structlog
@@ -370,7 +370,7 @@ Return a JSON object with exactly these keys:
                                    retry_delay=retry_delay,
                                    error=error_str,
                                )
-                               time.sleep(retry_delay)
+                               await asyncio.sleep(retry_delay)  # Non-blocking async sleep
                                retry_delay *= 2  # Exponential backoff
                            else:
                                logger.error(
@@ -390,8 +390,9 @@ Return a JSON object with exactly these keys:
                )
 
                # Poll for completion (with timeout)
-               max_wait_seconds = 24 * 3600  # 24 hours max wait
-               poll_interval = 2 * 60  # Poll every 2 minutes
+               # Limit to 4 minutes max wait to respect worker statement_timeout of 5 minutes
+               max_wait_seconds = 4 * 60  # 4 minutes max wait (leaves 1 min buffer)
+               poll_interval = 60  # Poll every 1 minute
                elapsed = 0
 
                completed_states = {
@@ -414,7 +415,7 @@ Return a JSON object with exactly these keys:
                        elapsed_seconds=elapsed,
                    )
 
-                   time.sleep(poll_interval)
+                   await asyncio.sleep(poll_interval)  # Non-blocking async sleep
                    elapsed += poll_interval
 
                # Get final status

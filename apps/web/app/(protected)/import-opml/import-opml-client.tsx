@@ -275,10 +275,10 @@ export default function ImportOPMLPageClient() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                        activeImports.length > 0 &&
-                        activeImports[0] ? (
+                    activeImports.length > 0 &&
+                    activeImports[0] ? (
                         <Card>
-                            <CardContent className="p-6">
+                            <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
                                         <Clock className="h-5 w-5 text-blue-600 animate-pulse" />
@@ -307,10 +307,11 @@ export default function ImportOPMLPageClient() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${isDragging
-                                ? "border-primary bg-primary/5"
-                                : "border-dashed border-2"
-                                }`}
+                            className={`transition-colors duration-200 ${
+                                isDragging
+                                    ? "border-primary bg-primary/5"
+                                    : "border-dashed border-2"
+                            }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

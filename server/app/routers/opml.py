@@ -979,15 +979,15 @@ async def list_user_import_tasks(
 
             if not state:
                 # No progress state yet, task is still pending
-                task_metadata = {
-                    "user_id": current_user.sub,
-                    "task_id": task_id,
-                    "estimated_feeds": 0,
-                    "filename": "unknown.opml",
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "status": "pending",
-                    "current_status": "pending",
-                }
+                task_metadata = OpmlTaskMetadata(
+                    user_id=current_user.sub,
+                    task_id=task_id,
+                    estimated_feeds=0,
+                    filename="unknown.opml",
+                    created_at=datetime.now(timezone.utc).isoformat(),
+                    status="pending",
+                    current_status="pending",
+                )
                 active_tasks.append(task_metadata)
                 continue
 
@@ -996,7 +996,7 @@ async def list_user_import_tasks(
                 tasks_to_remove.append(task_id)
             else:
                 # Still active
-                active_tasks.append(state.to_metadata().model_dump())
+                active_tasks.append(state.to_metadata())
 
         except Exception as e:
             logger.warning(
@@ -1005,15 +1005,15 @@ async def list_user_import_tasks(
                 error=str(e),
             )
             # Keep the task in list but mark as unknown
-            task_metadata = {
-                "user_id": current_user.sub,
-                "task_id": task_id,
-                "estimated_feeds": 0,
-                "filename": "unknown.opml",
-                "created_at": datetime.now(timezone.utc).isoformat(),
-                "status": "pending",
-                "current_status": "unknown",
-            }
+            task_metadata = OpmlTaskMetadata(
+                user_id=current_user.sub,
+                task_id=task_id,
+                estimated_feeds=0,
+                filename="unknown.opml",
+                created_at=datetime.now(timezone.utc).isoformat(),
+                status="pending",
+                current_status="unknown",
+            )
             active_tasks.append(task_metadata)
 
     # Clean up completed tasks from Redis
