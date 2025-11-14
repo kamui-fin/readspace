@@ -179,10 +179,12 @@ class ArticleCrudOperations:
         return result.scalar_one() or 0
 
     @staticmethod
-    async def create_articles_batch(
-        db: AsyncSession, *, articles_data: list[ArticleCreate], user_id: UUID
-    ) -> list[FeedArticle]:
-        """Create multiple articles in batch for better performance."""
+    async def create_articles_batch(db: AsyncSession, *, articles_data: list[ArticleCreate]) -> list[FeedArticle]:
+        """Create multiple articles in batch for better performance.
+
+        Note: This method no longer creates UserArticleState entries.
+        States are created lazily when users interact with articles.
+        """
         if not articles_data:
             return []
 
@@ -232,9 +234,8 @@ class ArticleCrudOperations:
             content_rows = content_result.fetchall()
             await db.flush()
 
-            # Step 5: Bulk create articles and user article states
+            # Step 5: Bulk create articles
             article_mappings = []
-            user_article_state_mappings = []
             created_articles_list = []  # To store the actual Article objects created
 
             for article_in, content_row in zip(new_articles, content_rows, strict=False):
@@ -263,40 +264,18 @@ class ArticleCrudOperations:
             result = await db.execute(article_returning_stmt)
             newly_inserted_articles_data = result.fetchall()
 
-            # Create UserArticleState entries for each newly inserted article
+            # Reconstruct FeedArticle objects from the returned data
+            # Note: We no longer create UserArticleState entries here.
+            # States are created lazily when users interact with articles.
             for article_data_tuple in newly_inserted_articles_data:
-                # Reconstruct a temporary Article object from the returned data
-                # This is a simplified reconstruction, assuming the order of returning() matches Article constructor
                 temp_article = FeedArticle(
                     id=article_data_tuple[0],
                     feed_id=article_data_tuple[1],
                     guid=article_data_tuple[2],
                     content_id=article_data_tuple[3],
                     created_at=article_data_tuple[4],
-                    # Add other fields if necessary, or fetch full objects later
                 )
                 created_articles_list.append(temp_article)
-
-                user_article_state_mappings.append(
-                    {
-                        "user_id": user_id,
-                        "article_id": temp_article.id,
-                        "is_read": False,
-                        "is_read_later": False,
-                        "is_favorite": False,
-                        "created_at": current_time,
-                        "updated_at": current_time,
-                    }
-                )
-
-            if user_article_state_mappings:
-                # Bulk insert UserArticleState entries
-                user_state_insert_stmt = insert(UserArticleState).values(user_article_state_mappings)
-                # On conflict, do nothing for user states as well
-                user_state_insert_stmt = user_state_insert_stmt.on_conflict_do_nothing(
-                    index_elements=["user_id", "article_id"]
-                )
-                await db.execute(user_state_insert_stmt)
 
             # Note: Commit is handled by the dependency injection layer (get_db)
             # No manual commit needed here to avoid double-commit overhead
@@ -406,17 +385,10 @@ class ArticleCrudOperations:
             # try to create the same user_article_state
             from sqlalchemy.dialects.postgresql import insert
 
-            stmt = insert(UserArticleState).values(
-                user_id=user_id,
-                article_id=article_id,
-                **update_data
-            )
+            stmt = insert(UserArticleState).values(user_id=user_id, article_id=article_id, **update_data)
 
             # On conflict, update the existing row with new values
-            stmt = stmt.on_conflict_do_update(
-                index_elements=['user_id', 'article_id'],
-                set_=update_data
-            )
+            stmt = stmt.on_conflict_do_update(index_elements=["user_id", "article_id"], set_=update_data)
 
             await db.execute(stmt)
 

@@ -233,27 +233,27 @@ class AIService:
         """
 
         try:
-           # Create a temporary JSONL file for batch requests
-           temp_file = None
-           uploaded_file = None
+            # Create a temporary JSONL file for batch requests
+            temp_file = None
+            uploaded_file = None
 
-           try:
-               # Build batch requests in JSONL format
-               batch_requests = []
-               for idx, feed_data in enumerate(feed_data_list):
-                   title = feed_data.get("title", "")
-                   description = feed_data.get("description", "")
-                   domain = feed_data.get("domain", "")
-                   language = feed_data.get("language", "en")
+            try:
+                # Build batch requests in JSONL format
+                batch_requests = []
+                for idx, feed_data in enumerate(feed_data_list):
+                    title = feed_data.get("title", "")
+                    description = feed_data.get("description", "")
+                    domain = feed_data.get("domain", "")
+                    language = feed_data.get("language", "en")
 
-                   # Language-specific instructions
-                   lang_instruction = ""
-                   if language == "zh":
-                       lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
-                   elif language != "en":
-                       lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
+                    # Language-specific instructions
+                    lang_instruction = ""
+                    if language == "zh":
+                        lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
+                    elif language != "en":
+                        lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
 
-                   prompt = f"""Analyze this RSS feed and provide enrichment metadata.
+                    prompt = f"""Analyze this RSS feed and provide enrichment metadata.
 {lang_instruction}Return ONLY a valid JSON object with no markdown formatting.
 
 Feed Information:
@@ -261,7 +261,7 @@ Title: {title}
 Description: {description}
 Domain: {domain}
 
-IMPORTANT: Use your existing knowledge of this website/publication (if you have any) to provide accurate enrichment. 
+IMPORTANT: Use your existing knowledge of this website/publication (if you have any) to provide accurate enrichment.
 
 Your task is to:
 1. Generate an ENHANCED description that expands on the existing one (if present) to make it more complete and useful for unfamiliar readers. Use your existing knowledge of this website/publication along with the provided information. If the original description is empty or very short, create a helpful description. Keep it concise (max 200 chars).
@@ -303,225 +303,225 @@ Your task is to:
 Return a JSON object with exactly these keys:
 {{"enhanced_description": "Enhanced/expanded description, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "ONE of the 12 categories above", "popularity_estimate": numeric_score_1_to_100}}"""  # noqa: E501
 
-                   # Create JSONL entry with key and request
-                   # Note: File-based batch requests use REST API format (camelCase for field names)
-                   # Python SDK uses snake_case, but JSONL files go to REST API
-                   batch_requests.append(
-                       {
-                           "key": f"feed-{idx}",
-                           "request": {
-                               "contents": [{"parts": [{"text": prompt}]}],
-                               "generationConfig": {
-                                   "temperature": 0.2,
-                                   "maxOutputTokens": 400,
-                                   "responseMimeType": "application/json",
-                                   "responseJsonSchema": FeedEnrichmentResponse.model_json_schema(),
-                               },
-                           },
-                       }
-                   )
+                    # Create JSONL entry with key and request
+                    # Note: File-based batch requests use REST API format (camelCase for field names)
+                    # Python SDK uses snake_case, but JSONL files go to REST API
+                    batch_requests.append(
+                        {
+                            "key": f"feed-{idx}",
+                            "request": {
+                                "contents": [{"parts": [{"text": prompt}]}],
+                                "generationConfig": {
+                                    "temperature": 0.2,
+                                    "maxOutputTokens": 400,
+                                    "responseMimeType": "application/json",
+                                    "responseJsonSchema": FeedEnrichmentResponse.model_json_schema(),
+                                },
+                            },
+                        }
+                    )
 
-               # Write to temporary JSONL file
-               temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
-               for request in batch_requests:
-                   temp_file.write(json.dumps(request) + "\n")
-               temp_file.close()
+                # Write to temporary JSONL file
+                temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
+                for request in batch_requests:
+                    temp_file.write(json.dumps(request) + "\n")
+                temp_file.close()
 
-               logger.info(
-                   "Created batch request file",
-                   file_path=temp_file.name,
-                   batch_size=len(batch_requests),
-               )
+                logger.info(
+                    "Created batch request file",
+                    file_path=temp_file.name,
+                    batch_size=len(batch_requests),
+                )
 
-               # Upload file to Gemini File API
-               uploaded_file = self.gemini_client.files.upload(
-                   file=temp_file.name,
-                   config=types.UploadFileConfig(
-                       display_name=f"feed-enrichment-batch-{len(batch_requests)}",
-                       mime_type="jsonl",
-                   ),
-               )
+                # Upload file to Gemini File API
+                uploaded_file = self.gemini_client.files.upload(
+                    file=temp_file.name,
+                    config=types.UploadFileConfig(
+                        display_name=f"feed-enrichment-batch-{len(batch_requests)}",
+                        mime_type="jsonl",
+                    ),
+                )
 
-               logger.info(
-                   "Uploaded batch file to Gemini",
-                   file_name=uploaded_file.name,
-                   batch_size=len(batch_requests),
-               )
+                logger.info(
+                    "Uploaded batch file to Gemini",
+                    file_name=uploaded_file.name,
+                    batch_size=len(batch_requests),
+                )
 
-               # Create batch job with uploaded file (with retry logic for quota errors)
-               max_retries = 3
-               retry_delay = 60  # Start with 60 seconds
+                # Create batch job with uploaded file (with retry logic for quota errors)
+                max_retries = 3
+                retry_delay = 60  # Start with 60 seconds
 
-               for attempt in range(max_retries):
-                   try:
-                       batch_job = self.gemini_client.batches.create(
-                           model=self.settings.GEMINI_MODEL,
-                           src=uploaded_file.name,
-                           config={"display_name": f"feed-enrichment-batch-{len(batch_requests)}"},
-                       )
-                       break  # Success, exit retry loop
-                   except Exception as e:
-                       error_str = str(e)
-                       if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
-                           if attempt < max_retries - 1:
-                               logger.warning(
-                                   "Quota exceeded, retrying after delay",
-                                   attempt=attempt + 1,
-                                   retry_delay=retry_delay,
-                                   error=error_str,
-                               )
-                               await asyncio.sleep(retry_delay)  # Non-blocking async sleep
-                               retry_delay *= 2  # Exponential backoff
-                           else:
-                               logger.error(
-                                   "Quota exceeded after all retries",
-                                   attempts=max_retries,
-                                   error=error_str,
-                               )
-                               raise
-                       else:
-                           # Not a quota error, raise immediately
-                           raise
+                for attempt in range(max_retries):
+                    try:
+                        batch_job = self.gemini_client.batches.create(
+                            model=self.settings.GEMINI_MODEL,
+                            src=uploaded_file.name,
+                            config={"display_name": f"feed-enrichment-batch-{len(batch_requests)}"},
+                        )
+                        break  # Success, exit retry loop
+                    except Exception as e:
+                        error_str = str(e)
+                        if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                            if attempt < max_retries - 1:
+                                logger.warning(
+                                    "Quota exceeded, retrying after delay",
+                                    attempt=attempt + 1,
+                                    retry_delay=retry_delay,
+                                    error=error_str,
+                                )
+                                await asyncio.sleep(retry_delay)  # Non-blocking async sleep
+                                retry_delay *= 2  # Exponential backoff
+                            else:
+                                logger.error(
+                                    "Quota exceeded after all retries",
+                                    attempts=max_retries,
+                                    error=error_str,
+                                )
+                                raise
+                        else:
+                            # Not a quota error, raise immediately
+                            raise
 
-               logger.info(
-                   "Batch enrichment job created",
-                   job_name=batch_job.name,
-                   batch_size=len(batch_requests),
-               )
+                logger.info(
+                    "Batch enrichment job created",
+                    job_name=batch_job.name,
+                    batch_size=len(batch_requests),
+                )
 
-               # Poll for completion (with timeout)
-               # Limit to 4 minutes max wait to respect worker statement_timeout of 5 minutes
-               max_wait_seconds = 4 * 60  # 4 minutes max wait (leaves 1 min buffer)
-               poll_interval = 60  # Poll every 1 minute
-               elapsed = 0
+                # Poll for completion (with timeout)
+                # Limit to 4 minutes max wait to respect worker statement_timeout of 5 minutes
+                max_wait_seconds = 4 * 60  # 4 minutes max wait (leaves 1 min buffer)
+                poll_interval = 60  # Poll every 1 minute
+                elapsed = 0
 
-               completed_states = {
-                   "JOB_STATE_SUCCEEDED",
-                   "JOB_STATE_FAILED",
-                   "JOB_STATE_CANCELLED",
-                   "JOB_STATE_EXPIRED",
-               }
+                completed_states = {
+                    "JOB_STATE_SUCCEEDED",
+                    "JOB_STATE_FAILED",
+                    "JOB_STATE_CANCELLED",
+                    "JOB_STATE_EXPIRED",
+                }
 
-               while elapsed < max_wait_seconds:
-                   batch_status = self.gemini_client.batches.get(name=batch_job.name)
+                while elapsed < max_wait_seconds:
+                    batch_status = self.gemini_client.batches.get(name=batch_job.name)
 
-                   if batch_status.state.name in completed_states:
-                       break
+                    if batch_status.state.name in completed_states:
+                        break
 
-                   logger.debug(
-                       "Batch job still running",
-                       job_name=batch_job.name,
-                       state=batch_status.state.name,
-                       elapsed_seconds=elapsed,
-                   )
+                    logger.debug(
+                        "Batch job still running",
+                        job_name=batch_job.name,
+                        state=batch_status.state.name,
+                        elapsed_seconds=elapsed,
+                    )
 
-                   await asyncio.sleep(poll_interval)  # Non-blocking async sleep
-                   elapsed += poll_interval
+                    await asyncio.sleep(poll_interval)  # Non-blocking async sleep
+                    elapsed += poll_interval
 
-               # Get final status
-               batch_status = self.gemini_client.batches.get(name=batch_job.name)
+                # Get final status
+                batch_status = self.gemini_client.batches.get(name=batch_job.name)
 
-               if batch_status.state.name != "JOB_STATE_SUCCEEDED":
-                   logger.error(
-                       "Batch job did not succeed",
-                       job_name=batch_job.name,
-                       state=batch_status.state.name,
-                       error=getattr(batch_status, "error", None),
-                   )
-                   return [None] * len(feed_data_list)
+                if batch_status.state.name != "JOB_STATE_SUCCEEDED":
+                    logger.error(
+                        "Batch job did not succeed",
+                        job_name=batch_job.name,
+                        state=batch_status.state.name,
+                        error=getattr(batch_status, "error", None),
+                    )
+                    return [None] * len(feed_data_list)
 
-               # Download and parse results from file
-               results: list[FeedEnrichmentResponse | None] = [None] * len(feed_data_list)
+                # Download and parse results from file
+                results: list[FeedEnrichmentResponse | None] = [None] * len(feed_data_list)
 
-               if batch_status.dest and batch_status.dest.file_name:
-                   result_file_name = batch_status.dest.file_name
-                   logger.info("Downloading batch results", file_name=result_file_name)
+                if batch_status.dest and batch_status.dest.file_name:
+                    result_file_name = batch_status.dest.file_name
+                    logger.info("Downloading batch results", file_name=result_file_name)
 
-                   # Download result file
-                   file_content = self.gemini_client.files.download(file=result_file_name)
-                   result_text = file_content.decode("utf-8")
+                    # Download result file
+                    file_content = self.gemini_client.files.download(file=result_file_name)
+                    result_text = file_content.decode("utf-8")
 
-                   # Parse JSONL results
-                   for line in result_text.strip().split("\n"):
-                       if not line:
-                           continue
+                    # Parse JSONL results
+                    for line in result_text.strip().split("\n"):
+                        if not line:
+                            continue
 
-                       try:
-                           result_obj = json.loads(line)
+                        try:
+                            result_obj = json.loads(line)
 
-                           # Extract index from key (e.g., "feed-0" -> 0)
-                           key = result_obj.get("key", "")
-                           if key.startswith("feed-"):
-                               idx = int(key.split("-")[1])
+                            # Extract index from key (e.g., "feed-0" -> 0)
+                            key = result_obj.get("key", "")
+                            if key.startswith("feed-"):
+                                idx = int(key.split("-")[1])
 
-                               # Check if response succeeded
-                               if "response" in result_obj:
-                                   # Extract text from nested response structure
-                                   # Structure: response -> candidates[0] -> content -> parts[0] -> text
-                                   try:
-                                       response_text = (
-                                           result_obj["response"]
-                                           .get("candidates", [{}])[0]
-                                           .get("content", {})
-                                           .get("parts", [{}])[0]
-                                           .get("text", "")
-                                       )
-                                       if response_text:
-                                           enrichment = FeedEnrichmentResponse.model_validate_json(response_text)
-                                           results[idx] = enrichment
-                                       else:
-                                           logger.warning(
-                                               "Empty response text in batch result",
-                                               key=key,
-                                           )
-                                   except (KeyError, IndexError, TypeError) as e:
-                                       logger.warning(
-                                           "Failed to extract text from batch response",
-                                           key=key,
-                                           error=str(e),
-                                       )
-                               elif "error" in result_obj:
-                                   logger.warning(
-                                       "Batch request failed",
-                                       key=key,
-                                       error=result_obj["error"],
-                                   )
-                               else:
-                                   logger.warning(
-                                       "Unexpected batch result structure",
-                                       key=key,
-                                       result_keys=list(result_obj.keys()),
-                                   )
-                       except Exception as e:
-                           logger.warning("Failed to parse batch result line", error=str(e), line=line[:100])
+                                # Check if response succeeded
+                                if "response" in result_obj:
+                                    # Extract text from nested response structure
+                                    # Structure: response -> candidates[0] -> content -> parts[0] -> text
+                                    try:
+                                        response_text = (
+                                            result_obj["response"]
+                                            .get("candidates", [{}])[0]
+                                            .get("content", {})
+                                            .get("parts", [{}])[0]
+                                            .get("text", "")
+                                        )
+                                        if response_text:
+                                            enrichment = FeedEnrichmentResponse.model_validate_json(response_text)
+                                            results[idx] = enrichment
+                                        else:
+                                            logger.warning(
+                                                "Empty response text in batch result",
+                                                key=key,
+                                            )
+                                    except (KeyError, IndexError, TypeError) as e:
+                                        logger.warning(
+                                            "Failed to extract text from batch response",
+                                            key=key,
+                                            error=str(e),
+                                        )
+                                elif "error" in result_obj:
+                                    logger.warning(
+                                        "Batch request failed",
+                                        key=key,
+                                        error=result_obj["error"],
+                                    )
+                                else:
+                                    logger.warning(
+                                        "Unexpected batch result structure",
+                                        key=key,
+                                        result_keys=list(result_obj.keys()),
+                                    )
+                        except Exception as e:
+                            logger.warning("Failed to parse batch result line", error=str(e), line=line[:100])
 
-               else:
-                   logger.error("No result file in batch response")
+                else:
+                    logger.error("No result file in batch response")
 
-               logger.info(
-                   "Batch enrichment completed",
-                   total_requests=len(feed_data_list),
-                   successful_results=sum(1 for r in results if r is not None),
-               )
+                logger.info(
+                    "Batch enrichment completed",
+                    total_requests=len(feed_data_list),
+                    successful_results=sum(1 for r in results if r is not None),
+                )
 
-               return results
+                return results
 
-           finally:
-               # Cleanup temporary file
-               if temp_file and os.path.exists(temp_file.name):
-                   try:
-                       os.unlink(temp_file.name)
-                       logger.debug("Cleaned up temporary batch file", file_path=temp_file.name)
-                   except Exception as e:
-                       logger.warning("Failed to cleanup temp file", error=str(e))
+            finally:
+                # Cleanup temporary file
+                if temp_file and os.path.exists(temp_file.name):
+                    try:
+                        os.unlink(temp_file.name)
+                        logger.debug("Cleaned up temporary batch file", file_path=temp_file.name)
+                    except Exception as e:
+                        logger.warning("Failed to cleanup temp file", error=str(e))
 
-               # Optionally delete uploaded file from Gemini (to save storage)
-               if uploaded_file:
-                   try:
-                       self.gemini_client.files.delete(name=uploaded_file.name)
-                       logger.debug("Deleted uploaded batch file", file_name=uploaded_file.name)
-                   except Exception as e:
-                       logger.warning("Failed to delete uploaded file", error=str(e))
+                # Optionally delete uploaded file from Gemini (to save storage)
+                if uploaded_file:
+                    try:
+                        self.gemini_client.files.delete(name=uploaded_file.name)
+                        logger.debug("Deleted uploaded batch file", file_name=uploaded_file.name)
+                    except Exception as e:
+                        logger.warning("Failed to delete uploaded file", error=str(e))
 
         except Exception as e:
             logger.error("Error in batch feed enrichment", error=str(e), exc_info=True)

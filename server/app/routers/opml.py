@@ -525,9 +525,7 @@ async def delete_import_progress(task_id: str) -> None:
             "description": "Subscription limit exceeded",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Importing this would exceed your feed subscription limit (25/100 left)"
-                    }
+                    "example": {"detail": "Importing this would exceed your feed subscription limit (25/100 left)"}
                 }
             },
         },
@@ -678,7 +676,10 @@ async def import_opml_file(
                 )
                 raise HTTPException(
                     status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                    detail=f"Importing this would exceed your feed subscription limit ({remaining_capacity}/{max_limit} left)",
+                    detail=(
+                        f"Importing this would exceed your feed subscription limit "
+                        f"({remaining_capacity}/{max_limit} left)"
+                    ),
                 )
 
         # Queue orchestration task

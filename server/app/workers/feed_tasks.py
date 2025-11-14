@@ -317,6 +317,9 @@ async def async_compact_unread_articles(db: AsyncSession) -> dict[str, int]:
 async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
     """Compact old articles - async implementation for testing.
 
+    IMPORTANT: This deletes article_contents (which cascade deletes feed_articles),
+    not feed_articles directly. Deleting feed_articles would leave orphaned content.
+
     Args:
         db: Database session
 
@@ -329,14 +332,14 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
         min_articles_per_feed=MIN_ARTICLES_PER_FEED,
     )
 
-    # Set statement timeout to 15 minutes for safety
-    await db.execute(text("SET statement_timeout = '60min'"))
+    # Set timeout first (must be separate statement for asyncpg)
+    await db.execute(text("SET LOCAL statement_timeout = '120min'"))
 
-    # Execute the deletion query using CTE for efficiency
+    # Execute the deletion query
     deletion_query = text("""
         WITH ranked_articles AS (
             SELECT
-                fa.id AS article_id,
+                ac.id AS content_id,
                 fa.feed_id,
                 ac.published_at AS published_or_created,
                 ROW_NUMBER() OVER (
@@ -346,18 +349,23 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
             FROM feed_articles fa
             JOIN article_contents ac ON fa.content_id = ac.id
         ),
-        eligible_articles AS (
-            SELECT ra.article_id
+        eligible_contents AS (
+            SELECT ra.content_id
             FROM ranked_articles ra
             LEFT JOIN user_article_states uas
-                ON uas.article_id = ra.article_id
+                ON uas.article_id = (
+                    SELECT fa2.id FROM feed_articles fa2 WHERE fa2.content_id = ra.content_id LIMIT 1
+                )
                 AND (uas.is_read_later = TRUE OR uas.is_favorite = TRUE)
+            LEFT JOIN clipped_articles ca
+                ON ca.content_id = ra.content_id
             WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)
               AND uas.id IS NULL       -- no saved states
+              AND ca.id IS NULL        -- not clipped
               AND ra.rn > :min_articles -- not in top N newest
         )
-        DELETE FROM feed_articles
-        WHERE id IN (SELECT article_id FROM eligible_articles)
+        DELETE FROM article_contents
+        WHERE id IN (SELECT content_id FROM eligible_contents)
     """)
 
     result = await db.execute(
@@ -372,12 +380,9 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
     # Commit the transaction
     await db.commit()
 
-    # Reset statement timeout to default
-    await db.execute(text("RESET statement_timeout"))
-
     logger.info(
         "Article compaction completed",
-        deleted_articles=deleted_count,
+        deleted_contents=deleted_count,
         retention_days=ARTICLE_RETENTION_DAYS,
         min_articles_per_feed=MIN_ARTICLES_PER_FEED,
     )

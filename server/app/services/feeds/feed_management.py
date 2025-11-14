@@ -555,9 +555,7 @@ class FeedManagementService:
                     continue
 
             if articles_data:
-                created_count = await create_articles_batch(
-                    db=self.db, articles_data=articles_data, user_id=self.user_id
-                )
+                created_count = await create_articles_batch(db=self.db, articles_data=articles_data)
                 logger.info(f"Created {created_count} new articles", feed_id=feed_db.id)
 
         # Update feed metadata with latest published_at timestamp

@@ -110,11 +110,13 @@ async def get_articles_by_user(
     )
 
 
-async def create_articles_batch(
-    db: AsyncSession, *, articles_data: list[ArticleCreate], user_id: UUID
-) -> list[FeedArticle]:
-    """Create multiple articles in batch."""
-    return await ArticleCrudOperations.create_articles_batch(db, articles_data=articles_data, user_id=user_id)
+async def create_articles_batch(db: AsyncSession, *, articles_data: list[ArticleCreate]) -> list[FeedArticle]:
+    """Create multiple articles in batch.
+
+    Note: This method no longer creates UserArticleState entries.
+    States are created lazily when users interact with articles.
+    """
+    return await ArticleCrudOperations.create_articles_batch(db, articles_data=articles_data)
 
 
 async def update_article(

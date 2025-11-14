@@ -285,9 +285,7 @@ class FeedCreationService:
 
         # Create articles in bulk
         if articles_to_create:
-            created_articles = await create_articles_batch(
-                db=self.db, articles_data=articles_to_create, user_id=self.user_id
-            )
+            created_articles = await create_articles_batch(db=self.db, articles_data=articles_to_create)
             logger.info(
                 f"Bulk created {len(created_articles)} new articles for feed",
                 feed_id=db_feed.id,

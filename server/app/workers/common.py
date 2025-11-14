@@ -94,7 +94,7 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             "Initialized persistent DB engine for Taskiq worker",
             environment=settings.ENVIRONMENT,
             is_supabase_cloud=settings.is_supabase_cloud,
-            is_production=is_production,
+            is_production=settings.is_production,
             **pool_config,
         )
 

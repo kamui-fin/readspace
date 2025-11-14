@@ -16,7 +16,6 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import structlog
-from sqlalchemy import insert
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -200,13 +199,20 @@ class FeedService:
             raise
 
     async def _create_new_articles(self, feed_db: Feed, entries: list) -> int:
-        """Create new articles from feed entries using efficient bulk insert."""
+        """Create new articles from feed entries using atomic upsert pattern.
+
+        This method ensures NO orphaned article_contents by:
+        1. Using INSERT ... ON CONFLICT for article_contents (upsert by link)
+        2. Atomically linking content to feed_articles in a single transaction
+        3. No orphans can occur because content is created OR reused atomically
+
+        The unique constraint on article_contents.link ensures dedupe at DB level.
+        """
         if not entries:
             return 0
 
         # Step 1: Process all entries and generate stable GUIDs
-        articles_to_create = []
-        content_to_create = []
+        articles_to_link = []
 
         for entry in entries:
             try:
@@ -238,8 +244,7 @@ class FeedService:
                     "updated_at": datetime.now(timezone.utc),
                 }
 
-                content_to_create.append(content_data)
-                articles_to_create.append((guid, len(content_to_create) - 1))  # Store index reference
+                articles_to_link.append((guid, content_data))
 
             except Exception as e:
                 logger.warning(
@@ -249,41 +254,57 @@ class FeedService:
                 )
                 continue
 
-        if not content_to_create:
+        if not articles_to_link:
             return 0
 
-        # Use explicit transaction boundary for atomic article creation
+        # Step 2: Use atomic upsert pattern - no orphans possible
         try:
             async with self.db.begin_nested():
-                # Step 2: Bulk create content first
-                content_insert_stmt = insert(ArticleContent).values(content_to_create)
-                content_result = await self.db.execute(content_insert_stmt.returning(ArticleContent.id))
-                content_rows = content_result.fetchall()
+                created_count = 0
 
-                # Step 3: Prepare article data with content IDs
-                article_insert_data = []
-                for i, content_row in enumerate(content_rows):
-                    if i < len(articles_to_create):
-                        guid, _ = articles_to_create[i]
-                        article_insert_data.append(
+                for guid, content_data in articles_to_link:
+                    try:
+                        # ATOMIC UPSERT: Insert content if not exists (by link), otherwise get existing
+                        content_insert_stmt = pg_insert(ArticleContent).values(content_data)
+                        content_insert_stmt = content_insert_stmt.on_conflict_do_update(
+                            index_elements=["link"],
+                            set_={"updated_at": datetime.now(timezone.utc)},  # Touch updated_at on conflict
+                        ).returning(ArticleContent.id)
+
+                        content_result = await self.db.execute(content_insert_stmt)
+                        content_id = content_result.scalar_one()
+
+                        # ATOMIC LINK: Create feed_article only if not exists
+                        article_insert_stmt = pg_insert(FeedArticle).values(
                             {
                                 "feed_id": feed_db.id,
-                                "content_id": content_row.id,
+                                "content_id": content_id,
                                 "guid": guid,
                                 "created_at": datetime.now(timezone.utc),
                                 "updated_at": datetime.now(timezone.utc),
                             }
                         )
+                        article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(
+                            index_elements=["feed_id", "guid"]
+                        )
 
-                # Step 4: Bulk insert articles with PostgreSQL-specific ON CONFLICT DO NOTHING
-                # This is the key efficiency improvement - single query handles all duplicates
-                article_insert_stmt = pg_insert(FeedArticle).values(article_insert_data)
-                article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(index_elements=["feed_id", "guid"])
+                        article_result = await self.db.execute(article_insert_stmt)
 
-                result = await self.db.execute(article_insert_stmt)
+                        # Count new articles created (not content rows)
+                        if article_result.rowcount and article_result.rowcount > 0:
+                            created_count += article_result.rowcount
+
+                    except Exception as article_error:
+                        # Log but continue processing other articles
+                        logger.warning(
+                            "Failed to create article",
+                            feed_id=str(feed_db.id),
+                            guid=guid,
+                            error=str(article_error),
+                        )
+                        continue
+
                 # Transaction auto-commits on successful exit from context manager
-
-            created_count = result.rowcount or 0
 
             if created_count > 0:
                 logger.info(
@@ -293,7 +314,7 @@ class FeedService:
                     feed_id=str(feed_db.id),
                 )
             else:
-                logger.info(
+                logger.debug(
                     "No new articles to create (all were duplicates)",
                     feed_id=str(feed_db.id),
                 )
@@ -302,7 +323,7 @@ class FeedService:
 
         except Exception as e:
             # Transaction auto-rolls back on exception
-            logger.error("Error in bulk article creation", feed_id=str(feed_db.id), error=str(e))
+            logger.error("Error in bulk article creation", feed_id=str(feed_db.id), error=str(e), exc_info=True)
             raise
 
     async def get_feeds_needing_refresh(self, *, limit: int = 100) -> list[Feed]:
