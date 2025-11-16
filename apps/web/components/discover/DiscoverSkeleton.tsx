@@ -1,4 +1,5 @@
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
+import { Skeleton } from "@/components/ui/skeleton"
 
 interface DiscoverSkeletonProps {
     title?: string
@@ -16,16 +17,16 @@ export function DiscoverSkeleton({
                     {/* Header */}
                     <div className="flex flex-col items-start md:items-center mb-8 md:mb-12">
                         <div className="mb-4 hidden md:block">
-                            <div className="w-32 h-32 bg-muted rounded-full animate-pulse" />
+                            <Skeleton className="w-32 h-32 rounded-full" />
                         </div>
 
                         {/* Mobile: Sidebar Toggle, Title and Language Selector */}
                         <div className="flex md:hidden items-center w-full max-w-2xl mb-6 gap-3">
-                            <div className="w-8 h-8 bg-muted rounded animate-pulse" />
+                            <Skeleton className="w-8 h-8 rounded" />
                             <h1 className="text-3xl font-semibold text-black dark:text-foreground min-h-[2.5rem] flex items-center truncate break-words flex-1">
                                 {title || "Loading..."}
                             </h1>
-                            <div className="w-16 h-8 bg-muted rounded animate-pulse" />
+                            <Skeleton className="w-16 h-8 rounded" />
                         </div>
 
                         {/* Desktop: Title centered */}
@@ -36,10 +37,10 @@ export function DiscoverSkeleton({
                         {/* Search Section */}
                         <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3 w-full max-w-2xl min-w-0">
                             <div className="relative flex-1 min-w-0">
-                                <div className="h-12 md:h-14 bg-muted rounded animate-pulse" />
+                                <Skeleton className="h-12 md:h-14 rounded" />
                             </div>
                             <div className="hidden md:block">
-                                <div className="h-14 w-24 bg-muted rounded animate-pulse" />
+                                <Skeleton className="h-14 w-24 rounded" />
                             </div>
                         </div>
                     </div>
@@ -51,7 +52,7 @@ export function DiscoverSkeleton({
                             {Array.from({ length: 12 }).map((_, i) => (
                                 <div
                                     key={i}
-                                    className="h-14 w-full md:h-10 md:w-32 bg-muted rounded-lg animate-pulse"
+                                    className="h-14 w-full md:h-10 md:w-32 bg-muted rounded-lg animate-pulse transition-colors duration-200"
                                 />
                             ))}
                         </div>

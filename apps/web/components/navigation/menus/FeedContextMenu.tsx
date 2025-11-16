@@ -20,11 +20,10 @@ import {
     cn,
     useDeleteFeed,
     useDeleteFolder,
-    useRefreshFeed,
     useUpdateFeed,
     useUpdateFolder,
 } from "@readspace/shared"
-import { MoreHorizontal, Pencil, RefreshCw, Trash2 } from "lucide-react"
+import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import { useState } from "react"
 import { toast } from "react-hot-toast"
@@ -50,6 +49,7 @@ export function FeedContextMenu({
     isFolder,
     itemId,
     itemTitle,
+    isFavorite,
 }: FeedContextMenuProps) {
     // Modal states
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
@@ -63,7 +63,6 @@ export function FeedContextMenu({
     const updateFolder = useUpdateFolder()
     const deleteFeed = useDeleteFeed()
     const deleteFolder = useDeleteFolder()
-    const refreshFeed = useRefreshFeed()
     const router = useRouter()
     const pathname = usePathname()
 
@@ -126,24 +125,18 @@ export function FeedContextMenu({
     }
 
     /**
-     * Handle force refresh feed
+     * Handle toggle favorite status
      */
-    const handleRefresh = (e: React.MouseEvent) => {
+    const handleToggleFavorite = (e: React.MouseEvent) => {
         e.preventDefault()
         e.stopPropagation()
         setIsDropdownOpen(false)
-        if (itemId) {
-            refreshFeed.mutate(
-                { feedId: itemId, forceRefetch: true },
-                {
-                    onSuccess: () => {
-                        toast.success("Feed refresh initiated!")
-                    },
-                    onError: () => {
-                        toast.error("Failed to refresh feed")
-                    },
-                }
-            )
+        if (itemId && !isFolder) {
+            updateFeed.mutate({
+                feedId: itemId,
+                data: { is_favorite: !isFavorite },
+                silent: true,
+            })
         }
     }
 
@@ -209,16 +202,17 @@ export function FeedContextMenu({
                         <Pencil className="mr-2 h-4 w-4" />
                         <span>Rename</span>
                     </DropdownMenuItem>
-                    {/* Only show refresh option for feeds, not folders */}
+                    {/* Only show favorite option for feeds, not folders */}
                     {!isFolder && (
-                        <DropdownMenuItem
-                            onClick={handleRefresh}
-                            disabled={refreshFeed.status === "pending"}
-                        >
-                            <RefreshCw
-                                className={`mr-2 h-4 w-4 ${refreshFeed.status === "pending" ? "animate-spin" : ""}`}
+                        <DropdownMenuItem onClick={handleToggleFavorite}>
+                            <Star
+                                className={`mr-2 h-4 w-4 ${isFavorite ? "fill-yellow-500 text-yellow-500" : ""}`}
                             />
-                            <span>Force check new articles</span>
+                            <span>
+                                {isFavorite
+                                    ? "Remove from favorites"
+                                    : "Add to favorites"}
+                            </span>
                         </DropdownMenuItem>
                     )}
                     <DropdownMenuItem

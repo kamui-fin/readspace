@@ -45,9 +45,11 @@ async def get_initial_cutoff_timestamp(
 ) -> datetime | None:
     """Get the cutoff timestamp for initial subscription to limit unread articles.
 
-    Returns the published_at timestamp of the Nth most recent article in the feed,
-    where N is the initial_unread_count. Articles newer than this timestamp will
-    be shown as unread.
+    Returns the published_at timestamp of the (N+1)th most recent article.
+    Articles with published_at > cutoff will be shown as unread.
+
+    This approach handles feeds where multiple articles share timestamps by using
+    strict greater-than (>) comparison and setting cutoff to the (N+1)th article.
 
     Args:
         db: Database session
@@ -55,19 +57,24 @@ async def get_initial_cutoff_timestamp(
         initial_unread_count: Number of recent articles to show as unread (default: 10)
 
     Returns:
-        Datetime of the Nth most recent article's published_at, or None if feed has < N articles
+        Datetime of the (N+1)th most recent article's published_at, or None if feed has <= N articles
     """
     # Query for the (N+1)th most recent article to get its timestamp
-    # This ensures N articles are shown as unread (published_at > cutoff)
+    # Using > for comparison, so articles 1-N will have published_at > cutoff
     # Example: For initial_unread_count=10, OFFSET 10 gets the 11th item
     # Articles 1-10 will have published_at > cutoff (11th article's timestamp)
+    #
+    # Note: For feeds where many articles share the same timestamp,
+    # this may result in fewer than N unread articles if the Nth and (N+1)th
+    # articles have the same timestamp. This is acceptable to avoid showing
+    # too many unread articles (e.g., 16 instead of 10).
     result = await db.execute(
         select(ArticleContent.published_at)
         .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
         .where(FeedArticle.feed_id == feed_id)
         .where(ArticleContent.published_at.is_not(None))
         .order_by(ArticleContent.published_at.desc())
-        .offset(initial_unread_count)  # Changed from initial_unread_count - 1
+        .offset(initial_unread_count)  # Get the (N+1)th article (0-indexed)
         .limit(1)
     )
     cutoff_timestamp = result.scalar_one_or_none()

@@ -6,8 +6,6 @@ from uuid import UUID
 
 from pydantic import AnyUrl, BaseModel, ConfigDict, Field, field_validator
 
-from app.models.enums import FeedCategory
-
 if TYPE_CHECKING:
     from app.schemas.articles import ArticleResponse
 
@@ -16,7 +14,7 @@ class FeedBase(BaseModel):
     """Base feed schema."""
 
     url: AnyUrl
-    title: str | None = Field(None, max_length=500)
+    title: str = Field(..., max_length=500)
     description: str | None = None
     link: AnyUrl | None = None
     language: str | None = Field(None, max_length=50)
@@ -26,27 +24,36 @@ class FeedBase(BaseModel):
     skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
 
 
-class FeedCreate(FeedBase):
-    """Schema for creating a feed subscription."""
+class FeedCreate(BaseModel):
+    """Schema for creating a feed subscription.
 
+    Note: Title is optional here because it will be automatically parsed from the RSS feed.
+    The feed parser always provides a title (with fallback to domain name).
+    """
+
+    url: AnyUrl
     folder_id: UUID
+    title: str | None = Field(None, max_length=500)
 
 
 class FeedUpdate(BaseModel):
-    """Schema for updating feed information - all fields optional."""
+    """Schema for updating user-specific feed subscription settings.
 
-    url: AnyUrl | None = None
+    Only allows updating subscription-specific fields:
+    - title: Custom title override (stored as custom_title in subscription)
+    - folder_id: Move feed to a different folder
+    - is_favorite: Toggle favorite status
+
+    Note: Global feed properties (url, description, etc.) can only be updated
+    via the admin endpoint.
+    """
+
+    # Custom title override for this user's subscription
     title: str | None = Field(None, max_length=500)
-    description: str | None = None
-    link: AnyUrl | None = None
-    language: str | None = Field(None, max_length=50)
-    image_url: str | None = None
+    # Folder assignment
     folder_id: UUID | None = None
-    top_level_category: FeedCategory | None = None
-    popularity_score: float | None = Field(None, ge=0.0, le=100.0)
-    ttl: int | None = Field(None, gt=0)
-    skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
-    skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
+    # Favorite status
+    is_favorite: bool | None = None
 
 
 class FeedResponse(FeedBase):
@@ -84,7 +91,7 @@ class FeedBasicInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
-    title: str | None
+    title: str
     url: AnyUrl
     image_url: str | None
 

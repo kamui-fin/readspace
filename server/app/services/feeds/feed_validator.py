@@ -6,6 +6,7 @@ import structlog
 
 from app.core.custom_exceptions import FeedValidationError
 from app.utils.language_normalizer import normalize_language_code
+from app.utils.url_normalizer import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
 
@@ -29,9 +30,8 @@ class FeedValidator:
 
         feed_info = parsed_feed.feed
 
-        # Check for required feed metadata
-        if not feed_info.get("title"):
-            raise FeedValidationError("Invalid feed format: Feed title is missing")
+        # Note: Title is no longer required here since we have domain fallback logic
+        # The title will be automatically generated from the domain if missing
 
         # Check for entries
         entries = parsed_feed.get("entries", [])
@@ -45,7 +45,7 @@ class FeedValidator:
 
         logger.info(
             "Feed structure validation passed",
-            title=feed_info.get("title"),
+            title=feed_info.get("title", "No title (will use domain fallback)"),
             entry_count=len(entries),
         )
 
@@ -129,19 +129,37 @@ class FeedValidator:
         if any(char in url for char in invalid_chars):
             raise FeedValidationError("Feed URL contains invalid characters")
 
-    def extract_feed_metadata(self, parsed_feed: Any) -> dict:
+    def extract_feed_metadata(self, parsed_feed: Any, feed_url: str | None = None) -> dict:
         """Extract and validate feed metadata.
 
         Args:
             parsed_feed: feedparser.FeedParserDict object
+            feed_url: Optional feed URL to use for domain fallback when title is missing
 
         Returns:
             dict: Cleaned feed metadata
         """
         feed_info = parsed_feed.feed
 
-        # Extract basic metadata with fallbacks
-        title = feed_info.get("title", "Untitled Feed").strip()[:500]  # Limit length
+        # Extract title with domain fallback if missing
+        title = feed_info.get("title", "").strip()
+        if not title and feed_url:
+            # Try to use the website link's domain first, fallback to feed URL domain
+            link = feed_info.get("link")
+            fallback_url = link if link else feed_url
+            title = extract_domain_from_url(fallback_url)
+            logger.info(
+                "Feed has no title, using domain fallback in validator",
+                feed_url=feed_url,
+                fallback_title=title,
+                fallback_source="link" if link else "feed_url",
+            )
+        elif not title:
+            # No feed_url provided, use generic fallback
+            title = "Untitled Feed"
+
+        title = title[:500]  # Limit length
+
         description = feed_info.get("description", "").strip()[:1000]  # Limit length
         link = feed_info.get("link", "").strip()[:2000]  # Limit length
 

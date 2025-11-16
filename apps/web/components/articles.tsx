@@ -717,9 +717,10 @@ export function ArticlesView({
         isFetching, // Also check if data is being fetched
     ])
 
-    // Show skeleton during initial loading, preview refresh, or when loading after preview
+    // Show skeleton during initial loading or preview refresh only
+    // Don't show skeleton when refetching with existing data (prevents flash on invalidation)
     const isInitialLoading =
-        ((isArticlesLoading || isFetching) && allArticles.length === 0) ||
+        (isArticlesLoading && allArticles.length === 0) ||
         isPreviewRefreshing
 
     if (isInitialLoading) {

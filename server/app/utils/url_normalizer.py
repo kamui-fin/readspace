@@ -6,6 +6,7 @@ import httpx
 import structlog
 
 logger = structlog.get_logger(__name__)
+url_logger = structlog.get_logger(__name__)
 
 
 def normalize_feed_url(url: str) -> str:
@@ -319,3 +320,63 @@ def _basic_normalize_url(url: str) -> str:
     normalized = urlunparse((scheme, netloc, path, parsed.params, query, fragment))
 
     return normalized
+
+
+def extract_domain_from_url(url: str) -> str:
+    """Extract a clean domain name from a URL for use as a fallback title.
+
+    This function extracts just the domain without protocol or www prefix,
+    suitable for display as a feed title when the RSS feed has no title.
+
+    Examples:
+        https://www.example.com/feed -> example.com
+        http://blog.example.co.uk/rss -> blog.example.co.uk
+        https://example.com/path/to/feed.xml -> example.com
+
+    Args:
+        url: The URL to extract domain from
+
+    Returns:
+        Clean domain string without protocol or path
+    """
+    if not url or not isinstance(url, str):
+        return "Unknown Feed"
+
+    url = url.strip()
+
+    try:
+        parsed = urlparse(url)
+        domain = parsed.netloc.lower()
+
+        # Remove port if present
+        if ":" in domain:
+            domain = domain.split(":")[0]
+
+        # Remove www. prefix if present
+        if domain.startswith("www."):
+            domain = domain[4:]
+
+        # If we still have a valid domain, return it
+        if domain:
+            return domain
+
+        # If netloc is empty, URL might not have a scheme
+        # Try to extract from the raw URL
+        if "/" in url:
+            # Remove protocol if present
+            url_without_protocol = url.split("://", 1)[-1]
+            # Get first part (domain)
+            domain = url_without_protocol.split("/")[0]
+            # Remove port
+            if ":" in domain:
+                domain = domain.split(":")[0]
+            # Remove www
+            if domain.startswith("www."):
+                domain = domain[4:]
+            if domain:
+                return domain.lower()
+
+    except Exception as e:
+        url_logger.debug("Failed to extract domain from URL", url=url, error=str(e))
+
+    return "Unknown Feed"

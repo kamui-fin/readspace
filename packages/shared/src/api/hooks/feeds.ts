@@ -1432,6 +1432,8 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       {
         previousArticle: Article | undefined;
         previousInfiniteQueries: Map<string, any>;
+        previousUnreadCounts: UnreadCounts | undefined;
+        previousFeeds: Feed[] | undefined;
         articleId: string;
         data: {
           is_read?: boolean;
@@ -1474,6 +1476,12 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"],
         });
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        await queryClient.cancelQueries({
+          queryKey: [RSS_QUERY_KEYS.FEEDS],
+        });
 
         // Snapshot the previous article data
         const previousArticle = queryClient.getQueryData<Article>([
@@ -1490,6 +1498,14 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         for (const [queryKey, queryData] of queries) {
           previousInfiniteQueries.set(JSON.stringify(queryKey), queryData);
         }
+
+        // Snapshot unread counts and feeds for rollback
+        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
+          RSS_QUERY_KEYS.UNREAD_COUNTS,
+        ]);
+        const previousFeeds = queryClient.getQueryData<Feed[]>([
+          RSS_QUERY_KEYS.FEEDS,
+        ]);
 
         // Optimistically update the specific article cache
         queryClient.setQueryData(
@@ -1517,7 +1533,74 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        return { previousArticle, previousInfiniteQueries, articleId, data };
+        // Optimistically update unread counts and read later counts
+        if (previousArticle) {
+          // Check if is_read changed
+          const isReadChanged = data.is_read !== undefined && previousArticle.is_read !== data.is_read;
+          const readDelta = isReadChanged ? (data.is_read ? -1 : 1) : 0;
+          
+          // Check if is_read_later changed
+          const isReadLaterChanged = data.is_read_later !== undefined && previousArticle.is_read_later !== data.is_read_later;
+          const readLaterDelta = isReadLaterChanged ? (data.is_read_later ? 1 : -1) : 0;
+          
+          // Only update if something changed
+          if (isReadChanged || isReadLaterChanged) {
+            // Update ALL unread count queries (with different folderId parameters)
+            queryClient.setQueriesData(
+              { queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] },
+              (old: UnreadCounts | undefined) => {
+                if (!old) return old;
+                
+                const updated = { ...old };
+                
+                // Update total unread count if is_read changed
+                if (isReadChanged && updated.total_unread !== undefined) {
+                  updated.total_unread = Math.max(0, updated.total_unread + readDelta);
+                }
+                
+                // Update folder unread count if is_read changed and article has a folder
+                if (isReadChanged && updated.unread_by_folder && previousArticle.folder_id) {
+                  const currentFolderCount = updated.unread_by_folder[previousArticle.folder_id] || 0;
+                  updated.unread_by_folder = {
+                    ...updated.unread_by_folder,
+                    [previousArticle.folder_id]: Math.max(0, currentFolderCount + readDelta),
+                  };
+                }
+                
+                // Update read_later_count if is_read_later changed
+                if (isReadLaterChanged && updated.read_later_count !== undefined) {
+                  updated.read_later_count = Math.max(0, updated.read_later_count + readLaterDelta);
+                }
+                
+                return updated;
+              },
+            );
+            
+            // Update feed unread count if is_read changed
+            if (isReadChanged && previousArticle.feed_id) {
+              queryClient.setQueryData(
+                [RSS_QUERY_KEYS.FEEDS],
+                (old: Feed[] | undefined) => {
+                  if (!old) return old;
+                  return old.map((feed: Feed) =>
+                    feed.id === previousArticle.feed_id
+                      ? { ...feed, unread_count: Math.max(0, (feed.unread_count || 0) + readDelta) }
+                      : feed,
+                  );
+                },
+              );
+            }
+          }
+        }
+
+        return { 
+          previousArticle, 
+          previousInfiniteQueries, 
+          previousUnreadCounts,
+          previousFeeds,
+          articleId, 
+          data 
+        };
       },
       onError: (_, __, context) => {
         // Rollback on error
@@ -1535,12 +1618,30 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           }
         }
 
+        // Rollback unread counts
+        if (context?.previousUnreadCounts) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.UNREAD_COUNTS],
+            context.previousUnreadCounts,
+          );
+        }
+
+        // Rollback feeds
+        if (context?.previousFeeds) {
+          queryClient.setQueryData(
+            [RSS_QUERY_KEYS.FEEDS],
+            context.previousFeeds,
+          );
+        }
+
         config.showError?.("Failed to update article");
       },
       onSuccess: (_, { articleId, data }) => {
-        // Only invalidate the specific article to ensure it's refreshed with server data
+        // Silently invalidate without refetching active queries to avoid skeleton flash
+        // Only mark as stale so they refetch on next mount/focus
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
+          refetchType: 'none', // Don't refetch, just mark as stale
         });
         
         // Invalidate all check queries (for extension popup)
@@ -1549,35 +1650,41 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             query.queryKey[0] === RSS_QUERY_KEYS.ARTICLE &&
             typeof query.queryKey[1] === 'string' &&
             query.queryKey[1].startsWith('check-'),
+          refetchType: 'none',
         });
         
-        // Invalidate unread counts to update badges and counts (invalidate all variants with different folderIds)
+        // Invalidate unread counts without refetching (optimistic update already applied)
         queryClient.invalidateQueries({
           predicate: (query) =>
             query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
+          refetchType: 'none',
         });
-        // Invalidate all article lists to ensure consistency across views
-        // Use refetchType: undefined (default) to invalidate both active and inactive queries
+        
+        // Invalidate article lists without refetching (optimistic update already applied)
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
+          refetchType: 'none',
         });
 
         // If read_later status changed, explicitly reset the read-later query cache
         // This ensures disabled queries are marked stale and will refetch when enabled
         if (data.is_read_later !== undefined) {
-          queryClient.resetQueries({
+          queryClient.invalidateQueries({
             queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
-            exact: false,
+            refetchType: 'none',
           });
         }
 
-        // Invalidate feeds to update individual feed unread counts
+        // Invalidate feeds without refetching (optimistic update already applied)
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
+          refetchType: 'none',
         });
-        // Invalidate sidebar data to ensure navigation counts update
+        
+        // Invalidate sidebar data without refetching
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
+          refetchType: 'none',
         });
       },
       ...options,

@@ -4,7 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { SidebarLeftMenuButton, SidebarMenuItem } from "@/components/ui/sidebar"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
-import { Inbox } from "lucide-react"
+import { Inbox, Star } from "lucide-react"
 
 interface RegularFeedItemData {
     /** Unique identifier for the feed */
@@ -60,6 +60,10 @@ export function RegularFeedItem({ feed }: RegularFeedItemProps) {
                                 <div className="w-4 mr-1 shrink-0" />
                             )}
                             <span className="ml-1 truncate">{feed.title}</span>
+                            {/* Star indicator for favorited feeds */}
+                            {feed.isFavorite && !isAll && (
+                                <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
+                            )}
                         </div>
                     </Link>
                 </SidebarLeftMenuButton>

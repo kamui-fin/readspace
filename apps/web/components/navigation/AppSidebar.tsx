@@ -81,7 +81,8 @@ export function AppSidebar({
             setIsLoadingUser(false)
         }
         getUserFromSession()
-    }, [supabase])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
 
     const handleSignOut = async () => {
         setUser(null)

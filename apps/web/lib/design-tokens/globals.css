@@ -41,7 +41,7 @@
         --background: 120 100% 99.41%;
         --foreground: 200 4.76% 24.71%;
         --muted: 132 33.3% 97.1%;
-        --muted-foreground: 97, 6%, 57%;
+        --muted-foreground: 97 6% 57%;
         --popover: 132 33.33% 97.06%;
         --popover-foreground: 234 10% 27%;
         --card: 132 33.33% 97.06%;
@@ -80,7 +80,7 @@
         --background: 0 0 7%;
         --foreground: 0 0% 83%;
         --muted: 240 2.47% 13.51%;
-        --muted-foreground: 132 33.33% 97.06%;
+        --muted-foreground: 240 2% 60%;
         --popover: 0 0% 10.59%;
         --popover-foreground: 120 100% 99.41%;
         --card: 200 0% 10.77%;

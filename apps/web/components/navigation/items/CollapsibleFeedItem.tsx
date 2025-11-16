@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { AnimatePresence, motion } from "framer-motion"
+import { motion } from "framer-motion"
 import {
     Collapsible,
     CollapsibleContent,
@@ -157,33 +157,26 @@ export function CollapsibleFeedItem({
                 </div>
 
                 {/* Collapsible content with sub-feeds */}
-                <CollapsibleContent forceMount className="overflow-hidden">
-                    <AnimatePresence>
-                        {isOpen &&
-                            Array.isArray(feed.items) &&
-                            feed.items.length > 0 && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{
-                                        duration: 0.2,
-                                        ease: "easeInOut",
-                                    }}
-                                >
-                                    <SidebarMenuSub>
-                                        {feed.items.map((item, index) => (
-                                            <SubFeedItem
-                                                key={item.id}
-                                                item={item}
-                                                index={index}
-                                            />
-                                        ))}
-                                    </SidebarMenuSub>
-                                </motion.div>
-                            )}
-                    </AnimatePresence>
-                </CollapsibleContent>
+                <div
+                    className="overflow-hidden"
+                    style={{
+                        maxHeight: isOpen ? "none" : "0",
+                        visibility: isOpen ? "visible" : "hidden",
+                    }}
+                >
+                    {Array.isArray(feed.items) && feed.items.length > 0 && (
+                        <SidebarMenuSub>
+                            {feed.items.map((item) => (
+                                <SubFeedItem
+                                    key={item.id}
+                                    item={item}
+                                    index={0}
+                                    disableAnimation={true}
+                                />
+                            ))}
+                        </SidebarMenuSub>
+                    )}
+                </div>
             </SidebarMenuItem>
         </Collapsible>
     )

@@ -4,25 +4,24 @@ import { Button } from "@/components/ui/button"
 import {
     SidebarGroup,
     SidebarGroupLabel,
-    SidebarLeftMenuButton,
     SidebarMenu,
-    SidebarMenuItem,
-    useSidebarLeft,
+    useSidebarLeft
 } from "@/components/ui/sidebar"
-import { useFeeds, useFolders, useUnreadCounts } from "@readspace/shared"
 import { useModalStore } from "@/lib/stores/modal-store"
+import { useFeeds, useFolders, useUnreadCounts } from "@readspace/shared"
 import {
     BookmarkIcon,
-    BookOpen,
     Compass,
     Diamond,
     FolderPlus,
-    Settings2,
+    Search,
+    Settings2
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import * as React from "react"
 import { useState } from "react"
+import { FeedSearchCommand } from "./FeedSearchCommand"
 import {
     CollapsibleFeedItem,
     type CollapsibleFeedItemData,
@@ -35,6 +34,10 @@ import {
     RegularFeedItem,
     type RegularFeedItemData,
 } from "./items/RegularFeedItem"
+import {
+    SubFeedItem,
+    type SubFeedItemData,
+} from "./items/SubFeedItem"
 import { FeedModal } from "./modals/FeedModal"
 import { FolderModal } from "./modals/FolderModal"
 import { SidebarFeedsSkeleton } from "./SidebarSkeleton"
@@ -88,6 +91,20 @@ export function FeedsNavigation({
         null
     )
     const [feedError, setFeedError] = useState<string | null>(null)
+    const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+    // Keyboard shortcut for search (Cmd+K or Ctrl+K)
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+                e.preventDefault()
+                setIsSearchOpen(true)
+            }
+        }
+
+        document.addEventListener("keydown", handleKeyDown)
+        return () => document.removeEventListener("keydown", handleKeyDown)
+    }, [])
 
     // Memoized type-safe data transformations
     const typedFolders = React.useMemo(
@@ -138,6 +155,31 @@ export function FeedsNavigation({
 
         return result
     }, [typedFolders, typedFeeds])
+
+    // Extract favorited feeds for separate rendering
+    const favoriteFeedItems: SubFeedItemData[] = React.useMemo(() => {
+        const favorites: SubFeedItemData[] = []
+
+        // Get all favorited feeds
+        const favoritedFeeds = typedFeeds.filter((feed) => feed.is_favorite)
+
+        // Transform favorites into SubFeedItemData
+        favoritedFeeds.forEach((feed) => {
+            favorites.push({
+                id: feed.id,
+                title: feed.title,
+                url: `/feeds/${feed.id}/articles`,
+                count: feed.unread_count ?? null,
+                image: feed.image_url || undefined,
+                isActive: pathname === `/feeds/${feed.id}/articles`,
+                // Don't show star icon in pinned section (it's redundant)
+                isFavorite: false,
+            })
+        })
+
+        // Sort favorites by title
+        return favorites.sort((a, b) => a.title.localeCompare(b.title))
+    }, [typedFeeds, pathname])
 
     // Transform data for rendering
     const feedItems: FeedItem[] = React.useMemo(() => {
@@ -239,10 +281,39 @@ export function FeedsNavigation({
 
     return (
         <SidebarGroup className="mt-2">
+            {/* Favorites section */}
+            {!isSidebarLoading && favoriteFeedItems.length > 0 && (
+                <div className="mb-6">
+                    <SidebarGroupLabel>
+                        Pinned
+                    </SidebarGroupLabel>
+                    <SidebarMenu>
+                        {favoriteFeedItems.map((feed, index) => (
+                            <SubFeedItem
+                                key={feed.id}
+                                item={feed}
+                                index={index}
+                                disableAnimation={true}
+                            />
+                        ))}
+                    </SidebarMenu>
+                </div>
+            )}
+
             {/* Header with actions */}
             <div className="flex items-center justify-between pr-2">
                 <SidebarGroupLabel>Feeds</SidebarGroupLabel>
                 <div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 w-6 p-0 transition-all duration-150 hover:bg-[hsl(var(--nav-hover))] rounded-full"
+                        onClick={() => setIsSearchOpen(true)}
+                        title="Search feeds (Cmd/Ctrl + K)"
+                    >
+                        <Search className="h-4 w-4 transition-colors duration-150" />
+                        <span className="sr-only">Search</span>
+                    </Button>
                     <Link href="/manage-feeds">
                         <Button
                             variant="ghost"
@@ -313,6 +384,14 @@ export function FeedsNavigation({
                 }))}
                 error={feedError}
                 onClearError={handleClearFeedError}
+            />
+
+            {/* Search command palette */}
+            <FeedSearchCommand
+                isOpen={isSearchOpen}
+                onClose={() => setIsSearchOpen(false)}
+                isMobile={isMobile}
+                onCloseSidebar={toggleSidebar}
             />
         </SidebarGroup>
     )

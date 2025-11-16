@@ -520,7 +520,7 @@ class FeedCreationService:
     def _extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> Any:
         """Extract feed metadata using FeedValidator service."""
         # Use FeedValidator to extract and clean metadata
-        metadata = self.feed_validator.extract_feed_metadata(parsed_feed)
+        metadata = self.feed_validator.extract_feed_metadata(parsed_feed, feed_url)
 
         # Extract additional fields specific to this implementation
         feed_info = parsed_feed.get("feed", {})

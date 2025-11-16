@@ -3,9 +3,21 @@ import { createClient as createBrowserClient } from "@/lib/supabase/client"
 import { createClient as createServerClient } from "@/lib/supabase/server"
 import { ApiClient, type AuthTokenProvider } from "@readspace/shared"
 
+// Token cache to prevent excessive auth requests
+let cachedToken: string | null = null
+let tokenExpiresAt = 0
+const TOKEN_CACHE_TTL = 50 * 1000 // 50 seconds (tokens expire in 60s, fetch early)
+
 const authTokenProvider: AuthTokenProvider = async (): Promise<
     string | null
 > => {
+    const now = Date.now()
+
+    // Return cached token if still valid
+    if (cachedToken && now < tokenExpiresAt) {
+        return cachedToken
+    }
+
     const isBrowser = typeof window !== "undefined"
 
     if (isBrowser) {
@@ -14,7 +26,12 @@ const authTokenProvider: AuthTokenProvider = async (): Promise<
             const {
                 data: { session },
             } = await supabase.auth.getSession()
-            return session?.access_token || null
+
+            // Update cache
+            cachedToken = session?.access_token || null
+            tokenExpiresAt = now + TOKEN_CACHE_TTL
+
+            return cachedToken
         } catch (error) {
             console.warn("Failed to get browser session:", error)
             return null
@@ -26,7 +43,12 @@ const authTokenProvider: AuthTokenProvider = async (): Promise<
         const {
             data: { session },
         } = await supabase.auth.getSession()
-        return session?.access_token || null
+
+        // Update cache
+        cachedToken = session?.access_token || null
+        tokenExpiresAt = now + TOKEN_CACHE_TTL
+
+        return cachedToken
     } catch (error) {
         console.debug(
             "Server auth not available (normal during build/SSR):",

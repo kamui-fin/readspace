@@ -22,7 +22,7 @@ class Feed(Base):
 
     id: Mapped[UUID] = mapped_column(SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
     url: Mapped[str] = mapped_column(String(2048), nullable=False, unique=True)
-    title: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    title: Mapped[str] = mapped_column(String(500), nullable=False)
     # Reduced from TEXT to String(2000) - most feed descriptions are < 1000 chars
     # This improves query performance and reduces table bloat
     description: Mapped[str | None] = mapped_column(String(2000), nullable=True)

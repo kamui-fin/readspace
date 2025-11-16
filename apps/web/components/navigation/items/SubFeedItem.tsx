@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { memo, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from "framer-motion"
@@ -9,6 +9,7 @@ import {
     SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
 import { FeedDropdownMenu } from "../menus/FeedContextMenu"
+import { Star } from "lucide-react"
 
 interface SubFeedItemData {
     /** Unique identifier for the feed */
@@ -32,13 +33,19 @@ interface SubFeedItemProps {
     item: SubFeedItemData
     /** Animation delay index for staggered animations */
     index: number
+    /** Disable animation for large lists */
+    disableAnimation?: boolean
 }
 
 /**
  * Sub-feed item component for displaying individual feeds within folders.
  * Supports image fallbacks and animated mounting.
  */
-export function SubFeedItem({ item, index }: SubFeedItemProps) {
+const SubFeedItemComponent = ({
+    item,
+    index,
+    disableAnimation = false,
+}: SubFeedItemProps) => {
     const [imageError, setImageError] = useState(false)
 
     /**
@@ -48,13 +55,7 @@ export function SubFeedItem({ item, index }: SubFeedItemProps) {
         setImageError(true)
     }
 
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.15, delay: index * 0.03 }}
-        >
+    const content = (
             <SidebarMenuSubItem>
                 <div className="flex items-center w-full group/item">
                     <SidebarLeftMenuSubButton
@@ -82,6 +83,10 @@ export function SubFeedItem({ item, index }: SubFeedItemProps) {
                                     <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
                                 )}
                                 <span className="truncate">{item.title}</span>
+                                {/* Star indicator for favorited feeds */}
+                                {item.isFavorite && (
+                                    <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
+                                )}
                             </div>
                         </Link>
                     </SidebarLeftMenuSubButton>
@@ -99,8 +104,29 @@ export function SubFeedItem({ item, index }: SubFeedItemProps) {
                     </div>
                 </div>
             </SidebarMenuSubItem>
+    )
+
+    // Skip animation for large lists (performance optimization)
+    if (disableAnimation) {
+        return content
+    }
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{
+                duration: 0.15,
+                delay: Math.min(index * 0.03, 0.3),
+            }}
+        >
+            {content}
         </motion.div>
     )
 }
+
+// Memoize to prevent re-renders when parent isOpen state changes
+export const SubFeedItem = memo(SubFeedItemComponent)
 
 export type { SubFeedItemData }

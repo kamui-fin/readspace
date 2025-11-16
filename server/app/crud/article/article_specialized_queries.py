@@ -231,72 +231,96 @@ class ArticleSpecializedQueries:
     @staticmethod
     async def get_all_unread_counts(db: AsyncSession, *, user_id: UUID) -> dict[str, int | dict[UUID, int]]:
         """
-        Get all unread counts in a single optimized query using CTE.
-
-        This version uses a materialized CTE for better query planning
-        and combines multiple aggregations in a single pass.
-        Now includes clipped articles in the same query using UNION ALL.
+        Get all unread counts in a single optimized query.
 
         Returns a dict with:
-        - total_unread: int
-        - unread_by_folder: dict[UUID, int]
-        - read_later_count: int
-        - today_count: int
+        - total_unread: int - count of unread articles (feed + clipped)
+        - unread_by_folder: dict[UUID, int] - unread counts per folder
+        - read_later_count: int - ALL articles with is_read_later=TRUE (regardless of read status)
+        - today_count: int - unread articles from last 24 hours
         """
         from sqlalchemy import text
 
         now_utc = datetime.now(timezone.utc)
         twenty_four_hours_ago = now_utc - timedelta(hours=24)
 
-        # Use raw SQL with CTE for optimal performance
-        # OPTIMIZATION: Combine feed articles and clipped articles in single query using UNION ALL
-        # Hybrid unread logic: articles newer than last_read_cutoff AND not explicitly marked read
+        # Optimized query using direct COUNT() aggregations
+        # Always returns at least one row with all aggregate counts
         query = text("""
-            WITH unread_articles AS MATERIALIZED (
-                -- Feed articles with cutoff logic
+            WITH folder_unreads AS (
                 SELECT
                     fs.folder_id,
-                    fa.id as article_id,
-                    COALESCE(uas.is_read_later, FALSE) as is_read_later,
-                    ac.published_at
+                    COUNT(*) as unread_count,
+                    COUNT(*) FILTER (
+                        WHERE ac.published_at >= :twenty_four_hours_ago
+                          AND ac.published_at <= :now_utc
+                    ) as today_count
                 FROM feed_articles fa
-                INNER JOIN feed_subscriptions fs
-                    ON fa.feed_id = fs.feed_id
-                INNER JOIN article_contents ac
-                    ON fa.content_id = ac.id
+                INNER JOIN feed_subscriptions fs ON fa.feed_id = fs.feed_id
+                INNER JOIN article_contents ac ON fa.content_id = ac.id
                 LEFT JOIN user_article_states uas
-                    ON uas.article_id = fa.id
-                    AND uas.user_id = :user_id
+                    ON uas.article_id = fa.id AND uas.user_id = :user_id
                 WHERE fs.user_id = :user_id
                   AND (uas.is_read IS NULL OR uas.is_read = FALSE)
                   AND (ac.published_at > fs.last_read_cutoff OR fs.last_read_cutoff IS NULL)
-
-                UNION ALL
-
-                -- Clipped articles (unread only) - no cutoff logic for clipped articles
+                GROUP BY fs.folder_id
+            ),
+            global_counts AS (
                 SELECT
-                    NULL as folder_id,
-                    ca.id as article_id,
-                    COALESCE(ca.is_read_later, FALSE) as is_read_later,
-                    ac.published_at
+                    -- Clipped article counts
+                    COUNT(*) FILTER (
+                        WHERE ca.is_read IS NULL OR ca.is_read = FALSE
+                    ) as clipped_unread_count,
+                    COUNT(*) FILTER (
+                        WHERE (ca.is_read IS NULL OR ca.is_read = FALSE)
+                          AND ac.published_at >= :twenty_four_hours_ago
+                          AND ac.published_at <= :now_utc
+                    ) as clipped_today_count,
+                    -- Read later count from all sources
+                    (
+                        SELECT COUNT(*) FROM (
+                            SELECT fa.id
+                            FROM feed_articles fa
+                            INNER JOIN feed_subscriptions fs ON fa.feed_id = fs.feed_id
+                            INNER JOIN user_article_states uas
+                                ON uas.article_id = fa.id AND uas.user_id = :user_id
+                            WHERE fs.user_id = :user_id AND uas.is_read_later = TRUE
+
+                            UNION ALL
+
+                            SELECT ca.id
+                            FROM clipped_articles ca
+                            WHERE ca.user_id = :user_id AND ca.is_read_later = TRUE
+                        ) all_read_later
+                    ) as read_later_count
                 FROM clipped_articles ca
-                INNER JOIN article_contents ac
-                    ON ca.content_id = ac.id
+                INNER JOIN article_contents ac ON ca.content_id = ac.id
                 WHERE ca.user_id = :user_id
-                  AND (ca.is_read IS NULL OR ca.is_read = FALSE)
             )
+            -- Always return at least one row by using CROSS JOIN with global counts
+            -- If no folders exist, folder_unreads will be empty and we'll get one row with NULLs
             SELECT
-                folder_id,
-                COUNT(*) as unread_count,
-                SUM(CASE WHEN is_read_later = TRUE THEN 1 ELSE 0 END) as read_later_count,
-                SUM(CASE
-                    WHEN published_at >= :twenty_four_hours_ago
-                         AND published_at <= :now_utc
-                    THEN 1
-                    ELSE 0
-                END) as today_count
-            FROM unread_articles
-            GROUP BY folder_id
+                COALESCE(fu.folder_id, NULL) as folder_id,
+                COALESCE(fu.unread_count, 0) as unread_count,
+                COALESCE(fu.today_count, 0) as today_count,
+                gc.read_later_count,
+                gc.clipped_unread_count,
+                gc.clipped_today_count
+            FROM global_counts gc
+            LEFT JOIN folder_unreads fu ON TRUE
+
+            -- Ensure we always return at least one row even with no data
+            UNION ALL
+
+            SELECT
+                NULL as folder_id,
+                0 as unread_count,
+                0 as today_count,
+                gc.read_later_count,
+                gc.clipped_unread_count,
+                gc.clipped_today_count
+            FROM global_counts gc
+            WHERE NOT EXISTS (SELECT 1 FROM folder_unreads)
         """)
 
         # Track query execution time for performance monitoring
@@ -323,22 +347,30 @@ class ArticleSpecializedQueries:
             row_count=row_count,
         )
 
-        # Aggregate results
+        # Aggregate results - query always returns at least one row
         total_unread = 0
         unread_by_folder: dict[UUID, int] = {}
         read_later_count = 0
         today_count = 0
 
-        for row in rows:
-            folder_unread = row.unread_count or 0
-            total_unread += folder_unread
+        # Global counts are the same across all rows, so grab from first row
+        if rows:
+            first_row = rows[0]
+            read_later_count = first_row.read_later_count or 0
+            clipped_unread = first_row.clipped_unread_count or 0
+            clipped_today = first_row.clipped_today_count or 0
 
-            # Only add to folder dict if folder_id is not None (feed articles)
-            if row.folder_id is not None:
-                unread_by_folder[row.folder_id] = folder_unread
+            # Aggregate folder-specific counts
+            for row in rows:
+                if row.folder_id is not None:
+                    folder_unread = row.unread_count or 0
+                    unread_by_folder[row.folder_id] = folder_unread
+                    total_unread += folder_unread
+                    today_count += row.today_count or 0
 
-            read_later_count += row.read_later_count or 0
-            today_count += row.today_count or 0
+            # Add clipped articles to totals
+            total_unread += clipped_unread
+            today_count += clipped_today
 
         logger.debug(
             "Aggregated unread counts",

@@ -8,7 +8,7 @@ export function SidebarFeedsSkeleton() {
                 {/* All item skeleton */}
                 <div className="flex items-center w-full py-1 px-2">
                     <div className="flex-1">
-                        <Skeleton className="h-4 w-8 bg-accent dark:bg-muted" />
+                        <Skeleton className="h-4 w-8" />
                     </div>
                     <div className="flex items-center gap-2">
                         <Skeleton className="h-6 w-6 bg-accent dark:bg-muted" />
@@ -19,10 +19,10 @@ export function SidebarFeedsSkeleton() {
                 <div>
                     <div className="flex items-center w-full py-1 px-2">
                         <div className="flex-1 flex items-center">
-                            <Skeleton className="h-4 w-20 ml-1 bg-accent dark:bg-muted" />
+                            <Skeleton className="h-4 w-20 ml-1" />
                         </div>
                         <div className="flex items-center gap-2">
-                            <Skeleton className="h-6 w-6 bg-accent dark:bg-muted" />
+                            <Skeleton className="h-6 w-6" />
                         </div>
                     </div>
 
@@ -30,10 +30,10 @@ export function SidebarFeedsSkeleton() {
                     <div className="ml-6 space-y-0.5">
                         <div className="flex items-center w-full py-0.5 px-2">
                             <div className="flex-1">
-                                <Skeleton className="h-4 w-24 bg-accent dark:bg-muted" />
+                                <Skeleton className="h-4 w-24" />
                             </div>
                             <div className="flex items-center gap-2">
-                                <Skeleton className="h-6 w-6 bg-accent dark:bg-muted" />
+                                <Skeleton className="h-6 w-6" />
                             </div>
                         </div>
                         <div className="flex items-center w-full py-0.5 px-2">
@@ -41,7 +41,7 @@ export function SidebarFeedsSkeleton() {
                                 <Skeleton className="h-4 w-20 bg-accent dark:bg-muted" />
                             </div>
                             <div className="flex items-center gap-2">
-                                <Skeleton className="h-6 w-6 bg-accent dark:bg-muted" />
+                                <Skeleton className="h-6 w-6" />
                             </div>
                         </div>
                     </div>
@@ -50,7 +50,7 @@ export function SidebarFeedsSkeleton() {
                 {/* Individual feed skeletons */}
                 <div className="flex items-center w-full py-1 px-2">
                     <div className="flex-1">
-                        <Skeleton className="h-4 w-28 bg-accent dark:bg-muted" />
+                        <Skeleton className="h-4 w-28" />
                     </div>
                     <div className="flex items-center gap-2">
                         <Skeleton className="h-6 w-6 bg-accent dark:bg-muted" />

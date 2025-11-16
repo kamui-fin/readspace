@@ -559,9 +559,9 @@ async def update_feed_settings(
     """
     Update user-configurable settings for an RSS feed subscription.
 
-    This endpoint allows users to modify their personal settings for a subscribed
-    RSS feed without affecting the global feed data. Users can update folder
-    assignment, custom title, favorite status, and other subscription preferences.
+    This endpoint allows users to modify their personal subscription settings
+    for an RSS feed without affecting the global feed data. Only subscription-specific
+    fields can be updated through this endpoint.
 
     Args:
         feed_id: UUID of the feed subscription to update
@@ -570,17 +570,12 @@ async def update_feed_settings(
         current_user: Authenticated user information
 
     Returns:
-        FeedResponse: Updated feed details with new settings applied
+        SubscriptionResponse: Updated subscription details with new settings applied
 
     Updatable Fields:
-        - folder_id: Move feed to different folder
-        - title: Custom title override for the feed
-        - description: Custom description override
-        - language: Feed language preference
-        - image_url: Custom image URL override
-        - ttl: Custom refresh interval (minutes)
-        - skip_hours: Hours to skip when fetching (0-23)
-        - skip_days: Days to skip when fetching
+        - title: Custom title override for this subscription (optional, max 500 chars)
+        - folder_id: Move subscription to a different folder (UUID)
+        - is_favorite: Toggle favorite status (boolean)
 
     Raises:
         HTTPException:
@@ -594,6 +589,7 @@ async def update_feed_settings(
         - User must be subscribed to the feed to update it
         - All fields in the request body are optional
         - Only affects user's subscription, not the global feed data
+        - To update global feed properties (url, description, etc.), use the admin endpoint
     """
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     try:

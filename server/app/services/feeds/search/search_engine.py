@@ -476,19 +476,19 @@ class RssSearchService:
                 logger.info("Found exact URL matches", count=len(exact_matches))
                 return exact_matches[:limit]
 
-            # Fall back to domain search (uses pg_trgm GIN index)
-            if self._is_website_url(query):
-                website_results = await self._search_by_website_url(query, language, limit, category)
-                if website_results:
-                    logger.info("Found website domain matches", count=len(website_results))
-                    return website_results[:limit]
-
             # If it's a valid RSS URL but not in DB, try preview
             if self._is_valid_url(query):
                 preview_result = await self._preview_url_as_feed(query)
                 if preview_result:
                     logger.info("Created preview for URL not in database", url=query)
                     return [preview_result]
+
+            # Fall back to domain search (uses pg_trgm GIN index)
+            if self._is_website_url(query):
+                website_results = await self._search_by_website_url(query, language, limit, category)
+                if website_results:
+                    logger.info("Found website domain matches", count=len(website_results))
+                    return website_results[:limit]
 
         # Regular text search (non-URL queries)
         if query:

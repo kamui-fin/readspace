@@ -183,6 +183,7 @@ export type Article = {
   guid: string; // Added
   estimated_read_time_minutes: number | null; // Added, made nullable
   custom_metadata: unknown | null; // JSON field with dynamic structure
+  folder_id: string | null; // Added to match backend ArticleBase schema
   feed?:
   | FeedBasicInfo
   | {

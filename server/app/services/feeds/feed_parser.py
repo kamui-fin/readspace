@@ -16,6 +16,7 @@ from app.core.custom_exceptions import FeedParsingError
 from app.schemas import FeedBase
 from app.utils.language_normalizer import normalize_language_code
 from app.utils.reading_time import calculate_reading_time_from_html
+from app.utils.url_normalizer import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
 
@@ -115,7 +116,21 @@ class FeedParsingService:
     def extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> FeedBase:
         """Extract relevant FeedBase data from parsed feed"""
         feed_info = parsed_feed.get("feed", {})
-        title = feed_info.get("title", feed_url)  # Default to URL if no title
+
+        # Extract title with fallback to domain
+        title = feed_info.get("title", "").strip()
+        if not title:
+            # Try to use the website link's domain first, fallback to feed URL domain
+            link = feed_info.get("link")
+            fallback_url = link if link else feed_url
+            title = extract_domain_from_url(fallback_url)
+            logger.info(
+                "Feed has no title, using domain fallback",
+                feed_url=feed_url,
+                fallback_title=title,
+                fallback_source="link" if link else "feed_url",
+            )
+
         description = feed_info.get("subtitle") or feed_info.get("description")
         link = feed_info.get("link")
         language = normalize_language_code(feed_info.get("language"))

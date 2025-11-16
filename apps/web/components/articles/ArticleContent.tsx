@@ -3,6 +3,9 @@
 import { useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { Globe } from "lucide-react"
+import Image from "next/image"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { useEffect, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 
@@ -112,9 +115,14 @@ export function ArticleContent({
     const [translatedLanguage, setTranslatedLanguage] = useState<string | null>(
         null
     )
+    const [feedImageError, setFeedImageError] = useState(false)
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
+    const pathname = usePathname()
+
+    // Check if we're viewing a specific feed's articles page
+    const isInFeedView = pathname?.startsWith("/feeds/") && pathname?.includes("/articles")
 
     // For AI operations (summary, translation), always use the base content (original or extracted)
     // This ensures proper cache key generation based on source content hash, not translated content
@@ -145,6 +153,7 @@ export function ArticleContent({
         setContentSource(article.extracted_content ? "extracted" : "original")
         setTranslatedContent(null)
         setTranslatedLanguage(null)
+        setFeedImageError(false)
     }, [article.id, article.extracted_content])
 
     const publishedAtString = article.published_at
@@ -157,6 +166,9 @@ export function ArticleContent({
                   addSuffix: true,
               })
         : "Date unknown"
+
+    // Show feed badge when not in a feed-specific view and article has feed info
+    const shouldShowFeedBadge = !isInFeedView && article.feed_id && article.feed?.title
 
 
     /**
@@ -554,9 +566,33 @@ export function ArticleContent({
                 }}
             >
                 <div className="mx-auto max-w-4xl">
-                    <article className="px-6 py-8 prose prose-slate dark:prose-invert prose-2xl article-content">
+                    <article className="px-6 py-8 prose prose-slate dark:prose-invert prose-2xl article-content prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl prose-li:text-foreground prose-li:text-xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-pre:text-foreground prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-img:rounded-lg prose-img:shadow-sm prose-strong:text-foreground prose-em:text-foreground prose-figcaption:text-muted-foreground prose-figcaption:text-sm prose-figcaption:italic prose-figure:my-8 prose-hr:border-border prose-th:text-foreground prose-th:font-semibold prose-th:border-border prose-td:text-foreground prose-td:border-border prose-table:border-border prose-thead:border-border prose-tr:border-border prose-ol:text-foreground prose-ul:text-foreground prose-dl:text-foreground prose-dt:text-foreground prose-dt:font-semibold prose-dd:text-foreground prose-lead:text-muted-foreground prose-video:rounded-lg prose-video:shadow-sm prose-kbd:bg-muted prose-kbd:text-foreground prose-kbd:px-2 prose-kbd:py-1 prose-kbd:rounded prose-kbd:border prose-kbd:border-border">
                         {/* Article Header */}
-                        <div className="mb-8 space-y-6 not-prose">
+                        <div className="space-y-4 not-prose">
+                            {/* Feed Link Badge - Show when not in feed-specific view */}
+                            {shouldShowFeedBadge && article.feed && (
+                                <Link
+                                    href={`/feeds/${article.feed_id}/articles`}
+                                    className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
+                                >
+                                    {article.feed.image_url && !feedImageError ? (
+                                        <Image
+                                            src={article.feed.image_url}
+                                            alt={article.feed.title || "Feed image"}
+                                            width={16}
+                                            height={16}
+                                            className="h-4 w-4 shrink-0 rounded"
+                                            onError={() => setFeedImageError(true)}
+                                        />
+                                    ) : (
+                                        <div className="h-4 w-4 shrink-0 rounded bg-primary/20" />
+                                    )}
+                                    <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground group-hover:text-foreground transition-colors duration-200">
+                                        {article.feed.title}
+                                    </span>
+                                </Link>
+                            )}
+
                             <h1 className="text-4xl font-bold leading-tight text-foreground tracking-tight">
                                 {article.title}
                             </h1>
@@ -834,7 +870,7 @@ export function ArticleContent({
                                 return displayContent ? (
                                     <AnimatedContent
                                         contentKey={contentKey}
-                                        className="prose-headings:font-semibold prose-headings:text-foreground prose-p:text-foreground prose-p:leading-relaxed prose-p:text-xl prose-li:text-foreground prose-li:text-xl prose-blockquote:border-l-primary prose-blockquote:bg-muted/30 prose-blockquote:py-3 prose-blockquote:px-4 prose-blockquote:text-xl prose-code:bg-muted prose-code:px-1.5 prose-code:py-1 prose-code:rounded prose-code:text-lg prose-code:before:content-none prose-code:after:content-none prose-pre:bg-muted prose-pre:border prose-a:text-primary prose-a:no-underline prose-a:hover:underline prose-img:rounded-lg prose-img:shadow-sm prose-strong:text-foreground"
+                                        className=""
                                     >
                                         <div
                                             className="text-xl leading-relaxed"

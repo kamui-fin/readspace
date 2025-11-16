@@ -117,6 +117,7 @@
         "remark-breaks": "^4.0.0",
         "remark-gfm": "^4.0.1",
         "remark-math": "^6.0.0",
+        "sass": "^1.94.0",
         "shiki": "^3.2.1",
         "sonner": "^2.0.1",
         "string-strip-html": "^13.4.12",
