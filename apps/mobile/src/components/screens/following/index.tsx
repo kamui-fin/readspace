@@ -76,6 +76,7 @@ export function FollowingScreen({
   const isResettingRef = useRef(false);
   const loadingToastIdRef = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const isNavigatingRef = useRef(false);
 
   // Get state and actions from Zustand stores
   const tabKey = getTabKey(activeTab);
@@ -690,13 +691,22 @@ export function FollowingScreen({
           showTopDivider={false}
           showBottomDivider={false}
           onPress={() => {
+            // Prevent duplicate navigation using ref to track navigation state
+            if (isNavigatingRef.current) return;
+
             const articleRoute = `/(protected)/articles/${article.id}`;
-            // Prevent duplicate navigation - check if already on this route
             const currentPath = segments.join('/');
             const articlePath = `articles/${article.id}`;
+
             // Only navigate if not already on this article route
             if (!currentPath.includes(articlePath)) {
+              isNavigatingRef.current = true;
               router.push(articleRoute as any);
+
+              // Reset navigation flag after a short delay
+              setTimeout(() => {
+                isNavigatingRef.current = false;
+              }, 500);
             }
           }}
           onMarkAsRead={(article) => {

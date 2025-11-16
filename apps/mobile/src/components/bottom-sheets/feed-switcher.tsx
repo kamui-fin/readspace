@@ -167,7 +167,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                   {/* Folder Content */}
                   <View className="flex-1 flex-row items-center justify-between min-w-0">
                     <Text
-                      className="font-geist-semibold text-lg text-grey dark:text-grey mr-3"
+                      className="font-geist-semibold text-lg text-grey dark:text-grey-dark mr-3"
                       numberOfLines={1}
                       style={{ flexShrink: 1 }}>
                       {item.folder.name}

@@ -12,7 +12,7 @@ import { Monicon } from '@monicon/native';
 import { stripHtml } from '@lib/utils/html';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
-const cardVariants = cva('bg-white dark:bg-white-dark', {
+const cardVariants = cva('bg-background dark:bg-background-dark', {
   variants: {
     variant: {
       feed: 'flex-row items-center gap-4 py-4 px-4',

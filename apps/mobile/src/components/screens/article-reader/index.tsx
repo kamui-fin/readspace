@@ -404,6 +404,27 @@ export function ArticleReader({
     []
   );
 
+  // Memoize renderersProps to prevent unnecessary rerenders
+  const renderersProps = useMemo(
+    () => ({
+      ul: {
+        markerTextStyle: {
+          fontFamily: 'EBGaramond_400Regular',
+          fontSize: 18,
+          color: textColor,
+        },
+      },
+      ol: {
+        markerTextStyle: {
+          fontFamily: 'EBGaramond_400Regular',
+          fontSize: 18,
+          color: textColor,
+        },
+      },
+    }),
+    [textColor]
+  );
+
   const feedTitle =
     typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
   const feedImageUrl =
@@ -637,22 +658,7 @@ export function ArticleReader({
           classesStyles={classesStyles}
           enableExperimentalMarginCollapsing
           enableCSSInlineProcessing={false}
-          renderersProps={{
-            ul: {
-              markerTextStyle: {
-                fontFamily: 'EBGaramond_400Regular',
-                fontSize: 18,
-                color: textColor,
-              },
-            },
-            ol: {
-              markerTextStyle: {
-                fontFamily: 'EBGaramond_400Regular',
-                fontSize: 18,
-                color: textColor,
-              },
-            },
-          }}
+          renderersProps={renderersProps}
         />
       </View>
     </ScrollView>

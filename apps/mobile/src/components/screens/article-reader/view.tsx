@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 import { Share, View, Linking } from 'react-native';
 import { Text } from '@components/ui/text';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSharedValue } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
@@ -39,7 +39,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
-  const insets = useSafeAreaInsets();
 
   // Fetch article data
   const { data: article, isLoading: isArticleLoading } = useArticle(articleId || '', {
@@ -180,10 +179,6 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   }, []);
 
   if (isArticleLoading) {
-    // Action bar offset matches the actual content offset
-    // Action bar: safe area top + button height + small buffer = insets.top + 8
-    const actionBarOffset = insets.top + 8;
-
     return (
       <SafeAreaView edges={['top']} className="flex-1 bg-background dark:bg-background-dark">
         <ArticleActionBar
@@ -194,9 +189,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           isBookmarked={false}
           isClipped={false}
         />
-        <View style={{ paddingTop: actionBarOffset }}>
-          <ArticleReaderSkeleton />
-        </View>
+        <ArticleReaderSkeleton article={article} />
       </SafeAreaView>
     );
   }
