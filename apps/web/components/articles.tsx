@@ -349,7 +349,7 @@ export function ArticlesView({
     }, [allArticles, showUnreadOnly, isReadLaterMode])
 
     /**
-     * Handle article selection with automatic mark as read
+     * Handle article selection - DON'T auto-mark as read here to avoid query invalidation race
      */
     const handleArticleSelect = useCallback(
         (articleId: string) => {
@@ -363,66 +363,10 @@ export function ArticlesView({
                 setShowContent(true)
             }
 
-            // Auto-mark as read on click (desktop only, not in preview mode)
-            if (!isMobile && !shouldShowPreviewBanner) {
-                const article = allArticles.find(
-                    (a: Article) => a.id === articleId
-                )
-                if (!isRecentlyReadMode && article && !article.is_read) {
-                    // Optimistically update the UI immediately
-                    queryClient.setQueriesData(
-                        { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
-                        (oldData: ArticlesInfiniteData | undefined) => {
-                            if (!oldData?.pages) return oldData
-                            return {
-                                ...oldData,
-                                pages: oldData.pages.map(
-                                    (page: ArticlesPageData) => ({
-                                        ...page,
-                                        items:
-                                            page.items?.map((item: Article) =>
-                                                item.id === articleId
-                                                    ? { ...item, is_read: true }
-                                                    : item
-                                            ) || [],
-                                    })
-                                ),
-                            }
-                        }
-                    )
-
-                    // Also update unread counts optimistically
-                    queryClient.setQueryData(
-                        [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                        (oldData: UnreadCountsData | undefined) => {
-                            if (!oldData) return oldData
-                            return {
-                                ...oldData,
-                                total_unread: Math.max(
-                                    0,
-                                    (oldData.total_unread || 0) - 1
-                                ),
-                            }
-                        }
-                    )
-
-                    // Now perform the actual mutation
-                    updateArticle.mutate({
-                        articleId,
-                        data: { is_read: true },
-                        articleType: article.article_type || "feed",
-                    })
-                }
-            }
+            // DON'T auto-mark as read on selection - let the click handler on ArticleContent do it
+            // This prevents query invalidation from racing with the article query fetch
         },
-        [
-            isMobile,
-            shouldShowPreviewBanner,
-            allArticles,
-            isRecentlyReadMode,
-            updateArticle,
-            queryClient,
-        ]
+        [isMobile]
     )
 
     /**
@@ -792,6 +736,8 @@ export function ArticlesView({
                                 onBack={handleBackToList}
                             />
                         </div>
+                    ) : showContent ? (
+                        <ArticleContentSkeleton />
                     ) : (
                         <div className="flex flex-col h-full">
                             {/* Mobile Toolbar */}
