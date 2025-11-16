@@ -1,4 +1,5 @@
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 import { Button } from '@components/ui/button';
 import { Monicon } from '@monicon/native';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -33,8 +34,12 @@ export function FeedPreviewBanner({ feedTitle: _feedTitle, onFollow }: FeedPrevi
       {/* Solar Eye Icon */}
       <View className="flex-row items-center gap-2">
         <Monicon name="solar:eye-bold" size={20} color={iconColor} />
-        <Text className="text-[15px] font-semibold leading-5" style={{ color: textColor }}>
-          Preview
+        <Text
+          size="lg"
+          fontFamily="geist-semibold"
+          className="leading-5"
+          style={{ color: textColor }}>
+          Preview Mode
         </Text>
       </View>
 

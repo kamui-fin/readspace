@@ -100,7 +100,7 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
             }}
             androidIconName={filter === 'read_later' ? 'bookmark' : 'bookmark_border'}
           />
-          <DropdownMenuItemTitle>Show read later</DropdownMenuItemTitle>
+          <DropdownMenuItemTitle>Show recents</DropdownMenuItemTitle>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenuRoot>

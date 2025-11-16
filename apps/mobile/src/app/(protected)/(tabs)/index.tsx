@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { View } from 'react-native';
+import { View, BackHandler, Platform } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useFocusEffect } from 'expo-router';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import { Header } from '@components/navigation/header';
@@ -14,6 +15,7 @@ import { FeedSwitcherBottomSheet } from '@/components/bottom-sheets/feed-switche
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);
   const activeTab = useFollowingStore((state) => state.activeTab);
+  const previousTab = useFollowingStore((state) => state.previousTab);
   const setActiveTab = useFollowingStore((state) => state.setActiveTab);
   const filter = useFollowingStore((state) => state.filter);
   const setFilter = useFollowingStore((state) => state.setFilter);
@@ -24,6 +26,9 @@ export default function FollowingRoute() {
   // Get selected feed/folder name from feed view store
   const viewType = useFeedViewStore((state) => state.viewType);
   const selectedName = useFeedViewStore((state) => state.selectedName);
+  const clearView = useFeedViewStore((state) => state.clearView);
+  const isViewingFeedOrFolder =
+    viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview';
 
   // Determine the header title based on view type
   const headerTitle = useMemo(() => {
@@ -74,6 +79,44 @@ export default function FollowingRoute() {
   const filterActionButton = useMemo(
     () => <FilterActionButton filter={filter} onFilterChange={setFilter} />,
     [filter, setFilter]
+  );
+
+  // Handle Android back button
+  useFocusEffect(
+    useCallback(() => {
+      if (Platform.OS !== 'android') {
+        return;
+      }
+
+      const onBackPress = () => {
+        // If viewing a feed/folder/preview, clear the view first
+        if (isViewingFeedOrFolder) {
+          clearView();
+          return true; // Prevent default back behavior
+        }
+
+        // If not on default tab (tab 2 = "All"), switch to previous tab or default tab
+        if (activeTab !== 2) {
+          const targetTab = previousTab !== null ? previousTab : 2; // Default to "All" tab
+          setActiveTab(targetTab);
+          return true; // Prevent default back behavior
+        }
+
+        // On default tab (tab 2) with no feed/folder view
+        // If there's a previous tab, switch to it; otherwise prevent exit
+        if (previousTab !== null && previousTab !== 2) {
+          setActiveTab(previousTab);
+          return true; // Prevent default back behavior
+        }
+
+        // No previous tab to go back to - prevent app exit
+        return true;
+      };
+
+      const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+
+      return () => subscription.remove();
+    }, [activeTab, previousTab, isViewingFeedOrFolder, setActiveTab, clearView])
   );
 
   return (

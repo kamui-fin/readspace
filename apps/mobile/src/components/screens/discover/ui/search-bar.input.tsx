@@ -1,7 +1,8 @@
 import { forwardRef, useMemo, useCallback } from 'react';
 import type { TextInputProps } from 'react-native';
+import { View } from 'react-native';
 import { Monicon } from '@monicon/native';
-import { TextInput } from '@components/ui/input';
+import { Input } from '@components/ui/input';
 import { Button } from '@components/ui/button';
 import { LanguageIcon } from '@components/icons/language';
 import {
@@ -22,7 +23,7 @@ const LANGUAGES = [
   { value: 'japanese' as Language, label: '日本語' },
 ];
 
-export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing'> {
+export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' | 'ref'> {
   onLanguageChange?: (language: Language) => void;
   selectedLanguage?: Language;
   onClear?: () => void;
@@ -33,7 +34,7 @@ export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing'> 
   showCancelButton?: boolean;
 }
 
-export const SearchBar = forwardRef<React.ElementRef<typeof TextInput>, SearchBarProps>(
+export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarProps>(
   (
     {
       onLanguageChange,
@@ -71,14 +72,15 @@ export const SearchBar = forwardRef<React.ElementRef<typeof TextInput>, SearchBa
       [onLanguageChange]
     );
 
-    // Build right icon buttons array (max 2)
-    const rightIconButtons = useMemo(() => {
+    // Build right element with icon buttons (max 2)
+    const rightElement = useMemo(() => {
       const buttons: React.ReactNode[] = [];
 
       // Clear button (if shown and has value)
       if (showClearButton && value) {
         buttons.push(
           <Button
+            key="clear"
             variant="text"
             size="small"
             fullWidth={false}
@@ -92,6 +94,7 @@ export const SearchBar = forwardRef<React.ElementRef<typeof TextInput>, SearchBa
       // Search icon button (rounded square with lighter primary background)
       buttons.push(
         <Button
+          key="search"
           variant="secondary"
           size="medium"
           fullWidth={false}
@@ -106,7 +109,9 @@ export const SearchBar = forwardRef<React.ElementRef<typeof TextInput>, SearchBa
         </Button>
       );
 
-      return buttons;
+      return buttons.length > 0 ? (
+        <View className="flex-row items-center gap-2 pr-2.5">{buttons}</View>
+      ) : undefined;
     }, [
       showClearButton,
       value,
@@ -127,52 +132,49 @@ export const SearchBar = forwardRef<React.ElementRef<typeof TextInput>, SearchBa
       onBlur?.(e);
     };
 
+    const leftElement = (
+      <DropdownMenuRoot>
+        <DropdownMenuTrigger>
+          <Button
+            variant="text"
+            size="small"
+            fullWidth={false}
+            className="min-w-0 flex-row items-center gap-1">
+            <LanguageIcon size={20} color={colors.grey} />
+            <Monicon
+              name="solar:alt-arrow-down-linear"
+              size={12}
+              strokeWidth={2.8}
+              color={colors.grey}
+            />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {LANGUAGES.map((lang) => (
+            <DropdownMenuItem key={lang.value} onSelect={() => handleLanguageSelect(lang.value)}>
+              <DropdownMenuItemTitle>{lang.label}</DropdownMenuItemTitle>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenuRoot>
+    );
+
     return (
-      <TextInput
+      <Input
         ref={ref}
-        variant="withRightIcons"
-        size="large"
         className="w-full"
-        placeholderTextColor={colors.grey}
         placeholder="What are you looking for?"
         value={value}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onSubmitEditing={() => handleSubmit()}
         returnKeyType="search"
-        style={{
+        inputStyle={{
           textAlignVertical: 'center',
           textAlign: 'center',
         }}
-        leftIconButton={
-          <DropdownMenuRoot>
-            <DropdownMenuTrigger>
-              <Button
-                variant="text"
-                size="small"
-                fullWidth={false}
-                className="min-w-0 flex-row items-center gap-1">
-                <LanguageIcon size={20} color={colors.grey} />
-                <Monicon
-                  name="solar:alt-arrow-down-linear"
-                  size={12}
-                  strokeWidth={2.8}
-                  color={colors.grey}
-                />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {LANGUAGES.map((lang) => (
-                <DropdownMenuItem
-                  key={lang.value}
-                  onSelect={() => handleLanguageSelect(lang.value)}>
-                  <DropdownMenuItemTitle>{lang.label}</DropdownMenuItemTitle>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenuRoot>
-        }
-        rightIconButtons={rightIconButtons}
+        leftElement={leftElement}
+        rightElement={rightElement}
         {...props}
       />
     );

@@ -1,13 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
-import {
-  Keyboard,
-  Pressable,
-  ScrollView,
-  Text,
-  TouchableWithoutFeedback,
-  View,
-} from 'react-native';
-import type { TextInput } from 'react-native';
+import { Keyboard, Pressable, ScrollView, TouchableWithoutFeedback, View } from 'react-native';
+import type { TextInput as RNTextInput } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useQuery } from '@tanstack/react-query';
 import { Monicon } from '@monicon/native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -48,7 +42,7 @@ export function DiscoverScreen() {
   const [selectedLanguage, setSelectedLanguage] = useState<Language>('english');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const searchBarRef = useRef<TextInput>(null);
+  const searchBarRef = useRef<RNTextInput>(null);
   const categoryScrollRef = useRef<ScrollView>(null);
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -183,7 +177,10 @@ export function DiscoverScreen() {
           {/* Header and Search Bar - Always visible */}
           <View className="px-6">
             {viewState === 'default' && (
-              <Text className="mb-8 font-geist-bold text-3xl tracking-heading text-black dark:text-black-dark">
+              <Text
+                size="lg"
+                fontFamily="geist-bold"
+                className="mb-8 tracking-heading text-black dark:text-black-dark">
                 Discover feeds
               </Text>
             )}
@@ -221,7 +218,10 @@ export function DiscoverScreen() {
                 }}>
                 {recentSearches.length > 0 ? (
                   <>
-                    <Text className="mb-4 font-geist-semibold text-base text-black dark:text-black-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist-semibold"
+                      className="mb-4 text-black dark:text-black-dark">
                       Recent searches
                     </Text>
                     <View className="gap-3">
@@ -235,7 +235,10 @@ export function DiscoverScreen() {
                             size={20}
                             color={colors.grey}
                           />
-                          <Text className="font-geist flex-1 text-base text-black dark:text-black-dark">
+                          <Text
+                            size="base"
+                            fontFamily="geist"
+                            className="flex-1 text-black dark:text-black-dark">
                             {query}
                           </Text>
                         </Pressable>
@@ -244,10 +247,16 @@ export function DiscoverScreen() {
                   </>
                 ) : (
                   <View className="py-12">
-                    <Text className="font-geist text-center text-base text-grey dark:text-grey-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist"
+                      className="text-center text-grey dark:text-grey-dark">
                       No recent searches yet
                     </Text>
-                    <Text className="font-geist mt-2 text-center text-sm text-grey dark:text-grey-dark">
+                    <Text
+                      size="sm"
+                      fontFamily="geist"
+                      className="mt-2 text-center text-grey dark:text-grey-dark">
                       Your search history will appear here
                     </Text>
                   </View>
@@ -263,7 +272,10 @@ export function DiscoverScreen() {
                 }}>
                 <View>
                   <View className="mb-4 flex-row items-center justify-between px-6">
-                    <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist-semibold"
+                      className="text-black dark:text-black-dark">
                       Categories
                     </Text>
                     {selectedCategory && (
@@ -273,7 +285,9 @@ export function DiscoverScreen() {
                           setSelectedCategory(null);
                         }}
                         className="transition-opacity active:opacity-60">
-                        <Text className="font-geist-medium text-sm text-secondary">Clear</Text>
+                        <Text size="sm" fontFamily="geist-medium" className="text-secondary">
+                          Clear
+                        </Text>
                       </Pressable>
                     )}
                   </View>
@@ -311,7 +325,10 @@ export function DiscoverScreen() {
                 </View>
 
                 <View className="mb-4 mt-8 px-6">
-                  <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                  <Text
+                    size="base"
+                    fontFamily="geist-semibold"
+                    className="text-black dark:text-black-dark">
                     Trending
                   </Text>
                 </View>
@@ -331,10 +348,17 @@ export function DiscoverScreen() {
                   </View>
                 ) : trendingError ? (
                   <View className="items-center justify-center px-6 py-12">
-                    <Text className="text-red-600 mb-2 text-center text-base">
+                    <Text
+                      size="base"
+                      fontFamily="geist"
+                      className="mb-2 text-center"
+                      style={{ color: '#dc2626' }}>
                       Error loading trending feeds
                     </Text>
-                    <Text className="text-center text-sm text-grey dark:text-grey-dark">
+                    <Text
+                      size="sm"
+                      fontFamily="geist"
+                      className="text-center text-grey dark:text-grey-dark">
                       {(trendingError as Error).message}
                     </Text>
                   </View>
@@ -355,7 +379,10 @@ export function DiscoverScreen() {
                   </View>
                 ) : (
                   <View className="items-center justify-center px-6 py-12">
-                    <Text className="text-center text-grey dark:text-grey-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist"
+                      className="text-center text-grey dark:text-grey-dark">
                       No trending feeds available
                     </Text>
                   </View>
@@ -408,7 +435,10 @@ export function DiscoverScreen() {
                       selectedCategory ? (
                         <View>
                           <View className="mb-4 flex-row items-center justify-between px-6">
-                            <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                            <Text
+                              size="base"
+                              fontFamily="geist-semibold"
+                              className="text-black dark:text-black-dark">
                               Categories
                             </Text>
                             <Pressable
@@ -417,7 +447,7 @@ export function DiscoverScreen() {
                                 setSelectedCategory(null);
                               }}
                               className="transition-opacity active:opacity-60">
-                              <Text className="font-geist-medium text-sm text-secondary">
+                              <Text size="sm" fontFamily="geist-medium" className="text-secondary">
                                 Clear
                               </Text>
                             </Pressable>
@@ -459,7 +489,10 @@ export function DiscoverScreen() {
                   />
                 ) : (
                   <View className="flex-1 items-center justify-center px-6 py-12">
-                    <Text className="text-center text-base text-grey dark:text-grey-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist"
+                      className="text-center text-grey dark:text-grey-dark">
                       No feeds found matching your search
                     </Text>
                   </View>

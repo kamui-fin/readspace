@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Image, Pressable, Text, View, type PressableProps } from 'react-native';
+import { Image, Pressable, View, type PressableProps } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Text } from '@components/ui/text';
 import { stripHtml } from '@lib/utils/html';
 import { FollowButton } from './follow.button';
 import { COLORS } from '@lib/constants/colors';
@@ -86,20 +87,29 @@ export const FeedListItem = ({
               backgroundColor: `${colors.secondary}33`,
             }}>
             <Text
-              className="font-geist-medium text-[10px] uppercase tracking-wider"
+              size="sm"
+              fontFamily="geist-medium"
+              className="uppercase tracking-wider"
               style={{
                 color: colors.secondary,
+                fontSize: 10,
               }}>
               Preview
             </Text>
           </View>
         )}
         <Text
-          className="mb-1 font-geist-semibold text-base text-black dark:text-black-dark"
+          size="base"
+          fontFamily="geist-semibold"
+          className="mb-1 text-black dark:text-black-dark"
           numberOfLines={1}>
           {stripHtml(title)}
         </Text>
-        <Text className="font-geist text-sm text-grey dark:text-grey-dark" numberOfLines={2}>
+        <Text
+          size="sm"
+          fontFamily="geist"
+          className="text-grey dark:text-grey-dark"
+          numberOfLines={2}>
           {stripHtml(description)}
         </Text>
       </View>

@@ -114,7 +114,7 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
             (showCloseButton && onClose)) && (
             <>
               <View
-                className={clsx('relative px-4 py-4 flex-row items-center', headerClassName)}
+                className={clsx('relative px-4 py-2 flex-row items-center', headerClassName)}
                 style={{ minHeight: 56 }}>
                 {/* Header Left */}
                 {headerLeft && (
@@ -205,14 +205,11 @@ export const Modal = forwardRef<BottomSheetModal, ModalProps>(
                   </View>
                 )}
               </View>
-
-              {/* Divider */}
-              <Divider />
             </>
           )}
 
           {/* Content */}
-          <View className="flex-1 px-4 pb-6 pt-4">{children}</View>
+          <View className="flex-1 px-4 pb-6">{children}</View>
 
           {/* Footer Actions - Fixed at bottom */}
           {footerActions && (

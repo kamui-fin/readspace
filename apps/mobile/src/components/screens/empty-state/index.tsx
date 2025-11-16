@@ -1,8 +1,9 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import type React from 'react';
-import { Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { Text } from '@components/ui/text';
 import { Monicon } from '@monicon/native';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -20,8 +21,6 @@ const emptyStateVariants = cva('items-center justify-center px-6', {
 });
 
 const iconContainerVariants = cva('mb-4');
-
-const textVariants = cva('text-center font-geist-medium text-lg text-grey dark:text-grey');
 
 export interface EmptyStateProps extends VariantProps<typeof emptyStateVariants> {
   icon: string;
@@ -49,7 +48,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <View className={clsx(iconContainerVariants())}>
         <Monicon name={icon} size={64} color={colors.grey2} />
       </View>
-      <Text className={clsx(textVariants())}>{message}</Text>
+      <Text size="lg" fontFamily="geist-medium" className="text-center text-grey dark:text-grey">
+        {message}
+      </Text>
     </View>
   );
 };

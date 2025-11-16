@@ -7,9 +7,9 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  Text,
   View,
 } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -313,7 +313,10 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
     return (
       <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base text-grey dark:text-grey-dark">
+          <Text
+            size="base"
+            fontFamily="geist"
+            className="text-center text-grey dark:text-grey-dark">
             Feed not found
           </Text>
         </View>
@@ -356,7 +359,10 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
                     resizeMode="cover"
                   />
                 ) : (
-                  <Text className="font-geist-bold text-3xl" style={{ color: colors.grey }}>
+                  <Text
+                    size="lg"
+                    fontFamily="geist-bold"
+                    style={{ color: colors.grey, fontSize: 30 }}>
                     {(feed.title || 'F').charAt(0).toUpperCase()}
                   </Text>
                 )}
@@ -374,8 +380,10 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
 
             {/* Feed Title */}
             <Text
+              size="2xl"
+              fontFamily="geist-bold"
               style={{ letterSpacing: -0.48 }}
-              className="mb-2 font-geist-bold text-2xl text-black dark:text-black-dark">
+              className="mb-2 text-black dark:text-black-dark">
               {feed.title || 'Untitled Feed'}
             </Text>
 
@@ -384,28 +392,39 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
               <View className="mb-4">
                 {feed.description.length > 80 ? (
                   <>
-                    <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
+                    <Text
+                      size="base"
+                      fontFamily="geist"
+                      className="leading-6 text-grey dark:text-grey-dark">
                       {isDescriptionExpanded
                         ? feed.description
                         : `${feed.description.slice(0, 80)}... `}
                       {!isDescriptionExpanded && (
                         <Text
+                          size="base"
+                          fontFamily="geist-medium"
                           onPress={toggleDescription}
-                          className="font-geist-medium text-base text-black dark:text-black-dark">
+                          className="text-black dark:text-black-dark">
                           more
                         </Text>
                       )}
                     </Text>
                     {isDescriptionExpanded && (
                       <Pressable onPress={toggleDescription}>
-                        <Text className="mt-1 font-geist-medium text-base text-black dark:text-black-dark">
+                        <Text
+                          size="base"
+                          fontFamily="geist-medium"
+                          className="mt-1 text-black dark:text-black-dark">
                           less
                         </Text>
                       </Pressable>
                     )}
                   </>
                 ) : (
-                  <Text className="font-geist text-base leading-6 text-grey dark:text-grey-dark">
+                  <Text
+                    size="base"
+                    fontFamily="geist"
+                    className="leading-6 text-grey dark:text-grey-dark">
                     {feed.description}
                   </Text>
                 )}
@@ -422,7 +441,9 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
                   color={colors.primary}
                 />
                 <Text
-                  className="flex-1 flex-shrink text-sm underline"
+                  size="sm"
+                  fontFamily="geist"
+                  className="flex-1 flex-shrink underline"
                   style={{ color: colors.primary }}
                   numberOfLines={1}>
                   {feed.link || feed.url}
@@ -441,7 +462,10 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
                       key={`${tagName}-${index.toString()}`}
                       className="flex-row items-center gap-1.5 rounded-full px-3 py-1.5"
                       style={{ backgroundColor: colors.grey5 }}>
-                      <Text className="font-geist text-xs" style={{ color: colors.grey }}>
+                      <Text
+                        size="sm"
+                        fontFamily="geist"
+                        style={{ color: colors.grey, fontSize: 12 }}>
                         #{formattedTag}
                       </Text>
                     </View>

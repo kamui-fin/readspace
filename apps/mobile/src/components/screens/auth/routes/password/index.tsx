@@ -1,10 +1,14 @@
-import { View, Text, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { useEffect } from 'react';
+import { View, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { useEffect, useState } from 'react';
 import { Formik, type FormikProps } from 'formik';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
+import { Monicon } from '@monicon/native';
 
-import { TextInput } from '@components/ui/input';
+import { Text } from '@components/ui/text';
+import { Input, InputPressable } from '@components/ui/input';
 import { PasswordSchema } from '@lib/validation/auth-schemas';
+import { COLORS } from '@lib/constants/colors';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 interface PasswordStepProps {
   initialPassword?: string;
@@ -25,6 +29,10 @@ function PasswordFormContent({
   onPasswordChange?: (password: string) => void;
   initialPassword: string;
 }) {
+  const [showPassword, setShowPassword] = useState(false);
+  const isDark = useIsDarkMode();
+  const colors = COLORS[isDark ? 'dark' : 'light'];
+
   // Notify parent of password changes
   useEffect(() => {
     if (onPasswordChange && values.password !== initialPassword) {
@@ -37,35 +45,42 @@ function PasswordFormContent({
       <View className="flex-1 px-6">
         {/* Header */}
         <View className="mb-8">
-          <Text className="text-primary_foreground dark:text-primary_foreground mb-2 font-geist-bold text-[28px]">
+          <Text
+            size="3xl"
+            fontFamily="geist-bold"
+            className="text-primary_foreground dark:text-primary_foreground mb-2">
             Create a password
           </Text>
-          <Text className="font-geist text-base text-grey dark:text-grey">
+          <Text size="lg" fontFamily="geist-medium" className="text-grey dark:text-grey">
             Your password must be at least 6 characters
           </Text>
         </View>
 
         {/* Password Input */}
-        <View>
-          <TextInput
-            placeholder="Enter your password"
-            value={values.password}
-            onChangeText={handleChange('password')}
-            onBlur={handleBlur('password')}
-            secureTextEntry
-            autoCapitalize="none"
-            autoComplete="password-new"
-            textContentType="newPassword"
-            autoFocus
-            size="large"
-            error={touched.password && !!errors.password}
-          />
-          {touched.password && errors.password && (
-            <Text className="font-geist mt-1 text-xs text-destructive dark:text-destructive">
-              {errors.password}
-            </Text>
-          )}
-        </View>
+        <Input
+          placeholder="Enter your password"
+          value={values.password}
+          onChangeText={handleChange('password')}
+          onBlur={handleBlur('password')}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoComplete="password-new"
+          textContentType="newPassword"
+          autoFocus
+          type="text"
+          isInvalid={touched.password && !!errors.password}
+          errorText={touched.password && errors.password ? errors.password : undefined}
+          borderRadius={12}
+          rightElement={
+            <InputPressable onPress={() => setShowPassword(!showPassword)}>
+              <Monicon
+                name={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'}
+                size={20}
+                color={colors.grey}
+              />
+            </InputPressable>
+          }
+        />
       </View>
     </TouchableWithoutFeedback>
   );

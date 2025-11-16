@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import {
   Pressable,
   ScrollView,
-  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import RenderHTML from 'react-native-render-html';
@@ -538,7 +538,10 @@ export function ArticleReader({
                 contentFit="contain"
               />
             )}
-            <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
+            <Text
+              size="sm"
+              fontFamily="geist"
+              className="uppercase tracking-wide text-grey dark:text-grey-dark">
               {displaySource || 'Unknown Source'}
             </Text>
           </Pressable>
@@ -551,7 +554,10 @@ export function ArticleReader({
                 contentFit="contain"
               />
             )}
-            <Text className="font-geist text-sm uppercase tracking-wide text-grey dark:text-grey-dark">
+            <Text
+              size="sm"
+              fontFamily="geist"
+              className="uppercase tracking-wide text-grey dark:text-grey-dark">
               {displaySource || 'Unknown Source'}
             </Text>
           </View>
@@ -559,15 +565,20 @@ export function ArticleReader({
 
         {/* Title */}
         <Text
-          className="mb-3 font-geist-bold text-3xl leading-tight text-primary-foreground dark:text-primary-foreground-dark"
-          style={{ letterSpacing: -0.72 }}>
+          size="lg"
+          fontFamily="geist-bold"
+          className="mb-3 leading-tight text-primary-foreground dark:text-primary-foreground-dark"
+          style={{ letterSpacing: -0.72, fontSize: 30 }}>
           {stripHtml(article.title)}
         </Text>
 
         {/* Note for clipped articles */}
         {isClipped && article.note && (
           <View className="mb-3 rounded-lg border border-grey4 bg-grey6 px-3 py-2 dark:border-grey4-dark dark:bg-grey6-dark">
-            <Text className="font-geist text-sm leading-relaxed text-grey dark:text-grey-dark">
+            <Text
+              size="sm"
+              fontFamily="geist"
+              className="leading-relaxed text-grey dark:text-grey-dark">
               {article.note}
             </Text>
           </View>
@@ -578,22 +589,34 @@ export function ArticleReader({
           {article.author && !isClipped && (
             <>
               <Text
-                className="font-geist flex-shrink text-sm text-grey dark:text-grey-dark"
+                size="sm"
+                fontFamily="geist"
+                className="flex-shrink text-grey dark:text-grey-dark"
                 numberOfLines={1}>
                 By {article.author}
               </Text>
-              <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>
+              <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
+                /
+              </Text>
             </>
           )}
           <Text
-            className="font-geist flex-shrink text-sm text-grey dark:text-grey-dark"
+            size="sm"
+            fontFamily="geist"
+            className="flex-shrink text-grey dark:text-grey-dark"
             numberOfLines={1}>
             {displayDate}
           </Text>
-          {readTime && <Text className="font-geist text-sm text-grey dark:text-grey-dark">/</Text>}
+          {readTime && (
+            <Text size="sm" fontFamily="geist" className="text-grey dark:text-grey-dark">
+              /
+            </Text>
+          )}
           {readTime && (
             <Text
-              className="font-geist flex-shrink text-sm text-grey dark:text-grey-dark"
+              size="sm"
+              fontFamily="geist"
+              className="flex-shrink text-grey dark:text-grey-dark"
               numberOfLines={1}>
               {readTime}
             </Text>

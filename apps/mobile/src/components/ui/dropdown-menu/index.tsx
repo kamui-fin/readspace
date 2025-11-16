@@ -1,5 +1,7 @@
 import { ComponentProps } from 'react';
 import { Platform, ViewStyle, Text } from 'react-native';
+import { cva } from 'class-variance-authority';
+import clsx from 'clsx';
 
 import * as DropdownMenu from 'zeego/dropdown-menu';
 
@@ -19,6 +21,18 @@ const DropdownMenuTrigger = DropdownMenu.Trigger;
 
 const DropdownMenuSub = DropdownMenu.Sub;
 
+const dropdownMenuContentVariants = cva('animate-zoom-in rounded-2xl p-2 shadow', {
+  variants: {
+    disableBlurEffect: {
+      true: 'bg-white dark:bg-grey5-dark',
+      false: 'bg-white/80 shadow backdrop-blur-md backdrop-saturate-150 dark:bg-black/80',
+    },
+  },
+  defaultVariants: {
+    disableBlurEffect: false,
+  },
+});
+
 const DropdownMenuSubContent = DropdownMenu.create(
   ({
     className,
@@ -31,11 +45,7 @@ const DropdownMenuSubContent = DropdownMenu.create(
     <DropdownMenu.SubContent
       align="end"
       {...props}
-      className={`animate-zoom-in rounded-2xl p-2 shadow ${
-        disableBlurEffect
-          ? 'bg-white dark:bg-grey5-dark'
-          : 'bg-white/80 shadow backdrop-blur-md backdrop-saturate-150 dark:bg-black/80'
-      } ${className || ''}`}
+      className={clsx(dropdownMenuContentVariants({ disableBlurEffect }), className)}
     />
   ),
   'SubContent'
@@ -53,11 +63,7 @@ const DropdownMenuContent = DropdownMenu.create(
     <DropdownMenu.Content
       align="end"
       {...props}
-      className={`animate-zoom-in rounded-2xl p-2 shadow ${
-        disableBlurEffect
-          ? 'bg-white dark:bg-grey5-dark'
-          : 'bg-white/80 shadow backdrop-blur-md backdrop-saturate-150 dark:bg-black/80'
-      } ${className || ''}`}
+      className={clsx(dropdownMenuContentVariants({ disableBlurEffect }), className)}
     />
   ),
   'Content'
@@ -70,11 +76,11 @@ const DropdownMenuItem = DropdownMenu.create(
     style,
     ...props
   }: { className?: string } & ComponentProps<typeof DropdownMenu.Item>) => {
-    const combinedStyle =
-      Platform.OS === 'web' ? ({ ...reversalWebIconStyle, ...(style as any) } as any) : style;
-
     return (
-      <DropdownMenu.Item {...props} style={combinedStyle} className={className}>
+      <DropdownMenu.Item
+        {...props}
+        style={[reversalWebIconStyle, style].filter(Boolean) as any}
+        className={className}>
         {children}
       </DropdownMenu.Item>
     );
@@ -125,7 +131,7 @@ const DropdownMenuSeparator = DropdownMenu.create(
   }: { className?: string } & ComponentProps<typeof DropdownMenu.Separator>) => (
     <DropdownMenu.Separator
       {...props}
-      className={`my-1 h-px bg-grey4 dark:bg-grey4-dark ${className || ''}`}
+      className={clsx('my-1 h-px bg-grey4 dark:bg-grey4-dark', className)}
     />
   ),
   'Separator'
@@ -138,11 +144,11 @@ const DropdownMenuSubTrigger = DropdownMenu.create(
     style,
     ...props
   }: { className?: string } & ComponentProps<typeof DropdownMenu.SubTrigger>) => {
-    const combinedStyle =
-      Platform.OS === 'web' ? ({ ...reversalWebIconStyle, ...(style as any) } as any) : style;
-
     return (
-      <DropdownMenu.SubTrigger {...props} style={combinedStyle} className={className}>
+      <DropdownMenu.SubTrigger
+        {...props}
+        style={[reversalWebIconStyle, style].filter(Boolean) as any}
+        className={className}>
         {children}
       </DropdownMenu.SubTrigger>
     );
@@ -174,7 +180,10 @@ const DropdownMenuLabel = DropdownMenu.create(
   ({ className, ...props }: { className?: string } & ComponentProps<typeof DropdownMenu.Label>) => (
     <DropdownMenu.Label
       {...props}
-      className={`px-2 py-1.5 font-geist-semibold text-sm text-grey dark:text-grey-dark ${className || ''}`}
+      className={clsx(
+        'px-2 py-1.5 font-geist-semibold text-sm text-grey dark:text-grey-dark',
+        className
+      )}
     />
   ),
   'Label'

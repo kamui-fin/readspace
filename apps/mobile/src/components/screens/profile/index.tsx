@@ -1,10 +1,11 @@
 import { useState, useRef, useCallback } from 'react';
-import { View, Text, Linking, ScrollView } from 'react-native';
+import { View, Linking, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Monicon } from '@monicon/native';
 import * as DocumentPicker from 'expo-document-picker';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
+import { Text } from '@components/ui/text';
 import { Button } from '@components/ui/button';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -177,15 +178,18 @@ export function ProfileScreen() {
           {/* Instance Information */}
           <SettingsGroup title="Instance" className="mb-8">
             <View className="rounded-xl bg-grey5 p-4 dark:bg-grey5-dark">
-              <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+              <Text
+                size="lg"
+                fontFamily="geist-semibold"
+                className="text-black dark:text-black-dark">
                 {settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
               </Text>
               {settings.instance_type === 'self-hosted' && (
-                <Text className="mt-1 font-geist-mono text-xs text-grey dark:text-grey">
+                <Text size="md" fontFamily="mono" className="mt-1 text-grey dark:text-grey">
                   {settings.readspace_url}
                 </Text>
               )}
-              <Text className="mt-3 font-geist text-sm text-grey dark:text-grey">
+              <Text size="md" fontFamily="geist" className="mt-3 text-grey dark:text-grey">
                 To switch instances, log out and reconfigure during sign in.
               </Text>
             </View>
@@ -193,12 +197,14 @@ export function ProfileScreen() {
 
           {/* Preferences Section */}
           <View className="mb-8 gap-2">
-            <Text className="font-geist-semibold text-sm text-grey dark:text-grey">
+            <Text size="md" fontFamily="geist-semibold" className="text-grey dark:text-grey">
               Preferences
             </Text>
             <View className="gap-3">
               <View className="flex-row items-center justify-between">
-                <Text className="font-geist text-base text-black dark:text-black-dark">Theme</Text>
+                <Text size="lg" fontFamily="geist" className="text-black dark:text-black-dark">
+                  Theme
+                </Text>
                 <DropdownMenuRoot>
                   <DropdownMenuTrigger>
                     <Button
@@ -206,7 +212,7 @@ export function ProfileScreen() {
                       size="medium"
                       fullWidth={false}
                       rightIcon={<ExpandVerticalIcon size={16} color={colors.black} />}
-                      textClassName="font-geist-medium text-sm">
+                      textClassName="font-geist-medium text-lg">
                       {theme.charAt(0).toUpperCase() + theme.slice(1)}
                     </Button>
                   </DropdownMenuTrigger>
@@ -222,7 +228,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="palette"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-base">
+                      <DropdownMenuItemTitle className="font-geist text-lg">
                         System
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />
@@ -238,7 +244,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="light_mode"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-base">
+                      <DropdownMenuItemTitle className="font-geist text-lg">
                         Light
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />
@@ -254,7 +260,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="dark_mode"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-base">
+                      <DropdownMenuItemTitle className="font-geist text-lg">
                         Dark
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />
@@ -277,7 +283,10 @@ export function ProfileScreen() {
                     color={colors.black}
                   />
                 }>
-                <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                <Text
+                  size="base"
+                  fontFamily="geist-semibold"
+                  className="text-black dark:text-black-dark">
                   Import Subscriptions
                 </Text>
               </Button>
@@ -296,7 +305,10 @@ export function ProfileScreen() {
                     color={colors.black}
                   />
                 }>
-                <Text className="font-geist-semibold text-base text-black dark:text-black-dark">
+                <Text
+                  size="base"
+                  fontFamily="geist-semibold"
+                  className="text-black dark:text-black-dark">
                   Export OPML
                 </Text>
               </Button>
@@ -305,7 +317,9 @@ export function ProfileScreen() {
 
           {/* Other Section */}
           <View className="mb-12 gap-2">
-            <Text className="font-geist-semibold text-sm text-grey dark:text-grey">Other</Text>
+            <Text size="md" fontFamily="geist-semibold" className="text-grey dark:text-grey">
+              Other
+            </Text>
             <View className="gap-3">
               {/* GitHub Button */}
               <Button
@@ -317,7 +331,7 @@ export function ProfileScreen() {
                 style={{
                   backgroundColor: githubBackground,
                 }}>
-                <Text className="font-geist-semibold text-base" style={{ color: githubColor }}>
+                <Text size="lg" fontFamily="geist-semibold" style={{ color: githubColor }}>
                   GitHub
                 </Text>
               </Button>
@@ -332,7 +346,7 @@ export function ProfileScreen() {
                 style={{
                   backgroundColor: discordBackground,
                 }}>
-                <Text className="font-geist-semibold text-base" style={{ color: discordColor }}>
+                <Text size="lg" fontFamily="geist-semibold" style={{ color: discordColor }}>
                   Join the Discord
                 </Text>
               </Button>
@@ -352,7 +366,7 @@ export function ProfileScreen() {
               style={{
                 backgroundColor: redBackground,
               }}>
-              <Text className="font-geist-semibold text-base" style={{ color: colors.red }}>
+              <Text size="lg" fontFamily="geist-semibold" style={{ color: colors.red }}>
                 {isLoggingOut ? 'Logging out...' : 'Logout'}
               </Text>
             </Button>

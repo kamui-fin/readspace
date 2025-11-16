@@ -1,10 +1,11 @@
-import { View, Text, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { View, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { useEffect } from 'react';
 import { Formik, type FormikProps } from 'formik';
 import { toFormikValidationSchema } from 'zod-formik-adapter';
 import { BottomSheetModal } from '@gorhom/bottom-sheet';
 
-import { TextInput } from '@components/ui/input';
+import { Text } from '@components/ui/text';
+import { Input } from '@components/ui/input';
 import { Button } from '@components/ui/button';
 import { toast } from '@components/ui/toast';
 import { useSettingsStore, type AppSettings } from '@stores/settings';
@@ -50,44 +51,45 @@ function EmailFormContent({
       <View className="flex-1 px-6">
         {/* Header */}
         <View className="mb-8">
-          <Text className="text-primary_foreground dark:text-primary_foreground mb-2 font-geist-bold text-[28px]">
+          <Text
+            size="3xl"
+            fontFamily="geist-bold"
+            className="text-primary_foreground dark:text-primary_foreground mb-2">
             What's your email?
           </Text>
-          <Text className="font-geist text-base text-grey dark:text-grey">
+          <Text size="lg" fontFamily="geist-medium" className="text-grey dark:text-grey">
             We'll use this to create your account
           </Text>
         </View>
 
         {/* Email Input */}
-        <View>
-          <TextInput
-            placeholder="example@gmail.com"
-            value={values.email}
-            onChangeText={handleChange('email')}
-            onBlur={handleBlur('email')}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoComplete="email"
-            textContentType="emailAddress"
-            autoFocus
-            size="large"
-            error={touched.email && !!errors.email}
-          />
-          {touched.email && errors.email && (
-            <Text className="font-geist mt-1 text-xs text-destructive dark:text-destructive">
-              {errors.email}
-            </Text>
-          )}
-        </View>
+        <Input
+          placeholder="address@example.com"
+          value={values.email}
+          onChangeText={handleChange('email')}
+          onBlur={handleBlur('email')}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoComplete="email"
+          textContentType="emailAddress"
+          autoFocus
+          type="email"
+          isInvalid={touched.email && !!errors.email}
+          errorText={touched.email && errors.email ? errors.email : undefined}
+          borderRadius={12}
+        />
 
         {/* Self-hosting option */}
         <View className="mt-4 flex-row items-center justify-between">
           {isSelfHosted ? (
             <>
               <View className="flex-1">
-                <Text className="font-geist-medium text-md text-primary-foreground dark:text-primary-foreground-dark">
+                <Text
+                  size="md"
+                  fontFamily="geist-medium"
+                  className="text-primary-foreground dark:text-primary-foreground-dark">
                   Using{' '}
-                  <Text className="font-geist-mono text-md text-grey dark:text-grey">
+                  <Text size="md" fontFamily="mono" className="text-grey dark:text-grey">
                     {settings.readspace_url}
                   </Text>
                 </Text>

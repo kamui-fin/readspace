@@ -23,8 +23,10 @@ const mmkvStorage = {
 export type ArticleFilter = 'all' | 'unread' | 'read' | 'read_later';
 
 interface FollowingState {
-  // Active tab index (0: Today, 1: Saved, 2: All)
+  // Active tab index (0: Today, 1: Saved, 2: All, 3: Recent)
   activeTab: number;
+  // Previous tab index (for back button navigation)
+  previousTab: number | null;
   // Article filter (all, unread, read)
   filter: ArticleFilter;
   // Track loading states per tab
@@ -56,6 +58,7 @@ export type FollowingStore = FollowingState & FollowingActions;
 
 const initialState: FollowingState = {
   activeTab: 0,
+  previousTab: null,
   filter: 'all',
   loadingStates: {
     today: false,
@@ -76,7 +79,11 @@ export const useFollowingStore = create<FollowingStore>()(
       ...initialState,
 
       setActiveTab: (tab) => {
-        set({ activeTab: tab });
+        set((state) => {
+          // Only track previous tab if it's different from current
+          const previousTab = state.activeTab !== tab ? state.activeTab : state.previousTab;
+          return { activeTab: tab, previousTab };
+        });
       },
 
       setFilter: (filter) => {
@@ -114,6 +121,7 @@ export const useFollowingStore = create<FollowingStore>()(
       storage: createJSONStorage(() => mmkvStorage),
       partialize: (state) => ({
         // Persist the active tab and filter, not loading states or counts
+        // Don't persist previousTab as it's only for navigation within session
         activeTab: state.activeTab,
         filter: state.filter,
       }),

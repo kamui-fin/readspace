@@ -5,7 +5,8 @@ import {
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { forwardRef, useCallback, useState } from 'react';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useColorScheme } from 'nativewind';
 
 import { Radio } from '@components/ui/radio';
@@ -75,7 +76,10 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
           className="flex-1 bg-white px-6 dark:bg-white-dark"
           contentContainerStyle={{ paddingBottom: 24 }}
           showsVerticalScrollIndicator={false}>
-          <Text className="mb-6 font-geist-bold text-2xl tracking-heading text-black dark:text-black-dark">
+          <Text
+            size="2xl"
+            fontFamily="geist-bold"
+            className="mb-6 tracking-heading text-black dark:text-black-dark">
             {title}
           </Text>
 

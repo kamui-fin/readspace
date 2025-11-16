@@ -1,5 +1,6 @@
 import { useCallback, useRef } from 'react';
-import { View, Text, Platform } from 'react-native';
+import { View, Platform } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -164,7 +165,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             </Button>
             <View className="absolute left-0 right-0 items-center">
               <Text
-                className="font-geist-medium text-black dark:text-black-dark"
+                size="base"
+                fontFamily="geist-medium"
+                className="text-black dark:text-black-dark"
                 numberOfLines={1}
                 ellipsizeMode="tail">
                 {feedTitle}
@@ -195,7 +198,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             </Button>
             <View className="absolute left-0 right-0 items-center">
               <Text
-                className="font-geist-medium text-black dark:text-black-dark"
+                size="base"
+                fontFamily="geist-medium"
+                className="text-black dark:text-black-dark"
                 numberOfLines={1}
                 ellipsizeMode="tail">
                 Articles from {feedTitle}
@@ -205,7 +210,10 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           </View>
         </View>
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="mb-4 text-center text-base text-grey dark:text-grey-dark">
+          <Text
+            size="base"
+            fontFamily="geist"
+            className="mb-4 text-center text-grey dark:text-grey-dark">
             Failed to load articles
           </Text>
           <Button variant="primary" size="medium" fullWidth={false} onPress={handleBack}>
@@ -229,7 +237,9 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             />
           </Button>
           <View className="absolute left-0 right-0 items-center">
-            <Text className="font-geist-medium text-black dark:text-black-dark">{feedTitle}</Text>
+            <Text size="base" fontFamily="geist-medium" className="text-black dark:text-black-dark">
+              {feedTitle}
+            </Text>
           </View>
           <View style={{ width: 40 }} />
         </View>
@@ -254,10 +264,16 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
       ) : (
         <View className="flex-1 items-center justify-center px-6">
           <Monicon name="solar:inbox-line-linear" size={64} color={colors.grey5} />
-          <Text className="mt-4 text-center font-geist-semibold text-lg text-black dark:text-black-dark">
+          <Text
+            size="lg"
+            fontFamily="geist-semibold"
+            className="mt-4 text-center text-black dark:text-black-dark">
             No articles yet
           </Text>
-          <Text className="font-geist mt-2 text-center text-base text-grey dark:text-grey-dark">
+          <Text
+            size="base"
+            fontFamily="geist"
+            className="mt-2 text-center text-grey dark:text-grey-dark">
             This feed doesn't have any articles yet. Check back later!
           </Text>
         </View>

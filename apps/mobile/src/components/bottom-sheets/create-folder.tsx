@@ -3,7 +3,7 @@ import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from '
 import { Text, View } from 'react-native';
 
 import { Button } from '@components/ui/button';
-import { TextInput } from '@components/ui/input';
+import { Input } from '@components/ui/input';
 import { useCreateFolder } from '@readspace/shared';
 import { toast } from '@components/ui/toast';
 import { BottomSheet } from '@components/ui/bottom-sheet';
@@ -75,7 +75,7 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
           <Text className="mb-4 font-geist text-base text-grey dark:text-grey-dark">
             Enter a name for your new folder
           </Text>
-          <TextInput
+          <Input
             value={folderName}
             onChangeText={setFolderName}
             placeholder="Folder name"

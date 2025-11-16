@@ -1,228 +1,196 @@
-import { type ComponentProps, forwardRef, useState, type ReactNode } from 'react';
+import { forwardRef, JSX, useMemo } from 'react';
 import {
+  Platform,
+  type StyleProp,
+  type TextInputProps as RNTextInputProps,
+  type TextStyle,
   TextInput as ReactNativeTextInput,
-  NativeSyntheticEvent,
-  TextInputKeyPressEvent,
   View,
+  Text,
+  Pressable,
+  type PressableProps,
 } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 
-import { COLORS } from '@lib/constants/colors';
+import { useOnFocus } from '@hooks/useOnFocus';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
-const inputVariants = cva(
-  'font-geist-regular text-base px-4 py-3 rounded-xl border-2 transition-colors',
-  {
-    variants: {
-      variant: {
-        default: 'bg-white dark:bg-background-dark',
-        filled: 'bg-grey6 dark:bg-grey6-dark',
-        withRightIcons: 'bg-grey5 dark:bg-grey5-dark pr-0',
-      },
-      size: {
-        small: 'px-3 py-2 text-sm',
-        medium: 'px-4 py-3 text-base',
-        large: 'px-4 py-3 text-lg',
-      },
-      disabled: {
-        true: 'opacity-50',
-        false: '',
-      },
-      rightIconCount: {
-        0: '',
-        1: 'pr-0',
-        2: 'pr-0',
-      },
-    },
-    compoundVariants: [
-      {
-        variant: 'withRightIcons',
-        rightIconCount: 1,
-        class: 'pr-0',
-      },
-      {
-        variant: 'withRightIcons',
-        rightIconCount: 2,
-        class: 'pr-0',
-      },
-    ],
-    defaultVariants: {
-      variant: 'default',
-      size: 'medium',
-      disabled: false,
-      rightIconCount: 0,
-    },
-  }
-);
-
-export type TextInputProps = {
+type InputProps = Omit<RNTextInputProps, 'style' | 'className'> & {
+  leftElement?: JSX.Element;
+  rightElement?: JSX.Element;
+  isInvalid?: boolean;
+  id?: string;
+  disabled?: boolean;
+  type?: RNTextInputProps['inputMode'];
+  label?: string;
+  errorText?: string;
+  helperText?: string;
+  inputStyle?: StyleProp<TextStyle>;
+  autocomplete?: 'on' | 'off';
+  borderRadius?: number;
   className?: string;
-  error?: boolean;
-  leftIconButton?: ReactNode;
-  rightIconButtons?: ReactNode[];
-} & Omit<ComponentProps<typeof ReactNativeTextInput>, 'className'> &
-  VariantProps<typeof inputVariants>;
+};
 
-const TextInput = forwardRef<ReactNativeTextInput, TextInputProps>(
-  (
-    {
-      className,
-      variant,
-      size,
-      error = false,
-      disabled = false,
-      leftIconButton,
-      rightIconButtons,
-      onFocus,
-      onBlur,
-      ...restProps
-    },
-    ref
-  ) => {
-    const [isFocused, setIsFocused] = useState(false);
-    const isDark = useIsDarkMode();
-
-    // Determine right icon count (max 2)
-    const iconCount: 0 | 1 | 2 = rightIconButtons
-      ? (Math.min(rightIconButtons.length, 2) as 0 | 1 | 2)
-      : 0;
-
-    // biome-ignore lint/suspicious/noExplicitAny: false positive
-    const handleFocus = (e: any) => {
-      setIsFocused(true);
-      onFocus?.(e);
-    };
-
-    // biome-ignore lint/suspicious/noExplicitAny: false positive
-    const handleBlur = (e: any) => {
-      setIsFocused(false);
-      onBlur?.(e);
-    };
-
-    const getBorderColor = () => {
-      if (error) return isDark ? COLORS.dark.destructive : COLORS.light.destructive;
-      if (isFocused) return isDark ? COLORS.dark.primary : COLORS.light.primary;
-      return isDark ? COLORS.dark.grey4 : COLORS.light.grey4;
-    };
-
-    const getTextColor = () =>
-      isDark ? COLORS.dark.primary_foreground : COLORS.light.primary_foreground;
-
-    const getPlaceholderColor = () => (isDark ? COLORS.dark.grey : COLORS.light.grey);
-
-    const getInputStyles = () => {
-      if (restProps.multiline) {
-        return {
-          includeFontPadding: false,
-          textAlignVertical: 'top' as const,
-        };
-      }
-
-      // For single-line inputs, set fixed height and center vertically
-      const sizeConfig = {
-        small: 40,
-        medium: 48,
-        large: 56,
-      };
-
-      const height = sizeConfig[size || 'medium'];
-
-      return {
-        includeFontPadding: false,
-        height,
-        textAlignVertical: 'center' as const,
-      };
-    };
-
-    // If variant is withRightIcons, wrap in container
-    if (variant === 'withRightIcons') {
-      return (
-        <View
-          className={clsx(
-            'flex-row items-center rounded-xl border-2',
-            variant === 'withRightIcons' &&
-              (isFocused ? 'border-primary dark:border-primary' : 'border-transparent')
-          )}
-          style={{
-            backgroundColor: isFocused
-              ? isDark
-                ? COLORS.dark.grey6
-                : COLORS.light.grey6
-              : isDark
-                ? COLORS.dark.grey5
-                : COLORS.light.grey5,
-          }}>
-          {/* Left Icon Button */}
-          {leftIconButton && <View className="pl-1">{leftIconButton}</View>}
-          <ReactNativeTextInput
-            ref={ref}
-            {...restProps}
-            className={clsx(
-              'flex-1 border-0 bg-transparent text-left font-geist-regular',
-              size === 'small' && 'px-2 py-2 text-sm',
-              size === 'medium' && 'px-3 py-3 text-base',
-              size === 'large' && 'px-3 py-3 text-lg',
-              leftIconButton && 'pl-2',
-              disabled && 'opacity-50',
-              className
-            )}
-            style={{
-              color: getTextColor(),
-              ...getInputStyles(),
-            }}
-            placeholderTextColor={getPlaceholderColor()}
-            editable={!disabled}
-            multiline={restProps.multiline ?? false}
-            autoCorrect={restProps.secureTextEntry ? false : restProps.autoCorrect}
-            autoCapitalize={restProps.secureTextEntry ? 'none' : restProps.autoCapitalize}
-            textContentType={restProps.secureTextEntry ? 'password' : restProps.textContentType}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-          />
-          {/* Right Icon Buttons */}
-          {iconCount > 0 && (
-            <View className="flex-row items-center gap-2 pr-2.5">
-              {rightIconButtons?.slice(0, 2).map((icon, index) => (
-                <View key={`right-icon-${index.toString()}`}>{icon}</View>
-              ))}
-            </View>
-          )}
-        </View>
-      );
+let idCounter = 0;
+// Replace this with useId from React 18. Currently we're doing client side rendering, so probably this is safe!
+export const useId = (id?: string) => {
+  const newId = useMemo(() => {
+    if (id) {
+      return id;
     }
+    idCounter++;
+    return idCounter.toString();
+  }, [id]);
 
-    return (
-      <ReactNativeTextInput
-        ref={ref}
-        {...restProps}
-        className={clsx(
-          inputVariants({ variant, size, disabled, rightIconCount: iconCount }),
-          className
-        )}
-        style={{
-          borderColor: getBorderColor(),
-          color: getTextColor(),
-          textAlign: restProps.secureTextEntry
-            ? 'left'
-            : restProps.multiline
-              ? undefined
-              : 'center',
-          ...getInputStyles(),
-        }}
-        placeholderTextColor={getPlaceholderColor()}
-        editable={!disabled}
-        multiline={restProps.multiline ?? false}
-        autoCorrect={restProps.secureTextEntry ? false : restProps.autoCorrect}
-        autoCapitalize={restProps.secureTextEntry ? 'none' : restProps.autoCapitalize}
-        textContentType={restProps.secureTextEntry ? 'password' : restProps.textContentType}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-      />
-    );
-  }
-);
+  return newId;
+};
 
-TextInput.displayName = 'TextInput';
+// biome-ignore lint/suspicious/noExplicitAny: forwardRef typing
+export const Input = forwardRef((props: InputProps, ref: any) => {
+  const {
+    leftElement,
+    rightElement,
+    placeholder,
+    onChangeText,
+    value,
+    label,
+    helperText,
+    errorText,
+    disabled,
+    type,
+    isInvalid,
+    autoFocus,
+    autocomplete,
+    borderRadius = 9999,
+    secureTextEntry,
+    multiline,
+    ...rest
+  } = props;
+  const { onFocus, onBlur } = useOnFocus();
+  const isDark = useIsDarkMode();
+  const inputId = useId(props.id);
+  const helperTextId = useId();
+  const errorTextId = useId();
 
-export { TextInput, NativeSyntheticEvent, TextInputKeyPressEvent };
+  return (
+    <View>
+      {label ? (
+        <>
+          <Text
+            nativeID={inputId}
+            className={clsx('text-sm font-bold text-gray-900 dark:text-white')}>
+            {label}
+          </Text>
+          <View className="h-2" />
+        </>
+      ) : null}
+
+      <View
+        className={clsx('transition-all duration-300')}
+        style={[
+          {
+            flexDirection: 'row',
+            alignItems: 'center',
+            borderRadius: borderRadius,
+            backgroundColor: isDark ? COLORS.dark.grey6 : COLORS.light.grey6,
+            borderColor: isInvalid
+              ? isDark
+                ? COLORS.dark.destructive
+                : COLORS.light.destructive
+              : undefined,
+            borderWidth: isInvalid ? 1 : undefined,
+            opacity: disabled ? 0.75 : 1,
+          },
+        ]}>
+        {leftElement}
+        <ReactNativeTextInput
+          className={clsx('text-gray-900 dark:text-white')}
+          style={[
+            // @ts-ignore remove focus outline on web as we'll control the focus styling
+            Platform.select({
+              web: {
+                outline: 'none',
+              },
+              default: undefined,
+            }),
+            {
+              flexGrow: 1,
+              paddingTop: Platform.select({
+                ios: 16,
+                default: 12,
+              }),
+              paddingBottom: Platform.select({
+                ios: 16,
+                default: 12,
+              }),
+              paddingLeft: leftElement ? 0 : 16,
+              paddingRight: rightElement ? 0 : 16,
+              fontWeight: '500',
+            },
+            props.inputStyle,
+          ]}
+          placeholderTextColor={isDark ? COLORS.dark.grey2 : COLORS.light.grey2}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          // @ts-ignore
+          readOnly={disabled}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          nativeID={inputId}
+          selectionColor={isDark ? COLORS.dark.grey3 : COLORS.light.grey3}
+          inputMode={type}
+          editable={!disabled}
+          autoFocus={autoFocus}
+          aria-describedby={Platform.select({
+            web: helperText ? helperTextId : undefined,
+            default: undefined,
+          })}
+          aria-errormessage={Platform.select({
+            web: errorText ? errorTextId : undefined,
+            default: undefined,
+          })}
+          aria-invalid={Platform.select({
+            web: isInvalid,
+            default: undefined,
+          })}
+          ref={ref}
+          autoComplete={autocomplete === 'off' ? 'off' : rest.autoComplete}
+          secureTextEntry={secureTextEntry}
+          multiline={multiline}
+          {...rest}
+        />
+        {rightElement && <View style={{ marginLeft: 'auto' }}>{rightElement}</View>}
+      </View>
+      {helperText ? (
+        <Text
+          nativeID={helperTextId}
+          className={clsx('text-sm text-gray-600 dark:text-gray-400')}
+          style={{ marginTop: 4, fontWeight: '600' }}>
+          {helperText}
+        </Text>
+      ) : null}
+      {errorText ? (
+        <Text
+          nativeID={errorTextId}
+          className={clsx('text-sm')}
+          style={{
+            marginTop: 4,
+            fontWeight: '600',
+            color: isDark ? COLORS.dark.destructive : COLORS.light.destructive,
+          }}>
+          {errorText}
+        </Text>
+      ) : null}
+    </View>
+  );
+});
+
+Input.displayName = 'Input';
+
+// This component adds appropriate padding to match our design system and increase the pressable area
+// Usage - with rightElement and leftElement
+export const InputPressable = (props: PressableProps) => {
+  return <Pressable style={{ padding: 8 }} {...props} />;
+};

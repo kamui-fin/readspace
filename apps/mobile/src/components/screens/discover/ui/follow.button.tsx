@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Pressable, Text, View, Platform } from 'react-native';
+import { Pressable, View, Platform } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
+import { Text } from '@components/ui/text';
 import { useFeeds, useSubscribeToFeed, useDeleteFeed } from '@readspace/shared';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -55,11 +56,11 @@ const followButtonVariants = cva('flex-row items-center gap-2 border', {
   },
 });
 
-const followButtonTextVariants = cva('font-geist-semibold', {
+const followButtonTextVariants = cva('', {
   variants: {
     variant: {
-      default: 'text-sm',
-      large: 'text-base',
+      default: '',
+      large: '',
     },
     following: {
       true: 'text-grey dark:text-grey-dark',
@@ -188,6 +189,8 @@ export function FollowButton({
           </View>
         )}
         <Text
+          size={variant === 'large' ? 'base' : 'sm'}
+          fontFamily="geist-semibold"
           className={followButtonTextVariants({
             variant: variant || 'default',
             following: displayFollowing,

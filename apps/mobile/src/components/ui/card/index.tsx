@@ -428,14 +428,14 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
           <View className="flex-1">
             {title && (
               <Text
-                className="mb-1 font-geist-semibold text-base text-primary-foreground dark:text-primary-foreground-dark"
+                className="mb-1 font-geist-semibold text-xl text-primary-foreground dark:text-primary-foreground-dark"
                 numberOfLines={1}>
                 {stripHtml(title)}
               </Text>
             )}
             {description && (
               <Text
-                className="font-geist-regular text-sm text-grey2 dark:text-grey2"
+                className="font-geist-regular text-lg text-grey2 dark:text-grey2"
                 numberOfLines={2}>
                 {stripHtml(description)}
               </Text>
@@ -494,7 +494,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
                   {/* Feed name */}
                   {feedName && (
                     <Text
-                      className="font-geist-regular text-xs text-grey dark:text-grey"
+                      className="font-geist-regular text-md text-grey dark:text-grey"
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{ flexShrink: 1 }}>
@@ -507,7 +507,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
                     <>
                       <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
                       <Text
-                        className="font-geist-regular text-xs text-grey dark:text-grey"
+                        className="font-geist-regular text-md text-grey dark:text-grey"
                         numberOfLines={1}
                         ellipsizeMode="tail">
                         {timestamp}
@@ -518,14 +518,14 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
               )}
               {title && (
                 <Text
-                  className="mb-2 font-geist-semibold text-base leading-5 tracking-tight text-primary-foreground dark:text-primary-foreground-dark"
+                  className="mb-4 font-geist-semibold text-xl leading-5 tracking-tight text-primary-foreground dark:text-primary-foreground-dark"
                   numberOfLines={3}>
                   {stripHtml(title)}
                 </Text>
               )}
               {description && (
                 <Text
-                  className="font-geist-regular text-sm leading-5 text-grey2 dark:text-grey2"
+                  className="font-geist-regular text-lg leading-5 text-grey2 dark:text-grey2"
                   numberOfLines={2}>
                   {stripHtml(description)}
                 </Text>
@@ -663,7 +663,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
                   {/* Feed name */}
                   {feedName && (
                     <Text
-                      className="font-geist-regular text-xs text-grey dark:text-grey"
+                      className="font-geist-regular text-md text-grey dark:text-grey"
                       numberOfLines={1}
                       ellipsizeMode="tail"
                       style={{ flexShrink: 1 }}>
@@ -676,7 +676,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
                     <>
                       <Monicon name="solar:clock-circle-linear" size={14} color="#90988B" />
                       <Text
-                        className="font-geist-regular text-xs text-grey dark:text-grey"
+                        className="font-geist-regular text-md text-grey dark:text-grey"
                         numberOfLines={1}
                         ellipsizeMode="tail">
                         {timestamp}
@@ -694,7 +694,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
               )}
               {description && (
                 <Text
-                  className="font-geist-regular text-sm leading-5 text-grey2 dark:text-grey2"
+                  className="font-geist-regular text-lg leading-5 text-grey2 dark:text-grey2"
                   numberOfLines={2}>
                   {stripHtml(description)}
                 </Text>
@@ -733,7 +733,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
               <View className="mb-2 flex-row items-center gap-2">
                 <View className="h-1.5 w-1.5 rounded-full bg-primary" />
                 <Text
-                  className="font-geist-regular text-xs text-grey dark:text-grey"
+                  className="font-geist-regular text-md text-grey dark:text-grey"
                   numberOfLines={1}
                   ellipsizeMode="tail">
                   {timestamp}
@@ -750,7 +750,7 @@ export const Card = forwardRef<React.ElementRef<typeof Pressable>, CardProps>(
             )}
             {description && (
               <Text
-                className="mt-2 font-geist-regular text-sm leading-5 text-grey2 dark:text-grey2"
+                className="mt-2 font-geist-regular text-lg leading-5 text-grey2 dark:text-grey2"
                 numberOfLines={3}
                 ellipsizeMode="tail">
                 {stripHtml(description)}

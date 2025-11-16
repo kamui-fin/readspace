@@ -2,12 +2,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
-  Text,
   type NativeSyntheticEvent,
   type NativeScrollEvent,
   RefreshControl,
   Platform,
 } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useRouter, useSegments } from 'expo-router';
 import type { SharedValue } from 'react-native-reanimated';
 
@@ -16,7 +16,7 @@ import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { toast } from '@components/ui/toast';
 import { useToast } from '@contexts/toast-provider';
 import { EmptyState } from '@components/screens/empty-state';
-import { ArticleCardSkeletonList } from '@/components/screens/following/ui/article-card.skeleton';
+import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { useFollowingStore, getTabName, getTabKey } from '@stores/following';
 import { useFeedViewStore } from '@stores/feed-view';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
@@ -25,7 +25,7 @@ import {
   FolderPickerModal,
   type FolderPickerModalRef,
 } from '@components/modals/folder-picker.modal';
-import { FolderPickerBottomSheet } from '@/components/bottom-sheets/folder-picker';
+import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
 import { groupArticlesByDate } from '@lib/utils/date';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -598,7 +598,10 @@ export function FollowingScreen({
     if (item.type === 'section') {
       return (
         <View className="px-4 pb-2 pt-4">
-          <Text className="font-geist-semibold text-sm text-secondary dark:text-secondary-dark">
+          <Text
+            size="md"
+            fontFamily="geist-semibold"
+            className="text-secondary dark:text-secondary-dark">
             {item.sectionTitle}
           </Text>
         </View>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
-import { Share, Text, View, Linking } from 'react-native';
+import { Share, View, Linking } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
@@ -212,7 +213,10 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           isClipped={false}
         />
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-base text-grey dark:text-grey-dark">
+          <Text
+            size="base"
+            fontFamily="geist"
+            className="text-center text-grey dark:text-grey-dark">
             Article not found
           </Text>
         </View>

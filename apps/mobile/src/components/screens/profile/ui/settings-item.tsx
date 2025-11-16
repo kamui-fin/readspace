@@ -1,6 +1,7 @@
 import clsx from 'clsx';
 import { forwardRef } from 'react';
-import { Pressable, Text, View, type PressableProps } from 'react-native';
+import { Pressable, View, type PressableProps } from 'react-native';
+import { Text } from '@components/ui/text';
 import { Monicon } from '@monicon/native';
 
 type SettingsItemVariant = 'select' | 'button' | 'link';
@@ -42,7 +43,9 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
         case 'select':
           return (
             <View className="flex-row items-center gap-2">
-              <Text className="font-geist text-base text-grey dark:text-grey">{value}</Text>
+              <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
+                {value}
+              </Text>
               <Monicon name="lucide:chevrons-up-down" size={20} color="#9FA29F" />
             </View>
           );
@@ -67,7 +70,9 @@ export const SettingsItem = forwardRef<React.ElementRef<typeof Pressable>, Setti
           opacity: pressed ? 0.7 : 1,
         })}
         {...props}>
-        <Text className="font-geist text-base text-black dark:text-black-dark">{label}</Text>
+        <Text size="base" fontFamily="geist" className="text-black dark:text-black-dark">
+          {label}
+        </Text>
         {renderRightContent()}
       </Pressable>
     );

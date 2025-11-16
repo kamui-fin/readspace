@@ -6,7 +6,7 @@ import { Keyboard, Platform, ScrollView, Text, TouchableWithoutFeedback, View } 
 import { z } from 'zod';
 
 import { Button } from '@components/ui/button';
-import { TextInput } from '@components/ui/input';
+import { Input } from '@components/ui/input';
 import { Modal } from '@components/ui/modal';
 import { toast } from '@components/ui/toast';
 import { Spinner } from '@components/ui/spinner';
@@ -214,73 +214,54 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
               <View className="gap-4 pb-4">
                 {/* API URL */}
                 <View>
-                  <Text className="mb-2 font-geist-medium text-sm text-primary-foreground dark:text-primary-foreground-dark">
-                    API URL
-                  </Text>
-                  <TextInput
+                  <Input
+                    label="API URL"
                     value={apiUrl}
                     onChangeText={setApiUrl}
                     placeholder="http://localhost:18008"
                     keyboardType="url"
                     autoCapitalize="none"
-                    autoComplete="off"
+                    autocomplete="off"
                     autoCorrect={false}
-                    error={!!errors.apiUrl}
+                    isInvalid={!!errors.apiUrl}
+                    errorText={errors.apiUrl}
                     className="font-geist-mono"
                   />
-                  {errors.apiUrl && (
-                    <Text className="font-geist mt-1 text-xs text-destructive dark:text-destructive">
-                      {errors.apiUrl}
-                    </Text>
-                  )}
                 </View>
 
                 {/* Supabase URL */}
                 <View>
-                  <Text className="mb-2 font-geist-medium text-sm text-primary-foreground dark:text-primary-foreground-dark">
-                    Supabase URL
-                  </Text>
-                  <TextInput
+                  <Input
+                    label="Supabase URL"
                     value={supabaseUrl}
                     onChangeText={setSupabaseUrl}
                     placeholder="http://localhost:18000"
                     keyboardType="url"
                     autoCapitalize="none"
-                    autoComplete="off"
+                    autocomplete="off"
                     autoCorrect={false}
-                    error={!!errors.supabaseUrl}
+                    isInvalid={!!errors.supabaseUrl}
+                    errorText={errors.supabaseUrl}
                     className="font-geist-mono"
                   />
-                  {errors.supabaseUrl && (
-                    <Text className="font-geist mt-1 text-xs text-destructive dark:text-destructive">
-                      {errors.supabaseUrl}
-                    </Text>
-                  )}
                 </View>
 
                 {/* Supabase Anonymous Key */}
                 <View>
-                  <Text className="mb-2 font-geist-medium text-sm text-primary-foreground dark:text-primary-foreground-dark">
-                    Supabase Anonymous Key
-                  </Text>
-                  <TextInput
+                  <Input
+                    label="Supabase Anonymous Key"
                     value={supabaseAnonKey}
                     onChangeText={setSupabaseAnonKey}
                     placeholder="Your anonymous key"
                     autoCapitalize="none"
-                    autoComplete="off"
+                    autocomplete="off"
                     autoCorrect={false}
                     multiline
-                    numberOfLines={3}
-                    error={!!errors.supabaseAnonKey}
+                    isInvalid={!!errors.supabaseAnonKey}
+                    errorText={errors.supabaseAnonKey}
                     className="font-geist-mono"
-                    style={{ height: 80, textAlignVertical: 'top' }}
+                    inputStyle={{ height: 80, textAlignVertical: 'top' }}
                   />
-                  {errors.supabaseAnonKey && (
-                    <Text className="font-geist mt-1 text-xs text-destructive dark:text-destructive">
-                      {errors.supabaseAnonKey}
-                    </Text>
-                  )}
                 </View>
               </View>
             </ScrollView>

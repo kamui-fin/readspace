@@ -168,9 +168,6 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
                 </View>
               )}
             </View>
-
-            {/* Divider */}
-            <Divider />
           </BottomSheetView>
         )}
 
@@ -179,7 +176,7 @@ export const BottomSheet = forwardRef<BottomSheetModal, BottomSheetProps>(
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingTop: headerTitle || headerLeft || headerRight || secondaryAction ? 64 : 16,
-            paddingBottom: 24,
+            paddingBottom: 18,
           }}
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled={true}

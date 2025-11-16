@@ -1,5 +1,6 @@
 import clsx from 'clsx';
-import { Text, View } from 'react-native';
+import { View } from 'react-native';
+import { Text } from '@components/ui/text';
 import { Avatar } from '@components/ui/avatar';
 
 export interface UserProfileProps {
@@ -16,8 +17,12 @@ export function UserProfile({ name, email, avatarUrl, className }: UserProfilePr
 
       {/* User Info */}
       <View className="flex-1">
-        <Text className="font-geist-semibold text-xl text-black dark:text-black-dark">{name}</Text>
-        <Text className="font-geist text-base text-grey dark:text-grey">{email}</Text>
+        <Text size="xl" fontFamily="geist-semibold" className="text-black dark:text-black-dark">
+          {name}
+        </Text>
+        <Text size="lg" fontFamily="geist" className="text-grey dark:text-grey">
+          {email}
+        </Text>
       </View>
     </View>
   );

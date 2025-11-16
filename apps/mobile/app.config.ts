@@ -2,8 +2,8 @@ import type { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Universal',
-  slug: 'universal',
+  name: 'Readspace',
+  slug: 'readspace',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/app/icon.png',

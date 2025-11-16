@@ -1,11 +1,12 @@
 /** biome-ignore-all assist/source/organizeImports: false positive */
 import { router } from 'expo-router';
 import { View, Text, StatusBar, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Monicon } from '@monicon/native';
 
 import { Button } from '@components/ui/button';
 import { GoogleIcon } from '@components/icons/google';
+import { ReadspaceLogo } from '@components/icons/readspace-logo';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 
@@ -21,9 +22,7 @@ export default function WelcomeScreen() {
   const horizontalPadding = Math.max(Math.min(24 * widthRatio, 32), 20);
 
   return (
-    <View
-      className="dark:bg-screen_background flex-1 bg-background"
-      style={{ paddingTop: insets.top }}>
+    <SafeAreaView className="dark:bg-screen_background flex-1 bg-background" edges={['top']}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
 
       {/* Main Content */}
@@ -33,12 +32,12 @@ export default function WelcomeScreen() {
         {/* Logo and Brand */}
         <View className="mb-6 flex-row items-center">
           <View
-            className="items-center justify-center rounded-2xl bg-primary dark:bg-primary"
+            className="items-center justify-center rounded-2xl bg-black dark:bg-black"
             style={{ width: logoSize, height: logoSize }}>
-            <Text className="font-geist-bold text-2xl text-white dark:text-white">R</Text>
+            <ReadspaceLogo size={logoSize} />
           </View>
-          <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-bold text-2xl">
-            Readspace
+          <Text className="text-primary_foreground dark:text-primary_foreground ml-4 font-figtree-medium text-4xl">
+            readspace
           </Text>
         </View>
 
@@ -78,6 +77,6 @@ export default function WelcomeScreen() {
           Continue with Google
         </Button>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }

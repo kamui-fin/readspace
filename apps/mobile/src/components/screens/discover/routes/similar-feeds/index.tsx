@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { Text } from '@components/ui/text';
 import { useQuery } from '@tanstack/react-query';
 import { useFocusEffect } from 'expo-router';
 import { Monicon } from '@monicon/native';
@@ -239,7 +240,10 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
     return (
       <View className="flex-1 bg-background dark:bg-background-dark">
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="mb-4 text-center text-base text-grey dark:text-grey-dark">
+          <Text
+            size="base"
+            fontFamily="geist"
+            className="mb-4 text-center text-grey dark:text-grey-dark">
             Failed to load similar feeds
           </Text>
         </View>
@@ -291,10 +295,16 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
         ) : (
           <View className="flex-1 items-center justify-center px-6">
             <Monicon name="solar:document-text-linear" size={64} color={colors.grey5} />
-            <Text className="mt-4 text-center font-geist-semibold text-lg text-black dark:text-black-dark">
+            <Text
+              size="lg"
+              fontFamily="geist-semibold"
+              className="mt-4 text-center text-black dark:text-black-dark">
               No similar feeds found
             </Text>
-            <Text className="font-geist mt-2 text-center text-base text-grey dark:text-grey-dark">
+            <Text
+              size="base"
+              fontFamily="geist"
+              className="mt-2 text-center text-grey dark:text-grey-dark">
               This feed might be unique, or similar feeds may not have embeddings yet.
             </Text>
           </View>
