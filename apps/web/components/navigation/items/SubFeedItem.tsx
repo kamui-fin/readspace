@@ -26,6 +26,8 @@ interface SubFeedItemData {
     isActive: boolean
     /** Whether this feed is favorited */
     isFavorite: boolean
+    /** Whether this item is in the pinned section (hides star icon) */
+    isPinned?: boolean
 }
 
 interface SubFeedItemProps {
@@ -83,8 +85,8 @@ const SubFeedItemComponent = ({
                                     <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
                                 )}
                                 <span className="truncate">{item.title}</span>
-                                {/* Star indicator for favorited feeds */}
-                                {item.isFavorite && (
+                                {/* Star indicator for favorited feeds (hidden in pinned section) */}
+                                {item.isFavorite && !item.isPinned && (
                                     <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
                                 )}
                             </div>

@@ -172,8 +172,10 @@ export function FeedsNavigation({
                 count: feed.unread_count ?? null,
                 image: feed.image_url || undefined,
                 isActive: pathname === `/feeds/${feed.id}/articles`,
-                // Don't show star icon in pinned section (it's redundant)
-                isFavorite: false,
+                // Keep isFavorite true for correct context menu behavior
+                // Star icon is hidden via isPinned flag
+                isFavorite: true,
+                isPinned: true,
             })
         })
 

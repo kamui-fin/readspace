@@ -183,6 +183,21 @@ export function ArticleContent({
                 setContentKey(newKey)
                 onContentChange(data.content, newKey)
                 onReadTimeChange(data.estimated_read_time_minutes || null)
+
+                // Update the article cache with extracted content
+                queryClient.setQueryData(
+                    [RSS_QUERY_KEYS.ARTICLE, article.id],
+                    (old: Article | undefined) => {
+                        if (!old) return old
+                        return {
+                            ...old,
+                            extracted_content: data.content,
+                            estimated_read_time_minutes:
+                                data.estimated_read_time_minutes || old.estimated_read_time_minutes,
+                        }
+                    }
+                )
+
                 // Automatically switch to extracted content after successful extraction
                 setContentSource("extracted")
             } else if (data) {

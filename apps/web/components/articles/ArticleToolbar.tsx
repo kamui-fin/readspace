@@ -143,14 +143,15 @@ export function ArticleToolbar({
                                     | "original"
                                     | "extracted"
                                     | "translated"
+                                // Always update the content source state for immediate tab feedback
+                                onContentSourceChange(newSource)
+
                                 // If switching to extracted and no content exists yet, trigger extraction
                                 if (
                                     newSource === "extracted" &&
                                     !article.extracted_content
                                 ) {
                                     onExtractFullText()
-                                } else {
-                                    onContentSourceChange(newSource)
                                 }
                             }}
                             className="w-auto inline-block"
