@@ -7,6 +7,7 @@ import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 import { Text } from '@components/ui/text';
 import { Button } from '@components/ui/button';
+import { Chip } from '@components/ui/chip';
 import { useSession } from '@contexts/auth-context';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
@@ -28,7 +29,6 @@ import {
 } from '@components/ui/dropdown-menu';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '@components/navigation/header';
-import { SettingsGroup } from '@/components/screens/profile/ui/settings-group';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { OPMLImportBottomSheet } from '@/components/bottom-sheets/opml-import';
 import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
@@ -167,33 +167,21 @@ export function ProfileScreen() {
         <View className="px-6">
           {/* User Profile */}
           {user && (
-            <UserProfile
-              name={user.user_metadata?.full_name || 'User'}
-              email={user.email || ''}
-              avatarUrl={user.user_metadata?.avatar_url}
-              className="mb-8"
-            />
-          )}
-
-          {/* Instance Information */}
-          <SettingsGroup title="Instance" className="mb-8">
-            <View className="rounded-xl bg-grey5 p-4 dark:bg-grey5-dark">
-              <Text
-                size="lg"
-                fontFamily="geist-semibold"
-                className="text-black dark:text-black-dark">
-                {settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
-              </Text>
-              {settings.instance_type === 'self-hosted' && (
-                <Text size="md" fontFamily="mono" className="mt-1 text-grey dark:text-grey">
-                  {settings.readspace_url}
-                </Text>
-              )}
-              <Text size="md" fontFamily="geist" className="mt-3 text-grey dark:text-grey">
-                To switch instances, log out and reconfigure during sign in.
-              </Text>
+            <View className="mb-8 flex-row items-center justify-between">
+              <UserProfile
+                name={user.user_metadata?.full_name || 'User'}
+                email={user.email || ''}
+                avatarUrl={user.user_metadata?.avatar_url}
+                className="flex-1"
+              />
+              <Chip
+                label={settings.instance_type === 'cloud' ? 'Cloud' : 'Self-hosted'}
+                variant="filled"
+                size="small"
+                selected={false}
+              />
             </View>
-          </SettingsGroup>
+          )}
 
           {/* Preferences Section */}
           <View className="mb-8 gap-2">
@@ -228,7 +216,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="palette"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-lg">
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
                         System
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />
@@ -244,7 +232,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="light_mode"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-lg">
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
                         Light
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />
@@ -260,7 +248,7 @@ export function ProfileScreen() {
                         }}
                         androidIconName="dark_mode"
                       />
-                      <DropdownMenuItemTitle className="font-geist text-lg">
+                      <DropdownMenuItemTitle size="lg" fontFamily="geist">
                         Dark
                       </DropdownMenuItemTitle>
                       <DropdownMenuItemIndicator />

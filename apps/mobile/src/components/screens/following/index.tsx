@@ -11,7 +11,7 @@ import { Text } from '@components/ui/text';
 import { useRouter, useSegments } from 'expo-router';
 import type { SharedValue } from 'react-native-reanimated';
 
-import { Card } from '@components/ui/card';
+import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { toast } from '@components/ui/toast';
 import { useToast } from '@contexts/toast-provider';
@@ -678,8 +678,7 @@ export function FollowingScreen({
       }
 
       return (
-        <Card
-          variant="swipeable"
+        <ArticleItemCard
           article={article}
           imageUrl={displayImageUrl}
           title={article.title}

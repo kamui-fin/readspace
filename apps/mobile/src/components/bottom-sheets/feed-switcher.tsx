@@ -17,12 +17,12 @@ import {
 } from '@components/ui/dropdown-menu';
 import { useFeeds, useFolders, type Feed, type Folder } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
-import { useFeedSwitcherStore } from '@stores/feed-switcher';
+import { useFeedSwitcherStore, type FeedSwitcherStore } from '@stores/feed-switcher';
 import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
 import {
   CreateFolderModal,
   type CreateFolderModalRef,
-} from '@/components/bottom-sheets/create-folder';
+} from '@components/bottom-sheets/create-folder';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 
 export interface FeedSwitcherBottomSheetRef {
@@ -54,8 +54,12 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
     const feeds = useMemo(() => (feedsData as Feed[]) || [], [feedsData]);
     const folders = useMemo(() => (foldersData as Folder[]) || [], [foldersData]);
 
-    const expandedFolders = useFeedSwitcherStore((state: any) => state.expandedFolders);
-    const toggleFolderInStore = useFeedSwitcherStore((state: any) => state.toggleFolder);
+    const expandedFolders = useFeedSwitcherStore(
+      (state: FeedSwitcherStore) => state.expandedFolders
+    );
+    const toggleFolderInStore = useFeedSwitcherStore(
+      (state: FeedSwitcherStore) => state.toggleFolder
+    );
 
     const selectFeed = useFeedViewStore((state) => state.selectFeed);
     const selectFolder = useFeedViewStore((state) => state.selectFolder);
@@ -137,7 +141,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
           <View className={!isLast ? 'mb-4' : 'mb-2'}>
             {/* Folder Group Container */}
             <View
-              className={`${item.isExpanded && !item.isEmpty ? 'rounded-2xl' : 'rounded-2xl'} bg-grey5 dark:bg-grey5-dark`}>
+              className={`${item.isExpanded && !item.isEmpty ? 'rounded-2xl' : 'rounded-2xl'} bg-grey6 dark:bg-grey6-dark`}>
               {/* Folder Button */}
               <Button
                 variant="secondary"
@@ -171,7 +175,12 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
 
                     <View className="flex-row items-center flex-shrink-0">
                       {item.unreadCount > 0 && (
-                        <Chip label={item.unreadCount.toString()} size="medium" selected={false} />
+                        <Chip
+                          label={item.unreadCount.toString()}
+                          size="small"
+                          selected={false}
+                          className="bg-grey4 dark:bg-grey4-dark"
+                        />
                       )}
                       <Button
                         variant="icon"
@@ -181,7 +190,7 @@ export const FeedSwitcherBottomSheet = forwardRef<FeedSwitcherBottomSheetRef, ob
                           e?.stopPropagation?.();
                           toggleFolderExpand(item.folder.id);
                         }}
-                        className="h-8 w-8">
+                        className="h-8 w-8 bg-transparent dark:bg-transparent">
                         <ExpandVerticalIcon size={20} color={colors.grey2} />
                       </Button>
                     </View>

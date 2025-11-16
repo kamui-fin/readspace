@@ -58,7 +58,6 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
     const [supabaseAnonKey, setSupabaseAnonKey] = useState(initialData?.supabaseAnonKey || '');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [isValidating, setIsValidating] = useState(false);
-    const isDark = false; // You can use useIsDarkMode() hook if available
 
     // Debug: Log when bottom sheet mounts/unmounts
     useEffect(() => {
@@ -105,7 +104,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
           console.log('[SelfHostSettingsBottomSheet] Resolved API URL:', resolvedApiUrl);
 
           try {
-            const apiResponse = await fetch(resolvedApiUrl + '/api/health', {
+            const apiResponse = await fetch(`${resolvedApiUrl}/api/health`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
             });

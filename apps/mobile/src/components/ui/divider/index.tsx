@@ -30,8 +30,8 @@ export const Divider: React.FC<DividerProps> = ({
     className={`bg-grey4 dark:bg-grey4-dark ${className || ''}`}
     style={[
       orientation === 'horizontal'
-        ? { width: width as DimensionValue, height: StyleSheet.hairlineWidth }
-        : { width: StyleSheet.hairlineWidth, height: height as DimensionValue },
+        ? { width: width as DimensionValue, height: 0.5 } // Increased from hairlineWidth to 0.5
+        : { width: 0.5, height: height as DimensionValue }, // Increased from hairlineWidth to 0.5
       style,
     ]}
     {...rest}

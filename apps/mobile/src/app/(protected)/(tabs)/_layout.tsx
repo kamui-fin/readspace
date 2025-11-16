@@ -173,6 +173,21 @@ export default function TabsLayout() {
           }}
         />
         <Tabs.Screen
+          name="recents"
+          options={{
+            title: 'Recents',
+            tabBarLabel: 'Recents',
+            tabBarIcon: ({ color, size, focused }) => (
+              <TabBarIcon
+                name="solar:history-bold-duotone"
+                size={size}
+                color={color}
+                focused={focused}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
           name="profile"
           options={{
             title: 'Profile',

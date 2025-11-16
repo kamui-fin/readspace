@@ -106,7 +106,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
           console.log('[SelfHostSettings] Resolved API URL:', resolvedApiUrl);
 
           try {
-            const apiResponse = await fetch(resolvedApiUrl + '/api/health', {
+            const apiResponse = await fetch(`${resolvedApiUrl}/api/health`, {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
             });

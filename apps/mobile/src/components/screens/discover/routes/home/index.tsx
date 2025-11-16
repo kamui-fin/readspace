@@ -4,7 +4,7 @@ import type { TextInput as RNTextInput } from 'react-native';
 import { Text } from '@components/ui/text';
 import { useQuery } from '@tanstack/react-query';
 import { Monicon } from '@monicon/native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { SearchBar, type Language } from '@components/screens/discover/ui/search-bar.input';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
@@ -47,7 +47,6 @@ export function DiscoverScreen() {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const { searches: recentSearches, addSearch } = useSearchHistory();
-  const insets = useSafeAreaInsets();
 
   // Compute bottom padding to account for tab bar
   // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)

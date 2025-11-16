@@ -411,15 +411,15 @@ export function ArticleReader({
 
   // Try multiple ways to get the feed ID
   let feedId: string | undefined;
-  if (typeof article.feed === 'object' && article.feed) {
-    feedId = (article.feed as any).id;
+  if (typeof article.feed === 'object' && article.feed && 'id' in article.feed) {
+    feedId = article.feed.id as string;
   } else if (typeof article.feed === 'string') {
     feedId = article.feed;
   }
 
   // Check if there's a feed_id field directly on the article
-  if (!feedId && (article as any).feed_id) {
-    feedId = (article as any).feed_id;
+  if (!feedId && 'feed_id' in article && typeof article.feed_id === 'string') {
+    feedId = article.feed_id;
   }
 
   // For clipped articles, show domain and use created_at as saved date

@@ -1,107 +1,221 @@
+import { View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { Platform, Pressable, StyleSheet, useColorScheme, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  Easing,
+  Extrapolation,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import * as Haptics from 'expo-haptics';
 
 import { BlurView } from '@components/ui/blurview';
+import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import { PlusIcon } from '@components/icons/plus';
+import { styles } from './styles';
+import { ANIMATION_DURATION } from './constants';
+import { AnimatedTab } from './animated-tab';
+import { ExpandTab } from './expand-tab';
 
-export const ThemeBottomTabbar = ({ state, descriptors, navigation }: BottomTabBarProps) => {
-  const colorScheme = useColorScheme();
-  const colors = COLORS[colorScheme ?? 'light'];
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        backgroundColor: 'transparent',
-        paddingTop: 8,
-        paddingHorizontal: 20,
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: 72,
-      }}>
-      {state.routes.map((route, index) => {
-        const { options } = descriptors[route.key];
-        const focused = state.index === index;
-        const color = focused ? colors.secondary : colors.inactive_tint;
-
-        const onPress = () => {
-          const event = navigation.emit({
-            type: 'tabPress',
-            target: route.key,
-            canPreventDefault: true,
-          });
-
-          if (!focused && !event.defaultPrevented) {
-            navigation.navigate({
-              name: route.name,
-              merge: true,
-              params: route.params,
-            });
-          }
-        };
-
-        const onLongPress = () => {
-          navigation.emit({
-            type: 'tabLongPress',
-            target: route.key,
-          });
-        };
-
-        return (
-          <View
-            key={route.key}
-            style={{
-              alignItems: 'center',
-              justifyContent: 'center',
-              minWidth: 44,
-              minHeight: 44,
-            }}>
-            <Pressable
-              onLongPress={onLongPress}
-              onPress={onPress}
-              hitSlop={10}
-              style={{
-                alignItems: 'center',
-                justifyContent: 'center',
-                width: 44,
-                height: 44,
-              }}>
-              {options.tabBarIcon?.({ focused, color, size: 28 })}
-            </Pressable>
-          </View>
-        );
-      })}
-    </View>
-  );
-};
-
-export const BottomTabbar = (props: BottomTabBarProps) => {
-  const { bottom: safeAreaBottom } = useSafeAreaInsets();
+export const LinearTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const isDark = useIsDarkMode();
-  const colorScheme = useColorScheme();
+  const tabBarColors = COLORS[isDark ? 'dark' : 'light'];
+  const animationProgress = useSharedValue(0);
 
-  const blurType = isDark ? 'dark' : 'light';
+  const startY = useSharedValue(0);
+  const translationY = useSharedValue(0);
+
+  const panGesture = Gesture.Pan()
+    .onStart(async () => {
+      startY.value = 0;
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Rigid);
+    })
+    .onUpdate((event) => {
+      translationY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      const velocity = event.velocityY;
+      const threshold = 500;
+
+      if (velocity < -threshold && animationProgress.value === 0) {
+        animationProgress.value = withTiming(1, {
+          duration: ANIMATION_DURATION,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        });
+      } else if (velocity > threshold && animationProgress.value === 1) {
+        animationProgress.value = withTiming(0, {
+          duration: ANIMATION_DURATION,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        });
+      } else if (animationProgress.value > 0.8) {
+        animationProgress.value = withTiming(0, {
+          duration: ANIMATION_DURATION,
+          easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+        });
+      }
+      scheduleOnRN(Haptics.impactAsync, Haptics.ImpactFeedbackStyle.Light);
+      translationY.value = 0;
+    });
+
+  const animatedTabBarStyle = useAnimatedStyle(() => {
+    const scale = interpolate(
+      animationProgress.value,
+      [0, 0.5, 1],
+      [1, 0.5, 1],
+      Extrapolation.CLAMP
+    );
+
+    const translateY = interpolate(
+      animationProgress.value,
+      [0, 0.5, 1],
+      [0, -10, -20],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      transform: [{ scale }, { translateY }],
+    };
+  });
+
+  const animatedFloatingBarStyle = useAnimatedStyle(() => {
+    const height = interpolate(
+      animationProgress.value,
+      [0, 0.4, 0.7, 1],
+      [50, 50, 250, 400],
+      Extrapolation.CLAMP
+    );
+
+    const borderRadius = interpolate(
+      animationProgress.value,
+      [0, 0.2, 1],
+      [25, 100, 40],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      height,
+      borderRadius,
+    };
+  });
+
+  const animatedOriginalTabBarStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      animationProgress.value,
+      [0, 0.25, 0.4],
+      [1, 0.2, 0],
+      Extrapolation.CLAMP
+    );
+
+    return {
+      opacity,
+      pointerEvents: animationProgress.value > 0.25 ? 'none' : 'auto',
+    };
+  });
+
+  const handleExpandTabPress = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    if (animationProgress.value === 0) {
+      animationProgress.value = withTiming(1, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      });
+    } else {
+      animationProgress.value = withTiming(0, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      });
+    }
+  };
+
+  const filteredRouteTabs = state.routes.filter((route) => {
+    const { options } = descriptors[route.key];
+    return options?.tabBarIcon !== undefined;
+  });
+
+  const blurTint = isDark ? 'systemThickMaterialDark' : 'systemThickMaterialLight';
 
   return (
-    <View
-      style={{
-        position: 'absolute',
-        bottom: 0,
-        width: '100%',
-        height: BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom,
-        overflow: 'hidden',
-        backgroundColor: Platform.select({
-          ios: COLORS[colorScheme ?? 'light'].tab_bar_background_ios,
-          default: COLORS[colorScheme ?? 'light'].tab_bar_background_default,
-        }),
-      }}>
-      {Platform.OS === 'ios' ? (
-        <BlurView intensity={100} tint={blurType} style={[StyleSheet.absoluteFillObject]} />
-      ) : null}
-      <ThemeBottomTabbar {...props} />
-    </View>
+    <GestureHandlerRootView style={styles.gestureContainer}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <GestureDetector gesture={panGesture}>
+          <Animated.View style={[styles.container, { flex: 1, marginRight: 12 }]}>
+            <Animated.View
+              style={[styles.floatingBarWrapper, animatedFloatingBarStyle, animatedTabBarStyle]}>
+              <BlurView intensity={100} tint={blurTint} style={styles.blurView}>
+                <Animated.View style={[styles.floatingBar, animatedOriginalTabBarStyle]}>
+                  {filteredRouteTabs.map((route, index) => {
+                    const { options } = descriptors[route.key];
+                    const isFocused = state.index === state.routes.indexOf(route);
+
+                    const onPress = (): void => {
+                      const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                      });
+
+                      if (!isFocused && !event.defaultPrevented) {
+                        navigation.navigate(route.name, route.params);
+                      }
+                    };
+
+                    const onLongPress = (): void => {
+                      navigation.emit({
+                        type: 'tabLongPress',
+                        target: route.key,
+                      });
+                    };
+
+                    return (
+                      <AnimatedTab
+                        key={route.key}
+                        isFocused={isFocused}
+                        options={options}
+                        colors={tabBarColors}
+                        onPress={onPress}
+                        onLongPress={onLongPress}
+                        animationProgress={animationProgress}
+                        index={index}
+                      />
+                    );
+                  })}
+
+                  <ExpandTab
+                    onPress={handleExpandTabPress}
+                    animationProgress={animationProgress}
+                    colors={tabBarColors}
+                  />
+                </Animated.View>
+              </BlurView>
+            </Animated.View>
+          </Animated.View>
+        </GestureDetector>
+        <BlurView intensity={100} tint={blurTint} style={{ borderRadius: 22, overflow: 'hidden' }}>
+          <Button
+            variant="text"
+            size="small"
+            fullWidth={false}
+            onPress={() => {
+              // TODO: Handle plus button press
+            }}
+            style={{
+              width: 56,
+              height: 48,
+              padding: 0,
+              borderRadius: 22,
+              backgroundColor: 'transparent',
+            }}>
+            <PlusIcon size={40} color={tabBarColors.grey} />
+          </Button>
+        </BlurView>
+      </View>
+    </GestureHandlerRootView>
   );
 };
+
+export { LinearTabBar as BottomTabbar };

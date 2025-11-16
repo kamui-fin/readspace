@@ -28,7 +28,7 @@ export function PageIndicator({
 
   return (
     <View className="w-full flex-row items-center justify-between">
-      {Array.from({ length: count }).map((_, index) => {
+      {Array.from({ length: count }, (_, index) => {
         const isActive = current.interpolate({
           inputRange: [index - 0.01, index, index + 0.01],
           outputRange: [0, 1, 0],
@@ -37,7 +37,7 @@ export function PageIndicator({
 
         return (
           <View
-            key={index}
+            key={`page-indicator-${index.toString()}`}
             className="relative flex-1"
             style={{
               height: size,

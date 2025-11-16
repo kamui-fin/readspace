@@ -39,7 +39,7 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
           uri: file.uri,
           type: 'text/xml',
           name: file.name || 'feeds.opml',
-        } as any);
+        } as unknown as Blob);
 
         importOPML.mutate(formData, {
           onSuccess: (data) => {
@@ -49,10 +49,12 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               ref.current.dismiss();
             }
 
-            router.push(`/(protected)/settings/opml-status/${data.task_id}` as any);
+            router.push(`/(protected)/settings/opml-status/${data.task_id}` as never);
           },
-          onError: (error: any) => {
-            toast.error(error?.message || 'Failed to import OPML. Please try again.');
+          onError: (error: unknown) => {
+            const errorMessage =
+              error instanceof Error ? error.message : 'Failed to import OPML. Please try again.';
+            toast.error(errorMessage);
             setIsImporting(false);
           },
         });

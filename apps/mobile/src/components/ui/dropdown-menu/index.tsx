@@ -1,8 +1,9 @@
 import { ComponentProps } from 'react';
-import { Platform, ViewStyle, Text } from 'react-native';
+import { Platform, ViewStyle } from 'react-native';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 
+import { Text, type TextSize } from '@components/ui/text';
 import * as DropdownMenu from 'zeego/dropdown-menu';
 
 const reversalWebIconStyle: ViewStyle = Platform.select({
@@ -91,13 +92,48 @@ const DropdownMenuItem = DropdownMenu.create(
 const DropdownMenuItemTitle = DropdownMenu.create(
   ({
     className,
+    size,
+    fontFamily,
+    children,
     ...props
-  }: { className?: string } & ComponentProps<typeof Text> &
-    ComponentProps<typeof DropdownMenu.ItemTitle>) => (
-    <DropdownMenu.ItemTitle {...props} className={className}>
-      {props.children}
-    </DropdownMenu.ItemTitle>
-  ),
+  }: {
+    className?: string;
+    size?: TextSize;
+    fontFamily?:
+      | 'geist'
+      | 'geist-medium'
+      | 'geist-semibold'
+      | 'geist-bold'
+      | 'mono'
+      | 'mono-medium'
+      | 'mono-semibold'
+      | 'mono-bold'
+      | 'figtree'
+      | 'figtree-medium'
+      | 'figtree-semibold'
+      | 'figtree-bold'
+      | 'garamond'
+      | 'garamond-medium'
+      | 'garamond-semibold'
+      | 'garamond-bold';
+  } & ComponentProps<typeof DropdownMenu.ItemTitle>) => {
+    // If size or fontFamily props are provided, wrap in Text component
+    // Otherwise, pass through to let ItemTitle handle rendering
+    const content =
+      size || fontFamily ? (
+        <Text size={size} fontFamily={fontFamily} className={className}>
+          {children}
+        </Text>
+      ) : (
+        children
+      );
+
+    return (
+      <DropdownMenu.ItemTitle {...props} className={className}>
+        {content}
+      </DropdownMenu.ItemTitle>
+    );
+  },
   'ItemTitle'
 );
 

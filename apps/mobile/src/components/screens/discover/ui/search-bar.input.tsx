@@ -34,7 +34,7 @@ export interface SearchBarProps extends Omit<TextInputProps, 'onSubmitEditing' |
   showCancelButton?: boolean;
 }
 
-export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarProps>(
+export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarProps>(
   (
     {
       onLanguageChange,
@@ -72,9 +72,37 @@ export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarPro
       [onLanguageChange]
     );
 
-    // Build right element with icon buttons (max 2)
+    // Build right element with language picker and clear button
     const rightElement = useMemo(() => {
       const buttons: React.ReactNode[] = [];
+
+      // Language picker dropdown
+      buttons.push(
+        <DropdownMenuRoot key="language">
+          <DropdownMenuTrigger>
+            <Button
+              variant="text"
+              size="small"
+              fullWidth={false}
+              className="min-w-0 flex-row items-center gap-1">
+              <LanguageIcon size={20} color={colors.grey} />
+              <Monicon
+                name="solar:alt-arrow-down-linear"
+                size={12}
+                strokeWidth={2.8}
+                color={colors.grey}
+              />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {LANGUAGES.map((lang) => (
+              <DropdownMenuItem key={lang.value} onSelect={() => handleLanguageSelect(lang.value)}>
+                <DropdownMenuItemTitle>{lang.label}</DropdownMenuItemTitle>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenuRoot>
+      );
 
       // Clear button (if shown and has value)
       if (showClearButton && value) {
@@ -91,36 +119,8 @@ export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarPro
         );
       }
 
-      // Search icon button (rounded square with lighter primary background)
-      buttons.push(
-        <Button
-          key="search"
-          variant="secondary"
-          size="medium"
-          fullWidth={false}
-          onPress={handleSubmit}
-          disabled={!value}
-          className="min-w-0"
-          style={{
-            borderRadius: 8,
-            backgroundColor: colors.primary,
-          }}>
-          <Monicon name="solar:magnifer-linear" size={20} color={colors.white} strokeWidth={2.4} />
-        </Button>
-      );
-
-      return buttons.length > 0 ? (
-        <View className="flex-row items-center gap-2 pr-2.5">{buttons}</View>
-      ) : undefined;
-    }, [
-      showClearButton,
-      value,
-      handleClear,
-      handleSubmit,
-      colors.grey,
-      colors.primary,
-      colors.white,
-    ]);
+      return <View className="flex-row items-center gap-2 pr-2.5">{buttons}</View>;
+    }, [showClearButton, value, handleClear, handleLanguageSelect, colors.grey]);
 
     // biome-ignore lint/suspicious/noExplicitAny: TextInput event types are complex
     const handleFocus = (e: any) => {
@@ -133,30 +133,9 @@ export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarPro
     };
 
     const leftElement = (
-      <DropdownMenuRoot>
-        <DropdownMenuTrigger>
-          <Button
-            variant="text"
-            size="small"
-            fullWidth={false}
-            className="min-w-0 flex-row items-center gap-1">
-            <LanguageIcon size={20} color={colors.grey} />
-            <Monicon
-              name="solar:alt-arrow-down-linear"
-              size={12}
-              strokeWidth={2.8}
-              color={colors.grey}
-            />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>
-          {LANGUAGES.map((lang) => (
-            <DropdownMenuItem key={lang.value} onSelect={() => handleLanguageSelect(lang.value)}>
-              <DropdownMenuItemTitle>{lang.label}</DropdownMenuItemTitle>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenuRoot>
+      <View style={{ padding: 8, paddingLeft: 16 }}>
+        <Monicon name="solar:magnifer-linear" size={20} color={colors.grey} strokeWidth={2.4} />
+      </View>
     );
 
     return (
@@ -171,7 +150,7 @@ export const SearchBar = forwardRef<React.ElementRef<typeof Input>, SearchBarPro
         returnKeyType="search"
         inputStyle={{
           textAlignVertical: 'center',
-          textAlign: 'center',
+          textAlign: 'left',
         }}
         leftElement={leftElement}
         rightElement={rightElement}

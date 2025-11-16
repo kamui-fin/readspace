@@ -26,7 +26,7 @@ interface FeedSwitcherActions {
   setExpandedFolders: (folders: Set<string>) => void;
 }
 
-type FeedSwitcherStore = FeedSwitcherState & FeedSwitcherActions;
+export type FeedSwitcherStore = FeedSwitcherState & FeedSwitcherActions;
 
 export const useFeedSwitcherStore = create<FeedSwitcherStore>()(
   persist(

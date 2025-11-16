@@ -1,6 +1,6 @@
-module.exports = function (api) {
+module.exports = (api) => {
   api.cache(true);
-  let plugins = [];
+  const plugins = [];
 
   plugins.push('react-native-worklets/plugin');
 

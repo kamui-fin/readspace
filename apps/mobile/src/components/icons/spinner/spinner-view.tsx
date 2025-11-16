@@ -16,7 +16,6 @@ export const getSpinnerSize = (size?: SpinnerSize): number => {
       return 16;
     case 'large':
       return 32;
-    case 'medium':
     default:
       return 24;
   }

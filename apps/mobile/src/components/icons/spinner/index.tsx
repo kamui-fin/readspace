@@ -15,12 +15,11 @@ export const Spinner = ({ size, duration = 750, ...rest }: SpinnerProps) => {
 
   useEffect(() => {
     transition.value = withRepeat(withTiming(360, { duration, easing: Easing.linear }), -1, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [duration, transition]);
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ rotateZ: transition.value + 'deg' }],
+      transform: [{ rotateZ: `${transition.value}deg` }],
     };
   }, []);
 

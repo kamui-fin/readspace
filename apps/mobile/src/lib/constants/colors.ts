@@ -13,7 +13,7 @@ export const COLORS = {
     primary: '#386641',
     primary_foreground: '#232222',
     secondary: '#6A994E',
-    grey6: 'rgb(247, 247, 247)',
+    grey6: 'rgb(243, 243, 243)',
     grey5: 'rgb(237, 237, 237)',
     grey4: 'rgb(226, 227, 227)',
     grey3: 'rgb(211, 212, 211)',

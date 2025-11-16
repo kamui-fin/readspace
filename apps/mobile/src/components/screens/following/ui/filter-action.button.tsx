@@ -3,9 +3,10 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuItemTitle,
   DropdownMenuItemIcon,
+  DropdownMenuItemIndicator,
 } from '@components/ui/dropdown-menu';
 import { Monicon } from '@monicon/native';
 import { COLORS } from '@lib/constants/colors';
@@ -75,33 +76,54 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuItem key="unread" onSelect={() => handleFilterToggle('unread')}>
+        <DropdownMenuCheckboxItem
+          key="unread"
+          value={filter === 'unread' ? 'on' : 'off'}
+          onValueChange={() => handleFilterToggle('unread')}
+          className="px-4 py-3">
           <DropdownMenuItemIcon
             ios={{
-              name: filter === 'unread' ? 'envelope.badge.fill' : 'envelope.badge',
+              name: 'envelope.badge',
             }}
             androidIconName="mail_notification"
           />
-          <DropdownMenuItemTitle>Show unread only</DropdownMenuItemTitle>
-        </DropdownMenuItem>
-        <DropdownMenuItem key="read" onSelect={() => handleFilterToggle('read')}>
+          <DropdownMenuItemTitle size="lg" fontFamily="geist">
+            Show unread only
+          </DropdownMenuItemTitle>
+          <DropdownMenuItemIndicator />
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          key="read"
+          value={filter === 'read' ? 'on' : 'off'}
+          onValueChange={() => handleFilterToggle('read')}
+          className="px-4 py-3">
           <DropdownMenuItemIcon
             ios={{
-              name: filter === 'read' ? 'envelope.open.fill' : 'envelope.open',
+              name: 'envelope.open',
             }}
-            androidIconName={filter === 'read' ? 'drafts' : 'mail'}
+            androidIconName="mail"
           />
-          <DropdownMenuItemTitle>Show read only</DropdownMenuItemTitle>
-        </DropdownMenuItem>
-        <DropdownMenuItem key="read_later" onSelect={() => handleFilterToggle('read_later')}>
+          <DropdownMenuItemTitle size="lg" fontFamily="geist">
+            Show read only
+          </DropdownMenuItemTitle>
+          <DropdownMenuItemIndicator />
+        </DropdownMenuCheckboxItem>
+        <DropdownMenuCheckboxItem
+          key="read_later"
+          value={filter === 'read_later' ? 'on' : 'off'}
+          onValueChange={() => handleFilterToggle('read_later')}
+          className="px-4 py-3">
           <DropdownMenuItemIcon
             ios={{
-              name: filter === 'read_later' ? 'clock.badge.fill' : 'clock.badge',
+              name: 'clock.badge',
             }}
-            androidIconName={filter === 'read_later' ? 'bookmark' : 'bookmark_border'}
+            androidIconName="bookmark_border"
           />
-          <DropdownMenuItemTitle>Show recents</DropdownMenuItemTitle>
-        </DropdownMenuItem>
+          <DropdownMenuItemTitle size="lg" fontFamily="geist">
+            Show recents
+          </DropdownMenuItemTitle>
+          <DropdownMenuItemIndicator />
+        </DropdownMenuCheckboxItem>
       </DropdownMenuContent>
     </DropdownMenuRoot>
   );
