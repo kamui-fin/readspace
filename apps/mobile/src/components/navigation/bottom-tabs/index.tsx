@@ -1,3 +1,4 @@
+import React from 'react';
 import { View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,12 +18,12 @@ import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { PlusIcon } from '@components/icons/plus';
-import { styles } from './styles';
-import { ANIMATION_DURATION } from './constants';
-import { AnimatedTab } from './animated-tab';
-import { ExpandTab } from './expand-tab';
+import { styles } from '@/components/navigation/bottom-tabs/ui/bottom-tab-bar/bottom-tab-bar.styles';
+import { ANIMATION_DURATION } from '@components/navigation/bottom-tabs/constants';
+import { AnimatedTab } from '@components/navigation/bottom-tabs/ui/animated-tab';
+import { ExpandTab } from '@components/navigation/bottom-tabs/ui/expand-tab';
 
-export const LinearTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
+export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const isDark = useIsDarkMode();
   const tabBarColors = COLORS[isDark ? 'dark' : 'light'];
   const animationProgress = useSharedValue(0);
@@ -218,4 +219,4 @@ export const LinearTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
   );
 };
 
-export { LinearTabBar as BottomTabbar };
+export { BottomTabBar as BottomTabbar };

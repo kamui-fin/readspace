@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { View, Text, Pressable } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -39,6 +39,19 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
 
   const duration = toast.duration || 3000;
 
+  const handleDismiss = useCallback(() => {
+    translateY.value = withTiming(
+      toast.from === 'top' ? -100 : 100,
+      { duration: 250 },
+      (finished) => {
+        if (finished) {
+          scheduleOnRN(onDismiss, toast.id);
+        }
+      }
+    );
+    opacity.value = withTiming(0, { duration: 250 });
+  }, [toast.from, toast.id, onDismiss, translateY, opacity]);
+
   useEffect(() => {
     // Entry animation - smooth fade in without bounce
     translateY.value = withTiming(0, { duration: 300 });
@@ -55,20 +68,7 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
 
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDismiss = () => {
-    translateY.value = withTiming(
-      toast.from === 'top' ? -100 : 100,
-      { duration: 250 },
-      (finished) => {
-        if (finished) {
-          scheduleOnRN(onDismiss, toast.id);
-        }
-      }
-    );
-    opacity.value = withTiming(0, { duration: 250 });
-  };
+  }, [duration, translateY, opacity, handleDismiss, iconOpacity, textOpacity]);
 
   const containerStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: translateY.value }],
@@ -107,7 +107,7 @@ export const ToastItem = ({ toast, onDismiss }: ToastItemProps) => {
         {
           position: 'absolute',
           alignSelf: 'center',
-          ...(toast.from === 'top' ? { top: insets.top + 16 } : { bottom: insets.bottom + 16 }),
+          ...(toast.from === 'top' ? { top: insets.top + 16 } : { bottom: insets.bottom + 8 }),
           zIndex: 9999,
         },
         containerStyle,

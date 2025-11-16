@@ -4,7 +4,7 @@ import type { SharedValue } from 'react-native-reanimated';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 
-import { BottomTabbar } from '@components/navigation/bottom-tabs';
+import { BottomTabbar } from '@/components/navigation/bottom-tabs';
 import { TabBarIcon } from '@/components/navigation/bottom-tab-bar-icon';
 import { Header } from '@components/navigation/header';
 import { Avatar } from '@components/ui/avatar';
@@ -32,6 +32,11 @@ export default function TabsLayout() {
     scrollDirection: SharedValue<'up' | 'down'>;
   } | null>(null);
   const [similarFeedsTitle, setSimilarFeedsTitle] = useState<string>('Similar feeds');
+  const [recentsScrollValues, setRecentsScrollValuesState] = useState<{
+    scrollY: SharedValue<number>;
+    scrollDirection: SharedValue<'up' | 'down'>;
+  } | null>(null);
+  const [recentsHeaderHeight, setRecentsHeaderHeightState] = useState(0);
 
   const setScrollValues = useCallback(
     (newScrollY: SharedValue<number>, newScrollDirection: SharedValue<'up' | 'down'>) => {
@@ -61,6 +66,22 @@ export default function TabsLayout() {
     []
   );
 
+  const setRecentsScrollValues = useCallback(
+    (newScrollY: SharedValue<number>, newScrollDirection: SharedValue<'up' | 'down'>) => {
+      setRecentsScrollValuesState({
+        scrollY: newScrollY,
+        scrollDirection: newScrollDirection,
+      });
+    },
+    []
+  );
+
+  const setRecentsHeaderHeight = useCallback((height: number) => {
+    if (height > 0) {
+      setRecentsHeaderHeightState(height);
+    }
+  }, []);
+
   const contextValue: DiscoverScrollContextType = {
     scrollY: scrollValues?.scrollY,
     scrollDirection: scrollValues?.scrollDirection,
@@ -73,6 +94,10 @@ export default function TabsLayout() {
     setSimilarFeedsScrollValues,
     similarFeedsTitle,
     setSimilarFeedsTitle,
+    recentsScrollValues,
+    setRecentsScrollValues,
+    recentsHeaderHeight,
+    setRecentsHeaderHeight,
   };
 
   // Get header config based on route
@@ -110,10 +135,11 @@ export default function TabsLayout() {
           scrollY: scrollValues?.scrollY,
           scrollDirection: scrollValues?.scrollDirection,
         };
-      case 'library':
+      case 'recents':
         return {
-          title: 'Feed Manager',
-          subtitle: 'Manage your feeds and subscriptions',
+          title: 'Recents',
+          subtitle: "Articles you've read",
+          // No scrollY or scrollDirection - simple sticky header without animations
         };
       case 'profile':
         return null; // Profile route handles its own static header
@@ -138,7 +164,11 @@ export default function TabsLayout() {
           bottomContent={headerConfig.bottomContent}
           titleFontWeight={headerConfig.titleFontWeight}
           onHeaderHeightChange={
-            currentRoute === 'discover' || isSimilarFeedsRoute ? setHeaderHeight : undefined
+            currentRoute === 'discover' || isSimilarFeedsRoute
+              ? setHeaderHeight
+              : currentRoute === 'recents'
+                ? setRecentsHeaderHeight
+                : undefined
           }
         />
       )}

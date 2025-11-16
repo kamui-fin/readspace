@@ -9,8 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-import { styles } from './styles';
-import { ANIMATION_DURATION } from './constants';
+import { styles } from './expand-tab.styles';
+import { ANIMATION_DURATION } from '../../constants';
 import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -68,7 +68,7 @@ export const ExpandTab: React.FC<ExpandTabProps> = ({
 
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={styles.tab}>
-      <Animated.View style={[styles.dummyIcon, animatedIconStyle]}>
+      <Animated.View style={[styles.expandTabIcon, animatedIconStyle]}>
         <ExpandVerticalIcon size={24} color={tabBarColors.grey} />
       </Animated.View>
     </TouchableOpacity>
