@@ -1,0 +1,39 @@
+discovery.docker "local" {
+  host = "unix:///run/docker.sock"
+}
+
+discovery.relabel "logs_integrations_docker" {
+  targets = []
+
+  // RULE 1: FILTERING
+  // Only keep targets where the container name matches your specific list.
+  // We use regex matching for 'readspace_api' OR 'readspace_worker'.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(readspace_api|readspace_worker)"
+    action        = "keep"
+  }
+
+  // RULE 2: LABELING (Your original rule)
+  // This runs after the filter, assigning the name to 'service_name'.
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "service_name"
+  }
+}
+
+loki.source.docker "default" {
+  host          = "unix:///run/docker.sock"
+  targets       = discovery.docker.local.targets
+  labels        = { "platform" = "docker" }
+  relabel_rules = discovery.relabel.logs_integrations_docker.rules
+  
+  forward_to    = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

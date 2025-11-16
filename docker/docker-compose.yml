@@ -8,13 +8,13 @@ services:
     ports:
       - 6379:6379
     volumes:
-        - redis-data:/data
+      - redis-data:/data
     healthcheck:
-        test: ["CMD", "redis-cli", "ping"]
-        interval: 30s
-        timeout: 10s
-        retries: 5
-        start_period: 5s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 5s
 
   web:
     build:
@@ -46,6 +46,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     volumes:
       - ../server:/app
     extra_hosts:
@@ -59,8 +61,14 @@ services:
       - SUPABASE_JWT_SECRET=${JWT_SECRET}
       - SUPABASE_URL=http://kong:8000
       - SUPABASE_DB_CONNECTION=postgresql+asyncpg://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -136,9 +144,36 @@ services:
       - ENVIRONMENT=production
       - PYTHONUNBUFFERED=1
 
+  loki:
+    image: grafana/loki:3.5
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./loki-config.yaml:/etc/loki/loki-config.yaml
+      # - ./loki-data:/loki
+    ports:
+      - "3100:3100"
+
+  alloy:
+    image: grafana/alloy:latest
+    command: ["run", "/etc/alloy/alloy.alloy"]
+    volumes:
+      - ./alloy.alloy:/etc/alloy/alloy.alloy
+      - /run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - loki
+
 volumes:
-    redis-data:
-    rabbitmq-data:
+  redis-data:
+  rabbitmq-data:
 
 networks:
   default:
