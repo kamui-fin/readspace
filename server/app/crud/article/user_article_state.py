@@ -48,7 +48,7 @@ async def create_user_article_state(db: AsyncSession, *, state_in: UserArticleSt
 
     db_state = UserArticleState(**state_data)
     db.add(db_state)
-    await db.commit()
+    await db.flush()
     await db.refresh(db_state)
     return db_state
 
@@ -69,7 +69,7 @@ async def update_user_article_state(
         setattr(state_db, field, value)
 
     db.add(state_db)
-    await db.commit()
+    await db.flush()
     await db.refresh(state_db)
     return state_db
 
@@ -106,7 +106,7 @@ async def update_article_read_status(
             state.is_read = is_read
             state.read_at = datetime.now(timezone.utc) if is_read else None
             db.add(state)
-            await db.commit()
+            await db.flush()
             await db.refresh(state)
     else:
         # Create new state with specified read status
@@ -134,7 +134,7 @@ async def toggle_article_favorite(db: AsyncSession, *, user_id: UUID, article_id
 
     state.is_favorite = not state.is_favorite
     db.add(state)
-    await db.commit()
+    await db.flush()
     await db.refresh(state)
     return state
 
@@ -145,7 +145,7 @@ async def toggle_article_read_later(db: AsyncSession, *, user_id: UUID, article_
 
     state.is_read_later = not state.is_read_later
     db.add(state)
-    await db.commit()
+    await db.flush()
     await db.refresh(state)
     return state
 

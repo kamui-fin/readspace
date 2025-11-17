@@ -163,7 +163,8 @@ async def update_feed_error(db: AsyncSession, *, feed_db: Feed, error_message: s
     )
 
     result = await db.execute(stmt)
-    await db.commit()
+    # NOTE: No commit here - let caller (task wrapper) handle transaction commit
+    # This prevents transaction state conflicts when called from get_worker_db()
     updated_feed = result.scalar_one()
 
     logger.warning(

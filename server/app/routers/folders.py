@@ -272,7 +272,6 @@ async def mark_folder_all_read(
 
     result = await db.execute(stmt)
     updated_count = result.rowcount
-    await db.commit()
 
     logger.info(
         "Marked all articles in folder as read",

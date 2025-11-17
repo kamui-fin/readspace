@@ -1,6 +1,7 @@
 """Shared fixtures for e2e tests - True end-to-end with real services."""
 
 import os
+import uuid
 from collections.abc import AsyncGenerator
 from pathlib import Path
 from uuid import uuid4
@@ -65,7 +66,15 @@ print(f"🔧 Environment: {settings.ENVIRONMENT}")
 @pytest_asyncio.fixture(scope="function")
 async def db_engine():
     """Create a test database engine connected to real test database."""
-    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False)
+    # Connection arguments for Supavisor transaction mode
+    # Must disable prepared statements for transaction mode pooler
+    # See: https://github.com/supabase/supavisor/issues/287
+    connect_args = {
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
+    }
+    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False, connect_args=connect_args)
     yield engine
     await engine.dispose()
 

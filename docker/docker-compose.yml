@@ -95,7 +95,7 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py"
+    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks=50
     volumes:
       - ../server:/app
     depends_on:

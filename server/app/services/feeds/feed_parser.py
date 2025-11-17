@@ -225,9 +225,19 @@ class FeedParsingService:
         if "published_parsed" in entry and entry.published_parsed:
             try:
                 parsed_date = datetime(*entry.published_parsed[:6]).replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
                 # Validate that the date is within reasonable bounds
                 if parsed_date.year >= MIN_VALID_PUBLISHED_YEAR:
-                    published_dt = parsed_date
+                    # Check if date is in the future
+                    if parsed_date > now:
+                        logger.warning(
+                            "Article has future publication date, capping to current time",
+                            guid=guid,
+                            parsed_date=parsed_date.isoformat(),
+                        )
+                        published_dt = now
+                    else:
+                        published_dt = parsed_date
                 else:
                     logger.warning(
                         "Published date year is before minimum valid year, using current time",
@@ -235,7 +245,7 @@ class FeedParsingService:
                         parsed_year=parsed_date.year,
                         min_year=MIN_VALID_PUBLISHED_YEAR,
                     )
-                    published_dt = datetime.now(timezone.utc)
+                    published_dt = now
             except Exception:
                 logger.warning(
                     "Failed to parse published_parsed",
@@ -245,9 +255,19 @@ class FeedParsingService:
         elif "updated_parsed" in entry and entry.updated_parsed:
             try:
                 parsed_date = datetime(*entry.updated_parsed[:6]).replace(tzinfo=timezone.utc)
+                now = datetime.now(timezone.utc)
                 # Validate that the date is within reasonable bounds
                 if parsed_date.year >= MIN_VALID_PUBLISHED_YEAR:
-                    published_dt = parsed_date
+                    # Check if date is in the future
+                    if parsed_date > now:
+                        logger.warning(
+                            "Article has future updated date, capping to current time",
+                            guid=guid,
+                            parsed_date=parsed_date.isoformat(),
+                        )
+                        published_dt = now
+                    else:
+                        published_dt = parsed_date
                 else:
                     logger.warning(
                         "Updated date year is before minimum valid year, using current time",
@@ -255,7 +275,7 @@ class FeedParsingService:
                         parsed_year=parsed_date.year,
                         min_year=MIN_VALID_PUBLISHED_YEAR,
                     )
-                    published_dt = datetime.now(timezone.utc)
+                    published_dt = now
             except Exception:
                 logger.warning(
                     "Failed to parse updated_parsed",

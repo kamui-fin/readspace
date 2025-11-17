@@ -263,7 +263,7 @@ async def create_subscription(
     # Tags are now handled as ARRAY field on feeds - no longer using tag_ids
 
     db.add(db_subscription)
-    await db.commit()
+    await db.flush()
 
     # Fetch with relationships in a single query using eager loading
     # This is more efficient than refresh + separate fetch
@@ -308,7 +308,7 @@ async def update_subscription(
             setattr(subscription_db, field, update_data[field])
 
     db.add(subscription_db)
-    await db.commit()
+    await db.flush()
     await db.refresh(subscription_db)
 
     return subscription_db
@@ -323,7 +323,6 @@ async def delete_subscription(db: AsyncSession, *, subscription_id: UUID, user_i
     # Delete the subscription
     await db.delete(subscription)
 
-    await db.commit()
     return subscription
 
 
@@ -384,8 +383,6 @@ async def delete_subscriptions_bulk(db: AsyncSession, *, feed_ids: list[UUID], u
     result = await db.execute(stmt)
     deleted_feed_ids = [row[0] for row in result.fetchall()]
 
-    await db.commit()
-
     return {"deleted_ids": deleted_feed_ids}
 
 
@@ -412,7 +409,5 @@ async def update_subscriptions_folder_bulk(
 
     result = await db.execute(stmt)
     updated_feed_ids = [row[0] for row in result.fetchall()]
-
-    await db.commit()
 
     return {"updated_ids": updated_feed_ids}

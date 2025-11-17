@@ -7,12 +7,6 @@ import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
     ResizableHandle,
     ResizablePanel,
     ResizablePanelGroup,
@@ -46,8 +40,6 @@ import {
     CheckCheck,
     Eye,
     EyeOff,
-    Globe,
-    MoreVertical,
     RefreshCw,
 } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -815,17 +807,20 @@ export function ArticlesView({
                                             </TooltipProvider>
                                         )}
 
-                                    {/* Direct refresh button */}
+                                    {/* Refresh button - deep refresh for individual feeds, quick refresh for others */}
                                     <TooltipProvider>
                                         <Tooltip>
                                             <TooltipTrigger asChild>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() =>
-                                                        handleRefreshWithMessage(
-                                                            "Refreshing articles..."
-                                                        )
+                                                    onClick={
+                                                        feedId
+                                                            ? handleDeepRefresh
+                                                            : () =>
+                                                                  handleRefreshWithMessage(
+                                                                      "Refreshing articles..."
+                                                                  )
                                                     }
                                                     disabled={isDeepRefreshing}
                                                 >
@@ -835,62 +830,12 @@ export function ArticlesView({
                                                 </Button>
                                             </TooltipTrigger>
                                             <TooltipContent>
-                                                Refresh articles
+                                                {feedId
+                                                    ? "Check for new articles"
+                                                    : "Refresh articles"}
                                             </TooltipContent>
                                         </Tooltip>
                                     </TooltipProvider>
-
-                                    {/* More actions - only show for individual feeds and not in preview mode */}
-                                    {feedId && !shouldShowPreviewBanner && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8"
-                                                >
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem
-                                                    onClick={() =>
-                                                        handleRefreshWithMessage(
-                                                            "Quick refresh..."
-                                                        )
-                                                    }
-                                                >
-                                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                                    Quick Refresh
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={handleDeepRefresh}
-                                                    disabled={isDeepRefreshing}
-                                                >
-                                                    <Globe className="h-4 w-4 mr-2" />
-                                                    {isDeepRefreshing
-                                                        ? "Checking..."
-                                                        : "Check for New Articles"}
-                                                </DropdownMenuItem>
-                                                {onCreateFolder && (
-                                                    <DropdownMenuItem
-                                                        onClick={onCreateFolder}
-                                                    >
-                                                        Create Folder
-                                                    </DropdownMenuItem>
-                                                )}
-                                                {onAddFeed && (
-                                                    <DropdownMenuItem
-                                                        onClick={() =>
-                                                            onAddFeed(folderId)
-                                                        }
-                                                    >
-                                                        Add Feed
-                                                    </DropdownMenuItem>
-                                                )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    )}
                                 </div>
                             </div>
 
@@ -1001,66 +946,18 @@ export function ArticlesView({
                                                 </Button>
                                             )}
 
-                                        {/* Individual feeds: refresh and more actions */}
+                                        {/* Individual feeds: single deep refresh button */}
                                         {feedId ? (
-                                            <div className="flex">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 rounded-r-none border-r border-border/50 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                    onClick={() =>
-                                                        handleRefreshWithMessage(
-                                                            "Quick refresh..."
-                                                        )
-                                                    }
-                                                    title="Quick refresh"
-                                                    disabled={isDeepRefreshing}
-                                                >
-                                                    <RefreshCw className="h-4 w-4 transition-transform duration-200 hover:rotate-180" />
-                                                </Button>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-4 rounded-l-none px-1 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
-                                                            title="More refresh options"
-                                                            disabled={
-                                                                isDeepRefreshing
-                                                            }
-                                                        >
-                                                            <MoreVertical className="h-3 w-3 transition-transform duration-200" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem
-                                                            onClick={() =>
-                                                                handleRefreshWithMessage(
-                                                                    "Quick refresh..."
-                                                                )
-                                                            }
-                                                        >
-                                                            <RefreshCw className="mr-2 h-4 w-4" />
-                                                            Quick Refresh
-                                                        </DropdownMenuItem>
-                                                        <DropdownMenuItem
-                                                            onClick={
-                                                                handleDeepRefresh
-                                                            }
-                                                            disabled={
-                                                                isDeepRefreshing
-                                                            }
-                                                        >
-                                                            <Globe className="mr-2 h-4 w-4" />
-                                                            {isDeepRefreshing
-                                                                ? "Checking..."
-                                                                : "Check for New Articles"}
-                                                        </DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 transition-all duration-200 hover:scale-110 hover:bg-muted/60"
+                                                onClick={handleDeepRefresh}
+                                                title="Check for new articles"
+                                                disabled={isDeepRefreshing}
+                                            >
+                                                <RefreshCw className={`h-4 w-4 transition-transform duration-200 ${isDeepRefreshing ? "animate-spin" : "hover:rotate-180"}`} />
+                                            </Button>
                                         ) : (
                                             /* Other views: simple refresh button (shallow only) */
                                             <Button

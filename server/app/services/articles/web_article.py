@@ -159,7 +159,7 @@ class WebArticleService:
                 )
 
             if needs_update or content_needs_update:
-                await self.db.commit()
+                await self.db.flush()
                 # Reload with content for response
                 existing_clipped = await crud_clipped_article.get_with_content(
                     self.db,

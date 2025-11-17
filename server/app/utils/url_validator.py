@@ -5,6 +5,8 @@ from urllib.parse import urlparse
 
 import structlog
 
+from app.core.config import get_settings
+
 logger = structlog.get_logger(__name__)
 
 # Precompiled regex pattern for folder name validation
@@ -44,6 +46,34 @@ PRIVATE_IP_PREFIXES = (
     "192.168.",
     "169.254.",  # Link-local
 )
+
+
+def _is_rsshub_url(url: str, domain: str) -> bool:
+    """
+    Check if a URL is the configured RSSHub instance.
+
+    Args:
+        url: The full URL to check
+        domain: The domain/host extracted from the URL
+
+    Returns:
+        bool: True if this is the configured RSSHub URL
+    """
+    settings = get_settings()
+    rsshub_url = settings.RSSHUB_URL
+
+    # Parse the RSSHub URL to get its domain and port
+    try:
+        rsshub_parsed = urlparse(rsshub_url)
+        rsshub_netloc = rsshub_parsed.netloc.lower()
+
+        # Compare the netloc (includes port if present)
+        url_parsed = urlparse(url)
+        url_netloc = url_parsed.netloc.lower()
+
+        return url_netloc == rsshub_netloc
+    except Exception:
+        return False
 
 
 def validate_feed_url(url: str, allow_rsshub: bool = True) -> tuple[bool, str | None]:
@@ -88,8 +118,19 @@ def validate_feed_url(url: str, allow_rsshub: bool = True) -> tuple[bool, str | 
     if not parsed.netloc:
         return False, "URL has no domain/host"
 
-    # Extract domain (handle ports)
-    domain = parsed.netloc.split(":")[0].lower()
+    # Extract domain (handle ports and IPv6 addresses)
+    netloc = parsed.netloc.lower()
+    if netloc.startswith("["):
+        # IPv6 address - extract everything between brackets
+        domain = netloc.split("]")[0] + "]"
+    else:
+        # Regular domain or IPv4 - extract before the port
+        domain = netloc.split(":")[0]
+
+    # Allow the configured RSSHub URL (may be localhost in development)
+    if _is_rsshub_url(url, domain):
+        logger.debug("Allowing configured RSSHub URL", url=url, domain=domain)
+        return True, None
 
     # Check against blocked domains
     if domain in BLOCKED_DOMAINS:

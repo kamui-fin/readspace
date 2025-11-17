@@ -16,19 +16,18 @@ from datetime import datetime, timezone
 from uuid import UUID
 
 import structlog
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed
-from app.models import ArticleContent, Feed, FeedArticle
-from app.schemas import FeedBase
+from app.crud.article.article_crud_operations import ArticleCrudOperations
+from app.models import Feed
+from app.schemas import ArticleCreate, FeedBase
 from app.schemas.subscriptions import FeedResponse
 from app.services.feeds.adaptive_feed_scheduler import calculate_optimal_interval
 from app.services.feeds.feed_fetcher import FeedFetcher
 from app.services.feeds.feed_parser import FeedParsingService
 from app.utils.content_hash import calculate_feed_content_hash
-from app.utils.guid_generator import generate_stable_guid
 
 logger = structlog.get_logger(__name__)
 
@@ -199,52 +198,41 @@ class FeedService:
             raise
 
     async def _create_new_articles(self, feed_db: Feed, entries: list) -> int:
-        """Create new articles from feed entries using atomic upsert pattern.
+        """Create new articles from feed entries using centralized bulk insert logic.
 
-        This method ensures NO orphaned article_contents by:
-        1. Using INSERT ... ON CONFLICT for article_contents (upsert by link)
-        2. Atomically linking content to feed_articles in a single transaction
-        3. No orphans can occur because content is created OR reused atomically
+        This method now delegates to ArticleCrudOperations.create_articles_batch for:
+        - True bulk INSERT operations (single query for all articles)
+        - Efficient handling of duplicate links via ON CONFLICT DO UPDATE
+        - Consistent article creation logic across refresh and initial creation flows
 
         The unique constraint on article_contents.link ensures dedupe at DB level.
         """
         if not entries:
             return 0
 
-        # Step 1: Process all entries and generate stable GUIDs
-        articles_to_link = []
+        # Step 1: Convert feed entries to ArticleCreate schemas
+        articles_to_create: list[ArticleCreate] = []
 
         for entry in entries:
             try:
-                # Extract article data
+                # Extract article data using feed parser
                 article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
                 if not article_dict:
                     continue
 
-                # Generate stable GUID for this feed
-                guid = generate_stable_guid(
-                    original_guid=article_dict.get("guid"),
-                    link=article_dict.get("link"),
+                # Create ArticleCreate schema (includes GUID generation logic)
+                article_schema = ArticleCreate(
+                    feed_id=feed_db.id,
+                    guid=article_dict["guid"],
                     title=article_dict.get("title"),
-                    published_at=str(article_dict.get("published_at")) if article_dict.get("published_at") else None,
+                    link=article_dict["link"],
                     content=article_dict.get("content"),
+                    author=article_dict.get("author"),
+                    published_at=article_dict.get("published_at"),
+                    image_url=article_dict.get("image_url"),
+                    estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
                 )
-
-                # Prepare content data
-                content_data = {
-                    "title": article_dict.get("title"),
-                    "link": article_dict["link"],
-                    "description": article_dict.get("description"),
-                    "content": article_dict.get("content"),
-                    "author": article_dict.get("author"),
-                    "published_at": article_dict.get("published_at"),
-                    "image_url": article_dict.get("image_url"),
-                    "estimated_read_time_minutes": article_dict.get("estimated_read_time_minutes"),
-                    "created_at": datetime.now(timezone.utc),
-                    "updated_at": datetime.now(timezone.utc),
-                }
-
-                articles_to_link.append((guid, content_data))
+                articles_to_create.append(article_schema)
 
             except Exception as e:
                 logger.warning(
@@ -254,57 +242,16 @@ class FeedService:
                 )
                 continue
 
-        if not articles_to_link:
+        if not articles_to_create:
             return 0
 
-        # Step 2: Use atomic upsert pattern - no orphans possible
+        # Step 2: Use centralized bulk insert logic
         try:
-            async with self.db.begin_nested():
-                created_count = 0
+            created_articles = await ArticleCrudOperations.create_articles_batch(
+                self.db, articles_data=articles_to_create
+            )
 
-                for guid, content_data in articles_to_link:
-                    try:
-                        # ATOMIC UPSERT: Insert content if not exists (by link), otherwise get existing
-                        content_insert_stmt = pg_insert(ArticleContent).values(content_data)
-                        content_insert_stmt = content_insert_stmt.on_conflict_do_update(
-                            index_elements=["link"],
-                            set_={"updated_at": datetime.now(timezone.utc)},  # Touch updated_at on conflict
-                        ).returning(ArticleContent.id)
-
-                        content_result = await self.db.execute(content_insert_stmt)
-                        content_id = content_result.scalar_one()
-
-                        # ATOMIC LINK: Create feed_article only if not exists
-                        article_insert_stmt = pg_insert(FeedArticle).values(
-                            {
-                                "feed_id": feed_db.id,
-                                "content_id": content_id,
-                                "guid": guid,
-                                "created_at": datetime.now(timezone.utc),
-                                "updated_at": datetime.now(timezone.utc),
-                            }
-                        )
-                        article_insert_stmt = article_insert_stmt.on_conflict_do_nothing(
-                            index_elements=["feed_id", "guid"]
-                        )
-
-                        article_result = await self.db.execute(article_insert_stmt)
-
-                        # Count new articles created (not content rows)
-                        if article_result.rowcount and article_result.rowcount > 0:
-                            created_count += article_result.rowcount
-
-                    except Exception as article_error:
-                        # Log but continue processing other articles
-                        logger.warning(
-                            "Failed to create article",
-                            feed_id=str(feed_db.id),
-                            guid=guid,
-                            error=str(article_error),
-                        )
-                        continue
-
-                # Transaction auto-commits on successful exit from context manager
+            created_count = len(created_articles)
 
             if created_count > 0:
                 logger.info(

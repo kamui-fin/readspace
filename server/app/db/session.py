@@ -1,3 +1,4 @@
+import uuid
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -31,16 +32,12 @@ def _create_engine():
 
     # Connection arguments for PgBouncer transaction mode
     connect_args = {
-        "server_settings": {
-            "application_name": f"readspace_api_{settings.ENVIRONMENT}",
-            # NOTE: Cannot set statement_timeout here when using PgBouncer in transaction mode
-            # PgBouncer doesn't forward startup parameters to PostgreSQL
-            # Use "SET LOCAL statement_timeout" in SQL queries if needed
-        },
         # CRITICAL: Disable prepared statements for PgBouncer transaction mode
         # Transaction mode doesn't support prepared statements
+        # See: https://github.com/supabase/supavisor/issues/287
         "statement_cache_size": 0,
         "prepared_statement_cache_size": 0,
+        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
     }
 
     return create_async_engine(

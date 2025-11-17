@@ -905,21 +905,21 @@ async def admin_update_feed(
                 updated_feed.top_level_category = feed_in.top_level_category
 
             db.add(updated_feed)
-            await db.commit()
+            await db.flush()
             await db.refresh(updated_feed)
 
         # Handle popularity_score update
         if feed_in.popularity_score is not None:
             updated_feed.popularity_score = feed_in.popularity_score
             db.add(updated_feed)
-            await db.commit()
+            await db.flush()
             await db.refresh(updated_feed)
 
         # Handle URL update if provided
         if feed_in.url is not None:
             updated_feed.url = str(feed_in.url)
             db.add(updated_feed)
-            await db.commit()
+            await db.flush()
             await db.refresh(updated_feed)
 
         logger.info(
@@ -1035,7 +1035,6 @@ async def admin_delete_feed(
 
     # Delete the feed - database CASCADE will handle related records efficiently
     await db.execute(sql_delete(Feed).where(Feed.id == feed_id))
-    await db.commit()
 
     logger.info(
         "Admin deleted global feed successfully",

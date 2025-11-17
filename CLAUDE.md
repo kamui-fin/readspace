@@ -377,3 +377,4 @@ This distinction is critical in both:
 - Shared types (`packages/shared/src/types/`)
 - Use bun over npm or pnpm
 - Unit tests must NOT involve database interactions
+- we prefer integration tests. unit tests only for pure logic

@@ -57,26 +57,21 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
 
         # Worker pool configuration for transaction mode
         # Workers process feeds concurrently, need sufficient connections per worker
-        # Scale horizontally with multiple worker replicas (4 workers × 15 = 60 total)
+        # With 200 concurrent async tasks (--max-async-tasks), need adequate pool size
+        # 200 tasks / 50 connections = ~4 tasks per connection (reasonable ratio)
+        # Scale horizontally with multiple worker replicas if needed
         pool_config = {
-            "pool_size": 5,
-            "max_overflow": 10,  # Total 15 connections per worker
+            "pool_size": 20,  # Increased from 5 to handle concurrent feed refreshes
+            "max_overflow": 30,  # Increased from 10 (total: 50 connections per worker)
             "pool_recycle": 1800,  # 30 minutes - prevent stale connections
-            "pool_timeout": 10,  # Fail fast on pool exhaustion
+            "pool_timeout": 60,  # Increased from 10s - more forgiving under load
         }
 
         # Connection arguments for PgBouncer transaction mode
         connect_args = {
-            "server_settings": {
-                "application_name": f"readspace_worker_{settings.ENVIRONMENT}",
-                # NOTE: Cannot set statement_timeout here when using PgBouncer in transaction mode
-                # PgBouncer doesn't forward startup parameters to PostgreSQL
-                # Use "SET LOCAL statement_timeout" in SQL queries if needed (see feed_tasks.py)
-            },
-            # CRITICAL: Disable prepared statements for PgBouncer transaction mode
-            # Transaction mode doesn't support prepared statements
             "statement_cache_size": 0,
             "prepared_statement_cache_size": 0,
+            "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
         }
 
         _db_engine = create_async_engine(
@@ -97,6 +92,8 @@ async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[As
             environment=settings.ENVIRONMENT,
             is_supabase_cloud=settings.is_supabase_cloud,
             is_production=settings.is_production,
+            statement_cache_disabled=True,
+            prepared_statement_cache_disabled=True,
             **pool_config,
         )
 

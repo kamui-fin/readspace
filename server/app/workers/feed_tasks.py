@@ -53,7 +53,9 @@ async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) ->
     logger.info("Starting schedule all feed refreshes")
 
     feed_service = FeedService(db=db)
-    feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=MAX_FEEDS_BATCH_SIZE)
+    feeds_to_check = await feed_service.get_feeds_needing_refresh(
+        limit=MAX_FEEDS_BATCH_SIZE
+    )
 
     logger.info("Found feeds to refresh", feed_count=len(feeds_to_check))
 
@@ -95,12 +97,18 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             return {"success": True, "enriched_count": 0, "message": "AI disabled"}
 
         # Get feeds without embeddings (not yet enriched)
-        result = await db.execute(select(Feed).where(Feed.embedding.is_(None)).limit(MAX_FEEDS_BATCH_SIZE))
+        result = await db.execute(
+            select(Feed).where(Feed.embedding.is_(None)).limit(MAX_FEEDS_BATCH_SIZE)
+        )
         feeds_to_enrich = result.scalars().all()
 
         if not feeds_to_enrich:
             logger.info("No feeds to enrich")
-            return {"success": True, "enriched_count": 0, "message": "No feeds need enrichment"}
+            return {
+                "success": True,
+                "enriched_count": 0,
+                "message": "No feeds need enrichment",
+            }
 
         logger.info("Found feeds to enrich", feed_count=len(feeds_to_enrich))
 
@@ -148,7 +156,9 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                 components.append(feed.title)
 
             # Use enhanced description if available, otherwise original
-            description = llm_result.enhanced_description if llm_result else feed.description
+            description = (
+                llm_result.enhanced_description if llm_result else feed.description
+            )
             if description:
                 components.append(description)
 
@@ -157,7 +167,9 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
 
             domain = enrichment_service._extract_domain_from_url(feed.link or feed.url)
             if domain:
-                domain_clean = domain.replace("www.", "").replace(".com", "").replace(".org", "")
+                domain_clean = (
+                    domain.replace("www.", "").replace(".com", "").replace(".org", "")
+                )
                 components.append(domain_clean)
 
             composite_text = " | ".join(components)
@@ -167,12 +179,17 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             embedding_texts.append(composite_text)
 
         # Batch embedding generation (chunk into batches of 100 due to API limit)
-        logger.info("Starting batch embedding generation", batch_size=len(embedding_texts))
+        logger.info(
+            "Starting batch embedding generation", batch_size=len(embedding_texts)
+        )
         embeddings = []
         batch_size = 100
         for i in range(0, len(embedding_texts), batch_size):
             batch = embedding_texts[i : i + batch_size]
-            logger.debug(f"Processing embedding batch {i // batch_size + 1}", batch_size=len(batch))
+            logger.debug(
+                f"Processing embedding batch {i // batch_size + 1}",
+                batch_size=len(batch),
+            )
             batch_embeddings = await ai_service.generate_embeddings_batch(batch)
             embeddings.extend(batch_embeddings)
 
@@ -205,21 +222,36 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                         category_enum = FeedCategory(llm_result.category)
                         update_mapping["top_level_category"] = category_enum
                     except ValueError:
-                        logger.warning("Invalid category", category=llm_result.category, feed_id=feed.id)
-                        update_mapping["top_level_category"] = FeedCategory.MISCELLANEOUS
+                        logger.warning(
+                            "Invalid category",
+                            category=llm_result.category,
+                            feed_id=feed.id,
+                        )
+                        update_mapping["top_level_category"] = (
+                            FeedCategory.MISCELLANEOUS
+                        )
 
                     if llm_result.enhanced_description:
                         update_mapping["description"] = llm_result.enhanced_description
 
                     # Calculate hybrid popularity score
-                    popularity_data = enrichment_service._calculate_hybrid_popularity_score(
-                        feed, {"popularity_estimate": llm_result.popularity_estimate}
+                    popularity_data = (
+                        enrichment_service._calculate_hybrid_popularity_score(
+                            feed,
+                            {"popularity_estimate": llm_result.popularity_estimate},
+                        )
                     )
                     update_mapping.update(
                         {
-                            "popularity_score": float(popularity_data.get("popularity_score", 0.5)),
-                            "llm_popularity_score": popularity_data.get("llm_popularity_score"),
-                            "domain_authority_score": popularity_data.get("domain_authority_score"),
+                            "popularity_score": float(
+                                popularity_data.get("popularity_score", 0.5)
+                            ),
+                            "llm_popularity_score": popularity_data.get(
+                                "llm_popularity_score"
+                            ),
+                            "domain_authority_score": popularity_data.get(
+                                "domain_authority_score"
+                            ),
                             "quality_score": popularity_data.get("quality_score"),
                         }
                     )
@@ -233,7 +265,9 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                 # Add embedding via raw SQL (vector type requires special handling)
                 if embedding:
                     await db.execute(
-                        text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
+                        text(
+                            "UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"
+                        ),
                         {"embedding": str(embedding), "feed_id": feed.id},
                     )
 
@@ -241,18 +275,23 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                 enriched_count += 1
 
             except Exception as e:
-                logger.error("Failed to prepare feed enrichment", feed_id=str(feed.id), error=str(e), exc_info=True)
+                logger.error(
+                    "Failed to prepare feed enrichment",
+                    feed_id=str(feed.id),
+                    error=str(e),
+                    exc_info=True,
+                )
                 failed_count += 1
 
         # Bulk update all feeds using SQLAlchemy ORM
         if bulk_update_mappings:
             try:
                 await db.execute(update(Feed), bulk_update_mappings)
-                await db.commit()
-                logger.info("Bulk updated feed enrichment data", count=len(bulk_update_mappings))
+                logger.info(
+                    "Bulk updated feed enrichment data", count=len(bulk_update_mappings)
+                )
             except Exception as e:
                 logger.error("Failed to bulk update feeds", error=str(e), exc_info=True)
-                await db.rollback()
                 raise
 
         logger.info(
@@ -303,7 +342,6 @@ async def async_compact_unread_articles(db: AsyncSession) -> dict[str, int]:
 
     result = await db.execute(stmt)
     updated_count = result.rowcount
-    await db.commit()
 
     logger.info(
         "Unread compaction completed",
@@ -336,7 +374,8 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
     await db.execute(text("SET LOCAL statement_timeout = '120min'"))
 
     # Execute the deletion query
-    deletion_query = text("""
+    deletion_query = text(
+        """
         WITH ranked_articles AS (
             SELECT
                 ac.id AS content_id,
@@ -366,7 +405,8 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
         )
         DELETE FROM article_contents
         WHERE id IN (SELECT content_id FROM eligible_contents)
-    """)
+    """
+    )
 
     result = await db.execute(
         deletion_query,
@@ -376,9 +416,6 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
         },
     )
     deleted_count = result.rowcount
-
-    # Commit the transaction
-    await db.commit()
 
     logger.info(
         "Article compaction completed",

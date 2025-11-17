@@ -1,9 +1,12 @@
 import logging
 import sys
+
 import structlog
+
 from app.core.config import get_settings
 
 settings = get_settings()
+
 
 def setup_logging(service_name: str = "api") -> None:
     if structlog.is_configured():
@@ -18,13 +21,14 @@ def setup_logging(service_name: str = "api") -> None:
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
         structlog.processors.TimeStamper(fmt="iso", utc=True)
-        if is_production else
-        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
+        if is_production
+        else structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S", utc=False),
     ]
 
     # 2. Configure Structlog
     structlog.configure(
-        processors=shared_processors + [
+        processors=shared_processors
+        + [
             # Prepare event dict for stdlib formatting
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
@@ -38,7 +42,7 @@ def setup_logging(service_name: str = "api") -> None:
     if is_production:
         formatter = structlog.stdlib.ProcessorFormatter(
             # Foreign logs (like Uvicorn) go through shared_processors first
-            foreign_pre_chain=shared_processors, 
+            foreign_pre_chain=shared_processors,
             processors=[
                 # Clean up internal keys
                 structlog.stdlib.ProcessorFormatter.remove_processors_meta,
@@ -64,14 +68,14 @@ def setup_logging(service_name: str = "api") -> None:
     root_logger.setLevel(settings.LOG_LEVEL)
 
     # --- THE CRITICAL FIX FOR UVICORN ---
-    # We must iterate through Uvicorn's specific loggers, remove their 
-    # default handlers (which print text), and force them to propagate 
+    # We must iterate through Uvicorn's specific loggers, remove their
+    # default handlers (which print text), and force them to propagate
     # up to the root logger (which prints JSON).
     for _log in ["uvicorn", "uvicorn.error", "uvicorn.access"]:
         logger = logging.getLogger(_log)
         logger.handlers = []  # Remove the default text handler
-        logger.propagate = True # Send logs up to the root logger (JSON)
-    
+        logger.propagate = True  # Send logs up to the root logger (JSON)
+
     # 6. Silence noisy libraries
     logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("httpx").setLevel(logging.WARNING)

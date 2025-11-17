@@ -87,8 +87,8 @@ async def update_feed_metadata(
     feed_db.last_error_message = None
 
     db.add(feed_db)
-    await db.commit()
-    await db.refresh(feed_db)
+    # NOTE: No commit here - let caller (task wrapper) handle transaction commit
+    # This prevents transaction state conflicts when called from get_worker_db()
     return feed_db
 
 
@@ -145,8 +145,8 @@ async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: 
         feed.updated_at = datetime.now(timezone.utc)
 
         db.add(feed)
-        await db.commit()
-        await db.refresh(feed)
+        # NOTE: No commit here - let caller (task wrapper) handle transaction commit
+        # This prevents transaction state conflicts when called from get_worker_db()
 
         logger.info(
             "Feed enrichment data updated successfully",
@@ -163,5 +163,6 @@ async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: 
             error=str(e),
             exc_info=True,
         )
-        await db.rollback()
+        # NOTE: No rollback here - let caller handle exception and rollback
+        # get_worker_db() will rollback on any exception
         raise

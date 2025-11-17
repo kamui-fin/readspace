@@ -56,7 +56,7 @@ async def create_folder(db: AsyncSession, *, folder_in: FolderCreate, user_id: U
 
     db_folder = Folder(**folder_in.model_dump(), user_id=user_id)
     db.add(db_folder)
-    await db.commit()
+    await db.flush()
     await db.refresh(db_folder)
     return db_folder
 
@@ -89,7 +89,7 @@ async def update_folder(db: AsyncSession, *, folder_db: Folder, folder_in: Folde
         setattr(folder_db, field, value)
 
     db.add(folder_db)
-    await db.commit()
+    await db.flush()
     await db.refresh(folder_db)
     return folder_db
 
@@ -104,7 +104,6 @@ async def delete_folder(db: AsyncSession, *, folder_id: UUID, user_id: UUID) -> 
     db_folder = await get_folder(db, folder_id=folder_id, user_id=user_id)
     if db_folder:
         await db.delete(db_folder)
-        await db.commit()
     return db_folder
 
 
@@ -148,9 +147,7 @@ async def create_folders_batch(db: AsyncSession, *, folder_names: list[str], use
         # Build mapping from returned rows (includes both new and existing folders)
         folder_name_to_id = {row.name: row.id for row in all_folders}
 
-        await db.commit()
         return folder_name_to_id
 
     except Exception as e:
-        await db.rollback()
         raise e
