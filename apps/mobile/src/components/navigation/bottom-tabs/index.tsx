@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View } from 'react-native';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -14,19 +14,22 @@ import { scheduleOnRN } from 'react-native-worklets';
 import * as Haptics from 'expo-haptics';
 
 import { BlurView } from '@components/ui/blurview';
-import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { PlusIcon } from '@components/icons/plus';
 import { styles } from '@/components/navigation/bottom-tabs/ui/bottom-tab-bar/bottom-tab-bar.styles';
-import { ANIMATION_DURATION } from '@components/navigation/bottom-tabs/constants';
+import { ANIMATION_DURATION, WIDTH } from '@components/navigation/bottom-tabs/constants';
 import { AnimatedTab } from '@components/navigation/bottom-tabs/ui/animated-tab';
 import { ExpandTab } from '@components/navigation/bottom-tabs/ui/expand-tab';
+import {
+  FeedSwitcherBottomSheet,
+  type FeedSwitcherBottomSheetRef,
+} from '@components/bottom-sheets/feed-switcher';
 
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const isDark = useIsDarkMode();
   const tabBarColors = COLORS[isDark ? 'dark' : 'light'];
   const animationProgress = useSharedValue(0);
+  const feedSwitcherRef = useRef<FeedSwitcherBottomSheetRef>(null);
 
   const startY = useSharedValue(0);
   const translationY = useSharedValue(0);
@@ -101,6 +104,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
     return {
       height,
       borderRadius,
+      width: WIDTH - 150,
     };
   });
 
@@ -120,17 +124,7 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
   const handleExpandTabPress = (): void => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (animationProgress.value === 0) {
-      animationProgress.value = withTiming(1, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-    } else {
-      animationProgress.value = withTiming(0, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-    }
+    feedSwitcherRef.current?.present();
   };
 
   const filteredRouteTabs = state.routes.filter((route) => {
@@ -142,7 +136,12 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
 
   return (
     <GestureHandlerRootView style={styles.gestureContainer}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+        }}>
         <GestureDetector gesture={panGesture}>
           <Animated.View style={[styles.container, { flex: 1, marginRight: 12 }]}>
             <Animated.View
@@ -172,49 +171,39 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
                       });
                     };
 
+                    // Insert ExpandTab before the last tab (profile)
+                    const isLastTab = index === filteredRouteTabs.length - 1;
+
                     return (
-                      <AnimatedTab
-                        key={route.key}
-                        isFocused={isFocused}
-                        options={options}
-                        colors={tabBarColors}
-                        onPress={onPress}
-                        onLongPress={onLongPress}
-                        animationProgress={animationProgress}
-                        index={index}
-                      />
+                      <React.Fragment key={route.key}>
+                        {isLastTab && (
+                          <ExpandTab
+                            onPress={handleExpandTabPress}
+                            animationProgress={animationProgress}
+                            colors={tabBarColors}
+                          />
+                        )}
+                        <AnimatedTab
+                          isFocused={isFocused}
+                          options={options}
+                          colors={tabBarColors}
+                          onPress={onPress}
+                          onLongPress={onLongPress}
+                          animationProgress={animationProgress}
+                          index={index}
+                        />
+                      </React.Fragment>
                     );
                   })}
-
-                  <ExpandTab
-                    onPress={handleExpandTabPress}
-                    animationProgress={animationProgress}
-                    colors={tabBarColors}
-                  />
                 </Animated.View>
               </BlurView>
             </Animated.View>
           </Animated.View>
         </GestureDetector>
-        <BlurView intensity={100} tint={blurTint} style={{ borderRadius: 22, overflow: 'hidden' }}>
-          <Button
-            variant="text"
-            size="small"
-            fullWidth={false}
-            onPress={() => {
-              // TODO: Handle plus button press
-            }}
-            style={{
-              width: 56,
-              height: 48,
-              padding: 0,
-              borderRadius: 22,
-              backgroundColor: 'transparent',
-            }}>
-            <PlusIcon size={40} color={tabBarColors.grey} />
-          </Button>
-        </BlurView>
       </View>
+
+      {/* Feed Switcher Bottom Sheet */}
+      <FeedSwitcherBottomSheet ref={feedSwitcherRef} />
     </GestureHandlerRootView>
   );
 };

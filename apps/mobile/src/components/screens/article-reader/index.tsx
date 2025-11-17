@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Text } from '@components/ui/text';
 import { useRouter } from 'expo-router';
-import { Image } from 'expo-image';
+import { Image as ExpoImage } from 'expo-image';
 import RenderHTML from 'react-native-render-html';
 import Constants from 'expo-constants';
 import { Galeria } from '@nandorojo/galeria';
@@ -40,11 +40,6 @@ export function ArticleReader({
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const insets = useSafeAreaInsets();
-
-  // Calculate minimal offset to clear action bar buttons
-  // Action bar: safe area top + 12px top padding + 40px button height + 12px bottom padding
-  // We only need to offset enough to clear the buttons, so: safe area + button height + small buffer
-  const actionBarOffset = insets.top + 8; // insets.top + 8px (button height + small buffer)
 
   // Handle scroll events to track position and direction
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
@@ -165,11 +160,11 @@ export function ArticleReader({
         color: textColor,
       },
       em: {
-        fontFamily: 'EBGaramond_400Regular',
+        fontFamily: 'EBGaramond_400Regular_Italic',
         fontStyle: 'italic' as const,
       },
       i: {
-        fontFamily: 'EBGaramond_400Regular',
+        fontFamily: 'EBGaramond_400Regular_Italic',
         fontStyle: 'italic' as const,
       },
       u: {
@@ -184,6 +179,8 @@ export function ArticleReader({
         color: textColor,
       },
       // Links with brand secondary color
+      // Note: When links are inside <em> or <i> tags, react-native-render-html
+      // will merge styles, so the italic font family from parent will be used
       a: {
         color: colors.secondary,
         textDecorationLine: 'underline' as const,
@@ -380,6 +377,10 @@ export function ArticleReader({
       'EBGaramond_500Medium',
       'EBGaramond_600SemiBold',
       'EBGaramond_700Bold',
+      'EBGaramond_400Regular_Italic',
+      'EBGaramond_500Medium_Italic',
+      'EBGaramond_600SemiBold_Italic',
+      'EBGaramond_700Bold_Italic',
       'Geist_400Regular',
       'Geist_500Medium',
       'Geist_600SemiBold',
@@ -517,17 +518,19 @@ export function ArticleReader({
         paddingBottom: 80,
       }}
       onScroll={handleScroll}
-      scrollEventThrottle={16}>
-      {/* Featured Image with Galeria */}
+      scrollEventThrottle={16}
+      showsVerticalScrollIndicator={false}>
+      {/* Featured Image with Galeria - Edge-to-edge */}
       {article.image_url && (
         <Galeria urls={[article.image_url]}>
           <Galeria.Image>
-            <View className="w-full bg-black" style={{ height: 240, marginTop: actionBarOffset }}>
-              <Image
+            <View className="w-full bg-black" style={{ height: 240, marginTop: insets.top + 32 }}>
+              <ExpoImage
                 source={{ uri: article.image_url }}
                 style={{ width: '100%', height: '100%' }}
                 contentFit="cover"
                 priority="high"
+                cachePolicy="memory-disk"
               />
             </View>
           </Galeria.Image>
@@ -536,8 +539,8 @@ export function ArticleReader({
 
       {/* Article Header */}
       <View
-        className="mx-6 mb-6 border-b border-grey4 pb-6 dark:border-grey4-dark"
-        style={{ marginTop: article.image_url ? 24 : actionBarOffset }}>
+        className="mb-6 border-b border-grey4 px-6 pb-6 dark:border-grey4-dark"
+        style={{ marginTop: article.image_url ? 24 : insets.top + 56 }}>
         {/* Source */}
         {!isClipped && feedId ? (
           <Pressable
@@ -553,7 +556,7 @@ export function ArticleReader({
             }}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             {displayFaviconUrl && (
-              <Image
+              <ExpoImage
                 source={{ uri: displayFaviconUrl }}
                 style={{ width: 16, height: 16, borderRadius: 2 }}
                 contentFit="contain"
@@ -569,7 +572,7 @@ export function ArticleReader({
         ) : (
           <View className="mb-2 flex-row items-center gap-2">
             {displayFaviconUrl && (
-              <Image
+              <ExpoImage
                 source={{ uri: displayFaviconUrl }}
                 style={{ width: 16, height: 16, borderRadius: 2 }}
                 contentFit="contain"
@@ -645,7 +648,7 @@ export function ArticleReader({
         </View>
       </View>
 
-      {/* Article Content */}
+      {/* Article Content - Edge-to-edge with horizontal padding */}
       <View className="px-6">
         <RenderHTML
           defaultTextProps={{
@@ -659,6 +662,42 @@ export function ArticleReader({
           enableExperimentalMarginCollapsing
           enableCSSInlineProcessing={false}
           renderersProps={renderersProps}
+          renderers={{
+            // biome-ignore lint/suspicious/noExplicitAny: react-native-render-html renderer types are complex
+            a: (props: any) => {
+              // Check if link is inside an italic context by examining parent styles
+              const tnode = props.TDefaultRenderer?.props?.tnode;
+              const parentDomNode = tnode?.parent?.domNode;
+              const parentTagName = parentDomNode?.name;
+
+              // Check if parent is em or i, or if link contains em/i
+              const linkInnerHTML = tnode?.domNode?.innerHTML || '';
+              const isInsideItalic =
+                parentTagName === 'em' ||
+                parentTagName === 'i' ||
+                linkInnerHTML.toLowerCase().includes('<em>') ||
+                linkInnerHTML.toLowerCase().includes('<i>');
+
+              // Apply italic font if inside italic context
+              const linkStyle = isInsideItalic
+                ? {
+                    ...tagsStyles.a,
+                    fontFamily: 'EBGaramond_500Medium_Italic',
+                    fontStyle: 'italic' as const,
+                  }
+                : tagsStyles.a;
+
+              return (
+                <props.TDefaultRenderer
+                  {...props}
+                  tbaseStyle={{
+                    ...props.TDefaultRenderer.props.tbaseStyle,
+                    ...linkStyle,
+                  }}
+                />
+              );
+            },
+          }}
         />
       </View>
     </ScrollView>

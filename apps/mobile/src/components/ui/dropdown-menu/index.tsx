@@ -1,5 +1,5 @@
-import { ComponentProps } from 'react';
-import { Platform, ViewStyle } from 'react-native';
+import type { ComponentProps } from 'react';
+import { Platform, type ViewStyle } from 'react-native';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 

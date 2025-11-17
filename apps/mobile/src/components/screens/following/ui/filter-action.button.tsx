@@ -29,8 +29,6 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
         return 'solar:letter-unread-bold';
       case 'read':
         return 'solar:letter-opened-bold';
-      case 'read_later':
-        return 'solar:bookmark-bold';
       default:
         return 'solar:filter-bold';
     }
@@ -51,7 +49,7 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
     return colors.muted_green;
   };
 
-  const handleFilterToggle = (selectedFilter: 'unread' | 'read' | 'read_later') => {
+  const handleFilterToggle = (selectedFilter: 'unread' | 'read') => {
     // If the filter is already selected, toggle it off (set to "all")
     // Otherwise, set it to the selected filter
     if (filter === selectedFilter) {
@@ -105,22 +103,6 @@ export function FilterActionButton({ filter, onFilterChange }: FilterActionButto
           />
           <DropdownMenuItemTitle size="lg" fontFamily="geist">
             Show read only
-          </DropdownMenuItemTitle>
-          <DropdownMenuItemIndicator />
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuCheckboxItem
-          key="read_later"
-          value={filter === 'read_later' ? 'on' : 'off'}
-          onValueChange={() => handleFilterToggle('read_later')}
-          className="px-4 py-3">
-          <DropdownMenuItemIcon
-            ios={{
-              name: 'clock.badge',
-            }}
-            androidIconName="bookmark_border"
-          />
-          <DropdownMenuItemTitle size="lg" fontFamily="geist">
-            Show recents
           </DropdownMenuItemTitle>
           <DropdownMenuItemIndicator />
         </DropdownMenuCheckboxItem>

@@ -12,6 +12,7 @@ import { toast } from '@components/ui/toast';
 import { Spinner } from '@components/ui/spinner';
 import { COLORS } from '@lib/constants/colors';
 import { validateSupabaseConnection } from '@lib/supabase/client';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string) => {
@@ -220,6 +221,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
                   isInvalid={!!errors.apiUrl}
                   errorText={errors.apiUrl}
                   className="font-geist-mono"
+                  borderRadius={12}
                 />
               </View>
 
@@ -237,6 +239,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
                   isInvalid={!!errors.supabaseUrl}
                   errorText={errors.supabaseUrl}
                   className="font-geist-mono"
+                  borderRadius={12}
                 />
               </View>
 
@@ -255,6 +258,7 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
                   errorText={errors.supabaseAnonKey}
                   className="font-geist-mono"
                   inputStyle={{ height: 80, textAlignVertical: 'top' }}
+                  borderRadius={12}
                 />
               </View>
             </View>
@@ -266,7 +270,8 @@ export const SelfHostSettingsBottomSheet = forwardRef<BottomSheetModal, SelfHost
                 size="large"
                 fullWidth
                 onPress={handleSave}
-                disabled={!isValid || isValidating}>
+                disabled={!isValid || isValidating}
+                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
                 {isValidating ? (
                   <View className="flex-row items-center justify-center gap-2">
                     <Spinner size="small" color={COLORS.white} />

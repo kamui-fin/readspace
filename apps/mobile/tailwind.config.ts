@@ -25,7 +25,7 @@ const config: Config = {
         },
         grey6: {
           DEFAULT: 'rgb(247, 247, 247)',
-          dark: 'rgb(27, 28, 27)',
+          dark: 'rgb(12, 13, 12)',
         },
         grey5: {
           DEFAULT: 'rgb(237, 237, 237)',

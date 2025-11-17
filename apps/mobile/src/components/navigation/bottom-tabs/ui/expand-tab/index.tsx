@@ -1,19 +1,17 @@
 import { TouchableOpacity } from 'react-native';
 import Animated, {
-  Easing,
   Extrapolation,
   interpolate,
   useAnimatedStyle,
-  withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-import { styles } from './expand-tab.styles';
-import { ANIMATION_DURATION } from '../../constants';
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import { styles } from '@components/navigation/bottom-tabs/ui/expand-tab/expand-tab.styles';
+import { ExpandVerticalAltIcon } from '@components/icons/expand-vertical-alt';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import Monicon from '@monicon/native';
 
 interface ExpandTabProps {
   animationProgress: SharedValue<number>;
@@ -32,17 +30,7 @@ export const ExpandTab: React.FC<ExpandTabProps> = ({
   const onPress = (): void => {
     onExpandPress?.();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    if (animationProgress.value === 0) {
-      animationProgress.value = withTiming(1, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-    } else {
-      animationProgress.value = withTiming(0, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-      });
-    }
+    // Animation logic removed - this tab now only opens the feed switcher
   };
 
   const animatedIconStyle = useAnimatedStyle(() => {
@@ -69,7 +57,7 @@ export const ExpandTab: React.FC<ExpandTabProps> = ({
   return (
     <TouchableOpacity activeOpacity={0.7} onPress={onPress} style={styles.tab}>
       <Animated.View style={[styles.expandTabIcon, animatedIconStyle]}>
-        <ExpandVerticalIcon size={24} color={tabBarColors.grey} />
+        <Monicon name="solar:library-bold-duotone" size={24} color={tabBarColors.grey} />
       </Animated.View>
     </TouchableOpacity>
   );

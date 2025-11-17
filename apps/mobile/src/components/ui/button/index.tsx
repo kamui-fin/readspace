@@ -3,8 +3,8 @@ import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, Text, View, StyleSheet } from 'react-native';
 
-import { buttonVariants } from './constants/button-variants';
-import { textVariants } from './constants/text-variants';
+import { buttonVariants } from '@components/ui/button/constants/button-variants';
+import { textVariants } from '@components/ui/button/constants/text-variants';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { COLORS } from '@lib/constants/colors';
 
@@ -83,7 +83,9 @@ export function Button({
       disabled={isDisabled}
       {...props}>
       {loading ? (
-        <ThreeDotsAnimation color={dotColor} />
+        <View style={{ transform: [{ scale: 3 }] }}>
+          <ThreeDotsAnimation color={dotColor} />
+        </View>
       ) : useCenteredLayout ? (
         // Medium/Small: Center everything together
         <View style={[styles.contentContainer, { gap }]}>

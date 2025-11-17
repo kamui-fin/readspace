@@ -26,6 +26,7 @@ import { SelfHostSettingsBottomSheet } from '@/components/bottom-sheets/self-hos
 import { useSession } from '@contexts/auth-context';
 import { useSettingsStore } from '@stores/settings';
 import { LoginSchema, type LoginFormData } from '@lib/validation/auth-schemas';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -218,7 +219,8 @@ export function LoginScreen() {
                   variant="primary"
                   size="large"
                   onPress={() => handleSubmit()}
-                  loading={isSubmitting}>
+                  loading={isSubmitting}
+                  style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
                   Sign In
                 </Button>
 

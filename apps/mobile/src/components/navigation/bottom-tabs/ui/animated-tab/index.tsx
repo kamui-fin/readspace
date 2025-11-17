@@ -10,7 +10,7 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { styles } from './animated-tab.styles';
+import { styles } from '@components/navigation/bottom-tabs/ui/animated-tab/animated-tab.styles';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 

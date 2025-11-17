@@ -27,7 +27,7 @@ import {
   DropdownMenuItemIcon,
   DropdownMenuItemIndicator,
 } from '@components/ui/dropdown-menu';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '@components/navigation/header';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { OPMLImportBottomSheet } from '@/components/bottom-sheets/opml-import';
@@ -155,15 +155,17 @@ export function ProfileScreen() {
   const discordColor = '#5865F2';
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background dark:bg-background-dark">
-      <Header variant="sticky" title="Profile" subtitle="Your account settings" />
+    <View className="flex-1 bg-background dark:bg-background-dark">
       <ScrollView
         className="flex-1"
         contentContainerStyle={{
-          paddingTop: 80,
           paddingBottom: insets.bottom + BOTTOM_TABBAR_BASE_HEIGHT + 20,
         }}
         showsVerticalScrollIndicator={false}>
+        {/* Header with safe area padding - scrolls with content */}
+        <View style={{ paddingTop: insets.top }}>
+          <Header variant="static" title="Profile" subtitle="Your account settings" />
+        </View>
         <View className="px-6">
           {/* User Profile */}
           {user && (
@@ -300,11 +302,33 @@ export function ProfileScreen() {
                   Export OPML
                 </Text>
               </Button>
+
+              {/* Reading History Button */}
+              <Button
+                variant="secondary"
+                size="large"
+                fullWidth
+                onPress={() => router.push('/(protected)/recents')}
+                leftIcon={
+                  <Monicon
+                    name="solar:history-bold-duotone"
+                    size={20}
+                    strokeWidth={2.4}
+                    color={colors.black}
+                  />
+                }>
+                <Text
+                  size="base"
+                  fontFamily="geist-semibold"
+                  className="text-black dark:text-black-dark">
+                  Reading History
+                </Text>
+              </Button>
             </View>
           </View>
 
           {/* Other Section */}
-          <View className="mb-12 gap-2">
+          <View className="mb-10 gap-2">
             <Text size="md" fontFamily="geist-semibold" className="text-grey dark:text-grey">
               Other
             </Text>
@@ -342,7 +366,7 @@ export function ProfileScreen() {
           </View>
 
           {/* Logout Button */}
-          <View style={{ marginTop: 20 }}>
+          <View>
             <Button
               variant="secondary"
               size="large"
@@ -369,6 +393,6 @@ export function ProfileScreen() {
         feedCount={feedCount}
         onCancel={handleCancelImport}
       />
-    </SafeAreaView>
+    </View>
   );
 }

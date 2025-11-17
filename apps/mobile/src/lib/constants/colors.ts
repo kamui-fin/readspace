@@ -52,7 +52,7 @@ export const COLORS = {
     primary: '#386641',
     primary_foreground: '#ffffff',
     secondary: '#6A994E',
-    grey6: 'rgb(27, 28, 27)',
+    grey6: 'rgb(12, 13, 12)',
     grey5: 'rgb(45, 47, 46)',
     grey4: 'rgb(58, 60, 58)',
     grey3: 'rgb(78, 80, 78)',

@@ -10,6 +10,7 @@ import { useFolders, useCreateFolder } from '@readspace/shared';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { toast } from '@components/ui/toast';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 export interface FolderPickerModalRef {
   present: () => void;
@@ -106,7 +107,11 @@ export const FolderPickerModal = forwardRef<FolderPickerModalRef, FolderPickerMo
           </Button>
         }
         footerActions={
-          <Button variant="primary" fullWidth onPress={handleConfirm}>
+          <Button
+            variant="primary"
+            fullWidth
+            onPress={handleConfirm}
+            style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
             Confirm
           </Button>
         }>

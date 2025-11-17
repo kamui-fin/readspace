@@ -2,17 +2,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, RefreshControl } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Text } from '@components/ui/text';
+import { Header } from '@components/navigation/header';
 import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { toast } from '@components/ui/toast';
 import { useToast } from '@contexts/toast-provider';
-import { useDiscoverScroll } from '@contexts/discover-scroll-context';
 import { EmptyState } from '@components/screens/empty-state';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { groupArticlesByDate } from '@lib/utils/date';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
@@ -22,7 +22,6 @@ import {
   useInfiniteRecentlyReadArticles,
   useUpdateArticle,
 } from '@readspace/shared';
-import { useFocusEffect } from 'expo-router';
 
 interface ListItem {
   type: 'section' | 'article' | 'divider';
@@ -36,34 +35,16 @@ export function RecentsScreen() {
   const segments = useSegments();
   const listRef = useRef<any>(null);
   const { showToast, updateToast } = useToast();
-  const insets = useSafeAreaInsets();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+  const insets = useSafeAreaInsets();
 
-  // Get header height from context
-  const { recentsHeaderHeight } = useDiscoverScroll();
-  const headerHeight = recentsHeaderHeight || 0;
-  const safeMinimumHeight = insets.top + 10 + 80 + 24 + 16; // ~130px + safe area (includes subtitle)
-
-  // Track if we're in a reset state to prevent scroll handler from setting non-zero values
-  const isResettingRef = useRef(false);
   const loadingToastIdRef = useRef<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const prevArticleCountRef = useRef(0);
 
-  // Compute safe padding that always has a fallback
-  // Uses headerHeight if available (> 0), otherwise falls back to safeMinimumHeight
-  // This handles all edge cases: initial render, tab switches, remeasurements
-  // Add 16px spacing after header to separate it from the first section header
-  const contentPaddingTop = useMemo(() => {
-    const effectiveHeight = headerHeight > 0 ? headerHeight : safeMinimumHeight;
-    return effectiveHeight + 16; // Add spacing below header for first section
-  }, [headerHeight, safeMinimumHeight]);
-
   // Compute bottom padding to account for tab bar
-  // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
-  // Add extra spacing (16px) for better visual separation
   const contentPaddingBottom = useMemo(() => {
     const tabBarHeight = BOTTOM_TABBAR_BASE_HEIGHT;
     return tabBarHeight;
@@ -261,42 +242,6 @@ export function RecentsScreen() {
     }
   };
 
-  // Reset scroll position when route is focused
-  useFocusEffect(
-    useCallback(() => {
-      // Set reset flag to prevent scroll handler from interfering
-      isResettingRef.current = true;
-
-      // Scroll list to top - use multiple attempts to ensure it works
-      const scrollToTop = () => {
-        if (listRef.current) {
-          try {
-            listRef.current.scrollToOffset({ offset: 0, animated: false });
-          } catch {
-            // Ignore errors if list isn't ready
-          }
-        }
-      };
-
-      // Try immediately
-      scrollToTop();
-
-      // Also try after a short delay to ensure list is ready
-      const timeoutId = setTimeout(() => {
-        scrollToTop();
-        // Clear reset flag after scroll operations complete
-        setTimeout(() => {
-          isResettingRef.current = false;
-        }, 100);
-      }, 50);
-
-      return () => {
-        clearTimeout(timeoutId);
-        isResettingRef.current = false;
-      };
-    }, [])
-  );
-
   const renderItem = (item: ListItem) => {
     if (item.type === 'section') {
       return (
@@ -443,65 +388,44 @@ export function RecentsScreen() {
     );
   };
 
-  // If empty and not loading, render empty state outside scrollable list
-  // This prevents scrolling on empty state and ensures header stays in place
-  const isEmpty = !isLoading && listItems.length === 0;
-
-  if (isEmpty) {
-    // When header is relative (scrollY = 0), it's in normal flow and takes up space
-    // The empty state needs to be centered in the remaining space below the header
-    // The EmptyState component with variant="centered" uses flex-1 to fill available space
-    // and centers its content with items-center justify-center
-    return (
-      <View
-        className="flex-1 bg-background dark:bg-background-dark"
-        style={
-          {
-            // Ensure the container fills the remaining space below the header
-            // The header is relative, so it takes up space, and this container
-            // fills the rest of the screen
-          }
-        }>
-        {renderEmpty()}
-      </View>
-    );
-  }
+  const renderHeader = () => (
+    <View style={{ paddingTop: insets.top }}>
+      <Header variant="static" title="Recents" subtitle="Articles you've read" />
+    </View>
+  );
 
   return (
-    <InfiniteScrollList
-      ref={listRef}
-      data={listItems}
-      renderItem={renderItem}
-      keyExtractor={(item) => item.id}
-      onEndReached={handleEndReached}
-      hasMore={hasNextPage ?? false}
-      isLoading={isFetchingNextPage}
-      ListFooterComponent={renderFooter}
-      ListEmptyComponent={renderEmpty}
-      estimatedItemSize={200}
-      showsVerticalScrollIndicator={false}
-      className="bg-background dark:bg-background-dark"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={handleRefresh}
-          tintColor={colors.secondary}
-          colors={[colors.secondary]}
-        />
-      }
-      contentContainerStyle={{
-        backgroundColor: colors.background,
-        // Always apply paddingTop to account for header height
-        // Header is always absolute for sticky variant, so content needs padding
-        // Uses computed safe padding that handles all edge cases:
-        // - Initial render (headerHeight = 0) → uses safeMinimumHeight
-        // - Normal state (headerHeight > 0) → uses actual headerHeight
-        paddingTop: contentPaddingTop,
-        // Always apply paddingBottom to account for bottom tab bar
-        // Tab bar is absolutely positioned, so content needs padding to prevent overlap
-        // Uses computed padding that accounts for tab bar height + safe area + spacing
-        paddingBottom: contentPaddingBottom,
-      }}
-    />
+    <View className="flex-1 bg-background dark:bg-background-dark">
+      <InfiniteScrollList
+        ref={listRef}
+        data={listItems}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        onEndReached={handleEndReached}
+        hasMore={hasNextPage ?? false}
+        isLoading={isFetchingNextPage}
+        ListHeaderComponent={renderHeader}
+        ListFooterComponent={renderFooter}
+        ListEmptyComponent={renderEmpty}
+        estimatedItemSize={200}
+        showsVerticalScrollIndicator={false}
+        className="bg-background dark:bg-background-dark"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor={colors.secondary}
+            colors={[colors.secondary]}
+          />
+        }
+        contentContainerStyle={{
+          backgroundColor: colors.background,
+          // Header includes safe area padding and scrolls with list
+          // As header scrolls away, content can go under the notch/status bar
+          // Only apply paddingBottom to account for bottom tab bar
+          paddingBottom: contentPaddingBottom,
+        }}
+      />
+    </View>
   );
 }

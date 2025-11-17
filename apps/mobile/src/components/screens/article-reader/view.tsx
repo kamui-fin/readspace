@@ -1,15 +1,14 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Share, View, Linking } from 'react-native';
 import { Text } from '@components/ui/text';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQueryClient } from '@tanstack/react-query';
 import { useSharedValue } from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 
-import { ArticleReader } from './index';
-import { ArticleReaderSkeleton } from './ui/article-reader.skeleton';
-import { ArticleActionBar } from './ui/article-actions.bar';
+import { ArticleReader } from '@components/screens/article-reader/index';
+import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
+import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -22,7 +21,7 @@ import {
 import { Button } from '@components/ui/button';
 import { Monicon } from '@monicon/native';
 import { toast } from '@components/ui/toast';
-import { useArticle, useUpdateArticle } from '@readspace/shared';
+import { useArticle, useUpdateArticle, useExtractFullText } from '@readspace/shared';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 
@@ -48,7 +47,39 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   // Check if this is a clipped article
   const isClipped = article?.article_type === 'clipped';
 
+  // Content source state - prefer extracted content when available
+  const [contentSource, setContentSource] = useState<'original' | 'extracted'>(
+    article?.extracted_content ? 'extracted' : 'original'
+  );
+
   const updateArticle = useUpdateArticle();
+
+  // Extract full text hook - auto-trigger for articles without extracted content
+  const { refetch: extractFullText, data: extractedData } = useExtractFullText(
+    articleId || '',
+    article?.link || ''
+  );
+
+  // Sync contentSource with article.extracted_content
+  useLayoutEffect(() => {
+    setContentSource(article?.extracted_content ? 'extracted' : 'original');
+  }, [article?.extracted_content]);
+
+  // Auto-extract content if not already extracted and article has loaded
+  useEffect(() => {
+    if (
+      article &&
+      !article.extracted_content &&
+      article.article_type === 'feed' &&
+      article.link &&
+      !extractedData
+    ) {
+      // Trigger extraction automatically
+      extractFullText().catch((error) => {
+        console.warn('Failed to auto-extract article content:', error);
+      });
+    }
+  }, [article, extractedData, extractFullText]);
 
   // Mark as read on mount (only if subscribed to the feed)
   useEffect(() => {
@@ -180,7 +211,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   if (isArticleLoading) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1 bg-background dark:bg-background-dark">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
@@ -190,13 +221,13 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           isClipped={false}
         />
         <ArticleReaderSkeleton article={article} />
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!article) {
     return (
-      <SafeAreaView edges={['top']} className="flex-1 bg-background dark:bg-background-dark">
+      <View className="flex-1 bg-background dark:bg-background-dark">
         <ArticleActionBar
           onClose={handleClose}
           onShare={handleShare}
@@ -213,12 +244,12 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
             Article not found
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top']} className="flex-1 bg-background dark:bg-background-dark">
+    <View className="flex-1 bg-background dark:bg-background-dark">
       <ArticleActionBar
         scrollY={scrollY}
         scrollDirection={scrollDirection}
@@ -267,6 +298,32 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
                 <>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
+                    key="extract"
+                    onSelect={() => {
+                      if (contentSource === 'extracted') {
+                        setContentSource('original');
+                        toast.success('Showing original content');
+                      } else if (article?.extracted_content || extractedData?.content) {
+                        setContentSource('extracted');
+                        toast.success('Showing extracted content');
+                      } else {
+                        toast.info('Extracting full text...');
+                        extractFullText()
+                          .then(() => {
+                            setContentSource('extracted');
+                            toast.success('Full text extracted!');
+                          })
+                          .catch(() => {
+                            toast.error('Failed to extract text');
+                          });
+                      }
+                    }}>
+                    <DropdownMenuItemIcon ios={{ name: 'doc.text' }} androidIconName="article" />
+                    <DropdownMenuItemTitle>
+                      {contentSource === 'extracted' ? 'Show Original' : 'Extract Full Text'}
+                    </DropdownMenuItemTitle>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
                     key="summarize"
                     onSelect={() => {
                       toast.info('Summarize feature coming soon');
@@ -292,11 +349,18 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         }
       />
       <ArticleReader
-        article={article}
+        article={{
+          ...article,
+          // Override content with extracted content when available and selected
+          content:
+            contentSource === 'extracted' && (article.extracted_content || extractedData?.content)
+              ? article.extracted_content || extractedData?.content || article.content
+              : article.content,
+        }}
         scrollY={scrollY}
         lastScrollY={lastScrollY}
         scrollDirection={scrollDirection}
       />
-    </SafeAreaView>
+    </View>
   );
 }

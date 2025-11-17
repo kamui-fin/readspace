@@ -1,7 +1,7 @@
 import 'global.css';
 import { Stack } from 'expo-router';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { useFonts } from 'expo-font';
+import * as Font from 'expo-font';
 import {
   Geist_400Regular,
   Geist_500Medium,
@@ -19,6 +19,10 @@ import {
   EBGaramond_500Medium,
   EBGaramond_600SemiBold,
   EBGaramond_700Bold,
+  EBGaramond_400Regular_Italic,
+  EBGaramond_500Medium_Italic,
+  EBGaramond_600SemiBold_Italic,
+  EBGaramond_700Bold_Italic,
 } from '@expo-google-fonts/eb-garamond';
 import {
   Figtree_400Regular,
@@ -27,7 +31,7 @@ import {
   Figtree_700Bold,
 } from '@expo-google-fonts/figtree';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@contexts/toast-provider';
 import { SessionProvider } from '@contexts/auth-context';
@@ -67,31 +71,58 @@ export default function RootLayout() {
 }
 
 function RootNavigator() {
-  const [fontsLoaded, fontError] = useFonts({
-    Geist_400Regular,
-    Geist_500Medium,
-    Geist_600SemiBold,
-    Geist_700Bold,
-    GeistMono_400Regular,
-    GeistMono_500Medium,
-    GeistMono_600SemiBold,
-    GeistMono_700Bold,
-    EBGaramond_400Regular,
-    EBGaramond_500Medium,
-    EBGaramond_600SemiBold,
-    EBGaramond_700Bold,
-    Figtree_400Regular,
-    Figtree_500Medium,
-    Figtree_600SemiBold,
-    Figtree_700Bold,
-  });
+  const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [fontError, setFontError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      // Hide the splash screen after the fonts have loaded (or an error was returned)
-      SplashScreen.hideAsync();
+    async function loadFonts() {
+      try {
+        // Load critical fonts first (Geist - primary UI font)
+        await Font.loadAsync({
+          Geist_400Regular,
+          Geist_500Medium,
+          Geist_600SemiBold,
+          Geist_700Bold,
+        });
+
+        // Load remaining fonts in parallel after critical fonts are loaded
+        await Promise.all([
+          Font.loadAsync({
+            GeistMono_400Regular,
+            GeistMono_500Medium,
+            GeistMono_600SemiBold,
+            GeistMono_700Bold,
+          }),
+          Font.loadAsync({
+            Figtree_400Regular,
+            Figtree_500Medium,
+            Figtree_600SemiBold,
+            Figtree_700Bold,
+          }),
+          Font.loadAsync({
+            EBGaramond_400Regular,
+            EBGaramond_500Medium,
+            EBGaramond_600SemiBold,
+            EBGaramond_700Bold,
+            EBGaramond_400Regular_Italic,
+            EBGaramond_500Medium_Italic,
+            EBGaramond_600SemiBold_Italic,
+            EBGaramond_700Bold_Italic,
+          }),
+        ]);
+
+        setFontsLoaded(true);
+      } catch (e) {
+        console.warn('Error loading fonts:', e);
+        setFontError(e as Error);
+      } finally {
+        // Hide splash screen after fonts are loaded
+        await SplashScreen.hideAsync();
+      }
     }
-  }, [fontsLoaded, fontError]);
+
+    loadFonts();
+  }, []);
 
   // Prevent rendering until the fonts have loaded (or errored)
   if (!fontsLoaded && !fontError) {

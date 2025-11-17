@@ -2,7 +2,7 @@ import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { Platform, Text, View } from 'react-native';
+import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
@@ -21,7 +21,6 @@ import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { Tab } from '@components/navigation/tab';
 import type { HeaderProps } from '@components/navigation/header/type';
 import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
-import { Pressable } from 'react-native';
 
 export const buttonConfigs = [
   { label: 'Today', iconName: 'solar:calendar-bold' },
@@ -150,15 +149,6 @@ export const Header: React.FC<HeaderProps> = (props) => {
     }
   }, [foregroundHeightState, tabsHeight, onHeaderHeightChange, variant]);
 
-  useEffect(() => {
-    if (variant === 'sticky') {
-      const totalHeight = foregroundHeightState + bottomContentHeightState;
-      if (totalHeight > 0 && onHeaderHeightChange) {
-        onHeaderHeightChange(totalHeight + insets.top + 10);
-      }
-    }
-  }, [foregroundHeightState, bottomContentHeightState, onHeaderHeightChange, variant, insets.top]);
-
   const handleForegroundLayout = useCallback(
     (e: { nativeEvent: { layout: { height: number } } }) => {
       const height = e.nativeEvent.layout.height;
@@ -187,6 +177,22 @@ export const Header: React.FC<HeaderProps> = (props) => {
       }
     },
     [bottomContentHeightState]
+  );
+
+  const [stickyContainerHeight, setStickyContainerHeight] = useState(0);
+
+  const handleStickyContainerLayout = useCallback(
+    (e: { nativeEvent: { layout: { height: number } } }) => {
+      const height = e.nativeEvent.layout.height;
+      if (Math.abs(height - stickyContainerHeight) > 0.5) {
+        setStickyContainerHeight(height);
+        // For simple sticky headers without scroll, directly report the measured height
+        if (variant === 'sticky' && onHeaderHeightChange) {
+          onHeaderHeightChange(height);
+        }
+      }
+    },
+    [stickyContainerHeight, variant, onHeaderHeightChange]
   );
 
   // Determine if we should use centered layout (for similar feeds with back button and no actions)
@@ -246,9 +252,9 @@ export const Header: React.FC<HeaderProps> = (props) => {
 
         <View className={clsx(titleContainerVariants({ layout: 'default' }))}>
           {onTitlePress ? (
-            <Pressable
+            <TouchableOpacity
               onPress={onTitlePress}
-              className="flex-row items-center gap-1.5 active:opacity-70">
+              className="flex-row items-center gap-0.5 active:opacity-70">
               <Text
                 className={clsx(
                   titleVariants({
@@ -265,7 +271,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
                 style={{ marginBottom: Platform.OS === 'ios' ? 6 : 2 }}>
                 <ExpandVerticalIcon size={24} color={colors.black} />
               </View>
-            </Pressable>
+            </TouchableOpacity>
           ) : (
             <Text
               className={clsx(titleVariants({ fontWeight: titleFontWeight, size: titleSize }))}
@@ -618,6 +624,7 @@ export const Header: React.FC<HeaderProps> = (props) => {
       return (
         <View
           className={clsx(headerContainerVariants({ variant }))}
+          onLayout={handleStickyContainerLayout}
           style={{
             position: 'absolute',
             top: 0,

@@ -12,6 +12,7 @@ import { toast } from '@components/ui/toast';
 import { useImportOPML } from '@readspace/shared';
 import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 export interface OPMLImportBottomSheetProps {
   file: DocumentPicker.DocumentPickerAsset | null;
@@ -110,7 +111,8 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               fullWidth={false}
               className="flex-1"
               onPress={handleCancel}
-              disabled={isImporting}>
+              disabled={isImporting}
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
               Cancel
             </Button>
 
@@ -120,7 +122,8 @@ export const OPMLImportBottomSheet = forwardRef<BottomSheetModal, OPMLImportBott
               fullWidth={false}
               className="flex-1"
               onPress={handleImport}
-              disabled={isImporting}>
+              disabled={isImporting}
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
               {isImporting ? (
                 <View className="flex-row items-center gap-2">
                   <Spinner size="small" color={COLORS.white} />

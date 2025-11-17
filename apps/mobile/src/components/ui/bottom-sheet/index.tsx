@@ -12,7 +12,6 @@ import type { ReactNode } from 'react';
 import { forwardRef, useCallback } from 'react';
 import { Text, useColorScheme, View } from 'react-native';
 
-import { Divider } from '@components/ui/divider';
 import { COLORS } from '@lib/constants/colors';
 
 export interface BottomSheetProps extends Omit<BottomSheetModalProps, 'children'> {

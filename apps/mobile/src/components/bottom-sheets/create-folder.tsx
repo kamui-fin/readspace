@@ -7,6 +7,7 @@ import { Input } from '@components/ui/input';
 import { useCreateFolder } from '@readspace/shared';
 import { toast } from '@components/ui/toast';
 import { BottomSheet } from '@components/ui/bottom-sheet';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 export interface CreateFolderModalRef {
   present: () => void;
@@ -59,18 +60,7 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
         snapPoints={['50%']}
         bottomInset={0}
         containerClassName="rounded-3xl overflow-hidden"
-        headerClassName="px-4"
-        headerRight={
-          <Button
-            variant="primary"
-            size="small"
-            className="h-8"
-            fullWidth={false}
-            onPress={handleConfirm}
-            disabled={!folderName.trim()}>
-            Confirm
-          </Button>
-        }>
+        headerClassName="px-4">
         <View>
           <Text className="mb-4 font-geist text-base text-grey dark:text-grey-dark">
             Enter a name for your new folder
@@ -83,7 +73,19 @@ export const CreateFolderModal = forwardRef<CreateFolderModalRef, CreateFolderMo
             autoCapitalize="words"
             returnKeyType="done"
             onSubmitEditing={handleConfirm}
+            borderRadius={12}
           />
+          <View className="mt-6">
+            <Button
+              variant="primary"
+              size="large"
+              fullWidth
+              onPress={handleConfirm}
+              disabled={!folderName.trim()}
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
+              Confirm
+            </Button>
+          </View>
         </View>
       </BottomSheet>
     );

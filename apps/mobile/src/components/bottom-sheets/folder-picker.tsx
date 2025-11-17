@@ -13,6 +13,7 @@ import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@/components/bottom-sheets/create-folder';
+import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 
 export interface FolderPickerBottomSheetRef {
   present: () => void;
@@ -80,9 +81,7 @@ export const FolderPickerBottomSheet = forwardRef<
               fullWidth={false}
               onPress={handleConfirm}
               disabled={false}
-              style={{
-                borderRadius: 9999,
-              }}>
+              style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
               Confirm
             </Button>
           </View>

@@ -12,7 +12,7 @@ import { SelfHostSettings } from '@components/modals/self-hosted-settings.modal'
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
 import { useSession } from '@contexts/auth-context';
 import { useSettingsStore } from '@stores/settings';
-import { SPACING } from '@lib/constants/app';
+import { SPACING, BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { EmailStep } from '@/components/screens/auth/routes/email';
 import { PasswordStep } from '@/components/screens/auth/routes/password';
@@ -140,14 +140,24 @@ export function SignupScreen() {
           <View className="gap-3">
             {/* Main Action Button */}
             {buttonText && (
-              <Button variant="primary" size="large" onPress={handleNext} loading={isLoading}>
+              <Button
+                variant="primary"
+                size="large"
+                onPress={handleNext}
+                loading={isLoading}
+                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
                 {buttonText}
               </Button>
             )}
 
             {/* Back Button or Sign In Link */}
             {currentStep > 0 ? (
-              <Button variant="secondary" size="large" onPress={handleBack} disabled={isLoading}>
+              <Button
+                variant="secondary"
+                size="large"
+                onPress={handleBack}
+                disabled={isLoading}
+                style={{ borderRadius: BUTTON_BORDER_RADIUS }}>
                 Back
               </Button>
             ) : (

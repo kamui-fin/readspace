@@ -2,7 +2,7 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
 import { forwardRef, useState } from 'react';
-import { Image, Pressable, type PressableProps, View } from 'react-native';
+import { Pressable, type PressableProps, View } from 'react-native';
 import { Image as ExpoImage } from 'expo-image';
 
 import { Text } from '@components/ui/text';
@@ -88,17 +88,21 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
           {/* Icon */}
           <View className="h-12 w-12 items-center justify-center overflow-hidden rounded-lg bg-grey5 dark:bg-grey5-dark">
             {iconUrl && !imageError ? (
-              <Image
+              <ExpoImage
                 source={{ uri: iconUrl }}
-                className="h-full w-full"
-                resizeMode="cover"
+                style={{ width: 48, height: 48 }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
                 onError={() => setImageError(true)}
               />
             ) : fallbackAvatarUrl ? (
-              <Image
+              <ExpoImage
                 source={{ uri: fallbackAvatarUrl }}
-                className="h-full w-full"
-                resizeMode="cover"
+                style={{ width: 48, height: 48 }}
+                contentFit="cover"
+                cachePolicy="memory-disk"
+                transition={150}
               />
             ) : null}
           </View>
@@ -145,15 +149,13 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
                 <View className="mb-3 flex-row items-center gap-2">
                   {/* Favicon */}
                   {faviconUrl ? (
-                    <View className="h-4 w-4 overflow-hidden rounded-sm">
-                      <ExpoImage
-                        source={{ uri: faviconUrl }}
-                        style={{ width: 16, height: 16 }}
-                        contentFit="cover"
-                        cachePolicy="memory-disk"
-                        transition={200}
-                      />
-                    </View>
+                    <ExpoImage
+                      source={{ uri: faviconUrl }}
+                      style={{ width: 16, height: 16, borderRadius: 4 }}
+                      contentFit="cover"
+                      cachePolicy="memory-disk"
+                      transition={150}
+                    />
                   ) : (
                     <View className="h-4 w-4 items-center justify-center rounded-sm bg-orange-100 dark:bg-orange-950">
                       <RssIcon size={12} color={isDark ? '#9a3412' : '#ea580c'} />
@@ -214,11 +216,12 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
               <View className="h-24 w-24 overflow-hidden rounded-xl bg-grey5 dark:bg-grey5-dark">
                 <ExpoImage
                   source={{ uri: imageUrl }}
-                  className="h-full w-full"
+                  style={{ width: 96, height: 96 }}
                   contentFit="cover"
                   cachePolicy="memory-disk"
                   transition={200}
-                  onError={() => setImageError(true)}
+                  placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+                  placeholderContentFit="cover"
                 />
               </View>
             )}
@@ -234,7 +237,15 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
       return (
         <Pressable ref={ref} className={clsx(cardVariants({ variant }), className)} {...props}>
           {imageUrl && (
-            <Image source={{ uri: imageUrl }} className="h-48 w-full" resizeMode="cover" />
+            <ExpoImage
+              source={{ uri: imageUrl }}
+              style={{ width: '100%', height: 192 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={200}
+              placeholder={{ blurhash: 'L6PZfSi_.AyE_3t7t7R**0o#DgR4' }}
+              placeholderContentFit="cover"
+            />
           )}
           <View className="p-4">
             {timestamp && (

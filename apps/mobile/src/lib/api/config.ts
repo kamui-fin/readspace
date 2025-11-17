@@ -25,13 +25,13 @@ export function configureApiClient(readspaceUrl?: string) {
   const settings = getSettings();
   const apiBaseUrl = resolveHostname(readspaceUrl || settings.readspace_url);
 
-  console.log('[ApiClient] Configuring with baseUrl:', apiBaseUrl);
+  console.log('[APIClient] Configuring with baseUrl:', apiBaseUrl);
 
   ApiClient.configure({
     baseUrl: apiBaseUrl,
     getAuthToken: async () => {
       if (!supabase) {
-        console.warn('[ApiClient] No Supabase client available');
+        console.warn('[APIClient] No Supabase client available');
         return null;
       }
 
@@ -52,19 +52,19 @@ export function configureApiClient(readspaceUrl?: string) {
 
         // If token expires in less than 60 seconds, refresh it
         if (timeUntilExpiry < 60) {
-          console.log('[ApiClient] Token expiring soon, refreshing...');
+          console.log('[APIClient] Token expiring soon, refreshing...');
           const {
             data: { session: refreshedSession },
             error,
           } = await supabase.auth.refreshSession();
 
           if (error) {
-            console.error('[ApiClient] Failed to refresh session:', error);
+            console.error('[APIClient] Failed to refresh session:', error);
             return session.access_token; // Return old token as fallback
           }
 
           if (refreshedSession) {
-            console.log('[ApiClient] Session refreshed successfully');
+            console.log('[APIClient] Session refreshed successfully');
             return refreshedSession.access_token;
           }
         }

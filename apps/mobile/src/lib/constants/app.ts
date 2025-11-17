@@ -9,6 +9,10 @@ export const DEVICE_CORNER_RADIUS = Platform.select({
   default: 24,
 });
 
+// Button border radius based on device corner radius
+// For buttons, we use the device corner radius directly for a system-consistent look
+export const BUTTON_BORDER_RADIUS = DEVICE_CORNER_RADIUS;
+
 export const BOTTOM_SHEET_WIDTH = Dimensions.get('window').width - 32;
 
 // Spacing constants for onboarding screens
