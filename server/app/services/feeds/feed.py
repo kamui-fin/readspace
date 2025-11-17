@@ -82,23 +82,43 @@ class FeedService:
         return await crud_feed.get_feed_by_url(self.db, url=url)
 
     async def refresh_feed(self, *, feed_id: UUID, force_refetch: bool = False) -> FeedResponse | None:
-        """Refresh a global feed by fetching latest content."""
+        """Refresh a global feed by fetching latest content.
+
+        Uses a three-phase pattern with commits to release connections in transaction pooling:
+        Phase 1: Quick metadata fetch (<10ms) + COMMIT → connection released
+        Phase 2: Network I/O without DB connection (0-30s)
+        Phase 3: Quick database write (<500ms) + COMMIT → connection released
+
+        In transaction pooling mode (Supavisor/PgBouncer), connections are only
+        returned to the pool after COMMIT/ROLLBACK, not during the transaction.
+        """
         logger.info("Refreshing global feed", feed_id=feed_id, force_refetch=force_refetch)
 
+        # ================================================================
+        # PHASE 1: Quick metadata fetch + COMMIT (DB connection held <10ms)
+        # ================================================================
         feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
         if not feed_db:
             logger.warning("Feed not found for refresh", feed_id=feed_id)
             return None
 
-        try:
-            # Determine cache headers
-            etag = feed_db.etag_header if not force_refetch else None
-            last_modified = feed_db.last_modified_header if not force_refetch else None
+        # Extract all data we need while we have the ORM object
+        etag = feed_db.etag_header if not force_refetch else None
+        last_modified = feed_db.last_modified_header if not force_refetch else None
+        feed_url = str(feed_db.url)
+        current_content_hash = feed_db.content_hash
 
-            # Fetch feed content
-            fetch_result = await self.feed_fetcher.fetch_content(
-                str(feed_db.url), etag=etag, last_modified=last_modified
-            )
+        # CRITICAL: Commit to release connection back to pool
+        await self.db.commit()
+        # Connection is now available for other tasks!
+
+        # ================================================================
+        # PHASE 2: Network I/O without holding DB connection (0-30s)
+        # ================================================================
+        try:
+            # Fetch feed content (HTTP request with 30s timeout)
+            # CRITICAL: No database connection is held during this operation
+            fetch_result = await self.feed_fetcher.fetch_content(feed_url, etag=etag, last_modified=last_modified)
 
             if fetch_result.status_code == 304:  # Not Modified
                 # Skip database write entirely for 304 responses to reduce DB load
@@ -107,94 +127,138 @@ class FeedService:
                     "Feed not modified (304), skipping refresh without DB update",
                     feed_id=feed_id,
                 )
+                # Re-fetch feed for response (quick query)
+                feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+                await self.db.commit()  # Release connection
                 return FeedResponse.model_validate(feed_db)
 
             if fetch_result.status_code != 200 or not fetch_result.content:
                 error_msg = f"Failed to fetch content: status {fetch_result.status_code}"
                 logger.error("Feed fetch failed", feed_id=feed_id, error=error_msg)
+
+                # Update error count (quick DB write)
+                feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+                await crud_feed.update_feed_error(self.db, feed_db=feed_db, error_message=error_msg)
+                await self.db.commit()  # Release connection
                 return None
 
-            # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_data(fetch_result.content, str(feed_db.url))
+            # Parse the feed content (CPU-bound, no I/O)
+            # CRITICAL: Still no database connection held
+            parsed_feed = self.feed_parser.parse_feed_data(fetch_result.content, feed_url)
 
-            # Check content hash to skip processing if unchanged
+            # Check content hash to detect if content actually changed
             new_hash = calculate_feed_content_hash(parsed_feed.entries)
 
-            if not force_refetch and feed_db.content_hash == new_hash and new_hash:
+            if not force_refetch and current_content_hash == new_hash and new_hash:
                 # Content unchanged - skip expensive article processing
+                # Quick DB write to update last_fetched_at only
                 await crud_feed.update_feed_metadata(
-                    self.db, feed_db=feed_db, last_fetched_at=datetime.now(timezone.utc)
+                    self.db,
+                    feed_db=await crud_feed.get_feed_by_id(self.db, feed_id=feed_id),
+                    last_fetched_at=datetime.now(timezone.utc),
                 )
                 logger.info(
                     "Feed content unchanged, skipped article processing",
                     feed_id=feed_id,
-                    content_hash=new_hash[:8],  # Log first 8 chars for debugging
+                    content_hash=new_hash[:8] if new_hash else None,
                 )
+                feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+                await self.db.commit()  # Release connection
                 return FeedResponse.model_validate(feed_db)
 
-            # Update feed metadata
+            # Extract feed headers for caching
             feed_headers = fetch_result.headers
-            last_article_published_at = None
 
+            # Find the latest article publication date
+            last_article_published_at = None
             if parsed_feed.entries:
-                # Find the latest article publication date
                 latest_published = None
                 for entry in parsed_feed.entries:
-                    article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
+                    article_dict = self.feed_parser.extract_article_data(entry, feed_url)
                     if article_dict and article_dict.get("published_at"):
                         entry_published = article_dict["published_at"]
                         if not latest_published or entry_published > latest_published:
                             latest_published = entry_published
-
                 last_article_published_at = latest_published
 
-            # Periodically recalculate optimal interval BEFORE creating articles
-            # This avoids transaction conflicts from multiple commits
-            should_recalculate = feed_db.adaptive_fetch_interval_minutes is None or random.random() < 0.1  # noqa: S311
+            # Extract feed metadata from parsed content
+            feed_metadata = {
+                "title": parsed_feed.feed.title if hasattr(parsed_feed.feed, "title") else None,
+                "description": parsed_feed.feed.description if hasattr(parsed_feed.feed, "description") else None,
+                "link": parsed_feed.feed.link if hasattr(parsed_feed.feed, "link") else None,
+                "language": parsed_feed.feed.language if hasattr(parsed_feed.feed, "language") else None,
+                "image_url": getattr(parsed_feed.feed, "image", {}).get("href")
+                if hasattr(parsed_feed.feed, "image")
+                else None,
+            }
+
+            # ================================================================
+            # PHASE 3: Database write operations (connection held ~500ms)
+            # ================================================================
+
+            # Re-fetch feed object for database operations
+            feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+
+            # Periodically recalculate optimal interval (1 in 10 refreshes)
+            # Only calculate if never set OR rarely to reduce query load
+            should_recalculate = (
+                feed_db.adaptive_fetch_interval_minutes is None or random.random() < 0.1  # noqa: S311
+            )
             adaptive_interval_to_set = None
 
             if should_recalculate:
-                # Calculate before any commits to avoid db session conflicts
+                # This does a query, but it's within the final write transaction
                 adaptive_interval_to_set = await calculate_optimal_interval(self.db, feed_db)
-                logger.info(
+                logger.debug(
                     "Calculated adaptive interval",
                     feed_id=feed_id,
                     new_interval=adaptive_interval_to_set,
                 )
 
-            # Update feed metadata including new content hash and adaptive interval (if calculated)
-            # This ensures only ONE commit for all feed metadata
+            # Update feed metadata including new content hash and adaptive interval
+            # This is a single database operation
             updated_feed = await crud_feed.update_feed_metadata(
                 self.db,
                 feed_db=feed_db,
-                title=parsed_feed.feed.title if hasattr(parsed_feed.feed, "title") else None,
-                description=parsed_feed.feed.description if hasattr(parsed_feed.feed, "description") else None,
-                link=parsed_feed.feed.link if hasattr(parsed_feed.feed, "link") else None,
-                language=parsed_feed.feed.language if hasattr(parsed_feed.feed, "language") else None,
-                image_url=getattr(parsed_feed.feed, "image", {}).get("href")
-                if hasattr(parsed_feed.feed, "image")
-                else None,
+                title=feed_metadata["title"],
+                description=feed_metadata["description"],
+                link=feed_metadata["link"],
+                language=feed_metadata["language"],
+                image_url=feed_metadata["image_url"],
                 etag=feed_headers.get("etag"),
                 last_modified=feed_headers.get("last-modified"),
                 last_fetched_at=datetime.now(timezone.utc),
                 last_article_published_at=last_article_published_at,
-                content_hash=new_hash,  # Store new hash
-                adaptive_fetch_interval_minutes=adaptive_interval_to_set,  # Set if calculated
+                content_hash=new_hash,
+                adaptive_fetch_interval_minutes=adaptive_interval_to_set,
             )
 
-            # Create new articles (this will be handled by article service)
+            # Create new articles using bulk insert (single query with ON CONFLICT)
             if parsed_feed.entries:
-                await self._create_new_articles(feed_db, parsed_feed.entries)
+                await self._create_new_articles(updated_feed, parsed_feed.entries)
 
-            logger.info("Feed refreshed successfully", feed_id=feed_id)
+            # No explicit commit here - handled by get_worker_db() context manager
+
+            logger.info(
+                "Feed refreshed successfully",
+                feed_id=feed_id,
+                new_articles=len(parsed_feed.entries) if parsed_feed.entries else 0,
+            )
             return FeedResponse.model_validate(updated_feed)
 
         except Exception as e:
             error_msg = f"Error refreshing feed: {str(e)}"
-            logger.error("Error refreshing feed", feed_id=feed_id, error=error_msg)
+            logger.error("Error refreshing feed", feed_id=feed_id, error=error_msg, exc_info=True)
 
-            # Update error count
-            await crud_feed.update_feed_error(self.db, feed_db=feed_db, error_message=error_msg)
+            # Update error count (re-fetch feed object for update)
+            try:
+                feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+                if feed_db:
+                    await crud_feed.update_feed_error(self.db, feed_db=feed_db, error_message=error_msg)
+                # No explicit commit - exception will trigger rollback in context manager
+            except Exception as update_error:
+                logger.error("Failed to update feed error", feed_id=feed_id, error=str(update_error))
+
             raise
 
     async def _create_new_articles(self, feed_db: Feed, entries: list) -> int:

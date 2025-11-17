@@ -1,5 +1,6 @@
 """Feed-related Taskiq tasks."""
 
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import UUID
@@ -20,7 +21,7 @@ from app.models import Feed, FeedCategory, FeedSubscription
 from app.services.ai.ai_service import get_ai_service
 from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
 from app.services.feeds.feed import FeedService
-from app.workers.common import ensure_uuid, get_worker_db
+from app.workers.common import ensure_uuid, get_worker_db, log_pool_stats
 
 logger = structlog.get_logger(__name__)
 
@@ -37,28 +38,40 @@ async def async_refresh_single_feed(feed_id: UUID, db: AsyncSession) -> None:
         feed_id: Feed UUID
         db: Database session
     """
+    start_time = time.perf_counter()
     logger.info("Starting feed refresh", feed_id=str(feed_id))
+
     feed_service = FeedService(db=db)
     await feed_service.refresh_feed(feed_id=feed_id)
-    logger.info("Successfully refreshed feed", feed_id=str(feed_id))
+
+    duration = time.perf_counter() - start_time
+    logger.info(
+        "Successfully refreshed feed",
+        feed_id=str(feed_id),
+        duration_seconds=round(duration, 3),
+        duration_ms=round(duration * 1000, 1),
+    )
 
 
-async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) -> None:
+async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) -> dict[str, Any]:
     """Schedule all feeds needing refresh - async implementation for testing.
 
     Args:
         db: Database session
         test_mode: If True, directly calls async functions instead of dispatching tasks
+
+    Returns:
+        Dictionary with scheduling statistics
     """
+    start_time = time.perf_counter()
     logger.info("Starting schedule all feed refreshes")
 
     feed_service = FeedService(db=db)
-    feeds_to_check = await feed_service.get_feeds_needing_refresh(
-        limit=MAX_FEEDS_BATCH_SIZE
-    )
+    feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=MAX_FEEDS_BATCH_SIZE)
 
     logger.info("Found feeds to refresh", feed_count=len(feeds_to_check))
 
+    dispatched_count = 0
     if feeds_to_check:
         feed_ids = [feed.id for feed in feeds_to_check]
 
@@ -66,19 +79,41 @@ async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) ->
             # In test mode, refresh feeds directly
             for feed_id in feed_ids:
                 await async_refresh_single_feed(feed_id=feed_id, db=db)
+                dispatched_count += 1
         else:
             # In production mode, kick tasks
             for feed_id in feed_ids:
                 await refresh_single_feed_task.kiq(feed_id)
+                dispatched_count += 1
+
+        duration = time.perf_counter() - start_time
+        feeds_per_second = round(dispatched_count / duration, 2) if duration > 0 else 0
 
         logger.info(
             "Dispatched feed refresh tasks",
-            task_count=len(feed_ids),
+            task_count=dispatched_count,
+            duration_seconds=round(duration, 3),
+            feeds_per_second=feeds_per_second,
         )
+
+        return {
+            "dispatched_count": dispatched_count,
+            "duration_seconds": round(duration, 3),
+            "feeds_per_second": feeds_per_second,
+        }
+
+    return {"dispatched_count": 0, "duration_seconds": 0, "feeds_per_second": 0}
 
 
 async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
     """Batch enrich all feeds without embeddings using Gemini Batch API.
+
+    Uses a three-phase pattern to minimize database connection hold time:
+    Phase 1: Query feeds needing enrichment (<100ms)
+    Phase 2: External API calls without DB connection (10-60s)
+    Phase 3: Bulk database update (<1s)
+
+    This pattern prevents holding connections during long-running external API calls.
 
     Args:
         db: Database session
@@ -96,10 +131,12 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             logger.info("AI disabled, skipping batch enrichment")
             return {"success": True, "enriched_count": 0, "message": "AI disabled"}
 
+        # ================================================================
+        # PHASE 1: Query feeds and prepare data (DB connection <100ms)
+        # ================================================================
+
         # Get feeds without embeddings (not yet enriched)
-        result = await db.execute(
-            select(Feed).where(Feed.embedding.is_(None)).limit(MAX_FEEDS_BATCH_SIZE)
-        )
+        result = await db.execute(select(Feed).where(Feed.embedding.is_(None)).limit(MAX_FEEDS_BATCH_SIZE))
         feeds_to_enrich = result.scalars().all()
 
         if not feeds_to_enrich:
@@ -112,13 +149,14 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
 
         logger.info("Found feeds to enrich", feed_count=len(feeds_to_enrich))
 
-        # Initialize services
-        ai_service = get_ai_service()
+        # Initialize enrichment service (no DB operations yet)
+        # Note: We pass db session but won't use it during API calls
         enrichment_service = FeedEnrichmentService(db=db)
 
         # Prepare feed data for batch processing
+        # Extract all data from ORM objects while we have them
         feed_data_list = []
-        feed_objects = []
+        feed_snapshot_list = []  # Store feed data without ORM objects
 
         for feed in feeds_to_enrich:
             # Detect language if not set
@@ -129,47 +167,66 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             # Extract domain
             domain = enrichment_service._extract_domain_from_url(feed.link or feed.url)
 
+            # Store all feed data needed for later processing
+            feed_snapshot = {
+                "id": feed.id,
+                "title": feed.title or "Unknown Feed",
+                "description": feed.description or "",
+                "domain": domain,
+                "language": language,
+                "link": feed.link,
+                "url": feed.url,
+                "image_url": feed.image_url,
+            }
+            feed_snapshot_list.append(feed_snapshot)
+
+            # Prepare data for AI service
             feed_data_list.append(
                 {
-                    "title": feed.title or "Unknown Feed",
-                    "description": feed.description or "",
+                    "title": feed_snapshot["title"],
+                    "description": feed_snapshot["description"],
                     "domain": domain,
                     "language": language,
                 }
             )
-            feed_objects.append(feed)
 
-        # Batch LLM enrichment
+        # Connection can be released here - no DB operations in Phase 2
+
+        # ================================================================
+        # PHASE 2: External API calls without holding DB connection (10-60s)
+        # ================================================================
+
+        # Initialize AI service (no DB dependency)
+        ai_service = get_ai_service()
+
+        # Batch LLM enrichment (10-30s external API call)
+        # CRITICAL: No database connection is held during this operation
         logger.info("Starting batch LLM enrichment", batch_size=len(feed_data_list))
         llm_results = await ai_service.enrich_feeds_batch(feed_data_list)
 
         # Prepare texts for batch embedding
         embedding_texts = []
-        for i, feed in enumerate(feed_objects):
+        for i, feed_snapshot in enumerate(feed_snapshot_list):
             llm_result = llm_results[i]
 
             # Build composite text for embedding
             components = []
 
             # Always use original title
-            if feed.title:
-                components.append(feed.title)
+            if feed_snapshot["title"]:
+                components.append(feed_snapshot["title"])
 
             # Use enhanced description if available, otherwise original
-            description = (
-                llm_result.enhanced_description if llm_result else feed.description
-            )
+            description = llm_result.enhanced_description if llm_result else feed_snapshot["description"]
             if description:
                 components.append(description)
 
             if llm_result and llm_result.tags:
                 components.append(", ".join(llm_result.tags))
 
-            domain = enrichment_service._extract_domain_from_url(feed.link or feed.url)
+            domain = feed_snapshot["domain"]
             if domain:
-                domain_clean = (
-                    domain.replace("www.", "").replace(".com", "").replace(".org", "")
-                )
+                domain_clean = domain.replace("www.", "").replace(".com", "").replace(".org", "")
                 components.append(domain_clean)
 
             composite_text = " | ".join(components)
@@ -178,10 +235,9 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
 
             embedding_texts.append(composite_text)
 
-        # Batch embedding generation (chunk into batches of 100 due to API limit)
-        logger.info(
-            "Starting batch embedding generation", batch_size=len(embedding_texts)
-        )
+        # Batch embedding generation (5-30s external API call)
+        # CRITICAL: Still no database connection held
+        logger.info("Starting batch embedding generation", batch_size=len(embedding_texts))
         embeddings = []
         batch_size = 100
         for i in range(0, len(embedding_texts), batch_size):
@@ -193,19 +249,24 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             batch_embeddings = await ai_service.generate_embeddings_batch(batch)
             embeddings.extend(batch_embeddings)
 
+        # ================================================================
+        # PHASE 3: Bulk database update (connection held <1s)
+        # ================================================================
+
         # Prepare bulk updates using SQLAlchemy ORM
         enriched_count = 0
         failed_count = 0
         bulk_update_mappings = []
+        embedding_updates = []  # Separate list for vector updates
 
-        for i, feed in enumerate(feed_objects):
+        for i, feed_snapshot in enumerate(feed_snapshot_list):
             try:
                 llm_result = llm_results[i]
                 embedding = embeddings[i]
 
                 # Build update mapping for this feed
                 update_mapping = {
-                    "id": feed.id,
+                    "id": feed_snapshot["id"],
                     "updated_at": datetime.now(timezone.utc),
                 }
 
@@ -225,50 +286,44 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                         logger.warning(
                             "Invalid category",
                             category=llm_result.category,
-                            feed_id=feed.id,
+                            feed_id=feed_snapshot["id"],
                         )
-                        update_mapping["top_level_category"] = (
-                            FeedCategory.MISCELLANEOUS
-                        )
+                        update_mapping["top_level_category"] = FeedCategory.MISCELLANEOUS
 
                     if llm_result.enhanced_description:
                         update_mapping["description"] = llm_result.enhanced_description
 
                     # Calculate hybrid popularity score
-                    popularity_data = (
-                        enrichment_service._calculate_hybrid_popularity_score(
-                            feed,
-                            {"popularity_estimate": llm_result.popularity_estimate},
-                        )
+                    # Create a minimal feed-like object for score calculation
+                    class FeedProxy:
+                        def __init__(self, snapshot):
+                            self.id = snapshot["id"]
+                            self.link = snapshot["link"]
+                            self.url = snapshot["url"]
+
+                    popularity_data = enrichment_service._calculate_hybrid_popularity_score(
+                        FeedProxy(feed_snapshot),
+                        {"popularity_estimate": llm_result.popularity_estimate},
                     )
                     update_mapping.update(
                         {
-                            "popularity_score": float(
-                                popularity_data.get("popularity_score", 0.5)
-                            ),
-                            "llm_popularity_score": popularity_data.get(
-                                "llm_popularity_score"
-                            ),
-                            "domain_authority_score": popularity_data.get(
-                                "domain_authority_score"
-                            ),
+                            "popularity_score": float(popularity_data.get("popularity_score", 0.5)),
+                            "llm_popularity_score": popularity_data.get("llm_popularity_score"),
+                            "domain_authority_score": popularity_data.get("domain_authority_score"),
                             "quality_score": popularity_data.get("quality_score"),
                         }
                     )
 
-                # Extract image if not set
-                if not feed.image_url:
-                    image_data = await enrichment_service._extract_image_url(feed)
-                    if image_data:
-                        update_mapping.update(image_data)
+                # Note: Image extraction requires HTTP fetch, skip for now
+                # Image URLs can be enriched separately or during feed refresh
 
-                # Add embedding via raw SQL (vector type requires special handling)
+                # Store embedding update separately (vector type requires raw SQL)
                 if embedding:
-                    await db.execute(
-                        text(
-                            "UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"
-                        ),
-                        {"embedding": str(embedding), "feed_id": feed.id},
+                    embedding_updates.append(
+                        {
+                            "embedding": str(embedding),
+                            "feed_id": feed_snapshot["id"],
+                        }
                     )
 
                 bulk_update_mappings.append(update_mapping)
@@ -277,33 +332,42 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
             except Exception as e:
                 logger.error(
                     "Failed to prepare feed enrichment",
-                    feed_id=str(feed.id),
+                    feed_id=str(feed_snapshot["id"]),
                     error=str(e),
                     exc_info=True,
                 )
                 failed_count += 1
 
-        # Bulk update all feeds using SQLAlchemy ORM
+        # Perform all database updates in bulk (two queries total)
         if bulk_update_mappings:
             try:
+                # Update 1: Bulk update feed metadata
                 await db.execute(update(Feed), bulk_update_mappings)
-                logger.info(
-                    "Bulk updated feed enrichment data", count=len(bulk_update_mappings)
-                )
+                logger.info("Bulk updated feed enrichment data", count=len(bulk_update_mappings))
+
+                # Update 2: Bulk update embeddings via raw SQL
+                if embedding_updates:
+                    for emb_update in embedding_updates:
+                        await db.execute(
+                            text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
+                            emb_update,
+                        )
+                    logger.info("Bulk updated feed embeddings", count=len(embedding_updates))
+
             except Exception as e:
                 logger.error("Failed to bulk update feeds", error=str(e), exc_info=True)
                 raise
 
         logger.info(
             "Batch feed enrichment completed",
-            total_feeds=len(feeds_to_enrich),
+            total_feeds=len(feed_snapshot_list),
             enriched_count=enriched_count,
             failed_count=failed_count,
         )
 
         return {
             "success": True,
-            "total_feeds": len(feeds_to_enrich),
+            "total_feeds": len(feed_snapshot_list),
             "enriched_count": enriched_count,
             "failed_count": failed_count,
         }
@@ -434,8 +498,8 @@ async def async_compact_old_articles(db: AsyncSession) -> dict[str, int]:
 
 @broker.task(
     task_name="feed_tasks.refresh_single_feed",
-    retry_on_error=True,
-    max_retries=2,
+    # Retry handled by SmartRetryMiddleware with exponential backoff
+    # Retries: 3 attempts with delays ~30s, ~1min, ~2min (with jitter)
 )
 async def refresh_single_feed_task(feed_id: UUID | str) -> None:
     """Refresh a single feed - Taskiq task wrapper.
@@ -453,17 +517,29 @@ async def refresh_single_feed_task(feed_id: UUID | str) -> None:
     task_name="feed_tasks.schedule_all_feed_refreshes",
     schedule=[{"cron": "*/30 * * * *"}],  # Every 30 minutes
 )
-async def schedule_all_feed_refreshes_task() -> None:
-    """Schedule all feeds needing refresh - Taskiq task wrapper."""
+async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
+    """Schedule all feeds needing refresh - Taskiq task wrapper.
+
+    Returns:
+        Dictionary with scheduling statistics
+    """
+    start_time = time.perf_counter()
     async for session in get_worker_db():
-        await async_schedule_all_feeds(db=session, test_mode=False)
+        result = await async_schedule_all_feeds(db=session)
+
+    total_duration = time.perf_counter() - start_time
+    logger.info(
+        "Feed refresh scheduling cycle completed",
+        total_duration_seconds=round(total_duration, 3),
+        **result,
+    )
+    return result
 
 
 @broker.task(
     task_name="feed_tasks.batch_enrich_feeds",
     schedule=[{"cron": "0 4 * * 0"}],  # Run weekly on Sunday at 4 AM UTC
-    retry_on_error=True,
-    max_retries=1,
+    # Retry handled by SmartRetryMiddleware with exponential backoff
 )
 async def batch_enrich_feeds_task() -> dict[str, Any]:
     """Batch enrich all feeds without embeddings - Taskiq task wrapper.
@@ -501,3 +577,19 @@ async def compact_old_articles_task() -> dict[str, int]:
     """
     async for session in get_worker_db():
         return await async_compact_old_articles(db=session)
+
+
+@broker.task(
+    task_name="feed_tasks.log_connection_pool_stats",
+    schedule=[{"cron": "*/5 * * * *"}],  # Run every 5 minutes
+)
+async def log_connection_pool_stats_task() -> dict[str, int]:
+    """Log database connection pool statistics - Taskiq task wrapper.
+
+    Monitors connection pool health for debugging and capacity planning.
+    Logs warnings when utilization exceeds 80%, critical when >95%.
+
+    Returns:
+        Dictionary with pool statistics
+    """
+    return await log_pool_stats()

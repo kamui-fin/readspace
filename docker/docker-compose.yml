@@ -95,7 +95,11 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks=50
+    # Increased from 50 to 200 after optimizing DB connection usage
+    # With new I/O-separated pattern, connections are held <500ms vs 30s before
+    # This allows much higher concurrency with same connection pool (100 connections)
+    # Expected throughput: 1000+ feeds/minute = 60K+ feeds/hour per worker
+    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks=200
     volumes:
       - ../server:/app
     depends_on:

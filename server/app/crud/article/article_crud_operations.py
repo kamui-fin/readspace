@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import and_, select, tuple_
+from sqlalchemy import and_, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -205,12 +205,12 @@ class ArticleCrudOperations:
 
             for article_in in articles_data:
                 link_str = str(article_in.link)
-                
+
                 # Track all articles for this link
                 if link_str not in all_articles_by_link:
                     all_articles_by_link[link_str] = []
                 all_articles_by_link[link_str].append(article_in)
-                
+
                 # Only add content mapping once per unique link
                 if link_str not in link_to_article:
                     content_mappings.append(

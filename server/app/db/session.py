@@ -13,19 +13,25 @@ def _create_engine():
 
     Always uses transaction mode (port 6543) with:
     - Prepared statements disabled (required for PgBouncer transaction mode)
-    - Moderate pool size (10+20) for API to handle concurrent user requests
+    - Reserved pool size for API to ensure user-facing requests aren't starved
     - Pool recycling to prevent stale connections
     - Pre-ping to verify connection health
+
+    Resource budget on Supabase Cloud (200 total connections, 15 pooled):
+    - API: 30 connections (user-facing, low latency priority)
+    - Worker: 100 connections (background, can tolerate queueing)
+    - Reserve: 70 connections (headroom for spikes + other services)
     """
     db_url = settings.SUPABASE_DB_CONNECTION
     if not db_url.startswith("postgresql+asyncpg://"):
         db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
-    # Unified pool configuration for transaction mode
-    # API handles bursty user traffic, needs larger pool than workers
+    # API pool configuration - reserved for user-facing requests
+    # Sized to handle bursty traffic without interfering with background workers
+    # With typical API response times <500ms, 30 connections can serve 60 req/s
     pool_config = {
-        "pool_size": 10,
-        "max_overflow": 20,  # Total 30 connections
+        "pool_size": 15,  # Up from 10 (base capacity for API requests)
+        "max_overflow": 15,  # Total: 30 connections reserved for API
         "pool_recycle": 1800,  # 30 minutes - prevent stale connections
         "pool_timeout": 30,  # Reasonable timeout for user-facing requests
     }

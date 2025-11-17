@@ -28,6 +28,7 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
     current_utc_weekday = now.weekday()
 
     # Never fetched feeds (top priority) - only refresh feeds with subscribers
+    # Use SELECT FOR UPDATE SKIP LOCKED to prevent duplicate refreshes by multiple workers
     never_fetched_stmt = (
         select(Feed)
         .filter(Feed.last_fetched_at.is_(None))
@@ -53,6 +54,7 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
         )
         .order_by(Feed.created_at.asc())
         .limit(limit)
+        .with_for_update(skip_locked=True)  # Skip feeds already locked by other workers
     )
 
     never_fetched_result = await db.execute(never_fetched_stmt)
@@ -99,6 +101,7 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
 
         # OPTIMIZATION: Bind 'now' as a parameter instead of using literal_column("NOW()")
         # to allow PostgreSQL to cache the query plan
+        # Use SELECT FOR UPDATE SKIP LOCKED to prevent duplicate refreshes by multiple workers
         due_feeds_stmt = (
             select(Feed)
             .filter(Feed.last_fetched_at.is_not(None))
@@ -130,6 +133,7 @@ async def get_feeds_needing_refresh(db: AsyncSession, *, limit: int = 100) -> li
                 Feed.last_fetched_at.asc(),
             )
             .limit(remaining_limit)
+            .with_for_update(skip_locked=True)  # Skip feeds already locked by other workers
         )
 
         due_result = await db.execute(due_feeds_stmt)

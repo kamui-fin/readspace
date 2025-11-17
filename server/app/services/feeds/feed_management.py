@@ -316,8 +316,14 @@ class FeedManagementService:
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
 
+        # CRITICAL: Commit to release connection before HTTP fetch
+        # In transaction pooling mode, connections are only released after COMMIT
+        # This mirrors the pattern from FeedService.refresh_feed()
+        await self.db.commit()
+
         try:
             # Fetch and parse the feed content
+            # Connection is NOT held during this 10-30s HTTP operation
             etag = feed_db.etag_header if not force_refetch else None
             last_modified = feed_db.last_modified_header if not force_refetch else None
 

@@ -520,7 +520,12 @@ class RssSearchService:
             # Create a temporary service instance for preview with a dummy user_id
             temp_service = FeedCreationService(self.db, user_id=uuid4())
 
+            # CRITICAL: Commit to release connection before HTTP fetch
+            # In transaction pooling mode, connections are only released after COMMIT
+            await self.db.commit()
+
             # Try to fetch and parse the URL using the transformed URL
+            # Connection is NOT held during this 10-30s HTTP operation
             fetch_result = await temp_service._fetch_feed_content(fetch_url)
             if fetch_result["status"] != 200 or not fetch_result["content"]:
                 logger.debug(

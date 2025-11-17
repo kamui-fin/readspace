@@ -5,6 +5,7 @@ import os
 from typing import Any
 
 from taskiq import AsyncBroker, InMemoryBroker, TaskiqScheduler
+from taskiq.middlewares import SmartRetryMiddleware
 from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_aio_pika import AioPikaBroker
 from taskiq_redis import ListRedisScheduleSource, RedisAsyncResultBackend
@@ -46,6 +47,19 @@ else:
         declare_exchange=True,
         exchange_name="taskiq_exchange",
     ).with_result_backend(result_backend)
+
+    # Add retry middleware with exponential backoff and jitter
+    # This prevents retry storms when feeds fail (e.g., temporary network issues)
+    # With exponential backoff: 30s → 1min → 2min → 4min (capped at 5min)
+    broker = broker.with_middlewares(
+        SmartRetryMiddleware(
+            default_retry_count=3,  # Maximum 3 retries per task
+            default_delay=30,  # Initial delay: 30 seconds
+            use_jitter=True,  # Add randomness to prevent thundering herd
+            use_delay_exponent=True,  # Enable exponential backoff
+            max_delay_exponent=300,  # Cap at 5 minutes
+        )
+    )
 
 # Create schedule source for dynamic scheduling (skip for tests)
 if env not in ("test", "pytest"):
