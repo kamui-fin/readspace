@@ -6,6 +6,7 @@ from typing import Any
 from uuid import UUID
 
 import structlog
+from prometheus_client import Counter, Gauge, Histogram
 from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +26,48 @@ from app.workers.common import ensure_uuid, get_worker_db, log_pool_stats
 
 logger = structlog.get_logger(__name__)
 
+# ============================================================================
+# PROMETHEUS METRICS
+# ============================================================================
+
+# Counter: Total feeds refreshed
+feeds_refreshed_total = Counter(
+    "readspace_feeds_refreshed_total",
+    "Total number of feeds successfully refreshed",
+)
+
+# Counter: Total feeds failed
+feeds_failed_total = Counter(
+    "readspace_feeds_failed_total",
+    "Total number of feeds that failed to refresh",
+)
+
+# Gauge: Feeds currently being refreshed
+feeds_in_progress = Gauge(
+    "readspace_feeds_in_progress",
+    "Number of feeds currently being refreshed",
+)
+
+# Histogram: Feed refresh duration
+feed_refresh_duration = Histogram(
+    "readspace_feed_refresh_duration_seconds",
+    "Time taken to refresh a single feed",
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0],
+)
+
+# Gauge: Feeds scheduled in last cycle
+feeds_scheduled_last_cycle = Gauge(
+    "readspace_feeds_scheduled_last_cycle",
+    "Number of feeds scheduled in the last scheduling cycle",
+)
+
+# Histogram: Batch scheduling duration
+batch_scheduling_duration = Histogram(
+    "readspace_batch_scheduling_duration_seconds",
+    "Time taken to schedule a batch of feed refreshes",
+    buckets=[0.1, 0.5, 1.0, 5.0, 10.0, 30.0],
+)
+
 
 # ============================================================================
 # ASYNC HELPER FUNCTIONS (for testing and reuse)
@@ -39,18 +82,28 @@ async def async_refresh_single_feed(feed_id: UUID, db: AsyncSession) -> None:
         db: Database session
     """
     start_time = time.perf_counter()
+    feeds_in_progress.inc()  # Increment gauge
     logger.info("Starting feed refresh", feed_id=str(feed_id))
 
-    feed_service = FeedService(db=db)
-    await feed_service.refresh_feed(feed_id=feed_id)
+    try:
+        feed_service = FeedService(db=db)
+        await feed_service.refresh_feed(feed_id=feed_id)
 
-    duration = time.perf_counter() - start_time
-    logger.info(
-        "Successfully refreshed feed",
-        feed_id=str(feed_id),
-        duration_seconds=round(duration, 3),
-        duration_ms=round(duration * 1000, 1),
-    )
+        duration = time.perf_counter() - start_time
+        feed_refresh_duration.observe(duration)  # Record duration
+        feeds_refreshed_total.inc()  # Increment success counter
+
+        logger.info(
+            "Successfully refreshed feed",
+            feed_id=str(feed_id),
+            duration_seconds=round(duration, 3),
+            duration_ms=round(duration * 1000, 1),
+        )
+    except Exception:
+        feeds_failed_total.inc()  # Increment failure counter
+        raise
+    finally:
+        feeds_in_progress.dec()  # Decrement gauge
 
 
 async def async_schedule_all_feeds(db: AsyncSession, test_mode: bool = False) -> dict[str, Any]:
@@ -528,6 +581,9 @@ async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
         result = await async_schedule_all_feeds(db=session)
 
     total_duration = time.perf_counter() - start_time
+    batch_scheduling_duration.observe(total_duration)  # Record batch duration
+    feeds_scheduled_last_cycle.set(result.get("dispatched_count", 0))  # Update gauge
+
     logger.info(
         "Feed refresh scheduling cycle completed",
         total_duration_seconds=round(total_duration, 3),

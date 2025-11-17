@@ -1,0 +1,313 @@
+groups:
+  - name: readspace_critical_alerts
+    interval: 30s
+    rules:
+      # ============================================================================
+      # HTTP ERROR RATE ALERTS
+      # ============================================================================
+
+      - alert: HighHTTPErrorRate
+        expr: |
+          rate(readspace_http_requests_total{status=~"5.."}[5m])
+          / rate(readspace_http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High HTTP 5xx error rate detected"
+          description: "{{ $value | humanizePercentage }} of HTTP requests are returning 5xx errors (threshold: 5%)"
+
+      - alert: FeedRefreshFailureSpike
+        expr: |
+          rate(readspace_feed_operations_total{operation="refresh", status!="success"}[10m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: feed_worker
+        annotations:
+          summary: "High feed refresh failure rate"
+          description: "Feed refresh operations are failing at {{ $value }} failures/second"
+
+      # ============================================================================
+      # LATENCY ALERTS
+      # ============================================================================
+
+      - alert: HighAPILatency
+        expr: |
+          histogram_quantile(0.95,
+            rate(readspace_http_request_duration_seconds_bucket[5m])
+          ) > 5.0
+        for: 10m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High API latency detected"
+          description: "95th percentile API latency is {{ $value }}s (threshold: 5s)"
+
+      - alert: SlowDatabaseQueries
+        expr: |
+          histogram_quantile(0.95,
+            rate(readspace_db_query_duration_seconds_bucket[5m])
+          ) > 1.0
+        for: 10m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile database query latency is {{ $value }}s (threshold: 1s)"
+
+      # ============================================================================
+      # EXTERNAL SERVICE ALERTS
+      # ============================================================================
+
+      - alert: HighRSSFetchFailureRate
+        expr: |
+          rate(readspace_rss_fetch_total{status!="success"}[10m])
+          / rate(readspace_rss_fetch_total[10m]) > 0.25
+        for: 10m
+        labels:
+          severity: warning
+          component: rss_fetcher
+        annotations:
+          summary: "High RSS fetch failure rate"
+          description: "{{ $value | humanizePercentage }} of RSS fetches are failing (threshold: 25%)"
+
+      - alert: ContentExtractionTimeouts
+        expr: |
+          rate(readspace_content_extraction_total{status="timeout"}[10m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: content_extraction
+        annotations:
+          summary: "Content extraction timeouts occurring"
+          description: "{{ $value }} content extractions/second are timing out"
+
+      - alert: HighAIServiceErrorRate
+        expr: |
+          rate(readspace_ai_requests_total{status!="success"}[5m])
+          / rate(readspace_ai_requests_total[5m]) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          component: ai_service
+        annotations:
+          summary: "High AI service error rate"
+          description: "{{ $value | humanizePercentage }} of AI requests are failing (threshold: 10%)"
+
+      # ============================================================================
+      # CONNECTION AND RESOURCE ALERTS
+      # ============================================================================
+
+      - alert: DatabaseConnectionPoolExhaustion
+        expr: readspace_db_pool_overflow > 5
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection pool exhausted"
+          description: "{{ $value }} connections are exceeding the pool size"
+
+      - alert: HighMemoryCacheUsage
+        expr: readspace_cache_memory_bytes > 1e9  # 1GB
+        for: 10m
+        labels:
+          severity: warning
+          component: cache
+        annotations:
+          summary: "High Redis cache memory usage"
+          description: "Cache is using {{ $value | humanize1024 }}B of memory (threshold: 1GB)"
+
+      # ============================================================================
+      # WORKER TASK ALERTS
+      # ============================================================================
+
+      - alert: WorkerTaskFailureSpike
+        expr: |
+          rate(readspace_worker_tasks_total{status="failure"}[10m]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "High worker task failure rate"
+          description: "Worker tasks are failing at {{ $value }} failures/second by task: {{ $labels.task_name }}"
+
+      - alert: LongRunningWorkerTasks
+        expr: |
+          histogram_quantile(0.95,
+            rate(readspace_worker_task_duration_seconds_bucket[10m])
+          ) > 300
+        for: 10m
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "Worker tasks taking too long"
+          description: "95th percentile worker task duration is {{ $value }}s (threshold: 300s) for task: {{ $labels.task_name }}"
+
+      # ============================================================================
+      # BUSINESS METRIC ALERTS
+      # ============================================================================
+
+      - alert: FeedRefreshSuccessRateLow
+        expr: readspace_feed_refresh_success_rate < 80
+        for: 30m
+        labels:
+          severity: warning
+          component: feed_worker
+        annotations:
+          summary: "Low feed refresh success rate"
+          description: "Feed refresh success rate is {{ $value }}% (threshold: 80%)"
+
+      - alert: DeadFeedsAccumulating
+        expr: readspace_dead_feeds_total > 100
+        for: 1h
+        labels:
+          severity: info
+          component: feed_management
+        annotations:
+          summary: "Dead feeds accumulating"
+          description: "{{ $value }} feeds have consecutive failures and may be permanently broken"
+
+      # ============================================================================
+      # USER-FACING ERRORS
+      # ============================================================================
+
+      - alert: HighUserErrorRate
+        expr: |
+          rate(readspace_user_errors_total{severity="high"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High user-facing error rate"
+          description: "Users are experiencing {{ $value }} high-severity errors/second of type: {{ $labels.error_type }}"
+
+      # ============================================================================
+      # SUBSCRIPTION OPERATIONS
+      # ============================================================================
+
+      - alert: HighSubscriptionFailureRate
+        expr: |
+          rate(readspace_feed_operations_total{operation="subscribe", status!="success"}[10m])
+          / rate(readspace_feed_operations_total{operation="subscribe"}[10m]) > 0.20
+        for: 10m
+        labels:
+          severity: warning
+          component: subscription_service
+        annotations:
+          summary: "High subscription operation failure rate"
+          description: "{{ $value | humanizePercentage }} of subscription attempts are failing (threshold: 20%)"
+
+      - alert: SubscriptionLatencyHigh
+        expr: |
+          histogram_quantile(0.95,
+            rate(readspace_feed_operation_duration_seconds_bucket{operation="subscribe"}[5m])
+          ) > 10.0
+        for: 10m
+        labels:
+          severity: warning
+          component: subscription_service
+        annotations:
+          summary: "High subscription operation latency"
+          description: "95th percentile subscription time is {{ $value }}s (threshold: 10s)"
+
+  - name: readspace_availability_alerts
+    interval: 1m
+    rules:
+      # ============================================================================
+      # SERVICE AVAILABILITY
+      # ============================================================================
+
+      - alert: ServiceDown
+        expr: up{job="readspace-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Readspace API service is down"
+          description: "The Readspace API has been unreachable for 2 minutes"
+
+      - alert: DatabaseUnreachable
+        expr: |
+          rate(readspace_db_queries_total{status="error"}[1m])
+          / rate(readspace_db_queries_total[1m]) > 0.50
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database appears unreachable"
+          description: "{{ $value | humanizePercentage }} of database queries are failing (threshold: 50%)"
+
+      - alert: RedisUnreachable
+        expr: |
+          rate(readspace_cache_operations_total{result="error"}[1m])
+          / rate(readspace_cache_operations_total[1m]) > 0.50
+        for: 2m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache appears unreachable"
+          description: "{{ $value | humanizePercentage }} of cache operations are failing (threshold: 50%)"
+
+  - name: readspace_performance_alerts
+    interval: 1m
+    rules:
+      # ============================================================================
+      # THROUGHPUT MONITORING
+      # ============================================================================
+
+      - alert: LowRequestThroughput
+        expr: |
+          rate(readspace_http_requests_total[5m]) < 0.1
+        for: 15m
+        labels:
+          severity: info
+          component: api
+        annotations:
+          summary: "Low request throughput detected"
+          description: "API is receiving only {{ $value }} requests/second (may indicate issues or low usage)"
+
+      - alert: NoFeedRefreshes
+        expr: |
+          rate(readspace_feed_operations_total{operation="refresh"}[10m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          component: feed_worker
+        annotations:
+          summary: "No feed refreshes occurring"
+          description: "Feed refresh worker appears to have stopped processing feeds"
+
+      # ============================================================================
+      # ARTICLE PROCESSING
+      # ============================================================================
+
+      - alert: ArticleProcessingBacklog
+        expr: readspace_article_processing_backlog > 10000
+        for: 1h
+        labels:
+          severity: warning
+          component: worker
+        annotations:
+          summary: "Large article processing backlog"
+          description: "{{ $value }} articles are pending processing"
+
+      - alert: FeedRefreshBacklog
+        expr: readspace_feed_refresh_backlog > 1000
+        for: 30m
+        labels:
+          severity: warning
+          component: feed_worker
+        annotations:
+          summary: "Large feed refresh backlog"
+          description: "{{ $value }} feeds are pending refresh"

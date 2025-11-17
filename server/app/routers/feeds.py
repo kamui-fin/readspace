@@ -1,3 +1,4 @@
+import time
 from typing import Any
 from uuid import UUID
 
@@ -7,6 +8,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.business_metrics import user_actions_total
 from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_PAGE_SIZE
 from app.core.custom_exceptions import (
     FeedConnectionError,
@@ -19,6 +21,7 @@ from app.core.custom_exceptions import (
 )
 from app.core.decorators import require_resource_limit
 from app.core.dependencies import get_subscription_service
+from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
 from app.crud import crud_feed, crud_folder, crud_profile, crud_subscription
 from app.db.session import get_db
 from app.models import ArticleContent, Feed, FeedArticle
@@ -115,6 +118,8 @@ async def subscribe_to_feed(
         - Subject to max_subscriptions resource limit
         - Creates a direct subscription without URL validation
     """
+    start_time = time.perf_counter()
+
     # SECURITY: Check feed existence BEFORE checking resource limits to prevent feed ID enumeration
     feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
     if not feed:
@@ -153,19 +158,35 @@ async def subscribe_to_feed(
             folder_id=subscription_data.folder_id,
         )
 
+        # Record success metrics
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="subscribe", status="success").inc()
+        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
+        user_actions_total.labels(action="subscribe").inc()
+
         logger.info(
             "Feed subscription created successfully",
             subscription_id=subscription.id,
             feed_id=feed_id,
             user_id=current_user.sub,
             folder_id=subscription_data.folder_id,
+            duration_seconds=round(duration, 3),
         )
         return subscription
 
     except HTTPException:
+        # Record metrics for HTTP exceptions
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="subscribe", status="http_error").inc()
+        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
         # Re-raise HTTP exceptions from downstream handlers
         raise
     except ReadspaceException as e:
+        # Record metrics for business logic failures
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="subscribe", status="validation_error").inc()
+        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
+
         # Convert custom exceptions to HTTP exceptions using mapper
         logger.warning(
             "Failed to create subscription",
@@ -173,9 +194,15 @@ async def subscribe_to_feed(
             error_type=type(e).__name__,
             user_id=current_user.sub,
             feed_id=feed_id,
+            duration_seconds=round(duration, 3),
         )
         raise to_http_exception(e) from e
     except Exception as e:
+        # Record metrics for unexpected errors
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="subscribe", status="error").inc()
+        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
+
         # Catch-all for unexpected errors
         logger.error(
             "Unexpected error creating feed subscription",
@@ -183,6 +210,7 @@ async def subscribe_to_feed(
             exc_info=True,
             feed_id=feed_id,
             user_id=current_user.sub,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -264,6 +292,7 @@ async def add_new_feed(
         - Performs full feed validation and content parsing
         - Automatically handles feed deduplication
     """
+    start_time = time.perf_counter()
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     try:
         feed = await feed_service.add_new_feed(
@@ -271,17 +300,34 @@ async def add_new_feed(
             folder_id=feed_in.folder_id,
             tag_names=None,
         )
+
+        # Record success metrics
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="add_new_feed", status="success").inc()
+        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
+        user_actions_total.labels(action="subscribe").inc()
+
         logger.info(
             "Feed added successfully",
             feed_id=feed.id,
             user_id=current_user.sub,
             url=feed_in.url,
+            duration_seconds=round(duration, 3),
         )
         return feed
     except HTTPException:
+        # Record metrics for HTTP exceptions
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="add_new_feed", status="http_error").inc()
+        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
         # Re-raise HTTP exceptions from downstream handlers
         raise
     except ReadspaceException as e:
+        # Record metrics for business logic failures
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="add_new_feed", status="validation_error").inc()
+        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
+
         # Convert custom exceptions to HTTP exceptions using mapper
         logger.warning(
             "Failed to add feed",
@@ -289,9 +335,15 @@ async def add_new_feed(
             error_type=type(e).__name__,
             user_id=current_user.sub,
             url=feed_in.url,
+            duration_seconds=round(duration, 3),
         )
         raise to_http_exception(e) from e
     except Exception as e:
+        # Record metrics for unexpected errors
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="add_new_feed", status="error").inc()
+        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
+
         # Catch-all for unexpected errors
         logger.error(
             "Unexpected error adding new feed",
@@ -299,6 +351,7 @@ async def add_new_feed(
             exc_info=True,
             user_id=current_user.sub,
             url=feed_in.url,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -611,7 +664,13 @@ async def update_feed_settings(
         # Re-raise HTTP exceptions from downstream handlers
         raise
     except (FeedValidationError, FeedSubscriptionError, NotFoundError) as e:
-        logger.warning(f"Validation error updating feed {feed_id} for user {current_user.sub}: {e}")
+        logger.warning(
+            "Validation error updating feed",
+            error=str(e),
+            error_type=type(e).__name__,
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
         logger.error(
@@ -721,6 +780,7 @@ async def refresh_feed(
         - Force refetch bypasses HTTP caching for immediate updates
         - Refresh is synchronous and may take several seconds for large feeds
     """
+    start_time = time.perf_counter()
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     try:
         refreshed_feed = await feed_service.refresh_feed(
@@ -733,40 +793,69 @@ async def refresh_feed(
                 user_id=current_user.sub,
             )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+
+        # Record success metrics
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="refresh", status="success").inc()
+        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
+
         logger.info(
             "Feed refresh triggered/completed",
             feed_id=refreshed_feed.id,
             user_id=current_user.sub,
+            duration_seconds=round(duration, 3),
         )
         return refreshed_feed
     except FeedConnectionError as e:
+        # Record connection error metrics
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="refresh", status="connection_error").inc()
+        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
+
         logger.error(
             "Connection error refreshing feed",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not connect to feed URL during refresh: {e}",
         ) from e
     except (FeedValidationError, FeedParsingError) as e:
+        # Record validation/parsing error metrics
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="refresh", status="validation_error").inc()
+        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
+
         logger.warning(
             "Validation/parsing error during feed refresh",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except HTTPException:
+        # Record metrics for HTTP exceptions
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="refresh", status="http_error").inc()
+        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
         # Re-raise HTTP exceptions (like feed not found)
         raise
     except Exception as e:
+        # Record metrics for unexpected errors
+        duration = time.perf_counter() - start_time
+        feed_operations_total.labels(operation="refresh", status="error").inc()
+        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
+
         logger.error(
             "Unexpected error refreshing feed",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1101,16 +1190,34 @@ async def delete_feed(
         - Action is irreversible - user data cannot be recovered
         - Returns 204 No Content on successful deletion
     """
+    start_time = time.perf_counter()
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     success = await feed_service.delete_feed(feed_id=feed_id)
+    duration = time.perf_counter() - start_time
+
     if not success:
+        feed_operations_total.labels(operation="unsubscribe", status="not_found").inc()
+        feed_operation_duration_seconds.labels(operation="unsubscribe").observe(duration)
+
         logger.warning(
             "Feed not found for deletion or access denied",
             feed_id=feed_id,
             user_id=current_user.sub,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
-    logger.info("Feed deleted successfully", feed_id=feed_id, user_id=current_user.sub)
+
+    # Record success metrics
+    feed_operations_total.labels(operation="unsubscribe", status="success").inc()
+    feed_operation_duration_seconds.labels(operation="unsubscribe").observe(duration)
+    user_actions_total.labels(action="unsubscribe").inc()
+
+    logger.info(
+        "Feed deleted successfully",
+        feed_id=feed_id,
+        user_id=current_user.sub,
+        duration_seconds=round(duration, 3),
+    )
     return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
 
 

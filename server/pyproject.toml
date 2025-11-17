@@ -63,7 +63,6 @@ sqlalchemy = {extras = ["asyncio"], version = "^2.0.28"}
 alembic = "^1.13.1"
 opml = "^0.5"
 feedparser = "^6.0.11"
-taskiq = {extras = ["reload"], version = "^0.11.20"}
 taskiq-redis = "^1.0.2"
 pytest = "^8.3.5"
 pytest-cov = "^6.1.1"
@@ -82,6 +81,8 @@ defusedxml = "^0.7.1"
 brotli = "^1.1.0"
 taskiq-aio-pika = "^0.4.4"
 python-json-logger = "^4.0.0"
+prometheus-fastapi-instrumentator = "^7.1.0"
+taskiq = {extras = ["metrics", "reload"], version = "^0.11.20"}
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

@@ -1,0 +1,43 @@
+# Prometheus configuration for Readspace
+# Scrapes metrics from FastAPI (port 8008) and Taskiq workers (port 9090)
+
+global:
+  scrape_interval: 15s  # Scrape targets every 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  external_labels:
+    cluster: 'readspace'
+    environment: 'production'
+
+# Scrape configurations
+scrape_configs:
+  # FastAPI metrics
+  - job_name: 'fastapi'
+    static_configs:
+      - targets: ['api:8008']
+        labels:
+          service: 'api'
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+
+  # Taskiq worker metrics
+  - job_name: 'taskiq_worker'
+    static_configs:
+      - targets: ['worker:9090']
+        labels:
+          service: 'worker'
+    metrics_path: '/metrics'
+    scrape_interval: 5s  # More frequent for worker metrics
+
+  # Connection pool and database metrics
+  - job_name: 'database'
+    static_configs:
+      - targets: ['api:8008']
+        labels:
+          service: 'database'
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9091']

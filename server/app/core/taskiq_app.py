@@ -4,7 +4,7 @@ import logging
 import os
 from typing import Any
 
-from taskiq import AsyncBroker, InMemoryBroker, TaskiqScheduler
+from taskiq import AsyncBroker, InMemoryBroker, PrometheusMiddleware, TaskiqScheduler
 from taskiq.middlewares import SmartRetryMiddleware
 from taskiq.schedule_sources import LabelScheduleSource
 from taskiq_aio_pika import AioPikaBroker
@@ -48,17 +48,25 @@ else:
         exchange_name="taskiq_exchange",
     ).with_result_backend(result_backend)
 
-    # Add retry middleware with exponential backoff and jitter
-    # This prevents retry storms when feeds fail (e.g., temporary network issues)
-    # With exponential backoff: 30s → 1min → 2min → 4min (capped at 5min)
+    # Add middlewares for retry and metrics
     broker = broker.with_middlewares(
+        # Retry middleware with exponential backoff and jitter
+        # This prevents retry storms when feeds fail (e.g., temporary network issues)
+        # With exponential backoff: 30s → 1min → 2min → 4min (capped at 5min)
         SmartRetryMiddleware(
             default_retry_count=3,  # Maximum 3 retries per task
             default_delay=30,  # Initial delay: 30 seconds
             use_jitter=True,  # Add randomness to prevent thundering herd
             use_delay_exponent=True,  # Enable exponential backoff
             max_delay_exponent=300,  # Cap at 5 minutes
-        )
+        ),
+        # Prometheus metrics for monitoring task performance
+        # Exposes metrics at http://worker:9090/metrics
+        # Tracks: task_duration, task_count, task_errors, task_retries
+        PrometheusMiddleware(
+            server_addr="0.0.0.0",  # noqa: S104 - Docker container binding
+            server_port=9090,
+        ),
     )
 
 # Create schedule source for dynamic scheduling (skip for tests)

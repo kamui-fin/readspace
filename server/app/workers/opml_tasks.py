@@ -1,5 +1,6 @@
 """OPML import Taskiq tasks."""
 
+import time
 from datetime import datetime, timezone
 from typing import Annotated, Any
 from uuid import UUID
@@ -8,6 +9,15 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 from taskiq import Context, TaskiqDepends
 
+from app.core.metrics import (
+    opml_feed_import_duration_seconds,
+    opml_feeds_failed_total,
+    opml_feeds_imported_total,
+    opml_feeds_in_progress,
+    opml_feeds_per_import,
+    opml_imports_in_progress,
+    opml_imports_total,
+)
 from app.core.taskiq_app import broker
 from app.services.opml.opml_import import OpmlImportService
 from app.workers.common import ensure_uuid, get_worker_db
@@ -48,6 +58,9 @@ async def async_import_single_feed(
     from app.routers.opml import update_import_progress
     from app.schemas import FeedImportError
 
+    start_time = time.perf_counter()
+    opml_feeds_in_progress.inc()  # Increment gauge
+
     logger.info("Starting feed import", user_id=str(user_id), feed_url=feed_url)
 
     try:
@@ -60,17 +73,34 @@ async def async_import_single_feed(
             update_existing=update_existing,
         )
 
+        duration = time.perf_counter() - start_time
+        status = result.get("status", "unknown")
+
+        # Record metrics based on result
+        if result.get("success"):
+            if status == "already_exists":
+                opml_feeds_imported_total.labels(status="already_exists").inc()
+            else:
+                opml_feeds_imported_total.labels(status="success").inc()
+        elif status == "limit_exceeded":
+            opml_feeds_imported_total.labels(status="skipped").inc()
+        else:
+            opml_feeds_imported_total.labels(status="failed").inc()
+            opml_feeds_failed_total.inc()
+
+        opml_feed_import_duration_seconds.observe(duration)  # Record duration
+
         logger.info(
             "Feed import completed",
             user_id=str(user_id),
             feed_url=feed_url,
             success=result.get("success", False),
+            status=status,
+            duration_seconds=round(duration, 3),
         )
 
         # Update progress state if we have a parent task
         if parent_task_id:
-            status = result.get("status", "unknown")
-
             if result.get("success"):
                 # Successful import or already exists
                 await update_import_progress(
@@ -99,11 +129,18 @@ async def async_import_single_feed(
 
         return result
     except Exception as exc:
+        duration = time.perf_counter() - start_time
+        opml_feeds_imported_total.labels(status="failed").inc()
+        opml_feeds_failed_total.inc()
+        opml_feed_import_duration_seconds.observe(duration)
+
         logger.error(
             "Feed import failed",
             user_id=str(user_id),
             feed_url=feed_url,
             error=str(exc),
+            error_type=type(exc).__name__,
+            duration_seconds=round(duration, 3),
             exc_info=True,
         )
 
@@ -132,6 +169,8 @@ async def async_import_single_feed(
             )
 
         return result
+    finally:
+        opml_feeds_in_progress.dec()  # Decrement gauge
 
 
 async def async_import_opml(

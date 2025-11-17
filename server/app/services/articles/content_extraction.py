@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import time
 from copy import deepcopy
 
 import structlog
@@ -9,7 +10,13 @@ import trafilatura  # type: ignore[import-untyped]
 from bs4 import BeautifulSoup
 from trafilatura.settings import DEFAULT_CONFIG
 
+from app.core.business_metrics import articles_extracted_total
 from app.core.constants import CONTENT_EXTRACTION_TIMEOUT
+from app.core.metrics import (
+    content_extraction_duration_seconds,
+    content_extraction_total,
+    extracted_content_size_bytes,
+)
 from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
@@ -104,6 +111,8 @@ class ContentExtractionService:
             >>> if content:
             ...     print(f"Extracted {len(content)} chars, {read_time} min read")
         """
+        start_time = time.perf_counter()
+
         try:
             logger.debug(
                 "Fetching content from URL",
@@ -120,15 +129,34 @@ class ContentExtractionService:
                     timeout=CONTENT_EXTRACTION_TIMEOUT,
                 )
             except asyncio.TimeoutError:
+                duration = time.perf_counter() - start_time
+
+                # Record timeout metrics
+                content_extraction_total.labels(status="timeout").inc()
+                content_extraction_duration_seconds.observe(duration)
+                articles_extracted_total.labels(status="failure", method="trafilatura").inc()
+
                 logger.warning(
                     "Content extraction timed out",
                     url=url,
                     timeout=CONTENT_EXTRACTION_TIMEOUT,
+                    duration_seconds=round(duration, 3),
                 )
                 return None, None, f"Content extraction timed out after {CONTENT_EXTRACTION_TIMEOUT} seconds"
 
             if not extracted:
-                logger.warning("Could not extract content from URL", url=url)
+                duration = time.perf_counter() - start_time
+
+                # Record failure metrics
+                content_extraction_total.labels(status="failure").inc()
+                content_extraction_duration_seconds.observe(duration)
+                articles_extracted_total.labels(status="failure", method="trafilatura").inc()
+
+                logger.warning(
+                    "Could not extract content from URL",
+                    url=url,
+                    duration_seconds=round(duration, 3),
+                )
                 return None, None, "Could not extract readable content from the page"
 
             # Remove duplicate title heading if article title is provided
@@ -137,21 +165,39 @@ class ContentExtractionService:
 
             # Calculate read time for the extracted content
             read_time = self._calculate_read_time(extracted)
+            duration = time.perf_counter() - start_time
+            content_size = len(extracted)
+
+            # Record success metrics
+            content_extraction_total.labels(status="success").inc()
+            content_extraction_duration_seconds.observe(duration)
+            extracted_content_size_bytes.observe(content_size)
+            articles_extracted_total.labels(status="success", method="trafilatura").inc()
 
             logger.info(
                 "Successfully extracted full text",
                 url=url,
-                content_length=len(extracted),
+                content_length=content_size,
                 read_time=read_time,
+                duration_seconds=round(duration, 3),
             )
 
             return extracted, read_time, None
 
         except Exception as e:
+            duration = time.perf_counter() - start_time
+
+            # Record error metrics
+            content_extraction_total.labels(status="error").inc()
+            content_extraction_duration_seconds.observe(duration)
+            articles_extracted_total.labels(status="failure", method="trafilatura").inc()
+
             logger.error(
                 "Error extracting full text",
                 error=str(e),
+                error_type=type(e).__name__,
                 url=url,
+                duration_seconds=round(duration, 3),
                 exc_info=True,
             )
             return None, None, "An unexpected error occurred while extracting content"

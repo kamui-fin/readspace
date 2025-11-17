@@ -6,6 +6,7 @@ import json
 import os
 import re
 import tempfile
+import time
 from typing import Any
 
 import structlog
@@ -15,6 +16,12 @@ from google.genai import types
 from app.core.config import get_settings
 from app.core.constants import AI_CACHE_TTL
 from app.core.custom_exceptions import ServiceUnavailableError
+from app.core.metrics import (
+    ai_batch_size,
+    ai_request_duration_seconds,
+    ai_requests_total,
+    ai_token_usage_total,
+)
 from app.core.redis_cache import RedisCache
 from app.schemas import FeedEnrichmentResponse
 
@@ -106,6 +113,9 @@ class AIService:
         """
         self._check_availability()
 
+        start_time = time.perf_counter()
+        operation = "generate_text"
+
         try:
             # Combine system prompt with user prompt if provided
             full_prompt = prompt
@@ -126,14 +136,57 @@ class AIService:
             )
 
             content = response.text or ""
-            logger.debug(
+            duration = time.perf_counter() - start_time
+
+            # Record metrics
+            ai_requests_total.labels(operation=operation, model=self.settings.GEMINI_MODEL, status="success").inc()
+            ai_request_duration_seconds.labels(operation=operation, model=self.settings.GEMINI_MODEL).observe(duration)
+
+            # Record token usage if available
+            if hasattr(response, "usage_metadata") and response.usage_metadata:
+                usage = response.usage_metadata
+                if hasattr(usage, "prompt_token_count"):
+                    ai_token_usage_total.labels(
+                        operation=operation, model=self.settings.GEMINI_MODEL, direction="prompt"
+                    ).inc(usage.prompt_token_count)
+                if hasattr(usage, "candidates_token_count"):
+                    ai_token_usage_total.labels(
+                        operation=operation, model=self.settings.GEMINI_MODEL, direction="response"
+                    ).inc(usage.candidates_token_count)
+
+            logger.info(
                 "Text generation completed",
+                operation=operation,
+                model=self.settings.GEMINI_MODEL,
                 response_length=len(content),
+                duration_seconds=round(duration, 3),
+                prompt_tokens=usage.prompt_token_count
+                if hasattr(response, "usage_metadata")
+                and response.usage_metadata
+                and hasattr(response.usage_metadata, "prompt_token_count")
+                else None,
+                response_tokens=usage.candidates_token_count
+                if hasattr(response, "usage_metadata")
+                and response.usage_metadata
+                and hasattr(response.usage_metadata, "candidates_token_count")
+                else None,
             )
             return content
 
         except Exception as e:
-            logger.error("Error generating text", error=str(e), exc_info=True)
+            duration = time.perf_counter() - start_time
+            ai_requests_total.labels(operation=operation, model=self.settings.GEMINI_MODEL, status="error").inc()
+            ai_request_duration_seconds.labels(operation=operation, model=self.settings.GEMINI_MODEL).observe(duration)
+
+            logger.error(
+                "Error generating text",
+                operation=operation,
+                model=self.settings.GEMINI_MODEL,
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_seconds=round(duration, 3),
+                exc_info=True,
+            )
             raise
 
     async def generate_embedding(self, text: str) -> list[float] | None:
@@ -158,12 +211,18 @@ class AIService:
         Returns:
             List of embeddings (or None for failed ones)
         """
+        start_time = time.perf_counter()
+        operation = "embed_batch"
+
         try:
             logger.debug(
                 "Generating batch embeddings with Gemini",
                 model=self.settings.GEMINI_EMBEDDING_MODEL,
                 batch_size=len(texts),
             )
+
+            # Record batch size
+            ai_batch_size.labels(operation=operation).observe(len(texts))
 
             response = self.gemini_client.models.embed_content(
                 model=self.settings.GEMINI_EMBEDDING_MODEL,
@@ -182,20 +241,53 @@ class AIService:
                     ):
                         embeddings.append(list(embedding_result.values))
                     else:
-                        logger.warning(f"Empty embedding for text {i}")
+                        logger.warning("Empty embedding returned from AI service", text_index=i, batch_size=len(texts))
                         embeddings.append(None)
             else:
                 # If no embeddings returned, fill with None
                 embeddings = [None] * len(texts)
 
-            logger.debug(
+            duration = time.perf_counter() - start_time
+            successful_count = sum(1 for e in embeddings if e is not None)
+
+            # Record metrics
+            ai_requests_total.labels(
+                operation=operation, model=self.settings.GEMINI_EMBEDDING_MODEL, status="success"
+            ).inc()
+            ai_request_duration_seconds.labels(operation=operation, model=self.settings.GEMINI_EMBEDDING_MODEL).observe(
+                duration
+            )
+
+            logger.info(
                 "Batch embedding generation completed",
-                successful_embeddings=sum(1 for e in embeddings if e is not None),
+                operation=operation,
+                model=self.settings.GEMINI_EMBEDDING_MODEL,
+                batch_size=len(texts),
+                successful_embeddings=successful_count,
+                failed_embeddings=len(texts) - successful_count,
+                duration_seconds=round(duration, 3),
             )
             return embeddings
 
         except Exception as e:
-            logger.error("Error generating batch embeddings", error=str(e), exc_info=True)
+            duration = time.perf_counter() - start_time
+            ai_requests_total.labels(
+                operation=operation, model=self.settings.GEMINI_EMBEDDING_MODEL, status="error"
+            ).inc()
+            ai_request_duration_seconds.labels(operation=operation, model=self.settings.GEMINI_EMBEDDING_MODEL).observe(
+                duration
+            )
+
+            logger.error(
+                "Error generating batch embeddings",
+                operation=operation,
+                model=self.settings.GEMINI_EMBEDDING_MODEL,
+                batch_size=len(texts),
+                error=str(e),
+                error_type=type(e).__name__,
+                duration_seconds=round(duration, 3),
+                exc_info=True,
+            )
             return [None] * len(texts)
 
     async def enrich_feeds_batch(

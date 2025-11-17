@@ -3448,6 +3448,37 @@ pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
 
 [[package]]
+name = "prometheus-client"
+version = "0.23.1"
+description = "Python client for the Prometheus monitoring system."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "prometheus_client-0.23.1-py3-none-any.whl", hash = "sha256:dd1913e6e76b59cfe44e7a4b83e01afc9873c1bdfd2ed8739f1e76aeca115f99"},
+    {file = "prometheus_client-0.23.1.tar.gz", hash = "sha256:6ae8f9081eaaaf153a2e959d2e6c4f4fb57b12ef76c8c7980202f1e57b48b2ce"},
+]
+
+[package.extras]
+twisted = ["twisted"]
+
+[[package]]
+name = "prometheus-fastapi-instrumentator"
+version = "7.1.0"
+description = "Instrument your FastAPI app with Prometheus metrics"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "prometheus_fastapi_instrumentator-7.1.0-py3-none-any.whl", hash = "sha256:978130f3c0bb7b8ebcc90d35516a6fe13e02d2eb358c8f83887cdef7020c31e9"},
+    {file = "prometheus_fastapi_instrumentator-7.1.0.tar.gz", hash = "sha256:be7cd61eeea4e5912aeccb4261c6631b3f227d8924542d79eaf5af3f439cbe5e"},
+]
+
+[package.dependencies]
+prometheus-client = ">=0.8.0,<1.0.0"
+starlette = ">=0.30.0,<1.0.0"
+
+[[package]]
 name = "propcache"
 version = "0.4.1"
 description = "Accelerated property cache"
@@ -5146,6 +5177,7 @@ gitignore-parser = {version = ">=0,<1", optional = true, markers = "extra == \"r
 importlib-metadata = "*"
 izulu = "0.50.0"
 packaging = ">=19"
+prometheus_client = {version = ">=0,<1", optional = true, markers = "extra == \"metrics\""}
 pycron = ">=3.0.0,<4.0.0"
 pydantic = ">=1.0,<=3.0"
 pytz = "*"
@@ -6215,4 +6247,4 @@ cffi = ["cffi (>=1.17) ; python_version >= \"3.13\" and platform_python_implemen
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<=3.13.9"
-content-hash = "6ca5cfdd19ebd8c8050308b77b82ffe0157e820da8a4414edacf29334113e563"
+content-hash = "9b6c80a85ee89b4c6b4d86056e652302a9cde0737de3b616323ab7c0396ef0b1"

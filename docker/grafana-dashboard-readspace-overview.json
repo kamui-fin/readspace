@@ -1,0 +1,340 @@
+{
+  "dashboard": {
+    "title": "Readspace Overview",
+    "tags": ["readspace", "overview"],
+    "timezone": "browser",
+    "schemaVersion": 16,
+    "version": 1,
+    "refresh": "30s",
+    "panels": [
+      {
+        "title": "HTTP Request Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(readspace_http_requests_total[5m])",
+            "legendFormat": "{{method}} {{endpoint}} ({{status}})",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "requests/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "HTTP Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "rate(readspace_http_requests_total{status=~\"5..\"}[5m]) / rate(readspace_http_requests_total[5m])",
+            "legendFormat": "5xx Error Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(readspace_http_requests_total{status=~\"4..\"}[5m]) / rate(readspace_http_requests_total[5m])",
+            "legendFormat": "4xx Error Rate",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "error rate", "format": "percentunit", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "API Latency (p95, p99)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(readspace_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p95",
+            "refId": "A"
+          },
+          {
+            "expr": "histogram_quantile(0.99, rate(readspace_http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "p99",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "seconds", "show": true},
+          {"show": false}
+        ],
+        "alert": {
+          "conditions": [
+            {
+              "evaluator": {"params": [5], "type": "gt"},
+              "operator": {"type": "and"},
+              "query": {"params": ["A", "5m", "now"]},
+              "reducer": {"params": [], "type": "avg"},
+              "type": "query"
+            }
+          ],
+          "name": "High API Latency"
+        }
+      },
+      {
+        "title": "Feed Operations",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+        "targets": [
+          {
+            "expr": "rate(readspace_feed_operations_total{status=\"success\"}[5m])",
+            "legendFormat": "{{operation}} (success)",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(readspace_feed_operations_total{status!=\"success\"}[5m])",
+            "legendFormat": "{{operation}} ({{status}})",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "operations/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Feed Refresh Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(readspace_feed_operation_duration_seconds_bucket{operation=\"refresh\"}[5m]))",
+            "legendFormat": "Feed Refresh p95",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "seconds", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Article Operations",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+        "targets": [
+          {
+            "expr": "rate(readspace_article_operations_total{status=\"success\"}[5m])",
+            "legendFormat": "{{operation}} (success)",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(readspace_article_operations_total{status!=\"success\"}[5m])",
+            "legendFormat": "{{operation}} ({{status}})",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "operations/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "User Actions",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(readspace_user_actions_total[5m])",
+            "legendFormat": "{{action}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "actions/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Content Extraction Success Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+        "targets": [
+          {
+            "expr": "rate(readspace_content_extraction_total{status=\"success\"}[5m]) / rate(readspace_content_extraction_total[5m])",
+            "legendFormat": "Success Rate",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(readspace_content_extraction_total{status=\"timeout\"}[5m])",
+            "legendFormat": "Timeouts/sec",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "rate", "format": "percentunit", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Database Query Latency (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 32},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(readspace_db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{operation}} on {{table}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "seconds", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Database Connection Pool",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 32},
+        "targets": [
+          {
+            "expr": "readspace_db_connections_active",
+            "legendFormat": "Active",
+            "refId": "A"
+          },
+          {
+            "expr": "readspace_db_connections_idle",
+            "legendFormat": "Idle",
+            "refId": "B"
+          },
+          {
+            "expr": "readspace_db_pool_overflow",
+            "legendFormat": "Overflow",
+            "refId": "C"
+          }
+        ],
+        "yaxes": [
+          {"label": "connections", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "External API Call Duration",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 40},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(readspace_external_api_duration_seconds_bucket[5m]))",
+            "legendFormat": "{{service}} p95",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "seconds", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "External API Error Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 40},
+        "targets": [
+          {
+            "expr": "rate(readspace_external_api_errors_total[5m])",
+            "legendFormat": "{{service}} - {{error_type}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "errors/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "AI Service Metrics",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 48},
+        "targets": [
+          {
+            "expr": "rate(readspace_ai_requests_total{status=\"success\"}[5m])",
+            "legendFormat": "{{operation}} ({{model}})",
+            "refId": "A"
+          },
+          {
+            "expr": "rate(readspace_ai_token_usage_total[5m])",
+            "legendFormat": "Tokens/sec - {{direction}}",
+            "refId": "B"
+          }
+        ],
+        "yaxes": [
+          {"label": "requests/sec, tokens/sec", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Worker Task Duration (p95)",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 48},
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(readspace_worker_task_duration_seconds_bucket[10m]))",
+            "legendFormat": "{{task_name}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "seconds", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Cache Hit Rate",
+        "type": "graph",
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 56},
+        "targets": [
+          {
+            "expr": "rate(readspace_cache_operations_total{result=\"hit\"}[5m]) / rate(readspace_cache_operations_total{operation=\"get\"}[5m])",
+            "legendFormat": "Hit Rate",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"label": "hit rate", "format": "percentunit", "show": true},
+          {"show": false}
+        ]
+      },
+      {
+        "title": "Active Users (Daily/Weekly)",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 56},
+        "targets": [
+          {
+            "expr": "readspace_active_users_daily",
+            "refId": "A"
+          },
+          {
+            "expr": "readspace_active_users_weekly",
+            "refId": "B"
+          }
+        ]
+      },
+      {
+        "title": "Feed Refresh Success Rate",
+        "type": "gauge",
+        "gridPos": {"h": 8, "w": 6, "x": 18, "y": 56},
+        "targets": [
+          {
+            "expr": "readspace_feed_refresh_success_rate",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"value": 0, "color": "red"},
+              {"value": 80, "color": "yellow"},
+              {"value": 95, "color": "green"}
+            ]
+          }
+        }
+      }
+    ]
+  }
+}

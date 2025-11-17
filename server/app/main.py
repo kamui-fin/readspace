@@ -6,12 +6,14 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from prometheus_client import make_asgi_app
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
-from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, RequestIdMiddleware
+from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, MetricsMiddleware, RequestIdMiddleware
 from app.routers import router as api_router  # Import the main router
 from app.utils.logging_config import setup_logging
 
@@ -93,6 +95,10 @@ app = FastAPI(
 # Add Request ID middleware (must be added before other middleware to ensure request_id is always available)
 app.add_middleware(RequestIdMiddleware)
 
+# Add Metrics middleware (should be early to capture accurate timing)
+# Must be after RequestIdMiddleware to have request_id available for logging
+app.add_middleware(MetricsMiddleware)
+
 # Add HTTP Caching middleware (adds ETag and Cache-Control headers)
 # This should be early in the chain to cache the final response
 app.add_middleware(HTTPCachingMiddleware)
@@ -114,7 +120,13 @@ app.add_middleware(
 # Exception handler for validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.error(f"Validation error: {exc.errors()}")
+    logger.error(
+        "Request validation error",
+        errors=exc.errors(),
+        path=request.url.path,
+        method=request.method,
+        request_id=getattr(request.state, "request_id", None),
+    )
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},
@@ -123,3 +135,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 # Include the main API router
 app.include_router(api_router, prefix="/api")  # Add all routes from app.routers with /api prefix
+
+# Mount Prometheus metrics endpoint
+# This exposes metrics at /metrics for Prometheus to scrape
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+# Instrument FastAPI with Prometheus metrics
+# Tracks: HTTP request duration, request count, response status codes
+Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)

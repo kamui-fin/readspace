@@ -1,3 +1,4 @@
+import time
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
@@ -14,6 +15,12 @@ from app.core.constants import (
     MAX_OPML_FILE_SIZE_MB,
     OPML_IMPORT_TASK_TTL_SECONDS,
     SUPPORTED_OPML_EXTENSIONS,
+)
+from app.core.metrics import (
+    opml_export_duration_seconds,
+    opml_export_total,
+    opml_import_requests_total,
+    opml_validation_total,
 )
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
@@ -61,13 +68,20 @@ def validate_opml_structure(content: str, filename: str) -> int:
     Raises:
         HTTPException: If XML is malformed or not a valid OPML file
     """
+    start_time = time.perf_counter()
+
     try:
         root = ElementTree.fromstring(content)
     except ElementTree.ParseError as e:
+        duration = time.perf_counter() - start_time
+        opml_validation_total.labels(status="invalid_xml").inc()
+
         logger.warning(
             "Failed to parse OPML XML",
             filename=filename,
             error=str(e),
+            error_type="ParseError",
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -79,10 +93,14 @@ def validate_opml_structure(content: str, filename: str) -> int:
 
     # Verify it's an OPML file (not RSS or other XML)
     if root.tag != "opml":
+        duration = time.perf_counter() - start_time
+        opml_validation_total.labels(status="invalid_structure").inc()
+
         logger.warning(
             "File is not OPML format",
             filename=filename,
             root_tag=root.tag,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -96,9 +114,13 @@ def validate_opml_structure(content: str, filename: str) -> int:
     # Check for body element
     body = root.find(".//body")
     if body is None:
+        duration = time.perf_counter() - start_time
+        opml_validation_total.labels(status="invalid_structure").inc()
+
         logger.warning(
             "OPML missing body element",
             filename=filename,
+            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -109,10 +131,14 @@ def validate_opml_structure(content: str, filename: str) -> int:
     feeds = root.findall(".//outline[@xmlUrl]")
     feed_count = len(feeds)
 
+    duration = time.perf_counter() - start_time
+    opml_validation_total.labels(status="success").inc()
+
     logger.info(
         "OPML structure validated",
         filename=filename,
         feed_count=feed_count,
+        duration_seconds=round(duration, 3),
     )
 
     return feed_count
@@ -589,7 +615,11 @@ async def import_opml_file(
     Raises:
         HTTPException: 400 for invalid files, 413 for oversized files, 500 for server errors
     """
+    start_time = time.perf_counter()
+
     if not opml_file.filename or not opml_file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
+        opml_import_requests_total.labels(status="rejected_validation").inc()
+
         logger.warning(
             "Invalid OPML file type uploaded",
             filename=opml_file.filename,
@@ -607,10 +637,12 @@ async def import_opml_file(
         file_size_mb = len(content_bytes) / (1024 * 1024)
 
         if file_size_mb > MAX_OPML_FILE_SIZE_MB:
+            opml_import_requests_total.labels(status="rejected_size").inc()
+
             logger.warning(
                 "OPML file too large",
                 filename=opml_file.filename,
-                size_mb=file_size_mb,
+                size_mb=round(file_size_mb, 2),
                 user_id=current_user.sub,
             )
             raise HTTPException(
@@ -622,23 +654,31 @@ async def import_opml_file(
             content_str = content_bytes.decode("utf-8")
         except UnicodeDecodeError:
             # Try other common encodings
+            encoding_found = False
             for encoding in FALLBACK_ENCODINGS:
                 try:
                     content_str = content_bytes.decode(encoding)
+                    encoding_found = True
                     logger.info(
                         "OPML file decoded with alternate encoding",
                         encoding=encoding,
                         filename=opml_file.filename,
                         user_id=current_user.sub,
+                        fallback_attempts=FALLBACK_ENCODINGS.index(encoding) + 1,
                     )
                     break
                 except UnicodeDecodeError:
                     continue
-            else:
+
+            if not encoding_found:
+                opml_validation_total.labels(status="encoding_error").inc()
+                opml_import_requests_total.labels(status="rejected_validation").inc()
+
                 logger.warning(
                     "Failed to decode OPML file with any encoding",
                     filename=opml_file.filename,
                     user_id=current_user.sub,
+                    encodings_tried=["utf-8"] + list(FALLBACK_ENCODINGS),
                 )
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -665,6 +705,8 @@ async def import_opml_file(
         if max_limit != -1:
             remaining_capacity = max_limit - current_usage
             if feed_count > remaining_capacity:
+                opml_import_requests_total.labels(status="rejected_limit").inc()
+
                 logger.warning(
                     "OPML import would exceed subscription limit",
                     feed_count=feed_count,
@@ -686,7 +728,7 @@ async def import_opml_file(
         logger.info(
             "Queuing OPML import orchestration task",
             filename=opml_file.filename,
-            size_mb=file_size_mb,
+            size_mb=round(file_size_mb, 2),
             feed_count=feed_count,
             user_id=current_user.sub,
         )
@@ -703,6 +745,19 @@ async def import_opml_file(
         await store_task_ownership(
             task_id=orchestration_task.task_id,
             user_id=current_user.sub,
+        )
+
+        duration = time.perf_counter() - start_time
+        opml_import_requests_total.labels(status="accepted").inc()
+
+        logger.info(
+            "OPML import request accepted",
+            task_id=orchestration_task.task_id,
+            filename=opml_file.filename,
+            size_mb=round(file_size_mb, 2),
+            feed_count=feed_count,
+            user_id=current_user.sub,
+            duration_seconds=round(duration, 3),
         )
 
         return {
@@ -1373,24 +1428,45 @@ async def export_opml_file(
     Raises:
         HTTPException: 500 for export generation errors
     """
+    start_time = time.perf_counter()
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+
     try:
         # Get all user feeds and export to OPML
         user_feeds = await feed_service.list_feeds()
+
         # Use OPML processor to handle export
         opml_processor = OpmlProcessor()
         opml_string = await opml_processor.export_feeds_to_opml(user_feeds)
-        logger.info("OPML export successful", user_id=current_user.sub)
+
+        duration = time.perf_counter() - start_time
+        opml_export_total.labels(status="success").inc()
+        opml_export_duration_seconds.observe(duration)
+
+        logger.info(
+            "OPML export successful",
+            user_id=current_user.sub,
+            feed_count=len(user_feeds),
+            export_size_bytes=len(opml_string),
+            duration_seconds=round(duration, 3),
+        )
+
         return PlainTextResponse(
             content=opml_string,
             media_type="application/xml",
             headers={"Content-Disposition": "attachment; filename=readspace_feeds_export.opml"},
         )
     except Exception as e:
+        duration = time.perf_counter() - start_time
+        opml_export_total.labels(status="error").inc()
+        opml_export_duration_seconds.observe(duration)
+
         logger.error(
             "Unexpected error during OPML export",
             error=str(e),
+            error_type=type(e).__name__,
             user_id=current_user.sub,
+            duration_seconds=round(duration, 3),
             exc_info=True,
         )
         raise HTTPException(
