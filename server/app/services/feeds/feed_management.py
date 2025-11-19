@@ -23,13 +23,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_subscription
-from app.crud.article.article import create_articles_batch
 from app.models import ArticleContent, FeedArticle, FeedSubscription, UserArticleState
-from app.schemas import ArticleCreate, FeedUpdate
+from app.schemas import FeedUpdate
 from app.schemas.subscriptions import FeedResponse, SubscriptionResponse, SubscriptionUpdate
+from app.services.feeds.feed import FeedService
 from app.services.feeds.feed_creation import FeedCreationService
-from app.services.feeds.feed_fetcher import FeedFetcher, FetchResult
-from app.services.feeds.feed_parser import FeedParsingService
 from app.utils.url_normalizer import normalize_url_for_display
 
 logger = structlog.get_logger(__name__)
@@ -64,16 +62,14 @@ class FeedManagementService:
         db: AsyncSession,
         user_id: UUID,
         feed_creation_service: FeedCreationService | None = None,
-        feed_fetcher: FeedFetcher | None = None,
-        feed_parser: FeedParsingService | None = None,
+        feed_service: FeedService | None = None,
     ):
         self.db = db
         self.user_id = user_id
         self._cache = get_redis_cache()
         # Allow dependency injection for testing
         self.feed_creation_service = feed_creation_service or FeedCreationService(db, user_id)
-        self.feed_fetcher = feed_fetcher or FeedFetcher(self._cache)
-        self.feed_parser = feed_parser or FeedParsingService()
+        self.feed_service = feed_service or FeedService(db)
 
     async def add_new_feed(
         self,
@@ -296,87 +292,48 @@ class FeedManagementService:
         """Refresh a specific feed by fetching latest content.
 
         Any authenticated user can refresh any feed in the system.
+        This method delegates to FeedService for the core refresh logic,
+        then adds user-specific data (subscription info, unread counts).
         """
         logger.info(
-            "Refreshing feed",
+            "Refreshing feed (user-triggered)",
             feed_id=feed_id,
             user_id=self.user_id,
             force_refetch=force_refetch,
             preview_mode=preview_mode,
         )
 
-        # Get the feed
-        feed_db = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
-        if not feed_db:
-            logger.warning("Feed not found for refresh", feed_id=feed_id)
-            return None
-
         # Get subscription if user has one (for response construction)
         subscription_db = await crud_subscription.get_subscription_by_feed_id(
             db=self.db, feed_id=feed_id, user_id=self.user_id
         )
 
-        # CRITICAL: Commit to release connection before HTTP fetch
-        # In transaction pooling mode, connections are only released after COMMIT
-        # This mirrors the pattern from FeedService.refresh_feed()
-        await self.db.commit()
-
+        # Delegate to FeedService for core refresh logic
+        # This handles: fetch, parse, content hash checking, adaptive intervals, article creation
         try:
-            # Fetch and parse the feed content
-            # Connection is NOT held during this 10-30s HTTP operation
-            etag = feed_db.etag_header if not force_refetch else None
-            last_modified = feed_db.last_modified_header if not force_refetch else None
+            base_response = await self.feed_service.refresh_feed(feed_id=feed_id, force_refetch=force_refetch)
+            
+            if not base_response:
+                logger.warning("Feed not found for refresh", feed_id=feed_id)
+                return None
 
-            fetch_result = await self.feed_fetcher.fetch_content(
-                str(feed_db.url), etag=etag, last_modified=last_modified
-            )
-
-            if fetch_result.status_code == 304:  # Not Modified
-                # Update last_fetched_at even if not modified
-                await crud_feed.update_feed_metadata(
-                    self.db, feed_db=feed_db, last_fetched_at=datetime.now(timezone.utc)
-                )
-                logger.info("Feed not modified, refresh skipped", feed_id=feed_id)
-                # Construct FeedResponse with current data
-                if preview_mode or not subscription_db:
-                    return self._construct_feed_response_preview(feed_db)
-                else:
-                    unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(feed_db, subscription_db, unread_count)
-
-            if fetch_result.status_code != 200 or not fetch_result.content:
-                logger.error(
-                    "Failed to fetch content for feed refresh",
-                    feed_id=feed_id,
-                    status=fetch_result.status_code,
-                )
-                # Return current state with correct user-specific data
-                if preview_mode or not subscription_db:
-                    return self._construct_feed_response_preview(feed_db)
-                else:
-                    unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(feed_db, subscription_db, unread_count)
-
-            # Parse the feed content
-            parsed_feed = self.feed_parser.parse_feed_data(fetch_result.content, str(feed_db.url))
-
-            # Update feed metadata and create new articles
-            await self._update_feed_and_articles(feed_db, fetch_result, parsed_feed)
-
-            # Return the updated feed
-            refreshed_feed = await crud_feed.get_feed_by_id(db=self.db, feed_id=feed_id)
-
-            logger.info("Feed refreshed successfully", feed_id=feed_id)
-            if refreshed_feed:
-                if preview_mode or not subscription_db:
-                    return self._construct_feed_response_preview(refreshed_feed)
-                else:
-                    unread_count = await self._get_unread_count(feed_id)
-                    return self._construct_feed_response(refreshed_feed, subscription_db, unread_count)
-            return None
+            # Convert base FeedResponse to user-specific FeedResponse
+            # Add subscription data and unread counts if user is subscribed
+            if preview_mode or not subscription_db:
+                # Preview mode: return feed without subscription data
+                return self._construct_feed_response_from_base(base_response, None, None)
+            else:
+                # Subscribed user: add subscription data and unread count
+                unread_count = await self._get_unread_count(feed_id)
+                return self._construct_feed_response_from_base(base_response, subscription_db, unread_count)
 
         except Exception as e:
-            logger.error("Error refreshing feed", feed_id=feed_id, error=str(e))
+            logger.error(
+                "Error refreshing feed (user-triggered)",
+                feed_id=feed_id,
+                user_id=self.user_id,
+                error=str(e),
+            )
             raise
 
     async def _get_unread_count(self, feed_id: UUID) -> int:
@@ -470,6 +427,7 @@ class FeedManagementService:
         return unread_counts
 
     def _construct_feed_response(self, feed_db: Any, subscription_db: Any, unread_count: int) -> FeedResponse:
+        """Construct a FeedResponse with subscription data and unread count."""
         feed_data = {
             "id": feed_db.id,
             "url": normalize_url_for_display(str(feed_db.url) if feed_db.url else None),
@@ -526,67 +484,38 @@ class FeedManagementService:
         }
         return FeedResponse(**feed_data)
 
-    async def _update_feed_and_articles(self, feed_db: Any, fetch_result: FetchResult, parsed_feed: Any) -> None:
-        """Update feed metadata and create new articles."""
-        # This is a simplified version - could be expanded or moved to feed_creation_service
-        # Extract and create new articles first to get latest published_at
-        latest_published_at = None
-        if parsed_feed.entries:
-            articles_data = []
-            for entry in parsed_feed.entries:
-                # Use FeedParsingService for proper article data extraction
-                try:
-                    article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
-                    if article_dict:
-                        article_data = ArticleCreate(
-                            title=article_dict["title"],
-                            link=article_dict["link"],
-                            content=article_dict["content"],
-                            author=article_dict.get("author"),
-                            published_at=article_dict.get("published_at"),
-                            guid=article_dict["guid"],
-                            feed_id=feed_db.id,
-                            user_id=self.user_id,
-                            image_url=article_dict.get("image_url"),
-                            estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
-                        )
-                        articles_data.append(article_data)
-
-                        # Track the latest published_at timestamp
-                        if article_data.published_at:
-                            if latest_published_at is None or article_data.published_at > latest_published_at:
-                                latest_published_at = article_data.published_at
-                except Exception as e:
-                    logger.warning("Error parsing article", feed_id=feed_db.id, error=str(e))
-                    continue
-
-            if articles_data:
-                created_count = await create_articles_batch(db=self.db, articles_data=articles_data)
-                logger.info(f"Created {created_count} new articles", feed_id=feed_db.id)
-
-        # Update feed metadata with latest published_at timestamp
-        feed_headers = fetch_result.headers
-
-        # If we found a newer published_at, use it; otherwise keep the existing value
-        update_last_article_published_at = latest_published_at
-        if latest_published_at and feed_db.last_article_published_at:
-            # Only update if the new timestamp is more recent
-            if latest_published_at > feed_db.last_article_published_at:
-                update_last_article_published_at = latest_published_at
-            else:
-                update_last_article_published_at = None  # Don't update, keep existing
-        elif latest_published_at:
-            # First time we have a published_at timestamp
-            update_last_article_published_at = latest_published_at
+    def _construct_feed_response_from_base(
+        self, base_response: FeedResponse, subscription_db: Any | None, unread_count: int | None
+    ) -> FeedResponse:
+        """Construct a user-specific FeedResponse from a base FeedResponse.
+        
+        This adds subscription-specific data (custom title, folder, unread count)
+        to a base feed response from FeedService.
+        """
+        # Start with base response data
+        feed_data = base_response.model_dump()
+        
+        # Add subscription-specific data if user is subscribed
+        if subscription_db:
+            feed_data.update(
+                {
+                    "title": subscription_db.custom_title or base_response.title,
+                    "is_subscribed": True,
+                    "user_id": subscription_db.user_id,
+                    "folder_id": subscription_db.folder_id,
+                    "is_favorite": subscription_db.is_favorite,
+                    "unread_count": unread_count,
+                }
+            )
         else:
-            # No new articles or no published_at timestamps
-            update_last_article_published_at = None
-
-        await crud_feed.update_feed_metadata(
-            self.db,
-            feed_db=feed_db,
-            etag=feed_headers.get("etag"),
-            last_modified=feed_headers.get("last-modified"),
-            last_fetched_at=datetime.now(timezone.utc),
-            last_article_published_at=update_last_article_published_at,
-        )
+            # Preview mode: no subscription data
+            feed_data.update(
+                {
+                    "is_subscribed": False,
+                    "user_id": None,
+                    "folder_id": None,
+                    "unread_count": None,
+                }
+            )
+        
+        return FeedResponse(**feed_data)

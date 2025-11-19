@@ -1,0 +1,103 @@
+import NextImage from "next/image"
+import { useHits, useInstantSearch, usePagination } from "react-instantsearch"
+
+import { FeedCard } from "@/components/feeds/FeedCard"
+import { Button } from "@/components/ui/button"
+import { feedDiscoveryResultToFeed, type FeedDiscoveryResult } from "@readspace/shared"
+
+import { Pagination } from "./Pagination"
+
+interface SearchResultsProps {
+    /** Callback to clear all search filters and query */
+    onClearSearch: () => void
+}
+
+/**
+ * Search Results component - displays feed search results with pagination.
+ *
+ * Shows a "no results" state when search completes with no matches,
+ * but waits for loading to complete to avoid flashing empty state.
+ */
+export function SearchResults({ onClearSearch }: SearchResultsProps) {
+    const { items, results } = useHits<FeedDiscoveryResult>()
+    const { nbHits } = results || { nbHits: 0 }
+    const { currentRefinement, nbPages } = usePagination()
+    const { status } = useInstantSearch()
+
+    // Don't show "no results" while the search is still loading
+    const isLoading = status === 'loading' || status === 'stalled'
+
+    if (items.length === 0 && !isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center py-16">
+                <div className="mb-6">
+                    <NextImage
+                        src="/discover/Search.svg"
+                        alt="No results found"
+                        width={132}
+                        height={128}
+                        className="w-32 h-auto"
+                    />
+                </div>
+                <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
+                    No matching feeds found
+                </h3>
+                <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
+                    Try rephrasing your query or browsing by category.
+                </p>
+            </div>
+        )
+    }
+
+    return (
+        <>
+            <div className="flex items-center justify-between mb-2 pl-5 pr-2">
+                <div className="text-[#91998C] dark:text-muted-foreground text-sm">
+                    {nbHits} {nbHits === 1 ? 'result' : 'results'}
+                    {nbPages > 1 && (
+                        <span className="ml-2">
+                            · Page {currentRefinement + 1} of {nbPages}
+                        </span>
+                    )}
+                </div>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClearSearch}
+                    className="h-8 px-3 text-sm text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
+                >
+                    Clear
+                </Button>
+            </div>
+            <div className="flex flex-col divide-y divide-border/40">
+                {items.map((hit) => {
+                    const hitData = hit as any
+                    const discoveryResult: FeedDiscoveryResult = {
+                        id: hitData.id,
+                        url: hitData.url,
+                        title: hitData.title,
+                        description: hitData.description,
+                        link: hitData.link,
+                        language: hitData.language,
+                        image_url: hitData.image_url,
+                        tags: hitData.tags || [],
+                        category: hitData.top_level_category,
+                        popularity_score: hitData.popularity_score,
+                        relevance: hitData._rankingScore || 0,
+                        search_metadata: undefined,
+                        is_preview: false,
+                        preview_url: undefined,
+                        is_subscribed: false,
+                    }
+
+                    const feed = feedDiscoveryResultToFeed(discoveryResult)
+
+                    return <FeedCard key={hitData.id} feed={feed} className="py-8" />
+                })}
+            </div>
+
+            {/* Pagination controls */}
+            <Pagination />
+        </>
+    )
+}

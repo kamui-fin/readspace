@@ -18,14 +18,14 @@ import * as React from "react"
 import { cn } from "@readspace/shared"
 
 const categoryBadgeVariants = cva(
-    "inline-flex items-center gap-2 rounded-[6px] border px-4 py-2 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-105 hover:shadow-sm",
+    "inline-flex items-center gap-2 rounded-full border px-5 py-2.5 text-sm font-medium transition-all duration-200 cursor-pointer hover:scale-[1.02] hover:shadow-md active:scale-[0.98]",
     {
         variants: {
             variant: {
                 default:
-                    "border-[#E4ECDF] bg-white text-[#91998C] hover:border-[#D8E5D0] hover:bg-[#FAFBFA] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent",
+                    "border-[#E4ECDF] bg-white text-[#6B7566] hover:border-[#ACC59D] hover:bg-[#F8FAF7] hover:text-[#6A994E] dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-accent dark:hover:text-primary",
                 selected:
-                    "border-[#ACC59D] bg-white text-[#6A994E] hover:border-[#9BB88A] hover:bg-[#F8FAF7] dark:border-primary/30 dark:bg-card dark:text-primary dark:hover:bg-accent",
+                    "border-[#6A994E] bg-[#F3F9EF] text-[#6A994E] shadow-sm hover:border-[#5A8A3E] hover:bg-[#EBF5E4] dark:border-primary dark:bg-primary/10 dark:text-primary dark:hover:bg-primary/15",
             },
         },
         defaultVariants: {

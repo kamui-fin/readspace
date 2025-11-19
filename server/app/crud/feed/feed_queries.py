@@ -8,9 +8,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.config import Settings
 from app.core.redis_cache import get_redis_cache
 from app.models import Feed, FeedSubscription
 from app.schemas import FeedBase
+from app.services.feeds.search.meilisearch_service import get_meilisearch_service
 from app.utils.url_validator import validate_feed_url
 
 logger = structlog.get_logger(__name__)
@@ -147,6 +149,14 @@ async def get_or_migrate_feed(db: AsyncSession, *, original_url: str, resolved_u
                 await redis_cache.delete(old_cache_key)
                 await redis_cache.set(new_cache_key, str(old_feed.id), FEED_URL_CACHE_TTL)
 
+                # Sync to Meilisearch after URL migration (fire-and-forget)
+                try:
+                    settings = Settings()
+                    meili_service = get_meilisearch_service(settings)
+                    await meili_service.update_feed(old_feed)
+                except Exception as e:
+                    logger.warning("meilisearch_sync_failed_migration", feed_id=old_feed.id, error=str(e))
+
                 return old_feed
             except Exception as e:
                 logger.error(
@@ -189,6 +199,16 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     db.add(db_feed)
     await db.flush()
     await db.refresh(db_feed)
+
+    # Sync to Meilisearch (fire-and-forget)
+    try:
+        settings = Settings()
+        meili_service = get_meilisearch_service(settings)
+        await meili_service.index_feed(db_feed)
+    except Exception as e:
+        logger.warning("meilisearch_sync_failed_create", feed_id=db_feed.id, error=str(e))
+        # Don't raise - Meilisearch sync failures shouldn't break the main flow
+
     return db_feed
 
 

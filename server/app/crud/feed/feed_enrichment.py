@@ -7,7 +7,9 @@ import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import Settings
 from app.models import Feed, FeedCategory
+from app.services.feeds.search.meilisearch_service import get_meilisearch_service
 
 logger = structlog.get_logger(__name__)
 
@@ -87,8 +89,16 @@ async def update_feed_metadata(
     feed_db.last_error_message = None
 
     db.add(feed_db)
-    # NOTE: No commit here - let caller (task wrapper) handle transaction commit
-    # This prevents transaction state conflicts when called from get_worker_db()
+
+    # Sync to Meilisearch (fire-and-forget)
+    try:
+        settings = Settings()
+        meili_service = get_meilisearch_service(settings)
+        await meili_service.update_feed(feed_db)
+    except Exception as e:
+        logger.warning("meilisearch_sync_failed", feed_id=feed_db.id, error=str(e))
+        # Don't raise - Meilisearch sync failures shouldn't break the main flow
+
     return feed_db
 
 
@@ -147,6 +157,15 @@ async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: 
         db.add(feed)
         # NOTE: No commit here - let caller (task wrapper) handle transaction commit
         # This prevents transaction state conflicts when called from get_worker_db()
+
+        # Sync to Meilisearch (fire-and-forget)
+        try:
+            settings = Settings()
+            meili_service = get_meilisearch_service(settings)
+            await meili_service.update_feed(feed)
+        except Exception as e:
+            logger.warning("meilisearch_sync_failed_enrichment", feed_id=feed.id, error=str(e))
+            # Don't raise - Meilisearch sync failures shouldn't break the main flow
 
         logger.info(
             "Feed enrichment data updated successfully",

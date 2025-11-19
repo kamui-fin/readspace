@@ -226,7 +226,7 @@ class TestOpmlImportStatus:
     async def test_get_import_status_unauthorized(self, async_client: AsyncClient, test_user: Profile):
         """Test accessing another user's import task."""
         # Create a task for a different user
-        from app.routers.opml import store_import_task_metadata
+        from app.routers.opml.utils import store_task_ownership as store_import_task_metadata
 
         other_user_id = "different-user-id"
         task_id = "other-user-task"

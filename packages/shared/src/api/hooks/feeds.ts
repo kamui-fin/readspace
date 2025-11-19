@@ -1538,11 +1538,11 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           // Check if is_read changed
           const isReadChanged = data.is_read !== undefined && previousArticle.is_read !== data.is_read;
           const readDelta = isReadChanged ? (data.is_read ? -1 : 1) : 0;
-          
+
           // Check if is_read_later changed
           const isReadLaterChanged = data.is_read_later !== undefined && previousArticle.is_read_later !== data.is_read_later;
           const readLaterDelta = isReadLaterChanged ? (data.is_read_later ? 1 : -1) : 0;
-          
+
           // Only update if something changed
           if (isReadChanged || isReadLaterChanged) {
             // Update ALL unread count queries (with different folderId parameters)
@@ -1550,14 +1550,14 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
               { queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] },
               (old: UnreadCounts | undefined) => {
                 if (!old) return old;
-                
+
                 const updated = { ...old };
-                
+
                 // Update total unread count if is_read changed
                 if (isReadChanged && updated.total_unread !== undefined) {
                   updated.total_unread = Math.max(0, updated.total_unread + readDelta);
                 }
-                
+
                 // Update folder unread count if is_read changed and article has a folder
                 if (isReadChanged && updated.unread_by_folder && previousArticle.folder_id) {
                   const currentFolderCount = updated.unread_by_folder[previousArticle.folder_id] || 0;
@@ -1566,16 +1566,16 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
                     [previousArticle.folder_id]: Math.max(0, currentFolderCount + readDelta),
                   };
                 }
-                
+
                 // Update read_later_count if is_read_later changed
                 if (isReadLaterChanged && updated.read_later_count !== undefined) {
                   updated.read_later_count = Math.max(0, updated.read_later_count + readLaterDelta);
                 }
-                
+
                 return updated;
               },
             );
-            
+
             // Update feed unread count if is_read changed
             if (isReadChanged && previousArticle.feed_id) {
               queryClient.setQueryData(
@@ -1593,13 +1593,13 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           }
         }
 
-        return { 
-          previousArticle, 
-          previousInfiniteQueries, 
+        return {
+          previousArticle,
+          previousInfiniteQueries,
           previousUnreadCounts,
           previousFeeds,
-          articleId, 
-          data 
+          articleId,
+          data
         };
       },
       onError: (_, __, context) => {
@@ -1643,7 +1643,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
           refetchType: 'none', // Don't refetch, just mark as stale
         });
-        
+
         // Invalidate all check queries (for extension popup)
         queryClient.invalidateQueries({
           predicate: (query) =>
@@ -1652,14 +1652,14 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             query.queryKey[1].startsWith('check-'),
           refetchType: 'none',
         });
-        
+
         // Invalidate unread counts without refetching (optimistic update already applied)
         queryClient.invalidateQueries({
           predicate: (query) =>
             query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
           refetchType: 'none',
         });
-        
+
         // Invalidate article lists without refetching (optimistic update already applied)
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
@@ -1680,7 +1680,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryKey: [RSS_QUERY_KEYS.FEEDS],
           refetchType: 'none',
         });
-        
+
         // Invalidate sidebar data without refetching
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
@@ -1818,57 +1818,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         return lastPage.next_cursor;
       },
       initialPageParam: null,
-      ...options,
-    });
-  }
-
-  // Trending feeds hook
-  function useTrendingFeeds(
-    params?: {
-      language?: string;
-      limit?: number;
-      category?: string;
-    },
-    options?: Omit<
-      UseQueryOptions<
-        Feed[],
-        Error,
-        Feed[],
-        [string, typeof params]
-      >,
-      "queryKey" | "queryFn"
-    >,
-  ) {
-    return useQuery({
-      queryKey: [RSS_QUERY_KEYS.TRENDING_FEEDS, params],
-      queryFn: () =>
-        ApiClient.rss.getTrendingFeeds(params) as Promise<Feed[]>,
-      ...options,
-    });
-  }
-
-  // Get recommendations by categories hook
-  function useGetRecommendations(
-    categories: string[],
-    params?: {
-      language?: string;
-      limit?: number;
-    },
-    options?: Omit<
-      UseQueryOptions<
-        any,
-        Error,
-        any,
-        [string, string[], typeof params]
-      >,
-      "queryKey" | "queryFn"
-    >,
-  ) {
-    return useQuery({
-      queryKey: [RSS_QUERY_KEYS.DISCOVER_RECOMMENDATIONS, categories, params],
-      queryFn: () =>
-        ApiClient.rss.getRecommendationsByCategories(categories, params),
-      enabled: categories.length > 0,
       ...options,
     });
   }
@@ -2016,10 +1965,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useInfiniteRecentlyReadArticles,
     useInfiniteReadLaterArticles,
     useInfiniteTodayArticles,
-
-    // Discovery hooks
-    useTrendingFeeds,
-    useGetRecommendations,
   };
 }
 
@@ -2066,10 +2011,6 @@ export const {
   useInfiniteRecentlyReadArticles,
   useInfiniteReadLaterArticles,
   useInfiniteTodayArticles,
-
-  // Discovery hooks
-  useTrendingFeeds,
-  useGetRecommendations,
 } = defaultHooks;
 
 // Export the factory function for custom configurations

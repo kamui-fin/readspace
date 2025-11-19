@@ -1,23 +1,15 @@
 import { Button } from "@/components/ui/button"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { useOnboardingStore } from "@/stores/onboarding"
-import { ApiClient } from "@readspace/shared"
+import { meilisearchClient, FEEDS_INDEX_NAME } from "@/lib/meilisearch-client"
+import { useFeeds } from "@readspace/shared"
 import { useQuery } from "@tanstack/react-query"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
 import OnboardingLayout from "../Layout"
 import { OnboardingFeedCard } from "../OnboardingFeedCard"
-
-// API response type for search feeds
-type DiscoverSearchResponse = {
-    results: FeedDiscoveryResult[]
-    total_count: number
-    query: string | null
-    category: string | null
-    language: string
-}
 
 type FeedDiscoveryResult = {
     id: string
@@ -38,10 +30,22 @@ const StepTwo: React.FC = () => {
     const [followedFeeds, setFollowedFeeds] = useState<string[]>(
         onboardingData.followedFeeds || []
     )
+    const [displayedFeeds, setDisplayedFeeds] = useState<OnboardingFeed[]>([])
     const { user } = useCurrentUser()
     const router = useRouter()
 
-    // Fetch feeds for selected categories using bulk recommendations endpoint
+    // Get user's subscribed feeds to check which ones are already followed
+    const { data: subscribedFeeds } = useFeeds(
+        {},
+        {
+            refetchOnMount: false,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            staleTime: 10 * 60 * 1000,
+        }
+    )
+
+    // Fetch feeds for selected categories using Meilisearch multi-search
     const {
         data: feedsData,
         isLoading,
@@ -49,19 +53,114 @@ const StepTwo: React.FC = () => {
     } = useQuery({
         queryKey: ["onboarding-feeds", onboardingData.selectedCategories],
         queryFn: async () => {
-            const response = await ApiClient.rss.getRecommendationsByCategories(
-                onboardingData.selectedCategories,
-                { limit: 20 }
+            if (onboardingData.selectedCategories.length === 0) {
+                return []
+            }
+
+            // Use multi-search to query each category separately
+            // This ensures fair representation across categories with different popularity score distributions
+            const queries = onboardingData.selectedCategories.map((category) => ({
+                indexUid: FEEDS_INDEX_NAME,
+                q: "",
+                filter: `top_level_category = "${category}" AND language = "en"`,
+                limit: 20, // Get top 20 from each category
+                sort: ["popularity_score:desc"],
+                attributesToRetrieve: [
+                    "id",
+                    "title",
+                    "description",
+                    "url",
+                    "link",
+                    "image_url",
+                    "top_level_category",
+                    "popularity_score",
+                ],
+            }))
+
+            const multiSearchResults = await meilisearchClient.multiSearch({
+                queries,
+            })
+
+            // Interleave results from different categories for diversity
+            const interleavedFeeds: OnboardingFeed[] = []
+            const categoryResults = multiSearchResults.results.map((result: any) =>
+                result.hits.map((hit: any) => ({
+                    id: hit.id,
+                    title: hit.title,
+                    description: hit.description,
+                    url: hit.url,
+                    link: hit.link,
+                    image_url: hit.image_url,
+                    category: hit.top_level_category,
+                    popularity_score: hit.popularity_score,
+                }))
             )
-            return response.results
+
+            // Interleave: take one from each category in round-robin fashion
+            let maxLength = Math.max(...categoryResults.map((r) => r.length))
+            for (let i = 0; i < maxLength; i++) {
+                for (const categoryFeeds of categoryResults) {
+                    if (i < categoryFeeds.length) {
+                        interleavedFeeds.push(categoryFeeds[i])
+                    }
+                }
+            }
+
+            return interleavedFeeds
         },
         enabled: onboardingData.selectedCategories.length > 0,
     })
 
-    const handleFeedSubscribed = (feedId: string) => {
+    // Initialize displayed feeds when data loads
+    React.useEffect(() => {
+        if (feedsData) {
+            setDisplayedFeeds(feedsData)
+        }
+    }, [feedsData])
+
+    const handleFeedSubscribed = async (feedId: string) => {
         const newFollowedFeeds = [...followedFeeds, feedId]
         setFollowedFeeds(newFollowedFeeds)
         updateOnboardingData({ followedFeeds: newFollowedFeeds })
+
+        // Fetch and insert similar feeds
+        try {
+            const index = meilisearchClient.index(FEEDS_INDEX_NAME)
+            const results = await index.searchSimilarDocuments({
+                id: feedId,
+                limit: 3,
+                embedder: "default",
+                showRankingScore: true,
+                filter: 'language = "en"',
+            })
+
+            const similarFeeds = results.hits.map((hit: any) => ({
+                id: hit.id,
+                title: hit.title,
+                description: hit.description,
+                url: hit.url,
+                link: hit.link,
+                image_url: hit.image_url,
+                category: hit.top_level_category,
+                popularity_score: hit.popularity_score,
+            }))
+
+            // Insert similar feeds right after the current feed
+            setDisplayedFeeds((prev) => {
+                const feedIndex = prev.findIndex((f) => f.id === feedId)
+                if (feedIndex === -1) return prev
+
+                const newFeeds = [...prev]
+                // Filter out duplicates and insert after current feed
+                const uniqueSimilar = similarFeeds.filter(
+                    (sf) => !newFeeds.some((f) => f.id === sf.id)
+                )
+                newFeeds.splice(feedIndex + 1, 0, ...uniqueSimilar)
+                return newFeeds
+            })
+        } catch (error) {
+            console.error("Failed to fetch similar feeds:", error)
+        }
     }
 
     const handleBack = () => {
@@ -149,31 +248,57 @@ const StepTwo: React.FC = () => {
             title="Add sources to your newsfeed"
             subtitle="Choose at least 3 publications to start building your reading list"
         >
-            <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {feedsData.map((feed: OnboardingFeed, index: number) => (
-                    <motion.div
-                        key={feed.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{
-                            duration: 0.3,
-                            delay: index * 0.1,
-                            ease: "easeOut",
-                        }}
-                    >
-                        <OnboardingFeedCard
-                            feed={feed}
-                            onSubscribed={handleFeedSubscribed}
-                        />
-                    </motion.div>
-                ))}
+            <div className="max-h-96 overflow-y-auto pr-2">
+                <AnimatePresence initial={false}>
+                    {displayedFeeds.map((feed: OnboardingFeed, index: number) => (
+                        <motion.div
+                            key={feed.id}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{
+                                duration: 0.2,
+                                ease: "easeOut",
+                            }}
+                            style={{ overflow: "hidden" }}
+                        >
+                            <motion.div
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.98,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 8,
+                                    scale: 0.98,
+                                }}
+                                transition={{
+                                    duration: 0.15,
+                                    ease: "easeOut",
+                                }}
+                            >
+                                <OnboardingFeedCard
+                                    feed={feed}
+                                    onSubscribed={handleFeedSubscribed}
+                                    isFollowing={subscribedFeeds?.some((f) => f.id === feed.id) ?? false}
+                                />
+                            </motion.div>
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
             </div>
 
             {followedFeeds.length > 0 && (
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-center text-sm text-gray-600 mt-4"
+                    className="text-center text-sm mt-4"
                 >
                     {followedFeeds.length} source
                     {followedFeeds.length === 1 ? "" : "s"} added

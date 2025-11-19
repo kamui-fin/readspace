@@ -1,23 +1,4 @@
-import type { ApiPaginatedResponse, PaginatedResponse, CursorPaginatedResponse } from "./api";
-
-// Feed category enum - matches backend FeedCategory
-export const FEED_CATEGORIES = {
-  TECHNOLOGY_PROGRAMMING: "Technology & Programming",
-  CULTURE_ARTS: "Culture & Arts",
-  LIFESTYLE_PERSONAL: "Lifestyle & Personal",
-  MISCELLANEOUS: "Miscellaneous",
-  DESIGN_CREATIVITY: "Design & Creativity",
-  SCIENCE_RESEARCH: "Science & Research",
-  NEWS_POLITICS: "News & Politics",
-  GAMING_ENTERTAINMENT: "Gaming & Entertainment",
-  BUSINESS_FINANCE: "Business & Finance",
-  ARTIFICIAL_INTELLIGENCE: "Artificial Intelligence",
-  SECURITY_PRIVACY: "Security & Privacy",
-  EDUCATION_LEARNING: "Education & Learning",
-} as const;
-
-export type FeedCategory =
-  (typeof FEED_CATEGORIES)[keyof typeof FEED_CATEGORIES];
+import type { ApiPaginatedResponse, CursorPaginatedResponse, PaginatedResponse } from "./api";
 
 // Types based on API responses
 export type Folder = {
@@ -204,7 +185,7 @@ export type Article = {
 export type ArticlesPaginatedResponse = PaginatedResponse<Article>;
 
 // Ensure PaginatedResponse is also exported if it wasn't already
-export type { PaginatedResponse, ApiPaginatedResponse, CursorPaginatedResponse };
+export type { ApiPaginatedResponse, CursorPaginatedResponse, PaginatedResponse };
 
 export interface UnreadCounts {
   total_unread?: number;
@@ -263,21 +244,21 @@ export interface SaveArticleResponse {
 
 export type CheckArticleSavedResponse =
   | {
-      is_saved: true;
-      article_id: string;
-      // Include metadata fields needed by extension (without heavy content)
-      id: string;
-      title: string | null;
-      note: string | null;
-      priority: string | null;
-      is_read: boolean;
-      is_read_later: boolean;
-      read_at: string | null;
-    }
+    is_saved: true;
+    article_id: string;
+    // Include metadata fields needed by extension (without heavy content)
+    id: string;
+    title: string | null;
+    note: string | null;
+    priority: string | null;
+    is_read: boolean;
+    is_read_later: boolean;
+    read_at: string | null;
+  }
   | {
-      is_saved: false;
-      article_id: null;
-    };
+    is_saved: false;
+    article_id: null;
+  };
 
 // Helper function to convert FeedDiscoveryResult to Feed
 export function feedDiscoveryResultToFeed(

@@ -16,8 +16,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
+import { exportFeedsToOPML } from "@/lib/opml-export"
 import {
-    exportFeedsToOPML,
     fuzzySearch,
     useBulkDeleteFeeds,
     useFeeds,

@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button"
 import { useRefreshFeed, useSubscribeToFeed } from "@readspace/shared"
 import { Check, Plus } from "lucide-react"
 import NextImage from "next/image"
-import { useState } from "react"
+import React, { useState } from "react"
 
 interface OnboardingFeedCardProps {
     feed: {
@@ -16,20 +16,22 @@ interface OnboardingFeedCardProps {
         popularity_score?: number
     }
     onSubscribed?: (feedId: string) => void
+    isFollowing?: boolean
 }
 
 export function OnboardingFeedCard({
     feed,
     onSubscribed,
+    isFollowing = false,
 }: OnboardingFeedCardProps) {
-    const [isSubscribed, setIsSubscribed] = useState(false)
+    const [isSubscribed, setIsSubscribed] = useState(isFollowing)
     const subscribeToFeed = useSubscribeToFeed()
     const refreshFeed = useRefreshFeed()
 
-    const truncateText = (text: string, maxLength: number) => {
-        if (text.length <= maxLength) return text
-        return text.substring(0, maxLength) + "..."
-    }
+    // Update local state when isFollowing prop changes
+    React.useEffect(() => {
+        setIsSubscribed(isFollowing)
+    }, [isFollowing])
 
     const handleSubscribe = async () => {
         if (isSubscribed) return
@@ -78,16 +80,16 @@ export function OnboardingFeedCard({
     }
 
     return (
-        <div className="group relative rounded-xl p-4 transition-all duration-200">
-            <div className="flex items-start gap-4">
+        <div className="px-2 md:px-4 w-full border-b border-border/40 last:border-0 py-4">
+            <div className="flex gap-3 md:gap-4 w-full min-w-0">
                 <div className="relative flex-shrink-0">
-                    {feed.image_url ? (
+                    {feed.image_url && (
                         <NextImage
                             src={feed.image_url}
                             alt={feed.title || "Feed icon"}
-                            className="w-12 h-12 rounded-xl object-cover"
-                            width={48}
-                            height={48}
+                            className="w-8 h-8 md:w-9 md:h-9 rounded object-cover"
+                            width={36}
+                            height={36}
                             onError={(e) => {
                                 const target = e.target as HTMLImageElement
                                 target.style.display = "none"
@@ -96,54 +98,72 @@ export function OnboardingFeedCard({
                                 if (fallback) fallback.style.display = "flex"
                             }}
                         />
-                    ) : null}
+                    )}
                     <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-sm ${getFeedIcon()}`}
+                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center font-bold text-xs md:text-sm ${getFeedIcon()}`}
                         style={{ display: feed.image_url ? "none" : "flex" }}
                     >
                         {getFeedInitials()}
                     </div>
                 </div>
 
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-3">
-                        <h3 className="font-semibold text-card-foreground leading-snug">
-                            {feed.title || "Untitled Publication"}
-                        </h3>
+                <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-lg text-black dark:text-foreground leading-tight tracking-tight truncate">
+                                {feed.title || "Untitled Publication"}
+                            </h3>
+                            <a
+                                href={feed.link || feed.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-[#BDC6B7] dark:text-secondary truncated"
+                            >
+                                {(feed.link || feed.url)
+                                    ?.replace(/^https?:\/\//, "")
+                                    ?.replace(/^www\./, "")
+                                    .replace(/\/$/, "") || "Unknown source"}
+                            </a>
+                        </div>
 
-                        <Button
-                            onClick={handleSubscribe}
-                            disabled={isSubscribed}
-                            className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 flex-shrink-0 transition-colors ${
-                                isSubscribed
-                                    ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
-                                    : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                            }`}
-                            variant={isSubscribed ? "outline" : "default"}
-                        >
-                            {isSubscribed ? (
-                                <>
-                                    <Check className="w-3 h-3" />
-                                    Added
-                                </>
-                            ) : (
-                                <>
-                                    <Plus className="w-3 h-3" />
-                                    Add
-                                </>
-                            )}
-                        </Button>
-                    </div>
-
-                    <div className="text-xs text-muted-foreground mb-1">
-                        {(feed.link || feed.url)
-                            ?.replace(/^https?:\/\//, "")
-                            .replace(/\/$/, "") || "Unknown source"}
+                        <div className="flex-shrink-0">
+                            <Button
+                                onClick={handleSubscribe}
+                                disabled={isSubscribed}
+                                className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors ${isSubscribed
+                                        ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
+                                        : "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                    }`}
+                                variant={isSubscribed ? "outline" : "default"}
+                            >
+                                {isSubscribed ? (
+                                    <>
+                                        <Check className="w-3 h-3" />
+                                        Added
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="w-3 h-3" />
+                                        Add
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </div>
 
                     {feed.description && (
-                        <p className="text-sm text-muted-foreground/80 leading-relaxed line-clamp-2">
-                            {truncateText(feed.description, 120)}
+                        <p
+                            className="text-xs text-[#91998C] mt-2 leading-relaxed break-words"
+                            style={{
+                                wordWrap: "break-word",
+                                overflowWrap: "anywhere",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {feed.description}
                         </p>
                     )}
                 </div>

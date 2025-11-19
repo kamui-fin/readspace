@@ -128,7 +128,7 @@ const FileListAction = React.forwardRef<
 >(
     (
         { className, ...props },
-        ref // eslint-disable-line
+        ref  
     ) => (
         <button
             ref={ref}

@@ -16,6 +16,7 @@ class Settings(BaseSettings):
 
     # Database Configuration
     SUPABASE_DB_CONNECTION: str
+    SUPABASE_DB_CONNECTION_SYNC: str | None = None  # Synchronous connection for scripts
 
     # CORS Configuration
     CORS_ORIGIN: str = "*"
@@ -36,6 +37,11 @@ class Settings(BaseSettings):
 
     # RSShub Configuration (validated URL)
     RSSHUB_URL: str = "http://localhost:1200"  # Default RSShub instance URL
+
+    # Meilisearch Configuration
+    MEILISEARCH_URL: str = "http://localhost:7700"
+    MEILISEARCH_MASTER_KEY: SecretStr
+    MEILISEARCH_INDEX_NAME: str = "feeds"
 
     model_config = SettingsConfigDict(env_file=".env")
 

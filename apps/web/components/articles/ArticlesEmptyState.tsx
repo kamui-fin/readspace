@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
 import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
-import { BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
+import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -13,7 +13,7 @@ interface GetStartedCardsProps {
     // router prop no longer needed
 }
 
-function GetStartedCards({}: GetStartedCardsProps) {
+function GetStartedCards({ }: GetStartedCardsProps) {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg mx-auto">
             <Link
@@ -53,6 +53,8 @@ interface ArticlesEmptyStateProps {
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
     feedId?: string
     folderId?: string
+    isPreviewMode?: boolean
+    previewRefreshFailed?: boolean
     onRefresh?: () => void
 }
 
@@ -60,6 +62,8 @@ export function ArticlesEmptyState({
     mode = "allArticles",
     feedId,
     folderId,
+    isPreviewMode = false,
+    previewRefreshFailed = false,
     onRefresh,
 }: ArticlesEmptyStateProps) {
     const [isRefreshing, setIsRefreshing] = useState(false)
@@ -242,6 +246,45 @@ export function ArticlesEmptyState({
         )
     }
 
+    // Special handling for preview mode feed refresh failure
+    if (feedId && isPreviewMode && previewRefreshFailed) {
+        return (
+            <div className="flex h-full w-full items-center justify-center p-6">
+                {isMobile && (
+                    <div className="absolute top-4 left-4">
+                        <SidebarLeftTrigger />
+                    </div>
+                )}
+                <div className="text-center space-y-6 max-w-sm mx-auto">
+                    <div>
+                        <AlertTriangle className="mx-auto h-12 w-12 text-yellow-500" />
+                    </div>
+                    <div className="space-y-3">
+                        <h3 className="text-lg font-semibold text-foreground tracking-tight">
+                            Whoops! This feed might be broken
+                        </h3>
+                        <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
+                            We couldn&apos;t fetch articles from this feed. It may be temporarily unavailable or the feed URL might be incorrect.
+                        </p>
+                    </div>
+                    {onRefresh && (
+                        <Button
+                            variant="outline"
+                            onClick={handleDeepRefresh}
+                            disabled={isRefreshing}
+                            className="transition-all duration-200 hover:scale-105 hover:shadow-md disabled:hover:scale-100"
+                        >
+                            <RefreshCw
+                                className={`mr-2 h-4 w-4 transition-transform ${isRefreshing ? "animate-spin" : "hover:rotate-180"}`}
+                            />
+                            {isRefreshing ? "Refreshing..." : "Try Again"}
+                        </Button>
+                    )}
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="flex h-full w-full items-center justify-center p-6">
             {isMobile && (
@@ -258,15 +301,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                              ? "No articles in this folder"
-                              : "No articles found"}
+                                ? "No articles in this folder"
+                                : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
                             ? "This feed hasn&apos;t published any articles yet, or they may not have loaded"
                             : folderId
-                              ? "No feeds in this folder have published articles yet"
-                              : "Try refreshing or check back later for new content"}
+                                ? "No feeds in this folder have published articles yet"
+                                : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && feedId && (

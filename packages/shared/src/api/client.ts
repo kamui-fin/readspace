@@ -2,7 +2,6 @@ import type {
   ActiveImportTask,
   Article,
   CheckArticleSavedResponse,
-  DiscoverSearchResponse,
   Feed,
   Folder,
   ImportTaskStatus,
@@ -584,67 +583,8 @@ export class ApiClient {
     },
 
     // Discover endpoints
-    searchFeeds: (params?: {
-      q?: string;
-      category?: string;
-      language?: string;
-      limit?: number;
-    }) => {
-      const queryParams = new URLSearchParams();
-      if (params?.q) queryParams.append("q", params.q);
-      if (params?.category) queryParams.append("category", params.category);
-      if (params?.language) queryParams.append("language", params.language);
-      if (params?.limit) queryParams.append("limit", params.limit.toString());
-
-      const queryString = queryParams.toString();
-      return this.get<DiscoverSearchResponse>(
-        `/api/discover/search${queryString ? `?${queryString}` : ""}`,
-      );
-    },
-
-    getRecommendationsByCategories: (
-      categories: string[],
-      params?: {
-        language?: string;
-        limit?: number;
-      },
-    ) => {
-      return this.post<DiscoverSearchResponse>(
-        "/api/discover/recommendations",
-        {
-          categories,
-          language: params?.language || "en",
-          limit: params?.limit || 20,
-        },
-      );
-    },
-
-    getCategories: (params?: { language?: string }) => {
-      const queryParams = new URLSearchParams();
-      if (params?.language) queryParams.append("language", params.language);
-
-      const queryString = queryParams.toString();
-      return this.get(
-        `/api/discover/categories${queryString ? `?${queryString}` : ""}`,
-      );
-    },
-
-    getCategoryFeeds: (
-      categoryName: string,
-      params?: {
-        language?: string;
-        limit?: number;
-      },
-    ) => {
-      const queryParams = new URLSearchParams();
-      if (params?.language) queryParams.append("language", params.language);
-      if (params?.limit) queryParams.append("limit", params.limit.toString());
-
-      const queryString = queryParams.toString();
-      return this.get(
-        `/api/discover/categories/${encodeURIComponent(categoryName)}${queryString ? `?${queryString}` : ""}`,
-      );
-    },
+    // Note: Search functionality now uses Meilisearch with direct frontend integration.
+    // Only preview endpoint remains for feed content preview before subscription.
 
     getPreviewArticles: (feedUrl: string, limit: number = 25) => {
       const queryParams = new URLSearchParams();
@@ -654,22 +594,6 @@ export class ApiClient {
       const queryString = queryParams.toString();
       return this.get(
         `/api/discover/preview/articles${queryString ? `?${queryString}` : ""}`,
-      );
-    },
-
-    getTrendingFeeds: (params?: {
-      language?: string;
-      limit?: number;
-      category?: string;
-    }) => {
-      const queryParams = new URLSearchParams();
-      if (params?.language) queryParams.append("language", params.language);
-      if (params?.limit) queryParams.append("limit", params.limit.toString());
-      if (params?.category) queryParams.append("category", params.category);
-
-      const queryString = queryParams.toString();
-      return this.get<Feed[]>(
-        `/api/feeds/trending${queryString ? `?${queryString}` : ""}`,
       );
     },
   };

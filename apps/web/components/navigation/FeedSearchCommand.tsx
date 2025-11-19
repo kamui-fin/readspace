@@ -111,7 +111,7 @@ export function FeedSearchCommand({
                 <Command.Input
                     value={searchValue}
                     onValueChange={setSearchValue}
-                    placeholder="Search feeds..."
+                    placeholder="Search my subscriptions..."
                 />
             </div>
 

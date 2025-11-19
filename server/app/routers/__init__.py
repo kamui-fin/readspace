@@ -12,7 +12,6 @@ from . import (
     feeds,
     folders,
     opml,
-    similar,
     users,
 )
 
@@ -28,7 +27,6 @@ router.include_router(feeds.router)
 router.include_router(articles.router)
 router.include_router(opml.router)
 router.include_router(discover.router)
-router.include_router(similar.router)
 
 
 @router.get("/health")

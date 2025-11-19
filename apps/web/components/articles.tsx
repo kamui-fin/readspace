@@ -26,13 +26,13 @@ import {
     useFeed,
     useFeeds,
     useFolders,
+    useInfiniteArticles,
+    useInfiniteReadLaterArticles,
+    useInfiniteRecentlyReadArticles,
+    useInfiniteTodayArticles,
     useRefreshFeed,
     useUnreadCounts,
     useUpdateArticle,
-    useInfiniteArticles,
-    useInfiniteRecentlyReadArticles,
-    useInfiniteReadLaterArticles,
-    useInfiniteTodayArticles,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
@@ -117,6 +117,7 @@ export function ArticlesView({
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false)
     const [previewFeedData, setPreviewFeedData] = useState<Feed | null>(null)
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false)
+    const [previewRefreshFailed, setPreviewRefreshFailed] = useState(false)
 
     // Ref to track if preview refresh has already been triggered for this feed
     const hasRefreshedPreview = useRef(false)
@@ -184,17 +185,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : feedId && feedData?.title
-              ? feedData.title
-              : folderId && allFolders
-                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                      ?.name ||
-                  initialSidebarTitle ||
-                  "All Articles"
-                : initialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : feedId && feedData?.title
+                    ? feedData.title
+                    : folderId && allFolders
+                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                            ?.name ||
+                        initialSidebarTitle ||
+                        "All Articles"
+                        : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -295,10 +296,10 @@ export function ArticlesView({
     const activeQuery = isTodayMode
         ? todayQuery
         : isRecentlyReadMode
-          ? recentlyReadQuery
-          : isReadLaterMode
-            ? readLaterQuery
-            : allArticlesQuery
+            ? recentlyReadQuery
+            : isReadLaterMode
+                ? readLaterQuery
+                : allArticlesQuery
 
     const {
         data,
@@ -553,6 +554,7 @@ export function ArticlesView({
         if (shouldShowPreviewBanner && feedId && !hasRefreshedPreview.current) {
             hasRefreshedPreview.current = true
             setIsPreviewRefreshing(true)
+            setPreviewRefreshFailed(false)
 
             console.log("[Preview Mode] Refreshing feed for preview:", feedId)
 
@@ -563,6 +565,7 @@ export function ArticlesView({
                     console.log("[Preview Mode] Feed refresh successful")
                     // Store the feed data from refresh response
                     setPreviewFeedData(feed)
+                    setPreviewRefreshFailed(false)
                     // Invalidate articles cache to trigger refetch
                     queryClient.invalidateQueries({
                         queryKey: [RSS_QUERY_KEYS.ARTICLES],
@@ -576,6 +579,7 @@ export function ArticlesView({
                         "[Preview Mode] Preview refresh failed:",
                         error
                     )
+                    setPreviewRefreshFailed(true)
                 })
                 .finally(() => {
                     setIsPreviewRefreshing(false)
@@ -604,6 +608,8 @@ export function ArticlesView({
         setCurrentReadTime(null)
         setIsShowingSummary(false)
         setIsTranslating(false)
+        setPreviewRefreshFailed(false)
+        hasRefreshedPreview.current = false
     }, [viewKey])
 
     // Auto-select first article when we have articles but no current selection (desktop only)
@@ -635,7 +641,7 @@ export function ArticlesView({
             // Select first article (or first unread if filter is on)
             const firstArticle = showUnreadOnly
                 ? sortedArticles.find((a: Article) => !a.is_read) ||
-                  sortedArticles[0]
+                sortedArticles[0]
                 : sortedArticles[0]
 
             if (firstArticle?.id) {
@@ -677,6 +683,8 @@ export function ArticlesView({
                     mode={mode}
                     feedId={feedId}
                     folderId={folderId}
+                    isPreviewMode={shouldShowPreviewBanner}
+                    previewRefreshFailed={previewRefreshFailed}
                     onRefresh={() =>
                         handleRefreshWithMessage("Refreshing articles...")
                     }
@@ -818,9 +826,9 @@ export function ArticlesView({
                                                         feedId
                                                             ? handleDeepRefresh
                                                             : () =>
-                                                                  handleRefreshWithMessage(
-                                                                      "Refreshing articles..."
-                                                                  )
+                                                                handleRefreshWithMessage(
+                                                                    "Refreshing articles..."
+                                                                )
                                                     }
                                                     disabled={isDeepRefreshing}
                                                 >

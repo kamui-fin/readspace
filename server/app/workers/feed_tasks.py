@@ -19,7 +19,7 @@ from app.core.constants import (
 )
 from app.core.taskiq_app import broker
 from app.models import Feed, FeedCategory, FeedSubscription
-from app.services.ai.ai_service import get_ai_service
+from app.services.ai import EmbeddingService, FeedEnrichmentService as AIFeedEnrichmentService
 from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
 from app.services.feeds.feed import FeedService
 from app.workers.common import ensure_uuid, get_worker_db, log_pool_stats
@@ -249,13 +249,14 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
         # PHASE 2: External API calls without holding DB connection (10-60s)
         # ================================================================
 
-        # Initialize AI service (no DB dependency)
-        ai_service = get_ai_service()
+        # Initialize AI services (no DB dependency)
+        ai_feed_enrichment = AIFeedEnrichmentService()
+        embedding_service = EmbeddingService()
 
         # Batch LLM enrichment (10-30s external API call)
         # CRITICAL: No database connection is held during this operation
         logger.info("Starting batch LLM enrichment", batch_size=len(feed_data_list))
-        llm_results = await ai_service.enrich_feeds_batch(feed_data_list)
+        llm_results = await ai_feed_enrichment.enrich_feeds_batch(feed_data_list)
 
         # Prepare texts for batch embedding
         embedding_texts = []
@@ -299,7 +300,7 @@ async def async_batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                 f"Processing embedding batch {i // batch_size + 1}",
                 batch_size=len(batch),
             )
-            batch_embeddings = await ai_service.generate_embeddings_batch(batch)
+            batch_embeddings = await embedding_service.generate_embeddings_batch(batch)
             embeddings.extend(batch_embeddings)
 
         # ================================================================

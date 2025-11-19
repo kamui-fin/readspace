@@ -125,7 +125,7 @@ class OpmlImportService:
 
         # Check for cancellation before dispatching
         if parent_task_id:
-            from app.routers.opml import check_import_cancellation_flag
+            from app.routers.opml.utils import check_import_cancellation_flag
 
             is_cancelled = await check_import_cancellation_flag(parent_task_id)
             if is_cancelled:

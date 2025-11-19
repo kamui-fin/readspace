@@ -14,7 +14,7 @@ from app.db.session import get_db
 from app.models import ClippedArticle
 from app.schemas.auth import TokenData
 from app.schemas.enums import LanguageCode
-from app.services.ai.ai_service import get_ai_service
+from app.services.ai import ContentProcessor
 from app.services.articles.article_management import ArticleManagementService
 from app.services.articles.content_extraction import ContentExtractionService
 from app.services.user.auth import get_current_user
@@ -194,7 +194,7 @@ async def summarize_article(
         )
 
         article_service = ArticleManagementService(db, UUID(user.sub))
-        ai_service = get_ai_service()
+        content_processor = ContentProcessor()
 
         # Get the article to verify ownership and get content
         article = await article_service.get_article(article_id)
@@ -227,8 +227,8 @@ async def summarize_article(
             content_source=content_source,
         )
 
-        # Generate summary using AI service
-        summary = await ai_service.summarize_article(title=article.title or "", content=content_to_summarize)
+        # Generate summary using content processor
+        summary = await content_processor.summarize_article(title=article.title or "", content=content_to_summarize)
 
         if not summary:
             return SummarizeResponse(success=False, error="Failed to generate summary")
@@ -294,8 +294,8 @@ async def translate_article(
         if not content_to_translate:
             return TranslateResponse(success=False, error="No content available to translate")
 
-        # Generate translation using AI service
-        translated_content = await ai_service.translate_article(
+        # Generate translation using content processor
+        translated_content = await content_processor.translate_article(
             content=content_to_translate, target_language=request.target_language
         )
 

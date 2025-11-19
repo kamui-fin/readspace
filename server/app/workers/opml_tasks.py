@@ -55,7 +55,7 @@ async def async_import_single_feed(
     Returns:
         Import result dictionary
     """
-    from app.routers.opml import update_import_progress
+    from app.routers.opml.utils import update_import_progress
     from app.schemas import FeedImportError
 
     start_time = time.perf_counter()
@@ -154,7 +154,7 @@ async def async_import_single_feed(
 
         # Update progress state if we have a parent task
         if parent_task_id:
-            from app.routers.opml import update_import_progress
+            from app.routers.opml.utils import update_import_progress
             from app.schemas import FeedImportError
 
             error = FeedImportError(
@@ -196,7 +196,7 @@ async def async_import_opml(
     Returns:
         Import result dictionary with metadata and dispatched task IDs
     """
-    from app.routers.opml import (
+    from app.routers.opml.utils import (
         check_import_cancellation_flag,
         initialize_import_progress,
         update_import_progress,
@@ -280,7 +280,7 @@ async def async_import_opml(
 
         # Mark as failed in progress state
         if task_id:
-            from app.routers.opml import update_import_progress
+            from app.routers.opml.utils import update_import_progress
 
             await update_import_progress(
                 task_id=task_id,
@@ -329,7 +329,7 @@ async def import_single_feed_task(
 
     # Check for cancellation before starting
     if parent_task_id:
-        from app.routers.opml import check_import_cancellation_flag, update_import_progress
+        from app.routers.opml.utils import check_import_cancellation_flag, update_import_progress
 
         is_cancelled = await check_import_cancellation_flag(parent_task_id)
         if is_cancelled:

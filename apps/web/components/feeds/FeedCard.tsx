@@ -1,6 +1,5 @@
 import { EditFeedDialog } from "@/components/feeds/EditFeedDialog"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
-import { useUserRole } from "@/hooks/useUserRole"
 import { Button } from "@/components/ui/button"
 import {
     Dialog,
@@ -16,22 +15,24 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useUserRole } from "@/hooks/useUserRole"
 import {
+    cn, RSS_QUERY_KEYS,
     useAdminDeleteFeed,
     useDeleteFeed,
     useFeeds,
     type Feed,
-    type FeedDiscoveryResult,
-    RSS_QUERY_KEYS,
+    type FeedDiscoveryResult
 } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
-import { MoreVertical, Pencil, Trash2 } from "lucide-react"
+import { Eye, MoreVertical, Pencil, Sparkles, Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
 interface FeedCardProps {
     feed: Feed | FeedDiscoveryResult
+    className?: string
     showFollowButton?: boolean
     showSimilarButton?: boolean
     showPreviewButton?: boolean
@@ -39,6 +40,7 @@ interface FeedCardProps {
 
 export function FeedCard({
     feed,
+    className,
     showFollowButton = true,
     showSimilarButton = true,
     showPreviewButton = true,
@@ -113,7 +115,7 @@ export function FeedCard({
     }
 
     return (
-        <div className="p-2 md:p-4 w-full">
+        <div className={cn("px-2 md:px-4 w-full", className)}>
             <div className="flex gap-3 md:gap-4 w-full min-w-0">
                 <div className="relative flex-shrink-0">
                     {feed.image_url && (
@@ -133,80 +135,46 @@ export function FeedCard({
                         />
                     )}
                     <div
-                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${
-                            feed.title?.toLowerCase().includes("techcrunch")
-                                ? "bg-green-600"
-                                : feed.title
-                                        ?.toLowerCase()
-                                        .includes("hacker news")
-                                  ? "bg-orange-500"
-                                  : "bg-gray-600"
-                        }`}
+                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${feed.title?.toLowerCase().includes("techcrunch")
+                            ? "bg-green-600"
+                            : feed.title
+                                ?.toLowerCase()
+                                .includes("hacker news")
+                                ? "bg-orange-500"
+                                : "bg-gray-600"
+                            }`}
                         style={{ display: feed.image_url ? "none" : "flex" }}
                     >
                         {feed.title?.toLowerCase().includes("techcrunch")
                             ? "TC"
                             : feed.title?.toLowerCase().includes("hacker news")
-                              ? "Y"
-                              : feed.title
-                                ? feed.title.charAt(0).toUpperCase()
-                                : "F"}
+                                ? "Y"
+                                : feed.title
+                                    ? feed.title.charAt(0).toUpperCase()
+                                    : "F"}
                     </div>
                 </div>
 
-                <div className="flex-1 min-w-0 max-w-full">
-                    <div className="flex flex-col md:flex-row md:items-start md:justify-between md:gap-4">
-                        <div className="flex-1 min-w-0 max-w-full">
-                            <h3
-                                className="font-semibold text-lg text-black dark:text-foreground leading-tight break-words hyphens-auto"
-                                style={{
-                                    wordWrap: "break-word",
-                                    overflowWrap: "anywhere",
-                                }}
-                            >
+                <div className="flex-1 min-w-0 flex flex-col">
+                    <div className="flex items-start gap-4">
+                        <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-lg text-black dark:text-foreground leading-tight tracking-tight truncate">
                                 {feed.title || "Untitled Feed"}
                             </h3>
                             <a
                                 href={feed.link || feed.url}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-xs text-[#BDC6B7] dark:text-secondary mt-0.5 block break-all"
-                                style={{ wordBreak: "break-all" }}
+                                className="text-xs text-[#BDC6B7] dark:text-secondary truncate"
                             >
                                 {(feed.link || feed.url)
                                     ?.replace(/^https?:\/\//, "")
+                                    ?.replace(/^www\./, "")
                                     .replace(/\/$/, "") || "No URL"}
                             </a>
-                            {feed.description && (
-                                <p
-                                    className="text-xs text-[#91998C] mt-2 leading-relaxed break-words"
-                                    style={{
-                                        wordWrap: "break-word",
-                                        overflowWrap: "anywhere",
-                                        display: "-webkit-box",
-                                        WebkitLineClamp: 3,
-                                        WebkitBoxOrient: "vertical",
-                                        overflow: "hidden",
-                                    }}
-                                >
-                                    {feed.description}
-                                </p>
-                            )}
                         </div>
 
-                        <div className="hidden md:flex items-center gap-4 flex-shrink-0">
-                            {showSimilarButton && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-[#91998C] hover:text-[#6A994E] text-xs px-2 py-1 h-auto font-normal"
-                                    asChild
-                                >
-                                    <Link href={`/feeds/${feed.id}/similar`}>
-                                        Similar Feeds
-                                    </Link>
-                                </Button>
-                            )}
+                        <div className="hidden md:flex items-center gap-1 flex-shrink-0">
                             {showFollowButton && (
                                 <Button
                                     variant={
@@ -221,7 +189,7 @@ export function FeedCard({
                                     {isFollowed ? "Unfollow" : "Follow"}
                                 </Button>
                             )}
-                            {isAdmin && (
+                            {(showPreviewButton || showSimilarButton) && (
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <Button
@@ -229,109 +197,138 @@ export function FeedCard({
                                             size="sm"
                                             className="h-8 w-8 p-0"
                                         >
-                                            <MoreVertical className="h-4 w-4" />
+                                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
                                             <span className="sr-only">
-                                                Admin controls
+                                                More options
                                             </span>
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            onClick={() =>
-                                                setIsEditDialogOpen(true)
-                                            }
-                                        >
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={handleAdminDelete}
-                                            className="text-destructive focus:text-destructive"
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                        </DropdownMenuItem>
+                                        {showPreviewButton && (
+                                            <Link href={`/feeds/${feed.id}/articles`}>
+                                                <DropdownMenuItem>
+                                                    <Eye className="mr-2 h-4 w-4" />
+                                                    {isFollowed ? "View" : "Preview"}
+                                                </DropdownMenuItem>
+                                            </Link>
+                                        )}
+                                        {showSimilarButton && (
+                                            <Link href={`/feeds/${feed.id}/similar`}>
+                                                <DropdownMenuItem>
+                                                    <Sparkles className="mr-2 h-4 w-4" />
+                                                    View Similar Feeds
+                                                </DropdownMenuItem>
+                                            </Link>
+                                        )}
+                                        {isAdmin && (
+                                            <>
+                                                <DropdownMenuItem
+                                                    onSelect={() =>
+                                                        setIsEditDialogOpen(true)
+                                                    }
+                                                >
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem
+                                                    onSelect={handleAdminDelete}
+                                                    className="text-destructive focus:text-destructive"
+                                                >
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </>
+                                        )}
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             )}
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between mt-3 gap-2">
-                        {showPreviewButton && (
+                    {feed.description && (
+                        <p
+                            className="text-xs text-[#91998C] mt-2 leading-relaxed break-words"
+                            style={{
+                                wordWrap: "break-word",
+                                overflowWrap: "anywhere",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 3,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {feed.description}
+                        </p>
+                    )}
+
+                    <div className="md:hidden flex items-center justify-end gap-2 mt-3">
+                        {showFollowButton && (
                             <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-primary hover:text-primary/80 dark:text-secondary dark:hover:text-secondary/80 text-xs px-0 py-1 h-auto font-normal"
-                                asChild
+                                variant={
+                                    isFollowed ? "outline" : "secondary"
+                                }
+                                onClick={handleFollowClick}
+                                className={`h-8 text-xs ${isFollowed ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10" : ""}`}
                             >
-                                <Link href={`/feeds/${feed.id}/articles`}>
-                                    {isFollowed ? "View" : "Preview"}
-                                </Link>
+                                {isFollowed && (
+                                    <Trash2 className="mr-1 h-3 w-3" />
+                                )}
+                                {isFollowed ? "Unfollow" : "Follow"}
                             </Button>
                         )}
-
-                        <div className="md:hidden flex items-center gap-2 flex-shrink-0">
-                            {showSimilarButton && (
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="text-[#91998C] hover:text-[#6A994E] text-xs px-2 py-1 h-auto font-normal"
-                                    asChild
-                                >
-                                    <Link href={`/feeds/${feed.id}/similar`}>
-                                        Similar Feeds
-                                    </Link>
-                                </Button>
-                            )}
-                            {showFollowButton && (
-                                <Button
-                                    variant={
-                                        isFollowed ? "outline" : "secondary"
-                                    }
-                                    onClick={handleFollowClick}
-                                    className={`h-8 text-xs ${isFollowed ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10" : ""}`}
-                                >
-                                    {isFollowed && (
-                                        <Trash2 className="mr-1 h-3 w-3" />
+                        {(showPreviewButton || showSimilarButton) && (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 w-8 p-0"
+                                    >
+                                        <MoreVertical className="h-4 w-4" />
+                                        <span className="sr-only">
+                                            More options
+                                        </span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    {showPreviewButton && (
+                                        <Link href={`/feeds/${feed.id}/articles`}>
+                                            <DropdownMenuItem>
+                                                <Eye className="mr-2 h-4 w-4" />
+                                                {isFollowed ? "View" : "Preview"}
+                                            </DropdownMenuItem>
+                                        </Link>
                                     )}
-                                    {isFollowed ? "Unfollow" : "Follow"}
-                                </Button>
-                            )}
-                            {isAdmin && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            <MoreVertical className="h-4 w-4" />
-                                            <span className="sr-only">
-                                                Admin controls
-                                            </span>
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                            onClick={() =>
-                                                setIsEditDialogOpen(true)
-                                            }
-                                        >
-                                            <Pencil className="mr-2 h-4 w-4" />
-                                            Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={handleAdminDelete}
-                                            className="text-destructive focus:text-destructive"
-                                        >
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
+                                    {showSimilarButton && (
+                                        <Link href={`/feeds/${feed.id}/similar`}>
+                                            <DropdownMenuItem>
+                                                <Sparkles className="mr-2 h-4 w-4" />
+                                                View Similar Feeds
+                                            </DropdownMenuItem>
+                                        </Link>
+                                    )}
+                                    {isAdmin && (
+                                        <>
+                                            <DropdownMenuItem
+                                                onSelect={() =>
+                                                    setIsEditDialogOpen(true)
+                                                }
+                                            >
+                                                <Pencil className="mr-2 h-4 w-4" />
+                                                Edit
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem
+                                                onSelect={handleAdminDelete}
+                                                className="text-destructive focus:text-destructive"
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
+                                            </DropdownMenuItem>
+                                        </>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </div>
                 </div>
             </div>
