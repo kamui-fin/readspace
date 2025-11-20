@@ -9,12 +9,13 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
 import { useSettingsStore } from '@stores/settings';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, Pressable, View } from 'react-native';
+import { Animated, Keyboard, Platform, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
@@ -25,27 +26,39 @@ export function SignupScreen() {
   const { signUp } = useSession();
   const { setSelfHosted } = useSettingsStore();
   const insets = useSafeAreaInsets();
+  const { handleAuthError } = useAuthErrorHandler();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const buttonBottomAnim = useRef(new Animated.Value(0)).current;
 
-  // Track keyboard height to keep buttons above keyboard
+  // Track keyboard height and animate button position
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+    const showSubscription = Keyboard.addListener('keyboardWillShow', (e) => {
       setKeyboardHeight(e.endCoordinates.height);
+      Animated.timing(buttonBottomAnim, {
+        toValue: e.endCoordinates.height,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
     });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+    const hideSubscription = Keyboard.addListener('keyboardWillHide', (e) => {
       setKeyboardHeight(0);
+      Animated.timing(buttonBottomAnim, {
+        toValue: 0,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
     });
 
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, []);
+  }, [buttonBottomAnim]);
 
   const handleSelfHostSave = (data: {
     apiUrl: string;
@@ -107,8 +120,7 @@ export function SignupScreen() {
         // Move to verification screen
         stepperRef.current?.goToNext();
       } catch (error) {
-        console.error('Sign up error:', error);
-        toast.error(error instanceof Error ? error.message : 'Failed to create account');
+        handleAuthError(error, 'signup');
       } finally {
         setIsLoading(false);
       }
@@ -140,17 +152,18 @@ export function SignupScreen() {
     <View className="dark:bg-screen_background flex-1 bg-background">
       <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
 
-      {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard */}
+      {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard with smooth animation */}
       {currentStep < pages.length - 1 && (
-        <View
-          className="dark:bg-screen_background absolute left-0 right-0 bg-background"
+        <Animated.View
+          className="absolute left-0 right-0"
           style={{
-            bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+            bottom: buttonBottomAnim,
             paddingHorizontal: Math.max(
               Math.min(SPACING.ONBOARDING_CONTENT_PADDING * (393 / 393), 36),
               20
             ),
             paddingBottom: keyboardHeight > 0 ? 20 : Math.max(insets.bottom + 20, 40),
+            backgroundColor: 'transparent',
           }}
           pointerEvents="box-none">
           <View className="gap-3">
@@ -166,7 +179,7 @@ export function SignupScreen() {
               </Button>
             )}
 
-            {/* Back Button or Sign In Link */}
+            {/* Back Button or Sign In Link - Hide sign in link when keyboard is visible */}
             {currentStep > 0 ? (
               <Button
                 variant="secondary"
@@ -177,22 +190,24 @@ export function SignupScreen() {
                 Back
               </Button>
             ) : (
-              <View className="flex-row items-center justify-center gap-1 py-3">
-                <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
-                  Already have an account?
-                </Text>
-                <Pressable onPress={() => router.replace('/(auth)/login')} disabled={isLoading}>
-                  <Text
-                    size="base"
-                    fontFamily="geist-semibold"
-                    className="text-primary dark:text-primary">
-                    Sign in
+              keyboardHeight === 0 && (
+                <View className="flex-row items-center justify-center gap-1 py-3">
+                  <Text size="base" fontFamily="geist" className="text-grey dark:text-grey">
+                    Already have an account?
                   </Text>
-                </Pressable>
-              </View>
+                  <Pressable onPress={() => router.replace('/(auth)/login')} disabled={isLoading}>
+                    <Text
+                      size="base"
+                      fontFamily="geist-semibold"
+                      className="text-primary dark:text-primary">
+                      Sign in
+                    </Text>
+                  </Pressable>
+                </View>
+              )
             )}
           </View>
-        </View>
+        </Animated.View>
       )}
 
       {/* Self-hosting modal/bottom sheet - rendered at screen level */}

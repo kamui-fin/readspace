@@ -1,3 +1,4 @@
+import { ArticleSummaryBottomSheet } from '@components/bottom-sheets/article-summary';
 import { ArticleReader } from '@components/screens/article-reader/index';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
 import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
@@ -13,14 +14,21 @@ import {
 } from '@components/ui/dropdown-menu';
 import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
-import { useArticle, useExtractFullText, useUpdateArticle } from '@readspace/shared';
+import {
+  useArticle,
+  useExtractFullText,
+  useSummarizeArticle,
+  useUpdateArticle,
+} from '@readspace/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
+import * as Haptics from 'expo-haptics';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Linking, Share, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
 
@@ -37,6 +45,9 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const scrollDirection = useSharedValue<'up' | 'down'>('down');
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
+
+  // Bottom sheet refs
+  const summaryBottomSheetRef = useRef<BottomSheetModal>(null);
 
   // Fetch article data
   const { data: article, isLoading: isArticleLoading } = useArticle(articleId || '', {
@@ -58,6 +69,19 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     articleId || '',
     article?.link || ''
   );
+
+  // Get the current content based on source
+  const currentContent =
+    contentSource === 'extracted' && (article?.extracted_content || extractedData?.content)
+      ? article?.extracted_content || extractedData?.content
+      : article?.content;
+
+  // AI Summary hook - only enabled when user requests it
+  const {
+    refetch: generateSummary,
+    data: summaryData,
+    isLoading: isSummaryLoading,
+  } = useSummarizeArticle(articleId || '', currentContent || undefined);
 
   // Sync contentSource with article.extracted_content
   useLayoutEffect(() => {
@@ -119,6 +143,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
   const handleBookmark = useCallback(() => {
     if (!article) return;
 
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     const newValue = !article.is_read_later;
     updateArticle.mutate(
       {
@@ -145,6 +171,8 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
 
   const handleMarkAsDone = useCallback(() => {
     if (!article) return;
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // Show immediate feedback
     toast.success('Marked as done');
@@ -207,6 +235,42 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
     // The dropdown menu will handle opening/closing
     // This is just a placeholder for the action bar
   }, []);
+
+  const handleGenerateSummary = useCallback(() => {
+    if (!article) return;
+
+    // Show loading toast
+    toast.info('Generating AI summary...');
+
+    // Open bottom sheet immediately
+    summaryBottomSheetRef.current?.present();
+
+    // Generate summary
+    generateSummary()
+      .then(() => {
+        // Success handled by the bottom sheet
+      })
+      .catch((error) => {
+        console.error('Failed to generate summary:', error);
+        toast.error('Failed to generate summary');
+        summaryBottomSheetRef.current?.dismiss();
+      });
+  }, [article, generateSummary]);
+
+  const handleRegenerateSummary = useCallback(() => {
+    if (!article) return;
+
+    toast.info('Regenerating summary...');
+
+    generateSummary()
+      .then(() => {
+        toast.success('Summary regenerated!');
+      })
+      .catch((error) => {
+        console.error('Failed to regenerate summary:', error);
+        toast.error('Failed to regenerate summary');
+      });
+  }, [article, generateSummary]);
 
   if (isArticleLoading) {
     return (
@@ -322,11 +386,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
                       {contentSource === 'extracted' ? 'Show Original' : 'Extract Full Text'}
                     </DropdownMenuItemTitle>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    key="summarize"
-                    onSelect={() => {
-                      toast.info('Summarize feature coming soon');
-                    }}>
+                  <DropdownMenuItem key="summarize" onSelect={handleGenerateSummary}>
                     <DropdownMenuItemIcon
                       ios={{ name: 'note.text' }}
                       androidIconName="description"
@@ -359,6 +419,14 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
         scrollY={scrollY}
         lastScrollY={lastScrollY}
         scrollDirection={scrollDirection}
+      />
+
+      {/* AI Summary Bottom Sheet */}
+      <ArticleSummaryBottomSheet
+        ref={summaryBottomSheetRef}
+        summary={summaryData || null}
+        isLoading={isSummaryLoading}
+        onRegenerate={handleRegenerateSummary}
       />
     </View>
   );

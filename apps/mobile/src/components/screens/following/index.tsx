@@ -5,33 +5,23 @@ import {
   FolderPickerModal,
   type FolderPickerModalRef,
 } from '@components/modals/folder-picker.modal';
-import { EmptyState } from '@components/screens/empty-state';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
-import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
 import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useToast } from '@contexts/toast-provider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
-import { groupArticlesByDate } from '@lib/utils/date';
-import type { Article } from '@readspace/shared';
 import {
-  formatRelativeDate,
   useCreateFeed,
   useFeed,
   useFeeds,
-  useInfiniteArticles,
-  useInfiniteReadLaterArticles,
-  useInfiniteRecentlyReadArticles,
-  useInfiniteTodayArticles,
   useUnreadCounts,
   useUpdateArticle,
 } from '@readspace/shared';
 import { useFeedViewStore } from '@stores/feed-view';
 import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
-import { useRouter, useSegments } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type NativeScrollEvent,
@@ -43,12 +33,11 @@ import {
 import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-interface ListItem {
-  type: 'section' | 'article' | 'divider';
-  id: string;
-  data?: Article;
-  sectionTitle?: string;
-}
+import { EmptyStateView } from './components/empty-state-view';
+import { ArticleListItem } from './components/article-list-item';
+import { useArticleQueries } from '../../../hooks/useArticleQueries';
+import { useScrollReset } from '../../../hooks/useScrollReset';
+import { createListItems, processArticles, type ListItem } from '../../../lib/utils/article';
 
 interface FollowingScreenProps {
   activeTab: number;
@@ -63,8 +52,6 @@ export function FollowingScreen({
   headerHeight,
   safeMinimumHeight,
 }: FollowingScreenProps) {
-  const router = useRouter();
-  const segments = useSegments();
   const listRef = useRef<any>(null);
   const { showToast, updateToast } = useToast();
   const insets = useSafeAreaInsets();
@@ -72,11 +59,12 @@ export function FollowingScreen({
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const folderPickerRef = useRef<FolderPickerModalRef>(null);
 
-  // Track if we're in a reset state to prevent scroll handler from setting non-zero values
+  // Refs for tracking state
   const isResettingRef = useRef(false);
   const loadingToastIdRef = useRef<string | null>(null);
+  const prevIsLoadingRef = useRef(false);
+  const prevArticleCountRef = useRef(0);
   const [refreshing, setRefreshing] = useState(false);
-  const isNavigatingRef = useRef(false);
 
   // Get state and actions from Zustand stores
   const tabKey = getTabKey(activeTab);
@@ -91,10 +79,6 @@ export function FollowingScreen({
   const selectedId = useFeedViewStore((state) => state.selectedId);
   const selectedName = useFeedViewStore((state) => state.selectedName);
   const isPreviewMode = useFeedViewStore((state) => state.isPreviewMode);
-
-  // Track previous loading state to detect transitions
-  const prevIsLoadingRef = useRef(false);
-  const prevArticleCountRef = useRef(0);
 
   // Compute safe padding that always has a fallback
   // Uses headerHeight if available (> 0), otherwise falls back to safeMinimumHeight
@@ -135,45 +119,12 @@ export function FollowingScreen({
     return {};
   }, [viewType, selectedId]);
 
-  // When viewing a feed/folder, we can't use the special queries (today/saved/recent)
-  // because they don't support feed/folder filtering. So we always use allQuery for feed/folder views.
-  // When NOT viewing a feed/folder, use the appropriate tab-specific query.
-
-  // Select the appropriate query hook based on active tab
-  const todayQuery = useInfiniteTodayArticles({ limit: 25 }, {
-    enabled: activeTab === 0 && !isViewingFeedOrFolder,
-  } as any);
-  const savedQuery = useInfiniteReadLaterArticles({ limit: 25 }, {
-    enabled: activeTab === 1 && !isViewingFeedOrFolder,
-  } as any);
-  const allQuery = useInfiniteArticles({ ...feedFolderParams, limit: 25 }, {
-    enabled: activeTab === 2 || isViewingFeedOrFolder,
-  } as any);
-  const recentQuery = useInfiniteRecentlyReadArticles({ limit: 25 }, {
-    enabled: activeTab === 3 && !isViewingFeedOrFolder,
-  } as any);
-
-  // Select active query based on tab
-  const activeQuery = useMemo(() => {
-    // When viewing a feed/folder, always use allQuery because the special queries
-    // (today/saved/recent) don't support feed/folder filtering
-    if (isViewingFeedOrFolder) {
-      return allQuery;
-    }
-    // When NOT viewing a feed/folder, use the tab-specific query
-    switch (activeTab) {
-      case 0:
-        return todayQuery;
-      case 1:
-        return savedQuery;
-      case 2:
-        return allQuery;
-      case 3:
-        return recentQuery;
-      default:
-        return allQuery;
-    }
-  }, [activeTab, isViewingFeedOrFolder, todayQuery, savedQuery, allQuery, recentQuery]);
+  // Use custom hook to manage article queries
+  const { activeQuery } = useArticleQueries({
+    activeTab,
+    isViewingFeedOrFolder,
+    feedFolderParams,
+  });
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = activeQuery;
 
@@ -181,124 +132,21 @@ export function FollowingScreen({
   const updateArticle = useUpdateArticle();
   const createFeed = useCreateFeed();
 
-  // Get unread counts - for feed/folder specific counts
-  const { data: unreadCounts } = useUnreadCounts();
-  const { data: feedsData } = useFeeds();
+  // Get unread counts and feeds data - kept for potential future use
+  useUnreadCounts();
+  useFeeds();
 
-  // Flatten paginated articles and deduplicate by ID
+  // Process articles: flatten, deduplicate, and apply filters
   const allArticles = useMemo(() => {
-    const infiniteData = data as any;
-    if (!infiniteData?.pages) return [];
-    const articles = infiniteData.pages.flatMap((page: { items?: Article[] }) => page.items || []);
-    // Deduplicate articles by ID
-    const uniqueArticles = new Map<string, Article>();
-    for (const article of articles) {
-      if (!uniqueArticles.has(article.id)) {
-        uniqueArticles.set(article.id, article);
-      }
-    }
-    let result = Array.from(uniqueArticles.values());
-
-    // When viewing a feed/folder, we need to apply tab-specific filters client-side
-    // because the backend queries don't support feed/folder + tab filters together
-    if (isViewingFeedOrFolder && activeTab !== 2) {
-      const now = new Date();
-      const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-      if (activeTab === 0) {
-        // Today: articles published in last 24 hours
-        result = result.filter((article) => {
-          if (!article.published_at) return false;
-          const publishedDate = new Date(article.published_at);
-          return publishedDate >= twentyFourHoursAgo && publishedDate <= now;
-        });
-      } else if (activeTab === 1) {
-        // Saved: articles marked as read_later
-        result = result.filter((article) => article.is_read_later);
-      } else if (activeTab === 3) {
-        // Recent: articles that have been read (is_read = true)
-        result = result.filter((article) => article.is_read);
-      }
-      // activeTab === -1 or 2: show all articles (no additional filtering)
-    }
-
-    // Filter by read/unread/read_later status based on filter state
-    if (filter === 'unread') {
-      result = result.filter((article) => !article.is_read);
-    } else if (filter === 'read') {
-      result = result.filter((article) => article.is_read);
-    } else if (filter === 'read_later') {
-      result = result.filter((article) => article.is_read_later);
-    }
-    // filter === "all" shows all articles, no filtering needed
-
-    return result;
+    return processArticles(data, isViewingFeedOrFolder, activeTab, filter);
   }, [data, filter, isViewingFeedOrFolder, activeTab]);
 
   // Group articles by date and create flat list with sections and dividers
   const listItems = useMemo(() => {
-    type ArticleWithDate = Article & { date: Date };
-    const articlesWithDates: ArticleWithDate[] = allArticles.map((article: Article) => ({
-      ...article,
-      date: article.published_at ? new Date(article.published_at) : new Date(),
-    }));
-    const grouped = groupArticlesByDate(articlesWithDates);
-    const items: ListItem[] = [];
-    let dividerCounter = 0;
-
-    // Sort section headers chronologically
-    const sortedSections = Object.entries(grouped).sort((a, b) => {
-      const firstArticleA = a[1][0];
-      const firstArticleB = b[1][0];
-      return firstArticleB.date.getTime() - firstArticleA.date.getTime();
-    });
-
-    for (let sectionIndex = 0; sectionIndex < sortedSections.length; sectionIndex++) {
-      const [sectionTitle, articles] = sortedSections[sectionIndex];
-      const isLastSection = sectionIndex === sortedSections.length - 1;
-
-      // Add section header
-      items.push({
-        type: 'section',
-        id: `section-${sectionTitle}`,
-        sectionTitle,
-      });
-
-      // Add articles with dividers
-      for (let i = 0; i < articles.length; i++) {
-        const article = articles[i];
-        items.push({
-          type: 'article',
-          id: article.id,
-          data: article,
-        });
-
-        // Add divider after each article except the last one
-        if (i < articles.length - 1) {
-          items.push({
-            type: 'divider',
-            id: `divider-${dividerCounter++}`,
-          });
-        }
-      }
-
-      // Add divider after section (before next section) only if not the last section
-      if (!isLastSection) {
-        items.push({
-          type: 'divider',
-          id: `divider-${dividerCounter++}`,
-        });
-      }
-    }
-
-    return items;
+    return createListItems(allArticles);
   }, [allArticles]);
 
   // Mutation handlers
-  const handleFollowFromPreview = useCallback(() => {
-    folderPickerRef.current?.present();
-  }, []);
-
   const handleFolderSelect = useCallback(
     (folderId: string | null) => {
       if (!feedData?.url) {
@@ -330,6 +178,8 @@ export function FollowingScreen({
 
   const handleBookmark = useCallback(
     (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       const newValue = !currentlySaved;
       updateArticle.mutate(
         {
@@ -464,119 +314,27 @@ export function FollowingScreen({
     }
   };
 
-  // Reset scroll position when tab changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue, only activeTab should trigger reset
-  useEffect(() => {
-    // Set reset flag to prevent scroll handler from interfering
-    isResettingRef.current = true;
+  // Reset scroll position when tab, filter, or view changes
+  useScrollReset({
+    listRef,
+    scrollY,
+    isResettingRef,
+    dependencies: [activeTab],
+  });
 
-    // Reset scroll position immediately when tab changes
-    scrollY.value = 0;
+  useScrollReset({
+    listRef,
+    scrollY,
+    isResettingRef,
+    dependencies: [filter],
+  });
 
-    // Scroll list to top - use multiple attempts to ensure it works
-    const scrollToTop = () => {
-      if (listRef.current) {
-        try {
-          listRef.current.scrollToOffset({ offset: 0, animated: false });
-        } catch {
-          // Ignore errors if list isn't ready
-        }
-      }
-    };
-
-    // Try immediately
-    scrollToTop();
-
-    // Also try after a short delay to ensure list is ready
-    const timeoutId = setTimeout(() => {
-      scrollToTop();
-      // Clear reset flag after scroll operations complete
-      setTimeout(() => {
-        isResettingRef.current = false;
-      }, 100);
-    }, 50);
-
-    return () => {
-      clearTimeout(timeoutId);
-      isResettingRef.current = false;
-    };
-  }, [activeTab]);
-
-  // Reset scroll position when filter changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue, only filter should trigger reset
-  useEffect(() => {
-    // Set reset flag to prevent scroll handler from interfering
-    isResettingRef.current = true;
-
-    // Reset scroll position immediately when filter changes
-    scrollY.value = 0;
-
-    // Scroll list to top - use multiple attempts to ensure it works
-    const scrollToTop = () => {
-      if (listRef.current) {
-        try {
-          listRef.current.scrollToOffset({ offset: 0, animated: false });
-        } catch {
-          // Ignore errors if list isn't ready
-        }
-      }
-    };
-
-    // Try immediately
-    scrollToTop();
-
-    // Also try after a short delay to ensure list is ready
-    const timeoutId = setTimeout(() => {
-      scrollToTop();
-      // Clear reset flag after scroll operations complete
-      setTimeout(() => {
-        isResettingRef.current = false;
-      }, 100);
-    }, 50);
-
-    return () => {
-      clearTimeout(timeoutId);
-      isResettingRef.current = false;
-    };
-  }, [filter]);
-
-  // Reset scroll position when feed/folder selection changes
-  // biome-ignore lint/correctness/useExhaustiveDependencies: scrollY is a stable SharedValue, only viewType/selectedName should trigger reset
-  useEffect(() => {
-    // Set reset flag to prevent scroll handler from interfering
-    isResettingRef.current = true;
-
-    // Reset scroll position immediately when feed/folder selection changes
-    scrollY.value = 0;
-
-    // Scroll list to top - use multiple attempts to ensure it works
-    const scrollToTop = () => {
-      if (listRef.current) {
-        try {
-          listRef.current.scrollToOffset({ offset: 0, animated: false });
-        } catch {
-          // Ignore errors if list isn't ready
-        }
-      }
-    };
-
-    // Try immediately
-    scrollToTop();
-
-    // Also try after a short delay to ensure list is ready
-    const timeoutId = setTimeout(() => {
-      scrollToTop();
-      // Clear reset flag after scroll operations complete
-      setTimeout(() => {
-        isResettingRef.current = false;
-      }, 100);
-    }, 50);
-
-    return () => {
-      clearTimeout(timeoutId);
-      isResettingRef.current = false;
-    };
-  }, [viewType, selectedName]);
+  useScrollReset({
+    listRef,
+    scrollY,
+    isResettingRef,
+    dependencies: [viewType, selectedName],
+  });
 
   // Use regular function instead of useAnimatedScrollHandler for LegendList compatibility
   // Add safeguards to prevent edge cases where scrollY might be non-zero when it shouldn't be
@@ -595,135 +353,14 @@ export function FollowingScreen({
     scrollY.value = clampedScrollY;
   };
 
-  const renderItem = (item: ListItem, index: number) => {
-    if (item.type === 'section') {
+  const renderItem = useCallback(
+    (item: ListItem) => {
       return (
-        <View className="px-4 pb-2 pt-4">
-          <Text
-            size="md"
-            fontFamily="geist-semibold"
-            className="text-secondary dark:text-secondary-dark">
-            {item.sectionTitle}
-          </Text>
-        </View>
+        <ArticleListItem item={item} onToggleRead={handleToggleRead} onBookmark={handleBookmark} />
       );
-    }
-
-    if (item.type === 'divider') {
-      return <View className="mx-4 h-[0.5px] bg-light-grey dark:bg-mid-grey-dark" />;
-    }
-
-    if (item.type === 'article' && item.data) {
-      const article = item.data;
-      const isClipped = article.article_type === 'clipped';
-
-      const timestamp = article.published_at
-        ? formatRelativeDate(new Date(article.published_at))
-        : 'Unknown';
-
-      // Only use article image_url, not feed image_url
-      const displayImageUrl = article.image_url || undefined;
-
-      // Extract feed information
-      const feedTitle =
-        typeof article.feed === 'object' && article.feed
-          ? article.feed.title || undefined
-          : undefined;
-      const feedImageUrl =
-        typeof article.feed === 'object' && article.feed
-          ? article.feed.image_url || undefined
-          : undefined;
-
-      // Debug favicon
-      if (!feedImageUrl && !isClipped) {
-        console.log('[Following] Missing favicon for article:', {
-          articleId: article.id,
-          feedType: typeof article.feed,
-          hasFeed: !!article.feed,
-          feedImageUrl,
-        });
-      }
-
-      // Try multiple ways to get the feed ID
-      let feedId: string | undefined;
-      if (typeof article.feed === 'object' && article.feed) {
-        feedId = (article.feed as any).id;
-      } else if (typeof article.feed === 'string') {
-        feedId = article.feed;
-      }
-
-      // Check if there's a feed_id field directly on the article
-      if (!feedId && (article as any).feed_id) {
-        feedId = (article as any).feed_id;
-      }
-
-      // For clipped articles - get favicon from domain
-      const getFaviconUrl = (url: string): string => {
-        try {
-          const domain = new URL(url).hostname;
-          return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-        } catch {
-          return '';
-        }
-      };
-
-      // Use favicon from clipped article domain, or feed image, or fallback to feed domain favicon
-      let displayFaviconUrl: string | undefined;
-      if (isClipped && article.link) {
-        displayFaviconUrl = getFaviconUrl(article.link);
-      } else if (feedImageUrl) {
-        displayFaviconUrl = feedImageUrl;
-      } else if (typeof article.feed === 'object' && article.feed && (article.feed as any).link) {
-        // Fallback: generate favicon from feed's website URL
-        displayFaviconUrl = getFaviconUrl((article.feed as any).link);
-      }
-
-      return (
-        <ArticleItemCard
-          article={article}
-          imageUrl={displayImageUrl}
-          title={article.title}
-          description={article.description || undefined}
-          timestamp={timestamp}
-          faviconUrl={displayFaviconUrl}
-          feedName={feedTitle}
-          className="px-4"
-          showTopDivider={false}
-          showBottomDivider={false}
-          onPress={() => {
-            // Prevent duplicate navigation using ref to track navigation state
-            if (isNavigatingRef.current) return;
-
-            const articleRoute = `/(protected)/articles/${article.id}`;
-            const currentPath = segments.join('/');
-            const articlePath = `articles/${article.id}`;
-
-            // Only navigate if not already on this article route
-            if (!currentPath.includes(articlePath)) {
-              isNavigatingRef.current = true;
-              router.push(articleRoute as any);
-
-              // Reset navigation flag after a short delay
-              setTimeout(() => {
-                isNavigatingRef.current = false;
-              }, 500);
-            }
-          }}
-          onMarkAsRead={(article) => {
-            handleToggleRead(article.id, article.is_read || false, article.article_type);
-          }}
-          onMarkAsUnread={(article) => {
-            handleToggleRead(article.id, article.is_read || false, article.article_type);
-          }}
-          onSaveArticle={(article) => {
-            handleBookmark(article.id, article.is_read_later || false, article.article_type);
-          }}
-        />
-      );
-    }
-
-    return <View />;
-  };
+    },
+    [handleToggleRead, handleBookmark]
+  );
 
   const renderFooter = () => {
     if (!isFetchingNextPage) return null;
@@ -734,68 +371,26 @@ export function FollowingScreen({
     );
   };
 
-  const renderEmpty = () => {
-    if (isLoading) {
-      return (
-        <View
-          style={{
-            flex: 1,
-            minHeight: 400,
-          }}>
-          <ArticleCardSkeletonList count={8} />
-        </View>
-      );
-    }
-
-    const emptyConfigs = {
-      0: {
-        icon: 'solar:inbox-broken',
-        message: 'No articles for today yet. Check back later!',
-      },
-      1: {
-        icon: 'solar:bookmark-broken',
-        message: 'No saved articles. Swipe right on articles to bookmark them.',
-      },
-      2: {
-        icon: 'solar:inbox-broken',
-        message: 'No articles yet. Add some feeds to get started!',
-      },
-      3: {
-        icon: 'solar:history-broken',
-        message: 'No recently read articles.',
-      },
-    };
-
-    const config = emptyConfigs[activeTab as keyof typeof emptyConfigs] || {
-      icon: 'solar:inbox-broken',
-      message: 'No articles available.',
-    };
-
-    return <EmptyState variant="centered" icon={config.icon} message={config.message} />;
-  };
+  const renderEmpty = useCallback(() => {
+    return (
+      <EmptyStateView
+        isLoading={isLoading}
+        activeTab={activeTab}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        refreshColor={colors.secondary}
+      />
+    );
+  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary]);
 
   // If empty and not loading, render empty state outside scrollable list
   // This prevents scrolling on empty state and ensures header stays in place
-  const isEmpty = !isLoading && listItems.length === 0;
+  const isEmptyState = !isLoading && listItems.length === 0;
 
-  if (isEmpty) {
-    // When header is relative (scrollY = 0), it's in normal flow and takes up space
-    // The empty state needs to be centered in the remaining space below the header
-    // The EmptyState component with variant="centered" uses flex-1 to fill available space
-    // and centers its content with items-center justify-center
+  if (isEmptyState) {
     return (
       <>
-        <View
-          className="flex-1 bg-background dark:bg-background-dark"
-          style={
-            {
-              // Ensure the container fills the remaining space below the header
-              // The header is relative, so it takes up space, and this container
-              // fills the rest of the screen
-            }
-          }>
-          {renderEmpty()}
-        </View>
+        {renderEmpty()}
 
         {/* Folder picker bottom sheet */}
         <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />

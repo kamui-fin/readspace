@@ -6,6 +6,7 @@ import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useAuthErrorHandler } from '@hooks/useAuthErrorHandler';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
@@ -16,6 +17,7 @@ import { router } from 'expo-router';
 import { Formik, type FormikHelpers } from 'formik';
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -38,23 +40,35 @@ export function LoginScreen() {
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const [showPassword, setShowPassword] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const buttonBottomAnim = useRef(new Animated.Value(0)).current;
+  const { handleAuthError } = useAuthErrorHandler();
 
   const isSelfHosted = settings.instance_type === 'self-hosted';
 
-  // Track keyboard height to keep buttons above keyboard
+  // Track keyboard height and animate button position
   useEffect(() => {
-    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+    const showSubscription = Keyboard.addListener('keyboardWillShow', (e) => {
       setKeyboardHeight(e.endCoordinates.height);
+      Animated.timing(buttonBottomAnim, {
+        toValue: e.endCoordinates.height,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
     });
-    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+    const hideSubscription = Keyboard.addListener('keyboardWillHide', (e) => {
       setKeyboardHeight(0);
+      Animated.timing(buttonBottomAnim, {
+        toValue: 0,
+        duration: e.duration || 250,
+        useNativeDriver: false,
+      }).start();
     });
 
     return () => {
       showSubscription.remove();
       hideSubscription.remove();
     };
-  }, []);
+  }, [buttonBottomAnim]);
 
   const initialValues: LoginFormData = {
     email: '',
@@ -70,8 +84,7 @@ export function LoginScreen() {
       toast.success('Welcome back!');
       // Auth provider will handle redirect to protected routes automatically
     } catch (error) {
-      console.error('Sign in error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to sign in');
+      handleAuthError(error, 'signin');
     } finally {
       setSubmitting(false);
     }
@@ -221,14 +234,16 @@ export function LoginScreen() {
               </TouchableWithoutFeedback>
             </ScrollView>
 
-            {/* Fixed Buttons at Bottom - Adjusts for keyboard */}
-            <View
-              className="dark:bg-screen_background absolute left-0 right-0 bg-background"
+            {/* Fixed Buttons at Bottom - Adjusts for keyboard with smooth animation */}
+            <Animated.View
+              className="absolute left-0 right-0"
               style={{
-                bottom: keyboardHeight > 0 ? keyboardHeight : 0,
+                bottom: buttonBottomAnim,
                 paddingHorizontal: Math.max(Math.min(24 * (393 / 393), 36), 20),
                 paddingBottom: keyboardHeight > 0 ? 20 : Math.max(insets.bottom + 20, 40),
-              }}>
+                backgroundColor: 'transparent',
+              }}
+              pointerEvents="box-none">
               <View className="gap-3">
                 {/* Sign In Button */}
                 <Button
@@ -240,24 +255,26 @@ export function LoginScreen() {
                   Sign In
                 </Button>
 
-                {/* Sign Up Link */}
-                <View className="flex-row items-center justify-center gap-1 py-3">
-                  <Text size="md" fontFamily="geist" className="text-grey dark:text-grey">
-                    Don't have an account?
-                  </Text>
-                  <Pressable
-                    onPress={() => router.replace('/(auth)/signup')}
-                    disabled={isSubmitting}>
-                    <Text
-                      size="md"
-                      fontFamily="geist-semibold"
-                      className="text-primary dark:text-primary">
-                      Sign up
+                {/* Sign Up Link - Hidden when keyboard is visible */}
+                {keyboardHeight === 0 && (
+                  <View className="flex-row items-center justify-center gap-1 py-3">
+                    <Text size="md" fontFamily="geist" className="text-grey dark:text-grey">
+                      Don't have an account?
                     </Text>
-                  </Pressable>
-                </View>
+                    <Pressable
+                      onPress={() => router.replace('/(auth)/signup')}
+                      disabled={isSubmitting}>
+                      <Text
+                        size="md"
+                        fontFamily="geist-semibold"
+                        className="text-primary dark:text-primary">
+                        Sign up
+                      </Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
-            </View>
+            </Animated.View>
           </>
         )}
       </Formik>

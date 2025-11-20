@@ -18,6 +18,7 @@ import {
   useInfiniteRecentlyReadArticles,
   useUpdateArticle,
 } from '@readspace/shared';
+import * as Haptics from 'expo-haptics';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { RefreshControl, View } from 'react-native';
@@ -138,6 +139,8 @@ export function RecentsScreen() {
   // Mutation handlers
   const handleBookmark = useCallback(
     (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
       const newValue = !currentlySaved;
       updateArticle.mutate(
         {

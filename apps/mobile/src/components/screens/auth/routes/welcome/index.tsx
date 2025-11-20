@@ -24,19 +24,20 @@ export function WelcomeScreen() {
   // TODO: Replace with your actual Google OAuth client ID
   // You'll need to provide this from your environment variables
 
-  // Debug: Log the client ID
+  // Debug: Log the client IDs
   useEffect(() => {
     console.log('==========================================');
     console.log('Google OAuth Configuration:');
-    console.log('Client ID:', process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID);
+    console.log('iOS Client ID:', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID);
+    console.log('Android Client ID:', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID);
     console.log('==========================================');
   }, []);
 
   const { response, promptAsync } = useGoogleAuth({
-    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
-    // Use the same ID as fallback for web, though typically these differ
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+    // Web client ID is typically used for backend token validation
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
   });
 
   useEffect(() => {
