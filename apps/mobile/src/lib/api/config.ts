@@ -1,8 +1,8 @@
+import { supabase } from '@lib/supabase/client';
 import { ApiClient } from '@readspace/shared';
-import { Platform } from 'react-native';
 
 import { getSettings } from '@stores/settings';
-import { supabase } from '@lib/supabase/client';
+import { Platform } from 'react-native';
 
 // Helper to resolve hostname for Android emulator
 const resolveHostname = (url: string): string => {
@@ -25,13 +25,13 @@ export function configureApiClient(readspaceUrl?: string) {
   const settings = getSettings();
   const apiBaseUrl = resolveHostname(readspaceUrl || settings.readspace_url);
 
-  console.log('[APIClient] Configuring with baseUrl:', apiBaseUrl);
+  console.log('[API] Configuring with baseUrl:', apiBaseUrl);
 
   ApiClient.configure({
     baseUrl: apiBaseUrl,
     getAuthToken: async () => {
       if (!supabase) {
-        console.warn('[APIClient] No Supabase client available');
+        console.warn('[API] No Supabase client available');
         return null;
       }
 
@@ -52,19 +52,19 @@ export function configureApiClient(readspaceUrl?: string) {
 
         // If token expires in less than 60 seconds, refresh it
         if (timeUntilExpiry < 60) {
-          console.log('[APIClient] Token expiring soon, refreshing...');
+          console.log('[API] Token expiring soon, refreshing...');
           const {
             data: { session: refreshedSession },
             error,
           } = await supabase.auth.refreshSession();
 
           if (error) {
-            console.error('[APIClient] Failed to refresh session:', error);
+            console.error('[API] Failed to refresh session:', error);
             return session.access_token; // Return old token as fallback
           }
 
           if (refreshedSession) {
-            console.log('[APIClient] Session refreshed successfully');
+            console.log('[API] Session refreshed successfully');
             return refreshedSession.access_token;
           }
         }

@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Image, Pressable, View, type PressableProps } from 'react-native';
-import { useRouter } from 'expo-router';
 import { Text } from '@components/ui/text';
-import { stripHtml } from '@lib/utils/html';
-import { FollowButton } from './follow.button';
-import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { stripHtml } from '@lib/utils/html';
 import clsx from 'clsx';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
+import { Image, Pressable, type PressableProps, View } from 'react-native';
+import { FollowButton } from './follow.button';
 
 export interface FeedListItemProps extends PressableProps {
   title: string;

@@ -1,3 +1,30 @@
+import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
+import {
+  FolderPickerModal,
+  type FolderPickerModalRef,
+} from '@components/modals/folder-picker.modal';
+import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { Button } from '@components/ui/button';
+import { Card } from '@components/ui/card';
+import { Chip } from '@components/ui/chip';
+import { Skeleton } from '@components/ui/skeleton';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import {
+  ApiClient,
+  type FeedDiscoveryResult,
+  formatRelativeDate,
+  type SimilarFeedsResponse,
+  useCreateFeed,
+  useDeleteFeed,
+  useFeed,
+} from '@readspace/shared';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -9,35 +36,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useRouter, useSegments } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Monicon } from '@monicon/native';
-
-import {
-  ApiClient,
-  formatRelativeDate,
-  useCreateFeed,
-  useDeleteFeed,
-  useFeed,
-  type FeedDiscoveryResult,
-  type SimilarFeedsResponse,
-} from '@readspace/shared';
-import { Card } from '@components/ui/card';
-import { Button } from '@components/ui/button';
-import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
-import { Skeleton } from '@components/ui/skeleton';
-import {
-  FolderPickerModal,
-  type FolderPickerModalRef,
-} from '@/components/modals/folder-picker.modal';
-import { FolderPickerBottomSheet } from '@/components/bottom-sheets/folder-picker';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { toast } from '@components/ui/toast';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { Chip } from '@/components/ui/chip';
 
 const isIOS = Platform.OS === 'ios';
 

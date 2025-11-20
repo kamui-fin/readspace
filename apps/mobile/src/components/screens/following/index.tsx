@@ -1,47 +1,47 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  View,
-  type NativeSyntheticEvent,
-  type NativeScrollEvent,
-  RefreshControl,
-  Platform,
-} from 'react-native';
-import { Text } from '@components/ui/text';
-import { useRouter, useSegments } from 'expo-router';
-import type { SharedValue } from 'react-native-reanimated';
 
-import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { toast } from '@components/ui/toast';
-import { useToast } from '@contexts/toast-provider';
-import { EmptyState } from '@components/screens/empty-state';
-import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
-import { useFollowingStore, getTabName, getTabKey } from '@stores/following';
-import { useFeedViewStore } from '@stores/feed-view';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
 } from '@components/modals/folder-picker.modal';
-import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
-import { groupArticlesByDate } from '@lib/utils/date';
-import { COLORS } from '@lib/constants/colors';
+import { EmptyState } from '@components/screens/empty-state';
+import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
+import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
+import { useToast } from '@contexts/toast-provider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { groupArticlesByDate } from '@lib/utils/date';
 import type { Article } from '@readspace/shared';
 import {
   formatRelativeDate,
-  useInfiniteArticles,
-  useInfiniteReadLaterArticles,
-  useInfiniteTodayArticles,
-  useInfiniteRecentlyReadArticles,
-  useUpdateArticle,
   useCreateFeed,
   useFeed,
-  useUnreadCounts,
   useFeeds,
+  useInfiniteArticles,
+  useInfiniteReadLaterArticles,
+  useInfiniteRecentlyReadArticles,
+  useInfiniteTodayArticles,
+  useUnreadCounts,
+  useUpdateArticle,
 } from '@readspace/shared';
+import { useFeedViewStore } from '@stores/feed-view';
+import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
+import { useRouter, useSegments } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Platform,
+  RefreshControl,
+  View,
+} from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ListItem {
   type: 'section' | 'article' | 'divider';

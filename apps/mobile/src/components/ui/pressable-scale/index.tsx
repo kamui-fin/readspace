@@ -1,6 +1,6 @@
+import clsx from 'clsx';
 import { forwardRef } from 'react';
 import { Pressable as RNPressable, type PressableProps as RNPressableProps } from 'react-native';
-import clsx from 'clsx';
 
 export type PressableScaleProps = RNPressableProps & {
   className?: string;

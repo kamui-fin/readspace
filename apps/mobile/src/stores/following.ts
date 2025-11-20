@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { createMMKV } from 'react-native-mmkv';
+import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 
 const storage = createMMKV({
   id: 'following-storage',

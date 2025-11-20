@@ -1,7 +1,23 @@
 import 'global.css';
-import { Stack } from 'expo-router';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import * as Font from 'expo-font';
+import { SplashScreenController } from '@components/screens/splash';
+import { SessionProvider } from '@contexts/auth-context';
+import { ToastProvider } from '@contexts/toast-provider';
+import {
+  EBGaramond_400Regular,
+  EBGaramond_400Regular_Italic,
+  EBGaramond_500Medium,
+  EBGaramond_500Medium_Italic,
+  EBGaramond_600SemiBold,
+  EBGaramond_600SemiBold_Italic,
+  EBGaramond_700Bold,
+  EBGaramond_700Bold_Italic,
+} from '@expo-google-fonts/eb-garamond';
+import {
+  Figtree_400Regular,
+  Figtree_500Medium,
+  Figtree_600SemiBold,
+  Figtree_700Bold,
+} from '@expo-google-fonts/figtree';
 import {
   Geist_400Regular,
   Geist_500Medium,
@@ -14,29 +30,13 @@ import {
   GeistMono_600SemiBold,
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
-import {
-  EBGaramond_400Regular,
-  EBGaramond_500Medium,
-  EBGaramond_600SemiBold,
-  EBGaramond_700Bold,
-  EBGaramond_400Regular_Italic,
-  EBGaramond_500Medium_Italic,
-  EBGaramond_600SemiBold_Italic,
-  EBGaramond_700Bold_Italic,
-} from '@expo-google-fonts/eb-garamond';
-import {
-  Figtree_400Regular,
-  Figtree_500Medium,
-  Figtree_600SemiBold,
-  Figtree_700Bold,
-} from '@expo-google-fonts/figtree';
+import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import * as Font from 'expo-font';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { ToastProvider } from '@contexts/toast-provider';
-import { SessionProvider } from '@contexts/auth-context';
-import { SplashScreenController } from '@components/screens/splash';
-import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Import API client to initialize it
 import '@lib/api/client';
 import { configureApiClient } from '@lib/api/config';

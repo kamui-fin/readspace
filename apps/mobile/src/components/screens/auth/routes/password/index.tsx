@@ -1,14 +1,13 @@
-import { View, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { useEffect, useState } from 'react';
-import { Formik, type FormikProps } from 'formik';
-import { toFormikValidationSchema } from 'zod-formik-adapter';
-import { Monicon } from '@monicon/native';
-
-import { Text } from '@components/ui/text';
 import { Input, InputPressable } from '@components/ui/input';
-import { PasswordSchema } from '@lib/validation/auth-schemas';
-import { COLORS } from '@lib/constants/colors';
+import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { PasswordSchema } from '@lib/validation/auth-schemas';
+import { Monicon } from '@monicon/native';
+import { Formik, type FormikProps } from 'formik';
+import { useEffect, useState } from 'react';
+import { Keyboard, TouchableWithoutFeedback, View } from 'react-native';
+import { toFormikValidationSchema } from 'zod-formik-adapter';
 
 interface PasswordStepProps {
   initialPassword?: string;

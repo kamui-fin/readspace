@@ -1,19 +1,16 @@
-import { useEffect, useCallback } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { CircleCheckIcon } from '@components/icons/circle-check';
+import { CircleErrorIcon } from '@components/icons/circle-error';
+import { COLORS } from '@lib/constants/colors';
+import { useCallback, useEffect } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-
-import { scheduleOnRN } from 'react-native-worklets';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { CircleCheckIcon } from '@components/icons/circle-check';
-import { CircleErrorIcon } from '@components/icons/circle-error';
-import { COLORS } from '@lib/constants/colors';
+import { scheduleOnRN } from 'react-native-worklets';
 
 export type ToastType = 'success' | 'error';
 

@@ -1,11 +1,11 @@
-import { useEffect } from 'react';
 import { useToast as useToastContext } from '@contexts/toast-provider';
+import { useEffect } from 'react';
 import { getToastShowFunction, getToastUpdateFunction, setToastFunctions } from './functions';
 
 export type {
+  CustomToastConfig,
   ToastData,
   ToastType,
-  CustomToastConfig,
 } from '@components/ui/toast/container';
 
 type ToastOptions = {

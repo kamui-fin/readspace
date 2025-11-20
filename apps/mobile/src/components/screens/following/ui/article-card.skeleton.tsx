@@ -1,6 +1,6 @@
-import { View } from 'react-native';
-import { Skeleton } from '@components/ui/skeleton';
 import { Divider } from '@components/ui/divider';
+import { Skeleton } from '@components/ui/skeleton';
+import { View } from 'react-native';
 
 interface ArticleCardSkeletonProps {
   showTopDivider?: boolean;

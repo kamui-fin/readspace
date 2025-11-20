@@ -1,6 +1,6 @@
-import { View, Animated } from 'react-native';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { Animated, View } from 'react-native';
 
 interface PageIndicatorProps {
   count: number;

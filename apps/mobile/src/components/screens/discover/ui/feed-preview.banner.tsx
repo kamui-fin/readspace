@@ -1,9 +1,9 @@
-import { View } from 'react-native';
-import { Text } from '@components/ui/text';
 import { Button } from '@components/ui/button';
-import { Monicon } from '@monicon/native';
+import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { View } from 'react-native';
 
 interface FeedPreviewBannerProps {
   feedTitle: string;

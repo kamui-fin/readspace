@@ -1,6 +1,6 @@
 import { BlurView as RNBlurView, type BlurViewProps as RNBlurViewProps } from 'expo-blur';
 import type { ReactNode } from 'react';
-import { StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import { type StyleProp, StyleSheet, type ViewStyle } from 'react-native';
 
 export type BlurViewProps = Omit<RNBlurViewProps, 'style'> & {
   style?: StyleProp<ViewStyle>;

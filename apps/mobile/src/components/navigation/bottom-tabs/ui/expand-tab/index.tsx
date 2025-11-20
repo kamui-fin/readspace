@@ -1,17 +1,15 @@
+import { styles } from '@components/navigation/bottom-tabs/ui/expand-tab/expand-tab.styles';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import Monicon from '@monicon/native';
+import * as Haptics from 'expo-haptics';
 import { TouchableOpacity } from 'react-native';
 import Animated, {
   Extrapolation,
   interpolate,
-  useAnimatedStyle,
   type SharedValue,
+  useAnimatedStyle,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
-
-import { styles } from '@components/navigation/bottom-tabs/ui/expand-tab/expand-tab.styles';
-import { ExpandVerticalAltIcon } from '@components/icons/expand-vertical-alt';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import Monicon from '@monicon/native';
 
 interface ExpandTabProps {
   animationProgress: SharedValue<number>;

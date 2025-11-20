@@ -1,17 +1,15 @@
+import { COLORS } from '@lib/constants/colors';
 import { useEffect } from 'react';
-import { View, StyleSheet, type ViewStyle, type StyleProp } from 'react-native';
-
+import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import Animated, {
+  Easing,
   useAnimatedStyle,
   useSharedValue,
-  withRepeat,
-  withTiming,
   withDelay,
+  withRepeat,
   withSequence,
-  Easing,
+  withTiming,
 } from 'react-native-reanimated';
-
-import { COLORS } from '@lib/constants/colors';
 
 export interface DotAnimationProps {
   color?: string;

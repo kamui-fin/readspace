@@ -1,7 +1,7 @@
-import { View } from 'react-native';
-import { Skeleton } from '@components/ui/skeleton';
 import { Divider } from '@components/ui/divider';
+import { Skeleton } from '@components/ui/skeleton';
 import type { Article } from '@readspace/shared';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ArticleReaderSkeletonProps {

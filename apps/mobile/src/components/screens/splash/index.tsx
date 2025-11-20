@@ -1,7 +1,6 @@
+import { useSession } from '@contexts/auth-context';
 import { SplashScreen } from 'expo-router';
 import { useEffect } from 'react';
-
-import { useSession } from '@contexts/auth-context';
 
 SplashScreen.preventAutoHideAsync();
 

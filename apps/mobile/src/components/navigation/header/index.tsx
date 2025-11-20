@@ -1,26 +1,25 @@
+import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import type { HeaderProps } from '@components/navigation/header/type';
+import { Tab } from '@components/navigation/tab';
+import { Button } from '@components/ui/button';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
 import { Platform, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
+  Easing,
   Extrapolation,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { Button } from '@components/ui/button';
-import { Monicon } from '@monicon/native';
-import { COLORS } from '@lib/constants/colors';
-import { DEVICE_CORNER_RADIUS } from '@lib/constants/app';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { Tab } from '@components/navigation/tab';
-import type { HeaderProps } from '@components/navigation/header/type';
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
 
 export const buttonConfigs = [
   { label: 'Today', iconName: 'solar:calendar-bold' },

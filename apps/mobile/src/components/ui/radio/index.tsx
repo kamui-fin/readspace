@@ -1,9 +1,9 @@
-import { forwardRef } from 'react';
-import { Pressable, Text, View, type PressableProps } from 'react-native';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { forwardRef } from 'react';
+import { Pressable, type PressableProps, Text, View } from 'react-native';
 
 const radioVariants = cva(
   'flex-row items-center gap-3 rounded-2xl bg-grey5 px-5 py-4 transition-opacity active:opacity-80 dark:bg-grey5-dark',

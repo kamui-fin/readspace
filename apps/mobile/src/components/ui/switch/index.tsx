@@ -1,11 +1,10 @@
-import { useCallback } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-
-import { MotiView } from 'moti';
-import { Extrapolation } from 'react-native-reanimated';
-
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+
+import { MotiView } from 'moti';
+import { useCallback } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Extrapolation } from 'react-native-reanimated';
 
 const PRESET_SIZE = {
   small: {
@@ -63,7 +62,7 @@ export const Switch = (props: SwitchProps) => {
         animate={{
           translateX: checked ? width - thumbWidth - thumbOffset : thumbOffset,
         }}
-        // @ts-ignore
+        // @ts-expect-error
         transition={{ overshootClamping: Extrapolation.CLAMP }}
       />
     </Pressable>

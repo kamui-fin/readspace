@@ -1,26 +1,25 @@
-import { useCallback, useRef } from 'react';
-import { View, Platform } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useRouter, useSegments } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
-import { Monicon } from '@monicon/native';
-
-import { Card } from '@components/ui/card';
-import { Button } from '@components/ui/button';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { ApiClient, formatRelativeDate, useCreateFeed, type Article } from '@readspace/shared';
-import { FeedPreviewBanner } from '@components/screens/discover/ui/feed-preview.banner';
+import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
-} from '@/components/modals/folder-picker.modal';
-import { FolderPickerBottomSheet } from '@/components/bottom-sheets/folder-picker';
+} from '@components/modals/folder-picker.modal';
+import { FeedPreviewBanner } from '@components/screens/discover/ui/feed-preview.banner';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
+import { Button } from '@components/ui/button';
+import { Card } from '@components/ui/card';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { ApiClient, type Article, formatRelativeDate, useCreateFeed } from '@readspace/shared';
+import { useQuery } from '@tanstack/react-query';
+import { useRouter, useSegments } from 'expo-router';
+import { useCallback, useRef } from 'react';
+import { Platform, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
 

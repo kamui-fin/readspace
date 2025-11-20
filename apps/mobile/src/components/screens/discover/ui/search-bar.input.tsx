@@ -1,19 +1,19 @@
-import { forwardRef, useMemo, useCallback } from 'react';
-import type { TextInputProps } from 'react-native';
-import { View } from 'react-native';
-import { Monicon } from '@monicon/native';
-import { Input } from '@components/ui/input';
-import { Button } from '@components/ui/button';
 import { LanguageIcon } from '@components/icons/language';
+import { Button } from '@components/ui/button';
 import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuItemTitle,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { COLORS } from '@lib/constants/colors';
+import { Input } from '@components/ui/input';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { forwardRef, useCallback, useMemo } from 'react';
+import type { TextInputProps } from 'react-native';
+import { View } from 'react-native';
 
 export type Language = 'english' | 'chinese' | 'japanese';
 

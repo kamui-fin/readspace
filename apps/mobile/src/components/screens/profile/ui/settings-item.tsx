@@ -1,8 +1,8 @@
-import clsx from 'clsx';
-import { forwardRef } from 'react';
-import { Pressable, View, type PressableProps } from 'react-native';
 import { Text } from '@components/ui/text';
 import { Monicon } from '@monicon/native';
+import clsx from 'clsx';
+import { forwardRef } from 'react';
+import { Pressable, type PressableProps, View } from 'react-native';
 
 type SettingsItemVariant = 'select' | 'button' | 'link';
 

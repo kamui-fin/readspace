@@ -1,20 +1,19 @@
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { useOnFocus } from '@hooks/useOnFocus';
+import { COLORS } from '@lib/constants/colors';
+import clsx from 'clsx';
 import { forwardRef, JSX, useMemo } from 'react';
 import {
   Platform,
-  type StyleProp,
-  type TextInputProps as RNTextInputProps,
-  type TextStyle,
-  TextInput as ReactNativeTextInput,
-  View,
-  Text,
   Pressable,
   type PressableProps,
+  TextInput as ReactNativeTextInput,
+  type TextInputProps as RNTextInputProps,
+  type StyleProp,
+  Text,
+  type TextStyle,
+  View,
 } from 'react-native';
-import clsx from 'clsx';
-
-import { useOnFocus } from '@hooks/useOnFocus';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
 
 type InputProps = Omit<RNTextInputProps, 'style' | 'className'> & {
   leftElement?: JSX.Element;
@@ -107,7 +106,7 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
         <ReactNativeTextInput
           className={clsx('text-gray-900 dark:text-white')}
           style={[
-            // @ts-ignore remove focus outline on web as we'll control the focus styling
+            // @ts-expect-error remove focus outline on web as we'll control the focus styling
             Platform.select({
               web: {
                 outline: 'none',
@@ -134,7 +133,7 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          // @ts-ignore
+          // @ts-expect-error
           readOnly={disabled}
           onFocus={onFocus}
           onBlur={onBlur}

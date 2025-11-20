@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, ReactNode, useEffect } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { NativeSyntheticEvent, TextLayoutEventData } from 'react-native';
 
 export type ClampTextParams = {

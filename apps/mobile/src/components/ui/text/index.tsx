@@ -1,7 +1,7 @@
-import { forwardRef } from 'react';
-import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
+import { forwardRef } from 'react';
+import { Text as RNText, type TextProps as RNTextProps } from 'react-native';
 
 const textVariants = cva('', {
   variants: {

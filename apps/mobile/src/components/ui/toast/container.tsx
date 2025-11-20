@@ -1,23 +1,20 @@
-import { useCallback, useEffect, useRef, useMemo } from 'react';
-import { View, Text, Pressable } from 'react-native';
+import { CircleCheckIcon } from '@components/icons/circle-check';
+import { CircleErrorIcon } from '@components/icons/circle-error';
+import { CircleInfoIcon } from '@components/icons/circle-info';
+import { Spinner } from '@components/ui/spinner';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { useSegments } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { Pressable, Text, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-
-import { scheduleOnRN } from 'react-native-worklets';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useSegments } from 'expo-router';
-
-import { CircleCheckIcon } from '@components/icons/circle-check';
-import { CircleErrorIcon } from '@components/icons/circle-error';
-import { CircleInfoIcon } from '@components/icons/circle-info';
-import { Spinner } from '@components/ui/spinner';
-import { COLORS } from '@lib/constants/colors';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { scheduleOnRN } from 'react-native-worklets';
 
 export type ToastType = 'success' | 'error' | 'promise' | 'info' | 'custom';
 

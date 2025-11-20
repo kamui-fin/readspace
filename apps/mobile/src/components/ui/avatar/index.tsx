@@ -1,6 +1,6 @@
 import clsx from 'clsx';
-import BoringAvatar from 'react-native-boring-avatars';
 import { Image, View } from 'react-native';
+import BoringAvatar from 'react-native-boring-avatars';
 
 export interface AvatarProps {
   name: string;

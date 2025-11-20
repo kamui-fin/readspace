@@ -1,17 +1,17 @@
-import { View } from 'react-native';
-import { Monicon } from '@monicon/native';
+import { Button } from '@components/ui/button';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
-import { Button } from '@components/ui/button';
+import { Monicon } from '@monicon/native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import Animated, {
-  useAnimatedStyle,
-  interpolate,
   Extrapolation,
+  interpolate,
+  useAnimatedStyle,
   useSharedValue,
 } from 'react-native-reanimated';
-import type { SharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useEffect, useState, type ReactNode } from 'react';
 
 interface ArticleActionBarProps {
   scrollY?: SharedValue<number>;

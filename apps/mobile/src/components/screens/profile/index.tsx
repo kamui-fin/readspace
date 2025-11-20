@@ -1,41 +1,40 @@
-import { useState, useRef, useCallback } from 'react';
-import { View, Linking, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Monicon } from '@monicon/native';
-import * as DocumentPicker from 'expo-document-picker';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-
-import { Text } from '@components/ui/text';
+import { OPMLImportBottomSheet } from '@components/bottom-sheets/opml-import';
+import { DiscordIcon } from '@components/icons/discord';
+import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import { GitHubIcon } from '@components/icons/github';
+import { Header } from '@components/navigation/header';
+import { UserProfile } from '@components/screens/profile/ui/user-profile';
 import { Button } from '@components/ui/button';
 import { Chip } from '@components/ui/chip';
-import { useSession } from '@contexts/auth-context';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
-import { toast } from '@components/ui/toast';
-import { UserProfile } from '@/components/screens/profile/ui/user-profile';
-import { useThemeStore, type Theme } from '@stores/theme';
-import { useSettingsStore } from '@stores/settings';
-import { GitHubIcon } from '@/components/icons/github';
-import { DiscordIcon } from '@/components/icons/discord';
-import { ExpandVerticalIcon } from '@/components/icons/expand-vertical';
 import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
   DropdownMenuCheckboxItem,
-  DropdownMenuItemTitle,
+  DropdownMenuContent,
   DropdownMenuItemIcon,
   DropdownMenuItemIndicator,
+  DropdownMenuItemTitle,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Header } from '@components/navigation/header';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
+import { useSession } from '@contexts/auth-context';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { OPMLImportBottomSheet } from '@/components/bottom-sheets/opml-import';
+import { COLORS } from '@lib/constants/colors';
 import { exportFeedsToOPML, readFileContent, validateOPMLFile } from '@lib/utils/opml';
+import { Monicon } from '@monicon/native';
 import { useFeeds, useFolders } from '@readspace/shared';
+import { useSettingsStore } from '@stores/settings';
+import { type Theme, useThemeStore } from '@stores/theme';
+import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
+import { useCallback, useRef, useState } from 'react';
+import { Linking, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function ProfileScreen() {
-  const router = useRouter();
+  const router = useRouter(); // Still needed for Reading History button
   const { signOut, user } = useSession();
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
@@ -57,7 +56,7 @@ export function ProfileScreen() {
     try {
       await signOut();
       toast.success('Logged out successfully');
-      router.replace('/(auth)');
+      // Navigation is handled automatically by auth context
     } catch (error) {
       console.error('Logout error:', error);
       toast.error('Failed to log out');

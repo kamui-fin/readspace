@@ -1,10 +1,10 @@
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 import type { VariantProps } from 'class-variance-authority';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { ReactNode } from 'react';
-import { View, Text } from 'react-native';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { Text, View } from 'react-native';
 
 const bannerVariants = cva('flex-row items-center px-4 py-2 rounded-xl', {
   variants: {

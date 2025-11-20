@@ -1,4 +1,4 @@
-import Svg, { Path, Defs, LinearGradient, Stop, type SvgProps } from 'react-native-svg';
+import Svg, { Defs, LinearGradient, Path, Stop, type SvgProps } from 'react-native-svg';
 
 interface ReadspaceLogoProps extends SvgProps {
   size?: number;

@@ -1,32 +1,31 @@
-import {
-  View,
-  Pressable,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableWithoutFeedback,
-  Keyboard,
-} from 'react-native';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Formik, type FormikHelpers } from 'formik';
-import { toFormikValidationSchema } from 'zod-formik-adapter';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { useRef, useState } from 'react';
-
-import { Text } from '@components/ui/text';
+import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
+import { SelfHostSettings } from '@components/modals/self-hosted-settings.modal';
 import { Button } from '@components/ui/button';
 import { Input, InputPressable } from '@components/ui/input';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import { Monicon } from '@monicon/native';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { SelfHostSettings } from '@/components/modals/self-hosted-settings.modal';
-import { SelfHostSettingsBottomSheet } from '@/components/bottom-sheets/self-hosted-settings.bottom-sheet';
 import { useSession } from '@contexts/auth-context';
-import { useSettingsStore } from '@stores/settings';
-import { LoginSchema, type LoginFormData } from '@lib/validation/auth-schemas';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { type LoginFormData, LoginSchema } from '@lib/validation/auth-schemas';
+import { Monicon } from '@monicon/native';
+import { useSettingsStore } from '@stores/settings';
+import { router } from 'expo-router';
+import { Formik, type FormikHelpers } from 'formik';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  TouchableWithoutFeedback,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { toFormikValidationSchema } from 'zod-formik-adapter';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -38,8 +37,24 @@ export function LoginScreen() {
   const isDark = useIsDarkMode();
   const colors = COLORS[isDark ? 'dark' : 'light'];
   const [showPassword, setShowPassword] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const isSelfHosted = settings.instance_type === 'self-hosted';
+
+  // Track keyboard height to keep buttons above keyboard
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const initialValues: LoginFormData = {
     email: '',
@@ -206,12 +221,13 @@ export function LoginScreen() {
               </TouchableWithoutFeedback>
             </ScrollView>
 
-            {/* Fixed Buttons at Bottom */}
+            {/* Fixed Buttons at Bottom - Adjusts for keyboard */}
             <View
-              className="dark:bg-screen_background absolute bottom-0 left-0 right-0 bg-background"
+              className="dark:bg-screen_background absolute left-0 right-0 bg-background"
               style={{
+                bottom: keyboardHeight > 0 ? keyboardHeight : 0,
                 paddingHorizontal: Math.max(Math.min(24 * (393 / 393), 36), 20),
-                paddingBottom: Math.max(insets.bottom + 20, 40),
+                paddingBottom: keyboardHeight > 0 ? 20 : Math.max(insets.bottom + 20, 40),
               }}>
               <View className="gap-3">
                 {/* Sign In Button */}

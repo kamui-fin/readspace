@@ -1,9 +1,8 @@
-import type { ComponentProps } from 'react';
-import { Platform, type ViewStyle } from 'react-native';
+import { Text, type TextSize } from '@components/ui/text';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
-
-import { Text, type TextSize } from '@components/ui/text';
+import type { ComponentProps } from 'react';
+import { Platform, type ViewStyle } from 'react-native';
 import * as DropdownMenu from 'zeego/dropdown-menu';
 
 const reversalWebIconStyle: ViewStyle = Platform.select({

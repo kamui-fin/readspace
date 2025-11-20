@@ -1,21 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
-import { Pressable, View, Platform } from 'react-native';
-import { cva, type VariantProps } from 'class-variance-authority';
-import clsx from 'clsx';
-import { Text } from '@components/ui/text';
-import { useFeeds, useSubscribeToFeed, useDeleteFeed } from '@readspace/shared';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { toast } from '@components/ui/toast';
+import {
+  FolderPickerBottomSheet,
+  type FolderPickerBottomSheetRef,
+} from '@components/bottom-sheets/folder-picker';
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
 } from '@components/modals/folder-picker.modal';
-import {
-  FolderPickerBottomSheet,
-  type FolderPickerBottomSheetRef,
-} from '@/components/bottom-sheets/folder-picker';
 import { Spinner } from '@components/ui/spinner';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { useDeleteFeed, useFeeds, useSubscribeToFeed } from '@readspace/shared';
+import { cva, type VariantProps } from 'class-variance-authority';
+import clsx from 'clsx';
+import * as Haptics from 'expo-haptics';
+import { useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, View } from 'react-native';
 
 const followButtonVariants = cva('flex-row items-center gap-2 border', {
   variants: {
@@ -134,6 +135,8 @@ export function FollowButton({
   };
 
   const handlePress = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
     if (displayFollowing) {
       // Unfollow
       setOptimisticFollowing(false);

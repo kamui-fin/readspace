@@ -1,16 +1,15 @@
+import { Radio } from '@components/ui/radio';
+import { Text } from '@components/ui/text';
 import {
   BottomSheetBackdrop,
   type BottomSheetBackdropProps,
   BottomSheetModal,
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
+import { COLORS } from '@lib/constants/colors';
+import { useColorScheme } from 'nativewind';
 import { forwardRef, useCallback, useState } from 'react';
 import { View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useColorScheme } from 'nativewind';
-
-import { Radio } from '@components/ui/radio';
-import { COLORS } from '@lib/constants/colors';
 
 export type Language = 'english' | 'chinese' | 'japanese';
 

@@ -1,16 +1,15 @@
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
-import { Monicon } from '@monicon/native';
-
 import { Button } from '@components/ui/button';
 import { Modal } from '@components/ui/modal';
 import { Radio } from '@components/ui/radio';
-import { useFolders, useCreateFolder } from '@readspace/shared';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { toast } from '@components/ui/toast';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { useCreateFolder, useFolders } from '@readspace/shared';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { Alert, ScrollView, View } from 'react-native';
 
 export interface FolderPickerModalRef {
   present: () => void;

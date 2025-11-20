@@ -1,26 +1,25 @@
-import { useMemo } from 'react';
-import {
-  Pressable,
-  ScrollView,
-  View,
-  useWindowDimensions,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-} from 'react-native';
 import { Text } from '@components/ui/text';
-import { useRouter } from 'expo-router';
-import { Image as ExpoImage } from 'expo-image';
-import RenderHTML from 'react-native-render-html';
-import Constants from 'expo-constants';
-import { Galeria } from '@nandorojo/galeria';
-import type { SharedValue } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { stripHtml } from '@lib/utils/html';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { stripHtml } from '@lib/utils/html';
+import { Galeria } from '@nandorojo/galeria';
 import type { Article } from '@readspace/shared';
 import { calculateReadingTime } from '@readspace/shared';
+import Constants from 'expo-constants';
+import { Image as ExpoImage } from 'expo-image';
+import { useRouter } from 'expo-router';
+import { useMemo } from 'react';
+import {
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  Pressable,
+  ScrollView,
+  useWindowDimensions,
+  View,
+} from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
+import RenderHTML from 'react-native-render-html';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export interface ArticleReaderProps {
   article: Article;

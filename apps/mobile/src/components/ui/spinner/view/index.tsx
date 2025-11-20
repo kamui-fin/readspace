@@ -1,7 +1,6 @@
-import Svg, { Circle } from 'react-native-svg';
-
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import Svg, { Circle } from 'react-native-svg';
 
 const spinnerSizeMap = new Map<SpinnerProps['size'], number>([
   ['large', 48],

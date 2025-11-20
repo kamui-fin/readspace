@@ -1,16 +1,16 @@
 import { Button } from '@components/ui/button';
 import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
   DropdownMenuCheckboxItem,
-  DropdownMenuItemTitle,
+  DropdownMenuContent,
   DropdownMenuItemIcon,
   DropdownMenuItemIndicator,
+  DropdownMenuItemTitle,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Monicon } from '@monicon/native';
-import { COLORS } from '@lib/constants/colors';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
 import type { ArticleFilter } from '@stores/following';
 
 interface FilterActionButtonProps {

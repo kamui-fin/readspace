@@ -1,6 +1,5 @@
+import { ArticleScreen } from '@components/screens/article-reader/view';
 import { useLocalSearchParams } from 'expo-router';
-
-import { ArticleScreen } from '@/components/screens/article-reader/view';
 
 export default function ArticleRoute() {
   const { id, isSubscribed: isSubscribedParam } = useLocalSearchParams<{

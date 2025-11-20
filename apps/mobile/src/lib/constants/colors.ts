@@ -1,8 +1,8 @@
 /***  Color constants for the mobile app*  Based on tailwind.config.js color definitions*/
 
 export const COLORS = {
-  white: 'rgb(255, 255, 255)',
-  black: 'rgb(0, 0, 0)',
+  white: 'rgb(252, 255, 252)',
+  black: 'rgb(26, 26, 26)',
   transparent: 'transparent',
   white_extra_low_opacity: 'rgba(255, 255, 255, 0.1)',
   white_low_opacity: 'rgba(255, 255, 255, 0.15)',

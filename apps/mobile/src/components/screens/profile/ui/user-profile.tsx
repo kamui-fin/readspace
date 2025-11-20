@@ -1,7 +1,7 @@
+import { Avatar } from '@components/ui/avatar';
+import { Text } from '@components/ui/text';
 import clsx from 'clsx';
 import { View } from 'react-native';
-import { Text } from '@components/ui/text';
-import { Avatar } from '@components/ui/avatar';
 
 export interface UserProfileProps {
   name: string;

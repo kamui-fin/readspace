@@ -1,23 +1,22 @@
-import { forwardRef, useCallback, useEffect, useRef } from 'react';
-import { Pressable, type PressableProps, View } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-  interpolate,
-  Extrapolation,
-  runOnJS,
-  withTiming,
-} from 'react-native-reanimated';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-
-import { Card, type CardProps } from '../../../ui/card/index';
-import { Monicon } from '@monicon/native';
 import { Divider } from '@components/ui/divider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
 import type { Article } from '@readspace/shared';
 import { useArticleActionsStore } from '@stores/article-actions';
+import { forwardRef, useCallback, useEffect, useRef } from 'react';
+import { Pressable, type PressableProps, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  Extrapolation,
+  interpolate,
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { Card, type CardProps } from '../../../ui/card/index';
 
 export interface SwipeAction {
   id: string;

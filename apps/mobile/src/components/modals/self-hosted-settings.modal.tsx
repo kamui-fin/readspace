@@ -202,15 +202,12 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
       <Modal
         ref={ref}
         headerTitle="Self-hosted connection"
+        headerTitleAlign="left"
         onClose={handleClose}
         snapPoints={['90%']}
         enablePanDownToClose={true}>
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <View className="flex-1">
-            <Text className="font-geist mb-6 text-base text-grey dark:text-grey">
-              Connect to your own Readspace instance
-            </Text>
-
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
               <View className="gap-4 pb-4">
                 {/* API URL */}
@@ -271,7 +268,7 @@ export const SelfHostSettings = forwardRef<BottomSheetModal, SelfHostSettingsPro
             </ScrollView>
 
             {/* Save Button */}
-            <View className="pb-6 pt-4">
+            <View className="pt-4">
               <Button
                 variant="primary"
                 size="large"

@@ -1,22 +1,21 @@
-import { useRef, useState } from 'react';
-import { View, Pressable, Platform } from 'react-native';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomSheetModal } from '@gorhom/bottom-sheet';
-
-import { Text } from '@components/ui/text';
-import { Stepper, type StepperRef } from '@components/navigation/stepper';
-import { Button } from '@components/ui/button';
-import { toast } from '@components/ui/toast';
-import { SelfHostSettings } from '@components/modals/self-hosted-settings.modal';
 import { SelfHostSettingsBottomSheet } from '@components/bottom-sheets/self-hosted-settings.bottom-sheet';
+import { SelfHostSettings } from '@components/modals/self-hosted-settings.modal';
+import { Stepper, type StepperRef } from '@components/navigation/stepper';
+import { EmailStep } from '@components/screens/auth/routes/email';
+import { PasswordStep } from '@components/screens/auth/routes/password';
+import { VerificationStep } from '@components/screens/auth/routes/verification';
+import { Button } from '@components/ui/button';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
 import { useSession } from '@contexts/auth-context';
-import { useSettingsStore } from '@stores/settings';
-import { SPACING, BUTTON_BORDER_RADIUS } from '@lib/constants/app';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { BUTTON_BORDER_RADIUS, SPACING } from '@lib/constants/app';
 import { EmailSchema, PasswordSchema } from '@lib/validation/auth-schemas';
-import { EmailStep } from '@/components/screens/auth/routes/email';
-import { PasswordStep } from '@/components/screens/auth/routes/password';
-import { VerificationStep } from '@/components/screens/auth/routes/verification';
+import { useSettingsStore } from '@stores/settings';
+import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Keyboard, Platform, Pressable, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -31,6 +30,22 @@ export function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Track keyboard height to keep buttons above keyboard
+  useEffect(() => {
+    const showSubscription = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardHeight(e.endCoordinates.height);
+    });
+    const hideSubscription = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, []);
 
   const handleSelfHostSave = (data: {
     apiUrl: string;
@@ -125,16 +140,17 @@ export function SignupScreen() {
     <View className="dark:bg-screen_background flex-1 bg-background">
       <Stepper ref={stepperRef} pages={pages} onStepChange={setCurrentStep} initialStep={0} />
 
-      {/* Fixed Buttons at Bottom - Hide on verification screen */}
+      {/* Fixed Buttons at Bottom - Hide on verification screen - Adjusts for keyboard */}
       {currentStep < pages.length - 1 && (
         <View
-          className="dark:bg-screen_background absolute bottom-0 left-0 right-0 bg-background"
+          className="dark:bg-screen_background absolute left-0 right-0 bg-background"
           style={{
+            bottom: keyboardHeight > 0 ? keyboardHeight : 0,
             paddingHorizontal: Math.max(
               Math.min(SPACING.ONBOARDING_CONTENT_PADDING * (393 / 393), 36),
               20
             ),
-            paddingBottom: Math.max(insets.bottom + 20, 40),
+            paddingBottom: keyboardHeight > 0 ? 20 : Math.max(insets.bottom + 20, 40),
           }}
           pointerEvents="box-none">
           <View className="gap-3">

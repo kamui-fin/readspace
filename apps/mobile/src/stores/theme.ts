@@ -1,8 +1,8 @@
-import { Appearance, type ColorSchemeName } from 'react-native';
 import { colorScheme } from 'nativewind';
+import { Appearance, type ColorSchemeName } from 'react-native';
+import { createMMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { createMMKV } from 'react-native-mmkv';
 
 const storage = createMMKV({
   id: 'theme-storage',

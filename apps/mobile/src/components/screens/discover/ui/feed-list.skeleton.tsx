@@ -1,6 +1,6 @@
-import { View } from 'react-native';
 import { Skeleton } from '@components/ui/skeleton';
 import { useMemo } from 'react';
+import { View } from 'react-native';
 
 interface FeedListSkeletonProps {
   count?: number;

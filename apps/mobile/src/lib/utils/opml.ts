@@ -1,7 +1,7 @@
-import { XMLParser } from 'fast-xml-parser';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Sharing from 'expo-sharing';
 import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import { XMLParser } from 'fast-xml-parser';
 
 export interface OPMLValidationResult {
   isValid: boolean;

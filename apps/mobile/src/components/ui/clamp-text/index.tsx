@@ -1,7 +1,6 @@
-import { useRef, ReactNode } from 'react';
-import { Platform, Text } from 'react-native';
-
 import { useClampText } from '@hooks/useClampText';
+import { ReactNode, useRef } from 'react';
+import { Platform, Text } from 'react-native';
 
 export type ClampTextProps = {
   text?: string | Iterable<ReactNode> | null;
@@ -48,7 +47,7 @@ export const ClampText = ({
       style={
         Platform.OS === 'web'
           ? {
-              // @ts-ignore
+              // @ts-expect-error
               wordBreak: 'break-word',
             }
           : {}

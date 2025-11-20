@@ -1,18 +1,17 @@
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useState } from 'react';
-import { View, Text } from 'react-native';
-import type * as DocumentPicker from 'expo-document-picker';
-import { Monicon } from '@monicon/native';
-import { useRouter } from 'expo-router';
-
-import { Button } from '@components/ui/button';
 import { BottomSheet } from '@components/ui/bottom-sheet';
+import { Button } from '@components/ui/button';
 import { Spinner } from '@components/ui/spinner';
 import { toast } from '@components/ui/toast';
-import { useImportOPML } from '@readspace/shared';
-import { COLORS } from '@lib/constants/colors';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { useImportOPML } from '@readspace/shared';
+import type * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
+import { forwardRef, useCallback, useState } from 'react';
+import { Text, View } from 'react-native';
 
 export interface OPMLImportBottomSheetProps {
   file: DocumentPicker.DocumentPickerAsset | null;

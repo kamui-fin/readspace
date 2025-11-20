@@ -1,17 +1,20 @@
-import { Redirect } from 'expo-router';
 import { useSession } from '@contexts/auth-context';
+import { Redirect } from 'expo-router';
 
 export default function Index() {
   const { session, isLoading } = useSession();
 
-  // Show nothing while checking auth state
+  // While auth is loading, show nothing (splash screen remains visible)
+  // This prevents flashing the wrong screen before auth state is determined
   if (isLoading) {
     return null;
   }
 
-  // Redirect based on authentication state
+  // Once auth state is loaded, redirect directly to the appropriate route
+  // Note: We redirect to the tab route directly, not to intermediate index routes
+  // to avoid multiple redirects
   if (session) {
-    return <Redirect href="/(protected)" />;
+    return <Redirect href="/(protected)/(tabs)" />;
   }
 
   return <Redirect href="/(auth)" />;

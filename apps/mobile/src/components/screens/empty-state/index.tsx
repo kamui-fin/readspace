@@ -1,12 +1,11 @@
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
 import type React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
-
-import { Text } from '@components/ui/text';
-import { Monicon } from '@monicon/native';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { type StyleProp, View, type ViewStyle } from 'react-native';
 
 const emptyStateVariants = cva('items-center justify-center px-6', {
   variants: {

@@ -1,29 +1,28 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Share, View, Linking } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useQueryClient } from '@tanstack/react-query';
-import { useSharedValue } from 'react-native-reanimated';
-import * as Clipboard from 'expo-clipboard';
-
 import { ArticleReader } from '@components/screens/article-reader/index';
-import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
 import { ArticleActionBar } from '@components/screens/article-reader/ui/article-actions.bar';
+import { ArticleReaderSkeleton } from '@components/screens/article-reader/ui/article-reader.skeleton';
+import { Button } from '@components/ui/button';
 import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuItemTitle,
   DropdownMenuItemIcon,
+  DropdownMenuItemTitle,
+  DropdownMenuRoot,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@components/ui/dropdown-menu';
-import { Button } from '@components/ui/button';
-import { Monicon } from '@monicon/native';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import { useArticle, useUpdateArticle, useExtractFullText } from '@readspace/shared';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { useArticle, useExtractFullText, useUpdateArticle } from '@readspace/shared';
+import { useQueryClient } from '@tanstack/react-query';
+import * as Clipboard from 'expo-clipboard';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
+import { Linking, Share, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 interface ArticleScreenProps {
   articleId: string;

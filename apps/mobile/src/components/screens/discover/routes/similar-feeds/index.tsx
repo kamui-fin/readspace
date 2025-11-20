@@ -1,30 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Platform, ScrollView, View } from 'react-native';
-import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useQuery } from '@tanstack/react-query';
-import { useFocusEffect } from 'expo-router';
-import { Monicon } from '@monicon/native';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
-
-import { ApiClient, useCreateFeed, type SimilarFeedsResponse } from '@readspace/shared';
-import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
 } from '@components/modals/folder-picker.modal';
-import { FolderPickerBottomSheet } from '@/components/bottom-sheets/folder-picker';
+import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Skeleton } from '@components/ui/skeleton';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { Text } from '@components/ui/text';
 import { toast } from '@components/ui/toast';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
 import { useDiscoverScroll } from '@contexts/discover-scroll-context';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { ApiClient, type SimilarFeedsResponse, useCreateFeed } from '@readspace/shared';
+import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import { Platform, ScrollView, View } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 
 const isIOS = Platform.OS === 'ios';
 

@@ -1,12 +1,11 @@
-import { useCallback, useMemo } from 'react';
-import { Platform, Pressable, PressableProps } from 'react-native';
+import { useIsDarkMode, useOnFocus, useOnHover } from '@hooks/index';
+import { COLORS } from '@lib/constants/colors';
 
 import { MotiView } from 'moti';
+import { useCallback, useMemo } from 'react';
+import { Platform, Pressable, PressableProps } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Path, Svg } from 'react-native-svg';
-
-import { useOnFocus, useOnHover, useIsDarkMode } from '@hooks/index';
-import { COLORS } from '@lib/constants/colors';
 
 export type CheckboxProps = Omit<PressableProps, 'onChange'> & {
   onChange: (checked: boolean) => void;
@@ -54,7 +53,7 @@ export const Checkbox = ({ checked, onChange, hitSlop = 14, disabled, ...rest }:
       accessibilityState={{ checked }}
       disabled={disabled}
       hitSlop={hitSlop}
-      //@ts-ignore - web only - checkbox toggle on spacebar press
+      //@ts-expect-error - web only - checkbox toggle on spacebar press
       onKeyDown={Platform.select({
         web: (e: any) => {
           if (e.code === 'Space') handleChange();

@@ -1,11 +1,10 @@
-import type { Session, User } from '@supabase/supabase-js';
-import type React from 'react';
-import { createContext, use, useEffect, useState } from 'react';
-import { useRouter, useSegments } from 'expo-router';
-
-import { supabase } from '@lib/supabase/client';
 import { useStorageState } from '@hooks/useStorageState';
 import { configureApiClient } from '@lib/api/config';
+import { supabase } from '@lib/supabase/client';
+import type { Session, User } from '@supabase/supabase-js';
+import { useRouter, useSegments } from 'expo-router';
+import type React from 'react';
+import { createContext, use, useEffect, useState } from 'react';
 
 interface SignUpCredentials {
   email: string;
@@ -25,6 +24,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signIn: (credentials: SignInCredentials) => Promise<void>;
   signUp: (credentials: SignUpCredentials) => Promise<void>;
+  signInWithGoogle: (idToken: string, accessToken: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -35,6 +35,7 @@ const AuthContext = createContext<AuthContextType>({
   signOut: async () => {},
   signIn: async () => {},
   signUp: async () => {},
+  signInWithGoogle: async () => {},
 });
 
 export function useSession() {
@@ -50,11 +51,15 @@ interface SessionProviderProps {
 }
 
 export function SessionProvider({ children }: SessionProviderProps) {
-  const [[isLoading, storedSession], setStoredSession] = useStorageState('session');
+  const [[isStorageLoading], setStoredSession] = useStorageState('session');
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
+  const [isSessionLoading, setIsSessionLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+
+  // Combined loading state: wait for both storage and Supabase session check
+  const isLoading = isStorageLoading || isSessionLoading;
 
   useEffect(() => {
     // Get initial session
@@ -75,6 +80,9 @@ export function SessionProvider({ children }: SessionProviderProps) {
         configureApiClient();
       } catch (error) {
         console.error('Error getting session:', error);
+      } finally {
+        // Mark session check as complete
+        setIsSessionLoading(false);
       }
     };
 
@@ -104,26 +112,24 @@ export function SessionProvider({ children }: SessionProviderProps) {
     };
   }, [setStoredSession]);
 
-  // Handle navigation based on auth state
+  // Handle navigation based on auth state changes
+  // Note: Initial routing is handled by /app/index.tsx
   useEffect(() => {
     if (isLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const inProtectedGroup = segments[0] === '(protected)';
 
+    // Only redirect if user is in the wrong section after auth state changes
+    // This prevents unnecessary redirects during initial load
     if (!session && inProtectedGroup) {
-      // Redirect to auth if not authenticated
+      // Redirect to auth
       router.replace('/(auth)');
     } else if (session && inAuthGroup) {
-      // Redirect to protected route if authenticated
-      router.replace('/(protected)');
+      // Redirect directly to protected tabs instead of root to avoid redirect loop
+      router.replace('/(protected)/(tabs)');
     }
-  }, [
-    session,
-    segments,
-    isLoading, // Redirect to protected route if authenticated
-    router.replace,
-  ]);
+  }, [session, segments, isLoading, router]);
 
   const signIn = async (credentials: SignInCredentials) => {
     const { error } = await supabase.auth.signInWithPassword({
@@ -151,6 +157,22 @@ export function SessionProvider({ children }: SessionProviderProps) {
     await supabase.auth.signOut();
   };
 
+  const signInWithGoogle = async (idToken: string, accessToken: string) => {
+    const { error } = await supabase.auth.signInWithIdToken({
+      provider: 'google',
+      token: idToken,
+      access_token: accessToken,
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    // Note: The onAuthStateChange listener will handle session updates
+    // We don't need to manually set session here as it will be set by the listener
+    // This ensures proper navigation flow through the auth state change effect
+  };
+
   const value: AuthContextType = {
     user,
     session,
@@ -159,6 +181,7 @@ export function SessionProvider({ children }: SessionProviderProps) {
     signOut,
     signIn,
     signUp,
+    signInWithGoogle,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,21 +1,20 @@
-import { useCallback, useRef, useState } from 'react';
-import { Keyboard, Pressable, ScrollView, TouchableWithoutFeedback, View } from 'react-native';
-import type { TextInput as RNTextInput } from 'react-native';
-import { Text } from '@components/ui/text';
-import { useQuery } from '@tanstack/react-query';
-import { Monicon } from '@monicon/native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { SearchBar, type Language } from '@components/screens/discover/ui/search-bar.input';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { Chip } from '@components/ui/chip';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
+import { type Language, SearchBar } from '@components/screens/discover/ui/search-bar.input';
+import { Chip } from '@components/ui/chip';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
 import { Skeleton } from '@components/ui/skeleton';
-import { useSearchHistory } from '@stores/search-history';
-import { ApiClient, useTrendingFeeds, type DiscoverSearchResponse } from '@readspace/shared';
-import { COLORS } from '@lib/constants/colors';
+import { Text } from '@components/ui/text';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { ApiClient, type DiscoverSearchResponse, useTrendingFeeds } from '@readspace/shared';
+import { useSearchHistory } from '@stores/search-history';
+import { useQuery } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
+import type { TextInput as RNTextInput } from 'react-native';
+import { Keyboard, Pressable, ScrollView, TouchableWithoutFeedback, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const CATEGORIES = [
   'Technology & Programming',

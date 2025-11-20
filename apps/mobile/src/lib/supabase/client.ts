@@ -1,8 +1,8 @@
 import { AppState, Platform } from 'react-native';
 import 'react-native-url-polyfill/auto';
+import { getSettings } from '@stores/settings';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { createMMKV } from 'react-native-mmkv';
-import { getSettings } from '@stores/settings';
 
 // Create MMKV storage instance for Supabase auth
 // Using a separate instance for auth data

@@ -1,5 +1,5 @@
-import type { SharedValue } from 'react-native-reanimated';
 import type { ReactNode } from 'react';
+import type { SharedValue } from 'react-native-reanimated';
 
 export interface HeaderAction {
   label: string;

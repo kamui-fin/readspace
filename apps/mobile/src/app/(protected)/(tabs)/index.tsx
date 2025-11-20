@@ -1,16 +1,15 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
-import { View, BackHandler, Platform } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect } from 'expo-router';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-
+import { FeedSwitcherBottomSheet } from '@components/bottom-sheets/feed-switcher';
 import { Header } from '@components/navigation/header';
 import { FollowingScreen } from '@components/screens/following';
-import { useFollowingStore } from '@stores/following';
+import { FilterActionButton } from '@components/screens/following/ui/filter-action.button';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { useFeedViewStore } from '@stores/feed-view';
-import { FilterActionButton } from '@/components/screens/following/ui/filter-action.button';
-import { FeedSwitcherBottomSheet } from '@/components/bottom-sheets/feed-switcher';
+import { useFollowingStore } from '@stores/following';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BackHandler, Platform, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function FollowingRoute() {
   const scrollY = useSharedValue(0);

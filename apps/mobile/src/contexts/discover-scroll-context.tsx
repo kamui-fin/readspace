@@ -1,6 +1,6 @@
+import type { ReactNode } from 'react';
 import { createContext, useContext } from 'react';
 import type { SharedValue } from 'react-native-reanimated';
-import type { ReactNode } from 'react';
 
 export interface DiscoverScrollContextType {
   scrollY?: SharedValue<number>;

@@ -1,29 +1,28 @@
-import { forwardRef, useImperativeHandle, useRef, useCallback, useMemo } from 'react';
-import { View, Text, useColorScheme } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-import { Monicon } from '@monicon/native';
-
-import { BottomSheet } from '@components/ui/bottom-sheet';
-import { Chip } from '@components/ui/chip';
-import { Button } from '@components/ui/button';
-import { COLORS } from '@lib/constants/colors';
-import {
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuItemTitle,
-  DropdownMenuItemIcon,
-} from '@components/ui/dropdown-menu';
-import { useFeeds, useFolders, type Feed, type Folder } from '@readspace/shared';
-import { useFeedViewStore } from '@stores/feed-view';
-import { useFeedSwitcherStore, type FeedSwitcherStore } from '@stores/feed-switcher';
-import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
 import {
   CreateFolderModal,
   type CreateFolderModalRef,
 } from '@components/bottom-sheets/create-folder';
+import { ExpandVerticalIcon } from '@components/icons/expand-vertical';
+import { BottomSheet } from '@components/ui/bottom-sheet';
+import { Button } from '@components/ui/button';
+import { Chip } from '@components/ui/chip';
+import {
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuItemIcon,
+  DropdownMenuItemTitle,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+} from '@components/ui/dropdown-menu';
 import type { BottomSheetModal } from '@gorhom/bottom-sheet';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
+import { type Feed, type Folder, useFeeds, useFolders } from '@readspace/shared';
+import { type FeedSwitcherStore, useFeedSwitcherStore } from '@stores/feed-switcher';
+import { useFeedViewStore } from '@stores/feed-view';
+import { Image as ExpoImage } from 'expo-image';
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
+import { Text, useColorScheme, View } from 'react-native';
 
 export interface FeedSwitcherBottomSheetRef {
   present: () => void;

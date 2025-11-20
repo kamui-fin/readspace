@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, ViewProps, StyleProp, ViewStyle, View, DimensionValue } from 'react-native';
+import { DimensionValue, StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
 
 export interface DividerProps extends ViewProps {
   /**  Applies style to the divider. */

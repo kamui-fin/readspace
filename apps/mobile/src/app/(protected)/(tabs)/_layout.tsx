@@ -1,11 +1,5 @@
-import { Tabs, useSegments, useRouter } from 'expo-router';
-import { useState, useCallback } from 'react';
-import type { SharedValue } from 'react-native-reanimated';
-import type { ReactNode } from 'react';
-import { View } from 'react-native';
-
-import { BottomTabbar } from '@components/navigation/bottom-tabs';
 import { TabBarIcon } from '@components/navigation/bottom-tab-bar-icon';
+import { BottomTabbar } from '@components/navigation/bottom-tabs';
 import { Header } from '@components/navigation/header';
 import { Avatar } from '@components/ui/avatar';
 import { useSession } from '@contexts/auth-context';
@@ -13,6 +7,11 @@ import {
   DiscoverScrollContext,
   type DiscoverScrollContextType,
 } from '@contexts/discover-scroll-context';
+import { Tabs, useRouter, useSegments } from 'expo-router';
+import type { ReactNode } from 'react';
+import { useCallback, useState } from 'react';
+import { View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 
 export default function TabsLayout() {
   const segments = useSegments();

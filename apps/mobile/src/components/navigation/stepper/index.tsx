@@ -1,11 +1,10 @@
-import type React from 'react';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Animated, KeyboardAvoidingView, Platform, View, useWindowDimensions } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { PAGE_INDICATOR, SPACING } from '@lib/constants/app';
 import { COLORS } from '@lib/constants/colors';
+import type React from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { Animated, KeyboardAvoidingView, Platform, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PageIndicator } from '../page-indicator';
 
 interface StepperProps {

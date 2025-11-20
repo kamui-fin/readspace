@@ -1,27 +1,27 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, RefreshControl } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Text } from '@components/ui/text';
 import { Header } from '@components/navigation/header';
-import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { toast } from '@components/ui/toast';
-import { useToast } from '@contexts/toast-provider';
 import { EmptyState } from '@components/screens/empty-state';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { groupArticlesByDate } from '@lib/utils/date';
-import { COLORS } from '@lib/constants/colors';
+import { ArticleItemCard } from '@components/screens/following/ui/article-item.card';
+import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
+import { Text } from '@components/ui/text';
+import { toast } from '@components/ui/toast';
+import { useToast } from '@contexts/toast-provider';
 import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
+import { COLORS } from '@lib/constants/colors';
+import { groupArticlesByDate } from '@lib/utils/date';
 import type { Article } from '@readspace/shared';
 import {
   formatRelativeDate,
   useInfiniteRecentlyReadArticles,
   useUpdateArticle,
 } from '@readspace/shared';
+import { useRouter, useSegments } from 'expo-router';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { RefreshControl, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface ListItem {
   type: 'section' | 'article' | 'divider';

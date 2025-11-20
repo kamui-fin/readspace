@@ -1,13 +1,12 @@
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
-
+import { BottomSheet } from '@components/ui/bottom-sheet';
 import { Button } from '@components/ui/button';
 import { Input } from '@components/ui/input';
-import { useCreateFolder } from '@readspace/shared';
 import { toast } from '@components/ui/toast';
-import { BottomSheet } from '@components/ui/bottom-sheet';
+import type { BottomSheetModal } from '@gorhom/bottom-sheet';
 import { BUTTON_BORDER_RADIUS } from '@lib/constants/app';
+import { useCreateFolder } from '@readspace/shared';
+import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from 'react';
+import { Text, View } from 'react-native';
 
 export interface CreateFolderModalRef {
   present: () => void;

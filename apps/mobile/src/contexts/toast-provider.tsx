@@ -1,8 +1,8 @@
 import type React from 'react';
-import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { View } from 'react-native';
 
-import { ToastItem, type ToastData } from '../components/ui/toast/container';
+import { type ToastData, ToastItem } from '../components/ui/toast/container';
 import { setToastFunctions } from '../components/ui/toast/functions';
 
 interface ToastContextType {

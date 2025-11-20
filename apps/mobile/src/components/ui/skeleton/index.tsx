@@ -3,12 +3,12 @@ import clsx from 'clsx';
 import { useEffect } from 'react';
 import { View } from 'react-native';
 import Animated, {
-  useSharedValue,
+  Easing,
   useAnimatedStyle,
+  useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
-  Easing,
 } from 'react-native-reanimated';
 
 const skeletonVariants = cva('bg-grey5 dark:bg-grey5-dark', {

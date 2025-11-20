@@ -1,12 +1,11 @@
-import type { VariantProps } from 'class-variance-authority';
-import clsx from 'clsx';
-import type { ReactNode } from 'react';
-import { Pressable, type PressableProps, Text, View, StyleSheet } from 'react-native';
-
 import { buttonVariants } from '@components/ui/button/constants/button-variants';
 import { textVariants } from '@components/ui/button/constants/text-variants';
 import { ThreeDotsAnimation } from '@components/ui/three-dots';
 import { COLORS } from '@lib/constants/colors';
+import type { VariantProps } from 'class-variance-authority';
+import clsx from 'clsx';
+import type { ReactNode } from 'react';
+import { Pressable, type PressableProps, StyleSheet, Text, View } from 'react-native';
 
 export interface ButtonProps
   extends Omit<PressableProps, 'children'>,
@@ -42,7 +41,7 @@ export function Button({
   // Check if children is text content (string, number, or Text component with text children)
   let isTextContent = typeof children === 'string' || typeof children === 'number';
   let textContent = children;
-  let textStyle = undefined;
+  let textStyle;
 
   // Handle Text component as children - extract its props
   if (!isTextContent && typeof children === 'object' && children !== null && 'props' in children) {

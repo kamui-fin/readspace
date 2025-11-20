@@ -1,6 +1,6 @@
+import { COLORS } from '@lib/constants/colors';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import { COLORS } from '@lib/constants/colors';
 
 export type SpinnerSize = 'small' | 'medium' | 'large';
 

@@ -1,12 +1,11 @@
-import { useCallback } from 'react';
-import { NativeSyntheticEvent, View } from 'react-native';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
 
 import RNSegmentedControl, {
   NativeSegmentedControlIOSChangeEvent,
 } from '@react-native-segmented-control/segmented-control';
-
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { COLORS } from '@lib/constants/colors';
+import { useCallback } from 'react';
+import { NativeSyntheticEvent, View } from 'react-native';
 
 type SegmentedControlProps = {
   values: string[];

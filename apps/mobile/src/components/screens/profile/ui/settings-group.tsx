@@ -1,7 +1,7 @@
-import clsx from 'clsx';
-import { View } from 'react-native';
-import type { ReactNode } from 'react';
 import { Text } from '@components/ui/text';
+import clsx from 'clsx';
+import type { ReactNode } from 'react';
+import { View } from 'react-native';
 
 interface SettingsGroupProps {
   title: string;

@@ -1,16 +1,15 @@
+import { RssIcon } from '@components/icons/rss';
+import { Divider } from '@components/ui/divider';
+import { Text } from '@components/ui/text';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { stripHtml } from '@lib/utils/html';
+import { Monicon } from '@monicon/native';
 import { cva, type VariantProps } from 'class-variance-authority';
 import clsx from 'clsx';
+import { Image as ExpoImage } from 'expo-image';
 import type { ReactNode } from 'react';
 import { forwardRef, useState } from 'react';
 import { Pressable, type PressableProps, View } from 'react-native';
-import { Image as ExpoImage } from 'expo-image';
-
-import { Text } from '@components/ui/text';
-import { Divider } from '@components/ui/divider';
-import { RssIcon } from '@components/icons/rss';
-import { Monicon } from '@monicon/native';
-import { stripHtml } from '@lib/utils/html';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 const cardVariants = cva('bg-background dark:bg-background-dark', {
   variants: {

@@ -1,11 +1,10 @@
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import { Monicon } from '@monicon/native';
 import { cva } from 'class-variance-authority';
 import clsx from 'clsx';
 import type { PressableProps } from 'react-native';
 import { Pressable, Text, View } from 'react-native';
-
-import { Monicon } from '@monicon/native';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 const tabVariants = cva('flex-row items-center justify-center px-4 py-2.5 rounded-lg', {
   variants: {

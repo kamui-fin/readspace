@@ -1,18 +1,18 @@
+import { styles } from '@components/navigation/bottom-tabs/ui/animated-tab/animated-tab.styles';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
+import { COLORS } from '@lib/constants/colors';
+import * as Haptics from 'expo-haptics';
 import { useEffect } from 'react';
 import { TouchableOpacity } from 'react-native';
 import Animated, {
   Easing,
   Extrapolation,
   interpolate,
+  type SharedValue,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-  type SharedValue,
 } from 'react-native-reanimated';
-
-import { styles } from '@components/navigation/bottom-tabs/ui/animated-tab/animated-tab.styles';
-import { COLORS } from '@lib/constants/colors';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
 
 interface AnimatedTabProps {
   isFocused: boolean;
@@ -76,11 +76,21 @@ export const AnimatedTab: React.FC<AnimatedTabProps> = ({
     };
   });
 
+  const handlePress = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onPress();
+  };
+
+  const handleLongPress = (): void => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onLongPress();
+  };
+
   return (
     <TouchableOpacity
       activeOpacity={0.7}
-      onPress={onPress}
-      onLongPress={onLongPress}
+      onPress={handlePress}
+      onLongPress={handleLongPress}
       style={styles.tab}>
       <Animated.View
         style={[

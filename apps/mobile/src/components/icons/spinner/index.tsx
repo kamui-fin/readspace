@@ -1,14 +1,12 @@
+import { getSpinnerSize, SpinnerProps, SpinnerView } from '@components/icons/spinner/spinner-view';
 import { useEffect } from 'react';
-
 import Animated, {
   Easing,
-  useSharedValue,
-  withTiming,
-  withRepeat,
   useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
 } from 'react-native-reanimated';
-
-import { getSpinnerSize, SpinnerView, SpinnerProps } from '@components/icons/spinner/spinner-view';
 
 export const Spinner = ({ size, duration = 750, ...rest }: SpinnerProps) => {
   const transition = useSharedValue(0);
