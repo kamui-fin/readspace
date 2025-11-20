@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.resource_limits import RESOURCE_LIMITS
-from app.crud import crud_profile
+from app.crud.profile import get_profile_by_id
 from app.models import FeedSubscription
 
 
@@ -105,7 +105,7 @@ async def check_subscription_limit(
     Raises:
         HTTPException: 404 if user profile not found, 429 if subscription limit exceeded
     """
-    profile = await crud_profile.get_by_id(db, user_id=user_id)
+    profile = await get_profile_by_id(db, user_id=user_id)
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

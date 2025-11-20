@@ -1,4 +1,4 @@
-"""Query builder for article queries."""
+"""Query builder for feed article queries."""
 
 from datetime import datetime
 from typing import Any
@@ -18,8 +18,8 @@ from app.models import (
 from app.utils.query_helpers import apply_boolean_filter
 
 
-class ArticleQueryBuilder:
-    """Builds SQLAlchemy queries for article filtering and sorting."""
+class FeedArticleQueryBuilder:
+    """Builds SQLAlchemy queries for feed article filtering and sorting."""
 
     def __init__(self, user_id: UUID, allow_preview: bool = False, load_full_content: bool = False):
         self.user_id = user_id

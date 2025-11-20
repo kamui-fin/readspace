@@ -7,7 +7,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-from app.crud.profile import crud_profile
+from app.crud.profile import create_profile_if_not_exists
 from app.db.session import get_db
 from app.services.user.auth import get_optional_user
 
@@ -38,7 +38,7 @@ class UserProfileMiddleware(BaseHTTPMiddleware):
                     try:
                         # Check if profile exists and create if needed
                         # This is cached at the DB level with upsert, so it's efficient
-                        await crud_profile.create_if_not_exists(db, user_id=user_id, email=email)
+                        await create_profile_if_not_exists(db, user_id=user_id, email=email)
 
                         logger.debug(
                             "User profile ensured via middleware",

@@ -53,7 +53,9 @@ class FeedEnrichmentService:
                 logger.info("Created batch request file", file_path=temp_file.name, batch_size=len(batch_requests))
 
                 uploaded_file = self._upload_file(temp_file.name, len(batch_requests))
-                logger.info("Uploaded batch file to Gemini", file_name=uploaded_file.name, batch_size=len(batch_requests))
+                logger.info(
+                    "Uploaded batch file to Gemini", file_name=uploaded_file.name, batch_size=len(batch_requests)
+                )
 
                 batch_job = await self._create_batch_job_with_retry(uploaded_file.name, len(batch_requests))
                 logger.info("Batch enrichment job created", job_name=batch_job.name, batch_size=len(batch_requests))
@@ -295,7 +297,9 @@ Return a JSON object with exactly these keys:
                     elif "error" in result_obj:
                         logger.warning("Batch request failed", key=key, error=result_obj["error"])
                     else:
-                        logger.warning("Unexpected batch result structure", key=key, result_keys=list(result_obj.keys()))
+                        logger.warning(
+                            "Unexpected batch result structure", key=key, result_keys=list(result_obj.keys())
+                        )
             except Exception as e:
                 logger.warning("Failed to parse batch result line", error=str(e), line=line[:100])
 

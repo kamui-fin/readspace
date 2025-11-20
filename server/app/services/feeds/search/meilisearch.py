@@ -43,9 +43,7 @@ class MeilisearchService:
                 logger.info("meilisearch_index_found", index=self.index_name)
             except MeilisearchApiError as e:
                 if "index_not_found" in str(e):
-                    task = self.client.create_index(
-                        self.index_name, {"primaryKey": "id"}
-                    )
+                    task = self.client.create_index(self.index_name, {"primaryKey": "id"})
                     self.client.wait_for_task(task.task_uid)
                     self._index = self.client.get_index(self.index_name)
                     logger.info("meilisearch_index_created", index=self.index_name)
@@ -125,9 +123,7 @@ class MeilisearchService:
                                 "{{..}}",
                             ],
                         },
-                        "response": {
-                            "embeddings": [{"values": "{{embedding}}"}, "{{..}}"]
-                        },
+                        "response": {"embeddings": [{"values": "{{embedding}}"}, "{{..}}"]},
                         "headers": {"x-goog-api-key": self.settings.GEMINI_API_KEY},
                     }
                 },
@@ -173,9 +169,7 @@ class MeilisearchService:
             "image_url": feed.image_url,
             "tags": tags,  # Keep as array - Meilisearch supports arrays natively
             # Convert FeedCategory enum to string value
-            "top_level_category": (
-                feed.top_level_category.value if feed.top_level_category else None
-            ),
+            "top_level_category": (feed.top_level_category.value if feed.top_level_category else None),
             "popularity_score": feed.popularity_score or 0.0,
         }
 
@@ -195,13 +189,9 @@ class MeilisearchService:
             document = self._feed_to_document(feed)
             task = self._index.add_documents([document])
             # Fire-and-forget: don't wait for indexing to complete
-            logger.debug(
-                "meilisearch_feed_indexed", feed_id=str(feed.id), task_uid=task.task_uid
-            )
+            logger.debug("meilisearch_feed_indexed", feed_id=str(feed.id), task_uid=task.task_uid)
         except Exception as e:
-            logger.error(
-                "meilisearch_index_feed_failed", feed_id=str(feed.id), error=str(e)
-            )
+            logger.error("meilisearch_index_feed_failed", feed_id=str(feed.id), error=str(e))
             # Don't raise - indexing failures shouldn't break the main flow
 
     async def index_feeds_batch(self, feeds: list[Feed]) -> None:
@@ -226,9 +216,7 @@ class MeilisearchService:
                 task_uid=task.task_uid,
             )
         except Exception as e:
-            logger.error(
-                "meilisearch_batch_index_failed", count=len(feeds), error=str(e)
-            )
+            logger.error("meilisearch_batch_index_failed", count=len(feeds), error=str(e))
 
     async def update_feed(self, feed: Feed) -> None:
         """
@@ -252,13 +240,9 @@ class MeilisearchService:
 
         try:
             task = self._index.delete_document(feed_id)
-            logger.debug(
-                "meilisearch_feed_deleted", feed_id=feed_id, task_uid=task.task_uid
-            )
+            logger.debug("meilisearch_feed_deleted", feed_id=feed_id, task_uid=task.task_uid)
         except Exception as e:
-            logger.error(
-                "meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e)
-            )
+            logger.error("meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e))
 
     async def delete_all_feeds(self) -> None:
         """Delete all documents from the index (used for re-indexing)."""

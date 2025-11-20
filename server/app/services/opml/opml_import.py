@@ -6,7 +6,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import crud_profile
+from app.crud.profile import get_profile_by_id
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
@@ -234,7 +234,7 @@ class OpmlImportService:
         """
         try:
             # Check subscription limit before attempting to add feed
-            profile = await crud_profile.get_by_id(self.db, user_id=self.user_id)
+            profile = await get_profile_by_id(self.db, user_id=self.user_id)
             if profile:
                 resource_service = ResourceLimitService(self.db)
                 can_proceed = await resource_service.check_limit(

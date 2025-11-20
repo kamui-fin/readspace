@@ -2,42 +2,52 @@
 
 This module provides a facade for feed CRUD operations by re-exporting
 functionality from specialized modules:
-- feed_queries.py: Basic CRUD operations
-- feed_scheduling.py: Feed refresh scheduling
-- feed_enrichment.py: Metadata and enrichment updates
+- core.py: Basic CRUD operations
+- url_handling.py: URL normalization and migration
+- enrichment.py: Metadata and enrichment updates
+- scheduling.py: Feed refresh scheduling
 """
 
-# Import all functions from specialized modules
-from app.crud.feed.feed_enrichment import (
-    update_feed_enrichment,
-    update_feed_metadata,
-)
-from app.crud.feed.feed_queries import (
+# Core CRUD operations
+from app.crud.feed.core import (
     create_feed,
     get_feed_by_id,
     get_feed_by_url,
     get_feeds_by_user,
-    get_or_migrate_feed,
-    normalize_feed_url,
 )
-from app.crud.feed.feed_scheduling import (
+
+# Enrichment operations
+from app.crud.feed.enrichment import (
+    update_feed_enrichment,
+    update_feed_metadata,
+)
+
+# Scheduling operations
+from app.crud.feed.scheduling import (
     get_feeds_needing_refresh,
     update_feed_error,
 )
 
+# URL handling
+from app.crud.feed.url_handling import (
+    get_or_migrate_feed,
+    normalize_feed_url,
+)
+
 # Re-export all functions
 __all__ = [
-    # Query functions
-    "normalize_feed_url",
+    # Core CRUD
     "get_feed_by_id",
     "get_feed_by_url",
-    "get_or_migrate_feed",
     "create_feed",
     "get_feeds_by_user",
-    # Scheduling functions
-    "get_feeds_needing_refresh",
-    "update_feed_error",
-    # Enrichment functions
+    # URL handling
+    "normalize_feed_url",
+    "get_or_migrate_feed",
+    # Enrichment
     "update_feed_metadata",
     "update_feed_enrichment",
+    # Scheduling
+    "get_feeds_needing_refresh",
+    "update_feed_error",
 ]

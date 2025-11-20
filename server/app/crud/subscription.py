@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
+from app.core.constants import INITIAL_UNREAD_COUNT
 from app.crud import folder as crud_folder
 from app.crud.feed import feed as crud_feed
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription
@@ -71,7 +72,6 @@ async def get_initial_cutoff_timestamp(
         select(ArticleContent.published_at)
         .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
         .where(FeedArticle.feed_id == feed_id)
-        .where(ArticleContent.published_at.is_not(None))
         .order_by(ArticleContent.published_at.desc())
         .offset(initial_unread_count)  # Get the (N+1)th article (0-indexed)
         .limit(1)
@@ -106,23 +106,9 @@ async def get_subscription_by_feed_url(db: AsyncSession, *, url: str, user_id: U
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
     description to reduce payload size.
     """
-    # Try exact match first
-    result = await db.execute(
-        select(FeedSubscription)
-        .options(
-            joinedload(FeedSubscription.feed).load_only(*SUBSCRIPTION_FEED_COLUMNS),
-            joinedload(FeedSubscription.folder),
-        )
-        .join(Feed)
-        .filter(Feed.url == url, FeedSubscription.user_id == user_id)
-    )
-    subscription = result.scalars().first()
-    if subscription:
-        return subscription
 
-    # If not found, try protocol variation (http <-> https)
-    alt_url = get_protocol_variation(url)
-    if alt_url:
+    async def _query_by_url(feed_url: str) -> FeedSubscription | None:
+        """Helper to query subscription by feed URL."""
         result = await db.execute(
             select(FeedSubscription)
             .options(
@@ -130,9 +116,19 @@ async def get_subscription_by_feed_url(db: AsyncSession, *, url: str, user_id: U
                 joinedload(FeedSubscription.folder),
             )
             .join(Feed)
-            .filter(Feed.url == alt_url, FeedSubscription.user_id == user_id)
+            .filter(Feed.url == feed_url, FeedSubscription.user_id == user_id)
         )
-        subscription = result.scalars().first()
+        return result.scalars().first()
+
+    # Try exact match first
+    subscription = await _query_by_url(url)
+    if subscription:
+        return subscription
+
+    # If not found, try protocol variation (http <-> https)
+    alt_url = get_protocol_variation(url)
+    if alt_url:
+        subscription = await _query_by_url(alt_url)
         if subscription:
             return subscription
 
@@ -146,9 +142,7 @@ async def get_subscriptions_by_user(
     skip: int = 0,
     limit: int = 100,
     folder_id: UUID | None = None,
-    tag_names: list[str] | None = None,
     is_favorite: bool | None = None,
-    search_query: str | None = None,
 ) -> list[FeedSubscription]:
     """Get subscriptions for a user with filtering options.
 
@@ -170,14 +164,6 @@ async def get_subscriptions_by_user(
 
     if is_favorite is not None:
         stmt = stmt.filter(FeedSubscription.is_favorite == is_favorite)
-
-    # Tag filtering removed - feeds now use tags as ARRAY field
-    # tag filtering would need to be adapted for ARRAY contains operations
-
-    if search_query:
-        stmt = stmt.filter(
-            (Feed.title.ilike(f"%{search_query}%")) | (FeedSubscription.custom_title.ilike(f"%{search_query}%"))
-        )
 
     # Order by custom title if set, otherwise by feed title
     stmt = stmt.order_by(FeedSubscription.custom_title.asc().nulls_last(), Feed.title.asc()).offset(skip).limit(limit)
@@ -241,7 +227,6 @@ async def create_subscription(
 
     # Get initial cutoff timestamp to limit unread articles
     # This ensures new subscriptions only show the N most recent articles as unread
-    from app.core.constants import INITIAL_UNREAD_COUNT
 
     initial_cutoff = await get_initial_cutoff_timestamp(
         db, feed_id=feed_db.id, initial_unread_count=INITIAL_UNREAD_COUNT
@@ -375,7 +360,12 @@ async def delete_subscriptions_bulk(db: AsyncSession, *, feed_ids: list[UUID], u
     """
     stmt = (
         delete(FeedSubscription)
-        .where(and_(FeedSubscription.user_id == user_id, FeedSubscription.feed_id.in_(feed_ids)))
+        .where(
+            and_(
+                FeedSubscription.user_id == user_id,
+                FeedSubscription.feed_id.in_(feed_ids),
+            )
+        )
         .returning(FeedSubscription.feed_id)
     )
 
@@ -401,7 +391,12 @@ async def update_subscriptions_folder_bulk(
     """
     stmt = (
         update(FeedSubscription)
-        .where(and_(FeedSubscription.user_id == user_id, FeedSubscription.feed_id.in_(feed_ids)))
+        .where(
+            and_(
+                FeedSubscription.user_id == user_id,
+                FeedSubscription.feed_id.in_(feed_ids),
+            )
+        )
         .values(folder_id=folder_id)
         .returning(FeedSubscription.feed_id)
     )

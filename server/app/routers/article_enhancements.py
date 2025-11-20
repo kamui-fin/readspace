@@ -282,7 +282,7 @@ async def translate_article(
         )
 
         article_service = ArticleManagementService(db, UUID(user.sub))
-        ai_service = get_ai_service()
+        content_processor = ContentProcessor()
 
         # Get the article to verify ownership and get content
         article = await article_service.get_article(article_id)

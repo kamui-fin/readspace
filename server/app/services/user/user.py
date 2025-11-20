@@ -7,7 +7,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.profile import crud_profile
+from app.crud.profile import create_profile_if_not_exists
 from app.models.user import Profile
 from app.schemas.auth import TokenData
 
@@ -35,7 +35,7 @@ class UserService:
             email=email,
         )
 
-        profile = await crud_profile.create_if_not_exists(self.db, user_id=user_id, email=email)
+        profile = await create_profile_if_not_exists(self.db, user_id=user_id, email=email)
 
         logger.info(
             "User profile ensured",

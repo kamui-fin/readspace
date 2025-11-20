@@ -487,7 +487,7 @@ class FeedManagementService:
         self, base_response: FeedResponse, subscription_db: Any | None, unread_count: int | None
     ) -> FeedResponse:
         """Construct a user-specific FeedResponse from a base FeedResponse.
-        
+
         This adds subscription-specific data (custom title, folder, unread count)
         to a base feed response from FeedService.
         """

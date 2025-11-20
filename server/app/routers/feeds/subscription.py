@@ -10,7 +10,8 @@ from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import ReadspaceException, to_http_exception
 from app.core.dependencies import get_subscription_service
 from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
-from app.crud import crud_feed, crud_profile
+from app.crud import crud_feed
+from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
 from app.schemas import FeedCreate
 from app.schemas.auth import TokenData
@@ -116,7 +117,7 @@ async def subscribe_to_feed(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
     # Now check resource limits after verifying the feed exists
-    profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

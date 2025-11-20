@@ -6,13 +6,8 @@ import structlog
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import (
-    FALLBACK_ENCODINGS,
-    MAX_OPML_FILE_SIZE_MB,
-    SUPPORTED_OPML_EXTENSIONS,
-)
-from app.core.metrics import opml_import_requests_total, opml_validation_total
-from app.crud.profile import crud_profile
+from app.core.constants import FALLBACK_ENCODINGS, MAX_OPML_FILE_SIZE_MB, SUPPORTED_OPML_EXTENSIONS
+from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
 from app.schemas import OpmlImportResponse, OpmlImportStatusResponse
 from app.schemas.auth import TokenData
@@ -145,8 +140,6 @@ async def import_opml_file(
     start_time = time.perf_counter()
 
     if not opml_file.filename or not opml_file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
-        opml_import_requests_total.labels(status="rejected_validation").inc()
-
         logger.warning(
             "Invalid OPML file type uploaded",
             filename=opml_file.filename,
@@ -164,8 +157,6 @@ async def import_opml_file(
         file_size_mb = len(content_bytes) / (1024 * 1024)
 
         if file_size_mb > MAX_OPML_FILE_SIZE_MB:
-            opml_import_requests_total.labels(status="rejected_size").inc()
-
             logger.warning(
                 "OPML file too large",
                 filename=opml_file.filename,
@@ -198,9 +189,6 @@ async def import_opml_file(
                     continue
 
             if not encoding_found:
-                opml_validation_total.labels(status="encoding_error").inc()
-                opml_import_requests_total.labels(status="rejected_validation").inc()
-
                 logger.warning(
                     "Failed to decode OPML file with any encoding",
                     filename=opml_file.filename,
@@ -219,7 +207,7 @@ async def import_opml_file(
         feed_count = validate_opml_structure(content_str, opml_file.filename or "unknown.opml")
 
         # Check resource limits before importing
-        profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+        profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
         if not profile:
             raise HTTPException(status_code=404, detail="User profile not found")
 
@@ -232,8 +220,6 @@ async def import_opml_file(
         if max_limit != -1:
             remaining_capacity = max_limit - current_usage
             if feed_count > remaining_capacity:
-                opml_import_requests_total.labels(status="rejected_limit").inc()
-
                 logger.warning(
                     "OPML import would exceed subscription limit",
                     feed_count=feed_count,
@@ -275,7 +261,6 @@ async def import_opml_file(
         )
 
         duration = time.perf_counter() - start_time
-        opml_import_requests_total.labels(status="accepted").inc()
 
         logger.info(
             "OPML import request accepted",

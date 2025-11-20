@@ -1,6 +1,4 @@
-"""
-CRUD operations for ArticleContent model
-"""
+"""CRUD operations for ArticleContent model."""
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,4 +61,4 @@ class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleC
 
 
 # Create instance
-crud_article_content = CRUDArticleContent(ArticleContent)
+article_content = CRUDArticleContent(ArticleContent)

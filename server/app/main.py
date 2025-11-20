@@ -6,7 +6,6 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import make_asgi_app
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings

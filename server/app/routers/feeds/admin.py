@@ -7,7 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
-from app.crud import crud_feed, crud_profile
+from app.crud import crud_feed
+from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
 from app.models import Feed
 from app.schemas.auth import TokenData
@@ -86,7 +87,7 @@ async def admin_update_feed(
     # Check if user is admin by fetching their profile
     from app.models.enums import UserRole
 
-    user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to update global feed",
@@ -244,7 +245,7 @@ async def admin_delete_feed(
     # Check if user is admin by fetching their profile
     from app.models.enums import UserRole
 
-    user_profile = await crud_profile.get_by_id(db, user_id=UUID(current_user.sub))
+    user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to delete global feed",

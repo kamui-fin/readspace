@@ -1,6 +1,4 @@
-"""
-CRUD operations for ClippedArticle model
-"""
+"""CRUD operations for ClippedArticle model."""
 
 from uuid import UUID
 
@@ -14,12 +12,12 @@ from app.schemas import ClippedArticleCreate, ClippedArticleUpdate
 
 
 class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedArticleUpdate]):
-    """CRUD operations for manually saved web articles"""
+    """CRUD operations for manually saved web articles."""
 
     async def get_by_user_and_content(
         self, db: AsyncSession, *, user_id: UUID, content_id: UUID
     ) -> ClippedArticle | None:
-        """Check if user already has this content clipped"""
+        """Check if user already has this content clipped."""
         result = await db.execute(
             select(ClippedArticle)
             .options(
@@ -35,7 +33,7 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
         return result.scalar_one_or_none()
 
     async def get_with_content(self, db: AsyncSession, *, article_id: UUID) -> ClippedArticle | None:
-        """Get clipped article with content"""
+        """Get clipped article with content."""
         result = await db.execute(
             select(ClippedArticle)
             .options(
@@ -72,4 +70,4 @@ class CRUDClippedArticle(CRUDBase[ClippedArticle, ClippedArticleCreate, ClippedA
 
 
 # Create instance
-crud_clipped_article = CRUDClippedArticle(ClippedArticle)
+clipped_articles = CRUDClippedArticle(ClippedArticle)
