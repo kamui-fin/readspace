@@ -102,9 +102,13 @@ class UserArticleState(Base):
     )
 
     # User interaction states
+    # Important note: is_read AND is_read_later can both be true
     is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    # Is this article in the user's "Read Later" list?
     is_read_later: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
     is_favorite: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     # User-specific metadata
@@ -137,7 +141,6 @@ class ClippedArticle(Base):
         SQLUUID(as_uuid=True),
         ForeignKey("profiles.id", ondelete="CASCADE"),
         nullable=False,
-        # Note: user_id index replaced by composite idx_clipped_user_created (user_id, created_at DESC)
     )
 
     # Clipped article specific fields
@@ -145,14 +148,13 @@ class ClippedArticle(Base):
     note = Column(String(2000))
 
     # User interaction state
-    # Note: is_read, is_read_later, is_favorite no longer indexed individually
-    # Queries filter by user_id first, making boolean indexes ineffective
     is_read = Column(Boolean, default=False, nullable=False)
     read_at = Column(DateTime(timezone=True))
+
     is_read_later = Column(Boolean, default=True, nullable=False)
+
     is_favorite = Column(Boolean, default=False, nullable=False)
 
-    # Note: created_at index replaced by composite idx_clipped_user_created (user_id, created_at DESC)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Relationships

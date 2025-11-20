@@ -3,7 +3,6 @@
 from datetime import datetime
 from uuid import UUID
 
-from pgvector.sqlalchemy import Vector  # type: ignore
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -36,11 +35,6 @@ class Feed(Base):
     popularity_score: Mapped[float | None] = mapped_column(Float, nullable=True, default=0.0)
     subscriber_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    # Vector embedding for similarity search (768 dimensions = ~3KB per feed)
-    # Using deferred loading to avoid loading this large column unless explicitly needed
-    # This significantly reduces memory usage for feed list queries
-    embedding: Mapped[list[float] | None] = mapped_column(Vector(768), deferred=True, nullable=True)
-
     # RSS-specific metadata
     ttl: Mapped[int | None] = mapped_column(Integer, nullable=True)
     skip_hours: Mapped[list[int] | None] = mapped_column(ARRAY(Integer), nullable=True)
@@ -71,6 +65,7 @@ class Feed(Base):
     __table_args__ = (
         # CHECK constraint added in migration: ck_feed_fetch_error_count_range
         # Ensures fetch_error_count >= 0 AND fetch_error_count < 1000
+        # TODO: maintenance routine to delete feeds with excessive fetch errors
     )
 
 

@@ -581,21 +581,6 @@ export class ApiClient {
         `/api/articles/check-saved?${queryParams.toString()}`
       );
     },
-
-    // Discover endpoints
-    // Note: Search functionality now uses Meilisearch with direct frontend integration.
-    // Only preview endpoint remains for feed content preview before subscription.
-
-    getPreviewArticles: (feedUrl: string, limit: number = 25) => {
-      const queryParams = new URLSearchParams();
-      queryParams.set("url", feedUrl);
-      queryParams.set("limit", limit.toString());
-
-      const queryString = queryParams.toString();
-      return this.get(
-        `/api/discover/preview/articles${queryString ? `?${queryString}` : ""}`,
-      );
-    },
   };
 
   // User/Profile endpoints

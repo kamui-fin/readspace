@@ -45,12 +45,12 @@ fi
 
 # Start any other services (like your custom web/server containers)
 if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
-    print_info "› Starting readspace application services..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" up -d; then
+    print_info "› Starting readspace application services (including Meilisearch)..."
+    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" up -d; then
         print_error "Failed to start custom application services."
         exit 1
     fi
-    print_success "✓ Custom application services are starting in the background."
+    print_success "✓ Custom application services (including Meilisearch) are starting in the background."
 else
     print_info "› No docker/docker-compose.yml found, skipping custom service startup."
 fi
@@ -85,12 +85,14 @@ echo ""
 if [ "$DEV_MODE" = true ]; then
     echo "Development tools are available at:"
     print_success "Supabase Studio: http://localhost:18000"
+    print_success "Meilisearch: http://localhost:7700"
     print_success "Analytics Dashboard: http://localhost:4000"
     print_success "RabbitMQ Management: http://localhost:15672 (guest/guest)"
     print_success "RSShub API: http://localhost:1200"
 else
     echo "For developers, you can access:"
     print_success "Supabase Dashboard: http://localhost:18000"
+    print_success "Meilisearch: http://localhost:7700"
     print_success "RabbitMQ Management: http://localhost:15672 (guest/guest)"
     print_success "RSShub API: http://localhost:1200"
 fi

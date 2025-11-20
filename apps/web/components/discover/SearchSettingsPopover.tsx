@@ -1,4 +1,4 @@
-import { Settings, Sparkles } from "lucide-react"
+import { Settings, SlidersHorizontal, Sparkles } from "lucide-react"
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -41,9 +41,9 @@ export function SearchSettingsPopover({
                 <Button
                     variant="ghost"
                     size="icon"
-                    className="h-12 w-12 md:h-14 md:w-14 flex-shrink-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
+                    className="h-10 w-10 md:h-12 md:w-12 flex-shrink-0 text-[#91998C] hover:text-[#6A994E] hover:bg-[#E8F5E1] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
                 >
-                    <Settings className="h-5 w-5" />
+                    <SlidersHorizontal className="h-5 w-5" />
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80" align="end">

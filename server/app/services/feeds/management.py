@@ -13,7 +13,6 @@ For global feed operations (background workers), use FeedService instead.
 For initial feed creation, use FeedCreationService.
 """
 
-from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
@@ -312,7 +311,7 @@ class FeedManagementService:
         # This handles: fetch, parse, content hash checking, adaptive intervals, article creation
         try:
             base_response = await self.feed_service.refresh_feed(feed_id=feed_id, force_refetch=force_refetch)
-            
+
             if not base_response:
                 logger.warning("Feed not found for refresh", feed_id=feed_id)
                 return None
@@ -494,7 +493,7 @@ class FeedManagementService:
         """
         # Start with base response data
         feed_data = base_response.model_dump()
-        
+
         # Add subscription-specific data if user is subscribed
         if subscription_db:
             feed_data.update(
@@ -517,5 +516,5 @@ class FeedManagementService:
                     "unread_count": None,
                 }
             )
-        
+
         return FeedResponse(**feed_data)

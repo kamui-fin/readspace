@@ -1,6 +1,7 @@
 "use client"
 
 import { ArticlesEmptyState } from "@/components/articles/ArticlesEmptyState"
+import { ArticlesErrorState } from "@/components/articles/ArticlesErrorState"
 import { ArticlesViewSkeleton } from "@/components/articles/ArticlesViewSkeleton"
 import { FeedPreviewBanner } from "@/components/feeds/FeedPreviewBanner"
 import { FeedSubscriptionModal } from "@/components/FeedSubscriptionModal"
@@ -147,7 +148,11 @@ export function ArticlesView({
 
     // Fetch feed data only when viewing a specific feed to check subscription status
     // For preview mode, we'll get feed data from the refresh response instead
-    const { data: fetchedFeedData } = useFeed(feedId || "", {
+    const {
+        data: fetchedFeedData,
+        error: feedError,
+        isLoading: isFeedLoading
+    } = useFeed(feedId || "", {
         enabled: !!feedId && !isPreviewRefreshing,
         refetchOnMount: false,
         refetchOnWindowFocus: false,
@@ -667,6 +672,22 @@ export function ArticlesView({
 
     if (isInitialLoading) {
         return <ArticlesViewSkeleton showUnreadBadge={false} />
+    }
+
+    // Show error state for feed errors (e.g., 404 Not Found)
+    // Check feed error first before showing empty state
+    if (feedId && feedError && !isFeedLoading && !isPreviewRefreshing) {
+        return (
+            <div className="flex h-[calc(100vh-1rem)] w-full bg-background rounded-xl shadow-sm">
+                <ArticlesErrorState
+                    error={feedError}
+                    onRetry={() => {
+                        // Trigger feed refetch
+                        handleRefreshWithMessage("Retrying...")
+                    }}
+                />
+            </div>
+        )
     }
 
     // Show empty state when no articles (but not when still loading)

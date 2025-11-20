@@ -83,7 +83,6 @@ class MeilisearchService:
                     "tags",
                     "top_level_category",
                     "popularity_score",
-                    "subscriber_count",
                 ],
                 # Ranking rules - order matters!
                 # Custom rule: popularity_score:desc is added for feed ranking

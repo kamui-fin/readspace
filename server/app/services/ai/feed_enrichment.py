@@ -38,7 +38,7 @@ class FeedEnrichmentService:
             List of FeedEnrichmentResponse or None for failed enrichments
         """
         self.gemini_client.check_availability()
-        
+
         if not feed_data_list:
             return []
 

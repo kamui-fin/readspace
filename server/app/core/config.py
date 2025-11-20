@@ -16,7 +16,6 @@ class Settings(BaseSettings):
 
     # Database Configuration
     SUPABASE_DB_CONNECTION: str
-    SUPABASE_DB_CONNECTION_SYNC: str | None = None  # Synchronous connection for scripts
 
     # CORS Configuration
     CORS_ORIGIN: str = "*"

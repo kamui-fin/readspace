@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query"
 interface UserProfile {
     id?: string
     email?: string
-    role?: "basic" | "pro" | "admin"
+    role?: "BASIC" | "PRO" | "ADMIN"
     created_at?: string
     updated_at?: string
 }
@@ -25,10 +25,10 @@ export function useUserRole() {
 
     return {
         profile,
-        role: profile?.role || "basic",
-        isAdmin: profile?.role === "admin",
-        isPro: profile?.role === "pro",
-        isBasic: profile?.role === "basic" || !profile?.role,
+        role: profile?.role || "BASIC",
+        isAdmin: profile?.role === "ADMIN",
+        isPro: profile?.role === "PRO",
+        isBasic: profile?.role === "BASIC" || !profile?.role,
         isLoading,
         error,
     }

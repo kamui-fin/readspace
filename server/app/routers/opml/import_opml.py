@@ -3,19 +3,15 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from defusedxml import ElementTree
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import (
     FALLBACK_ENCODINGS,
     MAX_OPML_FILE_SIZE_MB,
-    OPML_IMPORT_TASK_TTL_SECONDS,
     SUPPORTED_OPML_EXTENSIONS,
 )
 from app.core.metrics import opml_import_requests_total, opml_validation_total
-from app.core.redis_cache import RedisCache
-from app.core.taskiq_app import broker
 from app.crud.profile import crud_profile
 from app.db.session import get_db
 from app.schemas import OpmlImportResponse, OpmlImportStatusResponse
@@ -25,11 +21,9 @@ from app.services.user.resource_limits import ResourceLimitService
 from app.workers.opml_tasks import import_opml_task
 
 from .utils import (
-    check_import_cancellation_flag,
     cleanup_task_ownership,
     get_import_progress,
     get_task_owner,
-    get_taskiq_result,
     store_task_ownership,
     validate_opml_structure,
 )

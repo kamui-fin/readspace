@@ -9,7 +9,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import user_actions_total
-from app.core.constants import ERROR_FEED_NOT_FOUND, MAX_PAGE_SIZE
+from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import (
     FeedSubscriptionError,
     FeedValidationError,

@@ -34,7 +34,7 @@ class EmbeddingService:
             List of floats representing the embedding, or None if failed
         """
         self.gemini_client.check_availability()
-        
+
         try:
             response = self.gemini_client.client.models.embed_content(
                 model=self.embedding_model,
@@ -74,7 +74,7 @@ class EmbeddingService:
             List of embeddings (or None for failed ones)
         """
         self.gemini_client.check_availability()
-        
+
         start_time = time.perf_counter()
         operation = "embed_batch"
 

@@ -44,7 +44,7 @@ class TextGenerationService:
             Generated text response
         """
         self.gemini_client.check_availability()
-        
+
         start_time = time.perf_counter()
         operation = "generate_text"
 

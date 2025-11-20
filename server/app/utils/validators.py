@@ -11,7 +11,6 @@ from app.core.constants import (
     ALLOWED_BOOK_FORMATS,
     ARTICLE_PRIORITIES,
     HIGHLIGHT_COLORS,
-    MAX_DESCRIPTION_LENGTH,
     MAX_FOLDER_NAME_LENGTH,
     MAX_PAGE_SIZE,
     MAX_TAG_NAME_LENGTH,
@@ -145,11 +144,6 @@ def validate_string_length(
 def validate_title(title: str, required: bool = True) -> str | None:
     """Validate title field"""
     return validate_string_length(title, "Title", MAX_TITLE_LENGTH, 1, required)
-
-
-def validate_description(description: str, required: bool = False) -> str | None:
-    """Validate description field"""
-    return validate_string_length(description, "Description", MAX_DESCRIPTION_LENGTH, 0, required)
 
 
 def validate_tag_name(name: str) -> str:

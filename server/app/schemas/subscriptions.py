@@ -59,8 +59,8 @@ class FeedResponse(BaseModel):
 class SubscriptionFeedResponse(BaseModel):
     """Minimal feed response for subscription endpoints to prevent over-fetching.
 
-    This schema excludes heavy fields like embedding (~3KB), tags, and rarely-used
-    metadata to significantly reduce payload size in subscription list responses.
+    This schema excludes tags and rarely-used metadata to reduce payload size
+    in subscription list responses.
     """
 
     model_config = ConfigDict(from_attributes=True)
@@ -121,7 +121,6 @@ class SubscriptionResponse(BaseModel):
     """Optimized subscription response with minimal feed fields to prevent over-fetching.
 
     Uses SubscriptionFeedResponse instead of full FeedResponse to exclude:
-    - embedding field (~3KB per feed)
     - description (can be 2000 chars)
     - tags array
     - RSS metadata (ttl, skip_hours, skip_days)

@@ -134,51 +134,6 @@ class ServiceUnavailableError(ReadspaceException):
     pass
 
 
-# HTTP Exception Factories
-def http_not_found(message: str = "Resource not found") -> HTTPException:
-    """Create a 404 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=message)
-
-
-def http_bad_request(message: str = "Bad request") -> HTTPException:
-    """Create a 400 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message)
-
-
-def http_unauthorized(message: str = "Unauthorized") -> HTTPException:
-    """Create a 401 HTTP exception"""
-    return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail=message,
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-
-def http_forbidden(message: str = "Forbidden") -> HTTPException:
-    """Create a 403 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=message)
-
-
-def http_conflict(message: str = "Resource already exists") -> HTTPException:
-    """Create a 409 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_409_CONFLICT, detail=message)
-
-
-def http_validation_error(message: str = "Validation failed") -> HTTPException:
-    """Create a 422 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=message)
-
-
-def http_internal_server_error(message: str = "Internal server error") -> HTTPException:
-    """Create a 500 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=message)
-
-
-def http_service_unavailable(message: str = "Service unavailable") -> HTTPException:
-    """Create a 503 HTTP exception"""
-    return HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=message)
-
-
 # Exception Mapper - Maps custom exceptions to HTTP exceptions
 EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     # Client errors (4xx)

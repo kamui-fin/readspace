@@ -6,9 +6,9 @@ import { Configure, useClearRefinements, useCurrentRefinements, useMenu, useSear
 import { CategoryGrid } from "./CategoryGrid"
 import { CustomSearchBox } from "./CustomSearchBox"
 import { DiscoverLayout } from "./DiscoverLayout"
+import { useFeedPreview } from "./hooks/useFeedPreview"
 import { usePersistentState } from "./hooks/usePersistentState"
 import { SearchResults } from "./SearchResults"
-import { SearchSettingsPopover } from "./SearchSettingsPopover"
 
 interface DiscoverContentProps {
     /** Initial language preference (not currently used) */
@@ -27,6 +27,9 @@ export function DiscoverContent({
     onAiSettingsChange,
 }: DiscoverContentProps) {
     const { query, refine: refineQuery } = useSearchBox()
+
+    // Feed preview hook for URL detection
+    const { previewFeed, isLoading: isPreviewLoading, error: previewError, isUrlQuery } = useFeedPreview(query)
 
     // Use InstantSearch's menu widget for category filtering
     const { items: categoryItems, refine: refineCategory } = useMenu({
@@ -82,20 +85,15 @@ export function DiscoverContent({
     )
     const activeCategory = activeCategoryRefinement?.refinements[0]?.value || ""
 
-    // Apply default English filter on first load if no language is set
+    // Apply persisted language filter when no language is active
+    // This runs on mount and whenever the filter gets cleared
     useEffect(() => {
-        if (!activeLanguage && languageItems.length > 0) {
-            const defaultLang = persistedLanguage || "en"
-            if (defaultLang !== "all") {
-                // Use a ref to prevent infinite loops
-                const hasApplied = sessionStorage.getItem('discover-default-lang-applied')
-                if (!hasApplied) {
-                    refineLanguage(defaultLang)
-                    sessionStorage.setItem('discover-default-lang-applied', 'true')
-                }
-            }
+        if (!activeLanguage && languageItems.length > 0 && persistedLanguage !== "all") {
+            const targetLang = persistedLanguage || "en"
+            // Apply the filter
+            refineLanguage(targetLang)
         }
-    }, [languageItems.length, activeLanguage, persistedLanguage, refineLanguage]) // Include all dependencies
+    }, [activeLanguage, languageItems.length]) // Only depend on active state, not persistedLanguage to avoid loops
 
     // Determine display language (show "all" if no language filter is active)
     const displayLanguage = activeLanguage || (persistedLanguage === "all" ? "all" : persistedLanguage)
@@ -133,7 +131,8 @@ export function DiscoverContent({
     }
 
     // Determine if we should show search results or categories
-    const hasActiveSearch = Boolean(query || activeCategory)
+    // Show search results if there's a query OR active category, but NOT if it's a URL query (show preview instead)
+    const hasActiveSearch = Boolean((query && !isUrlQuery) || activeCategory)
 
     return (
         <>
@@ -172,15 +171,13 @@ export function DiscoverContent({
 
                     {/* Search Section */}
                     <div className="w-full max-w-2xl mx-auto mb-8">
-                        <div className="flex items-center gap-2">
-                            <CustomSearchBox placeholder="Search for a website or paste RSS link" />
-                            <SearchSettingsPopover
-                                language={displayLanguage}
-                                onLanguageChange={handleLanguageChange}
-                                aiEnabled={isAiEnabled}
-                                onAiToggle={handleAiToggle}
-                            />
-                        </div>
+                        <CustomSearchBox
+                            placeholder="Search for a website or paste RSS link"
+                            language={displayLanguage}
+                            onLanguageChange={handleLanguageChange}
+                            aiEnabled={isAiEnabled}
+                            onAiToggle={handleAiToggle}
+                        />
                         {isAiEnabled && query && (
                             <div className="flex items-center gap-1.5 mt-2 text-xs text-[#6A994E] dark:text-primary">
                                 <Sparkles className="w-3.5 h-3.5" />
@@ -190,9 +187,19 @@ export function DiscoverContent({
                     </div>
 
                     {/* Content Section */}
-                    {hasActiveSearch ? (
+                    {isUrlQuery ? (
+                        /* Show preview when URL is detected */
+                        <SearchResults
+                            onClearSearch={clearSearch}
+                            previewFeed={previewFeed}
+                            isPreviewLoading={isPreviewLoading}
+                            previewError={previewError}
+                        />
+                    ) : hasActiveSearch ? (
+                        /* Show search results for regular queries */
                         <SearchResults onClearSearch={clearSearch} />
                     ) : (
+                        /* Show category grid when no search */
                         <CategoryGrid onCategoryClick={handleCategoryClick} />
                     )}
                 </div>

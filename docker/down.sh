@@ -42,7 +42,7 @@ fi
 # Stop custom application services
 if [ -f "$SCRIPT_DIR/docker-compose.yml" ]; then
     print_info "› Stopping readspace application services..."
-    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" down; then
+    if ! docker compose -f "$SCRIPT_DIR/docker-compose.yml" --env-file "$SCRIPT_DIR/supabase/.env" --env-file "$SCRIPT_DIR/.env" down; then
         print_error "Failed to stop custom application services."
         exit 1
     fi

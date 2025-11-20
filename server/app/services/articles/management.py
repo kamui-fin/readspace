@@ -6,7 +6,7 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import AUTO_EXTRACT_ENABLED, AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
+from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.article.article import (
     count_read_later_articles,
     count_today_articles,
@@ -147,7 +147,7 @@ class ArticleManagementService:
                 article_response = self.transformer.feed_to_unified(article)
 
             # Attempt automatic content extraction if enabled
-            if article_response and AUTO_EXTRACT_ENABLED and AUTO_EXTRACT_ON_FETCH:
+            if article_response and AUTO_EXTRACT_ON_FETCH:
                 await self._auto_extract_content(article_response)
 
             return article_response

@@ -15,8 +15,7 @@ from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
 from app.utils.url_normalizer import get_protocol_variation, resolve_feed_url
 
 # Define minimal feed columns for subscription responses to prevent over-fetching
-# Excludes only heavy fields: embedding (~3KB)
-# Includes all other fields needed by FeedResponse schema
+# Includes all fields needed by FeedResponse schema
 SUBSCRIPTION_FEED_COLUMNS = [
     Feed.id,
     Feed.url,
@@ -85,7 +84,7 @@ async def get_subscription_by_id(db: AsyncSession, *, subscription_id: UUID, use
     """Get a subscription by ID for a specific user.
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
-    embedding (~3KB) and description to reduce payload size.
+    description to reduce payload size.
     """
     result = await db.execute(
         select(FeedSubscription)
@@ -105,7 +104,7 @@ async def get_subscription_by_feed_url(db: AsyncSession, *, url: str, user_id: U
     feeds that may have been stored with different protocols before normalization.
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
-    embedding (~3KB) and description to reduce payload size.
+    description to reduce payload size.
     """
     # Try exact match first
     result = await db.execute(
@@ -154,7 +153,7 @@ async def get_subscriptions_by_user(
     """Get subscriptions for a user with filtering options.
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
-    embedding (~3KB) and description to reduce payload size.
+    description to reduce payload size.
     """
     stmt = (
         select(FeedSubscription)
@@ -330,7 +329,7 @@ async def get_subscription_by_feed_id(db: AsyncSession, *, feed_id: UUID, user_i
     """Get a user's subscription to a feed by the feed's ID.
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
-    embedding (~3KB) and description to reduce payload size.
+    description to reduce payload size.
     """
     result = await db.execute(
         select(FeedSubscription)
@@ -347,7 +346,7 @@ async def get_all_subscriptions_for_user(db: AsyncSession, *, user_id: UUID) -> 
     """Get all subscriptions for a user (for OPML export, etc.).
 
     Uses load_only to fetch minimal feed fields, excluding heavy columns like
-    embedding (~3KB) and description to reduce payload size.
+    description to reduce payload size.
     """
     stmt = (
         select(FeedSubscription)

@@ -136,11 +136,6 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Include the main API router
 app.include_router(api_router, prefix="/api")  # Add all routes from app.routers with /api prefix
 
-# Mount Prometheus metrics endpoint
-# This exposes metrics at /metrics for Prometheus to scrape
-metrics_app = make_asgi_app()
-app.mount("/metrics", metrics_app)
-
 # Instrument FastAPI with Prometheus metrics
 # Tracks: HTTP request duration, request count, response status codes
-Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
+Instrumentator().instrument(app).expose(app)

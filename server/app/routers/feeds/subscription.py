@@ -8,7 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.business_metrics import user_actions_total
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import ReadspaceException, to_http_exception
-from app.core.decorators import require_resource_limit
 from app.core.dependencies import get_subscription_service
 from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
 from app.crud import crud_feed, crud_profile
@@ -22,7 +21,7 @@ from app.schemas.subscriptions import (
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.subscription import SubscriptionService
 from app.services.user.auth import get_current_user
-from app.services.user.resource_limits import ResourceLimitService
+from app.services.user.resource_limits import ResourceLimitService, check_subscription_limit
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -240,7 +239,6 @@ async def subscribe_to_feed(
         500: {"description": "Internal server error"},
     },
 )
-@require_resource_limit("max_subscriptions")
 async def add_new_feed(
     *,
     db: AsyncSession = Depends(get_db),
@@ -279,6 +277,10 @@ async def add_new_feed(
         - Automatically handles feed deduplication
     """
     start_time = time.perf_counter()
+
+    # Check subscription limit before processing
+    await check_subscription_limit(db, UUID(current_user.sub))
+
     feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
     try:
         feed = await feed_service.add_new_feed(

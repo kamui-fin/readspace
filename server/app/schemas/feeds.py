@@ -56,6 +56,38 @@ class FeedUpdate(BaseModel):
     is_favorite: bool | None = None
 
 
+class AdminFeedUpdate(BaseModel):
+    """Schema for updating global feed properties (admin only).
+
+    Allows updating any global feed metadata that affects all users:
+    - Basic metadata: title, description, link, language, image_url
+    - RSS-specific: ttl, skip_hours, skip_days
+    - Feed classification: top_level_category, popularity_score
+    - Feed URL: url (the RSS feed endpoint itself)
+
+    All fields are optional - only provided fields will be updated.
+    """
+
+    # Basic feed metadata
+    title: str | None = Field(None, max_length=500)
+    description: str | None = Field(None, max_length=2000)
+    link: AnyUrl | None = None
+    language: str | None = Field(None, max_length=50)
+    image_url: str | None = None
+
+    # RSS-specific metadata
+    ttl: int | None = Field(None, gt=0)
+    skip_hours: list[int] | None = Field(None, min_length=0, max_length=24)
+    skip_days: list[str] | None = Field(None, min_length=0, max_length=7)
+
+    # Feed classification
+    top_level_category: str | None = None
+    popularity_score: float | None = Field(None, ge=0.0, le=100.0)
+
+    # Feed URL (the RSS feed endpoint)
+    url: AnyUrl | None = None
+
+
 class FeedResponse(FeedBase):
     """Schema for feed responses."""
 

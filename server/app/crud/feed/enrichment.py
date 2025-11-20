@@ -4,7 +4,6 @@ from datetime import datetime, timezone
 from typing import Any
 
 import structlog
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
@@ -138,18 +137,6 @@ async def update_feed_enrichment(db: AsyncSession, feed: Feed, enrichment_data: 
 
         if "popularity_score" in enrichment_data:
             feed.popularity_score = float(enrichment_data["popularity_score"])
-
-        # Update embedding if present
-        if "embedding" in enrichment_data and enrichment_data["embedding"]:
-            # Embedding is handled as a vector column by SQLAlchemy
-            # The pgvector extension handles the conversion
-            embedding_list = enrichment_data["embedding"]
-            if isinstance(embedding_list, list) and len(embedding_list) == 768:
-                # Update using raw SQL for vector type
-                await db.execute(
-                    text("UPDATE feeds SET embedding = :embedding WHERE id = :feed_id"),
-                    {"embedding": str(embedding_list), "feed_id": feed.id},
-                )
 
         # Update the feed timestamp
         feed.updated_at = datetime.now(timezone.utc)

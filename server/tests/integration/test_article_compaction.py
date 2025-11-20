@@ -8,7 +8,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile, UserArticleState
-from app.workers.feed_tasks import async_compact_old_articles, compact_old_articles_task
+from app.workers.feed import compact_old_articles
 
 
 @pytest.mark.asyncio
@@ -75,7 +75,7 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
     assert len(articles_before) == 70
 
     # Run compaction task
-    result = await async_compact_old_articles(db=db_session)
+    result = await compact_old_articles(db=db_session)
 
     # Commit to persist the changes
     await db_session.commit()
@@ -167,7 +167,7 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
     await db_session.commit()
 
     # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    result = await compact_old_articles(db=db_session)
 
     # Verify all saved articles still exist
     for saved_id in saved_article_ids:
@@ -304,7 +304,7 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     await db_session.commit()
 
     # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    result = await compact_old_articles(db=db_session)
 
     # Verify both users' saved articles are preserved
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user1_saved_id))
@@ -376,7 +376,7 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
     assert initial_count == 70
 
     # Run compaction
-    result = await async_compact_old_articles(db=db_session)
+    result = await compact_old_articles(db=db_session)
 
     # Verify compaction deleted articles but kept minimum 50
     assert "deleted_articles" in result
@@ -442,7 +442,7 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
 
     # Call the async function directly instead of the Celery task wrapper
     # (Celery tasks can't run in an existing event loop)
-    result = await async_compact_old_articles(db=db_session)
+    result = await compact_old_articles(db=db_session)
 
     # Should return results dictionary
     assert "deleted_articles" in result

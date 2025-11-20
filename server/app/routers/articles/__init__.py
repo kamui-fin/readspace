@@ -23,11 +23,14 @@ router = APIRouter(
     },
 )
 
-# Include all subrouters
-router.include_router(retrieval.router)
-router.include_router(views.router)
-router.include_router(management.router)
-router.include_router(clipped.router)
-router.include_router(counts.router)
+# Include all subrouters - SPECIFIC routes BEFORE generic parameterized routes
+# This ordering is critical: FastAPI matches routes in registration order, and
+# parameterized routes like GET /{article_id} will catch any path segment.
+# Specific named paths must be registered first to ensure proper matching.
+router.include_router(counts.router)        # GET /unread-counts (specific path)
+router.include_router(views.router)         # GET /today, /recently-read, /read-later (specific paths)
+router.include_router(clipped.router)       # POST /, GET /check-saved (specific paths)
+router.include_router(management.router)    # PUT /{article_id} (parameterized, but not GET)
+router.include_router(retrieval.router)     # GET /{article_id} (generic parameterized - MUST BE LAST)
 
 __all__ = ["router"]

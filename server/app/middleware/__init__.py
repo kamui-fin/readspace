@@ -7,10 +7,17 @@ to avoid performance overhead. Consider using a dependency injection approach in
 
 from app.middleware.compression import CompressionMiddleware
 from app.middleware.http_caching import HTTPCachingMiddleware
+from app.middleware.logging import LoggingMiddleware
 from app.middleware.metrics_middleware import MetricsMiddleware
 from app.middleware.request_id import RequestIdMiddleware
 
 # UserProfileMiddleware is not imported here to avoid circular imports
 # Import it directly if needed: from app.middleware.user_profile import UserProfileMiddleware
 
-__all__ = ["RequestIdMiddleware", "CompressionMiddleware", "HTTPCachingMiddleware", "MetricsMiddleware"]
+__all__ = [
+    "CompressionMiddleware",
+    "HTTPCachingMiddleware",
+    "LoggingMiddleware",
+    "MetricsMiddleware",
+    "RequestIdMiddleware",
+]

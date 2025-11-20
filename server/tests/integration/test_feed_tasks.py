@@ -26,13 +26,13 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_success(self, test_feed: Feed, db_session: AsyncSession):
         """Test refreshing a single feed via async function."""
-        from app.workers.feed_tasks import async_refresh_single_feed
+        from app.workers.feed import refresh_single_feed
 
         # Record initial state
         initial_last_fetched = test_feed.last_fetched_at
 
         # Execute async function directly with test db session
-        await async_refresh_single_feed(feed_id=test_feed.id, db=db_session)
+        await refresh_single_feed(feed_id=test_feed.id, db=db_session)
 
         # Refresh feed from database
         await db_session.refresh(test_feed)
@@ -46,10 +46,10 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_with_string_uuid(self, test_feed: Feed, db_session: AsyncSession):
         """Test task handles UUID (no string conversion needed in async function)."""
-        from app.workers.feed_tasks import async_refresh_single_feed
+        from app.workers.feed import refresh_single_feed
 
         # Call with UUID directly with test db session
-        await async_refresh_single_feed(feed_id=test_feed.id, db=db_session)
+        await refresh_single_feed(feed_id=test_feed.id, db=db_session)
 
         # Verify the function completed without error
         # Note: last_fetched_at may not update if the feed fetch fails (e.g., rate limiting)
@@ -59,13 +59,13 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_nonexistent_feed(self, db_session: AsyncSession):
         """Test refreshing non-existent feed handles error gracefully."""
-        from app.workers.feed_tasks import async_refresh_single_feed
+        from app.workers.feed import refresh_single_feed
 
         fake_id = uuid4()
 
         # Should complete without raising (logs warning instead)
         # The service layer handles non-existent feeds gracefully
-        await async_refresh_single_feed(feed_id=fake_id, db=db_session)
+        await refresh_single_feed(feed_id=fake_id, db=db_session)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_via_api_triggers_task(
@@ -99,7 +99,7 @@ class TestFeedSchedulingTask:
     @pytest.mark.asyncio
     async def test_schedule_all_feed_refreshes_task(self, db_session: AsyncSession):
         """Test scheduling all feeds needing refresh."""
-        from app.workers.feed_tasks import async_schedule_all_feeds
+        from app.workers.feed import schedule_all_feeds
 
         # Create multiple feeds that need refresh
         feeds_to_create = 3
@@ -118,7 +118,7 @@ class TestFeedSchedulingTask:
         await db_session.flush()
 
         # Execute async function directly with test db session in test mode
-        await async_schedule_all_feeds(db=db_session, test_mode=True)
+        await schedule_all_feeds(db=db_session, test_mode=True)
 
         # Note: In test mode, feeds are refreshed directly
         # Verify feeds were refreshed
@@ -202,46 +202,12 @@ class TestFeedSchedulingTask:
 
 
 class TestFeedEnrichmentTask:
-    """Test feed enrichment task execution."""
+    """Test feed enrichment task execution.
 
-    @pytest.mark.asyncio
-    async def test_enrich_feed_task_success(self, test_feed: Feed, db_session: AsyncSession):
-        """Test enriching a feed with AI metadata."""
-        from app.workers.feed_tasks import async_enrich_feed
-
-        # Execute async function directly with test db session
-        result = await async_enrich_feed(feed_id=test_feed.id, db=db_session)
-
-        # Verify result structure
-        assert "success" in result
-        assert "feed_id" in result
-
-        # Note: Actual enrichment may fail if AI service unavailable
-        # That's okay - we're testing the function execution, not the AI service
-
-    @pytest.mark.asyncio
-    async def test_enrich_feed_task_with_uuid(self, test_feed: Feed, db_session: AsyncSession):
-        """Test enrichment function handles UUID directly."""
-        from app.workers.feed_tasks import async_enrich_feed
-
-        # Pass UUID directly with test db session
-        result = await async_enrich_feed(feed_id=test_feed.id, db=db_session)
-
-        assert "success" in result
-        assert "feed_id" in result
-
-    @pytest.mark.asyncio
-    async def test_enrich_feed_task_nonexistent_feed(self, db_session: AsyncSession):
-        """Test enriching non-existent feed returns error result."""
-        from app.workers.feed_tasks import async_enrich_feed
-
-        fake_id = uuid4()
-
-        # Should return error result, not raise exception
-        result = await async_enrich_feed(feed_id=fake_id, db=db_session)
-
-        assert result["success"] is False
-        assert "error" in result
+    NOTE: Individual feed enrichment tests have been removed.
+    Only batch enrichment is supported via batch_enrich_feeds.
+    """
+    pass
 
 
 # NOTE: TestFeedTaskRetry class has been removed
@@ -307,7 +273,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed_tasks import async_compact_unread_articles
+        from app.workers.feed import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -331,7 +297,7 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Run compaction task with provided db_session
-        result = await async_compact_unread_articles(db=db_session)
+        result = await compact_unread_articles(db=db_session)
 
         # Verify subscription was updated
         await db_session.refresh(subscription)
@@ -351,7 +317,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed_tasks import async_compact_unread_articles
+        from app.workers.feed import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -378,7 +344,7 @@ class TestUnreadCompactionTask:
         original_cutoff = subscription.last_read_cutoff
 
         # Run compaction
-        result = await async_compact_unread_articles(db=db_session)
+        result = await compact_unread_articles(db=db_session)
 
         # Refresh subscription
         await db_session.refresh(subscription)
@@ -394,7 +360,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed_tasks import async_compact_unread_articles
+        from app.workers.feed import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -417,7 +383,7 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Run compaction
-        result = await async_compact_unread_articles(db=db_session)
+        result = await compact_unread_articles(db=db_session)
 
         # Refresh subscription
         await db_session.refresh(subscription)
@@ -435,7 +401,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed_tasks import async_compact_unread_articles
+        from app.workers.feed import compact_unread_articles
 
         # Create multiple feeds with old cutoffs
         old_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS + 10)
@@ -461,7 +427,7 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Run compaction
-        result = await async_compact_unread_articles(db=db_session)
+        result = await compact_unread_articles(db=db_session)
 
         # Should report updating all 3 subscriptions
         assert "updated_subscriptions" in result

@@ -3,10 +3,12 @@
 from typing import Any
 from uuid import UUID
 
+from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.resource_limits import RESOURCE_LIMITS
+from app.crud import crud_profile
 from app.models import FeedSubscription
 
 
@@ -88,3 +90,38 @@ class ResourceLimitError(Exception):
         self.limit = limit
         self.current = current
         super().__init__(f"Resource limit exceeded for {resource}: {current}/{limit}")
+
+
+async def check_subscription_limit(
+    db: AsyncSession,
+    user_id: UUID,
+) -> None:
+    """Check if user can add more feed subscriptions and raise HTTPException if limit exceeded.
+
+    Args:
+        db: Database session
+        user_id: User UUID
+
+    Raises:
+        HTTPException: 404 if user profile not found, 429 if subscription limit exceeded
+    """
+    profile = await crud_profile.get_by_id(db, user_id=user_id)
+    if not profile:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User profile not found",
+        )
+
+    resource_service = ResourceLimitService(db)
+    can_proceed = await resource_service.check_limit(user_id, "max_subscriptions", str(profile.role))
+
+    if not can_proceed:
+        limits = resource_service.get_user_limits(str(profile.role))
+        current_count = await resource_service.get_current_usage(user_id, "max_subscriptions")
+        max_allowed = limits.get("max_subscriptions", 0)
+
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"You've reached the maximum number of feed subscriptions ({current_count}/{max_allowed}). "
+            "Please upgrade your plan to add more feeds.",
+        )

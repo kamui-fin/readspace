@@ -4,8 +4,6 @@ Note: Search functionality has been migrated to Meilisearch with direct frontend
 The frontend now uses React InstantSearch to query Meilisearch directly.
 """
 
-import time
-from datetime import datetime
 from typing import Any
 from uuid import uuid4
 
@@ -13,7 +11,6 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.constants import MAX_PAGE_SIZE
 from app.db.session import get_db
 from app.services.feeds.feed_creation import FeedCreationService
 from app.utils.rsshub_url_transformer import transform_rsshub_url
@@ -22,21 +19,20 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/discover", tags=["RSS Discovery"])
 
 
-@router.get("/preview/articles")
-async def get_preview_articles(
+@router.get("/preview")
+async def get_feed_preview(
     *,
     db: AsyncSession = Depends(get_db),
     url: str = Query(..., description="RSS feed URL to preview"),
-    limit: int = Query(25, ge=1, le=MAX_PAGE_SIZE, description="Maximum number of articles to return"),
 ) -> dict[str, Any]:
     """
-    Get articles from an RSS feed URL for preview purposes.
+    Get feed metadata from an RSS feed URL for preview purposes.
 
-    This endpoint fetches and parses an RSS feed directly without requiring database storage.
-    Used when users want to preview feed content before subscribing.
+    This endpoint fetches and parses an RSS feed to extract metadata without storing it.
+    Returns a FeedDiscoveryResult that can be displayed to users before subscribing.
     """
     try:
-        # Create a temporary service instance for fetching articles
+        # Create a temporary service instance for fetching feed metadata
         temp_service = FeedCreationService(db, user_id=uuid4())
 
         # Transform rsshub:// URLs to actual HTTP URLs for fetching
@@ -53,78 +49,66 @@ async def get_preview_articles(
         # Parse the feed using the transformed URL
         parsed_feed = temp_service._parse_feed_data(fetch_result["content"], fetch_url)
 
-        # Extract articles from the parsed feed (limit to requested amount)
-        articles = []
-        feed_entries = getattr(parsed_feed, "entries", [])[:limit]
+        # Extract feed metadata
+        feed_info = parsed_feed.get("feed", {})
+        feed_id = f"preview_feed_{hash(url)}"
 
-        for i, entry in enumerate(feed_entries):
-            # Create a preview article object
-            article = {
-                "id": f"preview_article_{hash(url)}_{i}",
-                "feed_id": f"preview_feed_{hash(url)}",
-                "content_id": f"preview_content_{hash(url)}_{i}",
-                "title": getattr(entry, "title", "Untitled"),
-                "author": getattr(entry, "author", None),
-                "url": getattr(entry, "link", ""),
-                "published_at": _parse_entry_date(entry),
-                "excerpt": _extract_excerpt(entry),
-                "content": {
-                    "content_html": getattr(entry, "content", [{}])[0].get("value", "")
-                    if hasattr(entry, "content")
-                    else getattr(entry, "summary", ""),
-                    "content_text": None,
-                },
-            }
-            articles.append(article)
-
+        # Build response matching FeedDiscoveryResult schema
         response = {
-            "articles": articles,
-            "feed": {
-                "id": f"preview_feed_{hash(url)}",
-                "title": getattr(parsed_feed.get("feed", {}), "title", "Preview Feed"),
-                "description": getattr(parsed_feed.get("feed", {}), "description", ""),
-                "url": url,
-                "link": getattr(parsed_feed.get("feed", {}), "link", ""),
-            },
-            "total_count": len(articles),
+            "id": feed_id,
+            "title": getattr(feed_info, "title", None) or "Untitled Feed",
+            "description": getattr(feed_info, "description", None),
+            "url": fetch_url,  # The RSS feed URL
+            "link": getattr(feed_info, "link", None),  # The website URL
+            "image_url": _extract_feed_image(feed_info),
+            "tags": _extract_feed_tags(feed_info),
+            "language": getattr(feed_info, "language", None),
+            "category": None,  # Not available from feed parsing
+            "popularity_score": 0.0,  # Not available for preview feeds
+            "relevance": 1.0,  # Max relevance for direct URL match
+            "search_metadata": None,
+            "is_preview": True,
+            "preview_url": url,  # Original URL provided by user
         }
 
-        logger.info("Feed preview generated", url=fetch_url, articles_count=len(articles))
+        logger.info("Feed preview generated", url=fetch_url, title=response["title"])
 
         return response
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Error previewing feed articles", url=url, error=str(e), exc_info=True)
+        logger.error("Error previewing feed", url=url, error=str(e), exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while previewing the feed",
         ) from e
 
 
-def _parse_entry_date(entry: Any) -> datetime | None:
-    """Parse published date from feed entry."""
+def _extract_feed_image(feed_info: Any) -> str | None:
+    """Extract feed image URL from parsed feed."""
     try:
-        if hasattr(entry, "published_parsed") and entry.published_parsed:
-            return datetime(*entry.published_parsed[:6])
-        if hasattr(entry, "updated_parsed") and entry.updated_parsed:
-            return datetime(*entry.updated_parsed[:6])
+        # Try common feed image locations
+        if hasattr(feed_info, "image") and isinstance(feed_info.image, dict):
+            return feed_info.image.get("href") or feed_info.image.get("url")
+        if hasattr(feed_info, "logo"):
+            return feed_info.logo
+        if hasattr(feed_info, "icon"):
+            return feed_info.icon
     except Exception:
         pass
     return None
 
 
-def _extract_excerpt(entry: Any) -> str | None:
-    """Extract a short excerpt from feed entry."""
+def _extract_feed_tags(feed_info: Any) -> list[str]:
+    """Extract tags/categories from parsed feed."""
     try:
-        if hasattr(entry, "summary"):
-            summary = entry.summary
-            # Strip HTML and limit length
-            import re
-
-            text = re.sub(r"<[^>]+>", "", summary)
-            return text[:500] if len(text) > 500 else text
+        tags = []
+        if hasattr(feed_info, "tags"):
+            tags.extend([tag.get("term") for tag in feed_info.tags if isinstance(tag, dict) and tag.get("term")])
+        if hasattr(feed_info, "categories"):
+            tags.extend([cat for cat in feed_info.categories if isinstance(cat, str)])
+        return tags[:10]  # Limit to 10 tags
     except Exception:
         pass
-    return None
+    return []

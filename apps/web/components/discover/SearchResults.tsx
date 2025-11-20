@@ -1,15 +1,24 @@
+import { Loader2 } from "lucide-react"
 import NextImage from "next/image"
 import { useHits, useInstantSearch, usePagination } from "react-instantsearch"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
+import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { feedDiscoveryResultToFeed, type FeedDiscoveryResult } from "@readspace/shared"
+import { feedDiscoveryResultToFeed, type Feed, type FeedDiscoveryResult } from "@readspace/shared"
 
 import { Pagination } from "./Pagination"
 
 interface SearchResultsProps {
     /** Callback to clear all search filters and query */
     onClearSearch: () => void
+    /** Preview feed data when URL is detected */
+    previewFeed?: FeedDiscoveryResult | null
+    /** Whether preview is loading */
+    isPreviewLoading?: boolean
+    /** Preview error message */
+    previewError?: string | null
 }
 
 /**
@@ -17,8 +26,10 @@ interface SearchResultsProps {
  *
  * Shows a "no results" state when search completes with no matches,
  * but waits for loading to complete to avoid flashing empty state.
+ *
+ * When a preview feed is provided (URL detected), displays the preview card instead.
  */
-export function SearchResults({ onClearSearch }: SearchResultsProps) {
+export function SearchResults({ onClearSearch, previewFeed, isPreviewLoading, previewError }: SearchResultsProps) {
     const { items, results } = useHits<FeedDiscoveryResult>()
     const { nbHits } = results || { nbHits: 0 }
     const { currentRefinement, nbPages } = usePagination()
@@ -26,6 +37,24 @@ export function SearchResults({ onClearSearch }: SearchResultsProps) {
 
     // Don't show "no results" while the search is still loading
     const isLoading = status === 'loading' || status === 'stalled'
+
+    // Prepare preview feed data if available
+    let previewFeedData: any = null
+    if (previewFeed && !isPreviewLoading && !previewError) {
+        previewFeedData = {
+            ...previewFeed,
+            folder_id: "",
+            folder_name: null,
+            is_favorite: false,
+            top_level_category: previewFeed.category,
+            unread_count: 0,
+            last_refreshed_at: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_preview: true,
+            preview_url: previewFeed.preview_url!,
+        }
+    }
 
     if (items.length === 0 && !isLoading) {
         return (
@@ -51,6 +80,18 @@ export function SearchResults({ onClearSearch }: SearchResultsProps) {
 
     return (
         <>
+            {/* Show preview feed at the top if available */}
+            {previewFeedData && (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2 pl-5 pr-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                            Feed Preview
+                        </h3>
+                    </div>
+                    <FeedPreviewCard feed={previewFeedData} />
+                </div>
+            )}
+
             <div className="flex items-center justify-between mb-2 pl-5 pr-2">
                 <div className="text-[#91998C] dark:text-muted-foreground text-sm">
                     {nbHits} {nbHits === 1 ? 'result' : 'results'}

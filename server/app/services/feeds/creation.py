@@ -527,6 +527,7 @@ class FeedCreationService:
         image_url = feed_info.get("image", {}).get("href") or feed_info.get("logo")
 
         # If no image is found and we have a link, use favicon from the link domain
+        # TODO: replace with fast but more accurate version
         if not image_url and metadata["link"]:
             try:
                 parsed_url = urlparse(metadata["link"])

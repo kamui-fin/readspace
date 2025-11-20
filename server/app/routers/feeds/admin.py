@@ -1,16 +1,17 @@
+from uuid import UUID
+
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from uuid import UUID
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.crud import crud_feed, crud_profile
 from app.db.session import get_db
 from app.models import Feed
-from app.schemas import FeedUpdate
 from app.schemas.auth import TokenData
+from app.schemas.feeds import AdminFeedUpdate
 from app.schemas.subscriptions import FeedResponse
 from app.services.feeds.feed_management import FeedManagementService
 from app.services.user.auth import get_current_user
@@ -42,7 +43,7 @@ router = APIRouter()
 )
 async def admin_update_feed(
     feed_id: UUID,
-    feed_in: FeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
+    feed_in: AdminFeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
