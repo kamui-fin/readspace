@@ -1516,22 +1516,78 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Optimistically update article in all infinite queries
-        queryClient.setQueriesData(
-          { queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"] },
-          (old: any) => {
+        // If adding to read later, explicitly create/update the read later cache
+        if (data.is_read_later && previousArticle) {
+          const readLaterQueryKey = [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"];
+          queryClient.setQueryData(readLaterQueryKey, (old: any) => {
+            // If no cache exists, create it with this article
+            if (!old?.pages) {
+              return {
+                pages: [{
+                  items: [{ ...previousArticle, ...data }],
+                  next_cursor: null,
+                  has_more: false,
+                  total_count: 1,
+                }],
+                pageParams: [null],
+              };
+            }
+
+            // Cache exists - add article if not already there
+            const firstPage = old.pages[0];
+            const articleExists = firstPage?.items?.some((item: Article) => item.id === articleId);
+
+            if (!articleExists) {
+              // Add to beginning of first page
+              return {
+                ...old,
+                pages: old.pages.map((page: any, index: number) =>
+                  index === 0
+                    ? { ...page, items: [{ ...previousArticle, ...data }, ...page.items] }
+                    : page
+                ),
+              };
+            }
+
+            return old;
+          });
+        }
+
+        // Optimistically update articles in existing infinite queries
+        const infiniteQueries = queryClient.getQueriesData({
+          queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite"],
+        });
+
+        for (const [queryKey] of infiniteQueries) {
+          const isReadLaterQuery = queryKey[2] === 'read_later';
+
+          queryClient.setQueryData(queryKey, (old: any) => {
+            // If no cache exists, skip update
             if (!old?.pages) return old;
+
             return {
               ...old,
               pages: old.pages.map((page: PaginatedResponse<Article>) => ({
                 ...page,
-                items: page.items.map((article: Article) =>
-                  article.id === articleId ? { ...article, ...data } : article,
-                ),
+                items: page.items
+                  .map((article: Article) =>
+                    article.id === articleId ? { ...article, ...data } : article,
+                  )
+                  .filter((article: Article) => {
+                    // If we're in read_later list and unmarking read_later, remove from list
+                    if (
+                      isReadLaterQuery &&
+                      article.id === articleId &&
+                      data.is_read_later === false
+                    ) {
+                      return false;
+                    }
+                    return true;
+                  }),
               })),
             };
-          },
-        );
+          });
+        }
 
         // Optimistically update unread counts and read later counts
         if (previousArticle) {
@@ -1636,12 +1692,11 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
 
         config.showError?.("Failed to update article");
       },
-      onSuccess: (_, { articleId, data }) => {
-        // Silently invalidate without refetching active queries to avoid skeleton flash
-        // Only mark as stale so they refetch on next mount/focus
+      onSuccess: (_, { articleId }) => {
+        // Invalidate queries - React Query will refetch them as needed
+        // Optimistic updates already applied, so active views won't show skeleton flash
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLE, articleId],
-          refetchType: 'none', // Don't refetch, just mark as stale
         });
 
         // Invalidate all check queries (for extension popup)
@@ -1650,41 +1705,27 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             query.queryKey[0] === RSS_QUERY_KEYS.ARTICLE &&
             typeof query.queryKey[1] === 'string' &&
             query.queryKey[1].startsWith('check-'),
-          refetchType: 'none',
         });
 
-        // Invalidate unread counts without refetching (optimistic update already applied)
+        // Invalidate unread counts
         queryClient.invalidateQueries({
           predicate: (query) =>
             query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
-          refetchType: 'none',
         });
 
-        // Invalidate article lists without refetching (optimistic update already applied)
+        // Invalidate article lists
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
-          refetchType: 'none',
         });
 
-        // If read_later status changed, explicitly reset the read-later query cache
-        // This ensures disabled queries are marked stale and will refetch when enabled
-        if (data.is_read_later !== undefined) {
-          queryClient.invalidateQueries({
-            queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
-            refetchType: 'none',
-          });
-        }
-
-        // Invalidate feeds without refetching (optimistic update already applied)
+        // Invalidate feeds
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
-          refetchType: 'none',
         });
 
-        // Invalidate sidebar data without refetching
+        // Invalidate sidebar data
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-          refetchType: 'none',
         });
       },
       ...options,
@@ -1738,21 +1779,22 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       CursorPaginatedResponse<Article>,
       Error,
       CursorPaginatedResponse<Article>,
-      [string, string, string, typeof params],
+      [string, string, string],
       string | null
     >,
   ) {
+    const limit = params.limit || 25;
     return useInfiniteQuery({
-      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "recently_read", params],
+      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "recently_read"],
       queryFn: ({
         pageParam,
       }: QueryFunctionContext<
-        [string, string, string, typeof params],
+        [string, string, string],
         string | null
       >) =>
         ApiClient.rss.getRecentlyReadArticles({
           cursor: pageParam || undefined,
-          limit: params.limit || 25,
+          limit,
         }),
       getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
         return lastPage.next_cursor;
@@ -1768,21 +1810,22 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       CursorPaginatedResponse<Article>,
       Error,
       CursorPaginatedResponse<Article>,
-      [string, string, string, typeof params],
+      [string, string, string],
       string | null
     >,
   ) {
+    const limit = params.limit || 25;
     return useInfiniteQuery({
-      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later", params],
+      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "read_later"],
       queryFn: ({
         pageParam,
       }: QueryFunctionContext<
-        [string, string, string, typeof params],
+        [string, string, string],
         string | null
       >) =>
         ApiClient.rss.getReadLaterArticles({
           cursor: pageParam || undefined,
-          limit: params.limit || 25,
+          limit,
         }),
       getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
         return lastPage.next_cursor;
@@ -1798,21 +1841,22 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       CursorPaginatedResponse<Article>,
       Error,
       CursorPaginatedResponse<Article>,
-      [string, string, string, typeof params],
+      [string, string, string],
       string | null
     >,
   ) {
+    const limit = params?.limit || 25;
     return useInfiniteQuery({
-      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "today", params],
+      queryKey: [RSS_QUERY_KEYS.ARTICLES, "infinite", "today"],
       queryFn: ({
         pageParam,
       }: QueryFunctionContext<
-        [string, string, string, typeof params],
+        [string, string, string],
         string | null
       >) =>
         ApiClient.rss.getTodaysArticles({
           cursor: pageParam || undefined,
-          limit: params?.limit || 25,
+          limit,
         }),
       getNextPageParam: (lastPage: CursorPaginatedResponse<Article>) => {
         return lastPage.next_cursor;

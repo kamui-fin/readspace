@@ -10,9 +10,8 @@ from app.crud.profile import get_profile_by_id
 from app.services.feeds.management import FeedManagementService
 from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
-from app.workers.opml_tasks import import_single_feed_task
 from app.services.user.resource_limits import ResourceLimitService
-from app.routers.opml.utils import check_import_cancellation_flag
+from app.workers.opml.progress import check_import_cancellation_flag
 
 logger = structlog.get_logger(__name__)
 
@@ -113,6 +112,8 @@ class OpmlImportService:
         Returns:
             Dict with total_feeds, task_ids, and status
         """
+        # Lazy import to avoid circular dependency
+        from app.workers.opml_tasks import import_single_feed_task
 
         total_feeds = len(feeds_data)
         task_ids = []

@@ -23,6 +23,28 @@ import { AiSummaryCard } from "./AiSummaryCard"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleToolbar } from "./ArticleToolbar"
 
+/**
+ * Custom hook to track responsive breakpoints safely (avoiding hydration issues)
+ */
+function useResponsive() {
+    const [isMobile, setIsMobile] = useState(false)
+
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        // Set initial value
+        checkMobile()
+
+        // Listen for resize
+        window.addEventListener("resize", checkMobile)
+        return () => window.removeEventListener("resize", checkMobile)
+    }, [])
+
+    return { isMobile }
+}
+
 // Type for the paginated articles data structure from TanStack Query
 interface ArticlesPageData {
     items: Article[]
@@ -120,6 +142,7 @@ export function ArticleContent({
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
     const pathname = usePathname()
+    const { isMobile } = useResponsive()
 
     // Check if we're viewing a specific feed's articles page
     const isInFeedView =
@@ -164,8 +187,8 @@ export function ArticleContent({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     // Show feed badge when not in a feed-specific view and article has feed info
@@ -322,7 +345,7 @@ export function ArticleContent({
             shouldShowPreviewBanner ||
             !contentRef.current ||
             hasMarkedRead ||
-            (typeof window !== "undefined" && window.innerWidth < 768) // Disable on mobile
+            isMobile // Disable on mobile
         )
             return
         const el = contentRef.current
@@ -374,6 +397,7 @@ export function ArticleContent({
         isRecentlyReadMode,
         isReadLaterMode,
         shouldShowPreviewBanner,
+        isMobile,
         onMarkAsRead,
         updateArticle,
         queryClient,
@@ -382,8 +406,8 @@ export function ArticleContent({
     return (
         <div className="flex-1 overflow-hidden flex flex-col h-full">
             {/* Mobile Toolbar - Fixed at top */}
-            {typeof window !== "undefined" && window.innerWidth < 768 && (
-                <div className="md:hidden bg-background/95 backdrop-blur-sm border-b px-4 py-3 flex-shrink-0">
+            {isMobile && (
+                <div className="md:hidden bg-background/95 backdrop-blur-sm border-b px-4 py-3 shrink-0">
                     <ArticleToolbar
                         article={article}
                         isReadLater={optimisticReadLater}
@@ -449,17 +473,17 @@ export function ArticleContent({
                                                                 // In read-later mode, remove this article entirely
                                                                 isReadLaterMode
                                                                     ? item.id !==
-                                                                      article.id
+                                                                    article.id
                                                                     : true
                                                         )
                                                         .map((item: Article) =>
                                                             item.id ===
-                                                            article.id
+                                                                article.id
                                                                 ? {
-                                                                      ...item,
-                                                                      is_read: true,
-                                                                      is_read_later: false,
-                                                                  }
+                                                                    ...item,
+                                                                    is_read: true,
+                                                                    is_read_later: false,
+                                                                }
                                                                 : item
                                                         ) || [],
                                             })
@@ -483,9 +507,6 @@ export function ArticleContent({
                                 }
                             )
 
-                            // Immediately remove from list UI
-                            onArticleRemoved?.()
-
                             updateArticle.mutate(
                                 {
                                     articleId: article.id,
@@ -496,6 +517,10 @@ export function ArticleContent({
                                     articleType: article.article_type,
                                 },
                                 {
+                                    onSuccess: () => {
+                                        // Only remove from list after successful mutation
+                                        onArticleRemoved?.()
+                                    },
                                     onError: () => {
                                         // Revert optimistic update on error
                                         setOptimisticReadLater(true)
@@ -540,8 +565,7 @@ export function ArticleContent({
                         !isReadLaterMode &&
                         !shouldShowPreviewBanner &&
                         !article.is_read &&
-                        typeof window !== "undefined" &&
-                        window.innerWidth >= 768 // Desktop only
+                        !isMobile // Desktop only
                     ) {
                         if (onMarkAsRead) {
                             onMarkAsRead()
@@ -560,11 +584,11 @@ export function ArticleContent({
                                                     page.items?.map(
                                                         (item: Article) =>
                                                             item.id ===
-                                                            article.id
+                                                                article.id
                                                                 ? {
-                                                                      ...item,
-                                                                      is_read: true,
-                                                                  }
+                                                                    ...item,
+                                                                    is_read: true,
+                                                                }
                                                                 : item
                                                     ) || [],
                                             })
@@ -593,7 +617,7 @@ export function ArticleContent({
                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
                                 >
                                     {article.feed.image_url &&
-                                    !feedImageError ? (
+                                        !feedImageError ? (
                                         <Image
                                             src={article.feed.image_url}
                                             alt={
@@ -625,7 +649,7 @@ export function ArticleContent({
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground font-mono">
                                     {article.author && (
                                         <>
-                                            <span className="text-foreground font-medium break-words">
+                                            <span className="text-foreground font-medium wrap-break-word">
                                                 {article.author}
                                             </span>
                                             <span className="hidden sm:inline">
@@ -649,207 +673,206 @@ export function ArticleContent({
                                 </div>
 
                                 {/* Desktop Article Toolbar */}
-                                {!shouldShowPreviewBanner &&
-                                    typeof window !== "undefined" &&
-                                    window.innerWidth >= 768 && (
-                                        <ArticleToolbar
-                                            article={article}
-                                            isReadLater={optimisticReadLater}
-                                            contentSource={contentSource}
-                                            onContentSourceChange={
-                                                setContentSource
-                                            }
-                                            hasTranslatedContent={
-                                                !!translatedContent
-                                            }
-                                            translatedLanguage={
-                                                translatedLanguage
-                                            }
-                                            onToggleReadLater={() => {
-                                                const newReadLaterState =
-                                                    !optimisticReadLater
-                                                setOptimisticReadLater(
-                                                    newReadLaterState
-                                                )
+                                {!shouldShowPreviewBanner && !isMobile && (
+                                    <ArticleToolbar
+                                        article={article}
+                                        isReadLater={optimisticReadLater}
+                                        contentSource={contentSource}
+                                        onContentSourceChange={
+                                            setContentSource
+                                        }
+                                        hasTranslatedContent={
+                                            !!translatedContent
+                                        }
+                                        translatedLanguage={
+                                            translatedLanguage
+                                        }
+                                        onToggleReadLater={() => {
+                                            const newReadLaterState =
+                                                !optimisticReadLater
+                                            setOptimisticReadLater(
+                                                newReadLaterState
+                                            )
 
-                                                // Show toast immediately for instant feedback
-                                                toast.success(
-                                                    newReadLaterState
-                                                        ? "Article saved to Read Later"
-                                                        : "Article removed from Read Later"
-                                                )
+                                            // Show toast immediately for instant feedback
+                                            toast.success(
+                                                newReadLaterState
+                                                    ? "Article saved to Read Later"
+                                                    : "Article removed from Read Later"
+                                            )
 
-                                                updateArticle.mutate(
-                                                    {
-                                                        articleId: article.id,
-                                                        data: {
-                                                            is_read_later:
-                                                                newReadLaterState,
-                                                            // When saving for later, mark as unread to update sidebar count
-                                                            is_read:
-                                                                newReadLaterState
-                                                                    ? false
-                                                                    : article.is_read,
-                                                        },
-                                                        articleType:
-                                                            article.article_type,
+                                            updateArticle.mutate(
+                                                {
+                                                    articleId: article.id,
+                                                    data: {
+                                                        is_read_later:
+                                                            newReadLaterState,
+                                                        // When saving for later, mark as unread to update sidebar count
+                                                        is_read:
+                                                            newReadLaterState
+                                                                ? false
+                                                                : article.is_read,
                                                     },
-                                                    {
-                                                        onError: () => {
-                                                            // Revert optimistic update on error and show error
-                                                            setOptimisticReadLater(
-                                                                !newReadLaterState
-                                                            )
-                                                            toast.error(
-                                                                "Failed to update article. Please try again."
-                                                            )
-                                                        },
-                                                    }
-                                                )
-                                            }}
-                                            onMarkAsRead={() => {
-                                                // Mark as read and remove from read later instantly
-                                                setOptimisticReadLater(false)
-                                                toast.success(
-                                                    "Article marked as read"
-                                                )
-
-                                                // Optimistically update the articles cache to instantly remove from read-later list
-                                                queryClient.setQueriesData(
-                                                    {
-                                                        queryKey: [
-                                                            RSS_QUERY_KEYS.ARTICLES,
-                                                        ],
+                                                    articleType:
+                                                        article.article_type,
+                                                },
+                                                {
+                                                    onError: () => {
+                                                        // Revert optimistic update on error and show error
+                                                        setOptimisticReadLater(
+                                                            !newReadLaterState
+                                                        )
+                                                        toast.error(
+                                                            "Failed to update article. Please try again."
+                                                        )
                                                     },
-                                                    (
-                                                        oldData:
-                                                            | ArticlesInfiniteData
-                                                            | undefined
-                                                    ) => {
-                                                        if (!oldData?.pages)
-                                                            return oldData
-                                                        return {
-                                                            ...oldData,
-                                                            pages: oldData.pages.map(
-                                                                (
-                                                                    page: ArticlesPageData
-                                                                ) => ({
-                                                                    ...page,
-                                                                    items:
-                                                                        page.items
-                                                                            ?.filter(
-                                                                                (
-                                                                                    item: Article
-                                                                                ) =>
-                                                                                    // In read-later mode, remove this article entirely
-                                                                                    isReadLaterMode
-                                                                                        ? item.id !==
-                                                                                          article.id
-                                                                                        : true
-                                                                            )
-                                                                            .map(
-                                                                                (
-                                                                                    item: Article
-                                                                                ) =>
-                                                                                    item.id ===
-                                                                                    article.id
-                                                                                        ? {
-                                                                                              ...item,
-                                                                                              is_read: true,
-                                                                                              is_read_later: false,
-                                                                                          }
-                                                                                        : item
-                                                                            ) ||
-                                                                        [],
-                                                                })
-                                                            ),
-                                                        }
-                                                    }
-                                                )
+                                                }
+                                            )
+                                        }}
+                                        onMarkAsRead={() => {
+                                            // Mark as read and remove from read later instantly
+                                            setOptimisticReadLater(false)
+                                            toast.success(
+                                                "Article marked as read"
+                                            )
 
-                                                // Also update unread counts optimistically
-                                                queryClient.setQueryData(
-                                                    [
-                                                        RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                            // Optimistically update the articles cache to instantly remove from read-later list
+                                            queryClient.setQueriesData(
+                                                {
+                                                    queryKey: [
+                                                        RSS_QUERY_KEYS.ARTICLES,
                                                     ],
-                                                    (
-                                                        oldData:
-                                                            | UnreadCountsData
-                                                            | undefined
-                                                    ) => {
-                                                        if (!oldData)
-                                                            return oldData
-                                                        return {
-                                                            ...oldData,
-                                                            read_later_count:
-                                                                Math.max(
-                                                                    0,
-                                                                    (oldData.read_later_count ||
-                                                                        0) - 1
-                                                                ),
-                                                        }
+                                                },
+                                                (
+                                                    oldData:
+                                                        | ArticlesInfiniteData
+                                                        | undefined
+                                                ) => {
+                                                    if (!oldData?.pages)
+                                                        return oldData
+                                                    return {
+                                                        ...oldData,
+                                                        pages: oldData.pages.map(
+                                                            (
+                                                                page: ArticlesPageData
+                                                            ) => ({
+                                                                ...page,
+                                                                items:
+                                                                    page.items
+                                                                        ?.filter(
+                                                                            (
+                                                                                item: Article
+                                                                            ) =>
+                                                                                // In read-later mode, remove this article entirely
+                                                                                isReadLaterMode
+                                                                                    ? item.id !==
+                                                                                    article.id
+                                                                                    : true
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                item: Article
+                                                                            ) =>
+                                                                                item.id ===
+                                                                                    article.id
+                                                                                    ? {
+                                                                                        ...item,
+                                                                                        is_read: true,
+                                                                                        is_read_later: false,
+                                                                                    }
+                                                                                    : item
+                                                                        ) ||
+                                                                    [],
+                                                            })
+                                                        ),
                                                     }
-                                                )
+                                                }
+                                            )
 
-                                                // Immediately remove from list UI
-                                                onArticleRemoved?.()
+                                            // Also update unread counts optimistically
+                                            queryClient.setQueryData(
+                                                [
+                                                    RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                                ],
+                                                (
+                                                    oldData:
+                                                        | UnreadCountsData
+                                                        | undefined
+                                                ) => {
+                                                    if (!oldData)
+                                                        return oldData
+                                                    return {
+                                                        ...oldData,
+                                                        read_later_count:
+                                                            Math.max(
+                                                                0,
+                                                                (oldData.read_later_count ||
+                                                                    0) - 1
+                                                            ),
+                                                    }
+                                                }
+                                            )
 
-                                                updateArticle.mutate(
-                                                    {
-                                                        articleId: article.id,
-                                                        data: {
-                                                            is_read: true,
-                                                            is_read_later: false,
-                                                        },
-                                                        articleType:
-                                                            article.article_type,
+                                            updateArticle.mutate(
+                                                {
+                                                    articleId: article.id,
+                                                    data: {
+                                                        is_read: true,
+                                                        is_read_later: false,
                                                     },
-                                                    {
-                                                        onError: () => {
-                                                            // Revert optimistic update on error
-                                                            setOptimisticReadLater(
-                                                                true
-                                                            )
-                                                            toast.error(
-                                                                "Failed to mark article as read. Please try again."
-                                                            )
+                                                    articleType:
+                                                        article.article_type,
+                                                },
+                                                {
+                                                    onSuccess: () => {
+                                                        // Only remove from list after successful mutation
+                                                        onArticleRemoved?.()
+                                                    },
+                                                    onError: () => {
+                                                        // Revert optimistic update on error
+                                                        setOptimisticReadLater(
+                                                            true
+                                                        )
+                                                        toast.error(
+                                                            "Failed to mark article as read. Please try again."
+                                                        )
 
-                                                            // Revert cache optimistic updates
-                                                            queryClient.invalidateQueries(
-                                                                {
-                                                                    queryKey: [
-                                                                        RSS_QUERY_KEYS.ARTICLES,
-                                                                    ],
-                                                                }
-                                                            )
-                                                            queryClient.invalidateQueries(
-                                                                {
-                                                                    queryKey: [
-                                                                        RSS_QUERY_KEYS.UNREAD_COUNTS,
-                                                                    ],
-                                                                }
-                                                            )
-                                                        },
-                                                    }
-                                                )
-                                            }}
-                                            onExtractFullText={
-                                                handleExtractContent
-                                            }
-                                            onSummarize={handleSummarize}
-                                            onTranslate={handleTranslate}
-                                            isExtracting={
-                                                extractFullText.isFetching
-                                            }
-                                            isSummarizing={
-                                                summarizeArticle.isFetching
-                                            }
-                                            isTranslating={isTranslating}
-                                            onBack={onBack}
-                                            hideBackground={true}
-                                            isReadLaterMode={isReadLaterMode}
-                                        />
-                                    )}
+                                                        // Revert cache optimistic updates
+                                                        queryClient.invalidateQueries(
+                                                            {
+                                                                queryKey: [
+                                                                    RSS_QUERY_KEYS.ARTICLES,
+                                                                ],
+                                                            }
+                                                        )
+                                                        queryClient.invalidateQueries(
+                                                            {
+                                                                queryKey: [
+                                                                    RSS_QUERY_KEYS.UNREAD_COUNTS,
+                                                                ],
+                                                            }
+                                                        )
+                                                    },
+                                                }
+                                            )
+                                        }}
+                                        onExtractFullText={
+                                            handleExtractContent
+                                        }
+                                        onSummarize={handleSummarize}
+                                        onTranslate={handleTranslate}
+                                        isExtracting={
+                                            extractFullText.isFetching
+                                        }
+                                        isSummarizing={
+                                            summarizeArticle.isFetching
+                                        }
+                                        isTranslating={isTranslating}
+                                        onBack={onBack}
+                                        hideBackground={true}
+                                        isReadLaterMode={isReadLaterMode}
+                                    />
+                                )}
                             </div>
                         </div>
 
@@ -866,27 +889,27 @@ export function ArticleContent({
                                     hasValidSummary
                                 )
                             })() && (
-                                <div className="mb-8">
-                                    <AiSummaryCard
-                                        summary={aiSummary!}
-                                        onDismiss={() => {
-                                            setAiSummary(null)
-                                            onSummaryChange(null, false)
-                                        }}
-                                    />
-                                </div>
-                            )}
+                                    <div className="mb-8">
+                                        <AiSummaryCard
+                                            summary={aiSummary!}
+                                            onDismiss={() => {
+                                                setAiSummary(null)
+                                                onSummaryChange(null, false)
+                                            }}
+                                        />
+                                    </div>
+                                )}
 
                             {/* Article Content - Show based on selected source */}
                             {(() => {
                                 const displayContent =
                                     contentSource === "translated" &&
-                                    translatedContent
+                                        translatedContent
                                         ? translatedContent
                                         : contentSource === "extracted" &&
                                             article.extracted_content
-                                          ? article.extracted_content
-                                          : article.content ||
+                                            ? article.extracted_content
+                                            : article.content ||
                                             article.description ||
                                             ""
 
@@ -913,17 +936,17 @@ export function ArticleContent({
                                     <div className="space-y-6">
                                         {(article.description ||
                                             article.note) && (
-                                            <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html:
-                                                            article.note ||
-                                                            article.description ||
-                                                            "",
-                                                    }}
-                                                />
-                                            </blockquote>
-                                        )}
+                                                <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
+                                                    <div
+                                                        dangerouslySetInnerHTML={{
+                                                            __html:
+                                                                article.note ||
+                                                                article.description ||
+                                                                "",
+                                                        }}
+                                                    />
+                                                </blockquote>
+                                            )}
                                         <div className="flex flex-col items-center justify-center py-8 text-center">
                                             <div className="mx-auto max-w-md">
                                                 <p className="text-sm text-muted-foreground">
