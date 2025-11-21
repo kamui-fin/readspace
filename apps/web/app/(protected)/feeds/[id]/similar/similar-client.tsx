@@ -6,7 +6,10 @@ import type { ReactNode } from "react"
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import { FEEDS_INDEX_NAME, meilisearchClient } from "@/lib/meilisearch-client"
-import { feedDiscoveryResultToFeed, type FeedDiscoveryResult } from "@readspace/shared"
+import {
+    feedDiscoveryResultToFeed,
+    type FeedDiscoveryResult,
+} from "@readspace/shared"
 
 interface SimilarFeedsClientProps {
     feedId: string
@@ -84,7 +87,8 @@ interface ErrorMessageProps {
 }
 
 function ErrorMessage({ error }: ErrorMessageProps) {
-    const isNotFound = error.message?.includes("404") || error.message?.includes("not found")
+    const isNotFound =
+        error.message?.includes("404") || error.message?.includes("not found")
 
     return (
         <div className="flex flex-col items-center justify-center py-16">
@@ -107,13 +111,16 @@ function EmptyState() {
                 No similar feeds found
             </h3>
             <p className="text-sm text-muted-foreground text-center max-w-md">
-                This feed might be unique, or similar feeds may not have embeddings yet.
+                This feed might be unique, or similar feeds may not have
+                embeddings yet.
             </p>
         </div>
     )
 }
 
-export default function SimilarFeedsClient({ feedId }: SimilarFeedsClientProps) {
+export default function SimilarFeedsClient({
+    feedId,
+}: SimilarFeedsClientProps) {
     // Query for similar feeds using Meilisearch
     const {
         data: similarResults,

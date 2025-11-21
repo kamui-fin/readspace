@@ -14,7 +14,7 @@ from app.models import Feed
 from app.schemas.auth import TokenData
 from app.schemas.feeds import AdminFeedUpdate
 from app.schemas.subscriptions import FeedResponse
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)

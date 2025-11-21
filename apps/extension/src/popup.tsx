@@ -1,5 +1,5 @@
 import { browser } from '@/lib/browser'
-import type { PageMetadata} from '@readspace/shared'
+import type { PageMetadata } from '@readspace/shared'
 import { QueryClient } from '@tanstack/react-query'
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client'
 import {
@@ -372,7 +372,12 @@ function PopupContent() {
               className="w-full h-full"
             />
           </div>
-          <h1 className="font-semibold text-lg" style={{fontFamily: "Figtree"}}>readspace</h1>
+          <h1
+            className="font-semibold text-lg"
+            style={{ fontFamily: 'Figtree' }}
+          >
+            readspace
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <ThemeSwitcher />
@@ -405,12 +410,12 @@ function PopupContent() {
           {(isFeedDataLoading ||
             (currentPageMetadata?.feeds &&
               currentPageMetadata.feeds.length > 0)) && (
-              <FeedDiscoveryCard
-                feeds={currentPageMetadata?.feeds}
-                websiteTitle={currentPageMetadata?.title}
-                isLoading={isFeedDataLoading}
-              />
-            )}
+            <FeedDiscoveryCard
+              feeds={currentPageMetadata?.feeds}
+              websiteTitle={currentPageMetadata?.title}
+              isLoading={isFeedDataLoading}
+            />
+          )}
 
           {/* Current Page Preview - Always show, with skeleton while loading */}
           <ArticlePreview

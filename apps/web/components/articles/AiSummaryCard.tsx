@@ -42,7 +42,7 @@ export function AiSummaryCard({ summary, onDismiss }: AiSummaryCardProps) {
                                     <X className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
+                            <div className="text-lg prose prose-sm dark:prose-invert max-w-none text-foreground">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkGfm, remarkBreaks]}
                                     components={{

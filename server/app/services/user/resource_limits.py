@@ -62,7 +62,7 @@ class ResourceLimitService:
                 return len(rows)
             else:
                 # Without lock, we can use the more efficient COUNT query
-                query = select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
+                query = select(func.count).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
                 result = await self.db.execute(query)
                 return result.scalar_one()
 

@@ -9,14 +9,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import MAX_AI_SUMMARIZATION_CONTENT_BYTES, MAX_AI_TRANSLATION_CONTENT_BYTES
 from app.core.custom_exceptions import ServiceUnavailableError
-from app.crud.article.article import get_article as crud_get_article
+from app.crud.article import get_article_by_id
 from app.db.session import get_db
 from app.models import ClippedArticle
 from app.schemas.auth import TokenData
 from app.schemas.enums import LanguageCode
 from app.services.ai import ContentProcessor
-from app.services.articles.article_management import ArticleManagementService
-from app.services.articles.content_extraction import ContentExtractionService
+from app.services.articles.management import ArticleManagementService
+from app.services.articles.scrape import ContentExtractionService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -128,7 +128,7 @@ async def extract_full_text(
 
         # Get the article directly from DB to verify ownership and get URL
         # Don't use rss_service.get_article() as it triggers auto-extraction
-        article_db = await crud_get_article(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
+        article_db = await get_article_by_id(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
         if not article_db:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
 

@@ -10,11 +10,11 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
+from app.core.logging_config import setup_logging
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
 from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, MetricsMiddleware, RequestIdMiddleware
 from app.routers import router as api_router  # Import the main router
-from app.utils.logging_config import setup_logging
 
 # Configure structured logging first
 setup_logging()

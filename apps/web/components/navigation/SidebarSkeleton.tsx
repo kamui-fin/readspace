@@ -60,7 +60,10 @@ export function SidebarFeedsSkeleton() {
                     {/* First sub-item */}
                     <SidebarMenuSubItem>
                         <div className="flex items-center w-full group/item">
-                            <SidebarLeftMenuSubButton className="flex-1" asChild>
+                            <SidebarLeftMenuSubButton
+                                className="flex-1"
+                                asChild
+                            >
                                 <div className="flex items-center gap-2">
                                     <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
                                     <Skeleton className="h-4 w-32 bg-muted-foreground/20" />
@@ -76,7 +79,10 @@ export function SidebarFeedsSkeleton() {
                     {/* Second sub-item */}
                     <SidebarMenuSubItem>
                         <div className="flex items-center w-full group/item">
-                            <SidebarLeftMenuSubButton className="flex-1" asChild>
+                            <SidebarLeftMenuSubButton
+                                className="flex-1"
+                                asChild
+                            >
                                 <div className="flex items-center gap-2">
                                     <Skeleton className="h-4 w-4 rounded-sm shrink-0 bg-muted-foreground/20" />
                                     <Skeleton className="h-4 w-28 bg-muted-foreground/20" />

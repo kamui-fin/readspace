@@ -2,10 +2,7 @@
 
 import Header from "@/components/navigation/Header"
 import { Button } from "@/components/ui/button"
-import {
-    Card,
-    CardContent
-} from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { opmlParse, type OutlineNode } from "@/lib/opml"
 import {
     ActiveImportTask,
@@ -266,8 +263,8 @@ export default function ImportOPMLPageClient() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                        activeImports.length > 0 &&
-                        activeImports[0] ? (
+                    activeImports.length > 0 &&
+                    activeImports[0] ? (
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -298,10 +295,11 @@ export default function ImportOPMLPageClient() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${isDragging
-                                ? "border-primary bg-primary/5"
-                                : "border-dashed border-2"
-                                }`}
+                            className={`transition-colors duration-200 ${
+                                isDragging
+                                    ? "border-primary bg-primary/5"
+                                    : "border-dashed border-2"
+                            }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

@@ -37,12 +37,7 @@ import {
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
-import {
-    CheckCheck,
-    Eye,
-    EyeOff,
-    RefreshCw,
-} from "lucide-react"
+import { CheckCheck, Eye, EyeOff, RefreshCw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 import { ArticleContent } from "./articles/ArticleContent"
@@ -151,7 +146,7 @@ export function ArticlesView({
     const {
         data: fetchedFeedData,
         error: feedError,
-        isLoading: isFeedLoading
+        isLoading: isFeedLoading,
     } = useFeed(feedId || "", {
         enabled: !!feedId && !isPreviewRefreshing,
         refetchOnMount: false,
@@ -190,17 +185,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-            ? "Read Later"
-            : isTodayMode
-                ? "Today"
-                : feedId && feedData?.title
-                    ? feedData.title
-                    : folderId && allFolders
-                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                            ?.name ||
-                        initialSidebarTitle ||
-                        "All Articles"
-                        : initialSidebarTitle || "All Articles"
+          ? "Read Later"
+          : isTodayMode
+            ? "Today"
+            : feedId && feedData?.title
+              ? feedData.title
+              : folderId && allFolders
+                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                      ?.name ||
+                  initialSidebarTitle ||
+                  "All Articles"
+                : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -301,10 +296,10 @@ export function ArticlesView({
     const activeQuery = isTodayMode
         ? todayQuery
         : isRecentlyReadMode
-            ? recentlyReadQuery
-            : isReadLaterMode
-                ? readLaterQuery
-                : allArticlesQuery
+          ? recentlyReadQuery
+          : isReadLaterMode
+            ? readLaterQuery
+            : allArticlesQuery
 
     const {
         data,
@@ -646,7 +641,7 @@ export function ArticlesView({
             // Select first article (or first unread if filter is on)
             const firstArticle = showUnreadOnly
                 ? sortedArticles.find((a: Article) => !a.is_read) ||
-                sortedArticles[0]
+                  sortedArticles[0]
                 : sortedArticles[0]
 
             if (firstArticle?.id) {
@@ -667,8 +662,7 @@ export function ArticlesView({
     // Show skeleton during initial loading or preview refresh only
     // Don't show skeleton when refetching with existing data (prevents flash on invalidation)
     const isInitialLoading =
-        (isArticlesLoading && allArticles.length === 0) ||
-        isPreviewRefreshing
+        (isArticlesLoading && allArticles.length === 0) || isPreviewRefreshing
 
     if (isInitialLoading) {
         return <ArticlesViewSkeleton showUnreadBadge={false} />
@@ -847,9 +841,9 @@ export function ArticlesView({
                                                         feedId
                                                             ? handleDeepRefresh
                                                             : () =>
-                                                                handleRefreshWithMessage(
-                                                                    "Refreshing articles..."
-                                                                )
+                                                                  handleRefreshWithMessage(
+                                                                      "Refreshing articles..."
+                                                                  )
                                                     }
                                                     disabled={isDeepRefreshing}
                                                 >
@@ -985,7 +979,9 @@ export function ArticlesView({
                                                 title="Check for new articles"
                                                 disabled={isDeepRefreshing}
                                             >
-                                                <RefreshCw className={`h-4 w-4 transition-transform duration-200 ${isDeepRefreshing ? "animate-spin" : "hover:rotate-180"}`} />
+                                                <RefreshCw
+                                                    className={`h-4 w-4 transition-transform duration-200 ${isDeepRefreshing ? "animate-spin" : "hover:rotate-180"}`}
+                                                />
                                             </Button>
                                         ) : (
                                             /* Other views: simple refresh button (shallow only) */

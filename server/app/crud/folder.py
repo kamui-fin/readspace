@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Folder
 from app.schemas import FolderCreate, FolderUpdate
-from app.utils.url_validator import validate_folder_name
+from app.utils.url.url_validator import validate_folder_name
 
 
 async def get_folder(db: AsyncSession, *, folder_id: UUID, user_id: UUID) -> Folder | None:

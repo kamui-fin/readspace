@@ -8,20 +8,18 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_metrics import user_actions_total
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import (
     FeedSubscriptionError,
     FeedValidationError,
     NotFoundError,
 )
-from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
 from app.db.session import get_db
 from app.models import ArticleContent, FeedArticle
 from app.schemas import FeedUpdate
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import FeedResponse, SubscriptionResponse
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -332,9 +330,6 @@ async def delete_feed(
     duration = time.perf_counter() - start_time
 
     if not success:
-        feed_operations_total.labels(operation="unsubscribe", status="not_found").inc()
-        feed_operation_duration_seconds.labels(operation="unsubscribe").observe(duration)
-
         logger.warning(
             "Feed not found for deletion or access denied",
             feed_id=feed_id,
@@ -342,11 +337,6 @@ async def delete_feed(
             duration_seconds=round(duration, 3),
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
-
-    # Record success metrics
-    feed_operations_total.labels(operation="unsubscribe", status="success").inc()
-    feed_operation_duration_seconds.labels(operation="unsubscribe").observe(duration)
-    user_actions_total.labels(action="unsubscribe").inc()
 
     logger.info(
         "Feed deleted successfully",

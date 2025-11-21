@@ -395,10 +395,11 @@ export function FeedSubscriptionModal({
                   {folders.map((folder) => (
                     <div
                       key={folder.id}
-                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${selectedFolderId === folder.id
+                      className={`group flex items-center gap-2.5 p-2.5 rounded-lg border transition-all cursor-pointer ${
+                        selectedFolderId === folder.id
                           ? 'bg-primary/10 border-primary/40 shadow-sm'
                           : 'hover:bg-accent/50 border-border hover:border-border/60'
-                        }`}
+                      }`}
                       onClick={() =>
                         !editingFolderId && setSelectedFolderId(folder.id)
                       }
@@ -447,10 +448,11 @@ export function FeedSubscriptionModal({
                       ) : (
                         <>
                           <div
-                            className={`rounded p-1 flex-shrink-0 transition-colors ${selectedFolderId === folder.id
+                            className={`rounded p-1 flex-shrink-0 transition-colors ${
+                              selectedFolderId === folder.id
                                 ? 'bg-primary text-primary-foreground'
                                 : 'bg-muted text-muted-foreground'
-                              }`}
+                            }`}
                           >
                             <FolderIcon className="w-3.5 h-3.5" />
                           </div>
@@ -537,17 +539,10 @@ export function FeedSubscriptionModal({
 
               {/* Actions */}
               <DialogFooter className="pt-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onClose}
-                >
+                <Button type="button" variant="outline" onClick={onClose}>
                   Cancel
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={!selectedFolderId}
-                >
+                <Button type="submit" disabled={!selectedFolderId}>
                   <BellPlus className="w-3 h-3 mr-2" />
                   Subscribe
                 </Button>

@@ -5,11 +5,9 @@ import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_metrics import user_actions_total
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import ReadspaceException, to_http_exception
 from app.core.dependencies import get_subscription_service
-from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
 from app.crud import crud_feed
 from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
@@ -19,7 +17,7 @@ from app.schemas.subscriptions import (
     SubscriptionCreateByFeedId,
     SubscriptionResponse,
 )
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.subscription import SubscriptionService
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import ResourceLimitService, check_subscription_limit
@@ -144,11 +142,7 @@ async def subscribe_to_feed(
             folder_id=subscription_data.folder_id,
         )
 
-        # Record success metrics
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="subscribe", status="success").inc()
-        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
-        user_actions_total.labels(action="subscribe").inc()
 
         logger.info(
             "Feed subscription created successfully",
@@ -161,17 +155,11 @@ async def subscribe_to_feed(
         return subscription
 
     except HTTPException:
-        # Record metrics for HTTP exceptions
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="subscribe", status="http_error").inc()
-        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
         # Re-raise HTTP exceptions from downstream handlers
         raise
     except ReadspaceException as e:
-        # Record metrics for business logic failures
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="subscribe", status="validation_error").inc()
-        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
 
         # Convert custom exceptions to HTTP exceptions using mapper
         logger.warning(
@@ -184,10 +172,7 @@ async def subscribe_to_feed(
         )
         raise to_http_exception(e) from e
     except Exception as e:
-        # Record metrics for unexpected errors
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="subscribe", status="error").inc()
-        feed_operation_duration_seconds.labels(operation="subscribe").observe(duration)
 
         # Catch-all for unexpected errors
         logger.error(
@@ -290,11 +275,7 @@ async def add_new_feed(
             tag_names=None,
         )
 
-        # Record success metrics
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="add_new_feed", status="success").inc()
-        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
-        user_actions_total.labels(action="subscribe").inc()
 
         logger.info(
             "Feed added successfully",
@@ -305,17 +286,11 @@ async def add_new_feed(
         )
         return feed
     except HTTPException:
-        # Record metrics for HTTP exceptions
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="add_new_feed", status="http_error").inc()
-        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
         # Re-raise HTTP exceptions from downstream handlers
         raise
     except ReadspaceException as e:
-        # Record metrics for business logic failures
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="add_new_feed", status="validation_error").inc()
-        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
 
         # Convert custom exceptions to HTTP exceptions using mapper
         logger.warning(
@@ -328,10 +303,7 @@ async def add_new_feed(
         )
         raise to_http_exception(e) from e
     except Exception as e:
-        # Record metrics for unexpected errors
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="add_new_feed", status="error").inc()
-        feed_operation_duration_seconds.labels(operation="add_new_feed").observe(duration)
 
         # Catch-all for unexpected errors
         logger.error(

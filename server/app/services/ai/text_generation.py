@@ -6,11 +6,6 @@ import structlog
 from google.genai import types
 
 from app.core.config import get_settings
-from app.core.metrics import (
-    ai_request_duration_seconds,
-    ai_requests_total,
-    ai_token_usage_total,
-)
 from app.services.ai.client import get_gemini_client
 
 logger = structlog.get_logger(__name__)
@@ -69,43 +64,17 @@ class TextGenerationService:
             content = response.text or ""
             duration = time.perf_counter() - start_time
 
-            ai_requests_total.labels(operation=operation, model=self.model, status="success").inc()
-            ai_request_duration_seconds.labels(operation=operation, model=self.model).observe(duration)
-
-            if hasattr(response, "usage_metadata") and response.usage_metadata:
-                usage = response.usage_metadata
-                if hasattr(usage, "prompt_token_count"):
-                    ai_token_usage_total.labels(operation=operation, model=self.model, direction="prompt").inc(
-                        usage.prompt_token_count
-                    )
-                if hasattr(usage, "candidates_token_count"):
-                    ai_token_usage_total.labels(operation=operation, model=self.model, direction="response").inc(
-                        usage.candidates_token_count
-                    )
-
             logger.info(
                 "Text generation completed",
                 operation=operation,
                 model=self.model,
                 response_length=len(content),
                 duration_seconds=round(duration, 3),
-                prompt_tokens=usage.prompt_token_count
-                if hasattr(response, "usage_metadata")
-                and response.usage_metadata
-                and hasattr(response.usage_metadata, "prompt_token_count")
-                else None,
-                response_tokens=usage.candidates_token_count
-                if hasattr(response, "usage_metadata")
-                and response.usage_metadata
-                and hasattr(response.usage_metadata, "candidates_token_count")
-                else None,
             )
             return content
 
         except Exception as e:
             duration = time.perf_counter() - start_time
-            ai_requests_total.labels(operation=operation, model=self.model, status="error").inc()
-            ai_request_duration_seconds.labels(operation=operation, model=self.model).observe(duration)
 
             logger.error(
                 "Error generating text",

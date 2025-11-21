@@ -122,7 +122,8 @@ export function ArticleContent({
     const pathname = usePathname()
 
     // Check if we're viewing a specific feed's articles page
-    const isInFeedView = pathname?.startsWith("/feeds/") && pathname?.includes("/articles")
+    const isInFeedView =
+        pathname?.startsWith("/feeds/") && pathname?.includes("/articles")
 
     // For AI operations (summary, translation), always use the base content (original or extracted)
     // This ensures proper cache key generation based on source content hash, not translated content
@@ -168,8 +169,8 @@ export function ArticleContent({
         : "Date unknown"
 
     // Show feed badge when not in a feed-specific view and article has feed info
-    const shouldShowFeedBadge = !isInFeedView && article.feed_id && article.feed?.title
-
+    const shouldShowFeedBadge =
+        !isInFeedView && article.feed_id && article.feed?.title
 
     /**
      * Handles extraction of full text content from article URL
@@ -193,7 +194,8 @@ export function ArticleContent({
                             ...old,
                             extracted_content: data.content,
                             estimated_read_time_minutes:
-                                data.estimated_read_time_minutes || old.estimated_read_time_minutes,
+                                data.estimated_read_time_minutes ||
+                                old.estimated_read_time_minutes,
                         }
                     }
                 )
@@ -590,14 +592,20 @@ export function ArticleContent({
                                     href={`/feeds/${article.feed_id}/articles`}
                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
                                 >
-                                    {article.feed.image_url && !feedImageError ? (
+                                    {article.feed.image_url &&
+                                    !feedImageError ? (
                                         <Image
                                             src={article.feed.image_url}
-                                            alt={article.feed.title || "Feed image"}
+                                            alt={
+                                                article.feed.title ||
+                                                "Feed image"
+                                            }
                                             width={16}
                                             height={16}
                                             className="h-4 w-4 shrink-0 rounded"
-                                            onError={() => setFeedImageError(true)}
+                                            onError={() =>
+                                                setFeedImageError(true)
+                                            }
                                         />
                                     ) : (
                                         <div className="h-4 w-4 shrink-0 rounded bg-primary/20" />

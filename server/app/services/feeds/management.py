@@ -25,9 +25,9 @@ from app.crud import crud_feed, crud_subscription
 from app.models import ArticleContent, FeedArticle, FeedSubscription, UserArticleState
 from app.schemas import FeedUpdate
 from app.schemas.subscriptions import FeedResponse, SubscriptionResponse, SubscriptionUpdate
+from app.services.feeds.creation import FeedCreationService
 from app.services.feeds.feed import FeedService
-from app.services.feeds.feed_creation import FeedCreationService
-from app.utils.url_normalizer import normalize_url_for_display
+from app.utils.url.url_normalizer import normalize_url_for_display
 
 logger = structlog.get_logger(__name__)
 
@@ -313,8 +313,23 @@ class FeedManagementService:
             base_response = await self.feed_service.refresh_feed(feed_id=feed_id, force_refetch=force_refetch)
 
             if not base_response:
-                logger.warning("Feed not found for refresh", feed_id=feed_id)
-                return None
+                # Refresh failed - check if user is subscribed or in preview mode
+                # If subscribed, return existing feed data; if preview mode, check if feed exists
+                if not preview_mode and not subscription_db:
+                    # Not subscribed and not preview mode - return None (will be 404)
+                    logger.warning("Feed not found for refresh", feed_id=feed_id)
+                    return None
+
+                # User is subscribed or in preview mode - return existing feed data even if refresh failed
+                feed_db = await crud_feed.get_feed_by_id(self.db, feed_id=feed_id)
+                if not feed_db:
+                    logger.warning("Feed not found for refresh", feed_id=feed_id)
+                    return None
+
+                # Construct response from existing feed data
+                from app.schemas.subscriptions import FeedResponse as BaseFeedResponse
+
+                base_response = BaseFeedResponse.model_validate(feed_db)
 
             # Convert base FeedResponse to user-specific FeedResponse
             # Add subscription data and unread counts if user is subscribed

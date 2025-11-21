@@ -1,7 +1,12 @@
 import { Button } from '@/components/ui/button'
 import { browser } from '@/lib/browser'
 import type { PageMetadata, Priority } from '@readspace/shared'
-import { useCheckArticleSaved, useSaveArticle, useUnsaveArticle, useUpdateArticle } from '@readspace/shared'
+import {
+  useCheckArticleSaved,
+  useSaveArticle,
+  useUnsaveArticle,
+  useUpdateArticle,
+} from '@readspace/shared'
 import { BookOpen, Check, Flag, Pencil, StickyNote, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
@@ -93,25 +98,27 @@ export function ArticlePreview({
     onError: () => {
       toast.error('Failed to save article')
       setIsPreparingToSave(false)
-    }
+    },
   })
   const unsaveArticleMutation = useUnsaveArticle({
     onError: () => {
       toast.error('Failed to remove article')
-    }
+    },
   })
   const updateArticleMutation = useUpdateArticle({
     onError: () => {
       toast.error('Failed to update article')
-    }
+    },
   })
 
-  // Show as saved if: 
+  // Show as saved if:
   // 1. Article is actually saved, OR
   // 2. Save mutation is pending (optimistic), OR
   // 3. We're preparing to save (extracting content)
   const isSaved =
-    (!!savedArticle && savedArticle.is_saved && savedArticle.is_read_later !== false) ||
+    (!!savedArticle &&
+      savedArticle.is_saved &&
+      savedArticle.is_read_later !== false) ||
     saveArticleMutation.isPending ||
     isPreparingToSave
 
@@ -134,7 +141,11 @@ export function ArticlePreview({
       return
     }
 
-    if (savedArticle && savedArticle.is_saved && savedArticle.is_read_later !== false) {
+    if (
+      savedArticle &&
+      savedArticle.is_saved &&
+      savedArticle.is_read_later !== false
+    ) {
       const savedTitle = savedArticle.title || ''
       const savedNote = savedArticle.note || ''
       const savedPriority = (
@@ -275,7 +286,8 @@ export function ArticlePreview({
           url: currentUrl,
           title: customTitle || extractedContent?.title || metadata?.title,
           content: extractedContent?.content,
-          metadata: Object.keys(metadataObj).length > 0 ? metadataObj : undefined,
+          metadata:
+            Object.keys(metadataObj).length > 0 ? metadataObj : undefined,
           priority: priority.toUpperCase(),
           note: note || undefined,
         })
@@ -367,12 +379,15 @@ export function ArticlePreview({
             }
             size="sm"
             variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
-            className={`flex-shrink-0 w-[100px] ${isSaved && !hasUnsavedChanges
-              ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-              : ''
-              }`}
+            className={`flex-shrink-0 w-[100px] ${
+              isSaved && !hasUnsavedChanges
+                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+                : ''
+            }`}
           >
-            {isSaved && !hasUnsavedChanges && !unsaveArticleMutation.isPending ? (
+            {isSaved &&
+            !hasUnsavedChanges &&
+            !unsaveArticleMutation.isPending ? (
               <div className="flex items-center justify-center">
                 <Trash2 className="w-3 h-3 mr-1.5" />
                 <span>Unsave</span>
@@ -382,7 +397,9 @@ export function ArticlePreview({
                 <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin mr-1.5" />
                 <span>Removing</span>
               </div>
-            ) : isSaved && hasUnsavedChanges && !updateArticleMutation.isPending ? (
+            ) : isSaved &&
+              hasUnsavedChanges &&
+              !updateArticleMutation.isPending ? (
               'Update'
             ) : updateArticleMutation.isPending ? (
               <div className="flex items-center justify-center">
@@ -463,9 +480,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('low')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'low'
-                      ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'low'
+                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -478,9 +496,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('medium')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'medium'
-                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'medium'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -493,9 +512,10 @@ export function ArticlePreview({
                   onClick={() => setPriority('high')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${priority === 'high'
-                      ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${
+                      priority === 'high'
+                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >

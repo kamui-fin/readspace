@@ -26,11 +26,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.taskiq_app import broker
 from app.workers.common import get_worker_db
-from app.workers.feed_tasks import (
-    async_compact_old_articles,
-    async_compact_unread_articles,
-    async_batch_enrich_feeds,
-    async_schedule_all_feeds,
+from app.workers.feed import (
+    batch_enrich_feeds,
+    compact_old_articles,
+    compact_unread_articles,
+    schedule_all_feeds,
 )
 
 logger = structlog.get_logger(__name__)
@@ -41,7 +41,7 @@ async def trigger_refresh_all() -> None:
     logger.info("Triggering: Schedule all feed refreshes")
 
     async for session in get_worker_db():
-        await async_schedule_all_feeds(db=session, test_mode=False)
+        await schedule_all_feeds(db=session)
 
     logger.info("Completed: Schedule all feed refreshes")
 
@@ -51,7 +51,7 @@ async def trigger_compact_unread() -> None:
     logger.info("Triggering: Compact unread articles")
 
     async for session in get_worker_db():
-        result = await async_compact_unread_articles(db=session)
+        result = await compact_unread_articles(db=session)
 
     logger.info("Completed: Compact unread articles", **result)
     print(f"\nResult: {result}")
@@ -62,19 +62,19 @@ async def trigger_compact_old() -> None:
     logger.info("Triggering: Compact old articles")
 
     async for session in get_worker_db():
-        result = await async_compact_old_articles(db=session)
+        result = await compact_old_articles(db=session)
 
     logger.info("Completed: Compact old articles", **result)
     print(f"\nResult: {result}")
 
 async def trigger_batch_enrich() -> None:
-    """Trigger compact old articles task."""
-    logger.info("Triggering: Compact old articles")
+    """Trigger batch enrich feeds task."""
+    logger.info("Triggering: Batch enrich feeds")
 
     async for session in get_worker_db():
-        result = await async_batch_enrich_feeds(db=session)
+        result = await batch_enrich_feeds(db=session)
 
-    logger.info("Completed: Compact old articles", **result)
+    logger.info("Completed: Batch enrich feeds", **result)
     print(f"\nResult: {result}")
 
 

@@ -9,11 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.constants import INITIAL_UNREAD_COUNT
+from app.crud import feed as crud_feed
 from app.crud import folder as crud_folder
-from app.crud.feed import feed as crud_feed
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription
 from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
-from app.utils.url_normalizer import get_protocol_variation, resolve_feed_url
+from app.utils.url.url_normalizer import get_protocol_variation, resolve_feed_url
 
 # Define minimal feed columns for subscription responses to prevent over-fetching
 # Includes all fields needed by FeedResponse schema

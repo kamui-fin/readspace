@@ -7,11 +7,20 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile
+from app.models import (
+    ArticleContent,
+    Feed,
+    FeedArticle,
+    FeedSubscription,
+    Folder,
+    Profile,
+)
 
 
 @pytest.mark.asyncio
-async def test_mark_feed_all_read_e2e(async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
+async def test_mark_feed_all_read_e2e(
+    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+):
     """Test marking all articles in a feed as read via API."""
     # Create a folder
     folder = Folder(
@@ -81,7 +90,9 @@ async def test_mark_feed_all_read_e2e(async_client: AsyncClient, db_session: Asy
 
 
 @pytest.mark.asyncio
-async def test_mark_folder_all_read_e2e(async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
+async def test_mark_folder_all_read_e2e(
+    async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+):
     """Test marking all articles in a folder as read via API."""
     # Create a folder
     folder = Folder(
@@ -150,7 +161,9 @@ async def test_mark_folder_all_read_e2e(async_client: AsyncClient, db_session: A
     # Verify both subscriptions were updated
     from sqlalchemy import select
 
-    result = await db_session.execute(select(FeedSubscription).where(FeedSubscription.folder_id == folder.id))
+    result = await db_session.execute(
+        select(FeedSubscription).where(FeedSubscription.folder_id == folder.id)
+    )
     subscriptions = result.scalars().all()
 
     assert len(subscriptions) == 2
@@ -273,9 +286,9 @@ async def test_new_articles_after_mark_all_read_show_as_unread(
     await db_session.commit()
 
     # Get unread counts - new article should be unread
-    from app.crud.article.article_specialized_queries import ArticleSpecializedQueries
+    from app.crud.article import count_unread_articles
 
-    unread_count = await ArticleSpecializedQueries.count_unread_articles(db_session, user_id=test_user.id)
+    unread_count = await count_unread_articles(db_session, user_id=test_user.id)
 
     # Should have 1 unread article (the new one)
     assert unread_count == 1
@@ -287,7 +300,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
 ):
     """Test that subscribing to a feed with >10 articles only shows 10 as unread initially."""
     from app.core.constants import INITIAL_UNREAD_COUNT
-    from app.crud.article.article_specialized_queries import ArticleSpecializedQueries
+    from app.crud.article import count_unread_articles
 
     # Create a folder
     folder = Folder(
@@ -355,9 +368,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
     assert subscription.last_read_cutoff is not None
 
     # Count unread articles for this user
-    unread_count = await ArticleSpecializedQueries.count_unread_articles(
-        db_session, user_id=test_user.id
-    )
+    unread_count = await count_unread_articles(db_session, user_id=test_user.id)
 
     # Should have exactly INITIAL_UNREAD_COUNT unread articles (default is 10)
     assert unread_count == INITIAL_UNREAD_COUNT, (
@@ -371,7 +382,7 @@ async def test_subscription_with_fewer_articles_shows_all_as_unread(
     async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
 ):
     """Test that subscribing to a feed with <10 articles shows all as unread."""
-    from app.crud.article.article_specialized_queries import ArticleSpecializedQueries
+    from app.crud.article import count_unread_articles
 
     # Create a folder
     folder = Folder(
@@ -434,9 +445,7 @@ async def test_subscription_with_fewer_articles_shows_all_as_unread(
     assert subscription.last_read_cutoff is None
 
     # Count unread articles
-    unread_count = await ArticleSpecializedQueries.count_unread_articles(
-        db_session, user_id=test_user.id
-    )
+    unread_count = await count_unread_articles(db_session, user_id=test_user.id)
 
     # Should have all 5 articles as unread
     assert unread_count == 5
@@ -505,7 +514,9 @@ async def test_mark_feed_all_read_updates_article_list_is_read_field(
     articles_before = data["items"]
     assert len(articles_before) == 5
     for article in articles_before:
-        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark all read"
+        assert (
+            article["is_read"] is False
+        ), f"Article {article['id']} should be unread before mark all read"
 
     # Mark all as read
     response = await async_client.put(f"/api/feeds/{feed.id}/read-status")
@@ -518,7 +529,9 @@ async def test_mark_feed_all_read_updates_article_list_is_read_field(
     articles_after = data["items"]
     assert len(articles_after) == 5
     for article in articles_after:
-        assert article["is_read"] is True, f"Article {article['id']} should be read after mark all read"
+        assert (
+            article["is_read"] is True
+        ), f"Article {article['id']} should be read after mark all read"
 
 
 @pytest.mark.asyncio
@@ -588,7 +601,9 @@ async def test_mark_folder_all_read_updates_article_list_is_read_field(
     articles_before = data["items"]
     assert len(articles_before) == 6  # 2 feeds × 3 articles
     for article in articles_before:
-        assert article["is_read"] is False, f"Article {article['id']} should be unread before mark folder all read"
+        assert (
+            article["is_read"] is False
+        ), f"Article {article['id']} should be unread before mark folder all read"
 
     # Mark folder all as read
     response = await async_client.put(f"/api/folders/{folder.id}/read-status")
@@ -601,4 +616,6 @@ async def test_mark_folder_all_read_updates_article_list_is_read_field(
     articles_after = data["items"]
     assert len(articles_after) == 6
     for article in articles_after:
-        assert article["is_read"] is True, f"Article {article['id']} should be read after mark folder all read"
+        assert (
+            article["is_read"] is True
+        ), f"Article {article['id']} should be read after mark folder all read"

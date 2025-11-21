@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import factory
 from factory.alchemy import SQLAlchemyModelFactory
 
-from app.models.user_models import AuthUser, Profile
+from app.models.user import AuthUser, Profile
 
 
 class AuthUserFactory(SQLAlchemyModelFactory):
@@ -45,8 +45,8 @@ class ProfileFactory(SQLAlchemyModelFactory):
         # This should be called after the profile is created
         try:
             # Get the session from the factory
-            if hasattr(obj, "_sa_session") and obj._sa_session:
-                session = obj._sa_session
+            if hasattr(obj, "_sa_session") and obj._sa_session:  # pylint: disable=no-member
+                session = obj._sa_session  # pylint: disable=no-member
                 session.execute(
                     text("""
                         INSERT INTO auth.users (

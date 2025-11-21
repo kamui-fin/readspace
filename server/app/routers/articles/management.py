@@ -1,17 +1,14 @@
-import time
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_metrics import user_actions_total
 from app.core.constants import ERROR_ARTICLE_NOT_FOUND
-from app.core.metrics import article_operation_duration_seconds, article_operations_total
 from app.db.session import get_db
 from app.schemas import ArticleResponse, ArticleUpdate, ClippedArticleUpdate
 from app.schemas.auth import TokenData
-from app.services.articles.article_management import ArticleManagementService
+from app.services.articles.management import ArticleManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -109,8 +106,6 @@ async def update_article(
         - article_type parameter helps optimize database queries
         - Automatically logs update activity for audit purposes
     """
-    start_time = time.perf_counter()
-
     logger.info(
         "Received article update request",
         article_id=article_id,
@@ -122,35 +117,18 @@ async def update_article(
     updated_article = await article_service.update_article(
         article_id=article_id, article_in=article_in, article_type=article_type
     )
-    duration = time.perf_counter() - start_time
 
     if not updated_article:
-        article_operations_total.labels(operation="update", status="not_found").inc()
-        article_operation_duration_seconds.labels(operation="update").observe(duration)
-
         logger.warning(
             "Article not found for update or access denied",
             article_id=article_id,
             user_id=current_user.sub,
-            duration_seconds=round(duration, 3),
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_ARTICLE_NOT_FOUND)
-
-    # Record success metrics
-    article_operations_total.labels(operation="update", status="success").inc()
-    article_operation_duration_seconds.labels(operation="update").observe(duration)
-
-    # Track specific user actions based on what was updated
-    update_data = article_in.model_dump(exclude_unset=True)
-    if update_data.get("is_read"):
-        user_actions_total.labels(action="read").inc()
-    if update_data.get("is_favorite"):
-        user_actions_total.labels(action="favorite").inc()
 
     logger.info(
         "Article status updated successfully",
         article_id=updated_article.id,
         user_id=current_user.sub,
-        duration_seconds=round(duration, 3),
     )
     return updated_article

@@ -6,7 +6,11 @@ import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { feedDiscoveryResultToFeed, type Feed, type FeedDiscoveryResult } from "@readspace/shared"
+import {
+    feedDiscoveryResultToFeed,
+    type Feed,
+    type FeedDiscoveryResult,
+} from "@readspace/shared"
 
 import { Pagination } from "./Pagination"
 
@@ -29,14 +33,19 @@ interface SearchResultsProps {
  *
  * When a preview feed is provided (URL detected), displays the preview card instead.
  */
-export function SearchResults({ onClearSearch, previewFeed, isPreviewLoading, previewError }: SearchResultsProps) {
+export function SearchResults({
+    onClearSearch,
+    previewFeed,
+    isPreviewLoading,
+    previewError,
+}: SearchResultsProps) {
     const { items, results } = useHits<FeedDiscoveryResult>()
     const { nbHits } = results || { nbHits: 0 }
     const { currentRefinement, nbPages } = usePagination()
     const { status } = useInstantSearch()
 
     // Don't show "no results" while the search is still loading
-    const isLoading = status === 'loading' || status === 'stalled'
+    const isLoading = status === "loading" || status === "stalled"
 
     // Prepare preview feed data if available
     let previewFeedData: any = null
@@ -94,7 +103,7 @@ export function SearchResults({ onClearSearch, previewFeed, isPreviewLoading, pr
 
             <div className="flex items-center justify-between mb-2 pl-5 pr-2">
                 <div className="text-[#91998C] dark:text-muted-foreground text-sm">
-                    {nbHits} {nbHits === 1 ? 'result' : 'results'}
+                    {nbHits} {nbHits === 1 ? "result" : "results"}
                     {nbPages > 1 && (
                         <span className="ml-2">
                             · Page {currentRefinement + 1} of {nbPages}
@@ -133,7 +142,13 @@ export function SearchResults({ onClearSearch, previewFeed, isPreviewLoading, pr
 
                     const feed = feedDiscoveryResultToFeed(discoveryResult)
 
-                    return <FeedCard key={hitData.id} feed={feed} className="py-8" />
+                    return (
+                        <FeedCard
+                            key={hitData.id}
+                            feed={feed}
+                            className="py-8"
+                        />
+                    )
                 })}
             </div>
 

@@ -75,7 +75,9 @@ export function ArticleItem({
      * Format priority for display (convert to title case)
      */
     const formatPriority = (priority: string): string => {
-        return priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
+        return (
+            priority.charAt(0).toUpperCase() + priority.slice(1).toLowerCase()
+        )
     }
 
     /**
@@ -152,7 +154,9 @@ export function ArticleItem({
                                 >
                                     <Paperclip className="h-2.5 w-2.5" />
                                     <span>
-                                        {priority ? formatPriority(priority) : "Clipped"}
+                                        {priority
+                                            ? formatPriority(priority)
+                                            : "Clipped"}
                                     </span>
                                 </div>
                             )}

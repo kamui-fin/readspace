@@ -10,13 +10,7 @@ import trafilatura  # type: ignore[import-untyped]
 from bs4 import BeautifulSoup
 from trafilatura.settings import DEFAULT_CONFIG
 
-from app.core.business_metrics import articles_extracted_total
 from app.core.constants import CONTENT_EXTRACTION_TIMEOUT
-from app.core.metrics import (
-    content_extraction_duration_seconds,
-    content_extraction_total,
-    extracted_content_size_bytes,
-)
 from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
@@ -131,26 +125,20 @@ class ContentExtractionService:
             except asyncio.TimeoutError:
                 duration = time.perf_counter() - start_time
 
-                # Record timeout metrics
-                content_extraction_total.labels(status="timeout").inc()
-                content_extraction_duration_seconds.observe(duration)
-                articles_extracted_total.labels(status="failure", method="trafilatura").inc()
-
                 logger.warning(
                     "Content extraction timed out",
                     url=url,
                     timeout=CONTENT_EXTRACTION_TIMEOUT,
                     duration_seconds=round(duration, 3),
                 )
-                return None, None, f"Content extraction timed out after {CONTENT_EXTRACTION_TIMEOUT} seconds"
+                return (
+                    None,
+                    None,
+                    f"Content extraction timed out after {CONTENT_EXTRACTION_TIMEOUT} seconds",
+                )
 
             if not extracted:
                 duration = time.perf_counter() - start_time
-
-                # Record failure metrics
-                content_extraction_total.labels(status="failure").inc()
-                content_extraction_duration_seconds.observe(duration)
-                articles_extracted_total.labels(status="failure", method="trafilatura").inc()
 
                 logger.warning(
                     "Could not extract content from URL",
@@ -168,12 +156,6 @@ class ContentExtractionService:
             duration = time.perf_counter() - start_time
             content_size = len(extracted)
 
-            # Record success metrics
-            content_extraction_total.labels(status="success").inc()
-            content_extraction_duration_seconds.observe(duration)
-            extracted_content_size_bytes.observe(content_size)
-            articles_extracted_total.labels(status="success", method="trafilatura").inc()
-
             logger.info(
                 "Successfully extracted full text",
                 url=url,
@@ -186,11 +168,6 @@ class ContentExtractionService:
 
         except Exception as e:
             duration = time.perf_counter() - start_time
-
-            # Record error metrics
-            content_extraction_total.labels(status="error").inc()
-            content_extraction_duration_seconds.observe(duration)
-            articles_extracted_total.labels(status="failure", method="trafilatura").inc()
 
             logger.error(
                 "Error extracting full text",

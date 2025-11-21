@@ -1,229 +1,229 @@
 // Dialog overlay styling
 [cmdk-overlay] {
-  background: rgba(0, 0, 0, 0.5);
-  position: fixed;
-  inset: 0;
-  z-index: 50;
+    background: rgba(0, 0, 0, 0.5);
+    position: fixed;
+    inset: 0;
+    z-index: 50;
 }
 
 // Dialog root styling
 [cmdk-dialog] {
-  z-index: 51;
+    z-index: 51;
 }
 
 [cmdk-root] {
-  max-width: 640px;
-  width: 100%;
-  padding: 8px;
-  background: hsl(var(--background));
-  border-radius: 16px;
-  overflow: hidden;
-  font-family: var(--font-sans);
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 16px 70px rgba(0, 0, 0, 0.2);
-  outline: none;
-  position: fixed;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  transition: transform 100ms ease;
-  z-index: 51;
+    max-width: 640px;
+    width: 100%;
+    padding: 8px;
+    background: hsl(var(--background));
+    border-radius: 16px;
+    overflow: hidden;
+    font-family: var(--font-sans);
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 16px 70px rgba(0, 0, 0, 0.2);
+    outline: none;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    transition: transform 100ms ease;
+    z-index: 51;
 }
 
 [cmdk-framer-header] {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 48px;
-  padding: 0 8px;
-  border-bottom: 1px solid hsl(var(--border));
-  margin-bottom: 12px;
-  padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 8px;
+    border-bottom: 1px solid hsl(var(--border));
+    margin-bottom: 12px;
+    padding-bottom: 8px;
 
-  svg {
-    width: 20px;
-    height: 20px;
-    color: hsl(var(--muted-foreground) / 0.5);
-    transform: translateY(1px);
-  }
+    svg {
+        width: 20px;
+        height: 20px;
+        color: hsl(var(--muted-foreground) / 0.5);
+        transform: translateY(1px);
+    }
 }
 
 [cmdk-input] {
-  font-family: var(--font-sans);
-  border: none;
-  width: 100%;
-  font-size: 16px;
-  outline: none;
-  background: hsl(var(--background));
-  color: hsl(var(--foreground));
+    font-family: var(--font-sans);
+    border: none;
+    width: 100%;
+    font-size: 16px;
+    outline: none;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
 
-  &::placeholder {
-    color: hsl(var(--muted-foreground) / 0.5);
-  }
+    &::placeholder {
+        color: hsl(var(--muted-foreground) / 0.5);
+    }
 }
 
 [cmdk-list] {
-  max-height: 400px;
-  overflow: auto;
-  padding: 0 8px;
+    max-height: 400px;
+    overflow: auto;
+    padding: 0 8px;
 }
 
 [cmdk-item] {
-  content-visibility: auto;
-  cursor: pointer;
-  border-radius: 12px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: hsl(var(--foreground));
-  padding: 8px 8px;
-  font-weight: 500;
-  transition: all 150ms ease;
-  transition-property: background-color, color;
+    content-visibility: auto;
+    cursor: pointer;
+    border-radius: 12px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: hsl(var(--foreground));
+    padding: 8px 8px;
+    font-weight: 500;
+    transition: all 150ms ease;
+    transition-property: background-color, color;
 
-  &[data-selected='true'] {
-    background: hsl(var(--accent));
-    color: hsl(var(--accent-foreground));
+    &[data-selected="true"] {
+        background: hsl(var(--accent));
+        color: hsl(var(--accent-foreground));
 
-    [cmdk-framer-item-subtitle] {
-      color: hsl(var(--accent-foreground) / 0.7);
+        [cmdk-framer-item-subtitle] {
+            color: hsl(var(--accent-foreground) / 0.7);
+        }
+
+        .feed-star-icon {
+            color: hsl(var(--accent-foreground));
+            fill: hsl(var(--accent-foreground));
+        }
     }
 
-    .feed-star-icon {
-      color: hsl(var(--accent-foreground));
-      fill: hsl(var(--accent-foreground));
+    &[data-disabled="true"] {
+        color: hsl(var(--muted-foreground));
+        cursor: not-allowed;
     }
-  }
 
-  &[data-disabled='true'] {
-    color: hsl(var(--muted-foreground));
-    cursor: not-allowed;
-  }
-
-  & + [cmdk-item] {
-    margin-top: 4px;
-  }
+    & + [cmdk-item] {
+        margin-top: 4px;
+    }
 }
 
 [cmdk-framer-icon-wrapper] {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  overflow: hidden;
-
-  img {
-    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
     height: 32px;
-    object-fit: cover;
     border-radius: 8px;
-  }
+    overflow: hidden;
 
-  .feed-placeholder {
-    width: 32px;
-    height: 32px;
-    background: hsl(var(--primary) / 0.08);
-    border-radius: 8px;
-  }
+    img {
+        width: 32px;
+        height: 32px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .feed-placeholder {
+        width: 32px;
+        height: 32px;
+        background: hsl(var(--primary) / 0.08);
+        border-radius: 8px;
+    }
 }
 
 [cmdk-framer-item-meta] {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
-  min-width: 0; // Enable text truncation
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0; // Enable text truncation
 
-  > span:first-child {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+    > span:first-child {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 }
 
 [cmdk-framer-item-subtitle] {
-  font-size: 12px;
-  font-weight: 400;
-  color: hsl(var(--muted-foreground));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    font-size: 12px;
+    font-weight: 400;
+    color: hsl(var(--muted-foreground));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 [cmdk-framer-badge] {
-  pointer-events: none;
-  display: inline-flex;
-  height: 20px;
-  user-select: none;
-  align-items: center;
-  gap: 4px;
-  border-radius: 6px;
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--muted));
-  padding: 0 6px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 500;
-  color: hsl(var(--foreground));
-  flex-shrink: 0;
+    pointer-events: none;
+    display: inline-flex;
+    height: 20px;
+    user-select: none;
+    align-items: center;
+    gap: 4px;
+    border-radius: 6px;
+    border: 1px solid hsl(var(--border));
+    background: hsl(var(--muted));
+    padding: 0 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: hsl(var(--foreground));
+    flex-shrink: 0;
 }
 
 .feed-star-icon {
-  width: 16px;
-  height: 16px;
-  color: hsl(var(--warning, 48 96% 53%));
-  fill: hsl(var(--warning, 48 96% 53%));
-  flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    color: hsl(var(--warning, 48 96% 53%));
+    fill: hsl(var(--warning, 48 96% 53%));
+    flex-shrink: 0;
 }
 
 [cmdk-separator] {
-  height: 1px;
-  width: 100%;
-  background: hsl(var(--border));
-  margin: 4px 0;
+    height: 1px;
+    width: 100%;
+    background: hsl(var(--border));
+    margin: 4px 0;
 }
 
 [cmdk-group] {
-  &:not(:first-child) {
-    margin-top: 16px;
-  }
+    &:not(:first-child) {
+        margin-top: 16px;
+    }
 }
 
 [cmdk-group-heading] {
-  user-select: none;
-  font-size: 12px;
-  font-weight: 500;
-  color: hsl(var(--muted-foreground));
-  padding: 0 8px;
-  display: flex;
-  align-items: center;
-  margin-bottom: 8px;
+    user-select: none;
+    font-size: 12px;
+    font-weight: 500;
+    color: hsl(var(--muted-foreground));
+    padding: 0 8px;
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
 }
 
 [cmdk-empty] {
-  font-size: 14px;
-  padding: 32px;
-  text-align: center;
-  white-space: pre-wrap;
-  color: hsl(var(--muted-foreground));
+    font-size: 14px;
+    padding: 32px;
+    text-align: center;
+    white-space: pre-wrap;
+    color: hsl(var(--muted-foreground));
 }
 
 @media (max-width: 640px) {
-  .feed-search-command {
-    [cmdk-root] {
-      max-width: calc(100vw - 16px);
-      border-radius: 12px;
-    }
+    .feed-search-command {
+        [cmdk-root] {
+            max-width: calc(100vw - 16px);
+            border-radius: 12px;
+        }
 
-    [cmdk-framer-item-subtitle] {
-      display: none;
-    }
+        [cmdk-framer-item-subtitle] {
+            display: none;
+        }
 
-    [cmdk-framer-item-meta] {
-      gap: 0;
+        [cmdk-framer-item-meta] {
+            gap: 0;
+        }
     }
-  }
 }

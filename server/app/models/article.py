@@ -25,7 +25,7 @@ class ArticleContent(Base):
     # Reduced from String(1000) to String(500) - most article titles are < 200 chars
     # This saves ~800 bytes per article in storage
     title = Column(String(500))
-    link = Column(String(2048), nullable=False)
+    link = Column(String(2048), nullable=False, unique=True)
     # Defer large text fields to reduce bandwidth in list queries
     # Use undefer() or undefer_group('content_details') when full content is needed
     description = deferred(Column(String(5000)), group="content_details")

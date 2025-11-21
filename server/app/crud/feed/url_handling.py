@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import Settings
 from app.core.redis_cache import get_redis_cache
 from app.models import Feed
-from app.services.feeds.search.meilisearch_service import get_meilisearch_service
-from app.utils.url_validator import validate_feed_url
+from app.services.feeds.search.meilisearch import get_meilisearch_service
+from app.utils.url.url_validator import validate_feed_url
 
 logger = structlog.get_logger(__name__)
 

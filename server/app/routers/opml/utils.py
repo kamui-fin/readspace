@@ -1,7 +1,6 @@
 """Shared utilities for OPML import/export operations."""
 
 import time
-from datetime import datetime, timezone
 from typing import Any
 
 import structlog
@@ -10,12 +9,36 @@ from fastapi import HTTPException, status
 from taskiq_redis.exceptions import ResultIsMissingError
 
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
-from app.core.metrics import opml_validation_total
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
-from app.schemas import FeedImportError, OpmlImportState
+from app.workers.opml.progress import (
+    check_import_cancellation_flag,
+    clear_import_cancellation_flag,
+    delete_import_progress,
+    get_import_progress,
+    initialize_import_progress,
+    set_import_cancellation_flag,
+    update_import_progress,
+)
 
 logger = structlog.get_logger(__name__)
+
+# Re-export progress functions for backward compatibility
+__all__ = [
+    "validate_opml_structure",
+    "store_task_ownership",
+    "get_task_owner",
+    "get_user_task_ids",
+    "cleanup_task_ownership",
+    "get_taskiq_result",
+    "set_import_cancellation_flag",
+    "check_import_cancellation_flag",
+    "clear_import_cancellation_flag",
+    "initialize_import_progress",
+    "get_import_progress",
+    "update_import_progress",
+    "delete_import_progress",
+]
 
 
 def validate_opml_structure(content: str, filename: str) -> int:
@@ -40,7 +63,6 @@ def validate_opml_structure(content: str, filename: str) -> int:
         root = ElementTree.fromstring(content)
     except ElementTree.ParseError as e:
         duration = time.perf_counter() - start_time
-        opml_validation_total.labels(status="invalid_xml").inc()
 
         logger.warning(
             "Failed to parse OPML XML",
@@ -60,7 +82,6 @@ def validate_opml_structure(content: str, filename: str) -> int:
     # Verify it's an OPML file (not RSS or other XML)
     if root.tag != "opml":
         duration = time.perf_counter() - start_time
-        opml_validation_total.labels(status="invalid_structure").inc()
 
         logger.warning(
             "File is not OPML format",
@@ -81,7 +102,6 @@ def validate_opml_structure(content: str, filename: str) -> int:
     body = root.find(".//body")
     if body is None:
         duration = time.perf_counter() - start_time
-        opml_validation_total.labels(status="invalid_structure").inc()
 
         logger.warning(
             "OPML missing body element",
@@ -98,7 +118,6 @@ def validate_opml_structure(content: str, filename: str) -> int:
     feed_count = len(feeds)
 
     duration = time.perf_counter() - start_time
-    opml_validation_total.labels(status="success").inc()
 
     logger.info(
         "OPML structure validated",
@@ -230,242 +249,5 @@ async def get_taskiq_result(task_id: str) -> tuple[str, Any | None, Any | None] 
         return None
 
 
-async def set_import_cancellation_flag(task_id: str) -> None:
-    """
-    Set cancellation flag for an import task.
-
-    Args:
-        task_id: Import task ID to cancel
-    """
-    redis_cache = RedisCache()
-    cancel_key = f"opml_import_cancel:{task_id}"
-    await redis_cache.set(cancel_key, True, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-    logger.info("Set cancellation flag for import task", task_id=task_id)
-
-
-async def check_import_cancellation_flag(task_id: str) -> bool:
-    """
-    Check if an import task has been cancelled.
-
-    Args:
-        task_id: Import task ID to check
-
-    Returns:
-        True if the task should be cancelled, False otherwise
-    """
-    redis_cache = RedisCache()
-    cancel_key = f"opml_import_cancel:{task_id}"
-    is_cancelled = await redis_cache.get(cancel_key)
-    return bool(is_cancelled)
-
-
-async def clear_import_cancellation_flag(task_id: str) -> None:
-    """
-    Clear cancellation flag for an import task.
-
-    Args:
-        task_id: Import task ID to clear
-    """
-    redis_cache = RedisCache()
-    cancel_key = f"opml_import_cancel:{task_id}"
-    await redis_cache.delete(cancel_key)
-
-
-async def initialize_import_progress(
-    task_id: str,
-    user_id: str,
-    filename: str,
-    total_feeds: int,
-) -> OpmlImportState:
-    """
-    Initialize progress state for a new import task.
-
-    Creates the single Redis key that will track all progress for this import.
-
-    Args:
-        task_id: Taskiq task ID
-        user_id: User ID who owns the import
-        filename: Original OPML filename
-        total_feeds: Total number of feeds to import
-
-    Returns:
-        OpmlImportState: Initialized state
-    """
-    redis_cache = RedisCache()
-
-    state = OpmlImportState(
-        task_id=task_id,
-        user_id=user_id,
-        filename=filename,
-        total_feeds=total_feeds,
-        status="pending",
-    )
-
-    progress_key = f"opml_import_progress:{task_id}"
-    await redis_cache.set(
-        progress_key,
-        state.model_dump(),
-        ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
-    )
-
-    logger.info(
-        "Initialized import progress state",
-        task_id=task_id,
-        user_id=user_id,
-        total_feeds=total_feeds,
-    )
-
-    return state
-
-
-async def get_import_progress(task_id: str) -> OpmlImportState | None:
-    """
-    Get current import progress state from Redis.
-
-    Args:
-        task_id: Taskiq task ID
-
-    Returns:
-        OpmlImportState | None: Current state or None if not found
-    """
-    redis_cache = RedisCache()
-    progress_key = f"opml_import_progress:{task_id}"
-
-    state_dict = await redis_cache.get(progress_key)
-    if not state_dict:
-        return None
-
-    return OpmlImportState(**state_dict)
-
-
-async def update_import_progress(
-    task_id: str,
-    success: bool = False,
-    already_exists: bool = False,
-    error: FeedImportError | None = None,
-    status: str | None = None,
-    started_at: str | None = None,
-    completed_at: str | None = None,
-    message: str | None = None,
-    cancelled: bool = False,
-    skipped_limit: bool = False,
-) -> OpmlImportState | None:
-    """
-    Atomically update import progress for a single feed completion.
-
-    This function loads the current state, updates it, and saves it back.
-    Redis operations are atomic at the key level.
-
-    Args:
-        task_id: Taskiq task ID
-        success: Whether the feed was successfully imported
-        already_exists: Whether the feed already existed
-        error: Error information if the feed failed
-        status: New overall status to set
-        started_at: ISO timestamp when processing started
-        completed_at: ISO timestamp when processing completed
-        message: Status message to set
-        cancelled: Whether this feed was cancelled
-        skipped_limit: Whether this feed was skipped due to subscription limit
-
-    Returns:
-        OpmlImportState | None: Updated state or None if not found
-    """
-    redis_cache = RedisCache()
-    progress_key = f"opml_import_progress:{task_id}"
-
-    # Get current state
-    state = await get_import_progress(task_id)
-    if not state:
-        logger.warning(
-            "Attempted to update non-existent import progress",
-            task_id=task_id,
-        )
-        return None
-
-    # Update counters
-    if cancelled:
-        state.cancelled_count += 1
-        state.completed_feeds += 1
-    elif skipped_limit:
-        state.skipped_limit += 1
-        state.completed_feeds += 1
-    elif success:
-        if already_exists:
-            state.already_existed += 1
-        else:
-            state.successful_imports += 1
-        state.completed_feeds += 1
-    elif error:
-        state.failed_imports += 1
-        state.completed_feeds += 1
-        state.errors.append(error)
-
-    # Update status and timestamps
-    if status:
-        state.status = status
-    if started_at:
-        state.started_at = started_at
-    if completed_at:
-        state.completed_at = completed_at
-    if message:
-        state.message = message
-
-    # Auto-complete if all feeds are processed
-    if state.completed_feeds >= state.total_feeds and state.status == "in_progress":
-        state.status = "completed"
-        state.completed_at = datetime.now(timezone.utc).isoformat()
-
-        # Generate completion message
-        completion_message = (
-            f"{state.successful_imports} feeds added. {state.already_existed} were already in your library."
-        )
-        if state.failed_imports > 0:
-            completion_message += f" {state.failed_imports} failed to import."
-        if state.skipped_limit > 0:
-            completion_message += f" {state.skipped_limit} skipped due to subscription limit."
-        if state.cancelled_count > 0:
-            completion_message += f" {state.cancelled_count} cancelled."
-            state.status = "cancelled"
-
-        state.message = completion_message
-
-        logger.info(
-            "Import completed automatically",
-            task_id=task_id,
-            successful=state.successful_imports,
-            failed=state.failed_imports,
-            already_existed=state.already_existed,
-            cancelled=state.cancelled_count,
-        )
-
-    # Save back to Redis
-    await redis_cache.set(
-        progress_key,
-        state.model_dump(),
-        ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS,
-    )
-
-    logger.debug(
-        "Updated import progress",
-        task_id=task_id,
-        completed=state.completed_feeds,
-        total=state.total_feeds,
-        status=state.status,
-    )
-
-    return state
-
-
-async def delete_import_progress(task_id: str) -> None:
-    """
-    Delete import progress state from Redis.
-
-    Args:
-        task_id: Taskiq task ID
-    """
-    redis_cache = RedisCache()
-    progress_key = f"opml_import_progress:{task_id}"
-    await redis_cache.delete(progress_key)
-
-    logger.debug("Deleted import progress state", task_id=task_id)
+# Progress tracking functions are now imported from app.workers.opml.progress
+# and re-exported above for backward compatibility

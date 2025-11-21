@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.utils.url_normalizer import extract_domain_from_url
+from app.utils.url.url_normalizer import extract_domain_from_url
 
 
 class TestExtractDomainFromUrl:

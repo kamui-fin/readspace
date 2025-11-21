@@ -4,7 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.utils.url_validator import validate_feed_url, validate_folder_name
+from app.utils.url.url_validator import validate_feed_url, validate_folder_name
 
 
 @pytest.mark.unit
@@ -47,7 +47,7 @@ class TestValidateFeedUrl:
         assert is_valid is False
         assert "blocked domain: localhost" in error
 
-    @patch("app.utils.url_validator.get_settings")
+    @patch("app.utils.url.url_validator.get_settings")
     def test_rsshub_localhost_allowed(self, mock_settings: MagicMock):
         """Localhost should be allowed when it's the configured RSSHub URL."""
         # Mock settings to return localhost:1200 as RSSHub URL
@@ -59,7 +59,7 @@ class TestValidateFeedUrl:
         assert is_valid is True
         assert error is None
 
-    @patch("app.utils.url_validator.get_settings")
+    @patch("app.utils.url.url_validator.get_settings")
     def test_rsshub_localhost_with_different_port_blocked(self, mock_settings: MagicMock):
         """Localhost with different port should still be blocked."""
         # Mock settings to return localhost:1200 as RSSHub URL
@@ -173,7 +173,7 @@ class TestValidateFeedUrl:
         assert is_valid is True
         assert error is None
 
-    @patch("app.utils.url_validator.get_settings")
+    @patch("app.utils.url.url_validator.get_settings")
     def test_rsshub_production_url_allowed(self, mock_settings: MagicMock):
         """Production RSSHub URLs should be allowed."""
         mock_settings_obj = MagicMock()
@@ -184,7 +184,7 @@ class TestValidateFeedUrl:
         assert is_valid is True
         assert error is None
 
-    @patch("app.utils.url_validator.get_settings")
+    @patch("app.utils.url.url_validator.get_settings")
     def test_rsshub_custom_domain_allowed(self, mock_settings: MagicMock):
         """Custom RSSHub domain should be allowed."""
         mock_settings_obj = MagicMock()

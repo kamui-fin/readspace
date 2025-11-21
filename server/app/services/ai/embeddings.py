@@ -5,11 +5,6 @@ import time
 import structlog
 
 from app.core.config import get_settings
-from app.core.metrics import (
-    ai_batch_size,
-    ai_request_duration_seconds,
-    ai_requests_total,
-)
 from app.services.ai.client import get_gemini_client
 
 logger = structlog.get_logger(__name__)
@@ -85,8 +80,6 @@ class EmbeddingService:
                 batch_size=len(texts),
             )
 
-            ai_batch_size.labels(operation=operation).observe(len(texts))
-
             response = self.gemini_client.client.models.embed_content(
                 model=self.embedding_model,
                 contents=texts,  # type: ignore[arg-type]
@@ -111,9 +104,6 @@ class EmbeddingService:
             duration = time.perf_counter() - start_time
             successful_count = sum(1 for e in embeddings if e is not None)
 
-            ai_requests_total.labels(operation=operation, model=self.embedding_model, status="success").inc()
-            ai_request_duration_seconds.labels(operation=operation, model=self.embedding_model).observe(duration)
-
             logger.info(
                 "Batch embedding generation completed",
                 operation=operation,
@@ -127,8 +117,6 @@ class EmbeddingService:
 
         except Exception as e:
             duration = time.perf_counter() - start_time
-            ai_requests_total.labels(operation=operation, model=self.embedding_model, status="error").inc()
-            ai_request_duration_seconds.labels(operation=operation, model=self.embedding_model).observe(duration)
 
             logger.error(
                 "Error generating batch embeddings",

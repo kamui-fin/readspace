@@ -3,7 +3,7 @@
 import pytest
 
 from app.core.constants import DEFAULT_REFRESH_INTERVAL_MINUTES, MAX_ERROR_BACKOFF_MINUTES
-from app.services.feeds.adaptive_feed_scheduler import calculate_error_backoff_interval
+from app.services.feeds.scheduler import calculate_error_backoff_interval
 
 
 @pytest.mark.unit

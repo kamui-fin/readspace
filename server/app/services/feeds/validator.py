@@ -6,7 +6,7 @@ import structlog
 
 from app.core.custom_exceptions import FeedValidationError
 from app.utils.language_normalizer import normalize_language_code
-from app.utils.url_normalizer import extract_domain_from_url
+from app.utils.url.url_normalizer import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
 

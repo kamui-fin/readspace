@@ -435,7 +435,13 @@ export const useExtensionStore = create<ExtensionState>()(
 )
 
 // Set up the store getter to break circular dependency
-setStoreGetter(() => useExtensionStore.getState())
+setStoreGetter(() => {
+  const state = useExtensionStore.getState()
+  return {
+    settings: state.settings,
+    updateToken: state.updateToken,
+  }
+})
 
 // Configure ApiClient immediately after store creation
 configureExtensionApiClient()

@@ -60,11 +60,7 @@ export function Settings({ onBack }: SettingsProps) {
               <p className="text-xs text-muted-foreground">Signed in as</p>
               <p className="font-medium">{user.email}</p>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleLogout}
-            >
+            <Button variant="destructive" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </Button>

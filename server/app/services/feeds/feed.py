@@ -20,13 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed
-from app.crud.article.article_crud_operations import ArticleCrudOperations
+from app.crud.article import create_articles_batch
 from app.models import Feed
 from app.schemas import ArticleCreate, FeedBase
 from app.schemas.subscriptions import FeedResponse
-from app.services.feeds.adaptive_feed_scheduler import calculate_optimal_interval
-from app.services.feeds.feed_fetcher import FeedFetcher
-from app.services.feeds.feed_parser import FeedParsingService
+from app.services.feeds.fetcher import FeedFetcher
+from app.services.feeds.parser import FeedParsingService
+from app.services.feeds.scheduler import calculate_optimal_interval
 from app.utils.content_hash import calculate_feed_content_hash
 
 logger = structlog.get_logger(__name__)
@@ -311,9 +311,7 @@ class FeedService:
 
         # Step 2: Use centralized bulk insert logic
         try:
-            created_articles = await ArticleCrudOperations.create_articles_batch(
-                self.db, articles_data=articles_to_create
-            )
+            created_articles = await create_articles_batch(self.db, articles_data=articles_to_create)
 
             created_count = len(created_articles)
 

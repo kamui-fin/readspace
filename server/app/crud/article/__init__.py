@@ -53,6 +53,15 @@ from .queries.pagination import (
 )
 
 # ============================================================================
+# RETRIEVAL QUERIES
+# ============================================================================
+from .queries.retrieval import (
+    count_articles_filtered,
+    get_article_by_id,
+    get_articles_filtered,
+)
+
+# ============================================================================
 # SPECIALIZED QUERIES
 # ============================================================================
 from .queries.specialized import (
@@ -84,6 +93,10 @@ __all__ = [
     "clipped_articles",
     "CRUDUserArticleState",
     "user_article_state",
+    # === Retrieval Queries ===
+    "get_article_by_id",
+    "get_articles_filtered",
+    "count_articles_filtered",
     # === Specialized Queries ===
     "get_recently_read_articles",
     "count_read_later_articles",

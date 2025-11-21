@@ -7,8 +7,6 @@ from typing import Any
 import structlog
 
 from app.core.config import get_settings
-from app.core.constants import DOMAIN_LOOKUP_CACHE_TTL
-from app.core.redis_cache import get_redis_cache
 
 logger = structlog.get_logger(__name__)
 
@@ -48,58 +46,9 @@ class PageRankService:
             logger.error("Failed to load PageRank dataset", error=str(e), exc_info=True)
             self._domain_scores = {}
 
-    async def get_domain_score_cached(self, domain: str) -> float:
-        """
-        Get PageRank score for a domain with Redis caching.
-
-        This method caches domain lookups in Redis for 1 hour to improve performance.
-        Domain lookups can be expensive when done repeatedly for the same domains.
-
-        Args:
-            domain: Domain to score (e.g., 'example.com')
-
-        Returns:
-            Score from 0.0 to 100.0 (higher = more authoritative)
-        """
-        if not domain:
-            return 0.0
-
-        from app.utils.domain_helpers import extract_clean_domain
-
-        # Clean domain for cache key
-        domain_clean = extract_clean_domain(domain)
-        if not domain_clean:
-            return 0.0
-
-        # Check cache first
-        cache = get_redis_cache()
-        cache_key = f"pagerank:domain:{domain_clean}"
-
-        try:
-            cached_score = await cache.get(cache_key)
-            if cached_score is not None:
-                logger.debug("PageRank cache hit", domain=domain_clean, score=cached_score)
-                return float(cached_score)
-        except Exception as e:
-            logger.warning("Failed to get cached PageRank score", domain=domain_clean, error=str(e))
-
-        # Cache miss - compute score
-        score = self.get_domain_score(domain_clean)
-
-        # Cache the result
-        try:
-            await cache.set(cache_key, score, ttl_seconds=DOMAIN_LOOKUP_CACHE_TTL)
-            logger.debug("PageRank cached", domain=domain_clean, score=score, ttl=DOMAIN_LOOKUP_CACHE_TTL)
-        except Exception as e:
-            logger.warning("Failed to cache PageRank score", domain=domain_clean, error=str(e))
-
-        return score
-
     def get_domain_score(self, domain: str) -> float:
         """
-        Get PageRank score for a domain (synchronous, non-cached version).
-
-        For async code with caching, use get_domain_score_cached() instead.
+        Get PageRank score for a domain.
 
         Args:
             domain: Domain to score (e.g., 'example.com')

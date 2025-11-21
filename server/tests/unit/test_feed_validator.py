@@ -3,7 +3,7 @@
 import pytest
 
 from app.core.custom_exceptions import FeedValidationError
-from app.services.feeds.feed_validator import FeedValidator
+from app.services.feeds.validator import FeedValidator
 
 
 @pytest.mark.unit

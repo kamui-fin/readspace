@@ -3,7 +3,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.base import CRUDBase
+from app.crud.article.operations.base import CRUDBase
 from app.models import ArticleContent
 from app.schemas import ArticleContentCreate
 

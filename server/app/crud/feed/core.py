@@ -11,7 +11,7 @@ from app.core.config import Settings
 from app.core.redis_cache import get_redis_cache
 from app.models import Feed, FeedSubscription
 from app.schemas import FeedBase
-from app.services.feeds.search.meilisearch_service import get_meilisearch_service
+from app.services.feeds.search.meilisearch import get_meilisearch_service
 
 logger = structlog.get_logger(__name__)
 
@@ -95,7 +95,7 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     try:
         settings = Settings()
         meili_service = get_meilisearch_service(settings)
-        await meili_service.index_feed(db_feed)
+        meili_service.add_feed(db_feed)
     except Exception as e:
         logger.warning("meilisearch_sync_failed_create", feed_id=db_feed.id, error=str(e))
         # Don't raise - Meilisearch sync failures shouldn't break the main flow

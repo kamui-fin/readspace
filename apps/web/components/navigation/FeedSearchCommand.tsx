@@ -96,16 +96,13 @@ export function FeedSearchCommand({
         setSearchValue("")
     }
 
-
     return (
         <Command.Dialog
             open={isOpen}
             onOpenChange={handleClose}
             label="Feed Search"
         >
-            <Dialog.Title className="sr-only">
-                Search Feeds
-            </Dialog.Title>
+            <Dialog.Title className="sr-only">Search Feeds</Dialog.Title>
             <div cmdk-framer-header="">
                 <Search />
                 <Command.Input
@@ -167,47 +164,48 @@ export function FeedSearchCommand({
                 })}
 
                 {/* No folder group */}
-                {groupedFeeds.no_folder && groupedFeeds.no_folder.length > 0 && (
-                    <Command.Group heading="No Folder">
-                        {groupedFeeds.no_folder.map((feed) => (
-                            <Command.Item
-                                key={feed.id}
-                                value={`${feed.title} ${feed.link || feed.url}`}
-                                onSelect={() => handleSelectFeed(feed.id)}
-                            >
-                                <div cmdk-framer-icon-wrapper="">
-                                    {feed.image_url ? (
-                                        <Image
-                                            src={feed.image_url}
-                                            alt=""
-                                            width={32}
-                                            height={32}
-                                        />
-                                    ) : (
-                                        <div className="feed-placeholder" />
+                {groupedFeeds.no_folder &&
+                    groupedFeeds.no_folder.length > 0 && (
+                        <Command.Group heading="No Folder">
+                            {groupedFeeds.no_folder.map((feed) => (
+                                <Command.Item
+                                    key={feed.id}
+                                    value={`${feed.title} ${feed.link || feed.url}`}
+                                    onSelect={() => handleSelectFeed(feed.id)}
+                                >
+                                    <div cmdk-framer-icon-wrapper="">
+                                        {feed.image_url ? (
+                                            <Image
+                                                src={feed.image_url}
+                                                alt=""
+                                                width={32}
+                                                height={32}
+                                            />
+                                        ) : (
+                                            <div className="feed-placeholder" />
+                                        )}
+                                    </div>
+                                    <div cmdk-framer-item-meta="">
+                                        <span>{feed.title}</span>
+                                        {feed.link && (
+                                            <span cmdk-framer-item-subtitle="">
+                                                {feed.link}
+                                            </span>
+                                        )}
+                                    </div>
+                                    {feed.is_favorite && (
+                                        <Star className="feed-star-icon" />
                                     )}
-                                </div>
-                                <div cmdk-framer-item-meta="">
-                                    <span>{feed.title}</span>
-                                    {feed.link && (
-                                        <span cmdk-framer-item-subtitle="">
-                                            {feed.link}
-                                        </span>
-                                    )}
-                                </div>
-                                {feed.is_favorite && (
-                                    <Star className="feed-star-icon" />
-                                )}
-                                {feed.unread_count != null &&
-                                    feed.unread_count > 0 && (
-                                        <kbd cmdk-framer-badge="">
-                                            {feed.unread_count}
-                                        </kbd>
-                                    )}
-                            </Command.Item>
-                        ))}
-                    </Command.Group>
-                )}
+                                    {feed.unread_count != null &&
+                                        feed.unread_count > 0 && (
+                                            <kbd cmdk-framer-badge="">
+                                                {feed.unread_count}
+                                            </kbd>
+                                        )}
+                                </Command.Item>
+                            ))}
+                        </Command.Group>
+                    )}
             </Command.List>
         </Command.Dialog>
     )

@@ -15,16 +15,21 @@ interface ArticlesErrorStateProps {
  * Dedicated error state component for article viewing errors
  * Handles different error types with appropriate messaging and actions
  */
-export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) {
+export function ArticlesErrorState({
+    error,
+    onRetry,
+}: ArticlesErrorStateProps) {
     const isMobile = useIsMobile()
     const router = useRouter()
 
     // Parse error to determine type
     const errorMessage = error?.message || "Unknown error"
-    const is404 = errorMessage.toLowerCase().includes("not found") ||
-                  errorMessage.includes("404")
-    const isNetworkError = errorMessage.toLowerCase().includes("network") ||
-                          errorMessage.toLowerCase().includes("fetch")
+    const is404 =
+        errorMessage.toLowerCase().includes("not found") ||
+        errorMessage.includes("404")
+    const isNetworkError =
+        errorMessage.toLowerCase().includes("network") ||
+        errorMessage.toLowerCase().includes("fetch")
 
     // Determine appropriate icon, title, and description
     const getErrorContent = () => {
@@ -32,7 +37,8 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
             return {
                 icon: AlertCircle,
                 title: "Feed Not Found",
-                description: "This feed doesn't exist or you don't have access to it.",
+                description:
+                    "This feed doesn't exist or you don't have access to it.",
                 iconColor: "text-destructive",
                 action: (
                     <Button
@@ -42,7 +48,7 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
                     >
                         View today's articles
                     </Button>
-                )
+                ),
             }
         }
 
@@ -50,7 +56,8 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
             return {
                 icon: WifiOff,
                 title: "Connection Error",
-                description: "Unable to connect to the server. Please check your internet connection.",
+                description:
+                    "Unable to connect to the server. Please check your internet connection.",
                 iconColor: "text-orange-500",
                 action: onRetry ? (
                     <Button
@@ -61,7 +68,7 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
                         <RefreshCw className="mr-2 h-4 w-4" />
                         Retry
                     </Button>
-                ) : null
+                ) : null,
             }
         }
 
@@ -69,7 +76,9 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
         return {
             icon: AlertTriangle,
             title: "Something Went Wrong",
-            description: errorMessage || "An unexpected error occurred while loading articles.",
+            description:
+                errorMessage ||
+                "An unexpected error occurred while loading articles.",
             iconColor: "text-yellow-500",
             action: onRetry ? (
                 <Button
@@ -80,11 +89,17 @@ export function ArticlesErrorState({ error, onRetry }: ArticlesErrorStateProps) 
                     <RefreshCw className="mr-2 h-4 w-4" />
                     Try Again
                 </Button>
-            ) : null
+            ) : null,
         }
     }
 
-    const { icon: Icon, title, description, iconColor, action } = getErrorContent()
+    const {
+        icon: Icon,
+        title,
+        description,
+        iconColor,
+        action,
+    } = getErrorContent()
 
     return (
         <div className="flex h-full w-full items-center justify-center p-6">

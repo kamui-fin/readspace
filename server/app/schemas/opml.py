@@ -132,6 +132,12 @@ class OpmlImportState(BaseModel):
         if self.cancelled_count > 0:
             message += f" {self.cancelled_count} cancelled."
 
+        # Convert errors list to dict format, or None if empty
+        # self.errors is always a list due to default_factory=list
+        errors_list: list[FeedImportError] = self.errors
+        error_list = [error.model_dump() for error in errors_list] if errors_list else []
+        errors_output = error_list if error_list else None
+
         return OpmlImportResult(
             imported_count=self.successful_imports,
             failed_count=self.failed_imports,
@@ -145,7 +151,7 @@ class OpmlImportState(BaseModel):
                 "skipped_limit": self.skipped_limit,
             },
             message=message,
-            errors=[error.model_dump() for error in self.errors] if self.errors else None,
+            errors=errors_output,
         )
 
     def to_metadata(self) -> "OpmlTaskMetadata":

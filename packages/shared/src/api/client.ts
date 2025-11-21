@@ -25,10 +25,14 @@ export class ApiError extends Error {
 // Type for auth token provider function
 export type AuthTokenProvider = () => Promise<string | null>;
 
+// Type for token refresh function that returns a fresh token
+export type TokenRefreshProvider = () => Promise<string | null>;
+
 // Configuration interface for the API client
 export interface ApiClientConfig {
   baseUrl: string;
   getAuthToken: AuthTokenProvider;
+  refreshToken?: TokenRefreshProvider;
 }
 
 // Helper function to get auth headers with configurable token provider
@@ -56,6 +60,7 @@ async function fetchWithRetry<T>(
   url: string,
   options: RequestInit,
   getAuthToken: AuthTokenProvider,
+  refreshToken?: TokenRefreshProvider,
 ): Promise<T> {
   let response = await fetch(url, options);
 
@@ -70,11 +75,27 @@ async function fetchWithRetry<T>(
       console.log("Received 401, attempting token refresh and retry");
 
       try {
-        // Get a fresh token (this should trigger a refresh in Supabase)
-        const freshHeaders = await getAuthHeaders(getAuthToken);
+        let freshToken: string | null = null;
+
+        // If a refresh token provider is configured, use it to get a fresh token
+        if (refreshToken) {
+          console.log("Calling refresh token provider");
+          freshToken = await refreshToken();
+        }
+
+        // If refresh provider didn't work or isn't configured, try getting token again
+        if (!freshToken) {
+          console.log("Refresh provider failed or not configured, trying getAuthToken");
+          freshToken = await getAuthToken();
+        }
 
         // Only retry if we got a fresh token
-        if (freshHeaders.Authorization) {
+        if (freshToken) {
+          const freshHeaders = {
+            ...await getAuthHeaders(getAuthToken),
+            Authorization: `Bearer ${freshToken}`,
+          };
+
           // Retry the request with fresh token
           response = await fetch(url, {
             ...options,
@@ -178,6 +199,7 @@ export class ApiClient {
           cache: "no-store", // Disable caching for authenticated requests
         },
         this.config.getAuthToken,
+        this.config.refreshToken,
       );
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {
@@ -282,19 +304,31 @@ export class ApiClient {
           );
 
           try {
-            const freshHeaders = await getAuthHeaders(this.config.getAuthToken);
+            let freshToken: string | null = null;
+
+            // If a refresh token provider is configured, use it to get a fresh token
+            if (this.config.refreshToken) {
+              console.log("Calling refresh token provider for upload");
+              freshToken = await this.config.refreshToken();
+            }
+
+            // If refresh provider didn't work or isn't configured, try getting token again
+            if (!freshToken) {
+              console.log("Refresh provider failed or not configured for upload, trying getAuthToken");
+              freshToken = await this.config.getAuthToken();
+            }
 
             // Only retry if we got a fresh token
-            if (freshHeaders.Authorization) {
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
-              const { "Content-Type": _, ...freshUploadHeaders } =
-                freshHeaders as Record<string, string>;
+            if (freshToken) {
+              const freshHeaders = {
+                Authorization: `Bearer ${freshToken}`,
+              };
 
               response = await fetch(url, {
                 method: "POST",
                 body: formData,
                 signal,
-                headers: freshUploadHeaders,
+                headers: freshHeaders,
               });
             }
           } catch (retryError) {

@@ -7,15 +7,9 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import (
-    opml_feed_import_duration_seconds,
-    opml_feeds_failed_total,
-    opml_feeds_imported_total,
-    opml_feeds_in_progress,
-)
-from app.routers.opml.utils import update_import_progress
 from app.schemas import FeedImportError
 from app.services.opml.opml_import import OpmlImportService
+from app.workers.opml.progress import update_import_progress
 
 logger = structlog.get_logger(__name__)
 
@@ -46,7 +40,6 @@ async def import_single_feed(
         Import result dictionary
     """
     start_time = time.perf_counter()
-    opml_feeds_in_progress.inc()
 
     logger.info("Starting feed import", user_id=str(user_id), feed_url=feed_url)
 
@@ -62,20 +55,6 @@ async def import_single_feed(
 
         duration = time.perf_counter() - start_time
         status = result.get("status", "unknown")
-
-        # Record metrics based on result
-        if result.get("success"):
-            if status == "already_exists":
-                opml_feeds_imported_total.labels(status="already_exists").inc()
-            else:
-                opml_feeds_imported_total.labels(status="success").inc()
-        elif status == "limit_exceeded":
-            opml_feeds_imported_total.labels(status="skipped").inc()
-        else:
-            opml_feeds_imported_total.labels(status="failed").inc()
-            opml_feeds_failed_total.inc()
-
-        opml_feed_import_duration_seconds.observe(duration)
 
         logger.info(
             "Feed import completed",
@@ -114,9 +93,6 @@ async def import_single_feed(
         return result
     except Exception as exc:
         duration = time.perf_counter() - start_time
-        opml_feeds_imported_total.labels(status="failed").inc()
-        opml_feeds_failed_total.inc()
-        opml_feed_import_duration_seconds.observe(duration)
 
         logger.error(
             "Feed import failed",
@@ -150,5 +126,3 @@ async def import_single_feed(
             )
 
         return result
-    finally:
-        opml_feeds_in_progress.dec()

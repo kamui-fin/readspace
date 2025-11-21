@@ -5,7 +5,7 @@ import {
     SidebarGroup,
     SidebarGroupLabel,
     SidebarMenu,
-    useSidebarLeft
+    useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { useModalStore } from "@/lib/stores/modal-store"
 import { useFeeds, useFolders, useUnreadCounts } from "@readspace/shared"
@@ -15,7 +15,7 @@ import {
     Diamond,
     FolderPlus,
     Search,
-    Settings2
+    Settings2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -34,10 +34,7 @@ import {
     RegularFeedItem,
     type RegularFeedItemData,
 } from "./items/RegularFeedItem"
-import {
-    SubFeedItem,
-    type SubFeedItemData,
-} from "./items/SubFeedItem"
+import { SubFeedItem, type SubFeedItemData } from "./items/SubFeedItem"
 import { FeedModal } from "./modals/FeedModal"
 import { FolderModal } from "./modals/FolderModal"
 import { SidebarFeedsSkeleton } from "./SidebarSkeleton"
@@ -286,9 +283,7 @@ export function FeedsNavigation({
             {/* Favorites section */}
             {!isSidebarLoading && favoriteFeedItems.length > 0 && (
                 <div className="mb-6">
-                    <SidebarGroupLabel>
-                        Pinned
-                    </SidebarGroupLabel>
+                    <SidebarGroupLabel>Pinned</SidebarGroupLabel>
                     <SidebarMenu>
                         {favoriteFeedItems.map((feed, index) => (
                             <SubFeedItem

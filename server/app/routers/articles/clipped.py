@@ -6,13 +6,11 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_metrics import user_actions_total
 from app.core.dependencies import get_user_service
-from app.core.metrics import article_operation_duration_seconds, article_operations_total
 from app.db.session import get_db
 from app.schemas import SaveArticleRequest
 from app.schemas.auth import TokenData
-from app.services.articles.web_article import WebArticleService
+from app.services.articles.clipped import WebArticleService
 from app.services.user.auth import get_current_user
 from app.services.user.user import UserService
 
@@ -103,11 +101,7 @@ async def save_web_article(
             priority=request.priority,
         )
 
-        # Record success metrics
         duration = time.perf_counter() - start_time
-        article_operations_total.labels(operation="save", status="success").inc()
-        article_operation_duration_seconds.labels(operation="save").observe(duration)
-        user_actions_total.labels(action="save").inc()
 
         logger.info(
             "Web article saved successfully",
@@ -121,10 +115,7 @@ async def save_web_article(
         return {"success": True, "article_id": str(article.id)}
 
     except ValueError as e:
-        # Record validation error metrics
         duration = time.perf_counter() - start_time
-        article_operations_total.labels(operation="save", status="validation_error").inc()
-        article_operation_duration_seconds.labels(operation="save").observe(duration)
 
         logger.warning(
             "Failed to save web article due to validation error",
@@ -135,10 +126,7 @@ async def save_web_article(
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except ConnectionError as e:
-        # Record connection error metrics
         duration = time.perf_counter() - start_time
-        article_operations_total.labels(operation="save", status="connection_error").inc()
-        article_operation_duration_seconds.labels(operation="save").observe(duration)
 
         logger.warning(
             "Failed to save web article due to connection error",
@@ -152,10 +140,7 @@ async def save_web_article(
             detail=f"Unable to fetch article: {str(e)}",
         ) from e
     except Exception as e:
-        # Record unexpected error metrics
         duration = time.perf_counter() - start_time
-        article_operations_total.labels(operation="save", status="error").inc()
-        article_operation_duration_seconds.labels(operation="save").observe(duration)
 
         logger.error(
             "Unexpected error saving web article",

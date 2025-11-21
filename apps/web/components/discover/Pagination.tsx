@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button"
  * Pagination component using Previous/Next buttons
  */
 export function Pagination() {
-    const { currentRefinement, nbPages, refine, isFirstPage, isLastPage } = usePagination()
+    const { currentRefinement, nbPages, refine, isFirstPage, isLastPage } =
+        usePagination()
 
     const handlePageChange = (page: number) => {
         refine(page)
         // Scroll to top smoothly
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+        window.scrollTo({ top: 0, behavior: "smooth" })
     }
 
     if (nbPages <= 1) {

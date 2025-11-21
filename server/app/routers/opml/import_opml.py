@@ -32,7 +32,10 @@ router = APIRouter()
     response_model=OpmlImportResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Import RSS feeds from OPML file",
-    description="Upload an OPML file to import RSS feeds into the user's library. The import process runs asynchronously in the background.",
+    description=(
+        "Upload an OPML file to import RSS feeds into the user's library. "
+        "The import process runs asynchronously in the background."
+    ),
     responses={
         202: {
             "description": "OPML file accepted for processing",
@@ -50,13 +53,19 @@ router = APIRouter()
                         "encoding_error": {
                             "summary": "File encoding issues",
                             "value": {
-                                "detail": "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, or try exporting it again from your RSS reader."
+                                "detail": (
+                                    "File encoding error. Please ensure the OPML file is saved with "
+                                    "UTF-8 encoding, or try exporting it again from your RSS reader."
+                                )
                             },
                         },
                         "invalid_opml": {
                             "summary": "Malformed OPML content",
                             "value": {
-                                "detail": "Invalid OPML file: Invalid XML structure. Please check that you've exported a valid OPML file from your RSS reader."
+                                "detail": (
+                                    "Invalid OPML file: Invalid XML structure. Please check that you've "
+                                    "exported a valid OPML file from your RSS reader."
+                                )
                             },
                         },
                     }
@@ -201,7 +210,7 @@ async def import_opml_file(
                         "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, "
                         "or try exporting it again from your RSS reader."
                     ),
-                )
+                ) from None
 
         # Validate OPML structure and count feeds properly
         feed_count = validate_opml_structure(content_str, opml_file.filename or "unknown.opml")

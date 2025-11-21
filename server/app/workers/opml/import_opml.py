@@ -7,12 +7,12 @@ from uuid import UUID
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.routers.opml.utils import (
+from app.services.opml.opml_import import OpmlImportService
+from app.workers.opml.progress import (
     check_import_cancellation_flag,
     initialize_import_progress,
     update_import_progress,
 )
-from app.services.opml.opml_import import OpmlImportService
 
 logger = structlog.get_logger(__name__)
 

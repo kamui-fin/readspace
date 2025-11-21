@@ -13,7 +13,7 @@ export * from "./types";
 // Export the full ApiClient with all functionality
 export {
   ApiClient,
-  ApiError, type ApiClientConfig, type AuthTokenProvider
+  ApiError, type ApiClientConfig, type AuthTokenProvider, type TokenRefreshProvider
 } from "./client";
 
 // Note: ApiWebClient and ApiExtensionClient have been moved to their respective apps

@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.base import CRUDBase
+from app.crud.article.operations.base import CRUDBase
 from app.models import UserArticleState
 from app.schemas.subscriptions import (
     UserArticleStateCreate,

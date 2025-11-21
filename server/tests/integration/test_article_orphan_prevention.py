@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ArticleContent, ClippedArticle, Feed, FeedArticle
 from app.services.feeds.feed import FeedService
-from app.services.feeds.feed_parser import FeedParsingService
+from app.services.feeds.parser import FeedParsingService
 
 
 @pytest.fixture
@@ -84,7 +84,7 @@ class TestOrphanPrevention:
         await db_session.commit()
 
         # Count total article_contents
-        total_contents_result = await db_session.execute(select(func.count()).select_from(ArticleContent))
+        total_contents_result = await db_session.execute(select(func.count).select_from(ArticleContent))
         total_contents = total_contents_result.scalar()
 
         # Count orphaned contents (no references from feed_articles or clipped_articles)
@@ -106,7 +106,7 @@ class TestOrphanPrevention:
 
         # Verify expected number of articles created
         feed_articles_result = await db_session.execute(
-            select(func.count()).select_from(FeedArticle).where(FeedArticle.feed_id == test_feed.id)
+            select(func.count).select_from(FeedArticle).where(FeedArticle.feed_id == test_feed.id)
         )
         feed_articles_count = feed_articles_result.scalar()
         assert feed_articles_count == 2  # Two articles in the feed
@@ -126,7 +126,7 @@ class TestOrphanPrevention:
 
         # Count article_contents for the duplicate link
         content_count_result = await db_session.execute(
-            select(func.count())
+            select(func.count)
             .select_from(ArticleContent)
             .where(ArticleContent.link == "https://example.com/same-article")
         )
@@ -142,7 +142,7 @@ class TestOrphanPrevention:
         content_id = content_result.scalar()
 
         feed_article_count_result = await db_session.execute(
-            select(func.count()).select_from(FeedArticle).where(FeedArticle.content_id == content_id)
+            select(func.count).select_from(FeedArticle).where(FeedArticle.content_id == content_id)
         )
         feed_article_count = feed_article_count_result.scalar()
 
@@ -246,7 +246,7 @@ class TestOrphanPrevention:
 
         # Count article_contents for the duplicate link
         content_count_result = await db_session.execute(
-            select(func.count())
+            select(func.count)
             .select_from(ArticleContent)
             .where(ArticleContent.link == "https://example.com/same-article")
         )

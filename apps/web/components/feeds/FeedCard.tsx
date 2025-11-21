@@ -48,7 +48,11 @@ export function FeedCard({
             <div className="hidden md:block">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                        >
                             <MoreVertical className="h-4 w-4 text-muted-foreground" />
                             <span className="sr-only">More options</span>
                         </Button>

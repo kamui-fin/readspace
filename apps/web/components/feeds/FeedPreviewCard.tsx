@@ -15,5 +15,7 @@ interface FeedPreviewCardProps {
  * Uses BaseFeedCard with the "preview" variant and no additional actions.
  */
 export function FeedPreviewCard({ feed }: FeedPreviewCardProps) {
-    return <BaseFeedCard feed={feed} variant="preview" showFollowButton={true} />
+    return (
+        <BaseFeedCard feed={feed} variant="preview" showFollowButton={true} />
+    )
 }

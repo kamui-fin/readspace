@@ -59,23 +59,25 @@ const StepTwo: React.FC = () => {
 
             // Use multi-search to query each category separately
             // This ensures fair representation across categories with different popularity score distributions
-            const queries = onboardingData.selectedCategories.map((category) => ({
-                indexUid: FEEDS_INDEX_NAME,
-                q: "",
-                filter: `top_level_category = "${category}" AND language = "en"`,
-                limit: 20, // Get top 20 from each category
-                sort: ["popularity_score:desc"],
-                attributesToRetrieve: [
-                    "id",
-                    "title",
-                    "description",
-                    "url",
-                    "link",
-                    "image_url",
-                    "top_level_category",
-                    "popularity_score",
-                ],
-            }))
+            const queries = onboardingData.selectedCategories.map(
+                (category) => ({
+                    indexUid: FEEDS_INDEX_NAME,
+                    q: "",
+                    filter: `top_level_category = "${category}" AND language = "en"`,
+                    limit: 20, // Get top 20 from each category
+                    sort: ["popularity_score:desc"],
+                    attributesToRetrieve: [
+                        "id",
+                        "title",
+                        "description",
+                        "url",
+                        "link",
+                        "image_url",
+                        "top_level_category",
+                        "popularity_score",
+                    ],
+                })
+            )
 
             const multiSearchResults = await meilisearchClient.multiSearch({
                 queries,
@@ -83,17 +85,18 @@ const StepTwo: React.FC = () => {
 
             // Interleave results from different categories for diversity
             const interleavedFeeds: OnboardingFeed[] = []
-            const categoryResults = multiSearchResults.results.map((result: any) =>
-                result.hits.map((hit: any) => ({
-                    id: hit.id,
-                    title: hit.title,
-                    description: hit.description,
-                    url: hit.url,
-                    link: hit.link,
-                    image_url: hit.image_url,
-                    category: hit.top_level_category,
-                    popularity_score: hit.popularity_score,
-                }))
+            const categoryResults = multiSearchResults.results.map(
+                (result: any) =>
+                    result.hits.map((hit: any) => ({
+                        id: hit.id,
+                        title: hit.title,
+                        description: hit.description,
+                        url: hit.url,
+                        link: hit.link,
+                        image_url: hit.image_url,
+                        category: hit.top_level_category,
+                        popularity_score: hit.popularity_score,
+                    }))
             )
 
             // Interleave: take one from each category in round-robin fashion
@@ -250,47 +253,53 @@ const StepTwo: React.FC = () => {
         >
             <div className="max-h-96 overflow-y-auto pr-2">
                 <AnimatePresence initial={false}>
-                    {displayedFeeds.map((feed: OnboardingFeed, index: number) => (
-                        <motion.div
-                            key={feed.id}
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{
-                                duration: 0.2,
-                                ease: "easeOut",
-                            }}
-                            style={{ overflow: "hidden" }}
-                        >
+                    {displayedFeeds.map(
+                        (feed: OnboardingFeed, index: number) => (
                             <motion.div
-                                initial={{
-                                    opacity: 0,
-                                    y: -8,
-                                    scale: 0.98,
-                                }}
-                                animate={{
-                                    opacity: 1,
-                                    y: 0,
-                                    scale: 1,
-                                }}
-                                exit={{
-                                    opacity: 0,
-                                    y: 8,
-                                    scale: 0.98,
-                                }}
+                                key={feed.id}
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "auto", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
                                 transition={{
-                                    duration: 0.15,
+                                    duration: 0.2,
                                     ease: "easeOut",
                                 }}
+                                style={{ overflow: "hidden" }}
                             >
-                                <OnboardingFeedCard
-                                    feed={feed}
-                                    onSubscribed={handleFeedSubscribed}
-                                    isFollowing={subscribedFeeds?.some((f) => f.id === feed.id) ?? false}
-                                />
+                                <motion.div
+                                    initial={{
+                                        opacity: 0,
+                                        y: -8,
+                                        scale: 0.98,
+                                    }}
+                                    animate={{
+                                        opacity: 1,
+                                        y: 0,
+                                        scale: 1,
+                                    }}
+                                    exit={{
+                                        opacity: 0,
+                                        y: 8,
+                                        scale: 0.98,
+                                    }}
+                                    transition={{
+                                        duration: 0.15,
+                                        ease: "easeOut",
+                                    }}
+                                >
+                                    <OnboardingFeedCard
+                                        feed={feed}
+                                        onSubscribed={handleFeedSubscribed}
+                                        isFollowing={
+                                            subscribedFeeds?.some(
+                                                (f) => f.id === feed.id
+                                            ) ?? false
+                                        }
+                                    />
+                                </motion.div>
                             </motion.div>
-                        </motion.div>
-                    ))}
+                        )
+                    )}
                 </AnimatePresence>
             </div>
 

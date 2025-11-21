@@ -223,9 +223,13 @@ Return a JSON object with exactly these keys:
                     raise
 
     async def _poll_for_completion(self, job_name: str) -> Any:
-        """Poll for batch job completion with timeout."""
-        max_wait_seconds = 4 * 60  # 4 minutes
-        poll_interval = 60
+        """Poll for batch job completion with timeout.
+
+        Gemini Batch API can take 5-10+ minutes for small batches.
+        Jobs remain in PENDING state while queued, then move to RUNNING.
+        """
+        max_wait_seconds = 15 * 60  # 15 minutes (reasonable for batch processing)
+        poll_interval = 30
         elapsed = 0
 
         completed_states = {
@@ -235,23 +239,43 @@ Return a JSON object with exactly these keys:
             "JOB_STATE_EXPIRED",
         }
 
+        last_state = None
         while elapsed < max_wait_seconds:
             batch_status = self.gemini_client.client.batches.get(name=job_name)
+            current_state = batch_status.state.name
 
-            if batch_status.state.name in completed_states:
+            if current_state in completed_states:
+                logger.info(
+                    "Batch job completed",
+                    job_name=job_name,
+                    state=current_state,
+                    total_wait_seconds=elapsed,
+                )
                 return batch_status
 
-            logger.debug(
-                "Batch job still running",
-                job_name=job_name,
-                state=batch_status.state.name,
-                elapsed_seconds=elapsed,
-            )
+            # Log state changes and periodic updates
+            if current_state != last_state or elapsed % 120 == 0:
+                logger.info(
+                    "Batch job status",
+                    job_name=job_name,
+                    state=current_state,
+                    elapsed_seconds=elapsed,
+                    max_wait_seconds=max_wait_seconds,
+                )
+                last_state = current_state
 
             await asyncio.sleep(poll_interval)
             elapsed += poll_interval
 
-        return self.gemini_client.client.batches.get(name=job_name)
+        # Timeout reached - get final status
+        final_status = self.gemini_client.client.batches.get(name=job_name)
+        logger.warning(
+            "Batch job timeout reached",
+            job_name=job_name,
+            final_state=final_status.state.name,
+            elapsed_seconds=elapsed,
+        )
+        return final_status
 
     def _parse_results(self, batch_status: Any, num_feeds: int) -> list[FeedEnrichmentResponse | None]:
         """Parse results from batch job."""

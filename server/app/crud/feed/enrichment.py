@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
 from app.models import Feed, FeedCategory
-from app.services.feeds.search.meilisearch_service import get_meilisearch_service
+from app.services.feeds.search.meilisearch import get_meilisearch_service
 
 logger = structlog.get_logger(__name__)
 

@@ -6,7 +6,7 @@ import pytest
 
 from app.core.constants import MIN_VALID_PUBLISHED_YEAR
 from app.core.custom_exceptions import FeedParsingError
-from app.services.feeds.feed_parser import FeedParsingService
+from app.services.feeds.parser import FeedParsingService
 
 
 @pytest.mark.unit

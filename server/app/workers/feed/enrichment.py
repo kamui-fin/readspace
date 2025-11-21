@@ -12,7 +12,8 @@ from app.core.config import get_settings
 from app.core.constants import MAX_FEEDS_BATCH_SIZE
 from app.models import Feed, FeedCategory
 from app.services.ai import FeedEnrichmentService as AIFeedEnrichmentService
-from app.services.feeds.enrichment.feed_enrichment import FeedEnrichmentService
+from app.services.feeds.enrichment.helpers import FeedEnrichmentService
+from app.services.feeds.search.meilisearch import get_meilisearch_service
 
 logger = structlog.get_logger(__name__)
 
@@ -23,8 +24,9 @@ class FeedProxy:
     Used to pass feed data to enrichment service without ORM objects.
     """
 
-    def __init__(self, feed_id: UUID, link: str | None, url: str):
+    def __init__(self, feed_id: UUID, title: str, link: str | None, url: str):
         self.id = feed_id
+        self.title = title
         self.link = link
         self.url = url
 
@@ -143,6 +145,7 @@ def build_feed_update_mapping(
         # Calculate hybrid popularity score
         feed_proxy = FeedProxy(
             feed_id=feed_snapshot["id"],
+            title=feed_snapshot["title"],
             link=feed_snapshot["link"],
             url=feed_snapshot["url"],
         )
@@ -186,6 +189,17 @@ def prepare_bulk_updates(
     for i, feed_snapshot in enumerate(feed_snapshot_list):
         try:
             llm_result = llm_results[i]
+
+            # Skip feeds where enrichment failed (None results)
+            if llm_result is None:
+                logger.warning(
+                    "Skipping feed with failed enrichment",
+                    feed_id=str(feed_snapshot["id"]),
+                    feed_title=feed_snapshot.get("title"),
+                )
+                failed_count += 1
+                continue
+
             language = feed_data_list[i]["language"]
 
             update_mapping = build_feed_update_mapping(
@@ -226,6 +240,74 @@ async def apply_bulk_updates(db: AsyncSession, bulk_update_mappings: list[dict[s
     except Exception as e:
         logger.error("Failed to bulk update feeds", error=str(e), exc_info=True)
         raise
+
+
+async def sync_feeds_to_meilisearch(
+    bulk_update_mappings: list[dict[str, Any]], feed_snapshot_list: list[dict[str, Any]]
+) -> None:
+    """Sync enriched feeds to Meilisearch index.
+
+    Args:
+        bulk_update_mappings: List of database update mappings
+        feed_snapshot_list: Original feed snapshots before enrichment
+    """
+    if not bulk_update_mappings:
+        return
+
+    try:
+        settings = get_settings()
+        meilisearch_service = get_meilisearch_service(settings)
+
+        # Create a mapping of feed_id -> update_mapping for quick lookup
+        updates_by_id = {mapping["id"]: mapping for mapping in bulk_update_mappings}
+
+        # Build Feed-like objects with enriched data for Meilisearch
+        feeds_to_sync = []
+        for snapshot in feed_snapshot_list:
+            feed_id = snapshot["id"]
+            if feed_id not in updates_by_id:
+                continue  # This feed failed enrichment, skip
+
+            # Merge snapshot with updates to create complete feed data
+            update_data = updates_by_id[feed_id]
+
+            # Create a minimal Feed-like object for Meilisearch indexing
+            # Matches the interface expected by MeilisearchService._feed_to_document
+            class MeilisearchFeedProxy:
+                """Lightweight feed proxy for Meilisearch indexing."""
+
+                def __init__(self, data: dict[str, Any]):
+                    self.id = data["id"]
+                    self.url = data["url"]
+                    self.title = data.get("title")
+                    self.description = data.get("description")
+                    self.link = data.get("link")
+                    self.language = data.get("language")
+                    self.image_url = data.get("image_url")
+                    self.tags = data.get("tags")
+                    self.top_level_category = data.get("top_level_category")
+                    self.popularity_score = data.get("popularity_score")
+
+            # Merge enriched data with original snapshot
+            enriched_data = {
+                **snapshot,
+                "tags": update_data.get("tags", snapshot.get("tags")),
+                "top_level_category": update_data.get("top_level_category"),
+                "description": update_data.get("description", snapshot.get("description")),
+                "language": update_data.get("language", snapshot.get("language")),
+                "popularity_score": update_data.get("popularity_score", 0.5),
+            }
+
+            feeds_to_sync.append(MeilisearchFeedProxy(enriched_data))
+
+        # Batch update in Meilisearch
+        if feeds_to_sync:
+            meilisearch_service.add_feeds_batch(feeds_to_sync)
+            logger.info("Synced enriched feeds to Meilisearch", count=len(feeds_to_sync))
+
+    except Exception as e:
+        # Log but don't raise - Meilisearch sync failures shouldn't break enrichment
+        logger.error("Failed to sync feeds to Meilisearch", error=str(e), exc_info=True)
 
 
 async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
@@ -270,13 +352,13 @@ async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
                 "message": "No feeds need enrichment",
             }
 
-        logger.info([x.title for x in feeds_to_enrich])
-
         # Initialize enrichment service
         enrichment_service = FeedEnrichmentService(db=db)
 
         # Prepare feed data for batch processing
         feed_data_list, feed_snapshot_list = prepare_feed_snapshots(feeds_to_enrich, enrichment_service)
+
+        print(feed_data_list)
 
         # ================================================================
         # PHASE 2: External API calls without holding DB connection (10-60s)
@@ -290,7 +372,7 @@ async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
         llm_results = await ai_feed_enrichment.enrich_feeds_batch(feed_data_list)
 
         # ================================================================
-        # PHASE 3: Bulk database update (connection held <1s)
+        # PHASE 3: Bulk database update and Meilisearch sync (connection held <1s)
         # ================================================================
 
         bulk_update_mappings, enriched_count, failed_count = prepare_bulk_updates(
@@ -302,6 +384,9 @@ async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
 
         # Perform database update in bulk
         await apply_bulk_updates(db, bulk_update_mappings)
+
+        # Sync enriched feeds to Meilisearch
+        await sync_feeds_to_meilisearch(bulk_update_mappings, feed_snapshot_list)
 
         logger.info(
             "Batch feed enrichment completed",

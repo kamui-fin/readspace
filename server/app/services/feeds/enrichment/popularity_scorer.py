@@ -10,13 +10,9 @@ This module implements a comprehensive popularity scoring system that blends:
 Final score range: 0-100 (higher = more popular)
 """
 
-import hashlib
 from typing import Any
 
 import structlog
-
-from app.core.constants import POPULARITY_SCORE_CACHE_TTL
-from app.core.redis_cache import get_redis_cache
 
 logger = structlog.get_logger(__name__)
 
@@ -67,65 +63,9 @@ class PopularityScorer:
             "quality": 0.2,  # 20% - Quality score (includes activity metrics)
         }
 
-    async def calculate_popularity_score_cached(self, feed_data: dict[str, Any]) -> dict[str, Any]:
-        """
-        Calculate comprehensive popularity score for a feed with Redis caching.
-
-        This method caches popularity calculations for 1 hour to improve performance.
-        Popularity scoring involves domain authority lookup which can be expensive.
-
-        Args:
-            feed_data: Feed metadata dictionary
-
-        Returns:
-            Dictionary with individual scores and final composite score
-        """
-        # Generate cache key from feed URL and domain
-        domain = feed_data.get("domain", "")
-        xml_url = feed_data.get("xmlUrl", "")
-
-        if not domain and not xml_url:
-            # No cacheable identifier, compute directly
-            return self.calculate_popularity_score(feed_data)
-
-        # Create cache key from domain and URL
-        cache_key_data = f"{domain}:{xml_url}"
-        url_hash = hashlib.md5(cache_key_data.encode()).hexdigest()[:8]  # noqa: S324  # MD5 used for cache key, not cryptography
-        cache_key = f"popularity:domain:{domain}:url:{url_hash}"
-
-        # Check cache first
-        cache = get_redis_cache()
-        try:
-            cached_result = await cache.get(cache_key)
-            if cached_result is not None:
-                logger.debug("Popularity score cache hit", domain=domain, url_hash=url_hash)
-                return cached_result
-        except Exception as e:
-            logger.warning("Failed to get cached popularity score", domain=domain, error=str(e))
-
-        # Cache miss - compute score
-        result = self.calculate_popularity_score(feed_data)
-
-        # Cache the result
-        try:
-            await cache.set(cache_key, result, ttl_seconds=POPULARITY_SCORE_CACHE_TTL)
-            logger.debug(
-                "Popularity score cached",
-                domain=domain,
-                url_hash=url_hash,
-                score=result["popularity_score"],
-                ttl=POPULARITY_SCORE_CACHE_TTL,
-            )
-        except Exception as e:
-            logger.warning("Failed to cache popularity score", domain=domain, error=str(e))
-
-        return result
-
     def calculate_popularity_score(self, feed_data: dict[str, Any]) -> dict[str, Any]:
         """
-        Calculate comprehensive popularity score for a feed (synchronous, non-cached version).
-
-        For async code with caching, use calculate_popularity_score_cached() instead.
+        Calculate comprehensive popularity score for a feed.
 
         Args:
             feed_data: Feed metadata dictionary

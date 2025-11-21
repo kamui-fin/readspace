@@ -4,9 +4,9 @@ import { browser, identity, storage } from '@/lib/browser'
 import type { CachedPageContent, CachedPageMetadata } from '@/lib/page-cache'
 import { pageCache } from '@/lib/page-cache'
 import { getSupabaseClient } from '@/lib/supabase'
-import { trimSaveArticleRequest } from '@readspace/shared'
 import type { Runtime } from 'webextension-polyfill'
 import { extractOAuthTokens } from './lib/oauth'
+import { trimSaveArticleRequest } from './utils/article'
 
 // Type for content extraction result
 interface ContentExtractionResult {
@@ -56,7 +56,10 @@ async function getBackgroundAuthToken(): Promise<string | null> {
 
     return token
   } catch (error) {
-    console.error('[Background Auth] Failed to get auth token from storage:', error)
+    console.error(
+      '[Background Auth] Failed to get auth token from storage:',
+      error
+    )
     return null
   }
 }
@@ -74,7 +77,8 @@ async function configureBackgroundApiClient() {
       store = JSON.parse(store)
     }
 
-    const baseUrl = store?.state?.settings?.readspace_url || 'https://api.readspace.ai'
+    const baseUrl =
+      store?.state?.settings?.readspace_url || 'https://api.readspace.ai'
 
     ApiClient.configure({
       baseUrl,
@@ -583,10 +587,10 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       ...trimmedData,
       metadata: trimmedData.metadata
         ? (Object.fromEntries(
-          Object.entries(trimmedData.metadata).filter(
-            ([_, value]) => value !== undefined
-          )
-        ) as Record<string, string>)
+            Object.entries(trimmedData.metadata).filter(
+              ([_, value]) => value !== undefined
+            )
+          ) as Record<string, string>)
         : undefined,
     }
 
@@ -785,9 +789,9 @@ async function handleGoogleOAuth(): Promise<{
     if (!clientId) {
       throw new Error(
         'Google OAuth client ID not configured. ' +
-        (manifest.oauth2
-          ? 'Please set it in the manifest.'
-          : 'Please add it in Settings.')
+          (manifest.oauth2
+            ? 'Please set it in the manifest.'
+            : 'Please add it in Settings.')
       )
     }
 

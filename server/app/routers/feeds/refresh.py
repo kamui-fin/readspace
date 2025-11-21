@@ -11,11 +11,10 @@ from app.core.custom_exceptions import (
     FeedParsingError,
     FeedValidationError,
 )
-from app.core.metrics import feed_operation_duration_seconds, feed_operations_total
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import FeedResponse
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -131,10 +130,7 @@ async def refresh_feed(
             )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-        # Record success metrics
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="refresh", status="success").inc()
-        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
 
         logger.info(
             "Feed refresh triggered/completed",
@@ -144,10 +140,7 @@ async def refresh_feed(
         )
         return refreshed_feed
     except FeedConnectionError as e:
-        # Record connection error metrics
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="refresh", status="connection_error").inc()
-        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
 
         logger.error(
             "Connection error refreshing feed",
@@ -161,10 +154,7 @@ async def refresh_feed(
             detail=f"Could not connect to feed URL during refresh: {e}",
         ) from e
     except (FeedValidationError, FeedParsingError) as e:
-        # Record validation/parsing error metrics
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="refresh", status="validation_error").inc()
-        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
 
         logger.warning(
             "Validation/parsing error during feed refresh",
@@ -175,17 +165,11 @@ async def refresh_feed(
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except HTTPException:
-        # Record metrics for HTTP exceptions
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="refresh", status="http_error").inc()
-        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
         # Re-raise HTTP exceptions (like feed not found)
         raise
     except Exception as e:
-        # Record metrics for unexpected errors
         duration = time.perf_counter() - start_time
-        feed_operations_total.labels(operation="refresh", status="error").inc()
-        feed_operation_duration_seconds.labels(operation="refresh").observe(duration)
 
         logger.error(
             "Unexpected error refreshing feed",

@@ -366,7 +366,7 @@ class TestFeedRefresh:
         """Test refreshing a feed."""
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
         db_session.add(subscription)
-        await db_session.flush()
+        await db_session.commit()  # Commit so the API can see it
 
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")
 
@@ -382,8 +382,11 @@ class TestFeedRefresh:
         assert response.status_code == 404
 
     @pytest.mark.asyncio
-    async def test_refresh_feed_preview_mode(self, async_client: AsyncClient, test_feed: Feed):
+    async def test_refresh_feed_preview_mode(self, async_client: AsyncClient, test_feed: Feed, db_session: AsyncSession):
         """Test refreshing feed in preview mode."""
+        # Ensure feed is committed
+        await db_session.commit()
+        
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh?preview=true")
 
         assert response.status_code == 200

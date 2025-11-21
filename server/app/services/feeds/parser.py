@@ -16,7 +16,7 @@ from app.core.custom_exceptions import FeedParsingError
 from app.schemas import FeedBase
 from app.utils.language_normalizer import normalize_language_code
 from app.utils.reading_time import calculate_reading_time_from_html
-from app.utils.url_normalizer import extract_domain_from_url
+from app.utils.url.url_normalizer import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
 

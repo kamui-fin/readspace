@@ -130,10 +130,11 @@ export function OnboardingFeedCard({
                             <Button
                                 onClick={handleSubscribe}
                                 disabled={isSubscribed}
-                                className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors ${isSubscribed
+                                className={`h-8 px-3 text-xs font-medium flex items-center gap-1.5 transition-colors ${
+                                    isSubscribed
                                         ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/10 cursor-default"
                                         : "bg-primary hover:bg-primary/90 text-primary-foreground"
-                                    }`}
+                                }`}
                                 variant={isSubscribed ? "outline" : "default"}
                             >
                                 {isSubscribed ? (

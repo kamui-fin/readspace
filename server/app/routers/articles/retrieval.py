@@ -8,7 +8,7 @@ from app.core.constants import ERROR_ARTICLE_NOT_FOUND
 from app.db.session import get_db
 from app.schemas import ArticleResponse
 from app.schemas.auth import TokenData
-from app.services.articles.article_management import ArticleManagementService
+from app.services.articles.management import ArticleManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -99,7 +99,11 @@ async def list_articles(
         - Returns empty items list when no articles match filters
         - feed_ids and folder_id are mutually exclusive (feed_ids takes precedence)
     """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+    from app.crud.article import (
+        ArticleTransformer,
+        CursorPaginationParams,
+        get_articles_cursor_paginated,
+    )
 
     # Create pagination parameters
     params = CursorPaginationParams(limit=limit, cursor=cursor)
@@ -117,8 +121,6 @@ async def list_articles(
     )
 
     # Transform the tuples into ArticleResponse objects
-    from app.crud.article.article_transformer import ArticleTransformer
-
     transformer = ArticleTransformer()
 
     transformed_items = []

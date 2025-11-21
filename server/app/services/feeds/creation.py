@@ -18,18 +18,18 @@ from app.core.custom_exceptions import (
 )
 from app.core.redis_cache import get_redis_cache
 from app.crud import crud_feed, crud_folder, crud_subscription
-from app.crud.article.article import create_articles_batch
+from app.crud.article import create_articles_batch
 from app.schemas import ArticleCreate, FeedBase
 from app.schemas.subscriptions import SubscriptionCreate, SubscriptionResponse
 from app.services.articles.article import ArticleBusinessLogic
-from app.services.articles.article_extractor import ArticleExtractor
-from app.services.feeds.adaptive_feed_scheduler import calculate_optimal_interval
-from app.services.feeds.feed_deduplication import FeedDeduplicationService
-from app.services.feeds.feed_fetcher import FeedFetcher
-from app.services.feeds.feed_parser import FeedParsingService
-from app.services.feeds.feed_validator import FeedValidator
+from app.services.articles.rss_extractor import ArticleExtractor
+from app.services.feeds.deduplication import FeedDeduplicationService
+from app.services.feeds.fetcher import FeedFetcher
+from app.services.feeds.parser import FeedParsingService
+from app.services.feeds.scheduler import calculate_optimal_interval
+from app.services.feeds.validator import FeedValidator
 from app.utils.content_hash import calculate_feed_content_hash
-from app.utils.url_normalizer import resolve_feed_url
+from app.utils.url.url_normalizer import resolve_feed_url
 
 logger = structlog.get_logger(__name__)
 

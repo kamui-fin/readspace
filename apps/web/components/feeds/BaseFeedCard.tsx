@@ -70,7 +70,8 @@ export function BaseFeedCard({
     const [isCreatingFolder, setIsCreatingFolder] = useState(false)
     const [newFolderName, setNewFolderName] = useState("")
     const [isUnsubscribeModalOpen, setIsUnsubscribeModalOpen] = useState(false)
-    const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] = useState(false)
+    const [isProcessingUnsubscribe, setIsProcessingUnsubscribe] =
+        useState(false)
 
     // Get the user's subscribed feeds to check if this feed is subscribed
     const { data: feedsData } = useFeeds(
@@ -154,7 +155,9 @@ export function BaseFeedCard({
 
             // Create the feed subscription
             // For preview feeds, use the preview_url; for regular feeds, use the url
-            const subscriptionUrl = isPreviewFeed ? (feed as any).preview_url : feed.url
+            const subscriptionUrl = isPreviewFeed
+                ? (feed as any).preview_url
+                : feed.url
             await createFeed.mutateAsync({
                 url: subscriptionUrl!,
                 folder_id: folderId,
@@ -279,8 +282,8 @@ export function BaseFeedCard({
                             feed.title?.toLowerCase().includes("techcrunch")
                                 ? "bg-green-600"
                                 : feed.title
-                                      ?.toLowerCase()
-                                      .includes("hacker news")
+                                        ?.toLowerCase()
+                                        .includes("hacker news")
                                   ? "bg-orange-500"
                                   : "bg-gray-600"
                         }`}
@@ -320,13 +323,20 @@ export function BaseFeedCard({
                         <div className="flex items-center gap-2 flex-shrink-0">
                             {showFollowButton && (
                                 <Button
-                                    variant={isFollowed ? "outline" : isPreview ? "default" : "secondary"}
+                                    variant={
+                                        isFollowed
+                                            ? "outline"
+                                            : isPreview
+                                              ? "default"
+                                              : "secondary"
+                                    }
                                     onClick={handleFollowClick}
                                     className={cn(
                                         "h-8 text-xs",
                                         isFollowed
                                             ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
-                                            : isPreview && "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                            : isPreview &&
+                                                  "bg-primary hover:bg-primary/90 text-primary-foreground"
                                     )}
                                 >
                                     {isFollowed && (
@@ -422,15 +432,19 @@ export function BaseFeedCard({
                                     rel="noopener noreferrer"
                                     className="text-xs text-muted-foreground truncate block"
                                 >
-                                    {((isPreviewFeed
-                                        ? (feed as any).preview_url
-                                        : feed.url) || "")
+                                    {(
+                                        (isPreviewFeed
+                                            ? (feed as any).preview_url
+                                            : feed.url) || ""
+                                    )
                                         .replace(/^https?:\/\//, "")
                                         .replace(/\/$/, "")
                                         .slice(0, 30) +
-                                        (((isPreviewFeed
-                                            ? (feed as any).preview_url
-                                            : feed.url) || "").length > 30
+                                        ((
+                                            (isPreviewFeed
+                                                ? (feed as any).preview_url
+                                                : feed.url) || ""
+                                        ).length > 30
                                             ? "..."
                                             : "")}
                                 </a>

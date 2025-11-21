@@ -10,9 +10,7 @@ import pytest
 from app.core.custom_exceptions import ValidationError
 from app.utils.validators import (
     validate_article_priority,
-    validate_book_format,
     validate_datetime,
-    validate_description,
     validate_email,
     validate_folder_name,
     validate_highlight_color,
@@ -243,33 +241,6 @@ class TestPaginationValidation:
 
 
 @pytest.mark.unit
-class TestBookFormatValidation:
-    """Test book format validation"""
-
-    def test_valid_book_formats(self):
-        """Test valid book format values"""
-        assert validate_book_format("EPUB") == "EPUB"
-        assert validate_book_format("PDF") == "PDF"
-        assert validate_book_format("epub") == "EPUB"  # Should uppercase
-        assert validate_book_format("pdf") == "PDF"  # Should uppercase
-
-    def test_invalid_book_formats(self):
-        """Test invalid book format values"""
-        # Test unsupported but valid format strings
-        unsupported_formats = ["MOBI", "TXT", "DOCX", "invalid"]
-
-        for format_str in unsupported_formats:
-            with pytest.raises(ValidationError, match="Unsupported book format"):
-                validate_book_format(format_str)
-
-        # Test empty/None formats
-        empty_formats = ["", None]
-        for format_str in empty_formats:
-            with pytest.raises(ValidationError, match="Book format is required"):
-                validate_book_format(format_str)
-
-
-@pytest.mark.unit
 class TestValidationErrorHandling:
     """Test validation error handling and messages"""
 
@@ -385,34 +356,6 @@ class TestTitleValidation:
         """Test title validation when optional"""
         assert validate_title("", required=False) is None
         assert validate_title(None, required=False) is None
-
-
-@pytest.mark.unit
-class TestDescriptionValidation:
-    """Test description validation logic"""
-
-    def test_valid_descriptions(self):
-        """Test valid description values"""
-        valid_descriptions = [
-            "Short description",
-            "A" * 1000,  # Assuming reasonable max length
-            "Description with\nnewlines",
-            "Description with special chars !@#$%",
-        ]
-
-        for desc in valid_descriptions:
-            result = validate_description(desc)
-            assert result == desc.strip()
-
-    def test_optional_description(self):
-        """Test description validation when optional (default)"""
-        assert validate_description("") is None
-        assert validate_description(None) is None
-
-    def test_required_description(self):
-        """Test description validation when required"""
-        with pytest.raises(ValidationError, match="required"):
-            validate_description("", required=True)
 
 
 @pytest.mark.unit

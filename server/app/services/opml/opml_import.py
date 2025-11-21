@@ -7,10 +7,12 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.profile import get_profile_by_id
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
+from app.workers.opml_tasks import import_single_feed_task
 from app.services.user.resource_limits import ResourceLimitService
+from app.routers.opml.utils import check_import_cancellation_flag
 
 logger = structlog.get_logger(__name__)
 
@@ -111,7 +113,6 @@ class OpmlImportService:
         Returns:
             Dict with total_feeds, task_ids, and status
         """
-        from app.workers.opml_tasks import import_single_feed_task
 
         total_feeds = len(feeds_data)
         task_ids = []
@@ -125,7 +126,6 @@ class OpmlImportService:
 
         # Check for cancellation before dispatching
         if parent_task_id:
-            from app.routers.opml.utils import check_import_cancellation_flag
 
             is_cancelled = await check_import_cancellation_flag(parent_task_id)
             if is_cancelled:

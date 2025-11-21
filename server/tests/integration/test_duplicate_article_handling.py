@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile
+from app.services.feeds.fetcher import FetchResult
 
 
 @pytest.fixture
@@ -58,7 +59,6 @@ def mock_feed_fetch_duplicate_articles():
         shared_url
     )
 
-    from app.services.feeds.feed_fetcher import FetchResult
 
     async def mock_fetch(url: str, *args, **kwargs):
         """Return different feed content based on URL."""
@@ -88,8 +88,8 @@ def mock_feed_fetch_duplicate_articles():
         else:
             raise ValueError(f"Unexpected feed URL: {url}")
 
-    with patch("app.services.feeds.feed_fetcher.FeedFetcher.fetch_content", side_effect=mock_fetch):
-        with patch("app.services.feeds.feed_creation.FeedCreationService._fetch_feed_content", side_effect=creation_fetch):
+    with patch("app.services.feeds.fetcher.FeedFetcher.fetch_content", side_effect=mock_fetch):
+        with patch("app.services.feeds.creation.FeedCreationService._fetch_feed_content", side_effect=creation_fetch):
             yield mock_fetch
 
 

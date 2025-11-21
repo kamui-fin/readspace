@@ -6,7 +6,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.crud.base import CRUDBase
+from app.crud.article.operations.base import CRUDBase
 from app.models import FeedArticle
 from app.schemas import FeedArticleCreate, FeedArticleUpdate
 

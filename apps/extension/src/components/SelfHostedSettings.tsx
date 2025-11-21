@@ -178,7 +178,7 @@ export function SelfHostedSettings({ onBack }: SelfHostedSettingsProps) {
               Advanced Users Only
             </p>
             <p className="text-sm text-amber-800 dark:text-amber-300">
-              Only modify these settings if you're self-hosting. 
+              Only modify these settings if you're self-hosting.
             </p>
           </div>
         </div>

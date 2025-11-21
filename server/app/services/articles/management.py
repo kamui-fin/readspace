@@ -7,29 +7,27 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
-from app.crud.article.article import (
+from app.crud.article import (
+    ArticleTransformer,
+    count_articles_filtered,
     count_read_later_articles,
     count_today_articles,
     count_unread_articles,
     count_unread_articles_by_folder,
     get_all_unread_counts,
-    get_article,
-    get_articles_by_user,
+    get_article_by_id,
+    get_articles_filtered,
     get_recently_read_articles,
     get_unread_counts_by_folder,
+    update_article_status,
 )
-from app.crud.article.article import (
-    update_article as crud_update_article,
-)
-from app.crud.article.article_transformer import ArticleTransformer
-from app.crud.article.unified_articles import crud_unified_articles
 from app.models import ClippedArticle, FeedArticle
 from app.schemas import (
     ArticleResponse,
     ArticleUpdate,
     PaginatedResponse,
 )
-from app.services.articles.content_extraction import ContentExtractionService
+from app.services.articles.scrape import ContentExtractionService
 from app.utils.content_detector import is_content_complete
 
 logger = structlog.get_logger(__name__)
@@ -63,12 +61,10 @@ class ArticleManagementService:
         allow_preview: bool = False,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles with filtering and pagination."""
-        from app.crud.article.article import count_articles_by_user
-
         skip = (page - 1) * size
 
         # Get total count for pagination (separate COUNT query with same filters)
-        total = await count_articles_by_user(
+        total = await count_articles_filtered(
             db=self.db,
             user_id=self.user_id,
             feed_ids=feed_ids,
@@ -83,7 +79,7 @@ class ArticleManagementService:
             allow_preview=allow_preview,
         )
 
-        articles_db = await get_articles_by_user(
+        articles_db = await get_articles_filtered(
             db=self.db,
             user_id=self.user_id,
             feed_ids=feed_ids,
@@ -126,7 +122,7 @@ class ArticleManagementService:
             allow_preview=allow_preview,
         )
 
-        article = await get_article(
+        article = await get_article_by_id(
             db=self.db,
             article_id=article_id,
             user_id=self.user_id,
@@ -216,7 +212,7 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get unread articles with filtering."""
-        articles_db = await get_articles_by_user(
+        articles_db = await get_articles_filtered(
             db=self.db,
             user_id=self.user_id,
             folder_id=folder_id,
@@ -246,7 +242,8 @@ class ArticleManagementService:
         limit: int = 50,
     ) -> PaginatedResponse[ArticleResponse]:
         """Get articles marked as read later (includes both RSS feed and clipped articles)."""
-        articles = await crud_unified_articles.get_unified_articles_by_user(
+        # Get read later articles using the same filtering as other methods
+        articles_db = await get_articles_filtered(
             db=self.db,
             user_id=self.user_id,
             is_read_later=True,
@@ -254,9 +251,9 @@ class ArticleManagementService:
             limit=limit,
             sort_by="published_at",
             sort_order="desc",
-            include_feed_articles=True,
-            include_clipped_articles=True,
         )
+
+        articles = [self.transformer.feed_to_unified(article) for article in articles_db]
 
         page = skip // limit + 1
         pages = page if len(articles) < limit else page + 1
@@ -311,7 +308,7 @@ class ArticleManagementService:
             article_type=article_type,
         )
 
-        updated_article = await crud_update_article(
+        updated_article = await update_article_status(
             db=self.db,
             article_id=article_id,
             article_in=article_in,

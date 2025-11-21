@@ -1,6 +1,6 @@
 """Tests for URL normalization functionality."""
 
-from app.utils.url_normalizer import are_urls_equivalent, normalize_feed_url
+from app.utils.url.url_normalizer import are_urls_equivalent, normalize_feed_url
 
 
 class TestUrlNormalizer:

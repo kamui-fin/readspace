@@ -29,7 +29,9 @@ interface UseFeedPreviewResult {
  * 3. Returns the preview data for display
  */
 export function useFeedPreview(query: string): UseFeedPreviewResult {
-    const [previewFeed, setPreviewFeed] = useState<FeedDiscoveryResult | null>(null)
+    const [previewFeed, setPreviewFeed] = useState<FeedDiscoveryResult | null>(
+        null
+    )
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -60,7 +62,9 @@ export function useFeedPreview(query: string): UseFeedPreviewResult {
                 let errorMessage = "Could not fetch feed preview"
 
                 if (err && typeof err === "object" && "response" in err) {
-                    const response = (err as { response?: { data?: { detail?: string } } }).response
+                    const response = (
+                        err as { response?: { data?: { detail?: string } } }
+                    ).response
                     if (response?.data?.detail) {
                         errorMessage = response.data.detail
                     }

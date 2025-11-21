@@ -6,10 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import opml_export_duration_seconds, opml_export_total
 from app.db.session import get_db
 from app.schemas.auth import TokenData
-from app.services.feeds.feed_management import FeedManagementService
+from app.services.feeds.management import FeedManagementService
 from app.services.opml.opml_processor import OpmlProcessor
 from app.services.user.auth import get_current_user
 
@@ -27,7 +26,14 @@ router = APIRouter()
             "description": "OPML file generated successfully",
             "content": {
                 "application/xml": {
-                    "example": "<?xml version='1.0' encoding='UTF-8'?>\n<opml version='2.0'>\n  <head>\n    <title>Readspace Feeds Export</title>\n  </head>\n  <body>\n    <outline text='Technology' title='Technology'>\n      <outline type='rss' text='TechCrunch' title='TechCrunch' xmlUrl='https://techcrunch.com/feed/' htmlUrl='https://techcrunch.com'/>\n    </outline>\n  </body>\n</opml>"
+                    "example": (
+                        "<?xml version='1.0' encoding='UTF-8'?>\n<opml version='2.0'>\n  <head>\n"
+                        "    <title>Readspace Feeds Export</title>\n  </head>\n  <body>\n"
+                        "    <outline text='Technology' title='Technology'>\n"
+                        "      <outline type='rss' text='TechCrunch' title='TechCrunch' "
+                        "xmlUrl='https://techcrunch.com/feed/' htmlUrl='https://techcrunch.com'/>\n"
+                        "    </outline>\n  </body>\n</opml>"
+                    )
                 }
             },
         },
@@ -104,8 +110,6 @@ async def export_opml_file(
         opml_string = await opml_processor.export_feeds_to_opml(user_feeds)
 
         duration = time.perf_counter() - start_time
-        opml_export_total.labels(status="success").inc()
-        opml_export_duration_seconds.observe(duration)
 
         logger.info(
             "OPML export successful",
@@ -122,8 +126,6 @@ async def export_opml_file(
         )
     except Exception as e:
         duration = time.perf_counter() - start_time
-        opml_export_total.labels(status="error").inc()
-        opml_export_duration_seconds.observe(duration)
 
         logger.error(
             "Unexpected error during OPML export",

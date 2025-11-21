@@ -16,10 +16,11 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.article.article_crud_operations import ArticleCrudOperations
+from app.crud.article import create_articles_batch
 from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile
 from app.schemas import ArticleCreate
 from app.services.feeds.feed import FeedService
+from app.services.feeds.fetcher import FetchResult
 
 
 @pytest_asyncio.fixture
@@ -91,7 +92,7 @@ class TestBulkArticleCreation:
         ]
 
         # Bulk insert
-        created_articles = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
 
         # Verify all 10 were created
         assert len(created_articles) == 10
@@ -148,7 +149,7 @@ class TestBulkArticleCreation:
             for i in range(3)
         ]
 
-        created_articles = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
 
         # Should create 3 feed_articles (linking to existing + new content)
         assert len(created_articles) == 3
@@ -188,7 +189,7 @@ class TestBulkArticleCreation:
             for i in range(5)
         ]
 
-        first_batch = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=initial_articles)
+        first_batch = await create_articles_batch(db_session, articles_data=initial_articles)
         assert len(first_batch) == 5
 
         # Try to insert overlapping batch with same guids but different links
@@ -207,7 +208,7 @@ class TestBulkArticleCreation:
             for i in range(3, 8)
         ]
 
-        second_batch = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=overlapping_articles)
+        second_batch = await create_articles_batch(db_session, articles_data=overlapping_articles)
 
         # First batch created guids: 0, 1, 2, 3, 4 (5 articles)
         # Second batch tries to create guids: 3, 4, 5, 6, 7 (5 articles)
@@ -223,7 +224,7 @@ class TestBulkArticleCreation:
     @pytest.mark.asyncio
     async def test_bulk_insert_empty_list(self, db_session: AsyncSession):
         """Test bulk insert with empty list returns empty list."""
-        created_articles = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=[])
+        created_articles = await create_articles_batch(db_session, articles_data=[])
 
         assert created_articles == []
 
@@ -294,7 +295,7 @@ class TestBulkArticleCreation:
             ),
         ]
 
-        created_articles = await ArticleCrudOperations.create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
 
         # Should create 2 new feed_articles (new-guid-1 and new-guid-2)
         # existing-guid should be skipped
@@ -364,8 +365,6 @@ class TestFeedServiceBulkIntegration:
     </channel>
 </rss>"""
 
-        from app.services.feeds.feed_fetcher import FetchResult
-
         async def mock_fetch(*args, **kwargs):
             return FetchResult(
                 status_code=200,
@@ -375,7 +374,7 @@ class TestFeedServiceBulkIntegration:
             )
 
         with patch(
-            "app.services.feeds.feed_fetcher.FeedFetcher.fetch_content",
+            "app.services.feeds.fetcher.FeedFetcher.fetch_content",
             side_effect=mock_fetch,
         ):
             # Refresh the feed
@@ -427,7 +426,6 @@ class TestFeedServiceBulkIntegration:
     </channel>
 </rss>"""
 
-        from app.services.feeds.feed_fetcher import FetchResult
 
         async def mock_fetch(*args, **kwargs):
             return FetchResult(
@@ -438,7 +436,7 @@ class TestFeedServiceBulkIntegration:
             )
 
         with patch(
-            "app.services.feeds.feed_fetcher.FeedFetcher.fetch_content",
+            "app.services.feeds.fetcher.FeedFetcher.fetch_content",
             side_effect=mock_fetch,
         ):
             feed_service = FeedService(db_session)

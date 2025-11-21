@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.schemas.auth import TokenData
-from app.services.articles.article_management import ArticleManagementService
+from app.services.articles.management import ArticleManagementService
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)

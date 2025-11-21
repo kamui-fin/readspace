@@ -267,7 +267,7 @@ async def test_folder(db_session: AsyncSession, test_user: Profile) -> Folder:
     """Create a test folder in real database."""
     folder = Folder(id=uuid4(), user_id=test_user.id, name="Test Folder")
     db_session.add(folder)
-    await db_session.flush()
+    await db_session.commit()  # Commit so API endpoints can see it
     await db_session.refresh(folder)
     return folder
 
@@ -284,7 +284,7 @@ async def test_feed(db_session: AsyncSession) -> Feed:
         language="en",
     )
     db_session.add(feed)
-    await db_session.flush()
+    await db_session.commit()  # Commit so API endpoints can see it
     await db_session.refresh(feed)
     return feed
 

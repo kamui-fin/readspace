@@ -58,54 +58,54 @@ const SubFeedItemComponent = ({
     }
 
     const content = (
-            <SidebarMenuSubItem>
-                <div className="flex items-center w-full group/item">
-                    <SidebarLeftMenuSubButton
-                        asChild
-                        isActive={item.isActive}
-                        className="py-0 flex-1"
+        <SidebarMenuSubItem>
+            <div className="flex items-center w-full group/item">
+                <SidebarLeftMenuSubButton
+                    asChild
+                    isActive={item.isActive}
+                    className="py-0 flex-1"
+                >
+                    <Link
+                        href={item.url}
+                        className="flex w-full items-center"
+                        aria-label={`Navigate to ${item.title} feed`}
                     >
-                        <Link
-                            href={item.url}
-                            className="flex w-full items-center"
-                            aria-label={`Navigate to ${item.title} feed`}
-                        >
-                            <div className="flex flex-grow items-center overflow-hidden pl-2">
-                                {/* Feed favicon with fallback */}
-                                {item.image && !imageError ? (
-                                    <Image
-                                        src={item.image}
-                                        alt=""
-                                        width={16}
-                                        height={16}
-                                        className="mr-2 h-4 w-4 shrink-0 rounded"
-                                        onError={handleImageError}
-                                    />
-                                ) : (
-                                    <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
-                                )}
-                                <span className="truncate">{item.title}</span>
-                                {/* Star indicator for favorited feeds (hidden in pinned section) */}
-                                {item.isFavorite && !item.isPinned && (
-                                    <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
-                                )}
-                            </div>
-                        </Link>
-                    </SidebarLeftMenuSubButton>
+                        <div className="flex flex-grow items-center overflow-hidden pl-2">
+                            {/* Feed favicon with fallback */}
+                            {item.image && !imageError ? (
+                                <Image
+                                    src={item.image}
+                                    alt=""
+                                    width={16}
+                                    height={16}
+                                    className="mr-2 h-4 w-4 shrink-0 rounded"
+                                    onError={handleImageError}
+                                />
+                            ) : (
+                                <div className="mr-2 h-4 w-4 shrink-0 rounded bg-primary/8" />
+                            )}
+                            <span className="truncate">{item.title}</span>
+                            {/* Star indicator for favorited feeds (hidden in pinned section) */}
+                            {item.isFavorite && !item.isPinned && (
+                                <Star className="h-3 w-3 ml-2 shrink-0 fill-yellow-500 text-yellow-500" />
+                            )}
+                        </div>
+                    </Link>
+                </SidebarLeftMenuSubButton>
 
-                    {/* Context menu and count */}
-                    <div className="shrink-0 flex items-center pr-2">
-                        <FeedDropdownMenu
-                            isFolder={false}
-                            itemActive={item.isActive}
-                            itemId={item.id}
-                            itemTitle={item.title}
-                            isFavorite={item.isFavorite}
-                            count={item.count}
-                        />
-                    </div>
+                {/* Context menu and count */}
+                <div className="shrink-0 flex items-center pr-2">
+                    <FeedDropdownMenu
+                        isFolder={false}
+                        itemActive={item.isActive}
+                        itemId={item.id}
+                        itemTitle={item.title}
+                        isFavorite={item.isFavorite}
+                        count={item.count}
+                    />
                 </div>
-            </SidebarMenuSubItem>
+            </div>
+        </SidebarMenuSubItem>
     )
 
     // Skip animation for large lists (performance optimization)

@@ -12,8 +12,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.services.feeds.feed_creation import FeedCreationService
-from app.utils.rsshub_url_transformer import transform_rsshub_url
+from app.services.feeds.creation import FeedCreationService
+from app.utils.url.rsshub_url_transformer import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/discover", tags=["RSS Discovery"])
@@ -96,7 +96,7 @@ def _extract_feed_image(feed_info: Any) -> str | None:
         if hasattr(feed_info, "icon"):
             return feed_info.icon
     except Exception:
-        pass
+        logger.debug("Failed to extract feed image", exc_info=True)
     return None
 
 
@@ -110,5 +110,5 @@ def _extract_feed_tags(feed_info: Any) -> list[str]:
             tags.extend([cat for cat in feed_info.categories if isinstance(cat, str)])
         return tags[:10]  # Limit to 10 tags
     except Exception:
-        pass
+        logger.debug("Failed to extract feed tags", exc_info=True)
     return []

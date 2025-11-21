@@ -8,7 +8,6 @@ from urllib.parse import urlparse
 from uuid import UUID
 
 from app.core.constants import (
-    ALLOWED_BOOK_FORMATS,
     ARTICLE_PRIORITIES,
     HIGHLIGHT_COLORS,
     MAX_FOLDER_NAME_LENGTH,
@@ -166,29 +165,6 @@ def validate_folder_name(name: str) -> str:
     if validated is None:
         raise ValidationError("Folder name cannot be empty")
     return validated
-
-
-def validate_book_format(format_str: str) -> str:
-    """
-    Validate book format
-
-    Args:
-        format_str: Book format string
-
-    Returns:
-        Validated format string
-
-    Raises:
-        ValidationError: If format is not supported
-    """
-    if not format_str:
-        raise ValidationError("Book format is required")
-
-    format_upper = format_str.upper()
-    if format_upper not in ALLOWED_BOOK_FORMATS:
-        raise ValidationError(f"Unsupported book format. Allowed: {', '.join(ALLOWED_BOOK_FORMATS)}")
-
-    return format_upper
 
 
 def validate_highlight_color(color: str) -> str:

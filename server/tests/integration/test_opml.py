@@ -67,15 +67,15 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test complete OPML import workflow by calling async functions directly."""
-        from app.workers.opml_tasks import async_import_opml
+        from app.workers.opml import import_opml
 
         # Call the async function directly in test mode (no Celery)
-        result = await async_import_opml(
+        result = await import_opml(
             user_id=test_user.id,
             opml_content=MINIMAL_OPML,
             default_folder_name="Imported Feeds",
             db=db_session,
-            test_mode=True,
+            
         )
 
         # Verify the result structure
@@ -98,15 +98,15 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test OPML import creates folders correctly."""
-        from app.workers.opml_tasks import async_import_opml
+        from app.workers.opml import import_opml
 
         # Call the async function directly in test mode (no Celery)
-        result = await async_import_opml(
+        result = await import_opml(
             user_id=test_user.id,
             opml_content=VALID_OPML,
             default_folder_name="Imported Feeds",
             db=db_session,
-            test_mode=True,
+            
         )
 
         # Verify folders were created
@@ -124,10 +124,10 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test individual feed import task executes correctly."""
-        from app.workers.opml_tasks import async_import_single_feed
+        from app.workers.opml import import_single_feed
 
         # Execute async function directly with db session
-        result = await async_import_single_feed(
+        result = await import_single_feed(
             user_id=test_user.id,
             feed_url="https://hnrss.org/newest",
             folder_id=str(test_folder.id),
@@ -232,10 +232,8 @@ class TestOpmlImportStatus:
         task_id = "other-user-task"
 
         await store_import_task_metadata(
-            user_id=other_user_id,
             task_id=task_id,
-            estimated_feeds=5,
-            filename="test.opml",
+            user_id=other_user_id,
         )
 
         response = await async_client.get(f"/api/opml/import/status/{task_id}")
@@ -343,7 +341,7 @@ class TestOpmlRoundtrip:
         self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test exporting OPML and importing it back."""
-        from app.workers.opml_tasks import async_import_opml
+        from app.workers.opml import import_opml
 
         # Create initial subscription
         subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
@@ -364,12 +362,12 @@ class TestOpmlRoundtrip:
         await db_session.flush()
 
         # Re-import the exported OPML by calling async function directly in test mode
-        result = await async_import_opml(
+        result = await import_opml(
             user_id=test_user.id,
             opml_content=exported_opml,
             default_folder_name="Imported Feeds",
             db=db_session,
-            test_mode=True,
+            
         )
 
         # Verify import was attempted

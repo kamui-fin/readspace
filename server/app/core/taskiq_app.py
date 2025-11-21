@@ -11,7 +11,7 @@ from taskiq_aio_pika import AioPikaBroker
 from taskiq_redis import ListRedisScheduleSource, RedisAsyncResultBackend
 
 from app.core.config import get_settings
-from app.utils.logging_config import setup_logging
+from app.core.logging_config import setup_logging
 
 logger = logging.getLogger(__name__)
 

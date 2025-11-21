@@ -31,6 +31,7 @@ MAX_URL_LENGTH = 2048
 MAX_TITLE_LENGTH = 500
 MAX_DESCRIPTION_LENGTH = 2000
 MAX_FOLDER_NAME_LENGTH = 255
+MAX_TAG_NAME_LENGTH = 50
 
 # Cache Keys
 FEED_CONTENT_CACHE_PREFIX = "feed_content:"
@@ -89,7 +90,6 @@ ERROR_ARTICLE_NOT_FOUND = "Article not found"
 ERROR_HIGHLIGHT_NOT_FOUND = "Highlight not found"
 ERROR_FOLDER_NOT_FOUND = "Folder not found"
 ERROR_USER_NOT_FOUND = "User profile not found"
-ERROR_BOOK_NOT_FOUND = "Book metadata not found"
 ERROR_INVALID_FOLDER_DATA = "Invalid folder data"
 
 # HTTP Caching Configuration

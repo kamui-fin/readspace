@@ -46,7 +46,9 @@ export function FeedDiscoveryCard({
   const [isFollowingFromModal, setIsFollowingFromModal] = useState(false)
   const userFeeds = useExtensionStore((state) => state.feeds)
   const { unsubscribeFromFeed } = useExtensionStore()
-  const pendingFollowUrls = useExtensionStore((state) => state.pendingFollowUrls)
+  const pendingFollowUrls = useExtensionStore(
+    (state) => state.pendingFollowUrls
+  )
   const cancelFollow = useExtensionStore((state) => state.cancelFollow)
 
   // Compute following state using useMemo for immediate, accurate state
@@ -70,7 +72,9 @@ export function FeedDiscoveryCard({
     )
 
     // Check if any discovered feed has a pending follow request
-    const hasPendingFollow = feeds.some((feed) => pendingFollowUrls.has(feed.url))
+    const hasPendingFollow = feeds.some((feed) =>
+      pendingFollowUrls.has(feed.url)
+    )
 
     return {
       isFollowing: !!followedFeed,
@@ -166,16 +170,25 @@ export function FeedDiscoveryCard({
           <div className="flex items-center flex-shrink-0">
             <Button
               onClick={handleFollowClick}
-              disabled={isUnfollowing || isPendingFollow || isFollowingFromModal}
+              disabled={
+                isUnfollowing || isPendingFollow || isFollowingFromModal
+              }
               size="sm"
               variant={
-                isFollowing && !isUnfollowing && !isPendingFollow && !isFollowingFromModal
+                isFollowing &&
+                !isUnfollowing &&
+                !isPendingFollow &&
+                !isFollowingFromModal
                   ? 'outline'
                   : isFollowingFromModal || isPendingFollow || isUnfollowing
                     ? 'ghost'
                     : 'default'
               }
-              className={`flex-shrink-0 min-w-[100px] ${isFollowing && !isUnfollowing && !isPendingFollow && !isFollowingFromModal
+              className={`flex-shrink-0 min-w-[100px] ${
+                isFollowing &&
+                !isUnfollowing &&
+                !isPendingFollow &&
+                !isFollowingFromModal
                   ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
                   : isFollowingFromModal || isPendingFollow
                     ? 'bg-orange-500/90 text-white hover:bg-orange-500/90'
@@ -184,7 +197,7 @@ export function FeedDiscoveryCard({
                       : !isFollowing
                         ? 'bg-orange-500 hover:bg-orange-600 text-white'
                         : ''
-                }`}
+              }`}
             >
               {isPendingFollow || isFollowingFromModal ? (
                 <div className="flex items-center justify-center overflow-hidden">

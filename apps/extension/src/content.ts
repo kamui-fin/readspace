@@ -134,9 +134,9 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
           discoveredUrls.add(absoluteUrl)
           const feedType = type?.includes('atom')
             ? 'atom'
-            // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
-            //   ? 'json'
-            : 'rss'
+            : // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
+              //   ? 'json'
+              'rss'
 
           feeds.push({
             url: absoluteUrl,
@@ -459,9 +459,9 @@ if (typeof extendedGlobal.readspaceContentScriptHasRun === 'undefined') {
           if (validation.isValid) {
             const feedType = type?.includes('atom')
               ? 'atom'
-              // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
-              //   ? 'json'
-              : 'rss'
+              : // : type?.includes('json') // Commented out - backend doesn't support JSON feeds yet
+                //   ? 'json'
+                'rss'
 
             feeds.push({
               url: absoluteUrl,

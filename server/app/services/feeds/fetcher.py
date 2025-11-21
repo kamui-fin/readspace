@@ -1,6 +1,5 @@
 """Feed fetching service with caching and conditional requests."""
 
-import time
 from dataclasses import dataclass
 from urllib.parse import urlparse, urlunparse
 
@@ -8,23 +7,15 @@ import httpx
 import structlog
 
 from app.core.constants import (
+    BROWSER_USER_AGENT,
     DEFAULT_RSS_TIMEOUT,
-    DEFAULT_USER_AGENT,
     HTTP_CLIENT_KEEPALIVE_EXPIRY,
     HTTP_CLIENT_MAX_KEEPALIVE,
     HTTP_CLIENT_POOL_LIMITS,
 )
-from app.core.metrics import (
-    cache_operations_total,
-    external_api_duration_seconds,
-    external_api_errors_total,
-    rss_fetch_duration_seconds,
-    rss_fetch_size_bytes,
-    rss_fetch_total,
-)
 from app.core.redis_cache import RedisCache
-from app.utils.rsshub_url_transformer import transform_rsshub_url
-from app.utils.url_validator import validate_feed_url
+from app.utils.url.rsshub_url_transformer import transform_rsshub_url
+from app.utils.url.url_validator import validate_feed_url
 
 logger = structlog.get_logger(__name__)
 
@@ -162,9 +153,6 @@ class FeedFetcher:
         Raises:
             ValueError: If the URL fails security validation after transformation
         """
-        start_time = time.perf_counter()
-        cached = False
-
         # Transform rsshub:// URLs to actual HTTP URLs
         actual_url = transform_rsshub_url(url)
 
@@ -179,8 +167,6 @@ class FeedFetcher:
                 error=error_message,
                 validation_check="security",
             )
-            rss_fetch_total.labels(status="error", cached="false").inc()
-            external_api_errors_total.labels(service="rss_feed", error_type="validation_failed").inc()
             return FetchResult(
                 content="",
                 headers={},
@@ -193,64 +179,30 @@ class FeedFetcher:
         cache_key = f"feed_content:{normalized_url}"
         cached_data = await self.redis_cache.get(cache_key)
 
-        if cached_data:
-            cache_operations_total.labels(operation="get", result="hit").inc()
-        else:
-            cache_operations_total.labels(operation="get", result="miss").inc()
-
         timeout = timeout_seconds if timeout_seconds is not None else DEFAULT_RSS_TIMEOUT
         request_headers = self._build_request_headers(etag, last_modified, cached_data)
 
         try:
             result = await self._make_http_request(actual_url, request_headers, timeout, cache_key)
-            cached = result.not_modified
-
-            # Record metrics
-            duration = time.perf_counter() - start_time
-            status = "success" if result.status_code < 400 else "error"
-            rss_fetch_total.labels(status=status, cached=str(cached).lower()).inc()
-            rss_fetch_duration_seconds.labels(cached=str(cached).lower()).observe(duration)
-            external_api_duration_seconds.labels(service="rss_feed", cached=str(cached).lower()).observe(duration)
-
-            if result.content:
-                content_size = len(result.content.encode("utf-8"))
-                rss_fetch_size_bytes.observe(content_size)
 
             # Log successful fetch
             logger.info(
                 "Feed fetched successfully",
                 url=url,
                 status_code=result.status_code,
-                duration_seconds=round(duration, 3),
-                cached=cached,
-                content_size_bytes=len(result.content.encode("utf-8")) if result.content else 0,
+                cached=result.not_modified,
+                content_size_bytes=(len(result.content.encode("utf-8")) if result.content else 0),
             )
 
             return result
 
         except httpx.ConnectTimeout:
-            duration = time.perf_counter() - start_time
-            rss_fetch_total.labels(status="error", cached="false").inc()
-            external_api_errors_total.labels(service="rss_feed", error_type="connect_timeout").inc()
-            rss_fetch_duration_seconds.labels(cached="false").observe(duration)
             return await self._handle_timeout_error(url, "connect")
         except httpx.ReadTimeout:
-            duration = time.perf_counter() - start_time
-            rss_fetch_total.labels(status="error", cached="false").inc()
-            external_api_errors_total.labels(service="rss_feed", error_type="read_timeout").inc()
-            rss_fetch_duration_seconds.labels(cached="false").observe(duration)
             return await self._handle_timeout_error(url, "read")
         except httpx.HTTPStatusError as exc:
-            duration = time.perf_counter() - start_time
-            rss_fetch_total.labels(status="error", cached="false").inc()
-            external_api_errors_total.labels(service="rss_feed", error_type=f"http_{exc.response.status_code}").inc()
-            rss_fetch_duration_seconds.labels(cached="false").observe(duration)
             return await self._handle_http_error(exc, actual_url)
         except Exception as exc:
-            duration = time.perf_counter() - start_time
-            rss_fetch_total.labels(status="error", cached="false").inc()
-            external_api_errors_total.labels(service="rss_feed", error_type="network_error").inc()
-            rss_fetch_duration_seconds.labels(cached="false").observe(duration)
             return await self._handle_unexpected_error(exc, actual_url)
 
     def _build_request_headers(
@@ -267,7 +219,7 @@ class FeedFetcher:
         Returns:
             dict: HTTP headers for the request
         """
-        headers = {"User-Agent": DEFAULT_USER_AGENT}
+        headers = {"User-Agent": BROWSER_USER_AGENT}
 
         if etag:
             headers["If-None-Match"] = etag
@@ -375,7 +327,7 @@ class FeedFetcher:
             url=url,
             status_code=exc.response.status_code,
             error_category="http",
-            response_body=exc.response.text[:200] if hasattr(exc.response, "text") else None,
+            response_body=(exc.response.text[:200] if hasattr(exc.response, "text") else None),
         )
         return FetchResult(
             content="",

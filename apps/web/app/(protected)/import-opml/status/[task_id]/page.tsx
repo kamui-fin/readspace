@@ -327,7 +327,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                            100
+                                                100
                                         )}
                                         %
                                     </span>

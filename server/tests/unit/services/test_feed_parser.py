@@ -8,7 +8,7 @@ import feedparser
 import pytest
 
 from app.core.constants import MIN_VALID_PUBLISHED_YEAR
-from app.services.feeds.feed_parser import FeedParsingService
+from app.services.feeds.parser import FeedParsingService
 
 
 class TestFeedParsingServiceExtractFeedMetadata:

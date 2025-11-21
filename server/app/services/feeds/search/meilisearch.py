@@ -1,4 +1,4 @@
-"""Meilisearch service for feed search and indexing."""
+"""Meilisearch service for feed CRUD operations."""
 
 import structlog
 from meilisearch import Client
@@ -12,7 +12,7 @@ logger = structlog.get_logger(__name__)
 
 
 class MeilisearchService:
-    """Service for managing Meilisearch feed index operations."""
+    """Service for managing Meilisearch feed document operations (CRUD only)."""
 
     def __init__(self, settings: Settings):
         """
@@ -20,6 +20,10 @@ class MeilisearchService:
 
         Args:
             settings: Application settings containing Meilisearch configuration
+
+        Note:
+            Index configuration (embedders, ranking rules, etc.) should be done
+            via the migration script, not during runtime operations.
         """
         self.settings = settings
         self.client = Client(
@@ -29,119 +33,19 @@ class MeilisearchService:
         self.index_name = settings.MEILISEARCH_INDEX_NAME
         self._index: Index | None = None
 
-    async def initialize_index(self) -> None:
+    def _get_index(self) -> Index:
         """
-        Initialize and configure the Meilisearch index.
+        Get or initialize the index reference.
 
-        Creates the index if it doesn't exist and applies the required settings
-        for feed search including searchable attributes, filters, and ranking.
+        Returns:
+            Index instance
+
+        Raises:
+            MeilisearchApiError: If index doesn't exist
         """
-        try:
-            # Create or get existing index
-            try:
-                self._index = self.client.get_index(self.index_name)
-                logger.info("meilisearch_index_found", index=self.index_name)
-            except MeilisearchApiError as e:
-                if "index_not_found" in str(e):
-                    task = self.client.create_index(self.index_name, {"primaryKey": "id"})
-                    self.client.wait_for_task(task.task_uid)
-                    self._index = self.client.get_index(self.index_name)
-                    logger.info("meilisearch_index_created", index=self.index_name)
-                else:
-                    raise
-
-            # Configure index settings
-            settings_config = {
-                # Fields that can be searched with full-text search
-                "searchableAttributes": [
-                    "title",
-                    "description",
-                    "tags",
-                    "url",
-                    "link",
-                ],
-                # Fields that can be used in filter expressions
-                "filterableAttributes": [
-                    "language",
-                    "top_level_category",
-                ],
-                # Fields that can be used for sorting
-                "sortableAttributes": [
-                    "popularity_score",
-                ],
-                # Fields to return in search results
-                "displayedAttributes": [
-                    "id",
-                    "url",
-                    "title",
-                    "description",
-                    "link",
-                    "language",
-                    "image_url",
-                    "tags",
-                    "top_level_category",
-                    "popularity_score",
-                ],
-                # Ranking rules - order matters!
-                # Custom rule: popularity_score:desc is added for feed ranking
-                "rankingRules": [
-                    "words",  # Number of matched query terms
-                    "typo",  # Fewer typos = better rank
-                    "proximity",  # Proximity of query terms
-                    "attribute",  # Match in important attributes (title > desc)
-                    "sort",  # Custom sort criterion
-                    "exactness",  # Exact matches ranked higher
-                    "popularity_score:desc",  # Custom: Popular feeds ranked higher
-                ],
-                # Enable typo tolerance for better search UX
-                "typoTolerance": {
-                    "enabled": True,
-                    "minWordSizeForTypos": {
-                        "oneTypo": 4,
-                        "twoTypos": 8,
-                    },
-                },
-                # Pagination settings
-                "pagination": {
-                    "maxTotalHits": 500,  # Limit total retrievable results
-                },
-                # Configure embedders for AI-powered search
-                # Use Gemini REST API for automatic embedding generation with batch support
-                "embedders": {
-                    "default": {
-                        "source": "rest",
-                        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:batchEmbedContents",
-                        "dimensions": 768,
-                        "documentTemplate": "{{doc.title}} {{doc.description}}",
-                        "request": {
-                            "requests": [
-                                {
-                                    "model": "models/gemini-embedding-001",
-                                    "content": {"parts": [{"text": "{{text}}"}]},
-                                    "outputDimensionality": 768,
-                                },
-                                "{{..}}",
-                            ],
-                        },
-                        "response": {"embeddings": [{"values": "{{embedding}}"}, "{{..}}"]},
-                        "headers": {"x-goog-api-key": self.settings.GEMINI_API_KEY},
-                    }
-                },
-            }
-
-            # Apply settings
-            task = self._index.update_settings(settings_config)
-            self.client.wait_for_task(task.task_uid)
-
-            logger.info(
-                "meilisearch_index_configured",
-                index=self.index_name,
-                settings=settings_config,
-            )
-
-        except Exception as e:
-            logger.error("meilisearch_init_failed", error=str(e), exc_info=True)
-            raise
+        if self._index is None:
+            self._index = self.client.get_index(self.index_name)
+        return self._index
 
     def _feed_to_document(self, feed: Feed) -> dict:
         """
@@ -175,110 +79,78 @@ class MeilisearchService:
 
         return doc
 
-    async def index_feed(self, feed: Feed) -> None:
+    def add_feed(self, feed: Feed) -> None:
         """
-        Index a single feed in Meilisearch.
+        Add a single feed document to Meilisearch.
 
         Args:
-            feed: Feed instance to index
-        """
-        if self._index is None:
-            await self.initialize_index()
+            feed: Feed instance to add
 
+        Note:
+            This is fire-and-forget. Meilisearch handles indexing asynchronously.
+        """
         try:
+            index = self._get_index()
             document = self._feed_to_document(feed)
-            task = self._index.add_documents([document])
-            # Fire-and-forget: don't wait for indexing to complete
-            logger.debug("meilisearch_feed_indexed", feed_id=str(feed.id), task_uid=task.task_uid)
+            task = index.add_documents([document])
+            logger.debug("meilisearch_feed_added", feed_id=str(feed.id), task_uid=task.task_uid)
+        except MeilisearchApiError as e:
+            logger.error("meilisearch_add_feed_failed", feed_id=str(feed.id), error=str(e))
         except Exception as e:
-            logger.error("meilisearch_index_feed_failed", feed_id=str(feed.id), error=str(e))
-            # Don't raise - indexing failures shouldn't break the main flow
+            logger.error("meilisearch_add_feed_failed", feed_id=str(feed.id), error=str(e))
 
-    async def index_feeds_batch(self, feeds: list[Feed]) -> None:
+    def add_feeds_batch(self, feeds: list[Feed]) -> None:
         """
-        Index multiple feeds in a single batch operation.
+        Add multiple feeds in a single batch operation.
 
         Args:
-            feeds: List of Feed instances to index
-        """
-        if self._index is None:
-            await self.initialize_index()
+            feeds: List of Feed instances to add
 
+        Note:
+            Meilisearch automatically handles batch indexing asynchronously.
+        """
         if not feeds:
             return
 
         try:
+            index = self._get_index()
             documents = [self._feed_to_document(feed) for feed in feeds]
-            task = self._index.add_documents(documents)
-            logger.info(
-                "meilisearch_batch_indexed",
-                count=len(documents),
-                task_uid=task.task_uid,
-            )
+            task = index.add_documents(documents)
+            logger.info("meilisearch_batch_added", count=len(documents), task_uid=task.task_uid)
+        except MeilisearchApiError as e:
+            logger.error("meilisearch_batch_add_failed", count=len(feeds), error=str(e))
         except Exception as e:
-            logger.error("meilisearch_batch_index_failed", count=len(feeds), error=str(e))
+            logger.error("meilisearch_batch_add_failed", count=len(feeds), error=str(e))
 
-    async def update_feed(self, feed: Feed) -> None:
+    def update_feed(self, feed: Feed) -> None:
         """
         Update an existing feed document in Meilisearch.
 
         Args:
             feed: Feed instance with updated data
-        """
-        # In Meilisearch, add_documents also updates existing documents with same ID
-        await self.index_feed(feed)
 
-    async def delete_feed(self, feed_id: str) -> None:
+        Note:
+            In Meilisearch, add_documents with existing ID performs an update.
+        """
+        self.add_feed(feed)
+
+    def delete_feed(self, feed_id: str) -> None:
         """
         Delete a feed document from Meilisearch.
 
         Args:
             feed_id: UUID of the feed to delete
         """
-        if self._index is None:
-            await self.initialize_index()
-
         try:
-            task = self._index.delete_document(feed_id)
+            index = self._get_index()
+            task = index.delete_document(feed_id)
             logger.debug("meilisearch_feed_deleted", feed_id=feed_id, task_uid=task.task_uid)
+        except MeilisearchApiError as e:
+            logger.error("meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e))
         except Exception as e:
             logger.error("meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e))
 
-    async def delete_all_feeds(self) -> None:
-        """Delete all documents from the index (used for re-indexing)."""
-        if self._index is None:
-            await self.initialize_index()
-
-        try:
-            task = self._index.delete_all_documents()
-            self.client.wait_for_task(task.task_uid)
-            logger.info("meilisearch_all_feeds_deleted", index=self.index_name)
-        except Exception as e:
-            logger.error("meilisearch_delete_all_failed", error=str(e))
-            raise
-
-    async def get_index_stats(self) -> dict:
-        """
-        Get statistics about the Meilisearch index.
-
-        Returns:
-            Dictionary with index statistics (number of documents, indexing status, etc.)
-        """
-        if self._index is None:
-            await self.initialize_index()
-
-        try:
-            stats = self._index.get_stats()
-            return {
-                "number_of_documents": stats.number_of_documents,
-                "is_indexing": stats.is_indexing,
-                "field_distribution": stats.field_distribution,
-            }
-        except Exception as e:
-            logger.error("meilisearch_stats_failed", error=str(e))
-            return {}
-
-    async def health_check(self) -> bool:
+    def health_check(self) -> bool:
         """
         Check if Meilisearch is healthy and accessible.
 
@@ -287,10 +159,8 @@ class MeilisearchService:
         """
         try:
             health = self.client.health()
-            # In newer versions, health() returns a dict
             if isinstance(health, dict):
                 return health.get("status") == "available"
-            # In older versions, it returns an object with .status attribute
             return health.status == "available"
         except Exception as e:
             logger.error("meilisearch_health_check_failed", error=str(e))

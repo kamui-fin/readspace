@@ -1,7 +1,13 @@
 import { Sparkles } from "lucide-react"
 import NextImage from "next/image"
 import { useCallback, useEffect } from "react"
-import { Configure, useClearRefinements, useCurrentRefinements, useMenu, useSearchBox } from "react-instantsearch"
+import {
+    Configure,
+    useClearRefinements,
+    useCurrentRefinements,
+    useMenu,
+    useSearchBox,
+} from "react-instantsearch"
 
 import { CategoryGrid } from "./CategoryGrid"
 import { CustomSearchBox } from "./CustomSearchBox"
@@ -23,23 +29,26 @@ interface DiscoverContentProps {
  * Manages search state, category filtering, language filtering, and AI search toggle.
  * Uses InstantSearch hooks for all search functionality.
  */
-export function DiscoverContent({
-    onAiSettingsChange,
-}: DiscoverContentProps) {
+export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
     const { query, refine: refineQuery } = useSearchBox()
 
     // Feed preview hook for URL detection
-    const { previewFeed, isLoading: isPreviewLoading, error: previewError, isUrlQuery } = useFeedPreview(query)
+    const {
+        previewFeed,
+        isLoading: isPreviewLoading,
+        error: previewError,
+        isUrlQuery,
+    } = useFeedPreview(query)
 
     // Use InstantSearch's menu widget for category filtering
     const { items: categoryItems, refine: refineCategory } = useMenu({
-        attribute: 'top_level_category',
+        attribute: "top_level_category",
         limit: 100,
     })
 
     // Use InstantSearch's menu widget for language filtering
     const { items: languageItems, refine: refineLanguage } = useMenu({
-        attribute: 'language',
+        attribute: "language",
         limit: 10,
     })
 
@@ -51,9 +60,10 @@ export function DiscoverContent({
 
     // Get active language from current refinements
     const activeLanguageRefinement = currentRefinements.find(
-        (item) => item.attribute === 'language'
+        (item) => item.attribute === "language"
     )
-    const activeLanguage = activeLanguageRefinement?.refinements[0]?.value as string || ""
+    const activeLanguage =
+        (activeLanguageRefinement?.refinements[0]?.value as string) || ""
 
     // Wrapper functions to clear specific refinements
     const clearLanguageRefinement = useCallback(() => {
@@ -81,14 +91,18 @@ export function DiscoverContent({
 
     // Get active category from current refinements
     const activeCategoryRefinement = currentRefinements.find(
-        (item) => item.attribute === 'top_level_category'
+        (item) => item.attribute === "top_level_category"
     )
     const activeCategory = activeCategoryRefinement?.refinements[0]?.value || ""
 
     // Apply persisted language filter when no language is active
     // This runs on mount and whenever the filter gets cleared
     useEffect(() => {
-        if (!activeLanguage && languageItems.length > 0 && persistedLanguage !== "all") {
+        if (
+            !activeLanguage &&
+            languageItems.length > 0 &&
+            persistedLanguage !== "all"
+        ) {
             const targetLang = persistedLanguage || "en"
             // Apply the filter
             refineLanguage(targetLang)
@@ -96,7 +110,9 @@ export function DiscoverContent({
     }, [activeLanguage, languageItems.length]) // Only depend on active state, not persistedLanguage to avoid loops
 
     // Determine display language (show "all" if no language filter is active)
-    const displayLanguage = activeLanguage || (persistedLanguage === "all" ? "all" : persistedLanguage)
+    const displayLanguage =
+        activeLanguage ||
+        (persistedLanguage === "all" ? "all" : persistedLanguage)
 
     const handleCategoryClick = (categoryName: string) => {
         refineCategory(categoryName)
@@ -120,7 +136,7 @@ export function DiscoverContent({
 
     const clearSearch = useCallback(() => {
         // Clear the search query
-        refineQuery('')
+        refineQuery("")
         // Clear all refinements (category and language)
         clearAllRefinements()
     }, [refineQuery, clearAllRefinements])
@@ -161,7 +177,9 @@ export function DiscoverContent({
                                 />
                                 <h1
                                     className="text-3xl md:text-5xl font-semibold text-black dark:text-foreground tracking-tight"
-                                    style={{ fontFamily: 'Figtree, sans-serif' }}
+                                    style={{
+                                        fontFamily: "Figtree, sans-serif",
+                                    }}
                                 >
                                     readspace
                                 </h1>

@@ -86,7 +86,11 @@ async def get_todays_articles(
         - Articles are sorted by publication date in descending order
         - Useful for creating "today's news" or "daily digest" views
     """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+    from app.crud.article import (
+        ArticleTransformer,
+        CursorPaginationParams,
+        get_articles_cursor_paginated,
+    )
 
     # Get current time in UTC
     now_utc = datetime.now(UTC)
@@ -107,8 +111,6 @@ async def get_todays_articles(
     )
 
     # Transform the tuples into ArticleResponse objects
-    from app.crud.article.article_transformer import ArticleTransformer
-
     transformer = ArticleTransformer()
 
     transformed_items = []
@@ -200,7 +202,11 @@ async def get_recently_read_articles(
         - Articles are sorted by published_at timestamp in descending order
         - Only includes articles from RSS feeds, not saved web articles
     """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_articles_cursor_paginated
+    from app.crud.article import (
+        ArticleTransformer,
+        CursorPaginationParams,
+        get_articles_cursor_paginated,
+    )
 
     # Create pagination parameters
     params = CursorPaginationParams(limit=limit, cursor=cursor)
@@ -217,8 +223,6 @@ async def get_recently_read_articles(
     )
 
     # Transform the tuples into ArticleResponse objects
-    from app.crud.article.article_transformer import ArticleTransformer
-
     transformer = ArticleTransformer()
 
     transformed_items = []
@@ -308,7 +312,11 @@ async def get_read_later_articles(
         - Articles are sorted by timestamp (published_at for RSS, created_at for clipped)
         - Articles remain in this list until explicitly marked as read or removed
     """
-    from app.crud.article.cursor_pagination import CursorPaginationParams, get_combined_articles_cursor_paginated
+    from app.crud.article import (
+        ArticleTransformer,
+        CursorPaginationParams,
+        get_combined_articles_cursor_paginated,
+    )
 
     # Create pagination parameters
     params = CursorPaginationParams(limit=limit, cursor=cursor)
@@ -322,8 +330,6 @@ async def get_read_later_articles(
     )
 
     # Transform the mixed items into ArticleResponse objects
-    from app.crud.article.article_transformer import ArticleTransformer
-
     transformer = ArticleTransformer()
 
     transformed_items = []
