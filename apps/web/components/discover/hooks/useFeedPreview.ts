@@ -1,5 +1,6 @@
+import { useQuery } from "@tanstack/react-query"
 import { ApiClient, type FeedDiscoveryResult } from "@readspace/shared"
-import { useEffect, useState } from "react"
+import { useMemo } from "react"
 
 /**
  * Detect if a string is a URL pattern (http://, https://, rsshub://)
@@ -18,6 +19,8 @@ interface UseFeedPreviewResult {
     error: string | null
     /** Whether the query is a URL */
     isUrlQuery: boolean
+    /** Whether the query has failed */
+    isError: boolean
 }
 
 /**
@@ -29,61 +32,47 @@ interface UseFeedPreviewResult {
  * 3. Returns the preview data for display
  */
 export function useFeedPreview(query: string): UseFeedPreviewResult {
-    const [previewFeed, setPreviewFeed] = useState<FeedDiscoveryResult | null>(
-        null
-    )
-    const [isLoading, setIsLoading] = useState(false)
-    const [error, setError] = useState<string | null>(null)
+    const isUrlQuery = useMemo(() => isUrl(query), [query])
+    const trimmedQuery = query.trim()
 
-    const isUrlQuery = isUrl(query)
-
-    useEffect(() => {
-        // Reset state when query changes
-        if (!query || !isUrlQuery) {
-            setPreviewFeed(null)
-            setError(null)
-            setIsLoading(false)
-            return
-        }
-
-        // Debounce URL fetching to avoid excessive requests
-        const timeoutId = setTimeout(async () => {
-            setIsLoading(true)
-            setError(null)
-
-            try {
-                const response = await ApiClient.get<FeedDiscoveryResult>(
-                    `/api/discover/preview?url=${encodeURIComponent(query.trim())}`
-                )
-
-                setPreviewFeed(response)
-            } catch (err: unknown) {
-                console.error("Failed to fetch feed preview:", err)
-                let errorMessage = "Could not fetch feed preview"
-
-                if (err && typeof err === "object" && "response" in err) {
-                    const response = (
-                        err as { response?: { data?: { detail?: string } } }
-                    ).response
-                    if (response?.data?.detail) {
-                        errorMessage = response.data.detail
-                    }
-                }
-
-                setError(errorMessage)
-                setPreviewFeed(null)
-            } finally {
-                setIsLoading(false)
-            }
-        }, 500) // 500ms debounce
-
-        return () => clearTimeout(timeoutId)
-    }, [query, isUrlQuery])
-
-    return {
-        previewFeed,
+    const {
+        data: previewFeed,
         isLoading,
         error,
+        isError,
+    } = useQuery({
+        queryKey: ["feedPreview", trimmedQuery],
+        queryFn: async () => {
+            const response = await ApiClient.get<FeedDiscoveryResult>(
+                `/api/discover/preview?url=${encodeURIComponent(trimmedQuery)}`
+            )
+            return response
+        },
+        enabled: isUrlQuery && trimmedQuery.length > 0,
+        retry: false,
+        staleTime: 5 * 60 * 1000, // 5 minutes
+    })
+
+    const errorMessage = useMemo(() => {
+        if (!error) return null
+
+        let message = "Could not fetch feed preview"
+        if (error && typeof error === "object" && "response" in error) {
+            const response = (
+                error as { response?: { data?: { detail?: string } } }
+            ).response
+            if (response?.data?.detail) {
+                message = response.data.detail
+            }
+        }
+        return message
+    }, [error])
+
+    return {
+        previewFeed: previewFeed ?? null,
+        isLoading,
+        error: errorMessage,
         isUrlQuery,
+        isError,
     }
 }

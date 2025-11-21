@@ -95,7 +95,7 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     try:
         settings = Settings()
         meili_service = get_meilisearch_service(settings)
-        meili_service.add_feed(db_feed)
+        await meili_service.add_feed(db_feed)
     except Exception as e:
         logger.warning("meilisearch_sync_failed_create", feed_id=db_feed.id, error=str(e))
         # Don't raise - Meilisearch sync failures shouldn't break the main flow

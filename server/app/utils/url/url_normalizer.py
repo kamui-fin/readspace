@@ -166,9 +166,12 @@ async def resolve_feed_url(url: str, timeout_seconds: int = 10, max_redirects: i
     the final canonical URL that the server considers authoritative. This is
     more accurate than arbitrary normalization rules (like removing www).
 
+    The resolved URL is then normalized using the same logic as database lookups
+    to ensure consistent URL storage and prevent duplicate feeds.
+
     Examples:
-        http://fark.com/feed -> https://www.fark.com/feed (server redirects)
-        http://www.example.com -> https://www.example.com (no redirect)
+        http://fark.com/feed -> https://www.fark.com/feed (server redirects + normalized)
+        http://www.example.com -> https://www.example.com (no redirect, but normalized to https)
 
     Args:
         url: The URL to resolve
@@ -176,13 +179,17 @@ async def resolve_feed_url(url: str, timeout_seconds: int = 10, max_redirects: i
         max_redirects: Maximum number of redirects to follow (default: 10)
 
     Returns:
-        The final resolved URL after following all redirects, or the original
-        URL if resolution fails (with basic normalization applied)
+        The final resolved URL after following all redirects with consistent
+        normalization applied, or the normalized original URL if resolution fails
 
     Note:
         If the HEAD request fails (timeout, connection error, etc.), falls back
-        to basic normalization without removing www or changing protocol arbitrarily.
+        to normalizing the original URL. Uses the same normalization as database
+        lookups to prevent duplicates (http->https, lowercase domain, etc.).
     """
+    # Import here to avoid circular dependency
+    from app.crud.feed.url_handling import normalize_feed_url as db_normalize_feed_url
+
     if not url or not isinstance(url, str):
         return url
 
@@ -215,36 +222,41 @@ async def resolve_feed_url(url: str, timeout_seconds: int = 10, max_redirects: i
                     redirects=len(response.history),
                 )
 
-                # Apply basic normalization to the resolved URL
-                return _basic_normalize_url(final_url)
+                # Apply database normalization to the resolved URL
+                # This ensures consistency with get_feed_by_url() lookups
+                return db_normalize_feed_url(final_url)
 
             except httpx.HTTPStatusError as e:
-                # Server returned error status - use original URL with basic normalization
+                # Server returned error status - use original URL with normalization
                 logger.warning(
-                    "HTTP error during URL resolution, using basic normalization",
+                    "HTTP error during URL resolution, using normalization",
                     url=url,
                     status_code=e.response.status_code,
                     error=str(e),
                 )
-                return _basic_normalize_url(url)
+                return db_normalize_feed_url(url)
 
             except httpx.TimeoutException:
-                logger.warning("Timeout during URL resolution, using basic normalization", url=url)
-                return _basic_normalize_url(url)
+                logger.warning("Timeout during URL resolution, using normalization", url=url)
+                return db_normalize_feed_url(url)
 
             except httpx.NetworkError as e:
-                logger.warning("Network error during URL resolution, using basic normalization", url=url, error=str(e))
-                return _basic_normalize_url(url)
+                logger.warning("Network error during URL resolution, using normalization", url=url, error=str(e))
+                return db_normalize_feed_url(url)
 
             except Exception as e:
-                logger.warning(
-                    "Unexpected error during URL resolution, using basic normalization", url=url, error=str(e)
-                )
-                return _basic_normalize_url(url)
+                logger.warning("Unexpected error during URL resolution, using normalization", url=url, error=str(e))
+                return db_normalize_feed_url(url)
 
     except Exception as e:
-        logger.error("Failed to parse or resolve URL, returning original", url=url, error=str(e))
-        return url
+        logger.error("Failed to parse or resolve URL, returning normalized original", url=url, error=str(e))
+        # Even on failure, normalize consistently
+        try:
+            from app.crud.feed.url_handling import normalize_feed_url as db_normalize_feed_url
+
+            return db_normalize_feed_url(url)
+        except Exception:
+            return url
 
 
 def _basic_normalize_url(url: str) -> str:

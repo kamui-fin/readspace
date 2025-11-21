@@ -83,7 +83,7 @@ taskiq-aio-pika = "^0.4.4"
 python-json-logger = "^4.0.0"
 prometheus-fastapi-instrumentator = "^7.1.0"
 taskiq = {extras = ["metrics", "reload"], version = "^0.11.20"}
-meilisearch = "^0.38.0"
+meilisearch-python-sdk = "^5.4.0"
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

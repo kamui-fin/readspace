@@ -50,19 +50,33 @@ class FeedEnrichmentService:
                 batch_requests = self._build_batch_requests(feed_data_list)
                 temp_file = self._create_jsonl_file(batch_requests)
 
-                logger.info("Created batch request file", file_path=temp_file.name, batch_size=len(batch_requests))
+                logger.info(
+                    "Created batch request file",
+                    file_path=temp_file.name,
+                    batch_size=len(batch_requests),
+                )
 
                 uploaded_file = self._upload_file(temp_file.name, len(batch_requests))
                 logger.info(
-                    "Uploaded batch file to Gemini", file_name=uploaded_file.name, batch_size=len(batch_requests)
+                    "Uploaded batch file to Gemini",
+                    file_name=uploaded_file.name,
+                    batch_size=len(batch_requests),
                 )
 
-                batch_job = await self._create_batch_job_with_retry(uploaded_file.name, len(batch_requests))
-                logger.info("Batch enrichment job created", job_name=batch_job.name, batch_size=len(batch_requests))
+                batch_job = await self._create_batch_job_with_retry(
+                    uploaded_file.name, len(batch_requests)
+                )
+                logger.info(
+                    "Batch enrichment job created",
+                    job_name=batch_job.name,
+                    batch_size=len(batch_requests),
+                )
 
                 batch_status = await self._poll_for_completion(batch_job.name)
 
-                if batch_status.state.name != "JOB_STATE_SUCCEEDED":
+                # Check for success with both naming conventions
+                success_states = {"JOB_STATE_SUCCEEDED", "BATCH_STATE_SUCCEEDED"}
+                if batch_status.state.name not in success_states:
                     logger.error(
                         "Batch job did not succeed",
                         job_name=batch_job.name,
@@ -88,7 +102,9 @@ class FeedEnrichmentService:
             logger.error("Error in batch feed enrichment", error=str(e), exc_info=True)
             return [None] * len(feed_data_list)
 
-    def _build_batch_requests(self, feed_data_list: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def _build_batch_requests(
+        self, feed_data_list: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Build batch requests in JSONL format."""
         batch_requests = []
         for idx, feed_data in enumerate(feed_data_list):
@@ -119,9 +135,13 @@ class FeedEnrichmentService:
 
         lang_instruction = ""
         if language == "zh":
-            lang_instruction = "The content is in Chinese. Keep all outputs in Chinese. "
+            lang_instruction = (
+                "The content is in Chinese. Keep all outputs in Chinese. "
+            )
         elif language != "en":
-            lang_instruction = f"The content is in {language}. Keep all outputs in {language}. "
+            lang_instruction = (
+                f"The content is in {language}. Keep all outputs in {language}. "
+            )
 
         return f"""Analyze this RSS feed and provide enrichment metadata.
 {lang_instruction}Return ONLY a valid JSON object with no markdown formatting.
@@ -174,7 +194,9 @@ Return a JSON object with exactly these keys:
 {{"enhanced_description": "Enhanced/expanded description, max 200 chars", "tags": ["specific", "keywords", "5-10", "tags"], "category": "ONE of the 12 categories above", "popularity_estimate": numeric_score_1_to_100}}"""  # noqa: E501
 
     @staticmethod
-    def _create_jsonl_file(batch_requests: list[dict[str, Any]]) -> tempfile._TemporaryFileWrapper:
+    def _create_jsonl_file(
+        batch_requests: list[dict[str, Any]],
+    ) -> tempfile._TemporaryFileWrapper:
         """Create temporary JSONL file with batch requests."""
         temp_file = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
         for request in batch_requests:
@@ -192,7 +214,9 @@ Return a JSON object with exactly these keys:
             ),
         )
 
-    async def _create_batch_job_with_retry(self, file_name: str, batch_size: int) -> Any:
+    async def _create_batch_job_with_retry(
+        self, file_name: str, batch_size: int
+    ) -> Any:
         """Create batch job with retry logic for quota errors."""
         max_retries = 3
         retry_delay = 60
@@ -217,7 +241,11 @@ Return a JSON object with exactly these keys:
                         await asyncio.sleep(retry_delay)
                         retry_delay *= 2
                     else:
-                        logger.error("Quota exceeded after all retries", attempts=max_retries, error=error_str)
+                        logger.error(
+                            "Quota exceeded after all retries",
+                            attempts=max_retries,
+                            error=error_str,
+                        )
                         raise
                 else:
                     raise
@@ -232,11 +260,16 @@ Return a JSON object with exactly these keys:
         poll_interval = 30
         elapsed = 0
 
+        # Handle both JOB_STATE_* and BATCH_STATE_* naming conventions
         completed_states = {
             "JOB_STATE_SUCCEEDED",
             "JOB_STATE_FAILED",
             "JOB_STATE_CANCELLED",
             "JOB_STATE_EXPIRED",
+            "BATCH_STATE_SUCCEEDED",
+            "BATCH_STATE_FAILED",
+            "BATCH_STATE_CANCELLED",
+            "BATCH_STATE_EXPIRED",
         }
 
         last_state = None
@@ -277,7 +310,9 @@ Return a JSON object with exactly these keys:
         )
         return final_status
 
-    def _parse_results(self, batch_status: Any, num_feeds: int) -> list[FeedEnrichmentResponse | None]:
+    def _parse_results(
+        self, batch_status: Any, num_feeds: int
+    ) -> list[FeedEnrichmentResponse | None]:
         """Parse results from batch job."""
         results: list[FeedEnrichmentResponse | None] = [None] * num_feeds
 
@@ -312,20 +347,34 @@ Return a JSON object with exactly these keys:
                                 .get("text", "")
                             )
                             if response_text:
-                                enrichment = FeedEnrichmentResponse.model_validate_json(response_text)
+                                enrichment = FeedEnrichmentResponse.model_validate_json(
+                                    response_text
+                                )
                                 results[idx] = enrichment
                             else:
-                                logger.warning("Empty response text in batch result", key=key)
+                                logger.warning(
+                                    "Empty response text in batch result", key=key
+                                )
                         except (KeyError, IndexError, TypeError) as e:
-                            logger.warning("Failed to extract text from batch response", key=key, error=str(e))
+                            logger.warning(
+                                "Failed to extract text from batch response",
+                                key=key,
+                                error=str(e),
+                            )
                     elif "error" in result_obj:
-                        logger.warning("Batch request failed", key=key, error=result_obj["error"])
+                        logger.warning(
+                            "Batch request failed", key=key, error=result_obj["error"]
+                        )
                     else:
                         logger.warning(
-                            "Unexpected batch result structure", key=key, result_keys=list(result_obj.keys())
+                            "Unexpected batch result structure",
+                            key=key,
+                            result_keys=list(result_obj.keys()),
                         )
             except Exception as e:
-                logger.warning("Failed to parse batch result line", error=str(e), line=line[:100])
+                logger.warning(
+                    "Failed to parse batch result line", error=str(e), line=line[:100]
+                )
 
         return results
 
@@ -334,13 +383,17 @@ Return a JSON object with exactly these keys:
         if temp_file and os.path.exists(temp_file.name):
             try:
                 os.unlink(temp_file.name)
-                logger.debug("Cleaned up temporary batch file", file_path=temp_file.name)
+                logger.debug(
+                    "Cleaned up temporary batch file", file_path=temp_file.name
+                )
             except Exception as e:
                 logger.warning("Failed to cleanup temp file", error=str(e))
 
         if uploaded_file:
             try:
                 self.gemini_client.client.files.delete(name=uploaded_file.name)
-                logger.debug("Deleted uploaded batch file", file_name=uploaded_file.name)
+                logger.debug(
+                    "Deleted uploaded batch file", file_name=uploaded_file.name
+                )
             except Exception as e:
                 logger.warning("Failed to delete uploaded file", error=str(e))

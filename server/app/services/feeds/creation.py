@@ -250,6 +250,11 @@ class FeedCreationService:
             feed_db=db_feed,  # Pass the feed object directly
         )
 
+        # CRITICAL: Commit subscription immediately to prevent loss on subsequent errors
+        # This ensures subscriptions persist even if later operations fail
+        # (mirrors folder commit pattern in opml_import.py:49)
+        await self.db.commit()
+
         return SubscriptionResponse.model_validate(subscription)
 
     async def _create_initial_articles(

@@ -38,6 +38,7 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
         isLoading: isPreviewLoading,
         error: previewError,
         isUrlQuery,
+        isError: isPreviewError,
     } = useFeedPreview(query)
 
     // Use InstantSearch's menu widget for category filtering
@@ -212,6 +213,7 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
                             previewFeed={previewFeed}
                             isPreviewLoading={isPreviewLoading}
                             previewError={previewError}
+                            isPreviewError={isPreviewError}
                         />
                     ) : hasActiveSearch ? (
                         /* Show search results for regular queries */

@@ -28,6 +28,7 @@ services:
       - MEILI_ENV=development
       - MEILI_MASTER_KEY=${MEILISEARCH_MASTER_KEY}
       - MEILI_HTTP_ADDR=0.0.0.0:7700
+      - MEILI_MASTER_KEY=readspace_master_key_change_in_production
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
       interval: 30s
@@ -62,6 +63,7 @@ services:
     container_name: readspace_api
     command: >
       sh -c "alembic upgrade head &&
+             python scripts/init_meilisearch.py &&
              uvicorn app.main:app --host 0.0.0.0 --port 8008"
     ports:
       - "18008:8008"

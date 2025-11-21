@@ -1,9 +1,8 @@
 """Meilisearch service for feed CRUD operations."""
 
 import structlog
-from meilisearch import Client
-from meilisearch.errors import MeilisearchApiError
-from meilisearch.index import Index
+from meilisearch_python_sdk import AsyncClient, AsyncIndex
+from meilisearch_python_sdk.errors import MeilisearchError
 
 from app.core.config import Settings
 from app.models.feed import Feed
@@ -26,25 +25,25 @@ class MeilisearchService:
             via the migration script, not during runtime operations.
         """
         self.settings = settings
-        self.client = Client(
+        self.client = AsyncClient(
             url=settings.MEILISEARCH_URL,
             api_key=settings.MEILISEARCH_MASTER_KEY.get_secret_value(),
         )
         self.index_name = settings.MEILISEARCH_INDEX_NAME
-        self._index: Index | None = None
+        self._index: AsyncIndex | None = None
 
-    def _get_index(self) -> Index:
+    async def _get_index(self) -> AsyncIndex:
         """
         Get or initialize the index reference.
 
         Returns:
-            Index instance
+            AsyncIndex instance
 
         Raises:
-            MeilisearchApiError: If index doesn't exist
+            MeilisearchError: If index doesn't exist
         """
         if self._index is None:
-            self._index = self.client.get_index(self.index_name)
+            self._index = await self.client.get_index(self.index_name)
         return self._index
 
     def _feed_to_document(self, feed: Feed) -> dict:
@@ -79,7 +78,7 @@ class MeilisearchService:
 
         return doc
 
-    def add_feed(self, feed: Feed) -> None:
+    async def add_feed(self, feed: Feed) -> None:
         """
         Add a single feed document to Meilisearch.
 
@@ -90,16 +89,16 @@ class MeilisearchService:
             This is fire-and-forget. Meilisearch handles indexing asynchronously.
         """
         try:
-            index = self._get_index()
+            index = await self._get_index()
             document = self._feed_to_document(feed)
-            task = index.add_documents([document])
+            task = await index.add_documents([document])
             logger.debug("meilisearch_feed_added", feed_id=str(feed.id), task_uid=task.task_uid)
-        except MeilisearchApiError as e:
+        except MeilisearchError as e:
             logger.error("meilisearch_add_feed_failed", feed_id=str(feed.id), error=str(e))
         except Exception as e:
             logger.error("meilisearch_add_feed_failed", feed_id=str(feed.id), error=str(e))
 
-    def add_feeds_batch(self, feeds: list[Feed]) -> None:
+    async def add_feeds_batch(self, feeds: list[Feed]) -> None:
         """
         Add multiple feeds in a single batch operation.
 
@@ -113,16 +112,16 @@ class MeilisearchService:
             return
 
         try:
-            index = self._get_index()
+            index = await self._get_index()
             documents = [self._feed_to_document(feed) for feed in feeds]
-            task = index.add_documents(documents)
+            task = await index.add_documents(documents)
             logger.info("meilisearch_batch_added", count=len(documents), task_uid=task.task_uid)
-        except MeilisearchApiError as e:
+        except MeilisearchError as e:
             logger.error("meilisearch_batch_add_failed", count=len(feeds), error=str(e))
         except Exception as e:
             logger.error("meilisearch_batch_add_failed", count=len(feeds), error=str(e))
 
-    def update_feed(self, feed: Feed) -> None:
+    async def update_feed(self, feed: Feed) -> None:
         """
         Update an existing feed document in Meilisearch.
 
@@ -132,9 +131,9 @@ class MeilisearchService:
         Note:
             In Meilisearch, add_documents with existing ID performs an update.
         """
-        self.add_feed(feed)
+        await self.add_feed(feed)
 
-    def delete_feed(self, feed_id: str) -> None:
+    async def delete_feed(self, feed_id: str) -> None:
         """
         Delete a feed document from Meilisearch.
 
@@ -142,15 +141,15 @@ class MeilisearchService:
             feed_id: UUID of the feed to delete
         """
         try:
-            index = self._get_index()
-            task = index.delete_document(feed_id)
+            index = await self._get_index()
+            task = await index.delete_document(feed_id)
             logger.debug("meilisearch_feed_deleted", feed_id=feed_id, task_uid=task.task_uid)
-        except MeilisearchApiError as e:
+        except MeilisearchError as e:
             logger.error("meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e))
         except Exception as e:
             logger.error("meilisearch_delete_feed_failed", feed_id=feed_id, error=str(e))
 
-    def health_check(self) -> bool:
+    async def health_check(self) -> bool:
         """
         Check if Meilisearch is healthy and accessible.
 
@@ -158,9 +157,7 @@ class MeilisearchService:
             True if healthy, False otherwise
         """
         try:
-            health = self.client.health()
-            if isinstance(health, dict):
-                return health.get("status") == "available"
+            health = await self.client.health()
             return health.status == "available"
         except Exception as e:
             logger.error("meilisearch_health_check_failed", error=str(e))

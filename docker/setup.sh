@@ -19,6 +19,7 @@
 #
 # It will create the following files:
 # - docker/supabase/.env (Supabase secrets and config)
+# - docker/.env (Meilisearch secrets)
 # - apps/web/.env (Frontend public URLs)
 # - server/.env (Backend configuration)
 # ==============================================================================
@@ -183,21 +184,44 @@ for cmd in openssl jq tr; do
   fi
 done
 
-# --- Create docker/.env for Meilisearch ---
-echo "📝 Creating docker/.env file for Meilisearch..."
-if [ ! -f "$SCRIPT_DIR/.env.example" ]; then
-    echo "Error: $SCRIPT_DIR/.env.example not found!" >&2
-    echo "Please ensure you are in the correct directory and the file exists." >&2
+# --- Extract Meilisearch Master Key from docker-compose.yml ---
+echo "🔍 Extracting Meilisearch master key from docker-compose.yml..."
+MEILISEARCH_MASTER_KEY=$(grep "MEILI_MASTER_KEY=" "$SCRIPT_DIR/docker-compose.yml" | grep -v "MEILI_MASTER_KEY=\${" | tail -1 | cut -d'=' -f2)
+
+if [ -z "$MEILISEARCH_MASTER_KEY" ]; then
+    echo "Error: Could not extract MEILISEARCH_MASTER_KEY from docker-compose.yml" >&2
     exit 1
 fi
+echo "✅ Meilisearch master key extracted."
 
-# Simply copy the example file - no need to change passwords
-cp "$SCRIPT_DIR/.env.example" "$SCRIPT_DIR/.env"
-echo "✅ docker/.env created."
+# --- Start Meilisearch to generate search key ---
+echo "🚀 Starting Meilisearch container to generate API keys..."
+docker compose -f "$SCRIPT_DIR/docker-compose.yml" up -d meilisearch
 
-# Load the Meilisearch keys from the .env file
-MEILISEARCH_MASTER_KEY=$(grep "^MEILISEARCH_MASTER_KEY=" "$SCRIPT_DIR/.env" | cut -d'=' -f2)
-MEILISEARCH_SEARCH_KEY=$(grep "^MEILISEARCH_SEARCH_KEY=" "$SCRIPT_DIR/.env" | cut -d'=' -f2)
+# Wait for Meilisearch to be ready
+echo "⏳ Waiting for Meilisearch to be ready..."
+for i in {1..30}; do
+    if curl -s -f -H "Authorization: Bearer $MEILISEARCH_MASTER_KEY" http://localhost:7700/health > /dev/null 2>&1; then
+        echo "✅ Meilisearch is ready."
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ Error: Meilisearch failed to start within 30 seconds" >&2
+        exit 1
+    fi
+    sleep 1
+done
+
+# Fetch the search API key from Meilisearch
+echo "🔑 Fetching search API key from Meilisearch..."
+MEILISEARCH_SEARCH_KEY=$(curl -s -H "Authorization: Bearer $MEILISEARCH_MASTER_KEY" \
+    http://localhost:7700/keys | jq -r '.results[] | select(.name == "Default Search API Key") | .key')
+
+if [ -z "$MEILISEARCH_SEARCH_KEY" ] || [ "$MEILISEARCH_SEARCH_KEY" = "null" ]; then
+    echo "❌ Error: Could not fetch search API key from Meilisearch" >&2
+    exit 1
+fi
+echo "✅ Search API key fetched successfully."
 
 # --- Port Availability Check ---
 echo "🔍 Checking port availability..."
@@ -387,7 +411,7 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://localhost:18000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-SUPABASE_DB_CONNECTION=postgresql://postgres:${POSTGRES_PASSWORD}@localhost:6543/postgres
+SUPABASE_DB_CONNECTION=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:6543/postgres
 
 # RabbitMQ Configuration for Taskiq
 RABBITMQ_URL=amqp://guest:guest@localhost:5672/
@@ -413,7 +437,7 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://kong:8000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-SUPABASE_DB_CONNECTION=postgresql://postgres:${POSTGRES_PASSWORD}@supavisor:6543/postgres
+SUPABASE_DB_CONNECTION=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@supavisor:6543/postgres
 
 # RabbitMQ Configuration for Taskiq
 RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/

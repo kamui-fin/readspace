@@ -33,18 +33,24 @@ router = APIRouter()
         },
         403: {
             "description": "Forbidden - Admin access required",
-            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
+            "content": {
+                "application/json": {"example": {"detail": "Admin access required"}}
+            },
         },
         404: {
             "description": "Feed not found",
             "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {"description": "Validation error in request body or invalid feed ID format"},
+        422: {
+            "description": "Validation error in request body or invalid feed ID format"
+        },
     },
 )
 async def admin_update_feed(
     feed_id: UUID,
-    feed_in: AdminFeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
+    feed_in: AdminFeedUpdate = Body(
+        ..., description="Global feed properties to update (all fields optional)"
+    ),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
@@ -108,7 +114,9 @@ async def admin_update_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
+        )
 
     # Update the feed metadata
     try:
@@ -201,7 +209,9 @@ async def admin_update_feed(
         204: {"description": "Successfully deleted global feed"},
         403: {
             "description": "Forbidden - Admin access required",
-            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
+            "content": {
+                "application/json": {"example": {"detail": "Admin access required"}}
+            },
         },
         404: {
             "description": "Feed not found",
@@ -268,7 +278,9 @@ async def admin_delete_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
+        )
 
     # Use raw SQL for efficient bulk deletion leveraging database cascades
     # This is much faster than ORM cascade which loads each related object individually
@@ -282,6 +294,29 @@ async def admin_delete_feed(
 
     # Delete the feed - database CASCADE will handle related records efficiently
     await db.execute(sql_delete(Feed).where(Feed.id == feed_id))
+
+    # Delete from Meilisearch search index
+    from app.core.config import get_settings
+    from app.services.feeds.search.meilisearch import get_meilisearch_service
+
+    try:
+        settings = get_settings()
+        meilisearch_service = get_meilisearch_service(settings)
+        await meilisearch_service.delete_feed(str(feed_id))
+        logger.info(
+            "Admin deleted feed from Meilisearch",
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+    except Exception as e:
+        logger.error(
+            "Failed to delete feed from Meilisearch",
+            feed_id=feed_id,
+            user_id=current_user.sub,
+            error=str(e),
+        )
+        # Don't fail the request if Meilisearch deletion fails
+        # The feed is already deleted from the database
 
     logger.info(
         "Admin deleted global feed successfully",

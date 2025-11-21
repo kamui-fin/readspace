@@ -1,14 +1,12 @@
-import { Loader2 } from "lucide-react"
 import NextImage from "next/image"
 import { useHits, useInstantSearch, usePagination } from "react-instantsearch"
 
 import { FeedCard } from "@/components/feeds/FeedCard"
+import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import { FeedPreviewCard } from "@/components/feeds/FeedPreviewCard"
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
     feedDiscoveryResultToFeed,
-    type Feed,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
 
@@ -23,6 +21,8 @@ interface SearchResultsProps {
     isPreviewLoading?: boolean
     /** Preview error message */
     previewError?: string | null
+    /** Whether preview fetch failed */
+    isPreviewError?: boolean
 }
 
 /**
@@ -38,14 +38,15 @@ export function SearchResults({
     previewFeed,
     isPreviewLoading,
     previewError,
+    isPreviewError,
 }: SearchResultsProps) {
     const { items, results } = useHits<FeedDiscoveryResult>()
     const { nbHits } = results || { nbHits: 0 }
     const { currentRefinement, nbPages } = usePagination()
     const { status } = useInstantSearch()
 
-    // Don't show "no results" while the search is still loading
-    const isLoading = status === "loading" || status === "stalled"
+    // Don't show "no results" while the search is still loading OR while preview is loading
+    const isLoading = status === "loading" || status === "stalled" || isPreviewLoading
 
     // Prepare preview feed data if available
     let previewFeedData: any = null
@@ -65,26 +66,59 @@ export function SearchResults({
         }
     }
 
-    if (items.length === 0 && !isLoading) {
+    // Show skeleton while preview is loading
+    if (isPreviewLoading && items.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center py-16">
-                <div className="mb-6">
-                    <NextImage
-                        src="/discover/Search.svg"
-                        alt="No results found"
-                        width={132}
-                        height={128}
-                        className="w-32 h-auto"
-                    />
+            <div className="mb-8">
+                <div className="flex items-center justify-between mb-2 pl-5 pr-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">
+                        Feed Preview
+                    </h3>
                 </div>
-                <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
-                    No matching feeds found
-                </h3>
-                <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
-                    Try rephrasing your query or browsing by category.
-                </p>
+                <FeedCardSkeleton />
             </div>
         )
+    }
+
+    if (items.length === 0 && !isLoading) {
+        // If we have a preview feed, just show that without the "no results" message
+        if (previewFeedData) {
+            return (
+                <div className="mb-8">
+                    <div className="flex items-center justify-between mb-2 pl-5 pr-2">
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                            Feed Preview
+                        </h3>
+                    </div>
+                    <FeedPreviewCard feed={previewFeedData} />
+                </div>
+            )
+        }
+
+        // Only show "no results" if the preview has failed or there's no preview attempt
+        if (isPreviewError || !isPreviewLoading) {
+            return (
+                <div className="flex flex-col items-center justify-center py-16">
+                    <div className="mb-6">
+                        <NextImage
+                            src="/discover/Search.svg"
+                            alt="No results found"
+                            width={132}
+                            height={128}
+                            className="w-32 h-auto"
+                        />
+                    </div>
+                    <h3 className="text-xl font-medium mb-3 text-black dark:text-foreground">
+                        No matching feeds found
+                    </h3>
+                    <p className="text-gray-500 dark:text-muted-foreground text-center max-w-md">
+                        Try rephrasing your query or browsing by category.
+                    </p>
+                </div>
+            )
+        }
+
+        return null
     }
 
     return (
@@ -101,24 +135,27 @@ export function SearchResults({
                 </div>
             )}
 
-            <div className="flex items-center justify-between mb-2 pl-5 pr-2">
-                <div className="text-[#91998C] dark:text-muted-foreground text-sm">
-                    {nbHits} {nbHits === 1 ? "result" : "results"}
-                    {nbPages > 1 && (
-                        <span className="ml-2">
-                            · Page {currentRefinement + 1} of {nbPages}
-                        </span>
-                    )}
+            {/* Only show results header if we have actual results */}
+            {items.length > 0 && (
+                <div className="flex items-center justify-between mb-2 pl-5 pr-2">
+                    <div className="text-[#91998C] dark:text-muted-foreground text-sm">
+                        {nbHits} {nbHits === 1 ? "result" : "results"}
+                        {nbPages > 1 && (
+                            <span className="ml-2">
+                                · Page {currentRefinement + 1} of {nbPages}
+                            </span>
+                        )}
+                    </div>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={onClearSearch}
+                        className="h-8 px-3 text-sm text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
+                    >
+                        Clear
+                    </Button>
                 </div>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClearSearch}
-                    className="h-8 px-3 text-sm text-[#91998C] hover:text-[#6A994E] hover:bg-[#F3F9EF] dark:text-muted-foreground dark:hover:text-primary dark:hover:bg-accent"
-                >
-                    Clear
-                </Button>
-            </div>
+            )}
             <div className="flex flex-col divide-y divide-border/40">
                 {items.map((hit) => {
                     const hitData = hit as any

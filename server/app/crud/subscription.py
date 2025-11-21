@@ -196,21 +196,20 @@ async def create_subscription(
     if not folder:
         raise ValueError(f"Folder with id {subscription_in.folder_id} not found for this user.")
 
-    # Resolve URL to get canonical URL by following redirects
-    resolved_url = await resolve_feed_url(str(subscription_in.url))
-    original_url = str(subscription_in.url)
-
-    # Check if subscription already exists using resolved URL
-    existing_subscription = await get_subscription_by_feed_url(db, url=resolved_url, user_id=user_id)
-    if existing_subscription:
-        raise IntegrityError(
-            statement=f"Subscription to feed '{subscription_in.url}' already exists for this user.",
-            params=None,
-            orig=Exception("Duplicate subscription"),
-        )
-
     # Use provided feed_db if available, otherwise get or create global feed
     if feed_db is None:
+        # Resolve URL to get canonical URL by following redirects
+        resolved_url = await resolve_feed_url(str(subscription_in.url))
+        original_url = str(subscription_in.url)
+
+        # Check if subscription already exists using resolved URL
+        existing_subscription = await get_subscription_by_feed_url(db, url=resolved_url, user_id=user_id)
+        if existing_subscription:
+            raise IntegrityError(
+                statement=f"Subscription to feed '{subscription_in.url}' already exists for this user.",
+                params=None,
+                orig=Exception("Duplicate subscription"),
+            )
         # Get or create global feed using resolved URL (handles URL normalization and redirects)
         feed_db = await crud_feed.get_or_migrate_feed(db, original_url=original_url, resolved_url=resolved_url)
         if not feed_db:
@@ -223,6 +222,17 @@ async def create_subscription(
             feed_data["url"] = resolved_url
             feed_base = FeedBase(**feed_data)
             feed_db = await crud_feed.create_feed(db, feed_data=feed_base)
+    else:
+        # Feed already provided (subscribing to existing feed by ID)
+        # Check if subscription already exists for this user
+        existing_subscription = await get_subscription_by_feed_id(db, feed_id=feed_db.id, user_id=user_id)
+        if existing_subscription:
+            raise IntegrityError(
+                statement=f"Subscription to feed already exists for this user.",
+                params=None,
+                orig=Exception("Duplicate subscription"),
+            )
+    
     # Feed exists, subscriber_count will be incremented automatically by database trigger
 
     # Get initial cutoff timestamp to limit unread articles

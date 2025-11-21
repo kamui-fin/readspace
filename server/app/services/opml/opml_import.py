@@ -44,6 +44,10 @@ class OpmlImportService:
         # Step 2: Bulk create/get folders in single operation
         folder_cache = await self._bulk_create_folders(unique_folder_names)
 
+        # CRITICAL: Commit folders before dispatching feed tasks
+        # This ensures folders are visible to feed tasks running in separate sessions
+        await self.db.commit()
+
         # Step 3: Transform feeds with pre-resolved folder IDs
         transformed_feeds = []
         for feed_data in raw_feeds_data:
@@ -127,7 +131,6 @@ class OpmlImportService:
 
         # Check for cancellation before dispatching
         if parent_task_id:
-
             is_cancelled = await check_import_cancellation_flag(parent_task_id)
             if is_cancelled:
                 logger.info(
