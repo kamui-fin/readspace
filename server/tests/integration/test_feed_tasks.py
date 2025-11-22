@@ -31,8 +31,8 @@ class TestFeedRefreshTask:
         # Record initial state
         initial_last_fetched = test_feed.last_fetched_at
 
-        # Execute async function directly with test db session
-        await refresh_single_feed(feed_id=test_feed.id, db=db_session)
+        # Execute async function directly - service manages its own sessions
+        await refresh_single_feed(feed_id=test_feed.id)
 
         # Refresh feed from database
         await db_session.refresh(test_feed)
@@ -46,8 +46,8 @@ class TestFeedRefreshTask:
         """Test task handles UUID (no string conversion needed in async function)."""
         from app.workers.feed import refresh_single_feed
 
-        # Call with UUID directly with test db session
-        await refresh_single_feed(feed_id=test_feed.id, db=db_session)
+        # Call with UUID directly - service manages its own sessions
+        await refresh_single_feed(feed_id=test_feed.id)
 
         # Verify the function completed without error
         # Note: last_fetched_at may not update if the feed fetch fails (e.g., rate limiting)
@@ -63,7 +63,7 @@ class TestFeedRefreshTask:
 
         # Should complete without raising (logs warning instead)
         # The service layer handles non-existent feeds gracefully
-        await refresh_single_feed(feed_id=fake_id, db=db_session)
+        await refresh_single_feed(feed_id=fake_id)
 
     @pytest.mark.asyncio
     async def test_refresh_feed_via_api_triggers_task(
@@ -115,9 +115,9 @@ class TestFeedSchedulingTask:
 
         await db_session.flush()
 
-        # Execute async function directly with test db session in test mode
+        # Execute async function directly in test mode - service manages its own sessions
         try:
-            await schedule_all_feeds(db=db_session, test_mode=True)
+            await schedule_all_feeds(test_mode=True)
         except Exception as e:
             # Feed refresh may fail due to network issues, rate limiting, or content size limits
             # With MAX_OPML_FILE_SIZE_MB = 5, feeds larger than 5MB will fail
@@ -156,8 +156,8 @@ class TestFeedSchedulingTask:
         await db_session.flush()
 
         # Verify the service correctly applies the limit when querying
-        feed_service = FeedService(db=db_session)
-        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(limit=3)
+        feed_service = FeedService()
+        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(db=db_session, limit=3)
 
         # Should only return 3 feeds even though we have 5
         assert len(feeds_to_refresh) == 3
@@ -200,8 +200,8 @@ class TestFeedSchedulingTask:
         await db_session.flush()
 
         # Query for feeds needing refresh
-        feed_service = FeedService(db=db_session)
-        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(limit=100)
+        feed_service = FeedService()
+        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(db=db_session, limit=100)
 
         # Should only include old feed, not recent feed
         feed_ids = [feed.id for feed in feeds_to_refresh]
@@ -307,8 +307,8 @@ class TestUnreadCompactionTask:
         db_session.add(subscription)
         await db_session.commit()
 
-        # Run compaction task with provided db_session
-        result = await compact_unread_articles(db=db_session)
+        # Run compaction task - service manages its own sessions
+        result = await compact_unread_articles()
 
         # Verify subscription was updated
         await db_session.refresh(subscription)

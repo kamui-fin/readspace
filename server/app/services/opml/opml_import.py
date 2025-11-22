@@ -1,54 +1,65 @@
 """Service for OPML import operations."""
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, Callable
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.profile import get_profile_by_id
-from app.services.feeds.management import FeedManagementService
 from app.services.folder import FolderService
 from app.services.opml.opml_processor import OpmlProcessor
 from app.services.user.resource_limits import ResourceLimitService
-from app.workers.opml.progress import check_import_cancellation_flag
+from app.workers.opml.progress import check_import_cancellation_flag, update_import_progress
+
+if TYPE_CHECKING:
+    from app.workers.opml_tasks import import_single_feed_task
 
 logger = structlog.get_logger(__name__)
 
+# Type alias for session factory
+SessionFactory = Callable[[], Any]  # Returns async context manager
+
 
 class OpmlImportService:
-    """Service for handling OPML import operations."""
+    """Service for handling OPML import operations.
 
-    def __init__(self, db: AsyncSession, user_id: UUID):
-        self.db = db
+    Uses session factory pattern for consistent database access.
+    """
+
+    def __init__(self, user_id: UUID):
         self.user_id = user_id
-        self.feed_service = FeedManagementService(db, user_id)
-        self.folder_service = FolderService(db, user_id)
         self.opml_processor = OpmlProcessor()
 
     async def extract_feeds_from_opml(
-        self, opml_content: str, default_folder_name: str | None = None
+        self,
+        session_factory: SessionFactory,
+        opml_content: str,
+        default_folder_name: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Extract feeds from OPML content and transform to worker task format."""
+        """Extract feeds from OPML content and transform to worker task format.
+
+        This method:
+        1. Parses OPML (CPU-bound, no DB)
+        2. Creates folders in a single transaction
+        3. Returns feed data with folder IDs
+        """
+        # Step 1: Parse OPML (no DB connection needed)
         raw_feeds_data = await self.opml_processor.extract_feeds_from_opml(
             opml_content, default_folder_name or "Imported Feeds"
         )
 
-        # Step 1: Extract all unique folder names upfront
+        # Step 2: Extract all unique folder names upfront
         unique_folder_names = set()
         for feed_data in raw_feeds_data:
             folder_name = feed_data.get("folder_name")
             if folder_name and folder_name.strip():
                 unique_folder_names.add(folder_name.strip())
 
-        # Step 2: Bulk create/get folders in single operation
-        folder_cache = await self._bulk_create_folders(unique_folder_names)
+        # Step 3: Bulk create/get folders in single transaction
+        async with session_factory() as db:
+            folder_cache = await self._bulk_create_folders_db(db, unique_folder_names)
 
-        # CRITICAL: Commit folders before dispatching feed tasks
-        # This ensures folders are visible to feed tasks running in separate sessions
-        await self.db.commit()
-
-        # Step 3: Transform feeds with pre-resolved folder IDs
+        # Step 4: Transform feeds with pre-resolved folder IDs (no DB)
         transformed_feeds = []
         for feed_data in raw_feeds_data:
             folder_name = feed_data.get("folder_name")
@@ -68,22 +79,84 @@ class OpmlImportService:
 
         return transformed_feeds
 
-    async def _bulk_create_folders(self, folder_names: set[str]) -> dict[str, UUID]:
-        """Bulk create folders and return name->id mapping."""
+    async def _check_subscription_limit_db(
+        self, db, feed_url: str, feed_title: str | None
+    ) -> dict[str, Any] | None:
+        """Check subscription limit. Returns error dict if limit exceeded, None otherwise.
+
+        Pure DB function - caller manages session.
+        """
+        profile = await get_profile_by_id(db, user_id=self.user_id)
+        if not profile:
+            return None
+
+        resource_service = ResourceLimitService(db)
+        can_proceed = await resource_service.check_limit(
+            self.user_id, "max_subscriptions", str(profile.role), lock=False
+        )
+
+        if not can_proceed:
+            limits = resource_service.get_user_limits(str(profile.role))
+            current_usage = await resource_service.get_current_usage(
+                self.user_id, "max_subscriptions", lock=False
+            )
+
+            logger.warning(
+                "Subscription limit reached during OPML import, skipping feed",
+                feed_url=feed_url,
+                user_id=str(self.user_id),
+                current_usage=current_usage,
+                limit=limits.get("max_subscriptions", 0),
+            )
+
+            return {
+                "success": False,
+                "url": feed_url,
+                "title": feed_title or "Unknown",
+                "status": "limit_exceeded",
+                "error": f"Subscription limit reached ({current_usage}/{limits.get('max_subscriptions', 0)})",
+            }
+
+        return None
+
+    async def _get_default_folder_db(self, db) -> UUID:
+        """Get default folder ID. Raises ValueError if not found.
+
+        Pure DB function - caller manages session.
+        """
+        folder_service = FolderService(db, self.user_id)
+        default_folder = await folder_service.get_default_folder()
+        if not default_folder:
+            raise ValueError("Could not find or create default folder")
+        return default_folder.id
+
+    async def _bulk_create_folders_db(
+        self, db, folder_names: set[str]
+    ) -> dict[str, UUID]:
+        """Bulk create folders and return name->id mapping.
+
+        Pure DB function - caller manages session.
+        """
         if not folder_names:
             return {}
 
-        # Get existing folders first
-        existing_folders = await self.folder_service.list_folders()
-        folder_cache: dict[str, UUID] = {folder.name: folder.id for folder in existing_folders}
+        folder_service = FolderService(db, self.user_id)
+
+        # Get existing folders
+        existing_folders = await folder_service.list_folders()
+        folder_cache: dict[str, UUID] = {
+            folder.name: folder.id for folder in existing_folders
+        }
 
         # Identify folders that need to be created
         folders_to_create = [name for name in folder_names if name not in folder_cache]
 
-        # Bulk create new folders using atomic batch operation to prevent race conditions
+        # Bulk create new folders using atomic batch operation
         if folders_to_create:
             try:
-                created_folders = await self.folder_service.create_folders_batch(folders_to_create)
+                created_folders = await folder_service.create_folders_batch(
+                    folders_to_create
+                )
                 folder_cache.update(created_folders)
 
                 logger.info(
@@ -99,24 +172,13 @@ class OpmlImportService:
                     folder_names=folders_to_create,
                     user_id=self.user_id,
                 )
-                # Continue gracefully without folder assignment
-                # folder_cache already contains existing folders, new ones will be None
 
         return folder_cache
 
     async def _dispatch_feed_tasks(
         self, feeds_data: list[dict[str, Any]], parent_task_id: str | None
     ) -> dict[str, Any]:
-        """Dispatch individual Taskiq tasks for each feed.
-
-        Args:
-            feeds_data: List of feed data dictionaries
-            parent_task_id: Parent orchestration task ID for cancellation checking
-
-        Returns:
-            Dict with total_feeds, task_ids, and status
-        """
-        # Lazy import to avoid circular dependency
+        """Dispatch individual Taskiq tasks for each feed."""
         from app.workers.opml_tasks import import_single_feed_task
 
         total_feeds = len(feeds_data)
@@ -145,17 +207,19 @@ class OpmlImportService:
                     "message": "Import was cancelled before tasks were dispatched",
                 }
 
-        # Dispatch a Taskiq task for each feed
+        # Dispatch all tasks to RabbitMQ queue
         for feed_data in feeds_data:
             try:
                 task = await import_single_feed_task.kiq(
                     user_id=str(self.user_id),
                     feed_url=feed_data["url"],
-                    folder_id=str(feed_data["folder_id"]) if feed_data["folder_id"] else None,
+                    folder_id=(
+                        str(feed_data["folder_id"]) if feed_data["folder_id"] else None
+                    ),
                     tag_names=feed_data["tag_names"],
                     feed_title=feed_data["title"],
                     update_existing=True,
-                    parent_task_id=parent_task_id,  # Pass parent for cancellation checks
+                    parent_task_id=parent_task_id,
                 )
                 task_ids.append(task.task_id)
 
@@ -172,7 +236,19 @@ class OpmlImportService:
                     error=str(e),
                     exc_info=True,
                 )
-                # Continue dispatching other tasks even if one fails
+                # Update progress to count this as a failed import
+                if parent_task_id:
+                    from app.schemas import FeedImportError
+                    
+                    await update_import_progress(
+                        task_id=parent_task_id,
+                        error=FeedImportError(
+                            url=feed_data["url"],
+                            title=feed_data.get("title", "Unknown"),
+                            error=f"Failed to dispatch task: {str(e)}",
+                            status="dispatch_failed",
+                        ),
+                    )
 
         logger.info(
             "Feed import tasks dispatched",
@@ -191,23 +267,17 @@ class OpmlImportService:
 
     async def process_opml_import(
         self,
+        session_factory: SessionFactory,
         opml_content: str,
         default_folder_name: str = "Imported Feeds",
         task_id: str | None = None,
     ) -> dict[str, Any]:
-        """Process OPML import by dispatching individual Taskiq tasks for each feed.
-
-        Args:
-            opml_content: OPML file content
-            default_folder_name: Default folder for feeds without a folder
-            task_id: Optional task ID for cancellation checking
-
-        Returns:
-            Dict with total_feeds, task_ids, and status
-        """
+        """Process OPML import by dispatching individual Taskiq tasks for each feed."""
         # Extract feeds from OPML
         feeds_data = await self.extract_feeds_from_opml(
-            opml_content=opml_content, default_folder_name=default_folder_name
+            session_factory,
+            opml_content=opml_content,
+            default_folder_name=default_folder_name,
         )
 
         if not feeds_data:
@@ -222,6 +292,7 @@ class OpmlImportService:
 
     async def import_single_feed(
         self,
+        session_factory: SessionFactory,
         feed_url: str,
         folder_id: str | None = None,
         tag_names: list[str] | None = None,
@@ -230,53 +301,29 @@ class OpmlImportService:
     ) -> dict[str, Any]:
         """Import a single feed with proper error handling.
 
-        This method encapsulates the business logic for individual feed import,
-        making it easier to test without Celery task complexity.
-
-        Returns:
-            Dict with success status, error details, and feed information
+        Uses multiple surgical database sessions via session factory.
         """
+        from app.services.feeds.creation import FeedCreationService
+
         try:
-            # Check subscription limit before attempting to add feed
-            profile = await get_profile_by_id(self.db, user_id=self.user_id)
-            if profile:
-                resource_service = ResourceLimitService(self.db)
-                can_proceed = await resource_service.check_limit(
-                    self.user_id, "max_subscriptions", str(profile.role), lock=False
+            # Phase 1: Check limit + get folder
+            async with session_factory() as db:
+                limit_check = await self._check_subscription_limit_db(
+                    db, feed_url, feed_title
                 )
+                if limit_check:
+                    return limit_check
 
-                if not can_proceed:
-                    limits = resource_service.get_user_limits(str(profile.role))
-                    current_usage = await resource_service.get_current_usage(
-                        self.user_id, "max_subscriptions", lock=False
-                    )
+                # Get folder in same session
+                if folder_id:
+                    folder_uuid = UUID(folder_id)
+                else:
+                    folder_uuid = await self._get_default_folder_db(db)
 
-                    logger.warning(
-                        "Subscription limit reached during OPML import, skipping feed",
-                        feed_url=feed_url,
-                        user_id=str(self.user_id),
-                        current_usage=current_usage,
-                        limit=limits.get("max_subscriptions", 0),
-                    )
-
-                    return {
-                        "success": False,
-                        "url": feed_url,
-                        "title": feed_title or "Unknown",
-                        "status": "limit_exceeded",
-                        "error": f"Subscription limit reached ({current_usage}/{limits.get('max_subscriptions', 0)})",
-                    }
-
-            if folder_id:
-                folder_uuid = UUID(folder_id)
-            else:
-                # Get or create default folder if none provided
-                default_folder = await self.folder_service.get_default_folder()
-                if not default_folder:
-                    raise ValueError("Could not find or create default folder")
-                folder_uuid = default_folder.id
-
-            feed_response = await self.feed_service.add_new_feed(
+            # Phase 2 & 3: Call FeedCreationService with session factory
+            feed_creation_service = FeedCreationService(user_id=self.user_id)
+            feed_response = await feed_creation_service.add_new_feed(
+                session_factory,
                 url=feed_url,
                 folder_id=folder_uuid,
                 tag_names=tag_names or [],
@@ -284,7 +331,9 @@ class OpmlImportService:
             )
 
             # Determine import status
-            if update_existing:
+            if feed_response.already_existed:
+                status = "already_exists"
+            elif update_existing:
                 status = "imported_or_updated"
             else:
                 status = "imported"
@@ -292,7 +341,9 @@ class OpmlImportService:
             return {
                 "success": True,
                 "url": feed_url,
-                "title": feed_response.custom_title or feed_response.feed.title or feed_title,
+                "title": feed_response.custom_title
+                or feed_response.feed.title
+                or feed_title,
                 "status": status,
                 "feed_id": str(feed_response.id),
             }
@@ -300,7 +351,7 @@ class OpmlImportService:
         except ValueError as e:
             # Feed already exists or other validation error
             error_msg = str(e).lower()
-            if "already exists" in error_msg:
+            if "already exists" in error_msg or "already subscribed" in error_msg:
                 return {
                     "success": True,
                     "url": feed_url,
@@ -332,6 +383,14 @@ class OpmlImportService:
                 }
 
         except Exception as e:
+            logger.error(
+                "Feed import failed with exception",
+                feed_url=feed_url,
+                error=str(e),
+                error_type=type(e).__name__,
+                exc_info=True,
+            )
+
             error_str = str(e).lower()
 
             # Categorize errors
@@ -352,7 +411,10 @@ class OpmlImportService:
                 ]
             ):
                 status = "network_error"
-            elif any(term in error_str for term in ["parse", "xml", "encoding", "not well-formed"]):
+            elif any(
+                term in error_str
+                for term in ["parse", "xml", "encoding", "not well-formed"]
+            ):
                 status = "broken_feed"
             elif "greenlet" in error_str:
                 status = "unknown_error"

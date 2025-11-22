@@ -98,12 +98,14 @@ async def export_opml_file(
     Raises:
         HTTPException: 500 for export generation errors
     """
+    from app.db.session import db_session_factory
+    
     start_time = time.perf_counter()
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
 
     try:
         # Get all user feeds and export to OPML
-        user_feeds = await feed_service.list_feeds()
+        user_feeds = await feed_service.list_feeds(db_session_factory)
 
         # Use OPML processor to handle export
         opml_processor = OpmlProcessor()

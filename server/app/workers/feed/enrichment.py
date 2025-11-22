@@ -40,6 +40,8 @@ class FeedProxy:
 
 async def query_feeds_needing_enrichment(db: AsyncSession) -> list[Feed]:
     """Query feeds that need enrichment (no tags set).
+    
+    Pure DB helper - caller manages session.
 
     Args:
         db: Database session
@@ -232,6 +234,8 @@ async def apply_bulk_updates(
     db: AsyncSession, bulk_update_mappings: list[dict[str, Any]]
 ) -> None:
     """Apply bulk updates to feeds in database.
+    
+    Pure DB helper - caller manages session.
 
     Args:
         db: Database session
@@ -305,24 +309,23 @@ async def sync_feeds_to_meilisearch(
         logger.error("Failed to sync feeds to Meilisearch", error=str(e), exc_info=True)
 
 
-async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
+async def batch_enrich_feeds() -> dict[str, Any]:
     """Batch enrich all feeds without tags/category using Gemini Batch API.
 
-    Uses a three-phase pattern to minimize database connection hold time:
-    Phase 1: Query feeds needing enrichment (<100ms)
-    Phase 2: External API calls without DB connection (10-60s)
-    Phase 3: Bulk database update (<1s)
+    Uses a three-phase pattern - service manages its own sessions:
+    Phase 1: Query feeds needing enrichment (with session)
+    Phase 2: External API calls (NO session)
+    Phase 3: Bulk database update (with session)
 
     This pattern prevents holding connections during long-running external API calls.
 
     Note: Embeddings are now handled automatically by Meilisearch via Gemini API.
 
-    Args:
-        db: Database session
-
     Returns:
         Dictionary with enrichment statistics
     """
+    from app.workers.common import worker_db
+
     logger.info("Starting batch feed enrichment")
 
     try:
@@ -336,24 +339,25 @@ async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
         # ================================================================
         # PHASE 1: Query feeds and prepare data (DB connection <100ms)
         # ================================================================
+        async with worker_db() as db:
+            feeds_to_enrich = await query_feeds_needing_enrichment(db)
 
-        feeds_to_enrich = await query_feeds_needing_enrichment(db)
+            if not feeds_to_enrich:
+                logger.info("No feeds to enrich")
+                return {
+                    "success": True,
+                    "enriched_count": 0,
+                    "message": "No feeds need enrichment",
+                }
 
-        if not feeds_to_enrich:
-            logger.info("No feeds to enrich")
-            return {
-                "success": True,
-                "enriched_count": 0,
-                "message": "No feeds need enrichment",
-            }
+            # Initialize enrichment service (no DB needed - just helper methods)
+            enrichment_service = FeedEnrichmentService()
 
-        # Initialize enrichment service
-        enrichment_service = FeedEnrichmentService(db=db)
-
-        # Prepare feed data for batch processing
-        feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
-            feeds_to_enrich, enrichment_service
-        )
+            # Prepare feed data for batch processing
+            feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
+                feeds_to_enrich, enrichment_service
+            )
+        # Connection released - available for other tasks!
 
         # ================================================================
         # PHASE 2: External API calls without holding DB connection (10-60s)
@@ -378,9 +382,10 @@ async def batch_enrich_feeds(db: AsyncSession) -> dict[str, Any]:
         )
 
         # Perform database update in bulk
-        await apply_bulk_updates(db, bulk_update_mappings)
+        async with worker_db() as db:
+            await apply_bulk_updates(db, bulk_update_mappings)
 
-        # Sync enriched feeds to Meilisearch
+        # Sync enriched feeds to Meilisearch (no DB connection needed)
         await sync_feeds_to_meilisearch(bulk_update_mappings, feed_snapshot_list)
 
         logger.info(

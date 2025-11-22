@@ -8,13 +8,14 @@ This module defines Taskiq task wrappers that handle:
 The actual business logic is in app.workers.opml package.
 """
 
+import time
 from typing import Annotated, Any
 
 import structlog
 from taskiq import Context, TaskiqDepends
 
 from app.core.taskiq_app import broker
-from app.workers.common import ensure_uuid, get_worker_db
+from app.workers.common import ensure_uuid
 from app.workers.opml import import_opml, import_single_feed
 from app.workers.opml.progress import check_import_cancellation_flag, update_import_progress
 
@@ -25,6 +26,7 @@ logger = structlog.get_logger(__name__)
     task_name="opml_tasks.import_single_feed",
     retry_on_error=True,
     max_retries=2,
+    timeout=120,  # 120 second timeout (30s fetch + 90s buffer for DB operations)
 )
 async def import_single_feed_task(
     user_id: str,
@@ -36,6 +38,14 @@ async def import_single_feed_task(
     parent_task_id: str | None = None,
 ) -> dict[str, Any]:
     """Import a single feed - Taskiq task wrapper.
+
+    Uses the three-phase pattern with surgical database sessions:
+    Phase 1: Check limits & existing subscriptions (<50ms)
+    Phase 2: Network I/O - fetch & parse feed (0-30s, no DB connection)
+    Phase 3: Create feed + subscription + articles (<500ms)
+    
+    Each phase uses a separate worker_db() context to ensure connections
+    are released immediately after each database operation.
 
     Args:
         user_id: User UUID (may be string from serialization)
@@ -49,6 +59,7 @@ async def import_single_feed_task(
     Returns:
         Import result dictionary
     """
+
     user_id_uuid = ensure_uuid(user_id)
 
     # Check for cancellation before starting
@@ -76,17 +87,65 @@ async def import_single_feed_task(
                 "error": "Import was cancelled by user",
             }
 
-    async for session in get_worker_db():
-        return await import_single_feed(
+    # Track timing
+    task_start = time.perf_counter()
+
+    try:
+        # Service function manages its own sessions internally - NO session passed
+        # It will use worker_db() context manager for each database operation
+        result = await import_single_feed(
             user_id=user_id_uuid,
             feed_url=feed_url,
             folder_id=folder_id,
-            db=session,
             tag_names=tag_names,
             feed_title=feed_title,
             update_existing=update_existing,
             parent_task_id=parent_task_id,
         )
+
+        total_time = time.perf_counter() - task_start
+
+        # Log timing metrics
+        logger.info(
+            "Feed import task completed",
+            feed_url=feed_url,
+            success=result.get("success", False),
+            status=result.get("status", "unknown"),
+            total_duration_seconds=round(total_time, 3),
+            user_id=str(user_id_uuid),
+        )
+
+        return result
+    except Exception as exc:
+        # Catch ANY unhandled exception at task level to ensure progress is updated
+        total_time = time.perf_counter() - task_start
+        
+        logger.error(
+            "Unhandled exception in feed import task wrapper",
+            feed_url=feed_url,
+            error=str(exc),
+            error_type=type(exc).__name__,
+            total_duration_seconds=round(total_time, 3),
+            user_id=str(user_id_uuid),
+            exc_info=True,
+        )
+        
+        # CRITICAL: Update progress even on catastrophic failure
+        if parent_task_id:
+            from app.schemas import FeedImportError
+            
+            await update_import_progress(
+                task_id=parent_task_id,
+                error=FeedImportError(
+                    url=feed_url,
+                    title=feed_title or "Unknown",
+                    error=f"Task wrapper exception: {str(exc)}",
+                    status="task_exception",
+                ),
+            )
+        
+        # Re-raise to let Taskiq handle retry logic
+        raise
 
 
 @broker.task(
@@ -99,14 +158,17 @@ async def import_opml_task(
     opml_content: str,
     default_folder_name: str = "Imported Feeds",
     filename: str | None = None,
-    estimated_feeds: int | None = None,
     context: Annotated[Context, TaskiqDepends()] = None,
 ) -> dict[str, Any]:
     """Import OPML file by dispatching individual feed tasks.
 
-    This orchestration task extracts feeds from the OPML and dispatches
-    individual Taskiq tasks for each feed. RabbitMQ handles queuing and
-    Taskiq workers process feeds concurrently.
+    This orchestration task:
+    1. Parses OPML content (CPU-bound, no DB)
+    2. Creates folders in batch (single quick transaction)
+    3. Dispatches individual feed import tasks to queue
+    
+    Total DB time: <200ms for folder creation
+    No DB connection held during task dispatching
 
     Args:
         user_id: User UUID (may be string from serialization)
@@ -123,14 +185,12 @@ async def import_opml_task(
 
     # Get task_id from context for cooperative cancellation
     task_id = context.message.task_id if context and hasattr(context, "message") and context.message else None
-
-    async for session in get_worker_db():
-        return await import_opml(
-            user_id=user_id_uuid,
-            opml_content=opml_content,
-            db=session,
-            default_folder_name=default_folder_name,
-            task_id=task_id,
-            filename=filename,
-            estimated_feeds=estimated_feeds,
-        )
+    
+    # Service function manages its own sessions internally - NO session passed
+    return await import_opml(
+        user_id=user_id_uuid,
+        opml_content=opml_content,
+        default_folder_name=default_folder_name,
+        task_id=task_id,
+        filename=filename,
+    )

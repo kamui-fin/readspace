@@ -25,12 +25,11 @@ import structlog
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.taskiq_app import broker
-from app.workers.common import get_worker_db
-from app.workers.feed import (
-    batch_enrich_feeds,
-    compact_old_articles,
-    compact_unread_articles,
-    schedule_all_feeds,
+from app.workers.feed_tasks import (
+    batch_enrich_feeds_task,
+    compact_old_articles_task,
+    compact_unread_articles_task,
+    schedule_all_feed_refreshes_task,
 )
 
 logger = structlog.get_logger(__name__)
@@ -39,43 +38,29 @@ logger = structlog.get_logger(__name__)
 async def trigger_refresh_all() -> None:
     """Trigger schedule all feed refreshes task."""
     logger.info("Triggering: Schedule all feed refreshes")
-
-    async for session in get_worker_db():
-        await schedule_all_feeds(db=session)
-
-    logger.info("Completed: Schedule all feed refreshes")
+    await schedule_all_feed_refreshes_task()
+    logger.info("Task queued: Schedule all feed refreshes")
 
 
 async def trigger_compact_unread() -> None:
     """Trigger compact unread articles task."""
     logger.info("Triggering: Compact unread articles")
-
-    async for session in get_worker_db():
-        result = await compact_unread_articles(db=session)
-
-    logger.info("Completed: Compact unread articles", **result)
-    print(f"\nResult: {result}")
+    await compact_unread_articles_task()
+    logger.info("Task queued: Compact unread articles")
 
 
 async def trigger_compact_old() -> None:
     """Trigger compact old articles task."""
     logger.info("Triggering: Compact old articles")
+    await compact_old_articles_task()
+    logger.info("Task queued: Compact old articles")
 
-    async for session in get_worker_db():
-        result = await compact_old_articles(db=session)
-
-    logger.info("Completed: Compact old articles", **result)
-    print(f"\nResult: {result}")
 
 async def trigger_batch_enrich() -> None:
     """Trigger batch enrich feeds task."""
     logger.info("Triggering: Batch enrich feeds")
-
-    async for session in get_worker_db():
-        result = await batch_enrich_feeds(db=session)
-
-    logger.info("Completed: Batch enrich feeds", **result)
-    print(f"\nResult: {result}")
+    await batch_enrich_feeds_task()
+    logger.info("Task queued: Batch enrich feeds")
 
 
 TASKS = {
@@ -119,7 +104,9 @@ async def main() -> None:
     try:
         await TASKS[task_name]()
     except Exception as exc:
-        logger.error("Task execution failed", task=task_name, error=str(exc), exc_info=True)
+        logger.error(
+            "Task execution failed", task=task_name, error=str(exc), exc_info=True
+        )
         print(f"\nError: Task execution failed - {exc}")
         sys.exit(1)
     finally:

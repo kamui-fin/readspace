@@ -29,19 +29,6 @@ class CRUDUserArticleState(CRUDBase[UserArticleState, UserArticleStateCreate, Us
         )
         return result.scalars().first()
 
-    async def get_batch(self, db: AsyncSession, *, user_id: UUID, article_ids: list[UUID]) -> list[UserArticleState]:
-        """Get user's states for multiple articles."""
-        if not article_ids:
-            return []
-
-        result = await db.execute(
-            select(UserArticleState).filter(
-                UserArticleState.user_id == user_id,
-                UserArticleState.article_id.in_(article_ids),
-            )
-        )
-        return list(result.scalars().all())
-
     async def create(self, db: AsyncSession, *, obj_in: UserArticleStateCreate) -> UserArticleState:
         """Create a new user article state."""
         state_data = obj_in.model_dump()

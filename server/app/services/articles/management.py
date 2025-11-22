@@ -52,8 +52,6 @@ class ArticleManagementService:
         feed_is_favorite: bool | None = None,
         published_since: datetime | None = None,
         published_until: datetime | None = None,
-        user_timezone: str | None = None,
-        search_query: str | None = None,
         sort_by: str = "published_at",
         sort_order: str = "desc",
         page: int = 1,
@@ -75,7 +73,6 @@ class ArticleManagementService:
             feed_is_favorite=feed_is_favorite,
             published_since=published_since,
             published_until=published_until,
-            search_query=search_query,
             allow_preview=allow_preview,
         )
 
@@ -90,7 +87,6 @@ class ArticleManagementService:
             feed_is_favorite=feed_is_favorite,
             published_since=published_since,
             published_until=published_until,
-            search_query=search_query,
             sort_by=sort_by,
             sort_order=sort_order,
             skip=skip,

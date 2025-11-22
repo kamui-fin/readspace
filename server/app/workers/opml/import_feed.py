@@ -5,10 +5,10 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas import FeedImportError
 from app.services.opml.opml_import import OpmlImportService
+from app.workers.common import worker_db_factory
 from app.workers.opml.progress import update_import_progress
 
 logger = structlog.get_logger(__name__)
@@ -18,7 +18,6 @@ async def import_single_feed(
     user_id: UUID,
     feed_url: str,
     folder_id: str,
-    db: AsyncSession,
     tag_names: list[str] | None = None,
     feed_title: str | None = None,
     update_existing: bool = False,
@@ -30,7 +29,6 @@ async def import_single_feed(
         user_id: User UUID
         feed_url: Feed URL to import
         folder_id: Folder ID for the feed
-        db: Database session
         tag_names: Optional list of tag names
         feed_title: Optional feed title override
         update_existing: Whether to update existing feed
@@ -39,13 +37,19 @@ async def import_single_feed(
     Returns:
         Import result dictionary
     """
+
     start_time = time.perf_counter()
 
-    logger.info("Starting feed import", user_id=str(user_id), feed_url=feed_url)
+    logger.info(
+        "Starting feed import",
+        user_id=str(user_id),
+        feed_url=feed_url,
+    )
 
     try:
-        opml_service = OpmlImportService(db=db, user_id=user_id)
+        opml_service = OpmlImportService(user_id=user_id)
         result = await opml_service.import_single_feed(
+            worker_db_factory,
             feed_url=feed_url,
             folder_id=folder_id,
             tag_names=tag_names,

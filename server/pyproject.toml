@@ -99,6 +99,8 @@ types-python-jose = "^3.5.0.20250531"
 pytest-mock = "^3.15.1"
 pylint = "^4.0.2"
 pytest-asyncio = "^1.2.0"
+vulture = "^2.14"
+pyflakes = "^3.4.0"
 
 [tool.ruff]
 target-version = "py310"

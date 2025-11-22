@@ -3,7 +3,6 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import (
@@ -11,7 +10,7 @@ from app.core.custom_exceptions import (
     FeedParsingError,
     FeedValidationError,
 )
-from app.db.session import get_db
+from app.db.session import get_db_factory
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import FeedResponse
 from app.services.feeds.management import FeedManagementService
@@ -57,7 +56,9 @@ router = APIRouter()
             "description": "Service unavailable - could not connect to feed URL",
             "content": {
                 "application/json": {
-                    "example": {"detail": "Could not connect to feed URL during refresh: Connection timeout"}
+                    "example": {
+                        "detail": "Could not connect to feed URL during refresh: Connection timeout"
+                    }
                 }
             },
         },
@@ -74,7 +75,7 @@ async def refresh_feed(
         False,
         description="Preview mode - refresh feed without requiring user subscription",
     ),
-    db: AsyncSession = Depends(get_db),
+    db_factory=Depends(get_db_factory),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
     """
@@ -117,10 +118,10 @@ async def refresh_feed(
         - Refresh is synchronous and may take several seconds for large feeds
     """
     start_time = time.perf_counter()
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     try:
         refreshed_feed = await feed_service.refresh_feed(
-            feed_id=feed_id, force_refetch=force_refetch, preview_mode=preview
+            db_factory, feed_id, force_refetch=force_refetch, preview_mode=preview
         )
         if not refreshed_feed:
             logger.warning(
@@ -128,7 +129,9 @@ async def refresh_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
+            )
 
         duration = time.perf_counter() - start_time
 
@@ -163,7 +166,9 @@ async def refresh_feed(
             feed_id=feed_id,
             duration_seconds=round(duration, 3),
         )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
+        ) from e
     except HTTPException:
         duration = time.perf_counter() - start_time
         # Re-raise HTTP exceptions (like feed not found)

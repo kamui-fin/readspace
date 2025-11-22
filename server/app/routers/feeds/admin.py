@@ -184,8 +184,10 @@ async def admin_update_feed(
         )
 
         # Return as FeedResponse
-        feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
-        return await feed_service.get_feed(feed_id=feed_id) or updated_feed
+        from app.db.session import db_session_factory
+        
+        feed_service = FeedManagementService(user_id=UUID(current_user.sub))
+        return await feed_service.get_feed(db_session_factory, feed_id=feed_id) or updated_feed
 
     except Exception as e:
         logger.error(

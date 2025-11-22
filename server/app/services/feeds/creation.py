@@ -1,13 +1,12 @@
 """Service for creating new RSS/Atom feeds."""
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 from urllib.parse import urlparse
 from uuid import UUID
 
 import feedparser  # type: ignore
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import (
     FeedConnectionError,
@@ -33,12 +32,17 @@ from app.utils.url.url_normalizer import resolve_feed_url
 
 logger = structlog.get_logger(__name__)
 
+# Type alias for session factory
+SessionFactory = Callable[[], Any]  # Returns async context manager
+
 
 class FeedCreationService:
-    """Service responsible for creating new feeds."""
+    """Service responsible for creating new feeds.
 
-    def __init__(self, db: AsyncSession, user_id: UUID):
-        self.db = db
+    Uses session factory pattern for consistent database access across API and worker contexts.
+    """
+
+    def __init__(self, user_id: UUID):
         self.user_id = user_id
 
         # Initialize service dependencies
@@ -51,6 +55,7 @@ class FeedCreationService:
 
     async def add_new_feed(
         self,
+        session_factory: SessionFactory,
         url: str,
         folder_id: UUID,
         tag_names: list[str] | None = None,
@@ -58,7 +63,13 @@ class FeedCreationService:
     ) -> SubscriptionResponse:
         """Adds a new feed by URL, parses it, and stores initial articles.
 
+        Uses three-phase pattern to avoid holding DB connections during network I/O:
+        Phase 1: Validation & duplicate check (with DB session)
+        Phase 2: Network I/O - fetch & parse (NO DB connection held)
+        Phase 3: Database write (with DB session)
+
         Args:
+            session_factory: Factory function that creates database sessions
             url: Feed URL to add
             folder_id: Folder to place the feed in
             tag_names: Optional list of tag names to associate
@@ -81,33 +92,61 @@ class FeedCreationService:
             resolved_url=resolved_url,
         )
 
-        # Check if feed exists or needs migration (handles URL changes via redirects)
-        existing_feed = await crud_feed.get_or_migrate_feed(self.db, original_url=url, resolved_url=resolved_url)
-        if existing_feed:
-            return await self._handle_existing_feed(existing_feed, resolved_url, folder_id, tag_names, update_existing)
+        # ================================================================
+        # PHASE 1: Validation & Duplicate Check (DB Session)
+        # ================================================================
+        async with session_factory() as db:
+            existing_feed = await crud_feed.get_or_migrate_feed(
+                db, original_url=url, resolved_url=resolved_url
+            )
 
-        # Validate folder exists
-        await self._validate_folder(folder_id)
+            if existing_feed:
+                # Fast path: Feed exists, handle subscription
+                return await self._handle_existing_feed_db(
+                    db,
+                    existing_feed,
+                    resolved_url,
+                    folder_id,
+                    update_existing,
+                )
 
+            # Validate folder exists
+            await self._validate_folder_db(db, folder_id)
+        # Session automatically closed here - connection released
+
+        # ================================================================
+        # PHASE 2: Network I/O (NO DB Connection Held)
+        # ================================================================
         # Fetch and parse feed using resolved URL (canonical URL from server)
+        # CRITICAL: No database connection is held during this 0-30s operation
         parsed_feed = await self._fetch_and_parse_feed(resolved_url)
 
-        # Check for duplicates using parsed feed data
-        dedup_service = FeedDeduplicationService(self.db)
-        await dedup_service.check_for_duplicates(resolved_url, parsed_feed)
+        # ================================================================
+        # PHASE 3: Database Write (DB Session)
+        # ================================================================
+        async with session_factory() as db:
+            # Check for duplicates using parsed feed data
+            dedup_service = FeedDeduplicationService(db)
+            await dedup_service.check_for_duplicates(resolved_url, parsed_feed)
 
-        # Create the feed with resolved URL for storage
-        return await self._create_new_feed(resolved_url, folder_id, tag_names, parsed_feed)
+            # Create the feed with resolved URL for storage
+            return await self._create_new_feed_db(
+                db, resolved_url, folder_id, tag_names, parsed_feed
+            )
+        # Session automatically committed and closed here
 
-    async def _handle_existing_feed(
+    async def _handle_existing_feed_db(
         self,
+        db,
         existing_feed: Any,
         url: str,
         folder_id: UUID,
-        tag_names: list[str] | None,
         update_existing: bool,
     ) -> SubscriptionResponse:
-        """Handle case where feed already exists."""
+        """Handle case where feed already exists (fast path - no network I/O needed).
+
+        Pure DB function - caller manages session.
+        """
         logger.info(
             "Feed URL already exists globally",
             url=url,
@@ -117,12 +156,14 @@ class FeedCreationService:
 
         # Check if user already has a subscription to this feed
         existing_subscription = await crud_subscription.get_subscription_by_feed_id(
-            self.db, feed_id=existing_feed.id, user_id=self.user_id
+            db, feed_id=existing_feed.id, user_id=self.user_id
         )
 
         if existing_subscription:
             if not update_existing:
-                raise FeedSubscriptionError(f"You are already subscribed to feed '{url}'.")
+                raise FeedSubscriptionError(
+                    f"You are already subscribed to feed '{url}'."
+                )
 
             # Update existing subscription
             logger.info(
@@ -133,7 +174,10 @@ class FeedCreationService:
             )
             # This would require implementing subscription update logic
             # For now, just return the existing subscription info
-            return SubscriptionResponse.model_validate(existing_subscription)
+            response = SubscriptionResponse.model_validate(existing_subscription)
+            # Mark that this was already existing
+            response.already_existed = True
+            return response
 
         # User doesn't have a subscription to this feed, create one
         logger.info(
@@ -144,20 +188,17 @@ class FeedCreationService:
         )
 
         # Validate target folder
-        await self._validate_folder(folder_id)
-
-        # Tags are now handled as ARRAY field on feeds
+        await self._validate_folder_db(db, folder_id)
 
         # Create subscription
         subscription_data = SubscriptionCreate(
             url=existing_feed.url,
             folder_id=folder_id,
-            # tag_ids removed - using ARRAY field
         )
 
         # Create subscription (this will reuse the existing global feed)
         subscription = await crud_subscription.create_subscription(
-            self.db,
+            db,
             subscription_in=subscription_data,
             user_id=self.user_id,
             feed_db=existing_feed,  # Pass the feed object directly
@@ -171,26 +212,30 @@ class FeedCreationService:
             subscription_id=subscription.id,
         )
 
-        # Note: Feed enrichment is now handled by weekly batch task
-        # No need to trigger individual enrichment tasks
-
         return SubscriptionResponse.model_validate(subscription)
 
-    async def _validate_folder(self, folder_id: UUID) -> None:
-        """Validate that folder exists and belongs to user."""
-        folder = await crud_folder.get_folder(self.db, folder_id=folder_id, user_id=self.user_id)
+    async def _validate_folder_db(self, db, folder_id: UUID) -> None:
+        """Validate that folder exists and belongs to user.
+
+        Pure DB function - caller manages session.
+        """
+        folder = await crud_folder.get_folder(
+            db, folder_id=folder_id, user_id=self.user_id
+        )
         if not folder:
             logger.warning(
                 "Folder not found or does not belong to user",
                 folder_id=folder_id,
                 user_id=self.user_id,
             )
-            raise NotFoundError(f"Folder with ID '{folder_id}' not found or access denied.")
+            raise NotFoundError(
+                f"Folder with ID '{folder_id}' not found or access denied."
+            )
 
     async def _fetch_and_parse_feed(self, url: str) -> feedparser.FeedParserDict:
         """Fetch feed content and parse it."""
         try:
-            # Fetch content using parent class method
+            # Fetch content
             fetch_result = await self._fetch_feed_content(url)
             if fetch_result["status"] != 200 or not fetch_result["content"]:
                 logger.error(
@@ -200,7 +245,7 @@ class FeedCreationService:
                 )
                 raise FeedConnectionError("Could not fetch feed content.")
 
-            # Parse content using parent class method
+            # Parse content
             parsed_feed = self._parse_feed_data(fetch_result["content"], url)
             return parsed_feed
 
@@ -211,56 +256,63 @@ class FeedCreationService:
             logger.error("Parsing error adding new feed", url=url, error=str(e))
             raise
 
-    async def _create_new_feed(
+    async def _create_new_feed_db(
         self,
+        db,
         url: str,
         folder_id: UUID,
         tag_names: list[str] | None,
         parsed_feed: feedparser.FeedParserDict,
     ) -> SubscriptionResponse:
-        """Create a new feed with articles."""
+        """Create a new feed with articles.
+
+        Pure DB function - caller manages session.
+        """
         # Extract feed metadata
         initial_feed_data = self._extract_feed_metadata(parsed_feed, url)
 
-        # Tags are now handled as ARRAY field on feeds
-
         # Create global feed
         db_feed = await crud_feed.create_feed(
-            self.db,
+            db,
             feed_data=initial_feed_data,
         )
 
         # Extract and create articles
-        latest_article_date = await self._create_initial_articles(db_feed, parsed_feed, url)
+        latest_article_date = await self._create_initial_articles_db(
+            db, db_feed, parsed_feed, url
+        )
 
         # Update feed with additional metadata
-        await self._update_feed_metadata(db_feed, parsed_feed, latest_article_date)
+        await self._update_feed_metadata_db(
+            db, db_feed, parsed_feed, latest_article_date
+        )
 
         # Create subscription
         subscription_data = SubscriptionCreate(
             url=url,
             folder_id=folder_id,
-            # tag_ids removed - using ARRAY field
         )
 
         subscription = await crud_subscription.create_subscription(
-            self.db,
+            db,
             subscription_in=subscription_data,
             user_id=self.user_id,
             feed_db=db_feed,  # Pass the feed object directly
         )
 
-        # CRITICAL: Commit subscription immediately to prevent loss on subsequent errors
-        # This ensures subscriptions persist even if later operations fail
-        # (mirrors folder commit pattern in opml_import.py:49)
-        await self.db.commit()
-
         return SubscriptionResponse.model_validate(subscription)
 
-    async def _create_initial_articles(
-        self, db_feed: Any, parsed_feed: feedparser.FeedParserDict, url: str
+    async def _create_initial_articles_db(
+        self,
+        db,
+        db_feed: Any,
+        parsed_feed: feedparser.FeedParserDict,
+        url: str,
     ) -> datetime | None:
-        """Extract and create initial articles from the feed."""
+        """Extract and create initial articles from the feed.
+
+        Pure DB function - caller manages session.
+        """
         articles_to_create: list[ArticleCreate] = []
         latest_article_date: datetime | None = None
 
@@ -278,11 +330,16 @@ class FeedCreationService:
         total_entries = len(entries)
 
         for entry in entries:
-            article_schema = self._extract_article_data(entry, db_feed.id, self.user_id, url)
+            article_schema = self._extract_article_data(
+                entry, db_feed.id, self.user_id, url
+            )
             if article_schema:
                 articles_to_create.append(article_schema)
                 if article_schema.published_at:
-                    if latest_article_date is None or article_schema.published_at > latest_article_date:
+                    if (
+                        latest_article_date is None
+                        or article_schema.published_at > latest_article_date
+                    ):
                         latest_article_date = article_schema.published_at
 
         # Validate feed has valid articles
@@ -290,7 +347,9 @@ class FeedCreationService:
 
         # Create articles in bulk
         if articles_to_create:
-            created_articles = await create_articles_batch(db=self.db, articles_data=articles_to_create)
+            created_articles = await create_articles_batch(
+                db=db, articles_data=articles_to_create
+            )
             logger.info(
                 f"Bulk created {len(created_articles)} new articles for feed",
                 feed_id=db_feed.id,
@@ -318,8 +377,12 @@ class FeedCreationService:
         if valid_articles_count == 0:
             # Don't need to delete feed - transaction will be rolled back
             if total_entries == 0:
-                logger.warning("Feed has no entries at all", url=url, user_id=self.user_id)
-                raise FeedValidationError("Feed appears to be broken: no entries found in feed")
+                logger.warning(
+                    "Feed has no entries at all", url=url, user_id=self.user_id
+                )
+                raise FeedValidationError(
+                    "Feed appears to be broken: no entries found in feed"
+                )
             else:
                 logger.warning(
                     "Feed has entries but no valid articles",
@@ -327,7 +390,9 @@ class FeedCreationService:
                     user_id=self.user_id,
                     total_entries=total_entries,
                 )
-                raise FeedValidationError("Feed appears to be broken: no valid articles found despite having entries")
+                raise FeedValidationError(
+                    "Feed appears to be broken: no valid articles found despite having entries"
+                )
 
         # Check for sparse feeds
         if total_entries > 0 and valid_articles_count < (total_entries * 0.1):
@@ -339,13 +404,17 @@ class FeedCreationService:
                 valid_articles=valid_articles_count,
             )
 
-    async def _update_feed_metadata(
+    async def _update_feed_metadata_db(
         self,
+        db,
         db_feed: Any,
         parsed_feed: feedparser.FeedParserDict,
         latest_article_date: datetime | None,
     ) -> None:
-        """Update feed with metadata from parsing."""
+        """Update feed with metadata from parsing.
+
+        Pure DB function - caller manages session.
+        """
         updated_feed_info = self._extract_feed_metadata(parsed_feed, str(db_feed.url))
 
         # Extract TTL
@@ -359,17 +428,21 @@ class FeedCreationService:
         content_hash = calculate_feed_content_hash(parsed_feed.entries)
 
         # Calculate initial adaptive fetch interval
-        adaptive_interval = await calculate_optimal_interval(self.db, db_feed)
+        adaptive_interval = await calculate_optimal_interval(db, db_feed)
 
         # Update feed with all metadata including content_hash and adaptive_fetch_interval_minutes
         await crud_feed.update_feed_metadata(
-            self.db,
+            db,
             feed_db=db_feed,
             title=updated_feed_info.title,
             description=updated_feed_info.description,
             link=str(updated_feed_info.link) if updated_feed_info.link else None,
             language=updated_feed_info.language,
-            image_url=str(updated_feed_info.image_url) if updated_feed_info.image_url else None,
+            image_url=(
+                str(updated_feed_info.image_url)
+                if updated_feed_info.image_url
+                else None
+            ),
             ttl=ttl_value,
             skip_hours=skip_hours,
             skip_days=skip_days,
@@ -381,7 +454,9 @@ class FeedCreationService:
             adaptive_fetch_interval_minutes=adaptive_interval,  # Set initial adaptive interval
         )
 
-    def _extract_ttl(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> int | None:
+    def _extract_ttl(
+        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
+    ) -> int | None:
         """Extract TTL value from parsed feed."""
         if not parsed_feed.feed.get("ttl"):
             return None
@@ -396,7 +471,9 @@ class FeedCreationService:
             )
             return None
 
-    def _extract_skip_hours(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> list[int]:
+    def _extract_skip_hours(
+        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
+    ) -> list[int]:
         """Extract skip hours from parsed feed."""
         skip_hours_value: list[int] = []
         skip_hours_raw = parsed_feed.feed.get("skipHours", {}).get("hour", [])
@@ -410,11 +487,15 @@ class FeedCreationService:
                 if 0 <= hour_int <= 23:  # Valid hour range
                     skip_hours_value.append(hour_int)
             except (ValueError, TypeError):
-                logger.warning("Invalid skip hour value", feed_id=feed_id, hour_raw=hour)
+                logger.warning(
+                    "Invalid skip hour value", feed_id=feed_id, hour_raw=hour
+                )
 
         return skip_hours_value
 
-    def _extract_skip_days(self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID) -> list[str]:
+    def _extract_skip_days(
+        self, parsed_feed: feedparser.FeedParserDict, feed_id: UUID
+    ) -> list[str]:
         """Extract skip days from parsed feed."""
         skip_days_value: list[str] = []
         skip_days_raw = parsed_feed.feed.get("skipDays", {}).get("day", [])
@@ -449,7 +530,9 @@ class FeedCreationService:
         timeout_seconds: int | None = None,
     ) -> dict[str, Any]:
         """Fetch feed content using the dedicated FeedFetcher service."""
-        result = await self.feed_fetcher.fetch_content(url, etag, last_modified, timeout_seconds)
+        result = await self.feed_fetcher.fetch_content(
+            url, etag, last_modified, timeout_seconds
+        )
 
         # Convert FeedFetcher response format to expected format
         if result.not_modified:
@@ -471,9 +554,13 @@ class FeedCreationService:
                 elif status_code == 403:
                     raise FeedConnectionError(f"Access denied to feed (403): {url}")
                 elif status_code in [500, 502, 503]:
-                    raise FeedConnectionError(f"Feed server error ({status_code}): {url}")
+                    raise FeedConnectionError(
+                        f"Feed server error ({status_code}): {url}"
+                    )
                 else:
-                    raise FeedConnectionError(f"HTTP error {status_code} while fetching feed: {url}")
+                    raise FeedConnectionError(
+                        f"HTTP error {status_code} while fetching feed: {url}"
+                    )
             else:
                 raise FeedConnectionError(f"Network error fetching feed: {url}")
 
@@ -483,7 +570,9 @@ class FeedCreationService:
             "headers": result.headers,
         }
 
-    def _parse_feed_data(self, feed_content_text: str, url: str) -> feedparser.FeedParserDict:
+    def _parse_feed_data(
+        self, feed_content_text: str, url: str
+    ) -> feedparser.FeedParserDict:
         """Parse RSS/Atom feed content and validate its structure using FeedValidator."""
         try:
             parsed_feed = feedparser.parse(feed_content_text)
@@ -493,8 +582,16 @@ class FeedCreationService:
 
         # Handle feedparser's bozo flag (malformed XML)
         if parsed_feed.bozo:
-            bozo_type = type(parsed_feed.bozo_exception).__name__ if parsed_feed.bozo_exception else "Unknown"
-            bozo_message = str(parsed_feed.bozo_exception) if parsed_feed.bozo_exception else "Unknown error"
+            bozo_type = (
+                type(parsed_feed.bozo_exception).__name__
+                if parsed_feed.bozo_exception
+                else "Unknown"
+            )
+            bozo_message = (
+                str(parsed_feed.bozo_exception)
+                if parsed_feed.bozo_exception
+                else "Unknown error"
+            )
             logger.warning(
                 "Feed parsed with issues (bozo)",
                 url=url,
@@ -504,7 +601,8 @@ class FeedCreationService:
 
             # Only fail for severe parsing errors
             if parsed_feed.bozo_exception and any(
-                error_type in bozo_type for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
+                error_type in bozo_type
+                for error_type in ["SAXParseException", "ExpatError", "XMLSyntaxError"]
             ):
                 if not parsed_feed.feed or not hasattr(parsed_feed, "entries"):
                     logger.error(
@@ -512,7 +610,9 @@ class FeedCreationService:
                         url=url,
                         bozo_type=bozo_type,
                     )
-                    raise FeedParsingError(f"Feed has severe parsing errors: {bozo_message}")
+                    raise FeedParsingError(
+                        f"Feed has severe parsing errors: {bozo_message}"
+                    )
 
         # Use FeedValidator to validate structure
         try:
@@ -522,7 +622,9 @@ class FeedCreationService:
 
         return parsed_feed
 
-    def _extract_feed_metadata(self, parsed_feed: feedparser.FeedParserDict, feed_url: str) -> Any:
+    def _extract_feed_metadata(
+        self, parsed_feed: feedparser.FeedParserDict, feed_url: str
+    ) -> Any:
         """Extract feed metadata using FeedValidator service."""
         # Use FeedValidator to extract and clean metadata
         metadata = self.feed_validator.extract_feed_metadata(parsed_feed, feed_url)
@@ -532,7 +634,6 @@ class FeedCreationService:
         image_url = feed_info.get("image", {}).get("href") or feed_info.get("logo")
 
         # If no image is found and we have a link, use favicon from the link domain
-        # TODO: replace with fast but more accurate version
         if not image_url and metadata["link"]:
             try:
                 parsed_url = urlparse(metadata["link"])
@@ -578,7 +679,9 @@ class FeedCreationService:
                     feed_id=feed_id,
                     user_id=user_id,
                     image_url=article_dict.get("image_url"),
-                    estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
+                    estimated_read_time_minutes=article_dict.get(
+                        "estimated_read_time_minutes"
+                    ),
                 )
             return None
         except Exception as e:

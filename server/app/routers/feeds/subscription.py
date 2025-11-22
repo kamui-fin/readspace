@@ -10,7 +10,7 @@ from app.core.custom_exceptions import ReadspaceException, to_http_exception
 from app.core.dependencies import get_subscription_service
 from app.crud import crud_feed
 from app.crud.profile import get_profile_by_id
-from app.db.session import get_db
+from app.db.session import get_db, get_db_factory
 from app.schemas import FeedCreate
 from app.schemas.auth import TokenData
 from app.schemas.subscriptions import (
@@ -227,7 +227,7 @@ async def subscribe_to_feed(
 )
 async def add_new_feed(
     *,
-    db: AsyncSession = Depends(get_db),
+    db_factory = Depends(get_db_factory),
     feed_in: FeedCreate = Body(..., description="Feed URL and folder assignment for the new subscription"),
     current_user: TokenData = Depends(get_current_user),
 ) -> SubscriptionResponse:
@@ -264,13 +264,15 @@ async def add_new_feed(
     """
     start_time = time.perf_counter()
 
-    # Check subscription limit before processing
-    await check_subscription_limit(db, UUID(current_user.sub))
+    # Check subscription limit before processing (quick check, use factory)
+    async with db_factory() as db:
+        await check_subscription_limit(db, UUID(current_user.sub))
 
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     try:
         feed = await feed_service.add_new_feed(
-            url=str(feed_in.url),
+            db_factory,
+            str(feed_in.url),
             folder_id=feed_in.folder_id,
             tag_names=None,
         )

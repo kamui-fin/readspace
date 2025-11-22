@@ -228,7 +228,7 @@ async def create_subscription(
         existing_subscription = await get_subscription_by_feed_id(db, feed_id=feed_db.id, user_id=user_id)
         if existing_subscription:
             raise IntegrityError(
-                statement=f"Subscription to feed already exists for this user.",
+                statement="Subscription to feed already exists for this user.",
                 params=None,
                 orig=Exception("Duplicate subscription"),
             )

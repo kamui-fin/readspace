@@ -9,7 +9,6 @@ import structlog
 from bs4 import BeautifulSoup
 from extract_favicon import check_availability, from_google, from_html  # type: ignore
 from lingua import Language, LanguageDetectorBuilder
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import BROWSER_USER_AGENT, FAVICON_FETCH_TIMEOUT
 from app.models import Feed
@@ -22,8 +21,7 @@ logger = structlog.get_logger(__name__)
 class FeedEnrichmentService:
     """Helper service for feed enrichment operations (used by batch enrichment task)."""
 
-    def __init__(self, db: AsyncSession):
-        self.db = db
+    def __init__(self):
         self.page_rank_service = get_page_rank_service()
         self.popularity_scorer = PopularityScorer(self.page_rank_service)
 

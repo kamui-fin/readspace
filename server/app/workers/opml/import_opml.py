@@ -5,9 +5,9 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.opml.opml_import import OpmlImportService
+from app.workers.common import worker_db_factory
 from app.workers.opml.progress import (
     check_import_cancellation_flag,
     initialize_import_progress,
@@ -20,18 +20,22 @@ logger = structlog.get_logger(__name__)
 async def import_opml(
     user_id: UUID,
     opml_content: str,
-    db: AsyncSession,
     default_folder_name: str = "Imported Feeds",
     task_id: str | None = None,
     filename: str | None = None,
-    estimated_feeds: int | None = None,
 ) -> dict[str, Any]:
     """Import OPML file by dispatching individual feed tasks.
+    
+    This orchestration function:
+    1. Parses OPML content (CPU-bound, no DB)
+    2. Creates folders (single transaction via service)
+    3. Dispatches individual feed import tasks
+    
+    The service manages its own database sessions internally.
 
     Args:
         user_id: User UUID
         opml_content: OPML file content
-        db: Database session
         default_folder_name: Default folder name for feeds without folders
         task_id: Optional task ID for cooperative cancellation
         filename: Original OPML filename
@@ -57,10 +61,11 @@ async def import_opml(
             }
 
     try:
-        opml_service = OpmlImportService(db=db, user_id=user_id)
+        opml_service = OpmlImportService(user_id=user_id)
 
-        # Extract feeds first to get the count
+        # Extract feeds - this does: parse OPML (CPU) + create folders (DB)
         feeds_data = await opml_service.extract_feeds_from_opml(
+            worker_db_factory,
             opml_content=opml_content,
             default_folder_name=default_folder_name,
         )

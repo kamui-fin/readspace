@@ -2,10 +2,12 @@
 
 import uuid
 from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
@@ -27,168 +29,119 @@ def ensure_uuid(value: UUID | str) -> UUID:
     return UUID(value) if isinstance(value, str) else value
 
 
-# Module-level persistent database engine for Taskiq workers
-_db_engine: AsyncEngine | None = None
-_session_maker: async_sessionmaker[AsyncSession] | None = None
+# Module-level engine and session maker for workers
+# These are created once and reused across all worker tasks
+_worker_engine: AsyncEngine | None = None
+_worker_session_maker: async_sessionmaker[AsyncSession] | None = None
 
 
-async def get_persistent_db_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
-    """Get or create persistent database engine and session maker for Taskiq tasks.
-
-    This maintains a connection pool that is reused across tasks, providing:
-    - Fast connections (no setup/teardown overhead)
-    - Better resource utilization
-    - Automatic connection health checking with pool_pre_ping
-
-    Configuration adapts based on environment:
-    - Local/Development: Larger pool (5+5=10), session mode, prepared statements enabled
-    - Production: Smaller pool (2+3=5), transaction mode, prepared statements disabled
-    - Multiple workers scale horizontally (4 workers × 5 = 20 total in production)
-
-    Returns:
-        Tuple of (engine, session_maker)
+def _get_worker_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
+    """Get or create the worker database engine and session maker.
+    
+    This is called once per worker process and reused for all tasks.
+    With NullPool, the engine doesn't hold connections - it just manages
+    the connection configuration.
     """
-    global _db_engine, _session_maker
-
-    if _db_engine is None or _session_maker is None:
-        # Ensure we use asyncpg driver for async operations
-        db_url = settings.SUPABASE_DB_CONNECTION
+    global _worker_engine, _worker_session_maker
+    
+    if _worker_engine is None or _worker_session_maker is None:
+        # Use Transaction Mode connection string (port 6543)
+        db_url = settings.DATABASE_URL_WORKER
         if not db_url.startswith("postgresql+asyncpg://"):
             db_url = db_url.replace("postgresql://", "postgresql+asyncpg://")
 
-        # Worker pool configuration for transaction mode with optimized I/O pattern
-        #
-        # AFTER refactoring refresh_feed() to separate network I/O from DB transactions:
-        # - DB connections are only held during quick queries (~500ms vs 30s before)
-        # - With 200 concurrent async tasks, effective pool utilization is much higher
-        # - Each connection can serve multiple tasks per second (not held during HTTP fetches)
-        #
-        # Resource budget on Supabase Cloud (200 total connections, 15 pooled):
-        # - API: 30 connections (user-facing, low latency priority)
-        # - Worker: 100 connections (background, can tolerate brief queueing)
-        # - Reserve: 70 connections (headroom for spikes + other services)
-        #
-        # Calculation:
-        # - 200 async tasks × 500ms avg DB time = 100 queries/second
-        # - 100 connections × 1000ms / 500ms = 200 queries/second capacity
-        # - 2x headroom factor provides comfortable safety margin
-        pool_config = {
-            "pool_size": 50,  # Up from 20 (base capacity for concurrent queries)
-            "max_overflow": 50,  # Up from 30 (total: 100 connections per worker)
-            "pool_recycle": 1800,  # 30 minutes - prevent stale connections
-            "pool_timeout": 120,  # Up from 60s (2 minute tolerance during high load)
-        }
-
-        # Connection arguments for PgBouncer transaction mode
+        # CRITICAL: Disable prepared statements for Supavisor
+        # Transaction mode doesn't support prepared statements
+        # See: https://github.com/supabase/supavisor/issues/287
         connect_args = {
             "statement_cache_size": 0,
             "prepared_statement_cache_size": 0,
             "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
         }
 
-        _db_engine = create_async_engine(
+        # Create engine with NullPool
+        # NullPool ensures no connection caching at SQLAlchemy level
+        _worker_engine = create_async_engine(
             db_url,
-            **pool_config,
-            pool_pre_ping=True,  # Health check connections before use
+            poolclass=NullPool,
             echo=False,
             connect_args=connect_args,
         )
-        _session_maker = async_sessionmaker(
-            _db_engine,
+
+        # Create session factory
+        _worker_session_maker = async_sessionmaker(
+            _worker_engine,
             class_=AsyncSession,
             autoflush=False,
             expire_on_commit=False,
         )
+        
         logger.info(
-            "Initialized persistent DB engine for Taskiq worker",
-            environment=settings.ENVIRONMENT,
-            is_supabase_cloud=settings.is_supabase_cloud,
-            is_production=settings.is_production,
-            statement_cache_disabled=True,
-            prepared_statement_cache_disabled=True,
-            **pool_config,
+            "Initialized worker database engine",
+            poolclass="NullPool",
+            mode="transaction",
+            port="6543",
         )
+    
+    return _worker_engine, _worker_session_maker
 
-    return _db_engine, _session_maker
 
-
-async def get_worker_db_session() -> AsyncSession:
-    """Get database session for Taskiq worker tasks with connection pooling.
-
-    Returns a session from the persistent connection pool. Callers are responsible
-    for committing or rolling back transactions and closing the session.
-
-    For automatic transaction management, use the context manager pattern:
-        async with get_worker_db_session() as db:
-            # Your code here
-            await db.commit()
-
-    Returns:
-        Database session from the persistent connection pool
+@asynccontextmanager
+async def worker_db() -> AsyncGenerator[AsyncSession, None]:
     """
-    _, session_maker = await get_persistent_db_engine()
-    return session_maker()
-
-
-async def get_worker_db() -> AsyncGenerator[AsyncSession, None]:
-    """Get database session for Taskiq worker tasks with automatic transaction management.
-
-    This provides auto-commit/rollback behavior, ensuring consistent transaction handling
-    across the application.
-
-    Yields:
-        Database session that automatically commits on success or rolls back on exception
+    Surgical database session for Taskiq workers.
+    
+    CRITICAL: This implements the "open late, close early" pattern for workers.
+    
+    Pattern: Connect → Begin Transaction → Query → Commit → Close
+    
+    Why this works with Supavisor Transaction Mode + NullPool:
+    1. Gets session from factory (NullPool creates fresh connection)
+    2. Connects to Supavisor (uses 1 of 200 client slots)
+    3. Begins transaction (Supavisor assigns 1 of 15 real DB connections)
+    4. Yields session for queries (~50-500ms of actual DB work)
+    5. Commits transaction (Supavisor returns real DB connection to pool)
+    6. Closes session (NullPool closes connection, releases client slot)
+    
+    This means:
+    - 10,000 concurrent tasks can share 5 real DB connections
+    - Each task only holds a connection during actual DB operations
+    - Network I/O (0-30s) happens WITHOUT holding any DB connection
+    - No "max client connections" errors
+    
+    Usage in tasks:
+        # Phase 1: Quick DB read
+        async with worker_db() as db:
+            feed_meta = await get_feed(db, feed_id)
+        
+        # Phase 2: Network I/O (no connection held)
+        content = await fetch_feed(feed_meta.url)
+        
+        # Phase 3: Quick DB write
+        async with worker_db() as db:
+            await update_feed(db, feed_id, content)
+    
+    Supavisor Configuration:
+    - Max client connections: 200 (API uses 10, workers share 190)
+    - Pool size: 15 (API uses 10, workers share 5)
+    - Mode: Transaction (port 6543)
     """
-    session = await get_worker_db_session()
+    # Get the shared engine and session maker
+    _, session_maker = _get_worker_engine()
+
+    # Create session (NullPool will create a fresh connection)
+    session = session_maker()
     try:
-        yield session
-        await session.commit()
+        async with session.begin():
+            # Transaction started - Supavisor assigns real DB connection
+            yield session
+            # Transaction commits automatically here - connection returned to Supavisor
     except Exception:
         await session.rollback()
         raise
     finally:
+        # Close session - NullPool closes the connection immediately
         await session.close()
 
-
-async def log_pool_stats() -> dict[str, int]:
-    """Log connection pool statistics for monitoring and debugging.
-
-    Returns detailed metrics about the database connection pool including:
-    - Total pool size (base connections)
-    - Checked in connections (available)
-    - Checked out connections (in use)
-    - Overflow connections (beyond base pool)
-    - Connection utilization percentage
-
-    Returns:
-        Dictionary with pool statistics
-    """
-    engine, _ = await get_persistent_db_engine()
-    pool = engine.pool
-
-    # Get pool statistics
-    pool_size = pool.size()
-    checked_in = pool.checkedin()
-    checked_out = pool.checkedout()
-    overflow = pool.overflow()
-    total_connections = pool_size + overflow
-
-    # Calculate utilization percentage
-    utilization_pct = round((checked_out / total_connections * 100), 1) if total_connections > 0 else 0
-
-    stats = {
-        "pool_size": pool_size,
-        "checked_in": checked_in,
-        "checked_out": checked_out,
-        "overflow": overflow,
-        "total_connections": total_connections,
-        "utilization_percent": utilization_pct,
-    }
-
-    logger.info(
-        "Database connection pool statistics",
-        **stats,
-        status="healthy" if utilization_pct < 80 else "warning" if utilization_pct < 95 else "critical",
-    )
-
-    return stats
+# Session factory for workers - same as worker_db but matches the factory pattern
+worker_db_factory = worker_db

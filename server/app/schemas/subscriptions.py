@@ -150,6 +150,9 @@ class SubscriptionResponse(BaseModel):
     # Related data - using minimal feed response
     feed: SubscriptionFeedResponse
     folder: FolderResponse
+    
+    # Flag to indicate if subscription already existed (used during OPML import)
+    already_existed: bool = False
 
 
 # ========= User Article State Schemas =========

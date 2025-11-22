@@ -5,67 +5,53 @@ from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import MAX_FEEDS_BATCH_SIZE
 from app.services.feeds.feed import FeedService
-from app.workers.feed.metrics import (
-    feed_refresh_duration,
-    feeds_failed_total,
-    feeds_in_progress,
-    feeds_refreshed_total,
-)
+from app.workers.common import worker_db_factory
 
 logger = structlog.get_logger(__name__)
 
 
-async def refresh_single_feed(feed_id: UUID, db: AsyncSession) -> None:
+async def refresh_single_feed(feed_id: UUID) -> None:
     """Refresh a single feed.
 
     Args:
         feed_id: Feed UUID
-        db: Database session
     """
     start_time = time.perf_counter()
-    feeds_in_progress.inc()
     logger.info("Starting feed refresh", feed_id=str(feed_id))
 
-    try:
-        feed_service = FeedService(db=db)
-        await feed_service.refresh_feed(feed_id=feed_id)
+    feed_service = FeedService()
+    await feed_service.refresh_feed(worker_db_factory, feed_id=feed_id)
 
-        duration = time.perf_counter() - start_time
-        feed_refresh_duration.observe(duration)
-        feeds_refreshed_total.inc()
+    duration = time.perf_counter() - start_time
 
-        logger.info(
-            "Successfully refreshed feed",
-            feed_id=str(feed_id),
-            duration_seconds=round(duration, 3),
-            duration_ms=round(duration * 1000, 1),
-        )
-    except Exception:
-        feeds_failed_total.inc()
-        raise
-    finally:
-        feeds_in_progress.dec()
+    logger.info(
+        "Successfully refreshed feed",
+        feed_id=str(feed_id),
+        duration_seconds=round(duration, 3),
+        duration_ms=round(duration * 1000, 1),
+    )
 
 
-async def schedule_all_feeds(db: AsyncSession, test_mode: bool = False) -> dict[str, Any]:
+async def schedule_all_feeds(test_mode: bool = False) -> dict[str, Any]:
     """Schedule all feeds needing refresh.
 
     Args:
-        db: Database session
         test_mode: If True, directly calls async functions instead of dispatching tasks
 
     Returns:
         Dictionary with scheduling statistics
     """
+
     start_time = time.perf_counter()
     logger.info("Starting schedule all feed refreshes")
 
-    feed_service = FeedService(db=db)
-    feeds_to_check = await feed_service.get_feeds_needing_refresh(limit=MAX_FEEDS_BATCH_SIZE)
+    feed_service = FeedService()
+    feeds_to_check = await feed_service.get_feeds_needing_refresh(
+        worker_db_factory, limit=MAX_FEEDS_BATCH_SIZE
+    )
 
     logger.info("Found feeds to refresh", feed_count=len(feeds_to_check))
 
@@ -76,7 +62,7 @@ async def schedule_all_feeds(db: AsyncSession, test_mode: bool = False) -> dict[
         if test_mode:
             # In test mode, refresh feeds directly
             for feed_id in feed_ids:
-                await refresh_single_feed(feed_id=feed_id, db=db)
+                await refresh_single_feed(feed_id=feed_id)
                 dispatched_count += 1
         else:
             # In production mode, kick tasks

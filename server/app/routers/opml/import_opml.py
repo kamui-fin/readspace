@@ -260,7 +260,6 @@ async def import_opml_file(
             opml_content=content_str,
             default_folder_name=default_folder_name,
             filename=opml_file.filename or "unknown.opml",
-            estimated_feeds=feed_count,
         )
 
         # Store only ownership for authorization

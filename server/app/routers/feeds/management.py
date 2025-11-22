@@ -44,7 +44,6 @@ router = APIRouter()
     },
 )
 async def list_feeds(
-    db: AsyncSession = Depends(get_db),
     folder_id: UUID | None = Query(None, description="Filter feeds by folder ID"),
     tag_names: list[str] | None = Query(
         None,
@@ -84,8 +83,11 @@ async def list_feeds(
         - Returns only feeds the user is subscribed to
         - Tag filtering uses AND logic (all specified tags must match)
     """
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+    from app.db.session import db_session_factory
+    
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     feeds = await feed_service.list_feeds(
+        db_session_factory,
         folder_id=folder_id,
         tag_names=tag_names,
         is_favorite=is_favorite,
@@ -114,7 +116,6 @@ async def list_feeds(
 )
 async def get_feed(
     feed_id: UUID,
-    db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
     """
@@ -145,8 +146,10 @@ async def get_feed(
         - Returns `is_subscribed: false` for unsubscribed feeds (preview mode)
         - Subscription-specific fields (folder_id, is_favorite) only included when subscribed
     """
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
-    feed = await feed_service.get_feed(feed_id=feed_id)
+    from app.db.session import db_session_factory
+    
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
+    feed = await feed_service.get_feed(db_session_factory, feed_id=feed_id)
     if not feed:
         logger.warning("Feed not found", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
@@ -191,7 +194,6 @@ async def get_feed(
 async def update_feed_settings(
     feed_id: UUID,
     feed_in: FeedUpdate = Body(..., description="Feed settings to update (all fields optional)"),
-    db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> SubscriptionResponse:
     """
@@ -229,9 +231,11 @@ async def update_feed_settings(
         - Only affects user's subscription, not the global feed data
         - To update global feed properties (url, description, etc.), use the admin endpoint
     """
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
+    from app.db.session import db_session_factory
+    
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     try:
-        updated_feed = await feed_service.update_feed_user_settings(feed_id=feed_id, feed_in=feed_in)
+        updated_feed = await feed_service.update_feed_user_settings(db_session_factory, feed_id=feed_id, feed_in=feed_in)
         if not updated_feed:
             logger.warning(
                 "Feed not found for update or access denied",
@@ -286,7 +290,6 @@ async def update_feed_settings(
 )
 async def delete_feed(
     feed_id: UUID,
-    db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> JSONResponse:
     """
@@ -324,9 +327,11 @@ async def delete_feed(
         - Action is irreversible - user data cannot be recovered
         - Returns 204 No Content on successful deletion
     """
+    from app.db.session import db_session_factory
+    
     start_time = time.perf_counter()
-    feed_service = FeedManagementService(db=db, user_id=UUID(current_user.sub))
-    success = await feed_service.delete_feed(feed_id=feed_id)
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
+    success = await feed_service.delete_feed(db_session_factory, feed_id=feed_id)
     duration = time.perf_counter() - start_time
 
     if not success:

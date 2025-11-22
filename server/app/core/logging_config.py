@@ -8,7 +8,7 @@ from app.core.config import get_settings
 settings = get_settings()
 
 
-def setup_logging(service_name: str = "api") -> None:
+def setup_logging() -> None:
     if structlog.is_configured():
         return
 
