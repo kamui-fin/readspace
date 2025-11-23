@@ -13,12 +13,10 @@ from app.crud.article import (
     count_read_later_articles,
     count_today_articles,
     count_unread_articles,
-    count_unread_articles_by_folder,
     get_all_unread_counts,
     get_article_by_id,
     get_articles_filtered,
     get_recently_read_articles,
-    get_unread_counts_by_folder,
     update_article_status,
 )
 from app.models import ClippedArticle, FeedArticle
@@ -316,14 +314,6 @@ class ArticleManagementService:
             return self.transformer.to_unified(updated_article)
         return None
 
-    async def get_unread_counts_by_folder(self) -> dict[UUID, int]:
-        """Get unread article counts grouped by folder."""
-        return await get_unread_counts_by_folder(db=self.db, user_id=self.user_id)
-
-    async def count_unread_articles_by_folder(self, folder_id: UUID) -> int:
-        """Count unread articles for a user in a specific folder."""
-        return await count_unread_articles_by_folder(db=self.db, user_id=self.user_id, folder_id=folder_id)
-
     async def get_total_unread_count(self) -> int:
         """Get total count of unread articles for the user."""
         return await count_unread_articles(db=self.db, user_id=self.user_id)
@@ -336,6 +326,10 @@ class ArticleManagementService:
         """Get total count of articles published today for the user."""
         return await count_today_articles(db=self.db, user_id=self.user_id)
 
-    async def get_all_unread_counts(self) -> dict[str, int | dict[UUID, int]]:
-        """Get all unread counts in a single optimized query."""
+    async def get_all_unread_counts(self) -> dict[str, int]:
+        """Get all unread counts in a single optimized query.
+
+        Returns:
+            dict with keys: total_unread, read_later_count, today_count
+        """
         return await get_all_unread_counts(db=self.db, user_id=self.user_id)

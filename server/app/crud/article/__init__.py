@@ -37,10 +37,7 @@ from .operations import (
 # ============================================================================
 # AGGREGATION QUERIES (Optimized Raw SQL)
 # ============================================================================
-from .queries.aggregations import (
-    get_all_unread_counts,
-    get_unread_counts_by_folder,
-)
+from .queries.aggregations import get_all_unread_counts
 
 # ============================================================================
 # PAGINATION
@@ -68,7 +65,6 @@ from .queries.specialized import (
     count_read_later_articles,
     count_today_articles,
     count_unread_articles,
-    count_unread_articles_by_folder,
     get_read_later_articles,
     get_recently_read_articles,
 )
@@ -81,7 +77,7 @@ from .queries.unified import CRUDUnifiedArticles, unified_articles
 # ============================================================================
 # TRANSFORMERS
 # ============================================================================
-from .transformers import ArticleTransformer
+from .transformer import ArticleTransformer
 
 __all__ = [
     # === CRUD Operations (Repository Pattern) ===
@@ -103,10 +99,8 @@ __all__ = [
     "count_today_articles",
     "get_read_later_articles",
     "count_unread_articles",
-    "count_unread_articles_by_folder",
     # === Aggregation Queries ===
     "get_all_unread_counts",
-    "get_unread_counts_by_folder",
     # === Pagination ===
     "CursorPaginationParams",
     "CursorPaginationResult",

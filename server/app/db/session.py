@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-
+import time
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -12,18 +12,18 @@ def _create_engine():
     """Create database engine for API using Session Mode with AsyncAdaptedQueuePool.
 
     CRITICAL: Uses AsyncAdaptedQueuePool for long-lived API connections with Supavisor Session Mode.
-    
+
     Why AsyncAdaptedQueuePool + Session Mode?
     - API is a long-lived, stationary server that benefits from persistent connections
     - Session Mode dedicates connections from Supavisor's pool to this client
     - AsyncAdaptedQueuePool maintains a small pool (10 connections) that are reused across requests
     - Each API request borrows a connection for ~50ms, then returns it to the pool
-    
+
     Supavisor Configuration:
     - Max client connections: 200 (total connections Supavisor accepts)
     - Pool size: 15 (actual Postgres connections Supavisor maintains)
     - API reserves: 10 connections (leaving 5 for workers + other services)
-    
+
     With AsyncAdaptedQueuePool + Session Mode:
     - API maintains 10 persistent connections to Supavisor
     - These 10 connections hold 10 of the 15 real DB connections
@@ -61,22 +61,50 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get database session."""
+
+    logger = structlog.get_logger(__name__)
+
+    acquire_start = time.perf_counter()
     async with AsyncSessionLocal() as session:
+        acquire_duration = (time.perf_counter() - acquire_start) * 1000
+        if acquire_duration > 100:  # Only log if slow
+            logger.warning(
+                "DB connection acquired (SLOW)", duration_ms=round(acquire_duration, 2)
+            )
+        else:
+            logger.debug(
+                "DB connection acquired", duration_ms=round(acquire_duration, 2)
+            )
+
         try:
             yield session
+
+            commit_start = time.perf_counter()
             await session.commit()
+            commit_duration = (time.perf_counter() - commit_start) * 1000
+            if commit_duration > 100:
+                logger.warning(
+                    "DB commit complete (SLOW)", duration_ms=round(commit_duration, 2)
+                )
+            else:
+                logger.debug(
+                    "DB commit complete", duration_ms=round(commit_duration, 2)
+                )
         except Exception:
             await session.rollback()
             raise
         finally:
             # Explicit session cleanup to ensure connections are properly returned
+            close_start = time.perf_counter()
             await session.close()
+            close_duration = (time.perf_counter() - close_start) * 1000
+            logger.debug("DB connection closed", duration_ms=round(close_duration, 2))
 
 
 @asynccontextmanager
 async def db_session_factory() -> AsyncIterator[AsyncSession]:
     """Session factory for use with services.
-    
+
     This factory creates sessions on-demand and manages their lifecycle.
     Services can call this multiple times to get fresh sessions for different phases.
     """
@@ -93,10 +121,10 @@ async def db_session_factory() -> AsyncIterator[AsyncSession]:
 
 async def get_db_factory():
     """FastAPI dependency that provides a session factory.
-    
+
     Use this for long-running operations where you want to control
     when database connections are acquired and released.
-    
+
     Example:
         @router.post("/feeds/{feed_id}/refresh")
         async def refresh_feed(

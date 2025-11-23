@@ -53,6 +53,7 @@ async def list_feeds(
     skip: int = Query(0, ge=0, description="Number of feeds to skip for pagination"),
     current_user: TokenData = Depends(get_current_user),
 ) -> list[FeedResponse]:
+    request_start = time.perf_counter()
     """
     Retrieve all RSS feeds the authenticated user is subscribed to.
 
@@ -85,15 +86,28 @@ async def list_feeds(
     """
     from app.db.session import db_session_factory
     
+    logger.debug("list_feeds: Request received", user_id=current_user.sub, folder_id=folder_id)
+    
+    service_start = time.perf_counter()
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
+    logger.debug("list_feeds: Service created", elapsed_ms=(time.perf_counter() - service_start) * 1000)
+    
+    query_start = time.perf_counter()
     feeds = await feed_service.list_feeds(
         db_session_factory,
         folder_id=folder_id,
         tag_names=tag_names,
         is_favorite=is_favorite,
         skip=skip,
-        include_unread_counts=True,  # Always include unread counts
     )
+    query_duration = (time.perf_counter() - query_start) * 1000
+    
+    total_duration = (time.perf_counter() - request_start) * 1000
+    logger.warning("list_feeds: Complete", 
+                query_duration_ms=round(query_duration, 2),
+                total_duration_ms=round(total_duration, 2),
+                feed_count=len(feeds))
+    
     return feeds
 
 
@@ -350,6 +364,60 @@ async def delete_feed(
         duration_seconds=round(duration, 3),
     )
     return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
+
+
+@router.get(
+    "/unread-counts",
+    response_model=dict[str, int],
+    status_code=status.HTTP_200_OK,
+    summary="Get unread counts for all user's feeds",
+    description="Retrieve unread article counts for all feeds the user is subscribed to",
+    responses={
+        200: {
+            "description": "Successfully retrieved unread counts for all feeds",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "feed-uuid-1": 15,
+                        "feed-uuid-2": 8,
+                        "feed-uuid-3": 0,
+                    }
+                }
+            },
+        },
+    },
+)
+async def get_feed_unread_counts(
+    current_user: TokenData = Depends(get_current_user),
+) -> dict[str, int]:
+    """
+    Get unread article counts for all user's feeds.
+
+    This endpoint provides per-feed unread counts for all feeds the user is
+    subscribed to. The frontend can use these counts to display unread badges
+    and calculate folder-level counts by summing feed counts within each folder.
+
+    Returns:
+        dict[str, int]: Dictionary mapping feed_id (as string) to unread count
+
+    Note:
+        - Only includes feeds the user is subscribed to
+        - Feeds with 0 unread articles are included in the response
+        - Uses optimized COALESCE queries for better performance
+        - Frontend should calculate per-folder counts by grouping by folder_id
+    """
+    from app.db.session import db_session_factory
+
+    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
+    unread_counts = await feed_service.get_all_feed_unread_counts(db_session_factory)
+
+    logger.info(
+        "Feed unread counts retrieved",
+        user_id=current_user.sub,
+        feed_count=len(unread_counts),
+    )
+
+    return unread_counts
 
 
 @router.put(

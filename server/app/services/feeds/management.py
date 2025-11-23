@@ -148,10 +148,22 @@ class FeedManagementService:
         is_favorite: bool | None = None,
         skip: int = 0,
         limit: int | None = None,
-        include_unread_counts: bool = False,
     ) -> list[FeedResponse]:
-        """List user's feed subscriptions with optional filtering and unread counts."""
+        """List user's feed subscriptions with optional filtering.
+
+        Note: Unread counts are NO LONGER included in this response.
+        Use the dedicated /feeds/unread-counts endpoint for per-feed counts.
+        """
+        import time
+        service_start = time.perf_counter()
+        logger.info("FeedService.list_feeds: Starting", user_id=str(self.user_id))
+
+        session_start = time.perf_counter()
         async with session_factory() as db:
+            session_duration = (time.perf_counter() - session_start) * 1000
+            logger.info("FeedService.list_feeds: Session acquired", duration_ms=round(session_duration, 2))
+
+            query_start = time.perf_counter()
             feeds_db = await crud_feed.get_feeds_by_user(
                 db=db,
                 user_id=self.user_id,
@@ -161,17 +173,13 @@ class FeedManagementService:
                 skip=skip,
                 limit=limit,
             )
+            query_duration = (time.perf_counter() - query_start) * 1000
+            logger.info("FeedService.list_feeds: Feeds fetched",
+                       duration_ms=round(query_duration, 2),
+                       count=len(feeds_db))
 
             if not feeds_db:
                 return []
-
-            # Get unread counts in a single query if requested
-            unread_counts_by_feed = {}
-            if include_unread_counts:
-                feed_ids = [feed.id for feed, _ in feeds_db]
-                unread_counts_by_feed = await self._get_unread_counts_for_feeds(
-                    db, feed_ids
-                )
 
             feed_responses = []
             for feed, subscription in feeds_db:
@@ -205,11 +213,8 @@ class FeedManagementService:
                     "user_id": subscription.user_id,
                     "folder_id": subscription.folder_id,
                     "is_favorite": subscription.is_favorite,
+                    "unread_count": None,  # No longer calculated here
                 }
-
-                # Add unread count if requested
-                if include_unread_counts:
-                    feed_data["unread_count"] = unread_counts_by_feed.get(feed.id, 0)
 
                 feed_responses.append(FeedResponse(**feed_data))
 
@@ -396,7 +401,10 @@ class FeedManagementService:
     async def _get_unread_counts_for_feeds(
         self, db, feed_ids: list[UUID]
     ) -> dict[UUID, int]:
-        """Get unread counts for multiple feeds in a single optimized query."""
+        """Get unread counts for multiple feeds in a single optimized query.
+
+        Uses COALESCE optimization for better index usage (SARGable queries).
+        """
         if not feed_ids:
             return {}
 
@@ -422,15 +430,9 @@ class FeedManagementService:
             .where(
                 and_(
                     FeedArticle.feed_id.in_(feed_ids),
-                    or_(
-                        FeedSubscription.last_read_cutoff.is_(None),
-                        ArticleContent.published_at
-                        > FeedSubscription.last_read_cutoff,
-                    ),
-                    or_(
-                        UserArticleState.is_read.is_(None),
-                        ~UserArticleState.is_read,
-                    ),
+                    # Optimized unread logic using COALESCE for SARGable queries
+                    ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, '1970-01-01'),
+                    func.coalesce(UserArticleState.is_read, False) == False,
                 )
             )
             .group_by(FeedArticle.feed_id)
@@ -480,3 +482,29 @@ class FeedManagementService:
             )
 
         return FeedResponse(**feed_data)
+
+    async def get_all_feed_unread_counts(
+        self, session_factory: SessionFactory
+    ) -> dict[str, int]:
+        """Get unread counts for all user's feeds.
+
+        Returns:
+            Dictionary mapping feed_id (as string) to unread count
+        """
+        async with session_factory() as db:
+            # Get all user's feed IDs
+            feeds_db = await crud_feed.get_feeds_by_user(
+                db=db,
+                user_id=self.user_id,
+            )
+
+            if not feeds_db:
+                return {}
+
+            feed_ids = [feed.id for feed, _ in feeds_db]
+
+            # Get unread counts for all feeds
+            unread_counts = await self._get_unread_counts_for_feeds(db, feed_ids)
+
+            # Convert UUID keys to strings for JSON serialization
+            return {str(feed_id): count for feed_id, count in unread_counts.items()}

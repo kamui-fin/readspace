@@ -7,12 +7,14 @@ function makeQueryClient() {
                 // With SSR, we usually want to set some default staleTime
                 // above 0 to avoid refetching immediately on the client
                 staleTime: 5 * 60 * 1000, // 5 minutes
+                // Keep data in cache for 30 minutes (longer than staleTime)
+                gcTime: 30 * 60 * 1000, // 30 minutes
                 retry: 1,
                 // Prevent redundant requests during navigation
                 refetchOnMount: false,
                 refetchOnWindowFocus: false,
-                // Enable background refetching for stale data
-                refetchOnReconnect: "always",
+                // Only refetch on reconnect if data is stale
+                refetchOnReconnect: false,
                 // Dedupe requests to the same endpoint
                 notifyOnChangeProps: "all",
             },

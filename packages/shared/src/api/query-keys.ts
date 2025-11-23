@@ -2,10 +2,10 @@
 export const RSS_QUERY_KEYS = {
   FOLDERS: "rss-folders",
   FEEDS: "rss-feeds",
+  FEED_UNREAD_COUNTS: "rss-feed-unread-counts",
   ARTICLES: "rss-articles",
   ARTICLE: "rss-article",
   UNREAD_COUNTS: "rss-unread-counts",
-  SIDEBAR_DATA: "rss-sidebar-data",
   OPML_IMPORT_STATUS: "opml-import-status",
   OPML_IMPORT_TASKS: "opml-import-tasks",
   REFRESH_STATUS: "refresh-status",

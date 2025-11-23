@@ -1,3 +1,4 @@
+import time
 from typing import Any
 from uuid import UUID
 
@@ -16,41 +17,19 @@ router = APIRouter()
 
 @router.get(
     "/unread-counts",
-    response_model=dict[str, Any],
+    response_model=dict[str, int],
     status_code=status.HTTP_200_OK,
-    summary="Get unread article counts",
-    description="Retrieve unread article counts, optionally filtered by folder",
+    summary="Get global unread article counts",
+    description="Retrieve global unread article counts (total, read later, today)",
     responses={
         200: {
             "description": "Successfully retrieved unread counts",
             "content": {
                 "application/json": {
-                    "examples": {
-                        "global_counts": {
-                            "summary": "Global unread counts (no folder filter)",
-                            "value": {
-                                "total_unread": 42,
-                                "unread_by_folder": {"folder-uuid-1": 15, "folder-uuid-2": 27},
-                                "read_later_count": 5,
-                                "today_count": 8,
-                            },
-                        },
-                        "folder_specific": {
-                            "summary": "Counts for specific folder",
-                            "value": {"total_unread": 15, "folder_id": "folder-uuid-1"},
-                        },
-                    }
-                }
-            },
-        },
-        422: {
-            "description": "Validation error in folder ID parameter",
-            "content": {
-                "application/json": {
                     "example": {
-                        "detail": [
-                            {"loc": ["query", "folder_id"], "msg": "invalid uuid format", "type": "value_error.uuid"}
-                        ]
+                        "total_unread": 42,
+                        "read_later_count": 5,
+                        "today_count": 8,
                     }
                 }
             },
@@ -60,46 +39,46 @@ router = APIRouter()
 async def get_unread_article_counts(
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-    folder_id: UUID | None = Query(None, description="Optional folder ID to get counts for a specific folder"),
-) -> dict[str, Any]:
+) -> dict[str, int]:
     """
-    Retrieve unread article counts, optionally filtered by folder.
+    Retrieve global unread article counts.
 
-    This endpoint provides unread article statistics to power UI elements like
-    badges, notifications, and navigation counters. It can return either global
-    counts across all folders or counts for a specific folder.
+    [Performance logging enabled]
+
+    This endpoint provides global unread article statistics to power UI elements like
+    badges, notifications, and navigation counters.
 
     Args:
         db: Database session dependency
         current_user: Authenticated user token data
-        folder_id: Optional UUID to get counts for a specific folder only
 
     Returns:
-        dict[str, Any]: Unread count statistics with the following structure:
-        - If folder_id is None: {
-            "total_unread": int,
-            "unread_by_folder": {"folder_id": count, ...},
-            "read_later_count": int,
-            "today_count": int
-          }
-        - If folder_id is provided: {
-            "unread_count": int
-          }
-
-    Raises:
-        HTTPException:
-            - 422: Validation error in folder_id parameter (invalid UUID format)
+        dict[str, int]: Unread count statistics:
+        - total_unread: Total unread articles (feed + clipped)
+        - read_later_count: Articles marked as read later
+        - today_count: Unread articles from last 24 hours
 
     Note:
         - Only counts articles from feeds the user is subscribed to
-        - "Uncategorized" includes articles from feeds not assigned to any folder
-        - Counts are calculated in real-time and not cached
-        - Useful for displaying unread badges in navigation menus
+        - Counts are calculated in real-time using optimized COALESCE queries
+        - Per-folder counts removed - use /feeds/unread-counts for per-feed counts
+        - Frontend should calculate per-folder counts from per-feed counts
     """
+    request_start = time.perf_counter()
+    logger.debug("unread_counts: Request received", user_id=current_user.sub)
+
+    service_start = time.perf_counter()
     article_service = ArticleManagementService(db=db, user_id=UUID(current_user.sub))
-    if folder_id:
-        count = await article_service.count_unread_articles_by_folder(folder_id=folder_id)
-        return {"unread_count": count}
-    else:
-        # Use optimized single-query method and return directly
-        return await article_service.get_all_unread_counts()
+    logger.debug("unread_counts: Service created", elapsed_ms=(time.perf_counter() - service_start) * 1000)
+
+    query_start = time.perf_counter()
+    result = await article_service.get_all_unread_counts()
+
+    query_duration = (time.perf_counter() - query_start) * 1000
+    total_duration = (time.perf_counter() - request_start) * 1000
+
+    logger.warning("unread_counts: Complete",
+                query_duration_ms=round(query_duration, 2),
+                total_duration_ms=round(total_duration, 2))
+
+    return result

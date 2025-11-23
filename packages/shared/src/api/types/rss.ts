@@ -23,7 +23,6 @@ export type Feed = {
   top_level_category: string | null; // Feed category enum value
   popularity_score: number | null; // Popularity estimate (0-100)
   last_fetched_at: string | null;
-  unread_count: number;
   fetch_error_count: number;
   last_error_message: string | null;
   last_article_published_at: string | null;
@@ -62,11 +61,6 @@ export type Subscription = {
   };
 };
 
-export type SidebarData = {
-  folders: Folder[];
-  feeds: Feed[];
-  unreadCounts: Record<string, number>;
-};
 
 // OPML Import types
 export type OPMLImportResponse = {
@@ -188,10 +182,13 @@ export type ArticlesPaginatedResponse = PaginatedResponse<Article>;
 export type { ApiPaginatedResponse, CursorPaginatedResponse, PaginatedResponse };
 
 export interface UnreadCounts {
-  total_unread?: number;
-  unread_by_folder?: Record<string, number>; // Dictionary with folder IDs as keys
-  read_later_count?: number;
-  today_count?: number;
+  total_unread: number;
+  read_later_count: number;
+  today_count: number;
+}
+
+export interface FeedUnreadCounts {
+  [feedId: string]: number; // Dictionary with feed IDs as keys, values are unread counts
 }
 
 // Discover/Search feed types - matches backend FeedDiscoveryResult
@@ -279,7 +276,6 @@ export function feedDiscoveryResultToFeed(
     top_level_category: discoveryResult.category,
     popularity_score: discoveryResult.popularity_score,
     last_fetched_at: null,
-    unread_count: 0,
     fetch_error_count: 0,
     last_error_message: null,
     last_article_published_at: null,

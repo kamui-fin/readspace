@@ -95,7 +95,10 @@ async def count_read_later_articles(db: AsyncSession, *, user_id: UUID) -> int:
 
 
 async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
-    """Count unread articles published in the last 24 hours for a user."""
+    """Count unread articles published in the last 24 hours for a user.
+
+    Uses COALESCE optimization for better index usage.
+    """
     # Use same 24-hour UTC logic as the today articles route
     now_utc = datetime.now(timezone.utc)
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
@@ -114,17 +117,9 @@ async def count_today_articles(db: AsyncSession, *, user_id: UUID) -> int:
         .filter(
             and_(
                 FeedSubscription.user_id == user_id,
-                # Hybrid unread logic:
-                # 1. Article must be newer than cutoff (or cutoff is NULL)
-                # 2. AND no explicit read state (or explicitly marked unread)
-                or_(
-                    ArticleContent.published_at > FeedSubscription.last_read_cutoff,
-                    FeedSubscription.last_read_cutoff.is_(None),
-                ),
-                or_(
-                    UserArticleState.is_read.is_(None),
-                    UserArticleState.is_read.is_(False),
-                ),
+                # Optimized unread logic using COALESCE for SARGable queries
+                ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, '1970-01-01'),
+                func.coalesce(UserArticleState.is_read, False) == False,
                 ArticleContent.published_at >= twenty_four_hours_ago,
                 ArticleContent.published_at <= now_utc,
             )
@@ -189,7 +184,10 @@ async def get_read_later_articles(
 
 
 async def count_unread_articles(db: AsyncSession, *, user_id: UUID) -> int:
-    """Count total unread articles for a user."""
+    """Count total unread articles for a user.
+
+    Uses COALESCE optimization for better index usage.
+    """
     result = await db.execute(
         select(func.count(FeedArticle.id))
         .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
@@ -204,51 +202,9 @@ async def count_unread_articles(db: AsyncSession, *, user_id: UUID) -> int:
         .filter(
             and_(
                 FeedSubscription.user_id == user_id,
-                # Hybrid unread logic:
-                # 1. Article must be newer than cutoff (or cutoff is NULL)
-                # 2. AND no explicit read state (or explicitly marked unread)
-                or_(
-                    ArticleContent.published_at > FeedSubscription.last_read_cutoff,
-                    FeedSubscription.last_read_cutoff.is_(None),
-                ),
-                or_(
-                    UserArticleState.is_read.is_(None),
-                    UserArticleState.is_read.is_(False),
-                ),
-            )
-        )
-    )
-    return result.scalar_one_or_none() or 0
-
-
-async def count_unread_articles_by_folder(db: AsyncSession, *, user_id: UUID, folder_id: UUID) -> int:
-    """Count unread articles in a specific folder for a user."""
-    result = await db.execute(
-        select(func.count(FeedArticle.id))
-        .join(ArticleContent, FeedArticle.content_id == ArticleContent.id)
-        .join(FeedSubscription, FeedSubscription.feed_id == FeedArticle.feed_id)
-        .outerjoin(
-            UserArticleState,
-            and_(
-                UserArticleState.article_id == FeedArticle.id,
-                UserArticleState.user_id == user_id,
-            ),
-        )
-        .filter(
-            and_(
-                FeedSubscription.user_id == user_id,
-                FeedSubscription.folder_id == folder_id,
-                # Hybrid unread logic:
-                # 1. Article must be newer than cutoff (or cutoff is NULL)
-                # 2. AND no explicit read state (or explicitly marked unread)
-                or_(
-                    ArticleContent.published_at > FeedSubscription.last_read_cutoff,
-                    FeedSubscription.last_read_cutoff.is_(None),
-                ),
-                or_(
-                    UserArticleState.is_read.is_(None),
-                    UserArticleState.is_read.is_(False),
-                ),
+                # Optimized unread logic using COALESCE for SARGable queries
+                ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, '1970-01-01'),
+                func.coalesce(UserArticleState.is_read, False) == False,
             )
         )
     )

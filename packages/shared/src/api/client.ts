@@ -3,6 +3,7 @@ import type {
   Article,
   CheckArticleSavedResponse,
   Feed,
+  FeedUnreadCounts,
   Folder,
   ImportTaskStatus,
   OPMLImportCancelResponse,
@@ -10,6 +11,7 @@ import type {
   SaveArticleResponse,
   SimilarFeedsResponse,
   Subscription,
+  UnreadCounts,
 } from "./types/rss";
 
 export class ApiError extends Error {
@@ -379,13 +381,12 @@ export class ApiClient {
       const queryParams = new URLSearchParams();
       if (params?.folder_id) queryParams.append("folder_id", params.folder_id);
 
-      queryParams.append("include_unread_counts", "true");
-
       const queryString = queryParams.toString();
       return this.get<Feed[]>(
         `/api/feeds/${queryString ? `?${queryString}` : ""}`,
       );
     },
+    getFeedUnreadCounts: () => this.get<FeedUnreadCounts>("/api/feeds/unread-counts"),
     getFeed: (id: string) => this.get<Feed>(`/api/feeds/${id}`),
     createFeed: (
       data: { url: string; folder_id?: string },
@@ -556,15 +557,7 @@ export class ApiClient {
         total_count: number | null;
       }>(`/api/articles/read-later${queryString ? `?${queryString}` : ""}`);
     },
-    getUnreadCounts: (folderId?: string) => {
-      const queryParams = new URLSearchParams();
-      if (folderId) queryParams.append("folder_id", folderId);
-
-      const queryString = queryParams.toString();
-      return this.get(
-        `/api/articles/unread-counts${queryString ? `?${queryString}` : ""}`,
-      );
-    },
+    getUnreadCounts: () => this.get<UnreadCounts>("/api/articles/unread-counts"),
     getArticle: (id: string) => this.get(`/api/articles/${id}`),
     updateArticle: (
       id: string,

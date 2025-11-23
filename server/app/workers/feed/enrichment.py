@@ -353,11 +353,10 @@ async def batch_enrich_feeds() -> dict[str, Any]:
             # Initialize enrichment service (no DB needed - just helper methods)
             enrichment_service = FeedEnrichmentService()
 
-            # Prepare feed data for batch processing
-            feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
-                feeds_to_enrich, enrichment_service
-            )
-        # Connection released - available for other tasks!
+        # Prepare feed data for batch processing
+        feed_data_list, feed_snapshot_list = prepare_feed_snapshots(
+            feeds_to_enrich, enrichment_service
+        )
 
         # ================================================================
         # PHASE 2: External API calls without holding DB connection (10-60s)

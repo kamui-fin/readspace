@@ -8,7 +8,7 @@ import {
     useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { useModalStore } from "@/lib/stores/modal-store"
-import { useFeeds, useFolders, useUnreadCounts } from "@readspace/shared"
+import { useFeeds, useFeedUnreadCounts, useFolders, useUnreadCounts } from "@readspace/shared"
 import {
     BookmarkIcon,
     Compass,
@@ -53,26 +53,11 @@ export function FeedsNavigation({
     isMobile: boolean
     toggleSidebar: () => void
 }) {
-    // Data queries with optimized cache configuration
-    const { data: folders, isLoading: isFoldersLoading } = useFolders({
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes
-    })
-    const { data: feeds, isLoading: isFeedsLoading } = useFeeds(
-        {},
-        {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000, // 5 minutes
-        }
-    )
-    const { data: unreadCounts, isLoading: isUnreadCountsLoading } =
-        useUnreadCounts(undefined, {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000, // 5 minutes
-        })
+    // Data queries - using global defaults for caching
+    const { data: folders, isLoading: isFoldersLoading } = useFolders()
+    const { data: feeds, isLoading: isFeedsLoading } = useFeeds({})
+    const { data: unreadCounts } = useUnreadCounts()
+    const { data: feedUnreadCounts } = useFeedUnreadCounts()
 
     // Loading state
     const isSidebarLoading = isFoldersLoading
@@ -110,23 +95,40 @@ export function FeedsNavigation({
     )
     const typedFeeds = React.useMemo(
         () =>
-            (feeds as Array<{
+            ((feeds as Array<{
                 id: string
                 title: string
                 folder_id: string | null
-                unread_count?: number
                 image_url?: string
                 is_favorite?: boolean
-            }>) || [],
-        [feeds]
+            }>) || []).map(feed => ({
+                ...feed,
+                unread_count: feedUnreadCounts?.[feed.id] ?? 0
+            })),
+        [feeds, feedUnreadCounts]
     )
     const typedUnreadCounts = React.useMemo(
-        () =>
-            (unreadCounts as {
+        () => {
+            const counts = (unreadCounts as {
                 total_unread?: number
-                unread_by_folder?: Record<string, number>
-            }) || {},
-        [unreadCounts]
+                read_later_count?: number
+                today_count?: number
+            }) || {}
+
+            // Calculate per-folder counts from feedUnreadCounts
+            const unread_by_folder: Record<string, number> = {}
+            typedFeeds.forEach(feed => {
+                if (feed.folder_id) {
+                    unread_by_folder[feed.folder_id] = (unread_by_folder[feed.folder_id] || 0) + (feed.unread_count || 0)
+                }
+            })
+
+            return {
+                ...counts,
+                unread_by_folder
+            }
+        },
+        [unreadCounts, typedFeeds]
     )
 
     // Group feeds by folder

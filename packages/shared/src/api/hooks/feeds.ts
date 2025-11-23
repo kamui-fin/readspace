@@ -15,12 +15,12 @@ import type {
   CheckArticleSavedResponse,
   CursorPaginatedResponse,
   Feed,
+  FeedUnreadCounts,
   Folder,
   ImportTaskStatus,
   OPMLImportResponse,
   PaginatedResponse,
   SaveArticleResponse,
-  SidebarData,
   Subscription,
   UnreadCounts
 } from "../types";
@@ -160,7 +160,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       { folderId: string; name: string },
       {
         previousFolders: Folder[] | undefined;
-        previousSidebarData: SidebarData | undefined;
         folderId: string;
         name: string;
       }
@@ -175,16 +174,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.FOLDERS],
         });
-        await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-        });
 
         // Snapshot the previous values
         const previousFolders = queryClient.getQueryData<Folder[]>([
           RSS_QUERY_KEYS.FOLDERS,
-        ]);
-        const previousSidebarData = queryClient.getQueryData<SidebarData>([
-          RSS_QUERY_KEYS.SIDEBAR_DATA,
         ]);
 
         // Optimistically update the folder name in folders cache
@@ -198,23 +191,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Optimistically update the folder name in sidebar data
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.SIDEBAR_DATA],
-          (old: SidebarData | undefined) => {
-            if (!old) return old;
-            return {
-              ...old,
-              folders: old.folders
-                ? old.folders.map((folder: Folder) =>
-                  folder.id === folderId ? { ...folder, name } : folder,
-                )
-                : [],
-            };
-          },
-        );
-
-        return { previousFolders, previousSidebarData, folderId, name };
+        return { previousFolders, folderId, name };
       },
       onError: (_, __, context) => {
         // Rollback on error
@@ -222,12 +199,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryClient.setQueryData(
             [RSS_QUERY_KEYS.FOLDERS],
             context.previousFolders,
-          );
-        }
-        if (context?.previousSidebarData) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.SIDEBAR_DATA],
-            context.previousSidebarData,
           );
         }
         config.showError?.("Failed to rename folder");
@@ -246,9 +217,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       string,
       {
         previousFolders: Folder[] | undefined;
-        previousSidebarData: SidebarData | undefined;
         previousFeeds: Feed[] | undefined;
-        previousUnreadCounts: UnreadCounts | undefined;
         folderId: string;
       }
     >,
@@ -269,27 +238,15 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryKey: [RSS_QUERY_KEYS.FOLDERS],
         });
         await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
-        });
-        await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
-        });
-        await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
         });
 
         // Snapshot the previous values
         const previousFolders = queryClient.getQueryData<Folder[]>([
           RSS_QUERY_KEYS.FOLDERS,
         ]);
-        const previousSidebarData = queryClient.getQueryData<SidebarData>([
-          RSS_QUERY_KEYS.SIDEBAR_DATA,
-        ]);
         const previousFeeds = queryClient.getQueryData<Feed[]>([
           RSS_QUERY_KEYS.FEEDS,
-        ]);
-        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
-          RSS_QUERY_KEYS.UNREAD_COUNTS,
         ]);
 
         // Optimistically remove the folder from all caches
@@ -298,23 +255,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           (old: Folder[] | undefined) => {
             if (!old) return [];
             return old.filter((folder: Folder) => folder.id !== folderId);
-          },
-        );
-
-        // Remove folder and its feeds from sidebar data
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.SIDEBAR_DATA],
-          (old: SidebarData | undefined) => {
-            if (!old) return old;
-            return {
-              ...old,
-              folders: old.folders
-                ? old.folders.filter((folder: Folder) => folder.id !== folderId)
-                : [],
-              feeds: old.feeds
-                ? old.feeds.filter((feed: Feed) => feed.folder_id !== folderId)
-                : [],
-            };
           },
         );
 
@@ -327,26 +267,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Update unread counts to remove counts for this folder
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.UNREAD_COUNTS],
-          (old: UnreadCounts | undefined) => {
-            if (!old) return old;
-            // Remove folder-specific unread counts
-            const newCounts = { ...old };
-            if (newCounts.unread_by_folder) {
-              const { [folderId]: _, ...remainingFolders } = newCounts.unread_by_folder;
-              newCounts.unread_by_folder = remainingFolders;
-            }
-            return newCounts;
-          },
-        );
-
         return {
           previousFolders,
-          previousSidebarData,
           previousFeeds,
-          previousUnreadCounts,
           folderId,
         };
       },
@@ -358,22 +281,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             context.previousFolders,
           );
         }
-        if (context?.previousSidebarData) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.SIDEBAR_DATA],
-            context.previousSidebarData,
-          );
-        }
         if (context?.previousFeeds) {
           queryClient.setQueryData(
             [RSS_QUERY_KEYS.FEEDS],
             context.previousFeeds,
-          );
-        }
-        if (context?.previousUnreadCounts) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            context.previousUnreadCounts,
           );
         }
         config.showError?.("Failed to delete folder");
@@ -385,6 +296,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         // Invalidate unread counts to ensure they're refreshed
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
         });
         // Invalidate articles to refetch current view
         queryClient.invalidateQueries({
@@ -755,7 +669,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       },
       {
         previousFeeds: Feed[] | undefined;
-        previousUnreadCounts: UnreadCounts | undefined;
         feedId: string;
       }
     >,
@@ -781,16 +694,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
         });
-        await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-        });
 
         // Snapshot the previous values
         const previousFeeds = queryClient.getQueryData<Feed[]>([
           RSS_QUERY_KEYS.FEEDS,
-        ]);
-        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
-          RSS_QUERY_KEYS.UNREAD_COUNTS,
         ]);
 
         // Optimistically remove the feed from feeds list
@@ -802,48 +709,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Get the feed being deleted to remove its unread count
-        const feedBeingDeleted = Array.isArray(previousFeeds)
-          ? (previousFeeds as Feed[]).find((feed: Feed) => feed.id === feedId)
-          : (null as Feed | null);
-
-        // Optimistically update unread counts
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.UNREAD_COUNTS],
-          (old: UnreadCounts | undefined) => {
-            if (!old || !feedBeingDeleted) return old;
-
-            const updatedCounts = { ...old };
-
-            // Reduce total unread count
-            if (updatedCounts.total_unread && feedBeingDeleted.unread_count) {
-              updatedCounts.total_unread = Math.max(
-                0,
-                updatedCounts.total_unread - feedBeingDeleted.unread_count,
-              );
-            }
-
-            // Reduce folder unread count if the feed was in a folder
-            if (
-              updatedCounts.unread_by_folder &&
-              feedBeingDeleted.folder_id &&
-              feedBeingDeleted.unread_count
-            ) {
-              const currentFolderCount = updatedCounts.unread_by_folder[feedBeingDeleted.folder_id] || 0;
-              updatedCounts.unread_by_folder = {
-                ...updatedCounts.unread_by_folder,
-                [feedBeingDeleted.folder_id]: Math.max(
-                  0,
-                  currentFolderCount - feedBeingDeleted.unread_count,
-                ),
-              };
-            }
-
-            return updatedCounts;
-          },
-        );
-
-        return { previousFeeds, previousUnreadCounts, feedId };
+        return { previousFeeds, feedId };
       },
       onError: (_, { silent }, context) => {
         // Rollback on error
@@ -851,12 +717,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryClient.setQueryData(
             [RSS_QUERY_KEYS.FEEDS],
             context.previousFeeds,
-          );
-        }
-        if (context?.previousUnreadCounts) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            context.previousUnreadCounts,
           );
         }
         if (!silent) {
@@ -872,6 +732,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         // Invalidate unread counts to ensure they're refreshed
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
         });
         // Invalidate articles to refetch current view
         queryClient.invalidateQueries({
@@ -902,7 +765,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       },
       {
         previousFeeds: Feed[] | undefined;
-        previousUnreadCounts: UnreadCounts | undefined;
         feedId: string;
       }
     >,
@@ -928,16 +790,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
         });
-        await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-        });
 
         // Snapshot the previous values
         const previousFeeds = queryClient.getQueryData<Feed[]>([
           RSS_QUERY_KEYS.FEEDS,
-        ]);
-        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
-          RSS_QUERY_KEYS.UNREAD_COUNTS,
         ]);
 
         // Optimistically remove the feed from feeds list
@@ -949,48 +805,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Get the feed being deleted to remove its unread count
-        const feedBeingDeleted = Array.isArray(previousFeeds)
-          ? (previousFeeds as Feed[]).find((feed: Feed) => feed.id === feedId)
-          : (null as Feed | null);
-
-        // Optimistically update unread counts
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.UNREAD_COUNTS],
-          (old: UnreadCounts | undefined) => {
-            if (!old || !feedBeingDeleted) return old;
-
-            const updatedCounts = { ...old };
-
-            // Reduce total unread count
-            if (updatedCounts.total_unread && feedBeingDeleted.unread_count) {
-              updatedCounts.total_unread = Math.max(
-                0,
-                updatedCounts.total_unread - feedBeingDeleted.unread_count,
-              );
-            }
-
-            // Reduce folder unread count if the feed was in a folder
-            if (
-              updatedCounts.unread_by_folder &&
-              feedBeingDeleted.folder_id &&
-              feedBeingDeleted.unread_count
-            ) {
-              const currentFolderCount = updatedCounts.unread_by_folder[feedBeingDeleted.folder_id] || 0;
-              updatedCounts.unread_by_folder = {
-                ...updatedCounts.unread_by_folder,
-                [feedBeingDeleted.folder_id]: Math.max(
-                  0,
-                  currentFolderCount - feedBeingDeleted.unread_count,
-                ),
-              };
-            }
-
-            return updatedCounts;
-          },
-        );
-
-        return { previousFeeds, previousUnreadCounts, feedId };
+        return { previousFeeds, feedId };
       },
       onError: (_, { silent }, context) => {
         // Rollback on error
@@ -998,12 +813,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryClient.setQueryData(
             [RSS_QUERY_KEYS.FEEDS],
             context.previousFeeds,
-          );
-        }
-        if (context?.previousUnreadCounts) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            context.previousUnreadCounts,
           );
         }
         if (!silent) {
@@ -1019,6 +828,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         // Invalidate unread counts to ensure they're refreshed
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
         });
         // Invalidate articles to refetch current view
         queryClient.invalidateQueries({
@@ -1046,7 +858,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
       { feedIds: string[] },
       {
         previousFeeds: Feed[] | undefined;
-        previousUnreadCounts: UnreadCounts | undefined;
       }
     >,
   ) {
@@ -1059,16 +870,10 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         await queryClient.cancelQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
         });
-        await queryClient.cancelQueries({
-          queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-        });
 
         // Snapshot previous values
         const previousFeeds = queryClient.getQueryData<Feed[]>([
           RSS_QUERY_KEYS.FEEDS,
-        ]);
-        const previousUnreadCounts = queryClient.getQueryData<UnreadCounts>([
-          RSS_QUERY_KEYS.UNREAD_COUNTS,
         ]);
 
         // Optimistically remove feeds
@@ -1080,56 +885,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           },
         );
 
-        // Get feeds being deleted for unread count updates
-        const feedsBeingDeleted = Array.isArray(previousFeeds)
-          ? (previousFeeds as Feed[]).filter((feed: Feed) =>
-            feedIds.includes(feed.id),
-          )
-          : [];
-
-        // Optimistically update unread counts
-        queryClient.setQueryData(
-          [RSS_QUERY_KEYS.UNREAD_COUNTS],
-          (old: UnreadCounts | undefined) => {
-            if (!old || feedsBeingDeleted.length === 0) return old;
-
-            const updatedCounts = { ...old };
-            const totalUnreadReduction = feedsBeingDeleted.reduce(
-              (sum, feed) => sum + (feed.unread_count || 0),
-              0,
-            );
-
-            // Reduce total unread count
-            if (updatedCounts.total_unread) {
-              updatedCounts.total_unread = Math.max(
-                0,
-                updatedCounts.total_unread - totalUnreadReduction,
-              );
-            }
-
-            // Reduce folder unread counts
-            if (updatedCounts.unread_by_folder) {
-              const folderReductions: Record<string, number> = {};
-              feedsBeingDeleted.forEach((feed) => {
-                if (feed.folder_id && feed.unread_count) {
-                  folderReductions[feed.folder_id] =
-                    (folderReductions[feed.folder_id] || 0) + feed.unread_count;
-                }
-              });
-
-              const newUnreadByFolder = { ...updatedCounts.unread_by_folder };
-              Object.entries(folderReductions).forEach(([folderId, reduction]) => {
-                const currentCount = newUnreadByFolder[folderId] || 0;
-                newUnreadByFolder[folderId] = Math.max(0, currentCount - reduction);
-              });
-              updatedCounts.unread_by_folder = newUnreadByFolder;
-            }
-
-            return updatedCounts;
-          },
-        );
-
-        return { previousFeeds, previousUnreadCounts };
+        return { previousFeeds };
       },
       onError: (_, __, context) => {
         // Rollback on error
@@ -1137,12 +893,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
           queryClient.setQueryData(
             [RSS_QUERY_KEYS.FEEDS],
             context.previousFeeds,
-          );
-        }
-        if (context?.previousUnreadCounts) {
-          queryClient.setQueryData(
-            [RSS_QUERY_KEYS.UNREAD_COUNTS],
-            context.previousUnreadCounts,
           );
         }
         config.showError?.("Failed to delete feeds");
@@ -1159,6 +909,9 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+        });
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
         });
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
@@ -1321,21 +1074,37 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
   }
 
   function useUnreadCounts(
-    folderId?: string,
     options?: Omit<
       UseQueryOptions<
         UnreadCounts,
         Error,
         UnreadCounts,
-        [string, string | undefined]
+        [string]
       >,
       "queryKey" | "queryFn"
     >,
   ) {
     return useQuery({
-      queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS, folderId],
-      queryFn: () =>
-        ApiClient.rss.getUnreadCounts(folderId) as Promise<UnreadCounts>,
+      queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+      queryFn: () => ApiClient.rss.getUnreadCounts(),
+      ...options,
+    });
+  }
+
+  function useFeedUnreadCounts(
+    options?: Omit<
+      UseQueryOptions<
+        FeedUnreadCounts,
+        Error,
+        FeedUnreadCounts,
+        [string]
+      >,
+      "queryKey" | "queryFn"
+    >,
+  ) {
+    return useQuery({
+      queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
+      queryFn: () => ApiClient.rss.getFeedUnreadCounts(),
       ...options,
     });
   }
@@ -1601,7 +1370,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
 
           // Only update if something changed
           if (isReadChanged || isReadLaterChanged) {
-            // Update ALL unread count queries (with different folderId parameters)
+            // Update ALL unread count queries
             queryClient.setQueriesData(
               { queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS] },
               (old: UnreadCounts | undefined) => {
@@ -1614,15 +1383,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
                   updated.total_unread = Math.max(0, updated.total_unread + readDelta);
                 }
 
-                // Update folder unread count if is_read changed and article has a folder
-                if (isReadChanged && updated.unread_by_folder && previousArticle.folder_id) {
-                  const currentFolderCount = updated.unread_by_folder[previousArticle.folder_id] || 0;
-                  updated.unread_by_folder = {
-                    ...updated.unread_by_folder,
-                    [previousArticle.folder_id]: Math.max(0, currentFolderCount + readDelta),
-                  };
-                }
-
                 // Update read_later_count if is_read_later changed
                 if (isReadLaterChanged && updated.read_later_count !== undefined) {
                   updated.read_later_count = Math.max(0, updated.read_later_count + readLaterDelta);
@@ -1631,21 +1391,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
                 return updated;
               },
             );
-
-            // Update feed unread count if is_read changed
-            if (isReadChanged && previousArticle.feed_id) {
-              queryClient.setQueryData(
-                [RSS_QUERY_KEYS.FEEDS],
-                (old: Feed[] | undefined) => {
-                  if (!old) return old;
-                  return old.map((feed: Feed) =>
-                    feed.id === previousArticle.feed_id
-                      ? { ...feed, unread_count: Math.max(0, (feed.unread_count || 0) + readDelta) }
-                      : feed,
-                  );
-                },
-              );
-            }
           }
         }
 
@@ -1713,6 +1458,11 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
             query.queryKey[0] === RSS_QUERY_KEYS.UNREAD_COUNTS,
         });
 
+        // Invalidate feed unread counts
+        queryClient.invalidateQueries({
+          queryKey: [RSS_QUERY_KEYS.FEED_UNREAD_COUNTS],
+        });
+
         // Invalidate article lists
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.ARTICLES],
@@ -1721,11 +1471,6 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
         // Invalidate feeds
         queryClient.invalidateQueries({
           queryKey: [RSS_QUERY_KEYS.FEEDS],
-        });
-
-        // Invalidate sidebar data
-        queryClient.invalidateQueries({
-          queryKey: [RSS_QUERY_KEYS.SIDEBAR_DATA],
         });
       },
       ...options,
@@ -1997,6 +1742,7 @@ function createFeedHooks(userConfig: FeedHooksConfig = {}) {
     useRecentlyReadArticles,
     useReadLaterArticles,
     useUnreadCounts,
+    useFeedUnreadCounts,
     useArticle,
     useSubscribeToFeed,
     useUpdateArticle,
@@ -2043,6 +1789,7 @@ export const {
   useRecentlyReadArticles,
   useReadLaterArticles,
   useUnreadCounts,
+  useFeedUnreadCounts,
   useArticle,
   useSubscribeToFeed,
   useUpdateArticle,

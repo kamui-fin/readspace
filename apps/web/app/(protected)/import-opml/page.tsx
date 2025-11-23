@@ -1,4 +1,4 @@
-import "@/lib/configure-api-client"
+import "@/lib/api-client"
 import { getQueryClient } from "@/lib/get-query-client"
 import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"

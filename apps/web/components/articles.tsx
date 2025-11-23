@@ -122,23 +122,12 @@ export function ArticlesView({
     const isMobile = useIsMobile()
     const queryClient = useQueryClient()
 
-    // Data queries - optimized with conditional enabling
-    const { data: allUserFeeds } = useFeeds(
-        {},
-        {
-            refetchOnMount: false,
-            refetchOnWindowFocus: false,
-            staleTime: 5 * 60 * 1000,
-            enabled: true, // Always needed for unread count calculations
-        }
-    )
+    // Data queries - using global defaults, only override when needed
+    const { data: allUserFeeds } = useFeeds({})
 
     // Fetch folders data only when viewing a specific folder
     const { data: allFolders } = useFolders({
         enabled: !!folderId,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000,
     })
 
     // Fetch feed data only when viewing a specific feed to check subscription status
@@ -149,21 +138,13 @@ export function ArticlesView({
         isLoading: isFeedLoading,
     } = useFeed(feedId || "", {
         enabled: !!feedId && !isPreviewRefreshing,
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000,
     })
 
     // Use preview feed data if available, otherwise use fetched data
     const feedData = previewFeedData || fetchedFeedData
 
-    // Unread counts query - only when needed for badges
-    const { data: unreadCounts } = useUnreadCounts(undefined, {
-        refetchOnMount: false,
-        refetchOnWindowFocus: false,
-        staleTime: 5 * 60 * 1000,
-        enabled: true, // Always needed for badges
-    })
+    // Unread counts query
+    const { data: unreadCounts } = useUnreadCounts()
 
     // Current article data
     const { data: currentArticle } = useArticle(selectedArticleId || "", {
