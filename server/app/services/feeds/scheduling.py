@@ -5,7 +5,6 @@ Intelligently calculates optimal fetch intervals based on feed publication patte
 """
 
 import random
-
 import structlog
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +15,8 @@ from app.core.constants import (
     MAX_REFRESH_INTERVAL_MINUTES,
     MIN_REFRESH_INTERVAL_MINUTES,
 )
-from app.models import ArticleContent, Feed, FeedArticle
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed
 
 logger = structlog.get_logger(__name__)
 

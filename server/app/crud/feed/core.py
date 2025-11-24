@@ -176,6 +176,18 @@ async def update_feed_after_fetch(
     return feed
 
 
+async def update_feed(db: AsyncSession, *, feed: Feed, update_data: dict) -> Feed:
+    """Update feed with provided data dictionary."""
+    for key, value in update_data.items():
+        if hasattr(feed, key):
+            setattr(feed, key, value)
+    
+    db.add(feed)
+    await db.flush()
+    await db.refresh(feed)
+    return feed
+
+
 async def update_enrichment_data(db: AsyncSession, *, feed: Feed, enrichment: dict) -> Feed:
     """Update AI-derived metadata (Categories, Tags)."""
     if "top_level_category" in enrichment:

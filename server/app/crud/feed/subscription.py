@@ -40,13 +40,16 @@ async def get_initial_cutoff(db: AsyncSession, feed_id: UUID) -> datetime | None
 
 
 async def create_subscription(
-    db: AsyncSession, *, user_id: UUID, subscription_in: SubscriptionCreate
+    db: AsyncSession, *, user_id: UUID, subscription_in: SubscriptionCreate, feed_db: Feed | None = None
 ) -> FeedSubscription:
-    # 1. Resolve Feed (using core.py logic)
-    normalized_url = normalize_url(str(subscription_in.url))
-    feed = await get_feed_by_url(db, url=normalized_url)
+    # 1. Resolve Feed (using core.py logic or provided feed_db)
+    if feed_db:
+        feed = feed_db
+    else:
+        normalized_url = normalize_url(str(subscription_in.url))
+        feed = await get_feed_by_url(db, url=normalized_url)
 
-    if not feed:
+        if not feed:
         # Functional call to create the global feed if it doesn't exist
         from app.schemas.feeds import FeedBase
 
@@ -88,8 +91,24 @@ async def create_subscription(
     return sub
 
 
+async def get_subscription_by_feed_id(
+    db: AsyncSession, *, feed_id: UUID, user_id: UUID
+) -> FeedSubscription | None:
+    """Get subscription by feed_id and user_id."""
+    stmt = (
+        select(FeedSubscription)
+        .options(
+            joinedload(FeedSubscription.feed).load_only(*SUBSCRIPTION_FEED_COLUMNS),
+            joinedload(FeedSubscription.folder),
+        )
+        .filter(FeedSubscription.feed_id == feed_id, FeedSubscription.user_id == user_id)
+    )
+    result = await db.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def get_subscriptions_by_user(
-    db: AsyncSession, *, user_id: UUID, skip: int = 0, limit: int = 100
+    db: AsyncSession, *, user_id: UUID, folder_id: UUID | None = None, skip: int = 0, limit: int = 100
 ) -> list[FeedSubscription]:
     stmt = (
         select(FeedSubscription)
@@ -98,10 +117,11 @@ async def get_subscriptions_by_user(
             joinedload(FeedSubscription.folder),
         )
         .filter(FeedSubscription.user_id == user_id)
-        .order_by(FeedSubscription.custom_title.asc().nulls_last(), FeedSubscription.created_at.desc())
-        .offset(skip)
-        .limit(limit)
     )
+    if folder_id is not None:
+        stmt = stmt.filter(FeedSubscription.folder_id == folder_id)
+    stmt = stmt.order_by(FeedSubscription.custom_title.asc().nulls_last(), FeedSubscription.created_at.desc())
+    stmt = stmt.offset(skip).limit(limit)
     result = await db.execute(stmt)
     return list(result.scalars().all())
 

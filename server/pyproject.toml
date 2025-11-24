@@ -131,6 +131,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*" = ["S101", "S106", "S113"]  # Allow assert, hardcoded secrets in tests
 
+[tool.pyright]
+venvPath = "."
+venv = ".venv"
+
 [tool.mypy]
 python_version = "3.10"
 warn_return_any = true

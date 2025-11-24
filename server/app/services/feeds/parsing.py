@@ -1,23 +1,21 @@
 """
-Article extraction service for RSS/Atom feed entries.
-
-Uses `nh3` (Ammonia) for high-performance HTML sanitization.
+Feed parsing module.
+Strictly handles CPU-bound parsing and data extraction.
+Zero DB dependencies.
 """
 
-import re
-from datetime import datetime, timezone
-from typing import Any
-from urllib.parse import urljoin
-from uuid import UUID
-
-import nh3
+import feedparser  # type: ignore
 import structlog
+from typing import Any, Optional, TypedDict
+from datetime import datetime, timezone
+from urllib.parse import urljoin, urlparse
+import re
+import nh3  # type: ignore
 from bs4 import BeautifulSoup
-
 from dateutil import parser as date_parser
 
-from app.schemas import ArticleCreate
-from app.utils.reading_time import calculate_reading_time
+from app.typing.articles import ArticleCreate
+from app.utils.text import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
@@ -25,7 +23,6 @@ logger = structlog.get_logger(__name__)
 # CONFIGURATION
 # ==============================================================================
 
-# Tags allowed in the reader
 ALLOWED_TAGS = {
     "a",
     "abbr",
@@ -64,48 +61,99 @@ ALLOWED_TAGS = {
     "figcaption",
 }
 
-# Attributes allowed per tag
 ALLOWED_ATTRIBUTES = {
     "a": {"href", "title", "target"},
     "img": {"src", "alt", "title", "width", "height"},
     "video": {"src", "controls", "poster"},
     "source": {"src", "type"},
-    "code": {"class"},  # Useful for syntax highlighting if you have it
+    "code": {"class"},
     "span": {"class"},
     "div": {"class"},
 }
 
+
+class ParsedFeed(TypedDict):
+    title: str
+    description: Optional[str]
+    link: Optional[str]
+    language: Optional[str]
+    image_url: Optional[str]
+    ttl: Optional[int]
+    articles: list[ArticleCreate]
+    version: str
+
+
+def parse_feed_content(content: str, url: str) -> ParsedFeed:
+    """
+    Parse raw feed content into a structured format.
+    Handles RSS/Atom normalization.
+    """
+    parsed = feedparser.parse(content)
+
+    if parsed.bozo:
+        logger.warning("Feed parsed with errors", url=url, error=str(parsed.bozo_exception))
+
+    feed = parsed.feed
+
+    title = _clean_plain_text(feed.get("title", "")) or _extract_domain(url)
+    description = _clean_plain_text(feed.get("description") or feed.get("subtitle") or "")
+    link = feed.get("link") or url
+    language = (feed.get("language") or "en").split("-")[0].lower()
+
+    image_url = feed.get("image", {}).get("href") or feed.get("logo")
+
+    ttl = None
+    if "ttl" in feed:
+        try:
+            ttl = int(feed["ttl"])
+        except (ValueError, TypeError):
+            pass
+
+    articles: list[ArticleCreate] = []
+
+    for entry in parsed.entries:
+        try:
+            # No dummy_id needed as feed_id is Optional in ArticleCreate
+            article = _extract_article_data(entry, feed_url=url)
+            if article:
+                articles.append(article)
+        except Exception as e:
+            logger.warning("Failed to extract article", error=str(e))
+
+    return {
+        "title": title,
+        "description": description,
+        "link": link,
+        "language": language,
+        "image_url": image_url,
+        "ttl": ttl,
+        "articles": articles,
+        "version": parsed.version or "unknown",
+    }
+
+
 # ==============================================================================
-# CORE EXTRACTION LOGIC
+# EXTRACTION LOGIC (Adapted from rss_extractor.py)
 # ==============================================================================
 
 
-def extract_article_data(
-    entry: dict[str, Any], feed_id: UUID, user_id: UUID, feed_url: str | None = None
-) -> ArticleCreate:
+def _extract_article_data(entry: dict[str, Any], feed_url: str) -> Optional[ArticleCreate]:
     """
-    Main entry point to convert a raw feedparser entry into a clean ArticleCreate schema.
+    Convert a raw feedparser entry into a clean ArticleCreate schema.
     """
-    # 1. Title & Link
-    title = _clean_plain_text(entry.get("title", "Untitled Article"))[:500]
     link = _extract_link(entry)
+    if not link:
+        return None
 
-    # 2. GUID
+    title = _clean_plain_text(entry.get("title", "Untitled Article"))[:500]
     guid = _extract_guid(entry, fallback_link=link)
-
-    # 3. Dates
     published_at = _extract_published_date(entry)
 
-    # 4. Content Processing
+    # Content Processing
     raw_content = _get_best_content_candidate(entry)
-
-    # Resolve relative links FIRST, then Sanitize
     clean_content = _sanitize_and_fix_html(raw_content, base_url=feed_url or link)
-
-    # Summary
     summary = _create_summary(entry, clean_content)
 
-    # 5. Metadata
     author = _extract_author(entry)
     image_url = _extract_image_url(entry, clean_content, base_url=feed_url or link)
     read_time = min(calculate_reading_time(clean_content, default_wpm=200), 60) if clean_content else 1
@@ -120,118 +168,14 @@ def extract_article_data(
         guid=guid,
         image_url=image_url,
         estimated_read_time_minutes=read_time,
-        feed_id=feed_id,
-        user_id=user_id,
+        # feed_id is Optional and will be assigned in service layer
+        feed_id=None,
+        user_id=None,
     )
 
 
-# ==============================================================================
-# HELPERS: HTML & CONTENT
-# ==============================================================================
-
-
-def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
-    """
-    1. Resolves relative URLs using BeautifulSoup.
-    2. Sanitizes HTML using nh3 (Rust).
-    """
-    if not html_content:
-        return ""
-
-    # Step 1: Link Resolution (Pre-sanitization)
-    # nh3 is a sanitizer, not a DOM manipulator. We use BS4 strictly
-    # to fix relative URLs (e.g., src="/cat.png") before cleaning.
-    if base_url:
-        try:
-            soup = BeautifulSoup(html_content, "html.parser")
-            has_changes = False
-
-            # Fix Links
-            for tag in soup.find_all(["a", "img", "video", "source"]):
-                # Check href
-                if tag.has_attr("href"):
-                    val = tag["href"]
-                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
-                        tag["href"] = urljoin(base_url, val)
-                        has_changes = True
-
-                # Check src
-                if tag.has_attr("src"):
-                    val = tag["src"]
-                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
-                        tag["src"] = urljoin(base_url, val)
-                        has_changes = True
-
-            if has_changes:
-                html_content = str(soup)
-        except Exception:
-            # If parsing fails, we proceed to sanitization with the original content
-            # to ensure at least XSS protection is applied.
-            pass
-
-    # Step 2: Sanitization (nh3)
-    # This strips scripts, styles, iframes, and unknown attributes
-    try:
-        clean_html = nh3.clean(
-            html_content,
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRIBUTES,
-            url_schemes={"http", "https", "mailto", "data"},
-        )
-        return clean_html
-    except Exception as e:
-        logger.error("HTML sanitization failed", error=str(e))
-        return ""
-
-
-def _get_best_content_candidate(entry: dict) -> str:
-    """Find the longest/richest content field."""
-    if "content" in entry:
-        for c in entry["content"]:
-            if c.get("type") in ["text/html", "application/xhtml+xml", "html"]:
-                return c.get("value", "")
-        if len(entry["content"]) > 0:
-            return entry["content"][0].get("value", "")
-
-    if "summary_detail" in entry:
-        return entry["summary_detail"].get("value", "")
-
-    return entry.get("summary", "") or entry.get("description", "")
-
-
-def _create_summary(entry: dict, clean_html_content: str) -> str:
-    """Generate a plain-text summary."""
-    # 1. Prefer explicit summary
-    raw_summary = entry.get("summary", "")
-    if raw_summary:
-        summary = _clean_plain_text(raw_summary)
-        if len(summary) > 20:
-            return summary[:1000]
-
-    # 2. Fallback: Strip tags from clean HTML
-    # We use nh3.clean with empty tags set to strip everything efficiently
-    text = nh3.clean(clean_html_content, tags=set())
-    # Normalize whitespace
-    text = re.sub(r"\s+", " ", text).strip()
-
-    return text[:300] + "..." if len(text) > 300 else text
-
-
-def _clean_plain_text(text: Any) -> str:
-    """Strip all HTML and normalize whitespace for Titles."""
-    if not text:
-        return ""
-    if isinstance(text, dict):
-        text = text.get("value", "")
-
-    # Strip all tags
-    text = nh3.clean(str(text), tags=set())
-    return re.sub(r"\s+", " ", text).strip()
-
-
-# ==============================================================================
-# HELPERS: METADATA
-# ==============================================================================
+def _extract_link(entry: dict) -> str:
+    return entry.get("link", "") or ""
 
 
 def _extract_guid(entry: dict, fallback_link: str) -> str:
@@ -241,10 +185,6 @@ def _extract_guid(entry: dict, fallback_link: str) -> str:
     if not guid:
         guid = fallback_link
     return str(guid).strip()[:500]
-
-
-def _extract_link(entry: dict) -> str:
-    return entry.get("link", "") or ""
 
 
 def _extract_published_date(entry: dict) -> datetime:
@@ -266,6 +206,8 @@ def _extract_published_date(entry: dict) -> datetime:
     if date_str:
         try:
             dt = date_parser.parse(date_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
             return dt.astimezone(timezone.utc)
         except (ValueError, TypeError, ImportError):
             pass
@@ -273,22 +215,91 @@ def _extract_published_date(entry: dict) -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _get_best_content_candidate(entry: dict) -> str:
+    if "content" in entry:
+        for c in entry["content"]:
+            if c.get("type") in ["text/html", "application/xhtml+xml", "html"]:
+                return c.get("value", "")
+        if len(entry["content"]) > 0:
+            return entry["content"][0].get("value", "")
+
+    if "summary_detail" in entry:
+        return entry["summary_detail"].get("value", "")
+
+    return entry.get("summary", "") or entry.get("description", "")
+
+
+def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
+    if not html_content:
+        return ""
+
+    if base_url:
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            has_changes = False
+            for tag in soup.find_all(["a", "img", "video", "source"]):
+                if tag.has_attr("href"):
+                    val = tag["href"]
+                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                        tag["href"] = urljoin(base_url, val)
+                        has_changes = True
+                if tag.has_attr("src"):
+                    val = tag["src"]
+                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                        tag["src"] = urljoin(base_url, val)
+                        has_changes = True
+            if has_changes:
+                html_content = str(soup)
+        except Exception:
+            pass
+
+    try:
+        clean_html = nh3.clean(
+            html_content,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            url_schemes={"http", "https", "mailto", "data"},
+        )
+        return clean_html
+    except Exception as e:
+        logger.error("HTML sanitization failed", error=str(e))
+        return ""
+
+
+def _create_summary(entry: dict, clean_html_content: str) -> str:
+    raw_summary = entry.get("summary", "")
+    if raw_summary:
+        summary = _clean_plain_text(raw_summary)
+        if len(summary) > 20:
+            return summary[:1000]
+
+    text = nh3.clean(clean_html_content, tags=set())
+    text = re.sub(r"\s+", " ", text).strip()
+    return text[:300] + "..." if len(text) > 300 else text
+
+
+def _clean_plain_text(text: Any) -> str:
+    if not text:
+        return ""
+    if isinstance(text, dict):
+        text = text.get("value", "")
+    text = nh3.clean(str(text), tags=set())
+    return re.sub(r"\s+", " ", text).strip()
+
+
 def _extract_author(entry: dict) -> str | None:
     if "author_detail" in entry:
         name = entry["author_detail"].get("name")
         if name:
             return str(name)[:200]
-
     if "authors" in entry and isinstance(entry["authors"], list) and entry["authors"]:
         name = entry["authors"][0].get("name")
         if name:
             return str(name)[:200]
-
     for key in ["author", "dc_creator", "itunes_author"]:
         val = entry.get(key)
         if val and isinstance(val, str):
             return val[:200]
-
     return None
 
 
@@ -298,29 +309,31 @@ def _extract_image_url(entry: dict, clean_content: str, base_url: str | None) ->
             return urljoin(base_url, url)
         return url
 
-    # 1. Media/Enclosures
     if "media_content" in entry:
         for media in entry["media_content"]:
             if media.get("medium") == "image" or str(media.get("type")).startswith("image/"):
                 return resolve(media.get("url"))
-
     if "enclosures" in entry:
         for enc in entry["enclosures"]:
             if str(enc.get("type")).startswith("image/"):
                 return resolve(enc.get("href"))
-
     if "media_thumbnail" in entry:
         if isinstance(entry["media_thumbnail"], list) and entry["media_thumbnail"]:
             return resolve(entry["media_thumbnail"][0].get("url"))
 
-    # 2. Content Scrape
-    # We use the already cleaned content (which has resolved URLs)
     if clean_content:
         soup = BeautifulSoup(clean_content, "html.parser")
         for img in soup.find_all("img", src=True):
             src = img["src"]
             if "icon" in src or "emoji" in src:
                 continue
-            return src  # Already resolved in _sanitize_and_fix_html
+            return src
 
     return None
+
+
+def _extract_domain(url: str) -> str:
+    try:
+        return urlparse(url).netloc
+    except Exception:
+        return url
