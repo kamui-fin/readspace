@@ -17,20 +17,14 @@ async def get_profile_by_id(db: AsyncSession, *, user_id: UUID) -> Profile | Non
     return result.scalar_one_or_none()
 
 
-async def create_profile(db: AsyncSession, *, profile_in: ProfileCreate) -> Profile:
-    """Create a new profile"""
-    db_profile = Profile(**profile_in.model_dump())
-    db.add(db_profile)
-    await db.flush()
-    await db.refresh(db_profile)
-    return db_profile
+async def get_current_usage(db: AsyncSession, user_id: UUID, resource: str) -> int:
+    """
+    Get current usage count for a specific resource type.
+    """
+    if resource == "max_subscriptions":
+        query = select(func.count()).select_from(FeedSubscription).where(FeedSubscription.user_id == user_id)
+        result = await db.execute(query)
+        return result.scalar() or 0
 
-
-async def create_profile_if_not_exists(db: AsyncSession, *, user_id: UUID, email: str) -> Profile:
-    """Create profile if it doesn't exist, otherwise return existing"""
-    existing = await get_profile_by_id(db, user_id=user_id)
-    if existing:
-        return existing
-
-    profile_data = ProfileCreate(id=user_id, email=email)
-    return await create_profile(db, profile_in=profile_data)
+    # Add other resources here as needed (e.g. max_bookmarks, max_daily_reads)
+    return 0

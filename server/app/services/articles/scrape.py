@@ -1,10 +1,19 @@
-"""Service for extracting full text content from article URLs."""
+"""
+Service for extracting full text content from article URLs.
+
+Uses:
+1. Trafilatura: For main content extraction (noise removal).
+2. BeautifulSoup: For DOM-specific cleanup (removing duplicate titles/images).
+3. nh3: For security sanitization (XSS prevention).
+"""
 
 import asyncio
 import re
 import time
 from copy import deepcopy
+from urllib.parse import urlparse
 
+import nh3
 import structlog
 import trafilatura  # type: ignore[import-untyped]
 from bs4 import BeautifulSoup
@@ -15,206 +24,229 @@ from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
 
-class ContentExtractionService:
-    """Service for extracting full article content from URLs using trafilatura."""
+# Allow-list for nh3 sanitization
+ALLOWED_TAGS = {
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+    "video",
+    "source",
+    "figure",
+    "figcaption",
+}
 
-    def __init__(self):
-        """Initialize the content extraction service with custom timeout config."""
-        # Create custom config with shorter timeout and no retries
-        self.config = deepcopy(DEFAULT_CONFIG)
-        self.config["DEFAULT"]["DOWNLOAD_TIMEOUT"] = str(CONTENT_EXTRACTION_TIMEOUT)
-        self.config["DEFAULT"]["MAX_REDIRECTS"] = "2"
+ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "img": {"src", "alt", "title", "width", "height"},
+    "video": {"src", "controls", "poster"},
+    "source": {"src", "type"},
+    "code": {"class"},
+    "span": {"class"},
+    "div": {"class"},
+}
 
-    def _remove_duplicate_title_heading(self, html_content: str, article_title: str | None) -> str:
-        """
-        Remove the first heading if it exactly matches the article title.
 
-        Args:
-            html_content: The extracted HTML content
-            article_title: The article title to compare against
+def _get_trafilatura_config() -> dict:
+    """Create custom config with shorter timeout and no retries."""
+    config = deepcopy(DEFAULT_CONFIG)
+    config["DEFAULT"]["DOWNLOAD_TIMEOUT"] = str(CONTENT_EXTRACTION_TIMEOUT)
+    config["DEFAULT"]["MAX_REDIRECTS"] = "2"
+    # Minimize noise
+    config["DEFAULT"]["deduplicate"] = "yes"
+    return config
 
-        Returns:
-            Modified HTML content with duplicate title heading removed if found
-        """
-        if not article_title or not html_content:
-            return html_content
 
-        try:
-            soup = BeautifulSoup(html_content, "html.parser")
+# ==============================================================================
+# DOM MANIPULATION HELPERS (BeautifulSoup)
+# ==============================================================================
 
-            # Find the first heading element (h1-h6)
-            first_heading = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
 
-            if first_heading:
-                # Normalize both texts for comparison: strip whitespace, collapse multiple spaces
-                heading_text = re.sub(r"\s+", " ", first_heading.get_text().strip())
-                title_text = re.sub(r"\s+", " ", article_title.strip())
+def _urls_match(url1: str | None, url2: str | None) -> bool:
+    """
+    Compare two URLs loosely to check if they point to the same image.
+    Ignores scheme (http/https) to be safe.
+    """
+    if not url1 or not url2:
+        return False
 
-                # If they match exactly (case-sensitive), remove the heading
-                if heading_text == title_text:
-                    logger.debug(
-                        "Removing duplicate title heading",
-                        heading_text=heading_text,
-                        title=title_text,
-                    )
-                    first_heading.decompose()
-                    return str(soup)
+    try:
+        u1 = urlparse(url1)
+        u2 = urlparse(url2)
+        # Compare netloc + path. Ignore scheme and query params (often dynamic sizing)
+        return (u1.netloc == u2.netloc) and (u1.path == u2.path)
+    except Exception:
+        return url1 == url2
 
-            return html_content
 
-        except Exception as e:
-            logger.warning(
-                "Failed to remove duplicate title heading",
-                error=str(e),
-                exc_info=True,
-            )
-            # Return original content if parsing fails
-            return html_content
+def _remove_duplicate_title_heading(soup: BeautifulSoup, article_title: str | None) -> None:
+    """
+    Remove the first heading if it matches the article title.
+    Mutates the soup object.
+    """
+    if not article_title:
+        return
 
-    async def extract_full_content(
-        self, url: str, article_title: str | None = None
-    ) -> tuple[str | None, int | None, str | None]:
-        """
-        Extract full text content from the article's original URL using trafilatura.
+    try:
+        # Find the first heading element (h1-h6)
+        first_heading = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
 
-        This method fetches the complete article content from the source URL,
-        which is useful when the RSS feed only provides a summary or excerpt.
-        It also removes duplicate title headings if the first heading matches the article title.
+        if first_heading:
+            # Normalize text for comparison
+            heading_text = re.sub(r"\s+", " ", first_heading.get_text().strip())
+            title_text = re.sub(r"\s+", " ", article_title.strip())
 
-        The extraction is subject to a timeout (default 15 seconds) to prevent hanging
-        on slow or unresponsive websites. If the timeout is exceeded, the extraction
-        fails gracefully and returns the original feed content.
+            # Check for exact match or strong containment
+            if heading_text.lower() == title_text.lower():
+                logger.debug("Removing duplicate title heading", text=heading_text)
+                first_heading.decompose()
+    except Exception as e:
+        logger.warning("Error removing duplicate title", error=str(e))
 
-        Args:
-            url: The URL to extract content from
-            article_title: Optional article title to check for duplicate headings
 
-        Returns:
-            A tuple of (content, read_time, error_message):
-            - content: Extracted HTML content or None if extraction failed
-            - read_time: Estimated reading time in minutes (capped at 60) or None
-            - error_message: Error description if extraction failed, None otherwise
+def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> None:
+    """
+    Remove an <img> tag from the body if it matches the main_image_url.
+    This prevents showing the Hero Image twice (once in UI header, once in body).
+    Mutates the soup object.
+    """
+    if not main_image_url:
+        return
 
-        Examples:
-            >>> service = ContentExtractionService()
-            >>> content, read_time, error = await service.extract_full_content(
-            ...     "https://example.com",
-            ...     "My Article Title"
-            ... )
-            >>> if content:
-            ...     print(f"Extracted {len(content)} chars, {read_time} min read")
-        """
-        start_time = time.perf_counter()
+    try:
+        images = soup.find_all("img", src=True)
+        for img in images:
+            if _urls_match(img["src"], main_image_url):
+                logger.debug("Removing duplicate hero image from body", src=img["src"])
+                # Optional: Remove parent figure if it contains only this image
+                parent = img.parent
+                img.decompose()
 
-        try:
-            logger.debug(
-                "Fetching content from URL",
-                url=url,
-                has_title=bool(article_title),
-                timeout=CONTENT_EXTRACTION_TIMEOUT,
-            )
+                # Cleanup empty parents (like <figure></figure> or <p></p>)
+                if parent and parent.name in ["figure", "p", "div"]:
+                    if not parent.get_text(strip=True) and not parent.find("img"):
+                        parent.decompose()
+                return  # Only remove the first occurrence (usually the top one)
+    except Exception as e:
+        logger.warning("Error removing duplicate image", error=str(e))
 
-            # Run the blocking trafilatura operations with a timeout
-            # This prevents hanging indefinitely on slow or unresponsive sites
-            try:
-                extracted = await asyncio.wait_for(
-                    asyncio.to_thread(self._fetch_and_extract, url),
-                    timeout=CONTENT_EXTRACTION_TIMEOUT,
-                )
-            except asyncio.TimeoutError:
-                duration = time.perf_counter() - start_time
 
-                logger.warning(
-                    "Content extraction timed out",
-                    url=url,
-                    timeout=CONTENT_EXTRACTION_TIMEOUT,
-                    duration_seconds=round(duration, 3),
-                )
-                return (
-                    None,
-                    None,
-                    f"Content extraction timed out after {CONTENT_EXTRACTION_TIMEOUT} seconds",
-                )
+# ==============================================================================
+# MAIN EXTRACTION LOGIC
+# ==============================================================================
 
-            if not extracted:
-                duration = time.perf_counter() - start_time
 
-                logger.warning(
-                    "Could not extract content from URL",
-                    url=url,
-                    duration_seconds=round(duration, 3),
-                )
-                return None, None, "Could not extract readable content from the page"
+def _fetch_and_extract(url: str, config: dict) -> str | None:
+    """Blocking Trafilatura operation to be run in a thread."""
+    downloaded = trafilatura.fetch_url(url, config=config)
+    if not downloaded:
+        return None
 
-            # Remove duplicate title heading if article title is provided
-            if article_title:
-                extracted = self._remove_duplicate_title_heading(extracted, article_title)
+    # Extract with images allowed
+    return trafilatura.extract(downloaded, output_format="html", include_images=True, config=config)
 
-            # Calculate read time for the extracted content
-            read_time = self._calculate_read_time(extracted)
-            duration = time.perf_counter() - start_time
-            content_size = len(extracted)
 
-            logger.info(
-                "Successfully extracted full text",
-                url=url,
-                content_length=content_size,
-                read_time=read_time,
-                duration_seconds=round(duration, 3),
-            )
+async def extract_full_content(
+    url: str, article_title: str | None = None, main_image_url: str | None = None
+) -> tuple[str | None, int | None, str | None]:
+    """
+    Extract full text content from the article's original URL.
 
-            return extracted, read_time, None
+    Pipeline:
+    1. Trafilatura (Fetch & Extract raw HTML)
+    2. BeautifulSoup (Remove duplicate Title & Hero Image)
+    3. nh3 (Sanitize HTML for security)
+    4. Metrics (Read Time)
 
-        except Exception as e:
-            duration = time.perf_counter() - start_time
+    Returns:
+        (content, read_time, error_message)
+    """
+    start_time = time.perf_counter()
+    config = _get_trafilatura_config()
 
-            logger.error(
-                "Error extracting full text",
-                error=str(e),
-                error_type=type(e).__name__,
-                url=url,
-                duration_seconds=round(duration, 3),
-                exc_info=True,
-            )
-            return None, None, "An unexpected error occurred while extracting content"
+    try:
+        # 1. Fetch & Extract (Blocking I/O)
+        extracted_html = await asyncio.wait_for(
+            asyncio.to_thread(_fetch_and_extract, url, config),
+            timeout=CONTENT_EXTRACTION_TIMEOUT,
+        )
 
-    def _fetch_and_extract(self, url: str) -> str | None:
-        """
-        Fetch and extract content using trafilatura (blocking operation).
+        if not extracted_html:
+            return None, None, "Could not extract readable content"
 
-        This method is designed to run in a separate thread to avoid blocking
-        the async event loop. It performs the actual HTTP fetch and content
-        extraction using trafilatura's synchronous API with a strict timeout
-        to prevent hanging on slow or unresponsive websites.
+        # 2. DOM Manipulation (Cleanup)
+        # We use BeautifulSoup for structural changes before sanitizing
+        soup = BeautifulSoup(extracted_html, "html.parser")
 
-        Args:
-            url: The URL to fetch and extract content from
+        # A. Remove Duplicate Title
+        if article_title:
+            _remove_duplicate_title_heading(soup, article_title)
 
-        Returns:
-            Extracted HTML content or None if extraction failed
-        """
-        # Fetch the URL content with custom config (shorter timeout, limited redirects)
-        downloaded = trafilatura.fetch_url(url, config=self.config)
-        if not downloaded:
-            return None
+        # B. Remove Duplicate Hero Image
+        if main_image_url:
+            _remove_duplicate_image(soup, main_image_url)
 
-        # Extract the main content as HTML
-        extracted = trafilatura.extract(downloaded, output_format="html", config=self.config)
-        return extracted
+        # Convert back to string for sanitization
+        cleaned_dom = str(soup)
 
-    def _calculate_read_time(self, content: str) -> int:
-        """
-        Calculate estimated reading time in minutes with CJK support.
+        # 3. Security Sanitization (nh3)
+        # Strips scripts, styles, iframes, and unsafe attributes
+        safe_content = nh3.clean(
+            cleaned_dom,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            url_schemes={"http", "https", "mailto", "data"},
+        )
 
-        Args:
-            content: The article content to analyze
+        # 4. Calculate Read Time (on the final visible text)
+        read_time = calculate_reading_time(safe_content, default_wpm=200)
+        read_time = min(read_time, 60)  # Cap at 60m
 
-        Returns:
-            Estimated reading time in minutes (capped at 60 minutes)
-        """
-        if not content:
-            return 1
+        duration = time.perf_counter() - start_time
+        logger.info(
+            "Extracted full text",
+            url=url,
+            content_length=len(safe_content),
+            read_time=read_time,
+            duration=round(duration, 3),
+        )
 
-        read_time = calculate_reading_time(content, default_wpm=200)
-        return min(read_time, 60)  # Cap at 60 minutes
+        return safe_content, read_time, None
+
+    except asyncio.TimeoutError:
+        logger.warning("Extraction timed out", url=url)
+        return None, None, f"Timed out after {CONTENT_EXTRACTION_TIMEOUT}s"
+    except Exception as e:
+        logger.error("Extraction failed", url=url, error=str(e))
+        return None, None, "Unexpected error during extraction"

@@ -1,59 +1,38 @@
-"""Logging middleware for FastAPI application."""
+"""
+Functional logging middleware.
+"""
 
 import time
-import uuid
-
 import structlog
 from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.responses import Response
 
-logger = structlog.get_logger(__name__)
+logger = structlog.get_logger("request_logger")
 
 
-class LoggingMiddleware(BaseHTTPMiddleware):
-    """Middleware to log all incoming requests and their processing time.
-
-    This middleware logs:
-    - Request start with method, path, and client information
-    - Request completion with status code and processing time
-    - Request failures with error details
+async def logging_middleware(request: Request, call_next) -> Response:
     """
+    Logs request start/end details and timing.
+    """
+    start_time = time.perf_counter()
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        """Log all incoming requests and their processing time.
+    # Contextualize logger with request ID if available (from headers or upstream)
+    request_id = request.headers.get("X-Request-ID", "unknown")
+    log = logger.bind(request_id=request_id, path=request.url.path, method=request.method)
 
-        Args:
-            request: The incoming FastAPI request
-            call_next: The next middleware or endpoint to call
+    log.info("Request started")
 
-        Returns:
-            Response: The response from the next middleware/endpoint
-        """
-        start_time = time.time()
+    try:
+        response = await call_next(request)
 
-        logger.info(
-            "Request started",
-            method=request.method,
-            path=request.url.path,
-            client_host=request.client.host if request.client else None,
-        )
+        process_time = time.perf_counter() - start_time
+        log.info("Request completed", status_code=response.status_code, duration=round(process_time, 4))
 
-        try:
-            response = await call_next(request)
-            process_time = time.time() - start_time
-            logger.info(
-                "Request completed",
-                status_code=response.status_code,
-                process_time=process_time,
-            )
-            return response
-        except Exception as e:
-            process_time = time.time() - start_time
-            logger.error(
-                "Request failed",
-                error=str(e),
-                process_time=process_time,
-                exc_info=True,
-            )
-            raise
+        # Add timing header for client visibility
+        response.headers["X-Process-Time"] = str(process_time)
+        return response
+
+    except Exception as e:
+        process_time = time.perf_counter() - start_time
+        log.error("Request failed", error=str(e), duration=round(process_time, 4), exc_info=True)
+        raise

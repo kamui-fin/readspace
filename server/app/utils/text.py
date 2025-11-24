@@ -28,6 +28,7 @@ LANGUAGE_PATTERNS = [
 
 # --- Hashing Utilities ---
 
+
 def get_content_hash(url: str) -> str:
     """Generate SHA-256 hash for article content URL (deduplication)."""
     normalized = url.strip().lower()
@@ -60,10 +61,11 @@ def calculate_feed_content_hash(entries: list[Any]) -> str:
 
 # --- Content Detection ---
 
+
 def is_content_complete(content: str | None, threshold: int = 500) -> bool:
     """
     Heuristic to check if content looks like a full article vs a summary.
-    
+
     Note: This is imperfect. Some micro-blogs have full content < 500 chars.
     """
     if content is None or content == "":
@@ -88,6 +90,7 @@ def is_cjk_text(text: str) -> bool:
 
 # --- Reading Time ---
 
+
 def calculate_reading_time(content: str, default_wpm: int = 230, cjk_cpm: int = 300) -> int:
     """Calculate reading time in minutes, handling HTML stripping and CJK detection."""
     if not content or not content.strip():
@@ -106,7 +109,7 @@ def calculate_reading_time(content: str, default_wpm: int = 230, cjk_cpm: int = 
     if is_cjk_text(clean_text):
         char_count = len(WHITESPACE_PATTERN.sub("", clean_text))
         return max(1, round(char_count / cjk_cpm))
-    
+
     # Word count for non-CJK
     clean_text = PUNCTUATION_PATTERN.sub(" ", clean_text)
     word_count = len(clean_text.split())
@@ -115,11 +118,12 @@ def calculate_reading_time(content: str, default_wpm: int = 230, cjk_cpm: int = 
 
 # --- Language Normalization ---
 
+
 def normalize_language_code(language_code: str | None) -> str | None:
     """Normalize language codes (e.g., 'en-US' -> 'en') using ISO 639-1."""
     if not language_code:
         return None
-    
+
     code = str(language_code).strip()
     if not code:
         return None
@@ -127,14 +131,14 @@ def normalize_language_code(language_code: str | None) -> str | None:
     # 1. Try extracting base code (e.g., en from en-US)
     base_code = None
     code_lower = code.lower()
-    
+
     # Check regex patterns
     for pattern in LANGUAGE_PATTERNS:
         match = pattern.match(code_lower)
         if match:
             base_code = match.group(1)
             break
-            
+
     if not base_code and 2 <= len(code_lower) <= 3 and code_lower.isalpha():
         base_code = code_lower
 
@@ -148,5 +152,5 @@ def normalize_language_code(language_code: str | None) -> str | None:
         # Fallback: if we extracted a valid-looking 2-letter base, use it
         if base_code and len(base_code) == 2:
             return base_code
-            
+
     return None

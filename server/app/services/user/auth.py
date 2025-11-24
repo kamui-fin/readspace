@@ -1,9 +1,6 @@
-import functools
-from collections.abc import Awaitable, Callable
-from typing import Any
-
 import structlog
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import JWTError, jwt
 
 from app.core.config import get_settings
@@ -11,77 +8,58 @@ from app.schemas.auth import TokenData
 
 logger = structlog.get_logger()
 
+# Standard FastAPI Security Scheme
+security = HTTPBearer()
+
 
 def verify_token(token: str) -> TokenData:
-    """Verify and decode a JWT token."""
+    """
+    Pure function to decode and validate JWT.
+    """
+    settings = get_settings()
     try:
-        settings = get_settings()
         payload = jwt.decode(
             token,
             key=settings.SUPABASE_JWT_SECRET.get_secret_value(),
             algorithms=["HS256"],
-            options={"verify_aud": False},  # Skip audience verification
+            options={"verify_aud": False},  # Skip audience check for Supabase
         )
+
         return TokenData(
             sub=payload.get("sub"),
             email=payload.get("email"),
             role=payload.get("role"),
-            app_metadata=payload.get("app_metadata"),
-            user_metadata=payload.get("user_metadata"),
+            app_metadata=payload.get("app_metadata", {}),
+            user_metadata=payload.get("user_metadata", {}),
         )
     except JWTError as e:
-        logger.error(f"JWT verification error: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token") from e
-
-
-def get_current_user(request: Request) -> TokenData:
-    """FastAPI dependency to get the current authenticated user."""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+        logger.warning("JWT verification failed", error=str(e))
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid authorization header",
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = auth_header.split(" ")[1]
-    token_data = verify_token(token)
-    return token_data
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenData:
+    """
+    FastAPI dependency for requiring authentication.
+    Usage: async def route(user: TokenData = Depends(get_current_user))
+    """
+    return verify_token(credentials.credentials)
 
 
-# Optional dependency that doesn't require auth but provides user if available
-def get_optional_user(request: Request) -> TokenData | None:
-    """FastAPI dependency to get the current user if available, but doesn't require auth."""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
+def get_optional_user(credentials: HTTPAuthorizationCredentials | None = Depends(security)) -> TokenData | None:
+    """
+    FastAPI dependency that returns User if token exists, else None.
+    Usage: async def route(user: TokenData | None = Depends(get_optional_user))
+    """
+    if not credentials:
         return None
 
     try:
-        token = auth_header.split(" ")[1]
-        return verify_token(token)
+        return verify_token(credentials.credentials)
     except HTTPException:
+        # If token is present but invalid, treating it as anonymous is usually
+        # safer than crashing, though strictly debating 401 is also valid.
         return None
-
-
-def requires_auth(f: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
-    """
-    Decorator for routes that require authentication.
-    This simplifies protecting routes and handling errors.
-
-    Usage:
-        @router.get("/protected")
-        @requires_auth
-        async def protected_route(request: Request):
-            user = request.state.user  # User is guaranteed to be available
-            return {"message": f"Hello, {user.email}!"}
-    """
-
-    @functools.wraps(f)
-    async def decorated_function(request: Request, *args: Any, **kwargs: Any) -> Any:
-        if not hasattr(request.state, "user") or request.state.user is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Authentication required",
-            )
-        return await f(request, *args, **kwargs)
-
-    return decorated_function

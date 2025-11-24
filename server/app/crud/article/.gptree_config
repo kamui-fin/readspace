@@ -24,4 +24,4 @@ showIgnoredInTree: false
 # Whether to show only default ignored files in the directory tree while still respecting gitignore
 showDefaultIgnoredInTree: false
 # Previously selected files (when using the -s or --save flag previously)
-previousFiles: operations/feed_articles.py,state_management.py,__init__.py,transformer.py,bulk_operations.py,operations/content.py,aggregations.py,.gptree_config,retrieval.py,operations/user_entries.py,pagination.py,operations/__init__.py,specialized.py,operations/query_builder.py
+previousFiles: __init__.py,actions.py,reader.py,counts.py,ingester.py,.gptree_config

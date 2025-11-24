@@ -36,7 +36,7 @@ class FeedCacheService:
 
     async def get_feed_by_url(self, url: str) -> Feed | None:
         """Get a feed by URL with Redis caching and protocol variation handling.
-        
+
         Handles:
         - URL normalization
         - Redis caching
@@ -63,10 +63,12 @@ class FeedCacheService:
                 if feed:
                     # Cache using the requested URL for future lookups
                     await self.redis_cache.set(cache_key, str(feed.id), FEED_URL_CACHE_TTL)
-                    logger.debug("Found feed via protocol variation", 
-                                requested_url=normalized_url, 
-                                found_url=alt_url,
-                                feed_id=feed.id)
+                    logger.debug(
+                        "Found feed via protocol variation",
+                        requested_url=normalized_url,
+                        found_url=alt_url,
+                        feed_id=feed.id,
+                    )
 
         # Cache the result
         if feed:
@@ -77,7 +79,7 @@ class FeedCacheService:
 
     async def get_or_create_feed(self, url: str, feed_data: FeedBase | None = None) -> Feed:
         """Get existing feed or create new one with caching and search syncing.
-        
+
         Handles:
         - URL normalization
         - Existence checks
@@ -85,7 +87,7 @@ class FeedCacheService:
         - Cache invalidation
         """
         normalized_url = normalize_feed_url(url)
-        
+
         # Check if feed exists
         existing_feed = await self.get_feed_by_url(normalized_url)
         if existing_feed:
@@ -109,12 +111,12 @@ class FeedCacheService:
 
     async def update_feed_url(self, feed: Feed, new_url: str) -> Feed:
         """Update feed URL with cache invalidation and search syncing.
-        
+
         Used for handling feed migrations (redirects).
         """
         old_url = feed.url
         normalized_new_url = normalize_feed_url(new_url)
-        
+
         feed.url = normalized_new_url
         updated_feed = await update_feed(self.db, feed=feed)
 
@@ -127,10 +129,7 @@ class FeedCacheService:
         # Sync to Meilisearch
         await self._sync_to_meilisearch(updated_feed, operation="update")
 
-        logger.info("Feed URL updated", 
-                   feed_id=updated_feed.id,
-                   old_url=old_url, 
-                   new_url=normalized_new_url)
+        logger.info("Feed URL updated", feed_id=updated_feed.id, old_url=old_url, new_url=normalized_new_url)
 
         return updated_feed
 
@@ -143,7 +142,7 @@ class FeedCacheService:
 
     async def _sync_to_meilisearch(self, feed: Feed, operation: str = "add") -> None:
         """Sync feed to Meilisearch (fire-and-forget).
-        
+
         Args:
             feed: Feed to sync
             operation: "add" or "update"
@@ -155,7 +154,5 @@ class FeedCacheService:
             else:
                 await meili_service.update_feed(feed)
         except Exception as e:
-            logger.warning(f"meilisearch_sync_failed_{operation}", 
-                          feed_id=feed.id, 
-                          error=str(e))
+            logger.warning(f"meilisearch_sync_failed_{operation}", feed_id=feed.id, error=str(e))
             # Don't raise - Meilisearch sync failures shouldn't break the main flow

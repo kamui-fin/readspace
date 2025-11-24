@@ -1,4 +1,8 @@
-"""Article extraction service for RSS/Atom feed entries."""
+"""
+Article extraction service for RSS/Atom feed entries.
+
+Uses `nh3` (Ammonia) for high-performance HTML sanitization.
+"""
 
 import re
 from datetime import datetime, timezone
@@ -6,250 +10,317 @@ from typing import Any
 from urllib.parse import urljoin
 from uuid import UUID
 
+import nh3
 import structlog
 from bs4 import BeautifulSoup
+
+from dateutil import parser as date_parser
 
 from app.schemas import ArticleCreate
 from app.utils.reading_time import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
 
-class ArticleExtractor:
-    """Extracts article data from RSS/Atom feed entries."""
+# Tags allowed in the reader
+ALLOWED_TAGS = {
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+    "video",
+    "source",
+    "figure",
+    "figcaption",
+}
 
-    def extract_article_data(self, entry: Any, feed_id: UUID, user_id: UUID) -> ArticleCreate:
-        """Extract article data from a feed entry.
+# Attributes allowed per tag
+ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "img": {"src", "alt", "title", "width", "height"},
+    "video": {"src", "controls", "poster"},
+    "source": {"src", "type"},
+    "code": {"class"},  # Useful for syntax highlighting if you have it
+    "span": {"class"},
+    "div": {"class"},
+}
 
-        Args:
-            entry: feedparser entry object
-            feed_id: UUID of the feed
-            user_id: UUID of the user
+# ==============================================================================
+# CORE EXTRACTION LOGIC
+# ==============================================================================
 
-        Returns:
-            ArticleCreate: Pydantic schema with extracted article data
-        """
-        # Extract basic fields
-        title = self._extract_title(entry)
-        link = self._extract_link(entry)
-        guid = self._extract_guid(entry, link)
-        published_at = self._extract_published_date(entry)
 
-        # Extract and clean content
-        content = self._extract_content(entry)
-        summary = self._extract_summary(entry, content)
+def extract_article_data(
+    entry: dict[str, Any], feed_id: UUID, user_id: UUID, feed_url: str | None = None
+) -> ArticleCreate:
+    """
+    Main entry point to convert a raw feedparser entry into a clean ArticleCreate schema.
+    """
+    # 1. Title & Link
+    title = _clean_plain_text(entry.get("title", "Untitled Article"))[:500]
+    link = _extract_link(entry)
 
-        # Extract metadata
-        author = self._extract_author(entry)
-        image_url = self._extract_image_url(entry, content)
-        read_time = self._calculate_read_time(content)
+    # 2. GUID
+    guid = _extract_guid(entry, fallback_link=link)
 
-        logger.debug(
-            "Extracted article data",
-            title=title,
-            link=link,
-            has_content=bool(content),
-            read_time=read_time,
+    # 3. Dates
+    published_at = _extract_published_date(entry)
+
+    # 4. Content Processing
+    raw_content = _get_best_content_candidate(entry)
+
+    # Resolve relative links FIRST, then Sanitize
+    clean_content = _sanitize_and_fix_html(raw_content, base_url=feed_url or link)
+
+    # Summary
+    summary = _create_summary(entry, clean_content)
+
+    # 5. Metadata
+    author = _extract_author(entry)
+    image_url = _extract_image_url(entry, clean_content, base_url=feed_url or link)
+    read_time = min(calculate_reading_time(clean_content, default_wpm=200), 60) if clean_content else 1
+
+    return ArticleCreate(
+        title=title,
+        link=link,
+        description=summary,
+        content=clean_content,
+        published_at=published_at,
+        author=author,
+        guid=guid,
+        image_url=image_url,
+        estimated_read_time_minutes=read_time,
+        feed_id=feed_id,
+        user_id=user_id,
+    )
+
+
+# ==============================================================================
+# HELPERS: HTML & CONTENT
+# ==============================================================================
+
+
+def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
+    """
+    1. Resolves relative URLs using BeautifulSoup.
+    2. Sanitizes HTML using nh3 (Rust).
+    """
+    if not html_content:
+        return ""
+
+    # Step 1: Link Resolution (Pre-sanitization)
+    # nh3 is a sanitizer, not a DOM manipulator. We use BS4 strictly
+    # to fix relative URLs (e.g., src="/cat.png") before cleaning.
+    if base_url:
+        try:
+            soup = BeautifulSoup(html_content, "html.parser")
+            has_changes = False
+
+            # Fix Links
+            for tag in soup.find_all(["a", "img", "video", "source"]):
+                # Check href
+                if tag.has_attr("href"):
+                    val = tag["href"]
+                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                        tag["href"] = urljoin(base_url, val)
+                        has_changes = True
+
+                # Check src
+                if tag.has_attr("src"):
+                    val = tag["src"]
+                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                        tag["src"] = urljoin(base_url, val)
+                        has_changes = True
+
+            if has_changes:
+                html_content = str(soup)
+        except Exception:
+            # If parsing fails, we proceed to sanitization with the original content
+            # to ensure at least XSS protection is applied.
+            pass
+
+    # Step 2: Sanitization (nh3)
+    # This strips scripts, styles, iframes, and unknown attributes
+    try:
+        clean_html = nh3.clean(
+            html_content,
+            tags=ALLOWED_TAGS,
+            attributes=ALLOWED_ATTRIBUTES,
+            url_schemes={"http", "https", "mailto", "data"},
         )
+        return clean_html
+    except Exception as e:
+        logger.error("HTML sanitization failed", error=str(e))
+        return ""
 
-        return ArticleCreate(
-            title=title,
-            link=link,
-            description=summary,
-            content=content,
-            published_at=published_at,
-            author=author,
-            guid=guid,
-            image_url=image_url,
-            estimated_read_time_minutes=read_time,
-            feed_id=feed_id,
-            user_id=user_id,
-        )
 
-    def _extract_title(self, entry: Any) -> str:
-        """Extract and clean article title."""
-        title = entry.get("title", "Untitled Article")
-        if isinstance(title, dict):
-            title = title.get("value", "Untitled Article")
+def _get_best_content_candidate(entry: dict) -> str:
+    """Find the longest/richest content field."""
+    if "content" in entry:
+        for c in entry["content"]:
+            if c.get("type") in ["text/html", "application/xhtml+xml", "html"]:
+                return c.get("value", "")
+        if len(entry["content"]) > 0:
+            return entry["content"][0].get("value", "")
 
-        # Clean HTML tags and normalize whitespace
-        title = BeautifulSoup(title, "html.parser").get_text()
-        title = re.sub(r"\s+", " ", title).strip()
+    if "summary_detail" in entry:
+        return entry["summary_detail"].get("value", "")
 
-        return title[:500]  # Limit length
+    return entry.get("summary", "") or entry.get("description", "")
 
-    def _extract_link(self, entry: Any) -> str:
-        """Extract article link."""
-        link = entry.get("link", "")
-        if isinstance(link, list) and link:
-            # Handle multiple links, prefer the first one
-            link = link[0].get("href", "") if isinstance(link[0], dict) else str(link[0])
-        elif isinstance(link, dict):
-            link = link.get("href", "")
 
-        return str(link).strip()[:2000]  # Limit length
+def _create_summary(entry: dict, clean_html_content: str) -> str:
+    """Generate a plain-text summary."""
+    # 1. Prefer explicit summary
+    raw_summary = entry.get("summary", "")
+    if raw_summary:
+        summary = _clean_plain_text(raw_summary)
+        if len(summary) > 20:
+            return summary[:1000]
 
-    def _extract_guid(self, entry: Any, fallback_link: str) -> str:
-        """Extract article GUID, using link as fallback."""
-        guid = entry.get("id") or entry.get("guid")
+    # 2. Fallback: Strip tags from clean HTML
+    # We use nh3.clean with empty tags set to strip everything efficiently
+    text = nh3.clean(clean_html_content, tags=set())
+    # Normalize whitespace
+    text = re.sub(r"\s+", " ", text).strip()
 
-        if isinstance(guid, dict):
-            guid = guid.get("value", fallback_link)
-        elif not guid:
-            guid = fallback_link
+    return text[:300] + "..." if len(text) > 300 else text
 
-        return str(guid).strip()[:500]  # Limit length
 
-    def _extract_published_date(self, entry: Any) -> datetime:
-        """Extract and parse published date."""
-        # Try different date fields
-        date_fields = ["published_parsed", "updated_parsed", "created_parsed"]
+def _clean_plain_text(text: Any) -> str:
+    """Strip all HTML and normalize whitespace for Titles."""
+    if not text:
+        return ""
+    if isinstance(text, dict):
+        text = text.get("value", "")
 
-        for field in date_fields:
-            date_tuple = entry.get(field)
-            if date_tuple:
-                try:
-                    # Extract first 6 elements (year, month, day, hour, minute, second)
-                    # Create datetime without timezone first, then replace with UTC
-                    dt = datetime(*date_tuple[:6])
-                    return dt.replace(tzinfo=timezone.utc)
-                except (TypeError, ValueError, AttributeError):
-                    continue
+    # Strip all tags
+    text = nh3.clean(str(text), tags=set())
+    return re.sub(r"\s+", " ", text).strip()
 
-        # Try string date fields
-        string_fields = ["published", "updated", "created"]
-        for field in string_fields:
-            date_str = entry.get(field)
-            if date_str:
-                try:
-                    # This is a simplified parser - in production you might want to use dateutil
-                    return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-                except (ValueError, AttributeError):
-                    continue
 
-        # Default to current time if no date found
-        logger.warning(
-            "No valid publication date found, using current time",
-            entry_id=entry.get("id"),
-        )
-        return datetime.now(timezone.utc)
+# ==============================================================================
+# HELPERS: METADATA
+# ==============================================================================
 
-    def _extract_content(self, entry: Any) -> str:
-        """Extract and clean article content."""
-        content = ""
 
-        # Try content field first (Atom feeds)
-        if "content" in entry:
-            content_list = entry["content"]
-            if content_list:
-                content = content_list[0].get("value", "")
+def _extract_guid(entry: dict, fallback_link: str) -> str:
+    guid = entry.get("id") or entry.get("guid")
+    if isinstance(guid, dict):
+        guid = guid.get("value")
+    if not guid:
+        guid = fallback_link
+    return str(guid).strip()[:500]
 
-        # Fallback to summary if no content
-        if not content:
-            content = entry.get("summary", "")
 
-        # Clean HTML content
-        if content:
-            soup = BeautifulSoup(content, "html.parser")
+def _extract_link(entry: dict) -> str:
+    return entry.get("link", "") or ""
 
-            # Remove script and style elements
-            for script in soup(["script", "style"]):
-                script.decompose()
 
-            # Get text content
-            content = soup.get_text()
+def _extract_published_date(entry: dict) -> datetime:
+    # 1. fast path
+    if "published_parsed" in entry and entry["published_parsed"]:
+        try:
+            return datetime(*entry["published_parsed"][:6], tzinfo=timezone.utc)
+        except ValueError:
+            pass
 
-            # Normalize whitespace
-            content = re.sub(r"\s+", " ", content).strip()
+    if "updated_parsed" in entry and entry["updated_parsed"]:
+        try:
+            return datetime(*entry["updated_parsed"][:6], tzinfo=timezone.utc)
+        except ValueError:
+            pass
 
-        return content[:10000]  # Limit content length
+    # 2. slow path
+    date_str = entry.get("published") or entry.get("updated") or entry.get("created")
+    if date_str:
+        try:
+            dt = date_parser.parse(date_str)
+            return dt.astimezone(timezone.utc)
+        except (ValueError, TypeError, ImportError):
+            pass
 
-    def _extract_summary(self, entry: Any, content: str) -> str:
-        """Extract article summary, creating one from content if needed."""
-        summary = entry.get("summary", "")
+    return datetime.now(timezone.utc)
 
-        if summary:
-            # Clean HTML from summary
-            soup = BeautifulSoup(summary, "html.parser")
-            summary = soup.get_text()
-            summary = re.sub(r"\s+", " ", summary).strip()
 
-        # If no summary or very short, create one from content
-        if not summary or len(summary) < 50:
-            if content:
-                # Take first 300 characters as summary
-                summary = content[:300]
-                if len(content) > 300:
-                    # Find last complete word
-                    last_space = summary.rfind(" ")
-                    if last_space > 200:
-                        summary = summary[:last_space] + "..."
+def _extract_author(entry: dict) -> str | None:
+    if "author_detail" in entry:
+        name = entry["author_detail"].get("name")
+        if name:
+            return str(name)[:200]
 
-        return str(summary)[:1000]  # Limit length
+    if "authors" in entry and isinstance(entry["authors"], list) and entry["authors"]:
+        name = entry["authors"][0].get("name")
+        if name:
+            return str(name)[:200]
 
-    def _extract_author(self, entry: Any) -> str | None:
-        """Extract article author."""
-        # Try different author fields
-        author = entry.get("author") or entry.get("dc_creator")
+    for key in ["author", "dc_creator", "itunes_author"]:
+        val = entry.get(key)
+        if val and isinstance(val, str):
+            return val[:200]
 
-        if isinstance(author, dict):
-            author = author.get("name") or author.get("email")
-        elif isinstance(author, list) and author:
-            author = author[0]
-            if isinstance(author, dict):
-                author = author.get("name") or author.get("email")
+    return None
 
-        if author:
-            author = str(author).strip()[:200]  # Limit length
-            return author if author else None
 
-        return None
+def _extract_image_url(entry: dict, clean_content: str, base_url: str | None) -> str | None:
+    def resolve(url):
+        if base_url and url:
+            return urljoin(base_url, url)
+        return url
 
-    def _extract_image_url(self, entry: Any, content: str) -> str | None:
-        """Extract article image URL from various sources."""
-        # Try media content first (common in RSS)
-        if "media_content" in entry:
-            for media in entry["media_content"]:
-                if media.get("medium") == "image" or media.get("type", "").startswith("image/"):
-                    url = media.get("url")
-                    return str(url) if url else None
+    # 1. Media/Enclosures
+    if "media_content" in entry:
+        for media in entry["media_content"]:
+            if media.get("medium") == "image" or str(media.get("type")).startswith("image/"):
+                return resolve(media.get("url"))
 
-        # Try media thumbnail
-        if "media_thumbnail" in entry:
-            thumbnails = entry["media_thumbnail"]
-            if thumbnails:
-                url = thumbnails[0].get("url")
-                return str(url) if url else None
+    if "enclosures" in entry:
+        for enc in entry["enclosures"]:
+            if str(enc.get("type")).startswith("image/"):
+                return resolve(enc.get("href"))
 
-        # Try enclosure
-        enclosures = entry.get("enclosures", [])
-        for enclosure in enclosures:
-            if enclosure.get("type", "").startswith("image/"):
-                href = enclosure.get("href")
-                return str(href) if href else None
+    if "media_thumbnail" in entry:
+        if isinstance(entry["media_thumbnail"], list) and entry["media_thumbnail"]:
+            return resolve(entry["media_thumbnail"][0].get("url"))
 
-        # Search in content for images
-        if content:
-            soup = BeautifulSoup(content, "html.parser")
-            img_tag = soup.find("img", src=True)
-            if img_tag and hasattr(img_tag, "get"):
-                img_src = img_tag.get("src")
-                if img_src:
-                    # Convert relative URLs to absolute if possible
-                    entry_link = entry.get("link")
-                    if entry_link:
-                        try:
-                            return urljoin(str(entry_link), str(img_src))
-                        except Exception:
-                            return str(img_src)
-                    return str(img_src)
+    # 2. Content Scrape
+    # We use the already cleaned content (which has resolved URLs)
+    if clean_content:
+        soup = BeautifulSoup(clean_content, "html.parser")
+        for img in soup.find_all("img", src=True):
+            src = img["src"]
+            if "icon" in src or "emoji" in src:
+                continue
+            return src  # Already resolved in _sanitize_and_fix_html
 
-        return None
-
-    def _calculate_read_time(self, content: str) -> int:
-        """Calculate estimated reading time in minutes with CJK support."""
-        if not content:
-            return 1
-
-        read_time = calculate_reading_time(content, default_wpm=200)
-        return min(read_time, 60)  # Cap at 60 minutes
+    return None

@@ -14,6 +14,7 @@ from app.core.taskiq_app import broker
 
 logger = structlog.get_logger(__name__)
 
+
 def validate_opml_structure(content: str, filename: str) -> int:
     """Validate OPML file structure and count feeds.
 

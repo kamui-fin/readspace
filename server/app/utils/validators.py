@@ -50,9 +50,9 @@ def validate_folder_name(name: str) -> str:
     """Strict folder name validation."""
     if not name or not name.strip():
         raise ValidationError("Folder name cannot be empty")
-        
+
     name = name.strip()
-    
+
     if len(name) > MAX_FOLDER_NAME_LENGTH:
         raise ValidationError(f"Folder name must be {MAX_FOLDER_NAME_LENGTH} characters or less")
 
@@ -95,11 +95,11 @@ def validate_title(title: str, required: bool = True) -> str | None:
 def validate_tag_name(name: str) -> str:
     if not name or len(name) > MAX_TAG_NAME_LENGTH:
         raise ValidationError(f"Tag name invalid (max {MAX_TAG_NAME_LENGTH} chars)")
-    
+
     name_lower = name.lower().strip()
     if not TAG_NAME_PATTERN.match(name_lower):
         raise ValidationError("Tag name can only contain lowercase letters, numbers, hyphens, and underscores")
-    
+
     return name_lower
 
 

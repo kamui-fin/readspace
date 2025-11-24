@@ -1,7 +1,4 @@
 """Service for user-specific feed subscription management.
-
-This service handles all user-scoped feed operations including subscriptions,
-user preferences, and user-specific feed data (like unread counts).
 """
 
 from typing import Any, Callable
@@ -47,31 +44,6 @@ class FeedManagementService:
         # Allow dependency injection for testing
         self.feed_creation_service = feed_creation_service or FeedCreationService(user_id)
         self.feed_service = feed_service or FeedService()
-
-    async def add_new_feed(
-        self,
-        session_factory: SessionFactory,
-        url: str,
-        folder_id: UUID,
-        tag_names: list[str] | None = None,
-        update_existing: bool = False,
-    ) -> SubscriptionResponse:
-        """Add a new RSS feed."""
-        logger.info(
-            "Adding new feed",
-            url=url,
-            folder_id=folder_id,
-            user_id=self.user_id,
-        )
-
-        # Use the dedicated feed creation service for the complex logic
-        return await self.feed_creation_service.add_new_feed(
-            session_factory,
-            url=url,
-            folder_id=folder_id,
-            tag_names=tag_names,
-            update_existing=update_existing,
-        )
 
     async def get_feed(self, session_factory: SessionFactory, feed_id: UUID) -> FeedResponse | None:
         """Get a specific feed by ID for any authenticated user.
@@ -340,88 +312,6 @@ class FeedManagementService:
             )
             raise
 
-    async def _get_unread_count(self, db, feed_id: UUID) -> int:
-        """Get unread count for a single feed."""
-        unread_counts_stmt = (
-            select(func.count(FeedArticle.id))
-            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
-            .join(
-                FeedSubscription,
-                and_(
-                    FeedSubscription.feed_id == FeedArticle.feed_id,
-                    FeedSubscription.user_id == self.user_id,
-                ),
-            )
-            .outerjoin(
-                UserArticleState,
-                and_(
-                    UserArticleState.article_id == FeedArticle.id,
-                    UserArticleState.user_id == self.user_id,
-                ),
-            )
-            .where(
-                and_(
-                    FeedArticle.feed_id == feed_id,
-                    or_(
-                        FeedSubscription.last_read_cutoff.is_(None),
-                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
-                    ),
-                    or_(
-                        UserArticleState.is_read.is_(None),
-                        ~UserArticleState.is_read,
-                    ),
-                )
-            )
-        )
-        unread_count_result = await db.execute(unread_counts_stmt)
-        return unread_count_result.scalar_one_or_none() or 0
-
-    async def _get_unread_counts_for_feeds(self, db, feed_ids: list[UUID]) -> dict[UUID, int]:
-        """Get unread counts for multiple feeds in a single optimized query.
-
-        Uses COALESCE optimization for better index usage (SARGable queries).
-        """
-        if not feed_ids:
-            return {}
-
-        unread_counts_stmt = (
-            select(FeedArticle.feed_id, func.count(FeedArticle.id).label("unread_count"))
-            .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
-            .join(
-                FeedSubscription,
-                and_(
-                    FeedSubscription.feed_id == FeedArticle.feed_id,
-                    FeedSubscription.user_id == self.user_id,
-                ),
-            )
-            .outerjoin(
-                UserArticleState,
-                and_(
-                    UserArticleState.article_id == FeedArticle.id,
-                    UserArticleState.user_id == self.user_id,
-                ),
-            )
-            .where(
-                and_(
-                    FeedArticle.feed_id.in_(feed_ids),
-                    # Optimized unread logic using COALESCE for SARGable queries
-                    ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, "1970-01-01"),
-                    func.coalesce(UserArticleState.is_read, False) == False,
-                )
-            )
-            .group_by(FeedArticle.feed_id)
-        )
-
-        result = await db.execute(unread_counts_stmt)
-        rows = result.fetchall()
-
-        # Convert to dict, ensuring all feed_ids have a count (default 0)
-        unread_counts = dict.fromkeys(feed_ids, 0)
-        for row in rows:
-            unread_counts[row.feed_id] = row.unread_count
-
-        return unread_counts
-
     def _construct_feed_response_from_base(
         self,
         base_response: FeedResponse,
@@ -456,27 +346,3 @@ class FeedManagementService:
             )
 
         return FeedResponse(**feed_data)
-
-    async def get_all_feed_unread_counts(self, session_factory: SessionFactory) -> dict[str, int]:
-        """Get unread counts for all user's feeds.
-
-        Returns:
-            Dictionary mapping feed_id (as string) to unread count
-        """
-        async with session_factory() as db:
-            # Get all user's feed IDs
-            feeds_db = await crud_feed.get_feeds_by_user(
-                db=db,
-                user_id=self.user_id,
-            )
-
-            if not feeds_db:
-                return {}
-
-            feed_ids = [feed.id for feed, _ in feeds_db]
-
-            # Get unread counts for all feeds
-            unread_counts = await self._get_unread_counts_for_feeds(db, feed_ids)
-
-            # Convert UUID keys to strings for JSON serialization
-            return {str(feed_id): count for feed_id, count in unread_counts.items()}

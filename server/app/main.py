@@ -6,15 +6,16 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_fastapi_instrumentator import Instrumentator
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
 from app.core.constants import SHOW_DOCS_ENVIRONMENTS
 from app.core.logging_config import setup_logging
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
-from app.middleware import CompressionMiddleware, HTTPCachingMiddleware, MetricsMiddleware, RequestIdMiddleware
-from app.routers import router as api_router  # Import the main router
+
+from app.middleware import caching_middleware, compression_middleware, logging_middleware
+from app.routers import router as api_router
 
 # Configure structured logging first
 setup_logging()
@@ -25,88 +26,39 @@ logger = structlog.get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI lifespan context manager for startup/shutdown."""
-    # Startup: Initialize Redis connection pool
+    # Startup
     await RedisCache.get_pool()
-
-    # Startup: Initialize Taskiq broker
     await broker.startup()
-
     logger.info("Application startup complete")
 
     yield
 
-    # Shutdown: Close Taskiq broker
+    # Shutdown
     await broker.shutdown()
-
-    # Shutdown: Close Redis connection pool
     await RedisCache.close_pool()
     logger.info("Application shutdown complete")
 
 
-# Configure FastAPI with comprehensive documentation metadata
+# Config
 settings = get_settings()
-
-# Determine if documentation should be enabled based on environment
 docs_config = {}
-
 if settings.ENVIRONMENT not in SHOW_DOCS_ENVIRONMENTS:
-    # Hide documentation in production
-    docs_config.update(
-        {
-            "openapi_url": None,
-            "docs_url": None,
-            "redoc_url": None,
-        }
-    )
+    docs_config = {"openapi_url": None, "docs_url": None, "redoc_url": None}
 
 app = FastAPI(
     title="Readspace API",
-    description="""
-    A privacy-focused open-source RSS reader to follow all the blogs, publications, newsletters,
-    and writers you care about.
-
-    ## Authentication
-
-    This API uses Supabase JWT tokens for authentication. Include your token in the
-    `Authorization` header as `Bearer <token>`.
-
-    ## Rate Limiting
-
-    Some endpoints have resource limits to ensure fair usage and prevent abuse.
-    """,
+    description="A privacy-focused open-source RSS reader.",
     version="1.0.0",
-    contact={
-        "name": "Readspace Support",
-        "url": "https://github.com/kamui-fin/readspace",
-        "email": "support@readspace.ai",
-    },
-    license_info={
-        "name": "GPLv3 License",
-        "url": "https://github.com/kamui-fin/readspace/blob/main/LICENSE",
-    },
-    servers=[
-        {"url": "https://api.readspace.ai", "description": "Production server"},
-    ],
     lifespan=lifespan,
     **docs_config,
 )
 
-# Add Request ID middleware (must be added before other middleware to ensure request_id is always available)
-app.add_middleware(RequestIdMiddleware)
+# --- Middleware Registration ---
+# Order matters: Inner runs first on request, Outer runs first on response
+# We want Compression LAST on response (Outer)
+# We want Logging FIRST on request (Inner/Outer varies, but usually outer wrapper)
 
-# Add Metrics middleware (should be early to capture accurate timing)
-# Must be after RequestIdMiddleware to have request_id available for logging
-app.add_middleware(MetricsMiddleware)
-
-# Add HTTP Caching middleware (adds ETag and Cache-Control headers)
-# This should be early in the chain to cache the final response
-app.add_middleware(HTTPCachingMiddleware)
-
-# Add Compression middleware (compresses responses with Brotli)
-# This should be last in the middleware chain so it compresses the final response
-app.add_middleware(CompressionMiddleware)
-
-# Configure CORS
+# 1. CORS (Built-in is optimized C-code, keep it)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[settings.CORS_ORIGIN],
@@ -115,26 +67,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# 2. Compression (Outer layer response processing)
+app.add_middleware(BaseHTTPMiddleware, dispatch=compression_middleware)
 
-# Exception handler for validation errors
+# 3. Caching Headers
+app.add_middleware(BaseHTTPMiddleware, dispatch=caching_middleware)
+
+# 4. Logging (Inner layer, closest to logic)
+app.add_middleware(BaseHTTPMiddleware, dispatch=logging_middleware)
+
+
+# --- Exception Handlers ---
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    logger.error(
-        "Request validation error",
-        errors=exc.errors(),
-        path=request.url.path,
-        method=request.method,
-        request_id=getattr(request.state, "request_id", None),
-    )
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
+    logger.error("Validation error", path=request.url.path, errors=exc.errors())
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
 
-# Include the main API router
-app.include_router(api_router, prefix="/api")  # Add all routes from app.routers with /api prefix
-
-# Instrument FastAPI with Prometheus metrics
-# Tracks: HTTP request duration, request count, response status codes
-Instrumentator().instrument(app).expose(app)
+# --- Router ---
+app.include_router(api_router, prefix="/api")

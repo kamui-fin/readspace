@@ -42,6 +42,7 @@ class Feed(Base):
 
     # Feed fetching state
     last_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_fetch_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
     last_modified_header: Mapped[str | None] = mapped_column(String(255), nullable=True)
     etag_header: Mapped[str | None] = mapped_column(String(255), nullable=True)
     last_article_published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
