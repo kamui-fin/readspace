@@ -5,16 +5,10 @@ from urllib.parse import urlparse, urlunparse
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import Settings
-from app.core.redis_cache import get_redis_cache
-from app.models import Feed
-from app.services.feeds.search.meilisearch import get_meilisearch_service
+from app.models.feed import Feed
 from app.utils.url.url_validator import validate_feed_url
 
 logger = structlog.get_logger(__name__)
-
-# Cache TTL for feed URL lookups (1 hour)
-FEED_URL_CACHE_TTL = 3600
 
 
 def normalize_feed_url(url: str) -> str:
@@ -64,7 +58,7 @@ async def get_or_migrate_feed(db: AsyncSession, *, original_url: str, resolved_u
     Raises:
         ValueError: If the resolved URL fails security validation
     """
-    from app.crud.feed.core import get_feed_by_url
+    from app.services.feeds.feed_cache_service import FeedCacheService
 
     # SECURITY: Validate resolved URL against allowed schemes and domains
     # This prevents redirects to malicious sites (file://, localhost, private IPs, etc.)
@@ -78,14 +72,17 @@ async def get_or_migrate_feed(db: AsyncSession, *, original_url: str, resolved_u
         )
         raise ValueError(f"Invalid resolved URL: {error_message}")
 
-    # First try to find feed by resolved URL (may include protocol variations)
-    feed = await get_feed_by_url(db, url=resolved_url)
+    # Use service layer for caching and search syncing
+    feed_service = FeedCacheService(db)
+    
+    # First try to find feed by resolved URL (includes protocol variations and caching)
+    feed = await feed_service.get_feed_by_url(resolved_url)
     if feed:
         return feed
 
     # If not found and URLs differ (redirect happened), check if old URL exists
     if original_url != resolved_url:
-        old_feed = await get_feed_by_url(db, url=original_url)
+        old_feed = await feed_service.get_feed_by_url(original_url)
         if old_feed:
             logger.info(
                 "Feed URL has changed (redirect detected), updating existing feed",
@@ -94,28 +91,9 @@ async def get_or_migrate_feed(db: AsyncSession, *, original_url: str, resolved_u
                 feed_id=old_feed.id,
             )
             try:
-                # Update the old feed's URL to the new resolved URL
-                old_feed.url = resolved_url
-                db.add(old_feed)
-                await db.flush()
-                await db.refresh(old_feed)
-
-                # Invalidate old cache entry and cache new URL mapping
-                redis_cache = get_redis_cache()
-                old_cache_key = f"feed_url:{normalize_feed_url(original_url)}"
-                new_cache_key = f"feed_url:{normalize_feed_url(resolved_url)}"
-                await redis_cache.delete(old_cache_key)
-                await redis_cache.set(new_cache_key, str(old_feed.id), FEED_URL_CACHE_TTL)
-
-                # Sync to Meilisearch after URL migration (fire-and-forget)
-                try:
-                    settings = Settings()
-                    meili_service = get_meilisearch_service(settings)
-                    await meili_service.update_feed(old_feed)
-                except Exception as e:
-                    logger.warning("meilisearch_sync_failed_migration", feed_id=old_feed.id, error=str(e))
-
-                return old_feed
+                # Update feed URL with cache invalidation and search syncing
+                updated_feed = await feed_service.update_feed_url(old_feed, resolved_url)
+                return updated_feed
             except Exception as e:
                 logger.error(
                     "Failed to update feed URL during migration",

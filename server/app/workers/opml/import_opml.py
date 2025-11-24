@@ -25,12 +25,12 @@ async def import_opml(
     filename: str | None = None,
 ) -> dict[str, Any]:
     """Import OPML file by dispatching individual feed tasks.
-    
+
     This orchestration function:
     1. Parses OPML content (CPU-bound, no DB)
     2. Creates folders (single transaction via service)
     3. Dispatches individual feed import tasks
-    
+
     The service manages its own database sessions internally.
 
     Args:

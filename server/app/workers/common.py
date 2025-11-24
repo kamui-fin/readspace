@@ -37,13 +37,13 @@ _worker_session_maker: async_sessionmaker[AsyncSession] | None = None
 
 def _get_worker_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]:
     """Get or create the worker database engine and session maker.
-    
+
     This is called once per worker process and reused for all tasks.
     With NullPool, the engine doesn't hold connections - it just manages
     the connection configuration.
     """
     global _worker_engine, _worker_session_maker
-    
+
     if _worker_engine is None or _worker_session_maker is None:
         # Use Transaction Mode connection string (port 6543)
         db_url = settings.DATABASE_URL_WORKER
@@ -75,14 +75,14 @@ def _get_worker_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]
             autoflush=False,
             expire_on_commit=False,
         )
-        
+
         logger.info(
             "Initialized worker database engine",
             poolclass="NullPool",
             mode="transaction",
             port="6543",
         )
-    
+
     return _worker_engine, _worker_session_maker
 
 
@@ -90,11 +90,11 @@ def _get_worker_engine() -> tuple[AsyncEngine, async_sessionmaker[AsyncSession]]
 async def worker_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Surgical database session for Taskiq workers.
-    
+
     CRITICAL: This implements the "open late, close early" pattern for workers.
-    
+
     Pattern: Connect → Begin Transaction → Query → Commit → Close
-    
+
     Why this works with Supavisor Transaction Mode + NullPool:
     1. Gets session from factory (NullPool creates fresh connection)
     2. Connects to Supavisor (uses 1 of 200 client slots)
@@ -102,25 +102,25 @@ async def worker_db() -> AsyncGenerator[AsyncSession, None]:
     4. Yields session for queries (~50-500ms of actual DB work)
     5. Commits transaction (Supavisor returns real DB connection to pool)
     6. Closes session (NullPool closes connection, releases client slot)
-    
+
     This means:
     - 10,000 concurrent tasks can share 5 real DB connections
     - Each task only holds a connection during actual DB operations
     - Network I/O (0-30s) happens WITHOUT holding any DB connection
     - No "max client connections" errors
-    
+
     Usage in tasks:
         # Phase 1: Quick DB read
         async with worker_db() as db:
             feed_meta = await get_feed(db, feed_id)
-        
+
         # Phase 2: Network I/O (no connection held)
         content = await fetch_feed(feed_meta.url)
-        
+
         # Phase 3: Quick DB write
         async with worker_db() as db:
             await update_feed(db, feed_id, content)
-    
+
     Supavisor Configuration:
     - Max client connections: 200 (API uses 10, workers share 190)
     - Pool size: 15 (API uses 10, workers share 5)
@@ -142,6 +142,7 @@ async def worker_db() -> AsyncGenerator[AsyncSession, None]:
     finally:
         # Close session - NullPool closes the connection immediately
         await session.close()
+
 
 # Session factory for workers - same as worker_db but matches the factory pattern
 worker_db_factory = worker_db

@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.article.operations.base import CRUDBase
 from app.models import ArticleContent
 from app.schemas import ArticleContentCreate
+from app.utils.content_hash import get_content_hash
 
 
 class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleContentCreate]):
@@ -25,6 +26,9 @@ class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleC
         if obj_in_data.get("image_url"):
             obj_in_data["image_url"] = str(obj_in_data["image_url"])
 
+        # Generate content hash
+        obj_in_data["content_hash"] = get_content_hash(obj_in_data["link"])
+
         db_obj = self.model(**obj_in_data)
         db.add(db_obj)
         await db.flush()  # Flush to get ID but don't commit
@@ -32,8 +36,9 @@ class CRUDArticleContent(CRUDBase[ArticleContent, ArticleContentCreate, ArticleC
         return db_obj
 
     async def get_by_link(self, db: AsyncSession, *, link: str) -> ArticleContent | None:
-        """Get an article content by its original URL."""
-        result = await db.execute(select(self.model).filter(self.model.link == link))
+        """Get an article content by its original URL (using hash for performance)."""
+        content_hash = get_content_hash(link)
+        result = await db.execute(select(self.model).filter(self.model.content_hash == content_hash))
         return result.scalars().first()
 
     async def get_by_link_extracted_by_extension(self, db: AsyncSession, *, link: str) -> ArticleContent | None:

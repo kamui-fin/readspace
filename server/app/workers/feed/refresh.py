@@ -49,9 +49,7 @@ async def schedule_all_feeds(test_mode: bool = False) -> dict[str, Any]:
     logger.info("Starting schedule all feed refreshes")
 
     feed_service = FeedService()
-    feeds_to_check = await feed_service.get_feeds_needing_refresh(
-        worker_db_factory, limit=MAX_FEEDS_BATCH_SIZE
-    )
+    feeds_to_check = await feed_service.get_feeds_needing_refresh(worker_db_factory, limit=MAX_FEEDS_BATCH_SIZE)
 
     logger.info("Found feeds to refresh", feed_count=len(feeds_to_check))
 

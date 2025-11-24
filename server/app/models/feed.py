@@ -62,12 +62,6 @@ class Feed(Base):
     subscriptions = relationship("FeedSubscription", back_populates="feed", cascade="all, delete-orphan")
     articles = relationship("FeedArticle", back_populates="feed", cascade="all, delete-orphan")
 
-    __table_args__ = (
-        # CHECK constraint added in migration: ck_feed_fetch_error_count_range
-        # Ensures fetch_error_count >= 0 AND fetch_error_count < 1000
-        # TODO: maintenance routine to delete feeds with excessive fetch errors
-    )
-
 
 class FeedSubscription(Base):
     """User-specific feed subscription table."""

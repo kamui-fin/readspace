@@ -9,11 +9,6 @@ from alembic import context
 from app.core.config import get_settings
 from app.db.base_class import Base
 
-# Import all models here to ensure they are registered with Base.metadata
-from app.models.article import ArticleContent, ClippedArticle, FeedArticle, UserArticleState  # noqa: F401
-from app.models.feed import Feed, FeedSubscription  # noqa: F401
-from app.models.folder import Folder  # noqa: F401
-from app.models.user import AuthUser, Profile  # noqa: F401
 
 # Import all models here to ensure they are registered with Base.metadata
 
@@ -44,7 +39,7 @@ def get_url():
     # Use ALEMBIC_DB_URL if it exists, otherwise fall back to SUPABASE_DB_CONNECTION
     db_url = os.getenv("ALEMBIC_DB_URL")
     if not db_url:
-        db_url = settings.SUPABASE_DB_CONNECTION
+        db_url = settings.DATABASE_URL_API
 
     return db_url.replace("postgresql://", "postgresql+asyncpg://")
 

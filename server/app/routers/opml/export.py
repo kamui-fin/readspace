@@ -99,7 +99,7 @@ async def export_opml_file(
         HTTPException: 500 for export generation errors
     """
     from app.db.session import db_session_factory
-    
+
     start_time = time.perf_counter()
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
 

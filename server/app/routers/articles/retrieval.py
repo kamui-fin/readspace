@@ -62,7 +62,6 @@ async def list_articles(
     folder_id: UUID | None = Query(None, description="Filter by folder ID (all feeds in folder)"),
     is_read: bool | None = Query(None, description="Filter by read status"),
     is_read_later: bool | None = Query(None, description="Filter by read later status"),
-    is_favorite: bool | None = Query(None, description="Filter by article favorite status"),
     exclude_content: bool = Query(True, description="Exclude article content for lighter responses (default: true)"),
 ) -> dict:
     """
@@ -81,7 +80,6 @@ async def list_articles(
         folder_id: Optional folder UUID to filter articles from all feeds in that folder
         is_read: Optional boolean to filter by read status
         is_read_later: Optional boolean to filter articles marked for reading later
-        is_favorite: Optional boolean to filter articles marked as favorites
 
     Returns:
         dict: Cursor pagination result with items, next_cursor, has_more, and total_count
@@ -117,7 +115,6 @@ async def list_articles(
         folder_id=folder_id,
         is_read=is_read,
         is_read_later=is_read_later,
-        is_favorite=is_favorite,
     )
 
     # Transform the tuples into ArticleResponse objects

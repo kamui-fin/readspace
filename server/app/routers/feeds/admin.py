@@ -33,24 +33,18 @@ router = APIRouter()
         },
         403: {
             "description": "Forbidden - Admin access required",
-            "content": {
-                "application/json": {"example": {"detail": "Admin access required"}}
-            },
+            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
         },
         404: {
             "description": "Feed not found",
             "content": {"application/json": {"example": {"detail": "Feed not found"}}},
         },
-        422: {
-            "description": "Validation error in request body or invalid feed ID format"
-        },
+        422: {"description": "Validation error in request body or invalid feed ID format"},
     },
 )
 async def admin_update_feed(
     feed_id: UUID,
-    feed_in: AdminFeedUpdate = Body(
-        ..., description="Global feed properties to update (all fields optional)"
-    ),
+    feed_in: AdminFeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
 ) -> FeedResponse:
@@ -114,9 +108,7 @@ async def admin_update_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
     # Update the feed metadata
     try:
@@ -185,7 +177,7 @@ async def admin_update_feed(
 
         # Return as FeedResponse
         from app.db.session import db_session_factory
-        
+
         feed_service = FeedManagementService(user_id=UUID(current_user.sub))
         return await feed_service.get_feed(db_session_factory, feed_id=feed_id) or updated_feed
 
@@ -211,9 +203,7 @@ async def admin_update_feed(
         204: {"description": "Successfully deleted global feed"},
         403: {
             "description": "Forbidden - Admin access required",
-            "content": {
-                "application/json": {"example": {"detail": "Admin access required"}}
-            },
+            "content": {"application/json": {"example": {"detail": "Admin access required"}}},
         },
         404: {
             "description": "Feed not found",
@@ -280,9 +270,7 @@ async def admin_delete_feed(
             feed_id=feed_id,
             user_id=current_user.sub,
         )
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
     # Use raw SQL for efficient bulk deletion leveraging database cascades
     # This is much faster than ORM cascade which loads each related object individually

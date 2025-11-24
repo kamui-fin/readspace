@@ -27,7 +27,7 @@ def upgrade() -> None:
     """)
 
     # Drop redundant ascending index (keeping ix_article_contents_published_at)
-    op.execute("DROP INDEX IF EXISTS idx_article_content_published")
+    op.execute("DROP INDEX IF EXISTS idx_article_contents_published")
 
     # Drop obsolete index (COALESCE fix makes this unnecessary)
     op.execute("DROP INDEX IF EXISTS idx_user_states_unread")

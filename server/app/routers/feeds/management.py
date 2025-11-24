@@ -85,13 +85,13 @@ async def list_feeds(
         - Tag filtering uses AND logic (all specified tags must match)
     """
     from app.db.session import db_session_factory
-    
+
     logger.debug("list_feeds: Request received", user_id=current_user.sub, folder_id=folder_id)
-    
+
     service_start = time.perf_counter()
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     logger.debug("list_feeds: Service created", elapsed_ms=(time.perf_counter() - service_start) * 1000)
-    
+
     query_start = time.perf_counter()
     feeds = await feed_service.list_feeds(
         db_session_factory,
@@ -101,13 +101,15 @@ async def list_feeds(
         skip=skip,
     )
     query_duration = (time.perf_counter() - query_start) * 1000
-    
+
     total_duration = (time.perf_counter() - request_start) * 1000
-    logger.warning("list_feeds: Complete", 
-                query_duration_ms=round(query_duration, 2),
-                total_duration_ms=round(total_duration, 2),
-                feed_count=len(feeds))
-    
+    logger.warning(
+        "list_feeds: Complete",
+        query_duration_ms=round(query_duration, 2),
+        total_duration_ms=round(total_duration, 2),
+        feed_count=len(feeds),
+    )
+
     return feeds
 
 
@@ -161,7 +163,7 @@ async def get_feed(
         - Subscription-specific fields (folder_id, is_favorite) only included when subscribed
     """
     from app.db.session import db_session_factory
-    
+
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     feed = await feed_service.get_feed(db_session_factory, feed_id=feed_id)
     if not feed:
@@ -246,10 +248,12 @@ async def update_feed_settings(
         - To update global feed properties (url, description, etc.), use the admin endpoint
     """
     from app.db.session import db_session_factory
-    
+
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     try:
-        updated_feed = await feed_service.update_feed_user_settings(db_session_factory, feed_id=feed_id, feed_in=feed_in)
+        updated_feed = await feed_service.update_feed_user_settings(
+            db_session_factory, feed_id=feed_id, feed_in=feed_in
+        )
         if not updated_feed:
             logger.warning(
                 "Feed not found for update or access denied",
@@ -342,7 +346,7 @@ async def delete_feed(
         - Returns 204 No Content on successful deletion
     """
     from app.db.session import db_session_factory
-    
+
     start_time = time.perf_counter()
     feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     success = await feed_service.delete_feed(db_session_factory, feed_id=feed_id)

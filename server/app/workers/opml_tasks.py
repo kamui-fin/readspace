@@ -43,7 +43,7 @@ async def import_single_feed_task(
     Phase 1: Check limits & existing subscriptions (<50ms)
     Phase 2: Network I/O - fetch & parse feed (0-30s, no DB connection)
     Phase 3: Create feed + subscription + articles (<500ms)
-    
+
     Each phase uses a separate worker_db() context to ensure connections
     are released immediately after each database operation.
 
@@ -119,7 +119,7 @@ async def import_single_feed_task(
     except Exception as exc:
         # Catch ANY unhandled exception at task level to ensure progress is updated
         total_time = time.perf_counter() - task_start
-        
+
         logger.error(
             "Unhandled exception in feed import task wrapper",
             feed_url=feed_url,
@@ -129,11 +129,11 @@ async def import_single_feed_task(
             user_id=str(user_id_uuid),
             exc_info=True,
         )
-        
+
         # CRITICAL: Update progress even on catastrophic failure
         if parent_task_id:
             from app.schemas import FeedImportError
-            
+
             await update_import_progress(
                 task_id=parent_task_id,
                 error=FeedImportError(
@@ -143,7 +143,7 @@ async def import_single_feed_task(
                     status="task_exception",
                 ),
             )
-        
+
         # Re-raise to let Taskiq handle retry logic
         raise
 
@@ -166,7 +166,7 @@ async def import_opml_task(
     1. Parses OPML content (CPU-bound, no DB)
     2. Creates folders in batch (single quick transaction)
     3. Dispatches individual feed import tasks to queue
-    
+
     Total DB time: <200ms for folder creation
     No DB connection held during task dispatching
 
@@ -185,7 +185,7 @@ async def import_opml_task(
 
     # Get task_id from context for cooperative cancellation
     task_id = context.message.task_id if context and hasattr(context, "message") and context.message else None
-    
+
     # Service function manages its own sessions internally - NO session passed
     return await import_opml(
         user_id=user_id_uuid,

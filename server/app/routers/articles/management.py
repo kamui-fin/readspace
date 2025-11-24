@@ -97,7 +97,6 @@ async def update_article(
     Updateable Fields:
         - is_read: Mark article as read/unread
         - is_read_later: Add/remove from read-later list
-        - is_favorite: Mark as favorite/unfavorite
         - read_at: Timestamp when article was read (usually set automatically)
 
     Note:

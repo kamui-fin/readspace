@@ -79,9 +79,7 @@ class OpmlImportService:
 
         return transformed_feeds
 
-    async def _check_subscription_limit_db(
-        self, db, feed_url: str, feed_title: str | None
-    ) -> dict[str, Any] | None:
+    async def _check_subscription_limit_db(self, db, feed_url: str, feed_title: str | None) -> dict[str, Any] | None:
         """Check subscription limit. Returns error dict if limit exceeded, None otherwise.
 
         Pure DB function - caller manages session.
@@ -97,9 +95,7 @@ class OpmlImportService:
 
         if not can_proceed:
             limits = resource_service.get_user_limits(str(profile.role))
-            current_usage = await resource_service.get_current_usage(
-                self.user_id, "max_subscriptions", lock=False
-            )
+            current_usage = await resource_service.get_current_usage(self.user_id, "max_subscriptions", lock=False)
 
             logger.warning(
                 "Subscription limit reached during OPML import, skipping feed",
@@ -130,9 +126,7 @@ class OpmlImportService:
             raise ValueError("Could not find or create default folder")
         return default_folder.id
 
-    async def _bulk_create_folders_db(
-        self, db, folder_names: set[str]
-    ) -> dict[str, UUID]:
+    async def _bulk_create_folders_db(self, db, folder_names: set[str]) -> dict[str, UUID]:
         """Bulk create folders and return name->id mapping.
 
         Pure DB function - caller manages session.
@@ -144,9 +138,7 @@ class OpmlImportService:
 
         # Get existing folders
         existing_folders = await folder_service.list_folders()
-        folder_cache: dict[str, UUID] = {
-            folder.name: folder.id for folder in existing_folders
-        }
+        folder_cache: dict[str, UUID] = {folder.name: folder.id for folder in existing_folders}
 
         # Identify folders that need to be created
         folders_to_create = [name for name in folder_names if name not in folder_cache]
@@ -154,9 +146,7 @@ class OpmlImportService:
         # Bulk create new folders using atomic batch operation
         if folders_to_create:
             try:
-                created_folders = await folder_service.create_folders_batch(
-                    folders_to_create
-                )
+                created_folders = await folder_service.create_folders_batch(folders_to_create)
                 folder_cache.update(created_folders)
 
                 logger.info(
@@ -213,9 +203,7 @@ class OpmlImportService:
                 task = await import_single_feed_task.kiq(
                     user_id=str(self.user_id),
                     feed_url=feed_data["url"],
-                    folder_id=(
-                        str(feed_data["folder_id"]) if feed_data["folder_id"] else None
-                    ),
+                    folder_id=(str(feed_data["folder_id"]) if feed_data["folder_id"] else None),
                     tag_names=feed_data["tag_names"],
                     feed_title=feed_data["title"],
                     update_existing=True,
@@ -239,7 +227,7 @@ class OpmlImportService:
                 # Update progress to count this as a failed import
                 if parent_task_id:
                     from app.schemas import FeedImportError
-                    
+
                     await update_import_progress(
                         task_id=parent_task_id,
                         error=FeedImportError(
@@ -308,9 +296,7 @@ class OpmlImportService:
         try:
             # Phase 1: Check limit + get folder
             async with session_factory() as db:
-                limit_check = await self._check_subscription_limit_db(
-                    db, feed_url, feed_title
-                )
+                limit_check = await self._check_subscription_limit_db(db, feed_url, feed_title)
                 if limit_check:
                     return limit_check
 
@@ -341,9 +327,7 @@ class OpmlImportService:
             return {
                 "success": True,
                 "url": feed_url,
-                "title": feed_response.custom_title
-                or feed_response.feed.title
-                or feed_title,
+                "title": feed_response.custom_title or feed_response.feed.title or feed_title,
                 "status": status,
                 "feed_id": str(feed_response.id),
             }
@@ -411,10 +395,7 @@ class OpmlImportService:
                 ]
             ):
                 status = "network_error"
-            elif any(
-                term in error_str
-                for term in ["parse", "xml", "encoding", "not well-formed"]
-            ):
+            elif any(term in error_str for term in ["parse", "xml", "encoding", "not well-formed"]):
                 status = "broken_feed"
             elif "greenlet" in error_str:
                 status = "unknown_error"

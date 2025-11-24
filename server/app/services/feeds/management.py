@@ -45,9 +45,7 @@ class FeedManagementService:
         self.user_id = user_id
         self._cache = get_redis_cache()
         # Allow dependency injection for testing
-        self.feed_creation_service = feed_creation_service or FeedCreationService(
-            user_id
-        )
+        self.feed_creation_service = feed_creation_service or FeedCreationService(user_id)
         self.feed_service = feed_service or FeedService()
 
     async def add_new_feed(
@@ -75,9 +73,7 @@ class FeedManagementService:
             update_existing=update_existing,
         )
 
-    async def get_feed(
-        self, session_factory: SessionFactory, feed_id: UUID
-    ) -> FeedResponse | None:
+    async def get_feed(self, session_factory: SessionFactory, feed_id: UUID) -> FeedResponse | None:
         """Get a specific feed by ID for any authenticated user.
 
         Returns feed data with subscription status. Any authenticated user can view
@@ -100,18 +96,12 @@ class FeedManagementService:
             # Base feed data (always present)
             feed_data = {
                 "id": feed_db.id,
-                "url": normalize_url_for_display(
-                    str(feed_db.url) if feed_db.url else None
-                ),
+                "url": normalize_url_for_display(str(feed_db.url) if feed_db.url else None),
                 "title": feed_db.title,
                 "description": feed_db.description,
-                "link": normalize_url_for_display(
-                    str(feed_db.link) if feed_db.link else None
-                ),
+                "link": normalize_url_for_display(str(feed_db.link) if feed_db.link else None),
                 "language": feed_db.language,
-                "image_url": normalize_url_for_display(
-                    str(feed_db.image_url) if feed_db.image_url else None
-                ),
+                "image_url": normalize_url_for_display(str(feed_db.image_url) if feed_db.image_url else None),
                 "tags": feed_db.tags,
                 "top_level_category": feed_db.top_level_category,
                 "popularity_score": feed_db.popularity_score,
@@ -155,6 +145,7 @@ class FeedManagementService:
         Use the dedicated /feeds/unread-counts endpoint for per-feed counts.
         """
         import time
+
         service_start = time.perf_counter()
         logger.info("FeedService.list_feeds: Starting", user_id=str(self.user_id))
 
@@ -174,9 +165,9 @@ class FeedManagementService:
                 limit=limit,
             )
             query_duration = (time.perf_counter() - query_start) * 1000
-            logger.info("FeedService.list_feeds: Feeds fetched",
-                       duration_ms=round(query_duration, 2),
-                       count=len(feeds_db))
+            logger.info(
+                "FeedService.list_feeds: Feeds fetched", duration_ms=round(query_duration, 2), count=len(feeds_db)
+            )
 
             if not feeds_db:
                 return []
@@ -185,18 +176,12 @@ class FeedManagementService:
             for feed, subscription in feeds_db:
                 feed_data = {
                     "id": feed.id,
-                    "url": normalize_url_for_display(
-                        str(feed.url) if feed.url else None
-                    ),
+                    "url": normalize_url_for_display(str(feed.url) if feed.url else None),
                     "title": subscription.custom_title or feed.title,
                     "description": feed.description,
-                    "link": normalize_url_for_display(
-                        str(feed.link) if feed.link else None
-                    ),
+                    "link": normalize_url_for_display(str(feed.link) if feed.link else None),
                     "language": feed.language,
-                    "image_url": normalize_url_for_display(
-                        str(feed.image_url) if feed.image_url else None
-                    ),
+                    "image_url": normalize_url_for_display(str(feed.image_url) if feed.image_url else None),
                     "tags": feed.tags,
                     "top_level_category": feed.top_level_category,
                     "popularity_score": feed.popularity_score,
@@ -252,9 +237,7 @@ class FeedManagementService:
                 return SubscriptionResponse.model_validate(updated_subscription)
             return None
 
-    async def delete_feed(
-        self, session_factory: SessionFactory, feed_id: UUID
-    ) -> bool:
+    async def delete_feed(self, session_factory: SessionFactory, feed_id: UUID) -> bool:
         """Delete a feed and all its articles."""
         logger.info("Deleting feed", feed_id=feed_id, user_id=self.user_id)
 
@@ -341,16 +324,12 @@ class FeedManagementService:
             # Convert base FeedResponse to user-specific FeedResponse
             if preview_mode or not subscription_db:
                 # Preview mode: return feed without subscription data
-                return self._construct_feed_response_from_base(
-                    base_response, None, None
-                )
+                return self._construct_feed_response_from_base(base_response, None, None)
             else:
                 # Subscribed user: add subscription data and unread count
                 async with session_factory() as db:
                     unread_count = await self._get_unread_count(db, feed_id)
-                return self._construct_feed_response_from_base(
-                    base_response, subscription_db, unread_count
-                )
+                return self._construct_feed_response_from_base(base_response, subscription_db, unread_count)
 
         except Exception as e:
             logger.error(
@@ -385,8 +364,7 @@ class FeedManagementService:
                     FeedArticle.feed_id == feed_id,
                     or_(
                         FeedSubscription.last_read_cutoff.is_(None),
-                        ArticleContent.published_at
-                        > FeedSubscription.last_read_cutoff,
+                        ArticleContent.published_at > FeedSubscription.last_read_cutoff,
                     ),
                     or_(
                         UserArticleState.is_read.is_(None),
@@ -398,9 +376,7 @@ class FeedManagementService:
         unread_count_result = await db.execute(unread_counts_stmt)
         return unread_count_result.scalar_one_or_none() or 0
 
-    async def _get_unread_counts_for_feeds(
-        self, db, feed_ids: list[UUID]
-    ) -> dict[UUID, int]:
+    async def _get_unread_counts_for_feeds(self, db, feed_ids: list[UUID]) -> dict[UUID, int]:
         """Get unread counts for multiple feeds in a single optimized query.
 
         Uses COALESCE optimization for better index usage (SARGable queries).
@@ -409,9 +385,7 @@ class FeedManagementService:
             return {}
 
         unread_counts_stmt = (
-            select(
-                FeedArticle.feed_id, func.count(FeedArticle.id).label("unread_count")
-            )
+            select(FeedArticle.feed_id, func.count(FeedArticle.id).label("unread_count"))
             .join(ArticleContent, ArticleContent.id == FeedArticle.content_id)
             .join(
                 FeedSubscription,
@@ -431,7 +405,7 @@ class FeedManagementService:
                 and_(
                     FeedArticle.feed_id.in_(feed_ids),
                     # Optimized unread logic using COALESCE for SARGable queries
-                    ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, '1970-01-01'),
+                    ArticleContent.published_at > func.coalesce(FeedSubscription.last_read_cutoff, "1970-01-01"),
                     func.coalesce(UserArticleState.is_read, False) == False,
                 )
             )
@@ -483,9 +457,7 @@ class FeedManagementService:
 
         return FeedResponse(**feed_data)
 
-    async def get_all_feed_unread_counts(
-        self, session_factory: SessionFactory
-    ) -> dict[str, int]:
+    async def get_all_feed_unread_counts(self, session_factory: SessionFactory) -> dict[str, int]:
         """Get unread counts for all user's feeds.
 
         Returns:

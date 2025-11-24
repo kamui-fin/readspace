@@ -6,7 +6,7 @@ consistently across API endpoints and background workers.
 Usage:
     # API mode (FastAPI dependency)
     from app.db.session import get_db_factory
-    
+
     @router.post("/feeds")
     async def create_feed(
         feed_in: FeedCreate,
@@ -14,10 +14,10 @@ Usage:
     ):
         service = FeedService()
         return await service.create_feed(db_factory, feed_in)
-    
+
     # Worker mode
     from app.workers.common import worker_db_factory
-    
+
     async def refresh_feed_task(feed_id: UUID):
         service = FeedService()
         return await service.refresh_feed(worker_db_factory, feed_id)
@@ -32,7 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 class SessionFactory(Protocol):
     """Protocol for database session factories.
-    
+
     This allows both API and worker contexts to provide session factories
     in a consistent way without tight coupling.
     """
@@ -40,7 +40,7 @@ class SessionFactory(Protocol):
     @asynccontextmanager
     async def __call__(self) -> AsyncIterator[AsyncSession]:
         """Create a new database session as a context manager.
-        
+
         Yields:
             AsyncSession: Database session that will be automatically committed/rolled back
         """

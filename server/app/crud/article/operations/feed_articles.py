@@ -9,17 +9,19 @@ from sqlalchemy.orm import selectinload
 from app.crud.article.operations.base import CRUDBase
 from app.models import FeedArticle
 from app.schemas import FeedArticleCreate, FeedArticleUpdate
+from app.utils.content_hash import get_guid_hash
 
 
-class CRUDFeedArticle(CRUDBase[FeedArticle, FeedArticleCreate, FeedArticleUpdate]):
+class CRUDFeedArticle:
     """CRUD operations for RSS feed articles."""
 
     async def get_by_feed_and_guid(self, db: AsyncSession, *, feed_id: UUID, guid: str) -> FeedArticle | None:
-        """Get feed article by feed ID and GUID."""
+        """Get feed article by feed ID and GUID (using hash for performance)."""
+        guid_hash = get_guid_hash(guid, fallback_link=None)
         result = await db.execute(
             select(FeedArticle)
             .options(selectinload(FeedArticle.content))
-            .where(and_(FeedArticle.feed_id == feed_id, FeedArticle.guid == guid))
+            .where(and_(FeedArticle.feed_id == feed_id, FeedArticle.guid_hash == guid_hash))
         )
         return result.scalar_one_or_none()
 

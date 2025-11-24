@@ -77,8 +77,10 @@ async def get_unread_article_counts(
     query_duration = (time.perf_counter() - query_start) * 1000
     total_duration = (time.perf_counter() - request_start) * 1000
 
-    logger.warning("unread_counts: Complete",
-                query_duration_ms=round(query_duration, 2),
-                total_duration_ms=round(total_duration, 2))
+    logger.warning(
+        "unread_counts: Complete",
+        query_duration_ms=round(query_duration, 2),
+        total_duration_ms=round(total_duration, 2),
+    )
 
     return result

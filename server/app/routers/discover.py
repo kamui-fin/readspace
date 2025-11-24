@@ -33,7 +33,7 @@ async def get_feed_preview(
     """
     try:
         # Create a temporary service instance for fetching feed metadata
-        temp_service = FeedCreationService(db, user_id=uuid4())
+        temp_service = FeedCreationService(db)
 
         # Transform rsshub:// URLs to actual HTTP URLs for fetching
         fetch_url = transform_rsshub_url(url)

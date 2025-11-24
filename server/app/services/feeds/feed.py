@@ -44,7 +44,7 @@ class FeedService:
     Usage:
         # API mode
         from app.db.session import get_db_factory
-        
+
         @router.post("/feeds/{feed_id}/refresh")
         async def refresh_feed(
             feed_id: UUID,
@@ -52,10 +52,10 @@ class FeedService:
         ):
             service = FeedService()
             return await service.refresh_feed(db_factory, feed_id)
-        
+
         # Worker mode
         from app.workers.common import worker_db_factory
-        
+
         async def refresh_feed_task(feed_id: UUID):
             service = FeedService()
             return await service.refresh_feed(worker_db_factory, feed_id)
@@ -70,25 +70,19 @@ class FeedService:
         self.feed_fetcher = feed_fetcher or FeedFetcher(self._cache)
         self.feed_parser = feed_parser or FeedParsingService()
 
-    async def get_or_create_feed(
-        self, session_factory: SessionFactory, *, feed_data: FeedBase
-    ) -> Feed:
+    async def get_or_create_feed(self, session_factory: SessionFactory, *, feed_data: FeedBase) -> Feed:
         """Get existing global feed or create a new one."""
         logger.info("Getting or creating global feed", url=str(feed_data.url))
 
         async with session_factory() as db:
             return await crud_feed.create_feed(db, feed_data=feed_data)
 
-    async def get_feed_by_id(
-        self, session_factory: SessionFactory, *, feed_id: UUID
-    ) -> Feed | None:
+    async def get_feed_by_id(self, session_factory: SessionFactory, *, feed_id: UUID) -> Feed | None:
         """Get a global feed by ID."""
         async with session_factory() as db:
             return await crud_feed.get_feed_by_id(db, feed_id=feed_id)
 
-    async def get_feed_by_url(
-        self, session_factory: SessionFactory, *, url: str
-    ) -> Feed | None:
+    async def get_feed_by_url(self, session_factory: SessionFactory, *, url: str) -> Feed | None:
         """Get a global feed by URL."""
         async with session_factory() as db:
             return await crud_feed.get_feed_by_url(db, url=url)
@@ -138,22 +132,16 @@ class FeedService:
         # PHASE 2: Network I/O without holding DB connection (0-30s)
         # ================================================================
         try:
-            fetch_result = await self.feed_fetcher.fetch_content(
-                feed_url, etag=etag, last_modified=last_modified
-            )
+            fetch_result = await self.feed_fetcher.fetch_content(feed_url, etag=etag, last_modified=last_modified)
         except Exception as e:
             error_msg = f"Error fetching feed: {str(e)}"
-            logger.error(
-                "Error fetching feed", feed_id=feed_id, error=error_msg, exc_info=True
-            )
+            logger.error("Error fetching feed", feed_id=feed_id, error=error_msg, exc_info=True)
 
             # Update error count
             async with session_factory() as db:
                 feed_db = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
                 if feed_db:
-                    await crud_feed.update_feed_error(
-                        db, feed_db=feed_db, error_message=error_msg
-                    )
+                    await crud_feed.update_feed_error(db, feed_db=feed_db, error_message=error_msg)
             raise
 
         # Handle 304 Not Modified
@@ -173,9 +161,7 @@ class FeedService:
 
             async with session_factory() as db:
                 feed_db = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
-                await crud_feed.update_feed_error(
-                    db, feed_db=feed_db, error_message=error_msg
-                )
+                await crud_feed.update_feed_error(db, feed_db=feed_db, error_message=error_msg)
             return None
 
         # Parse the feed content (CPU-bound, no I/O)
@@ -203,9 +189,7 @@ class FeedService:
         # Extract feed headers and metadata (no DB)
         feed_headers = fetch_result.headers
         feed_metadata = self._extract_feed_metadata(parsed_feed)
-        last_article_published_at = self._find_latest_article_date(
-            parsed_feed, feed_url
-        )
+        last_article_published_at = self._find_latest_article_date(parsed_feed, feed_url)
 
         # ================================================================
         # PHASE 3: Database write operations (connection held ~500ms)
@@ -224,32 +208,16 @@ class FeedService:
     def _extract_feed_metadata(self, parsed_feed) -> dict:
         """Extract feed metadata from parsed content (no DB)."""
         return {
-            "title": (
-                parsed_feed.feed.title if hasattr(parsed_feed.feed, "title") else None
-            ),
-            "description": (
-                parsed_feed.feed.description
-                if hasattr(parsed_feed.feed, "description")
-                else None
-            ),
-            "link": (
-                parsed_feed.feed.link if hasattr(parsed_feed.feed, "link") else None
-            ),
-            "language": (
-                parsed_feed.feed.language
-                if hasattr(parsed_feed.feed, "language")
-                else None
-            ),
+            "title": (parsed_feed.feed.title if hasattr(parsed_feed.feed, "title") else None),
+            "description": (parsed_feed.feed.description if hasattr(parsed_feed.feed, "description") else None),
+            "link": (parsed_feed.feed.link if hasattr(parsed_feed.feed, "link") else None),
+            "language": (parsed_feed.feed.language if hasattr(parsed_feed.feed, "language") else None),
             "image_url": (
-                getattr(parsed_feed.feed, "image", {}).get("href")
-                if hasattr(parsed_feed.feed, "image")
-                else None
+                getattr(parsed_feed.feed, "image", {}).get("href") if hasattr(parsed_feed.feed, "image") else None
             ),
         }
 
-    def _find_latest_article_date(
-        self, parsed_feed, feed_url: str
-    ) -> datetime | None:
+    def _find_latest_article_date(self, parsed_feed, feed_url: str) -> datetime | None:
         """Find the latest article publication date (no DB)."""
         if not parsed_feed.entries:
             return None
@@ -279,8 +247,7 @@ class FeedService:
 
         # Periodically recalculate optimal interval (1 in 10 refreshes)
         should_recalculate = (
-            feed_db.adaptive_fetch_interval_minutes is None
-            or random.random() < 0.1  # noqa: S311
+            feed_db.adaptive_fetch_interval_minutes is None or random.random() < 0.1  # noqa: S311
         )
         adaptive_interval_to_set = None
 
@@ -329,9 +296,7 @@ class FeedService:
 
         for entry in entries:
             try:
-                article_dict = self.feed_parser.extract_article_data(
-                    entry, str(feed_db.url)
-                )
+                article_dict = self.feed_parser.extract_article_data(entry, str(feed_db.url))
                 if not article_dict:
                     continue
 
@@ -344,9 +309,7 @@ class FeedService:
                     author=article_dict.get("author"),
                     published_at=article_dict.get("published_at"),
                     image_url=article_dict.get("image_url"),
-                    estimated_read_time_minutes=article_dict.get(
-                        "estimated_read_time_minutes"
-                    ),
+                    estimated_read_time_minutes=article_dict.get("estimated_read_time_minutes"),
                 )
                 articles_to_create.append(article_schema)
 
@@ -362,9 +325,7 @@ class FeedService:
             return 0
 
         try:
-            created_articles = await create_articles_batch(
-                db, articles_data=articles_to_create
-            )
+            created_articles = await create_articles_batch(db, articles_data=articles_to_create)
 
             created_count = len(created_articles)
 
@@ -392,9 +353,7 @@ class FeedService:
             )
             raise
 
-    async def get_feeds_needing_refresh(
-        self, session_factory: SessionFactory, *, limit: int = 100
-    ) -> list[Feed]:
+    async def get_feeds_needing_refresh(self, session_factory: SessionFactory, *, limit: int = 100) -> list[Feed]:
         """Get global feeds that need refreshing."""
         async with session_factory() as db:
             return await crud_feed.get_feeds_needing_refresh(db, limit=limit)

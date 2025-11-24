@@ -56,9 +56,7 @@ router = APIRouter()
             "description": "Service unavailable - could not connect to feed URL",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Could not connect to feed URL during refresh: Connection timeout"
-                    }
+                    "example": {"detail": "Could not connect to feed URL during refresh: Connection timeout"}
                 }
             },
         },
@@ -129,9 +127,7 @@ async def refresh_feed(
                 feed_id=feed_id,
                 user_id=current_user.sub,
             )
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
         duration = time.perf_counter() - start_time
 
@@ -166,9 +162,7 @@ async def refresh_feed(
             feed_id=feed_id,
             duration_seconds=round(duration, 3),
         )
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except HTTPException:
         duration = time.perf_counter() - start_time
         # Re-raise HTTP exceptions (like feed not found)

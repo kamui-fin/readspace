@@ -14,7 +14,7 @@ logger = structlog.get_logger(__name__)
 
 async def compact_unread_articles() -> dict[str, int]:
     """Compact unread articles by updating last_read_cutoff.
-    
+
     Service manages its own database session.
 
     Returns:
@@ -53,7 +53,7 @@ async def compact_old_articles() -> dict[str, int]:
 
     IMPORTANT: This deletes article_contents (which cascade deletes feed_articles),
     not feed_articles directly. Deleting feed_articles would leave orphaned content.
-    
+
     Service manages its own database session.
 
     Returns:
@@ -91,7 +91,7 @@ async def compact_old_articles() -> dict[str, int]:
                     ON uas.article_id = (
                         SELECT fa2.id FROM feed_articles fa2 WHERE fa2.content_id = ra.content_id LIMIT 1
                     )
-                    AND (uas.is_read_later = TRUE OR uas.is_favorite = TRUE)
+                    AND uas.is_read_later = TRUE
                 LEFT JOIN clipped_articles ca
                     ON ca.content_id = ra.content_id
                 WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)

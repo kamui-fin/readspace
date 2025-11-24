@@ -68,13 +68,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         acquire_duration = (time.perf_counter() - acquire_start) * 1000
         if acquire_duration > 100:  # Only log if slow
-            logger.warning(
-                "DB connection acquired (SLOW)", duration_ms=round(acquire_duration, 2)
-            )
+            logger.warning("DB connection acquired (SLOW)", duration_ms=round(acquire_duration, 2))
         else:
-            logger.debug(
-                "DB connection acquired", duration_ms=round(acquire_duration, 2)
-            )
+            logger.debug("DB connection acquired", duration_ms=round(acquire_duration, 2))
 
         try:
             yield session
@@ -83,13 +79,9 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.commit()
             commit_duration = (time.perf_counter() - commit_start) * 1000
             if commit_duration > 100:
-                logger.warning(
-                    "DB commit complete (SLOW)", duration_ms=round(commit_duration, 2)
-                )
+                logger.warning("DB commit complete (SLOW)", duration_ms=round(commit_duration, 2))
             else:
-                logger.debug(
-                    "DB commit complete", duration_ms=round(commit_duration, 2)
-                )
+                logger.debug("DB commit complete", duration_ms=round(commit_duration, 2))
         except Exception:
             await session.rollback()
             raise

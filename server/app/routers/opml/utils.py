@@ -11,35 +11,8 @@ from taskiq_redis.exceptions import ResultIsMissingError
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
 from app.core.redis_cache import RedisCache
 from app.core.taskiq_app import broker
-from app.workers.opml.progress import (
-    check_import_cancellation_flag,
-    clear_import_cancellation_flag,
-    delete_import_progress,
-    get_import_progress,
-    initialize_import_progress,
-    set_import_cancellation_flag,
-    update_import_progress,
-)
 
 logger = structlog.get_logger(__name__)
-
-# Re-export progress functions for backward compatibility
-__all__ = [
-    "validate_opml_structure",
-    "store_task_ownership",
-    "get_task_owner",
-    "get_user_task_ids",
-    "cleanup_task_ownership",
-    "get_taskiq_result",
-    "set_import_cancellation_flag",
-    "check_import_cancellation_flag",
-    "clear_import_cancellation_flag",
-    "initialize_import_progress",
-    "get_import_progress",
-    "update_import_progress",
-    "delete_import_progress",
-]
-
 
 def validate_opml_structure(content: str, filename: str) -> int:
     """Validate OPML file structure and count feeds.

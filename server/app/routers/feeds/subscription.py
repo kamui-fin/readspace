@@ -227,7 +227,7 @@ async def subscribe_to_feed(
 )
 async def add_new_feed(
     *,
-    db_factory = Depends(get_db_factory),
+    db_factory=Depends(get_db_factory),
     feed_in: FeedCreate = Body(..., description="Feed URL and folder assignment for the new subscription"),
     current_user: TokenData = Depends(get_current_user),
 ) -> SubscriptionResponse:

@@ -1,261 +1,109 @@
-"""Transformers for converting between article data models and response schemas."""
+"""Simplified transformer for new unified schema."""
 
 from typing import Any
 from urllib.parse import urlparse
 
-from app.models import ClippedArticle, Feed, FeedArticle, FeedSubscription, UserArticleState
+from app.models import Feed, FeedArticle, UserEntry
 from app.schemas import ArticleResponse
 
 
 class ArticleTransformer:
-    """Transforms articles between different representations."""
+    """Transform database models to API responses."""
 
     @staticmethod
-    def _truncate_description(description: str | None, max_length: int = 200) -> str | None:
-        """Truncate description to specified length with ellipsis.
-
-        Args:
-            description: Full description text
-            max_length: Maximum length for truncated version (default 200 chars)
-
-        Returns:
-            Truncated description with ellipsis if longer than max_length, or original if shorter
-        """
-        if not description:
-            return None
-
-        if len(description) <= max_length:
-            return description
-
-        # Find the last space before max_length to avoid cutting words
-        truncated = description[:max_length]
-        last_space = truncated.rfind(" ")
-
-        if last_space > max_length * 0.8:  # Only use space if it's not too far back
-            truncated = truncated[:last_space]
-
-        return truncated.rstrip(".,;:") + "..."
-
-    def feed_to_unified(
-        self,
-        feed_article: (
-            FeedArticle
-            | tuple[FeedArticle, UserArticleState]
-            | tuple[FeedArticle, UserArticleState, FeedSubscription, bool]
-        ),
-    ) -> ArticleResponse:
-        """Convert FeedArticle to unified ArticleResponse.
-
-        Args:
-            feed_article: Can be:
-                - FeedArticle: Single article (legacy)
-                - tuple[FeedArticle, UserArticleState]: Article with user state
-                - tuple[FeedArticle, UserArticleState, FeedSubscription, bool]: Article with user state,
-                  subscription, and computed is_read value (recommended)
-        """
-        # Handle different tuple structures
-        if isinstance(feed_article, tuple):
-            if len(feed_article) == 4:
-                # New format: (FeedArticle, UserArticleState, FeedSubscription, computed_is_read)
-                article, user_state, subscription, computed_is_read = feed_article
-                # Use computed is_read value which respects last_read_cutoff
-                is_read = computed_is_read
-                # Other user states still come from UserArticleState
-                is_read_later = user_state.is_read_later if user_state is not None else False
-                is_favorite = user_state.is_favorite if user_state is not None else False
-                read_at = user_state.read_at if user_state is not None else None
-            elif len(feed_article) == 2:
-                # Legacy format: (FeedArticle, UserArticleState)
-                article, user_state = feed_article
-                # Handle case where user_state is None (from LEFT OUTER JOIN)
-                if user_state is not None:
-                    is_read = user_state.is_read
-                    is_read_later = user_state.is_read_later
-                    is_favorite = user_state.is_favorite
-                    read_at = user_state.read_at
-                else:
-                    # Default values when no user state exists yet
-                    is_read = False
-                    is_read_later = False
-                    is_favorite = False
-                    read_at = None
-            else:
-                raise ValueError(f"Unexpected tuple length: {len(feed_article)}")
-        else:
-            # Single FeedArticle without user state
-            article = feed_article
-            is_read = getattr(feed_article, "is_read", False)
-            is_read_later = getattr(feed_article, "is_read_later", False)
-            is_favorite = getattr(feed_article, "is_favorite", False)
-            read_at = getattr(feed_article, "read_at", None)
-
-        content = article.content
-        feed = article.feed
-
-        # Get description - may be None if deferred in list queries
-        full_description = content.description if content else None
-
-        # Generate preview from full description if available, otherwise use title
-        description_preview = self._truncate_description(full_description)
-        if not description_preview and content and content.title:
-            # Fallback to truncated title if no description
-            description_preview = self._truncate_description(content.title)
-
-        return ArticleResponse(
-            id=article.id,
-            title=content.title if content else None,
-            link=content.link if content else None,
-            description=full_description,
-            description_preview=description_preview,
-            content=content.content if content else None,
-            published_at=content.published_at if content else None,
-            author=content.author if content else None,
-            image_url=content.image_url if content else None,
-            estimated_read_time_minutes=content.estimated_read_time_minutes if content else None,
-            is_read=is_read,
-            is_read_later=is_read_later,
-            is_favorite=is_favorite,
-            read_at=read_at,
-            feed_id=article.feed_id,
-            guid=getattr(article, "guid", None),
-            folder_id=None,  # Will be determined from feed subscription
-            article_type="feed",
-            created_at=article.created_at,
-            updated_at=article.updated_at,
-            feed=self._extract_feed_info(feed),
-        )
-
-    def clipped_to_unified(self, clipped_article: ClippedArticle) -> ArticleResponse:
-        """Convert ClippedArticle to unified ArticleResponse."""
-        content = clipped_article.content
-
-        # Get description - may be None if deferred in list queries
-        full_description = content.description if content else None
-
-        # Generate preview from full description if available
-        description_preview = self._truncate_description(full_description)
-        if not description_preview and content and content.title:
-            description_preview = self._truncate_description(content.title)
-
-        return ArticleResponse(
-            id=clipped_article.id,
-            title=content.title if content else None,
-            link=content.link if content else None,
-            description=full_description,
-            description_preview=description_preview,
-            content=content.content if content else None,
-            published_at=clipped_article.created_at,  # Use created_at as published_at
-            author=content.author if content else None,
-            image_url=content.image_url if content else None,
-            estimated_read_time_minutes=content.estimated_read_time_minutes if content else None,
-            is_read=clipped_article.is_read,
-            is_read_later=clipped_article.is_read_later,
-            is_favorite=clipped_article.is_favorite,
-            read_at=clipped_article.read_at,  # Include read_at timestamp
-            feed_id=None,  # No feed for clipped articles
-            priority=getattr(clipped_article, "priority", None),
-            note=getattr(clipped_article, "note", None),
-            article_type="clipped",
-            created_at=clipped_article.created_at,
-            updated_at=clipped_article.created_at,  # ClippedArticle doesn't have updated_at, use created_at
-            feed=None,
-        )
-
-    def raw_row_to_unified(self, row: Any) -> ArticleResponse:
-        """Convert raw database row from union query to ArticleResponse."""
-        # Handle both ORM objects and raw row data
-        if hasattr(row, "_asdict"):
-            # Handle named tuple from raw SQL
-            data = row._asdict()
-        elif hasattr(row, "__dict__"):
-            # Handle ORM object
-            data = row.__dict__
-        else:
-            # Handle dictionary
-            data = dict(row) if hasattr(row, "items") else {}
-
-        # Build feed info if we have feed data
-        feed_info = None
-        if data.get("feed_title") or data.get("feed_link"):
-            feed_info = {
-                "title": data.get("feed_title"),
-                "link": data.get("feed_link"),
-                "image_url": data.get("feed_image_url"),
-            }
-
-        # Generate description preview
-        full_description = data.get("description")
-        description_preview = self._truncate_description(full_description)
-        if not description_preview and data.get("title"):
-            description_preview = self._truncate_description(data.get("title"))
-
-        return ArticleResponse(
-            id=data.get("id"),
-            title=data.get("title"),
-            link=data.get("link"),
-            description=full_description,
-            description_preview=description_preview,
-            content=data.get("content"),
-            published_at=data.get("published_at"),
-            author=data.get("author"),
-            image_url=data.get("image_url"),
-            estimated_read_time_minutes=data.get("read_time"),
-            is_read=data.get("is_read", False),
-            is_read_later=data.get("is_read_later", False),
-            is_favorite=data.get("is_favorite", False),
-            feed_id=data.get("feed_id"),
-            guid=data.get("guid"),
-            folder_id=data.get("folder_id"),
-            priority=data.get("priority"),
-            note=data.get("note"),
-            article_type=data.get("article_type", "unknown"),
-            created_at=data.get("created_at"),
-            updated_at=data.get("updated_at", data.get("created_at")),
-            feed=feed_info,
-        )
-
-    def _extract_source_domain(self, link: str | None) -> str | None:
-        """Extract domain from article link."""
+    def _extract_source_domain(link: str | None) -> str | None:
+        """Extract domain from URL."""
         if not link:
             return None
-
         try:
             parsed = urlparse(link)
-            return parsed.netloc
+            return parsed.netloc or None
         except Exception:
             return None
 
-    def to_unified(
-        self,
-        article: (
-            FeedArticle
-            | ClippedArticle
-            | tuple[FeedArticle, UserArticleState]
-            | tuple[FeedArticle, UserArticleState, FeedSubscription, bool]
-        ),
-    ) -> ArticleResponse:
-        """Convert any article type to unified ArticleResponse."""
-        # Check the actual type to determine which transformer to use
-        if isinstance(article, tuple):
-            # This is a tuple - could be 2 or 4 elements
-            return self.feed_to_unified(article)
-        elif isinstance(article, FeedArticle):
-            # This is a FeedArticle
-            return self.feed_to_unified(article)
-        elif isinstance(article, ClippedArticle):
-            # This is a ClippedArticle
-            return self.clipped_to_unified(article)
-        else:
-            # Unknown type - this should never happen due to type hints
-            raise TypeError(f"Unsupported article type: {type(article)}")
-
-    def _extract_feed_info(self, feed: Feed | None) -> dict[str, Any] | None:
-        """Extract feed information for response."""
+    @staticmethod
+    def _extract_feed_info(feed: Feed | None) -> dict[str, Any] | None:
+        """Extract feed information."""
         if not feed:
             return None
 
         return {
+            "id": feed.id,
             "title": feed.title,
+            "url": feed.url,
             "link": feed.link,
             "image_url": feed.image_url,
         }
+
+    @staticmethod
+    def _truncate_description(description: str | None, max_length: int = 200) -> str | None:
+        """Truncate description to max length."""
+        if not description:
+            return None
+        if len(description) <= max_length:
+            return description
+        return description[:max_length].rsplit(" ", 1)[0] + "..."
+
+    def entry_to_response(
+        self,
+        feed_article: FeedArticle,
+        user_entry: UserEntry | None = None,
+    ) -> ArticleResponse:
+        """
+        Convert FeedArticle + UserEntry to ArticleResponse.
+        """
+        content = feed_article.content
+        feed = feed_article.feed
+
+        # Extract user state
+        is_read = user_entry.is_read if user_entry else False
+        is_read_later = user_entry.is_read_later if user_entry else False
+        is_favorite = user_entry.is_favorite if user_entry else False
+        read_at = user_entry.read_at if user_entry else None
+        user_note = user_entry.user_note if user_entry else None
+        user_tags = user_entry.user_tags if user_entry else None
+
+        return ArticleResponse(
+            id=feed_article.id,
+            title=content.title,
+            link=content.link,
+            description=self._truncate_description(content.description),
+            content=content.content,
+            image_url=content.image_url,
+            author=content.author,
+            published_at=feed_article.published_at,  # Use denormalized value!
+            estimated_read_time_minutes=content.estimated_read_time_minutes,
+            source_domain=self._extract_source_domain(content.link),
+            is_read=is_read,
+            is_read_later=is_read_later,
+            is_favorite=is_favorite,
+            read_at=read_at,
+            user_note=user_note,
+            user_tags=user_tags,
+            article_type="feed",
+            created_at=feed_article.created_at,
+            feed=self._extract_feed_info(feed),
+        )
+
+    def to_response(
+        self,
+        article: FeedArticle | tuple[FeedArticle, UserEntry | None],
+    ) -> ArticleResponse:
+        """
+        Convert article to response - handles both single and tuple formats.
+        """
+        if isinstance(article, tuple):
+            feed_article, user_entry = article
+            return self.entry_to_response(feed_article, user_entry)
+        else:
+            return self.entry_to_response(article, None)
+
+    def raw_row_to_response(self, row: Any) -> ArticleResponse:
+        """Convert raw SQLAlchemy row to response."""
+        if hasattr(row, "_tuple"):
+            # Row from query result
+            feed_article, user_entry = row._tuple()
+            return self.entry_to_response(feed_article, user_entry)
+        else:
+            # Single object
+            return self.entry_to_response(row, None)

@@ -30,12 +30,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         Returns:
             Response: The response from the next middleware/endpoint
         """
-        request_id = str(uuid.uuid4())
         start_time = time.time()
 
         logger.info(
             "Request started",
-            request_id=request_id,
             method=request.method,
             path=request.url.path,
             client_host=request.client.host if request.client else None,
@@ -46,7 +44,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
             logger.info(
                 "Request completed",
-                request_id=request_id,
                 status_code=response.status_code,
                 process_time=process_time,
             )
@@ -55,7 +52,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             process_time = time.time() - start_time
             logger.error(
                 "Request failed",
-                request_id=request_id,
                 error=str(e),
                 process_time=process_time,
                 exc_info=True,

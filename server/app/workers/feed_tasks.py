@@ -34,7 +34,7 @@ logger = structlog.get_logger(__name__)
 )
 async def refresh_single_feed_task(feed_id: UUID | str) -> None:
     """Refresh a single feed - Taskiq task wrapper.
-    
+
     The service function manages its own database sessions internally:
     Phase 1: Quick metadata fetch (<10ms) + COMMIT → connection released
     Phase 2: Network I/O without DB connection (0-30s)
@@ -55,18 +55,18 @@ async def refresh_single_feed_task(feed_id: UUID | str) -> None:
 )
 async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
     """Schedule all feeds needing refresh - Taskiq task wrapper.
-    
+
     This is a quick orchestration task that:
     1. Queries feeds needing refresh (single quick query)
     2. Dispatches individual refresh tasks to the queue
-    
+
     Total DB time: <100ms for querying feed IDs
 
     Returns:
         Dictionary with scheduling statistics
     """
     start_time = time.perf_counter()
-    
+
     # Service function manages its own session - NO session passed
     result = await schedule_all_feeds()
 
@@ -87,10 +87,10 @@ async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
 )
 async def batch_enrich_feeds_task() -> dict[str, Any]:
     """Batch enrich all feeds without embeddings - Taskiq task wrapper.
-    
+
     LONG-RUNNING TASK: Processes feeds in batches to avoid holding connections.
     Pattern: Load batch → Process (AI calls) → Save batch → Repeat
-    
+
     Each batch cycle:
     - DB time: ~100ms (load + save)
     - AI time: ~5-10s (no DB connection held)
@@ -109,7 +109,7 @@ async def batch_enrich_feeds_task() -> dict[str, Any]:
 )
 async def compact_unread_articles_task() -> dict[str, int]:
     """Compact unread articles - Taskiq task wrapper.
-    
+
     LONG-RUNNING TASK: Processes subscriptions in batches.
     Pattern: Load batch → Process → Save batch → Repeat
 
@@ -126,7 +126,7 @@ async def compact_unread_articles_task() -> dict[str, int]:
 )
 async def compact_old_articles_task() -> dict[str, int]:
     """Compact old articles - Taskiq task wrapper.
-    
+
     LONG-RUNNING TASK: Processes articles in batches.
     Pattern: Load batch → Delete → Load next batch → Repeat
 
