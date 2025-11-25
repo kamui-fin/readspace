@@ -5,7 +5,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
@@ -18,10 +18,9 @@ from app.crud.feed.subscription import (
     update_subscription,
 )
 from app.db.session import get_db
+from app.services.user.auth import get_current_user
 from app.typing.subscriptions import FeedResponse, SubscriptionResponse, SubscriptionUpdate
 from app.typing.user import TokenData
-from app.services.feeds.service import get_user_feeds
-from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -144,7 +143,6 @@ async def get_feed(
         logger.warning("Feed not found", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
     # TODO: Transform Feed + Subscription to FeedResponse
     return feed
 
@@ -270,7 +268,7 @@ async def delete_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> JSONResponse:
+) -> ORJSONResponse:
     """
     Delete user's subscription to an RSS feed and remove associated user data.
 
@@ -283,7 +281,7 @@ async def delete_feed(
         current_user: Authenticated user information
 
     Returns:
-        JSONResponse: Empty response with 204 status code on success
+        ORJSONResponse: Empty response with 204 status code on success
 
     Raises:
         HTTPException:
@@ -323,7 +321,7 @@ async def delete_feed(
         feed_id=feed_id,
         user_id=current_user.sub,
     )
-    return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
+    return ORJSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
 
 
 @router.put(

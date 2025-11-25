@@ -1,15 +1,14 @@
 """Central module for ingesting articles - handles bulk creation and content deduplication."""
 
 from datetime import datetime, timezone
-from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, FeedArticle
+from app.models.article import ArticleContent, FeedArticle
 from app.typing.articles import ArticleCreate
-from app.utils.content_hash import get_content_hash, get_guid_hash
+from app.utils.text import get_content_hash, get_guid_hash
 
 
 async def create_articles_batch(db: AsyncSession, *, articles_data: list[ArticleCreate]) -> list[FeedArticle]:
@@ -39,10 +38,10 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
                     "description": article_in.content,
                     "content": article_in.content,
                     "author": article_in.author,
-                    "published_at": article_in.published_at,
+                    # published_at is not in ArticleContent
                     "image_url": str(article_in.image_url) if article_in.image_url else None,
                     "estimated_read_time_minutes": getattr(article_in, "estimated_read_time_minutes", None),
-                    "created_at": current_time,
+                    # created_at is not in ArticleContent
                 }
             )
             link_to_article[link_str] = article_in
@@ -117,3 +116,48 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
     await db.flush()
 
     return created_articles_list
+
+
+async def upsert_article_content(
+    db: AsyncSession, article_in: ArticleCreate, update_title_if_changed: bool = False
+) -> ArticleContent:
+    """
+    Upsert a single article content entry.
+    Used for clipped articles or single-item ingestion.
+    """
+    content_hash = get_content_hash(article_in.link)
+
+    values = {
+        "title": article_in.title,
+        "link": str(article_in.link),
+        "content_hash": content_hash,
+        "description": article_in.description,
+        "content": article_in.content,
+        "author": article_in.author,
+        "image_url": str(article_in.image_url) if article_in.image_url else None,
+        "estimated_read_time_minutes": article_in.estimated_read_time_minutes,
+    }
+
+    stmt = pg_insert(ArticleContent).values(values)
+
+    if update_title_if_changed:
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["content_hash"],
+            set_={
+                "title": stmt.excluded.title,
+                "image_url": stmt.excluded.image_url,
+                "estimated_read_time_minutes": stmt.excluded.estimated_read_time_minutes,
+                "description": stmt.excluded.description,
+                "content": stmt.excluded.content,
+            },
+        )
+    else:
+        # Force return of existing row if conflict
+        stmt = stmt.on_conflict_do_update(
+            index_elements=["content_hash"], set_={"content_hash": stmt.excluded.content_hash}
+        )
+
+    stmt = stmt.returning(ArticleContent)
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.scalar_one()

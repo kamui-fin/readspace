@@ -3,6 +3,7 @@ Functional logging middleware.
 """
 
 import time
+
 import structlog
 from fastapi import Request
 from starlette.responses import Response

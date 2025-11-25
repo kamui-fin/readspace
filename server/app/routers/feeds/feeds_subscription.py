@@ -10,14 +10,13 @@ from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import ReadspaceException, to_http_exception
 from app.crud.feed.core import get_feed_by_id
 from app.crud.feed.subscription import create_subscription
-from app.crud.profile import get_profile_by_id
 from app.db.session import get_db, get_db_factory
-from app.typing.feeds import FeedCreate
-from app.typing.subscriptions import SubscriptionCreate, SubscriptionCreateByFeedId, SubscriptionResponse
-from app.typing.user import TokenData
 from app.services.feeds.service import add_feed
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_subscription_limit
+from app.typing.feeds import FeedCreate
+from app.typing.subscriptions import SubscriptionCreate, SubscriptionCreateByFeedId, SubscriptionResponse
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

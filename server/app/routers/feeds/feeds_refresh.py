@@ -4,15 +4,14 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import FeedConnectionError, FeedParsingError, FeedValidationError
 from app.db.session import get_db_factory
-from app.typing.subscriptions import FeedResponse
-from app.typing.user import TokenData
 from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
+from app.typing.subscriptions import FeedResponse
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

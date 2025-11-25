@@ -5,14 +5,15 @@ Handles task ownership, listing, cancellation, and status retrieval.
 Interacts with Redis for state management.
 """
 
-import structlog
 from datetime import datetime, timezone
+
+import structlog
 from fastapi import HTTPException, status
 
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
 from app.core.redis_cache import delete, get, set
-from app.models.enums import ImportStatus
-from app.typing.opml import OpmlImportCancelResponse, OpmlTaskMetadata, OpmlImportStatusResponse
+from app.typing.common import ImportStatus
+from app.typing.opml import OpmlImportCancelResponse, OpmlImportStatusResponse, OpmlTaskMetadata
 from app.workers.opml.progress import (
     get_import_progress,
     set_import_cancellation_flag,

@@ -5,7 +5,6 @@ The frontend now uses React InstantSearch to query Meilisearch directly.
 """
 
 from typing import Any
-from uuid import uuid4
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status

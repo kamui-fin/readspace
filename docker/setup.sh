@@ -411,7 +411,12 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://localhost:18000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-SUPABASE_DB_CONNECTION=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:6543/postgres
+
+# Database Configuration
+# API uses Session Mode (port 5432) with QueuePool for persistent connections
+# Workers use Transaction Mode (port 6543) with NullPool for surgical transactions
+DATABASE_URL_API=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:5432/postgres
+DATABASE_URL_WORKER=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@localhost:6543/postgres
 
 # RabbitMQ Configuration for Taskiq
 RABBITMQ_URL=amqp://guest:guest@localhost:5672/
@@ -437,7 +442,12 @@ cat <<EOF > "$PROJECT_ROOT/server/.env"
 SUPABASE_URL=http://kong:8000
 SUPABASE_JWT_SECRET=${JWT_SECRET}
 SUPABASE_SERVICE_ROLE_KEY=${SERVICE_ROLE_KEY}
-SUPABASE_DB_CONNECTION=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@supavisor:6543/postgres
+
+# Database Configuration
+# API uses Session Mode (port 5432) with QueuePool for persistent connections
+# Workers use Transaction Mode (port 6543) with NullPool for surgical transactions
+DATABASE_URL_API=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@db:5432/postgres
+DATABASE_URL_WORKER=postgresql://postgres.postgres:${POSTGRES_PASSWORD}@supavisor:6543/postgres
 
 # RabbitMQ Configuration for Taskiq
 RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/

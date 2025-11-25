@@ -1,8 +1,8 @@
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
-import time
-import structlog
+
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -61,36 +61,15 @@ AsyncSessionLocal = async_sessionmaker(
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Get database session."""
-
-    logger = structlog.get_logger(__name__)
-
-    acquire_start = time.perf_counter()
     async with AsyncSessionLocal() as session:
-        acquire_duration = (time.perf_counter() - acquire_start) * 1000
-        if acquire_duration > 100:  # Only log if slow
-            logger.warning("DB connection acquired (SLOW)", duration_ms=round(acquire_duration, 2))
-        else:
-            logger.debug("DB connection acquired", duration_ms=round(acquire_duration, 2))
-
         try:
             yield session
-
-            commit_start = time.perf_counter()
             await session.commit()
-            commit_duration = (time.perf_counter() - commit_start) * 1000
-            if commit_duration > 100:
-                logger.warning("DB commit complete (SLOW)", duration_ms=round(commit_duration, 2))
-            else:
-                logger.debug("DB commit complete", duration_ms=round(commit_duration, 2))
         except Exception:
             await session.rollback()
             raise
         finally:
-            # Explicit session cleanup to ensure connections are properly returned
-            close_start = time.perf_counter()
             await session.close()
-            close_duration = (time.perf_counter() - close_start) * 1000
-            logger.debug("DB connection closed", duration_ms=round(close_duration, 2))
 
 
 @asynccontextmanager

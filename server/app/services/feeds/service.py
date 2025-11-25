@@ -4,11 +4,12 @@ Orchestrates fetching, parsing, and database persistence.
 Follows the 'Surgical Session' pattern: DB -> IO -> DB.
 """
 
-import structlog
-from typing import Any, Callable, Optional, List
-from uuid import UUID
+from collections.abc import Callable
 from datetime import datetime, timezone
+from typing import Any
+from uuid import UUID
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import (
@@ -17,23 +18,22 @@ from app.core.custom_exceptions import (
     FeedSubscriptionError,
     NotFoundError,
 )
-from app.crud.feed.core import get_feed_by_url, get_feed_by_id, create_feed, update_feed
+from app.crud.article.ingester import create_articles_batch
+from app.crud.feed.core import create_feed, get_feed_by_id, get_feed_by_url, update_feed
 from app.crud.feed.subscription import (
-    get_subscription_by_feed_id,
-    get_subscriptions_by_user,
     create_subscription,
     delete_subscription,
+    get_subscription_by_feed_id,
+    get_subscriptions_by_user,
 )
-from app.crud.article.ingester import create_articles_batch
 from app.crud.folder import get_by_id as get_folder
 from app.models.feed import Feed
 from app.services.feeds import fetching, parsing, scheduling
-from app.utils.common import resolve_feed_url, normalize_feed_url
-from app.utils.text import calculate_feed_content_hash
 from app.typing.articles import ArticleCreate
 from app.typing.feeds import FeedBase
 from app.typing.subscriptions import SubscriptionCreate
-
+from app.utils.common import normalize_feed_url, resolve_feed_url
+from app.utils.text import calculate_feed_content_hash
 
 logger = structlog.get_logger(__name__)
 
@@ -45,7 +45,7 @@ async def add_feed(
     user_id: UUID,
     url: str,
     folder_id: UUID,
-    custom_title: Optional[str] = None,
+    custom_title: str | None = None,
 ) -> Any:
     logger.info("Adding feed", url=url, user_id=user_id)
 
@@ -72,7 +72,7 @@ async def add_feed(
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], resolved_url)
     except Exception as e:
-        raise FeedParsingError(f"Failed to parse feed: {e}")
+        raise FeedParsingError(f"Failed to parse feed: {e}") from e
 
     async with session_factory() as db:
         existing_feed = await get_feed_by_url(db, url=normalized_url)
@@ -106,7 +106,7 @@ async def add_feed(
         return sub
 
 
-async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bool = False) -> Optional[Feed]:
+async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bool = False) -> Feed | None:
     async with session_factory() as db:
         feed = await get_feed_by_id(db, feed_id=feed_id)
         if not feed:
@@ -188,8 +188,8 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
 
 
 async def get_user_feeds(
-    session_factory: SessionFactory, user_id: UUID, folder_id: Optional[UUID] = None, skip: int = 0, limit: int = 100
-) -> List[Any]:
+    session_factory: SessionFactory, user_id: UUID, folder_id: UUID | None = None, skip: int = 0, limit: int = 100
+) -> list[Any]:
     async with session_factory() as db:
         subs = await get_subscriptions_by_user(db, user_id=user_id, folder_id=folder_id, skip=skip, limit=limit)
         return subs
@@ -201,7 +201,7 @@ async def unsubscribe(session_factory: SessionFactory, user_id: UUID, subscripti
 
 
 async def _subscribe_to_existing_feed(
-    db: AsyncSession, user_id: UUID, feed: Feed, folder_id: UUID, custom_title: Optional[str]
+    db: AsyncSession, user_id: UUID, feed: Feed, folder_id: UUID, custom_title: str | None
 ) -> Any:
     existing = await get_subscription_by_feed_id(db, feed_id=feed.id, user_id=user_id)
     if existing:

@@ -2,7 +2,6 @@
 
 import logging
 import os
-from typing import Any
 
 from taskiq import AsyncBroker, InMemoryBroker, PrometheusMiddleware, TaskiqScheduler
 from taskiq.middlewares import SmartRetryMiddleware
@@ -90,13 +89,3 @@ else:
         broker=broker,
         sources=[LabelScheduleSource(broker)],
     )
-
-
-# Helper function for JSON serialization of UUIDs and other types
-def default_serializer(obj: Any) -> Any:
-    """Custom JSON serializer for non-standard types."""
-    from uuid import UUID
-
-    if isinstance(obj, UUID):
-        return str(obj)
-    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")

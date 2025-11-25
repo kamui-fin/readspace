@@ -6,9 +6,9 @@ from uuid import UUID
 
 import structlog
 
-from app.models.enums import ImportStatus
 from app.services.opml.opml_import import process_opml_import
 from app.services.opml.parsing import parse_opml
+from app.typing.common import ImportStatus
 from app.workers.common import worker_db_factory
 from app.workers.opml.progress import (
     check_import_cancellation_flag,

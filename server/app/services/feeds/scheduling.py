@@ -5,8 +5,8 @@ Intelligently calculates optimal fetch intervals based on feed publication patte
 """
 
 import random
+
 import structlog
-from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import (
@@ -15,7 +15,7 @@ from app.core.constants import (
     MAX_REFRESH_INTERVAL_MINUTES,
     MIN_REFRESH_INTERVAL_MINUTES,
 )
-from app.models.article import ArticleContent, FeedArticle
+from app.crud.feed.core import get_recent_article_publication_times
 from app.models.feed import Feed
 
 logger = structlog.get_logger(__name__)
@@ -42,17 +42,7 @@ async def calculate_optimal_interval(db: AsyncSession, feed: Feed) -> int:
         return DEFAULT_REFRESH_INTERVAL_MINUTES
 
     # Query recent article publication times (use existing tables!)
-    stmt = (
-        select(ArticleContent.published_at)
-        .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
-        .where(FeedArticle.feed_id == feed.id)
-        .where(ArticleContent.published_at.is_not(None))
-        .order_by(desc(ArticleContent.published_at))
-        .limit(30)  # Analyze last 30 articles for pattern detection
-    )
-
-    result = await db.execute(stmt)
-    pub_times = [row[0] for row in result.all()]
+    pub_times = await get_recent_article_publication_times(db, feed_id=feed.id, limit=30)
 
     if len(pub_times) < 2:
         logger.debug("Insufficient articles for analysis", feed_id=feed.id, article_count=len(pub_times))

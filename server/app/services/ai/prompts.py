@@ -18,7 +18,8 @@ Return ONLY a valid JSON object. No markdown formatting.
 Your task:
 1. Enhanced Description: Create a helpful description (max 200 chars).
 2. Tags: Extract 5-10 specific tags/keywords based on the feed's typical coverage.
-3. Category: Choose ONE: Technology, AI, Design, Business, News, Gaming, Science, Lifestyle, Culture, Security, Education, Miscellaneous.
+3. Category: Choose ONE: Technology, AI, Design, Business, News, Gaming, Science,
+   Lifestyle, Culture, Security, Education, Miscellaneous.
 4. Popularity: Estimate global influence (1-100).
 
 Return JSON format:

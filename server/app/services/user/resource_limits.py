@@ -5,12 +5,10 @@ Resource limit enforcement logic.
 from uuid import UUID
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.resource_limits import RESOURCE_LIMITS
-from app.crud.profile import get_profile_by_id, get_current_usage
-from app.models import FeedSubscription
+from app.crud.profile import get_current_usage, get_profile_by_id
 
 
 def _get_limit_for_role(role: str, resource: str) -> int:

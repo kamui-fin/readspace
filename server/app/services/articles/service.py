@@ -12,7 +12,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
-from app.crud.article import reader, actions
+from app.crud.article import actions, reader
 from app.schemas import (
     ArticleResponse,
     ArticleUpdate,

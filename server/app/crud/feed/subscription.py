@@ -3,18 +3,17 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select, update
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.constants import INITIAL_UNREAD_COUNT
-from app.crud.feed.core import get_feed_by_url, create_feed, normalize_url
-from app.crud.folder import get_by_id
+from app.core.custom_exceptions import FeedSubscriptionError
+from app.crud.feed.core import create_feed, get_feed_by_url, normalize_url
 from app.models.article import ArticleContent, FeedArticle
-from app.typing.feeds import FeedBase
 from app.models.feed import Feed, FeedSubscription
-from app.typing.subscriptions import SubscriptionCreate, SubscriptionUpdate
+from app.typing.feeds import FeedBase
+from app.typing.subscriptions import SubscriptionCreate
 
 # Minimal columns for list views
 SUBSCRIPTION_FEED_COLUMNS = [
@@ -56,7 +55,7 @@ async def create_subscription(
     # 2. Check Duplicates
     existing = await db.execute(select(FeedSubscription).filter_by(user_id=user_id, feed_id=feed.id))
     if existing.scalar_one_or_none():
-        raise IntegrityError("Already subscribed", params=None, original_exception=None)
+        raise FeedSubscriptionError("Already subscribed to this feed")
 
     # 3. Handle Folder
     folder_id = subscription_in.folder_id
@@ -87,9 +86,7 @@ async def create_subscription(
     return sub
 
 
-async def get_subscription_by_feed_id(
-    db: AsyncSession, *, feed_id: UUID, user_id: UUID
-) -> FeedSubscription | None:
+async def get_subscription_by_feed_id(db: AsyncSession, *, feed_id: UUID, user_id: UUID) -> FeedSubscription | None:
     """Get subscription by feed_id and user_id."""
     stmt = (
         select(FeedSubscription)
@@ -164,7 +161,7 @@ async def bulk_update_subscriptions_folder(
 ) -> int:
     """
     Bulk update folder_id for multiple subscriptions.
-    
+
     Returns the number of subscriptions updated.
     """
     stmt = (
@@ -175,6 +172,36 @@ async def bulk_update_subscriptions_folder(
         )
         .values(folder_id=folder_id)
     )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount
+
+
+async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetime) -> int:
+    """
+    Update last_read_cutoff for all subscriptions to compact unread articles.
+
+    Sets last_read_cutoff to the maximum of its current value and the provided cutoff_date.
+    This marks articles older than cutoff_date as read for all users.
+
+    Args:
+        db: Database session
+        cutoff_date: Date threshold - articles older than this will be marked as read
+
+    Returns:
+        Number of subscriptions updated
+    """
+    stmt = (
+        update(FeedSubscription)
+        .values(
+            last_read_cutoff=func.greatest(
+                func.coalesce(FeedSubscription.last_read_cutoff, cutoff_date),
+                cutoff_date,
+            )
+        )
+        .execution_options(synchronize_session=False)
+    )
+
     result = await db.execute(stmt)
     await db.flush()
     return result.rowcount

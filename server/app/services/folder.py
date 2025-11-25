@@ -10,8 +10,8 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import folder as crud_folder
-from app.schemas import FolderCreate, FolderResponse, FolderUpdate
-from app.utils.url.url_validator import validate_folder_name
+from app.typing.folders import FolderCreate, FolderResponse, FolderUpdate
+from app.utils.common import validate_folder_name
 
 logger = structlog.get_logger(__name__)
 
@@ -53,7 +53,7 @@ async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder
 
         # Check duplicate
         duplicate = await crud_folder.get_by_name(db, folder_in.name, user_id)
-        if duplicate and duplicate.id != folder_id:
+        if duplicate and str(duplicate.id) != str(folder_id):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT, detail=f"Folder '{folder_in.name}' already exists."
             )

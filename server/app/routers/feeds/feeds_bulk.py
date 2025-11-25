@@ -7,11 +7,15 @@ import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.crud.feed.subscription import (
+    bulk_update_subscriptions_folder,
+    delete_subscription,
+    get_subscription_by_feed_id,
+)
 from app.crud.folder import get_folder
-from app.crud.feed.subscription import bulk_update_subscriptions_folder
 from app.db.session import get_db
-from app.typing.user import TokenData
 from app.services.user.auth import get_current_user
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -75,17 +79,23 @@ async def bulk_delete_feeds(
     if not feed_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
-    result = await crud_subscription.delete_subscriptions_bulk(db=db, feed_ids=feed_ids, user_id=UUID(current_user.sub))
+    deleted_ids = []
+    user_uuid = UUID(current_user.sub)
+    for feed_id in feed_ids:
+        subscription = await get_subscription_by_feed_id(db=db, feed_id=feed_id, user_id=user_uuid)
+        if subscription:
+            await delete_subscription(db=db, subscription_id=subscription.id, user_id=user_uuid)
+            deleted_ids.append(feed_id)
 
     logger.info(
         "Bulk delete feeds completed",
-        deleted_count=len(result["deleted_ids"]),
+        deleted_count=len(deleted_ids),
         user_id=current_user.sub,
     )
 
     return {
-        "deleted_count": len(result["deleted_ids"]),
-        "deleted_ids": [str(fid) for fid in result["deleted_ids"]],
+        "deleted_count": len(deleted_ids),
+        "deleted_ids": [str(fid) for fid in deleted_ids],
     }
 
 

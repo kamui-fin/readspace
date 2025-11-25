@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Path, status
+from fastapi import APIRouter, Depends, Path
 
 from app.services.opml.tasks import cancel_user_task, list_user_tasks
 from app.services.user.auth import get_current_user

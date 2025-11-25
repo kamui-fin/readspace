@@ -35,6 +35,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import structlog
+from meilisearch_python_sdk import AsyncClient
 from meilisearch_python_sdk.errors import MeilisearchError
 from meilisearch_python_sdk.models.settings import MeilisearchSettings
 from sqlalchemy import create_engine, select
@@ -42,24 +43,22 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.models.feed import Feed
-from app.services.feeds.search.meilisearch import MeilisearchService
+from app.services.feeds.meilisearch import get_client, sync_feeds_batch
 
 logger = structlog.get_logger(__name__)
 
 
-async def check_index_exists(meili_service: MeilisearchService) -> bool:
+async def check_index_exists(client: AsyncClient, index_name: str) -> bool:
     """
     Check if the Meilisearch index exists and is configured.
 
     Args:
-        meili_service: Meilisearch service instance
+        client: Meilisearch async client
+        index_name: Name of the index
 
     Returns:
         True if index exists and has settings configured, False otherwise
     """
-    client = meili_service.client
-    index_name = meili_service.index_name
-
     try:
         index = await client.get_index(index_name)
         settings = await index.get_settings()
@@ -80,7 +79,7 @@ async def check_index_exists(meili_service: MeilisearchService) -> bool:
 
 
 async def configure_meilisearch_index(
-    meili_service: MeilisearchService, force: bool = False, embedders_only: bool = False
+    client: AsyncClient, index_name: str, settings: Settings, force: bool = False, embedders_only: bool = False
 ) -> None:
     """
     Configure Meilisearch index with all necessary settings.
@@ -89,20 +88,19 @@ async def configure_meilisearch_index(
     The runtime service only performs CRUD operations.
 
     Args:
-        meili_service: Meilisearch service instance
+        client: Meilisearch async client
+        index_name: Name of the index
+        settings: Application settings
         force: If True, reconfigure even if index exists
         embedders_only: If True, only update embedder settings (for AI sync)
     """
-    client = meili_service.client
-    index_name = meili_service.index_name
-    settings = meili_service.settings
 
     logger.info("configuring_meilisearch_index", index=index_name)
 
     # For embedders_only mode, skip the existence check
     if not embedders_only:
         # Check if already configured (unless force is True)
-        if not force and await check_index_exists(meili_service):
+        if not force and await check_index_exists(client, index_name):
             logger.info("meilisearch_index_already_configured_skipping", index=index_name)
             return
 
@@ -268,20 +266,13 @@ async def init_meilisearch(check_only: bool = False) -> bool:
     """
     # Load settings
     settings = Settings()
-
-    # Initialize Meilisearch service
-    meili_service = MeilisearchService(settings)
+    client = get_client(settings)
+    index_name = settings.MEILISEARCH_INDEX_NAME
 
     logger.info("meilisearch_initialization_started", check_only=check_only)
 
-    # Check Meilisearch health
-    is_healthy = await meili_service.health_check()
-    if not is_healthy:
-        logger.error("meilisearch_unhealthy")
-        raise RuntimeError("Meilisearch is not healthy. Please check the service.")
-
     # Check if index exists
-    exists = await check_index_exists(meili_service)
+    exists = await check_index_exists(client, index_name)
 
     if check_only:
         logger.info("meilisearch_check_complete", exists=exists, configured=exists)
@@ -292,7 +283,7 @@ async def init_meilisearch(check_only: bool = False) -> bool:
         return True
 
     # Configure index
-    await configure_meilisearch_index(meili_service, force=False)
+    await configure_meilisearch_index(client, index_name, settings, force=False)
     logger.info("meilisearch_initialization_complete")
     return True
 
@@ -311,23 +302,18 @@ async def sync_embeddings() -> None:
         logger.error("ai_not_enabled")
         raise RuntimeError("ENABLE_AI must be set to true in your environment to sync embeddings")
 
-    meili_service = MeilisearchService(settings)
+    client = get_client(settings)
+    index_name = settings.MEILISEARCH_INDEX_NAME
     logger.info("embeddings_sync_started")
 
-    # Check Meilisearch health
-    is_healthy = await meili_service.health_check()
-    if not is_healthy:
-        logger.error("meilisearch_unhealthy")
-        raise RuntimeError("Meilisearch is not healthy. Please check the service.")
-
     # Check if index exists
-    exists = await check_index_exists(meili_service)
+    exists = await check_index_exists(client, index_name)
     if not exists:
         logger.error("index_not_found_cannot_sync")
         raise RuntimeError("Index must exist before syncing embeddings. Run init first.")
 
     # Update settings to add embedders
-    await configure_meilisearch_index(meili_service, force=False, embedders_only=True)
+    await configure_meilisearch_index(client, index_name, settings, force=False, embedders_only=True)
     
     logger.info(
         "embeddings_sync_initiated",
@@ -352,19 +338,13 @@ async def migrate_feeds(batch_size: int = 5) -> None:
         "postgresql+asyncpg://", "postgresql://"
     )
 
-    # Initialize Meilisearch service
-    meili_service = MeilisearchService(settings)
+    client = get_client(settings)
+    index_name = settings.MEILISEARCH_INDEX_NAME
 
     logger.info("migration_started", batch_size=batch_size)
 
-    # Check Meilisearch health
-    is_healthy = await meili_service.health_check()
-    if not is_healthy:
-        logger.error("meilisearch_unhealthy")
-        raise RuntimeError("Meilisearch is not healthy. Please check the service.")
-
     # Configure index (force reconfiguration)
-    await configure_meilisearch_index(meili_service, force=True)
+    await configure_meilisearch_index(client, index_name, settings, force=True)
 
     # Create database session (synchronous)
     engine = create_engine(
@@ -381,9 +361,9 @@ async def migrate_feeds(batch_size: int = 5) -> None:
         with Session(engine) as session:
             # Clear existing documents if doing full migration
             logger.info("clearing_existing_documents")
-            index = await meili_service.client.get_index(meili_service.index_name)
+            index = await client.get_index(index_name)
             task = await index.delete_all_documents()
-            await meili_service.client.wait_for_task(task.task_uid)
+            await client.wait_for_task(task.task_uid)
             logger.info("existing_documents_cleared")
 
             # Count total feeds
@@ -413,7 +393,7 @@ async def migrate_feeds(batch_size: int = 5) -> None:
                 )
 
                 # Add batch to Meilisearch
-                await meili_service.add_feeds_batch(batch)
+                await sync_feeds_batch(settings, batch)
                 total_indexed += len(batch)
 
                 # Wait a bit between batches to avoid overwhelming Meilisearch
@@ -421,7 +401,7 @@ async def migrate_feeds(batch_size: int = 5) -> None:
                     await asyncio.sleep(0.5)
 
         # Get final stats
-        index = await meili_service.client.get_index(meili_service.index_name)
+        index = await client.get_index(index_name)
         stats = await index.get_stats()
         logger.info(
             "migration_completed",

@@ -3,8 +3,10 @@ Functional middleware for Brotli compression.
 """
 
 import brotli
+import structlog
 from fastapi import Request
 from starlette.responses import Response, StreamingResponse
+
 from app.core.constants import COMPRESSION_CONTENT_TYPES, COMPRESSION_LEVEL, COMPRESSION_MIN_SIZE
 
 
@@ -60,8 +62,9 @@ async def compression_middleware(request: Request, call_next) -> Response:
                 media_type=response.media_type,
             )
 
-    except Exception:
-        pass  # Fallback to original if compression fails
+    except Exception as e:
+        logger = structlog.get_logger(__name__)
+        logger.debug("Compression failed, using original", error=str(e))
 
     return Response(
         content=response_body,

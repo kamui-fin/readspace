@@ -3,22 +3,23 @@ Feed fetching module handling HTTP requests.
 Strictly handles Network I/O. No database dependencies.
 """
 
+from typing import TypedDict
+
 import httpx
 import structlog
-from typing import TypedDict, Optional
 
 from app.core.constants import (
     BROWSER_USER_AGENT,
     DEFAULT_RSS_TIMEOUT,
-    HTTP_CLIENT_POOL_LIMITS,
-    HTTP_CLIENT_MAX_KEEPALIVE,
     HTTP_CLIENT_KEEPALIVE_EXPIRY,
+    HTTP_CLIENT_MAX_KEEPALIVE,
+    HTTP_CLIENT_POOL_LIMITS,
 )
 
 logger = structlog.get_logger(__name__)
 
 # Singleton client container
-_client: Optional[httpx.AsyncClient] = None
+_client: httpx.AsyncClient | None = None
 
 
 class FetchResult(TypedDict):
@@ -26,7 +27,7 @@ class FetchResult(TypedDict):
     headers: dict[str, str]
     status_code: int
     not_modified: bool
-    error: Optional[str]
+    error: str | None
 
 
 def get_http_client() -> httpx.AsyncClient:
@@ -46,15 +47,15 @@ def get_http_client() -> httpx.AsyncClient:
             follow_redirects=True,
             timeout=DEFAULT_RSS_TIMEOUT,
             headers={"User-Agent": BROWSER_USER_AGENT},
-            verify=False,  # Many RSS feeds have bad SSL
+            verify=False,  # noqa: S501  # Many RSS feeds have bad SSL
         )
     return _client
 
 
 async def fetch_feed_content(
     url: str,
-    etag: Optional[str] = None,
-    last_modified: Optional[str] = None,
+    etag: str | None = None,
+    last_modified: str | None = None,
     timeout: int = DEFAULT_RSS_TIMEOUT,
 ) -> FetchResult:
     """

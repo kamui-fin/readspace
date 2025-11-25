@@ -2,8 +2,9 @@
 Schemas for AI and scraping enhancements.
 """
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict
-from .common import LanguageCode
+from pydantic import BaseModel, Field, field_validator
+
+from app.typing.common import LanguageCode
 
 # Constants (Move these to app/core/constants.py in a real app)
 MAX_SUMMARIZATION_BYTES = 100 * 1024  # 100KB
@@ -80,5 +81,4 @@ class TranslateRequest(BaseModel):
 
 class TranslateResponse(BaseModel):
     translated_content: str
-    source_language: str | None = None  # Useful to return what AI detected
     target_language: LanguageCode

@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Folder
-from app.schemas import FolderCreate, FolderUpdate
+from app.models.folder import Folder
+from app.typing.folders import FolderCreate, FolderUpdate
 
 
 async def get_by_id(db: AsyncSession, folder_id: UUID, user_id: UUID) -> Folder | None:

@@ -4,21 +4,16 @@ Consolidated from previous validators.py and url.py to reduce sprawl.
 """
 
 import re
-from typing import Any
 from urllib.parse import urlparse, urlunparse
 from uuid import UUID
-from datetime import datetime, timezone
+
 import httpx
 import structlog
 
 from app.core.config import get_settings
 from app.core.constants import (
-    ARTICLE_PRIORITIES,
-    HIGHLIGHT_COLORS,
     MAX_FOLDER_NAME_LENGTH,
     MAX_PAGE_SIZE,
-    MAX_TAG_NAME_LENGTH,
-    MAX_TITLE_LENGTH,
     MAX_URL_LENGTH,
 )
 from app.core.custom_exceptions import ValidationError
@@ -27,7 +22,7 @@ logger = structlog.get_logger(__name__)
 
 # --- Constants & Regex ---
 ALLOWED_FEED_SCHEMES = {"http", "https", "rsshub"}
-BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}
+BLOCKED_DOMAINS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}  # noqa: S104
 PRIVATE_IP_PREFIXES = (
     "10.",
     "172.16.",
@@ -111,7 +106,7 @@ async def resolve_feed_url(url: str, timeout: int = 10) -> str:
         return normalize_feed_url(url)
 
     try:
-        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout, verify=False) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout, verify=False) as client:  # noqa: S501
             response = await client.head(url)
             return normalize_feed_url(str(response.url))
     except Exception:
@@ -123,7 +118,7 @@ def validate_feed_url_security(url: str, allow_rsshub: bool = True) -> None:
     try:
         parsed = urlparse(url)
     except Exception as e:
-        raise ValidationError(f"Invalid URL format: {e}")
+        raise ValidationError(f"Invalid URL format: {e}") from e
 
     allowed = ALLOWED_FEED_SCHEMES if allow_rsshub else {"http", "https"}
     if parsed.scheme not in allowed:
@@ -166,8 +161,8 @@ def validate_url(url: str, required: bool = True) -> str | None:
         if not parsed.scheme or not parsed.netloc:
             raise ValidationError("Invalid URL format")
         return url
-    except Exception:
-        raise ValidationError("Invalid URL")
+    except Exception as e:
+        raise ValidationError("Invalid URL") from e
 
 
 def validate_email(email: str) -> str:
@@ -194,8 +189,8 @@ def validate_uuid(uuid_str: str, field_name: str = "ID") -> UUID:
         raise ValidationError(f"{field_name} is required")
     try:
         return UUID(uuid_str)
-    except ValueError:
-        raise ValidationError(f"Invalid {field_name} format")
+    except ValueError as e:
+        raise ValidationError(f"Invalid {field_name} format") from e
 
 
 def validate_pagination(skip: int = 0, limit: int = 100) -> tuple[int, int]:

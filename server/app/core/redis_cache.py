@@ -2,16 +2,11 @@
 Functional Redis Cache interface.
 """
 
-import json
-from datetime import date, datetime
-from decimal import Decimal
-from enum import Enum
 from typing import Any
-from uuid import UUID
 
+import orjson
 import redis.asyncio as redis
 import structlog
-from pydantic import BaseModel
 
 from app.core.config import get_settings
 
@@ -21,24 +16,7 @@ logger = structlog.get_logger(__name__)
 _pool: redis.ConnectionPool | None = None
 
 
-class ExtendedJSONEncoder(json.JSONEncoder):
-    """JSON encoder helper for Pydantic/Dates/UUIDs."""
-
-    def default(self, obj: Any) -> Any:
-        if isinstance(obj, datetime | date):
-            return obj.isoformat()
-        if isinstance(obj, UUID):
-            return str(obj)
-        if isinstance(obj, Enum):
-            return obj.value
-        if isinstance(obj, Decimal):
-            return float(obj)
-        if isinstance(obj, BaseModel):
-            return obj.model_dump(mode="json")
-        return super().default(obj)
-
-
-def _get_pool() -> redis.ConnectionPool:
+def get_pool() -> redis.ConnectionPool:
     """Get or create the global connection pool."""
     global _pool
     if _pool is None:
@@ -72,13 +50,13 @@ async def close_pool() -> None:
 async def get(key: str) -> Any | None:
     """Retrieve a value from cache."""
     try:
-        pool = _get_pool()
+        pool = get_pool()
         async with redis.Redis(connection_pool=pool) as client:
             val = await client.get(key)
             if val:
                 try:
-                    return json.loads(val)
-                except json.JSONDecodeError:
+                    return orjson.loads(val)
+                except orjson.JSONDecodeError:
                     return val
             return None
     except Exception as e:
@@ -89,10 +67,10 @@ async def get(key: str) -> Any | None:
 async def set(key: str, value: Any, ttl_seconds: int | None = None) -> bool:
     """Set a value in cache."""
     try:
-        pool = _get_pool()
+        pool = get_pool()
         async with redis.Redis(connection_pool=pool) as client:
-            # Let json.dumps handle recursion via Encoder
-            serialized = json.dumps(value, cls=ExtendedJSONEncoder)
+            # orjson handles datetime, UUID, Enum, Decimal, and Pydantic models automatically
+            serialized = orjson.dumps(value).decode("utf-8")
 
             if ttl_seconds:
                 await client.setex(key, ttl_seconds, serialized)
@@ -107,7 +85,7 @@ async def set(key: str, value: Any, ttl_seconds: int | None = None) -> bool:
 async def delete(key: str) -> bool:
     """Delete a key."""
     try:
-        pool = _get_pool()
+        pool = get_pool()
         async with redis.Redis(connection_pool=pool) as client:
             await client.delete(key)
             return True
@@ -119,7 +97,7 @@ async def delete(key: str) -> bool:
 async def exists(key: str) -> bool:
     """Check if key exists."""
     try:
-        pool = _get_pool()
+        pool = get_pool()
         async with redis.Redis(connection_pool=pool) as client:
             return bool(await client.exists(key))
     except Exception as e:

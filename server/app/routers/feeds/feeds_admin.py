@@ -9,15 +9,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import ERROR_FEED_NOT_FOUND
-from app.crud.feed.core import admin_update_feed, delete_feed, get_feed_by_id
+from app.crud.feed.core import admin_update_feed as crud_admin_update_feed
+from app.crud.feed.core import delete_feed as crud_delete_feed
+from app.crud.feed.core import get_feed_by_id
 from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
 from app.models.enums import UserRole
-from app.typing.feeds import AdminFeedUpdate
-from app.typing.subscriptions import FeedResponse
-from app.typing.user import TokenData
-from app.services.feeds.search.meilisearch import get_meilisearch_service
+from app.services.feeds.meilisearch import delete_feed as meilisearch_delete_feed
 from app.services.user.auth import get_current_user
+from app.typing.feeds import AdminFeedUpdate, FeedDetail
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -25,13 +26,13 @@ router = APIRouter()
 
 @router.put(
     "/{feed_id}/admin",
-    response_model=FeedResponse,
+    response_model=FeedDetail,
     summary="[Admin] Update global feed properties",
     description="Admin-only endpoint to update global feed metadata that affects all users",
     responses={
         200: {
             "description": "Successfully updated global feed",
-            "model": FeedResponse,
+            "model": FeedDetail,
         },
         403: {
             "description": "Forbidden - Admin access required",
@@ -49,7 +50,7 @@ async def admin_update_feed(
     feed_in: AdminFeedUpdate = Body(..., description="Global feed properties to update (all fields optional)"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> FeedResponse:
+) -> FeedDetail:
     """
     Update global feed properties (admin only).
 
@@ -64,7 +65,7 @@ async def admin_update_feed(
         current_user: Authenticated user information (must be admin)
 
     Returns:
-        FeedResponse: Updated feed details
+        FeedDetail: Updated feed details
 
     Updatable Fields:
         - title: Feed title
@@ -88,11 +89,21 @@ async def admin_update_feed(
     """
     # Check if user is admin
     user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
-    if not user_profile or user_profile.role != UserRole.ADMIN:
+    if user_profile is None:
+        logger.warning(
+            "User profile not found",
+            user_id=current_user.sub,
+            feed_id=feed_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    if str(user_profile.role) != UserRole.ADMIN.value:
         logger.warning(
             "Non-admin user attempted to update global feed",
             user_id=current_user.sub,
-            user_role=user_profile.role if user_profile else None,
+            user_role=str(user_profile.role),
             feed_id=feed_id,
         )
         raise HTTPException(
@@ -112,7 +123,7 @@ async def admin_update_feed(
 
     # Update the feed metadata using CRUD function
     try:
-        updated_feed = await admin_update_feed(
+        updated_feed = await crud_admin_update_feed(
             db,
             feed=feed,
             title=feed_in.title,
@@ -134,8 +145,7 @@ async def admin_update_feed(
             user_id=current_user.sub,
         )
 
-        # TODO: Transform to FeedResponse
-        return updated_feed
+        return FeedDetail.model_validate(updated_feed)
 
     except ValueError as e:
         logger.warning(
@@ -214,11 +224,21 @@ async def admin_delete_feed(
     """
     # Check if user is admin
     user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
-    if not user_profile or user_profile.role != UserRole.ADMIN:
+    if user_profile is None:
+        logger.warning(
+            "User profile not found",
+            user_id=current_user.sub,
+            feed_id=feed_id,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    if str(user_profile.role) != UserRole.ADMIN.value:
         logger.warning(
             "Non-admin user attempted to delete global feed",
             user_id=current_user.sub,
-            user_role=user_profile.role if user_profile else None,
+            user_role=str(user_profile.role),
             feed_id=feed_id,
         )
         raise HTTPException(
@@ -233,7 +253,7 @@ async def admin_delete_feed(
         user_id=current_user.sub,
     )
 
-    deleted = await delete_feed(db, feed_id=feed_id)
+    deleted = await crud_delete_feed(db, feed_id=feed_id)
     if not deleted:
         logger.warning(
             "Admin attempted to delete non-existent feed",
@@ -245,8 +265,7 @@ async def admin_delete_feed(
     # Delete from Meilisearch search index
     try:
         settings = get_settings()
-        meilisearch_service = get_meilisearch_service(settings)
-        await meilisearch_service.delete_feed(str(feed_id))
+        await meilisearch_delete_feed(settings, str(feed_id))
         logger.info(
             "Admin deleted feed from Meilisearch",
             feed_id=feed_id,

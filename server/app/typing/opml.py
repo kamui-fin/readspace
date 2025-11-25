@@ -5,7 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.models.enums import ImportStatus
+from app.typing.common import ImportStatus
 
 
 class OpmlImportResponse(BaseModel):

@@ -2,7 +2,9 @@
 
 from datetime import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict, Field
+
+from pydantic import BaseModel, ConfigDict
+
 from .feeds import FeedSummary
 from .folders import FolderResponse
 

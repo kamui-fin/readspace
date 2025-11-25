@@ -5,6 +5,7 @@ Orchestrates parsing, folder creation, and background task dispatch.
 Handles both the initial upload (router-facing) and the background processing (worker-facing).
 """
 
+from collections.abc import Callable
 from typing import Any
 from uuid import UUID
 
@@ -12,12 +13,13 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud import folder as crud_folder
-from app.db.session_factory import SessionFactory
 from app.services.opml.parsing import parse_opml
 from app.services.opml.tasks import store_task_ownership
 from app.services.user.resource_limits import enforce_subscription_limit
 from app.typing.opml import OpmlImportResponse
 from app.workers.opml_tasks import import_single_feed_task
+
+SessionFactory = Callable[[], Any]
 
 logger = structlog.get_logger(__name__)
 
@@ -71,7 +73,7 @@ async def handle_opml_upload(
     return OpmlImportResponse(
         task_id=orchestration_task.task_id,
         message=(
-            f"OPML file queued for processing. "
+            "OPML file queued for processing. "
             "New feeds will be imported and existing feeds will be updated/reorganized as needed."
         ),
         estimated_feeds=feed_count,
@@ -118,7 +120,7 @@ async def process_opml_import(
             task = await import_single_feed_task.kiq(
                 user_id=str(user_id),
                 feed_url=feed["xml_url"],
-                folder_id=str(folder_id) if folder_id else None,
+                folder_id=str(folder_id) if folder_id else "",
                 feed_title=feed.get("title"),
                 parent_task_id=parent_task_id,
                 tag_names=[],

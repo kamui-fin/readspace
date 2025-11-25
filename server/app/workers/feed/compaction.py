@@ -3,10 +3,10 @@
 from datetime import datetime, timedelta, timezone
 
 import structlog
-from sqlalchemy import func, text, update
 
 from app.core.constants import ARTICLE_RETENTION_DAYS, MIN_ARTICLES_PER_FEED, UNREAD_RETENTION_DAYS
-from app.models import FeedSubscription
+from app.crud.article.actions import delete_old_article_contents
+from app.crud.feed.subscription import compact_unread_subscriptions
 from app.workers.common import worker_db
 
 logger = structlog.get_logger(__name__)
@@ -15,7 +15,8 @@ logger = structlog.get_logger(__name__)
 async def compact_unread_articles() -> dict[str, int]:
     """Compact unread articles by updating last_read_cutoff.
 
-    Service manages its own database session.
+    Worker manages its own database session and orchestrates the compaction.
+    Business logic (cutoff calculation) stays here, database operations in CRUD.
 
     Returns:
         Dictionary with updated_subscriptions count
@@ -25,19 +26,7 @@ async def compact_unread_articles() -> dict[str, int]:
     cutoff_date = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS)
 
     async with worker_db() as db:
-        stmt = (
-            update(FeedSubscription)
-            .values(
-                last_read_cutoff=func.greatest(
-                    func.coalesce(FeedSubscription.last_read_cutoff, cutoff_date),
-                    cutoff_date,
-                )
-            )
-            .execution_options(synchronize_session=False)
-        )
-
-        result = await db.execute(stmt)
-        updated_count = result.rowcount
+        updated_count = await compact_unread_subscriptions(db, cutoff_date=cutoff_date)
 
         logger.info(
             "Unread compaction completed",
@@ -54,7 +43,8 @@ async def compact_old_articles() -> dict[str, int]:
     IMPORTANT: This deletes article_contents (which cascade deletes feed_articles),
     not feed_articles directly. Deleting feed_articles would leave orphaned content.
 
-    Service manages its own database session.
+    Worker manages its own database session and orchestrates the compaction.
+    Business logic (retention parameters) stays here, database operations in CRUD.
 
     Returns:
         Dictionary with deleted_articles count
@@ -66,52 +56,9 @@ async def compact_old_articles() -> dict[str, int]:
     )
 
     async with worker_db() as db:
-        # Set timeout first (must be separate statement for asyncpg)
-        await db.execute(text("SET LOCAL statement_timeout = '120min'"))
-
-        # Execute the deletion query
-        deletion_query = text(
-            """
-            WITH ranked_articles AS (
-                SELECT
-                    ac.id AS content_id,
-                    fa.feed_id,
-                    ac.published_at AS published_or_created,
-                    ROW_NUMBER() OVER (
-                        PARTITION BY fa.feed_id
-                        ORDER BY ac.published_at DESC
-                    ) AS rn
-                FROM feed_articles fa
-                JOIN article_contents ac ON fa.content_id = ac.id
-            ),
-            eligible_contents AS (
-                SELECT ra.content_id
-                FROM ranked_articles ra
-                LEFT JOIN user_article_states uas
-                    ON uas.article_id = (
-                        SELECT fa2.id FROM feed_articles fa2 WHERE fa2.content_id = ra.content_id LIMIT 1
-                    )
-                    AND uas.is_read_later = TRUE
-                LEFT JOIN clipped_articles ca
-                    ON ca.content_id = ra.content_id
-                WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)
-                  AND uas.id IS NULL       -- no saved states
-                  AND ca.id IS NULL        -- not clipped
-                  AND ra.rn > :min_articles -- not in top N newest
-            )
-            DELETE FROM article_contents
-            WHERE id IN (SELECT content_id FROM eligible_contents)
-        """
+        deleted_count = await delete_old_article_contents(
+            db, retention_days=ARTICLE_RETENTION_DAYS, min_articles_per_feed=MIN_ARTICLES_PER_FEED
         )
-
-        result = await db.execute(
-            deletion_query,
-            {
-                "retention_days": ARTICLE_RETENTION_DAYS,
-                "min_articles": MIN_ARTICLES_PER_FEED,
-            },
-        )
-        deleted_count = result.rowcount
 
         logger.info(
             "Article compaction completed",

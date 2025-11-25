@@ -11,7 +11,6 @@ DEFAULT_RSS_TIMEOUT = 30  # seconds - reduced from 180s to prevent connection ex
 MAX_OPML_FILE_SIZE_MB = 5  # Maximum OPML file size (50MB)
 OPML_IMPORT_TASK_TTL_SECONDS = 24 * 60 * 60  # Redis TTL for import tasks (24 hours)
 SUPPORTED_OPML_EXTENSIONS = (".opml", ".xml")  # Allowed file extensions
-FALLBACK_ENCODINGS = ["latin-1", "cp1252", "iso-8859-1"]  # Encodings to try if UTF-8 fails
 
 # Environment Configuration
 SHOW_DOCS_ENVIRONMENTS = ("development", "staging", "local")  # Environments to show API docs
@@ -51,9 +50,6 @@ HTTP_CLIENT_POOL_LIMITS = 200  # Maximum number of connections to pool
 HTTP_CLIENT_MAX_KEEPALIVE = 20  # Maximum number of keep-alive connections
 HTTP_CLIENT_KEEPALIVE_EXPIRY = 30.0  # Seconds before an idle connection is closed
 
-# Highlight Colors
-HIGHLIGHT_COLORS = ["yellow", "green", "blue"]
-
 # Article Priorities
 ARTICLE_PRIORITIES = ["low", "medium", "high"]
 
@@ -91,12 +87,6 @@ ERROR_HIGHLIGHT_NOT_FOUND = "Highlight not found"
 ERROR_FOLDER_NOT_FOUND = "Folder not found"
 ERROR_USER_NOT_FOUND = "User profile not found"
 ERROR_INVALID_FOLDER_DATA = "Invalid folder data"
-
-# HTTP Caching Configuration
-CACHE_CONTROL_STATIC_FEEDS = "public, max-age=3600"  # 1 hour for feed metadata
-CACHE_CONTROL_ARTICLE_LISTS = "private, max-age=300"  # 5 minutes for article lists
-CACHE_CONTROL_NO_CACHE = "no-cache, no-store, must-revalidate"  # For dynamic content
-CACHE_CONTROL_IMMUTABLE = "public, max-age=31536000, immutable"  # For immutable resources
 
 # Response Compression Configuration
 COMPRESSION_MIN_SIZE = 500  # Minimum response size in bytes to compress

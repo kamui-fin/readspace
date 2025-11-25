@@ -6,7 +6,9 @@ Matches the 'UserEntry' database model.
 
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+
 from .common import ArticlePriority
 
 # ================= Inputs =================

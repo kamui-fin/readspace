@@ -8,7 +8,6 @@ This module defines Taskiq task wrappers that handle:
 The actual business logic is in app.workers.feed package.
 """
 
-import time
 from typing import Any
 from uuid import UUID
 
@@ -16,13 +15,9 @@ import structlog
 
 from app.core.taskiq_app import broker
 from app.workers.common import ensure_uuid
-from app.workers.feed import (
-    batch_enrich_feeds,
-    compact_old_articles,
-    compact_unread_articles,
-    refresh_single_feed,
-    schedule_all_feeds,
-)
+from app.workers.feed.compaction import compact_old_articles, compact_unread_articles
+from app.workers.feed.enrichment import batch_enrich_feeds
+from app.workers.feed.refresh import refresh_single_feed, schedule_all_feeds
 
 logger = structlog.get_logger(__name__)
 
@@ -53,7 +48,7 @@ async def refresh_single_feed_task(feed_id: UUID | str) -> None:
     task_name="feed_tasks.schedule_all_feed_refreshes",
     schedule=[{"cron": "*/30 * * * *"}],  # Every 30 minutes
 )
-async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
+async def schedule_all_feed_refreshes_task() -> None:
     """Schedule all feeds needing refresh - Taskiq task wrapper.
 
     This is a quick orchestration task that:
@@ -62,22 +57,8 @@ async def schedule_all_feed_refreshes_task() -> dict[str, Any]:
 
     Total DB time: <100ms for querying feed IDs
 
-    Returns:
-        Dictionary with scheduling statistics
     """
-    start_time = time.perf_counter()
-
-    # Service function manages its own session - NO session passed
-    result = await schedule_all_feeds()
-
-    total_duration = time.perf_counter() - start_time
-
-    logger.info(
-        "Feed refresh scheduling cycle completed",
-        total_duration_seconds=round(total_duration, 3),
-        **result,
-    )
-    return result
+    return await schedule_all_feeds()
 
 
 @broker.task(

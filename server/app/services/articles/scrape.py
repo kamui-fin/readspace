@@ -10,17 +10,17 @@ Uses:
 import asyncio
 import re
 import time
-from copy import deepcopy
 from urllib.parse import urlparse
 
 import nh3
 import structlog
 import trafilatura  # type: ignore[import-untyped]
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
+from trafilatura.downloads import ConfigParser
 from trafilatura.settings import DEFAULT_CONFIG
 
 from app.core.constants import CONTENT_EXTRACTION_TIMEOUT
-from app.utils.reading_time import calculate_reading_time
+from app.utils.text import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
@@ -78,9 +78,9 @@ ALLOWED_ATTRIBUTES = {
 }
 
 
-def _get_trafilatura_config() -> dict:
+def _get_trafilatura_config() -> ConfigParser:
     """Create custom config with shorter timeout and no retries."""
-    config = deepcopy(DEFAULT_CONFIG)
+    config = ConfigParser(defaults=DEFAULT_CONFIG.defaults())
     config["DEFAULT"]["DOWNLOAD_TIMEOUT"] = str(CONTENT_EXTRACTION_TIMEOUT)
     config["DEFAULT"]["MAX_REDIRECTS"] = "2"
     # Minimize noise
@@ -147,8 +147,19 @@ def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> 
     try:
         images = soup.find_all("img", src=True)
         for img in images:
-            if _urls_match(img["src"], main_image_url):
-                logger.debug("Removing duplicate hero image from body", src=img["src"])
+            # Type check: ensure img is a Tag object (not NavigableString, etc.)
+            if not isinstance(img, Tag):
+                continue
+
+            # BeautifulSoup Tag attributes can be strings or lists, extract as string
+            img_src_attr = img.attrs.get("src")
+            if isinstance(img_src_attr, list):
+                img_src = img_src_attr[0] if img_src_attr else None
+            else:
+                img_src = img_src_attr if isinstance(img_src_attr, str) else None
+
+            if img_src and _urls_match(img_src, main_image_url):
+                logger.debug("Removing duplicate hero image from body", src=img_src)
                 # Optional: Remove parent figure if it contains only this image
                 parent = img.parent
                 img.decompose()
@@ -167,7 +178,7 @@ def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> 
 # ==============================================================================
 
 
-def _fetch_and_extract(url: str, config: dict) -> str | None:
+def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
     """Blocking Trafilatura operation to be run in a thread."""
     downloaded = trafilatura.fetch_url(url, config=config)
     if not downloaded:

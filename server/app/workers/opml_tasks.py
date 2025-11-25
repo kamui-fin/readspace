@@ -14,9 +14,9 @@ import structlog
 from taskiq import Context, TaskiqDepends
 
 from app.core.taskiq_app import broker
+from app.typing.opml import FeedImportError
 from app.workers.common import ensure_uuid
 from app.workers.opml.import_feed import import_single_feed
-from app.typing.opml import FeedImportError
 from app.workers.opml.import_opml import import_opml
 from app.workers.opml.progress import check_import_cancellation_flag, update_import_progress
 

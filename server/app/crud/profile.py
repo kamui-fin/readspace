@@ -4,11 +4,11 @@ CRUD operations for Profile model
 
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.feed import FeedSubscription
 from app.models.user import Profile
-from app.schemas.user import ProfileCreate
 
 
 async def get_profile_by_id(db: AsyncSession, *, user_id: UUID) -> Profile | None:

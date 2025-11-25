@@ -6,8 +6,6 @@ import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.custom_exceptions import ServiceUnavailableError
-from app.crud.article.reader import get_article_by_id
 from app.db.session import get_db
 from app.schemas.auth import TokenData
 from app.services.ai.service import generate_summary, translate_content

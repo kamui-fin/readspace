@@ -4,14 +4,15 @@ Strictly handles CPU-bound parsing and data extraction.
 Zero DB dependencies.
 """
 
-import feedparser  # type: ignore
-import structlog
-from typing import Any, Optional, TypedDict
-from datetime import datetime, timezone
-from urllib.parse import urljoin, urlparse
 import re
+from datetime import datetime, timezone
+from typing import Any, TypedDict, cast
+from urllib.parse import urljoin, urlparse
+
+import feedparser  # type: ignore
 import nh3  # type: ignore
-from bs4 import BeautifulSoup
+import structlog
+from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 
 from app.typing.articles import ArticleCreate
@@ -74,11 +75,11 @@ ALLOWED_ATTRIBUTES = {
 
 class ParsedFeed(TypedDict):
     title: str
-    description: Optional[str]
-    link: Optional[str]
-    language: Optional[str]
-    image_url: Optional[str]
-    ttl: Optional[int]
+    description: str | None
+    link: str | None
+    language: str | None
+    image_url: str | None
+    ttl: int | None
     articles: list[ArticleCreate]
     version: str
 
@@ -93,7 +94,7 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     if parsed.bozo:
         logger.warning("Feed parsed with errors", url=url, error=str(parsed.bozo_exception))
 
-    feed = parsed.feed
+    feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
     title = _clean_plain_text(feed.get("title", "")) or _extract_domain(url)
     description = _clean_plain_text(feed.get("description") or feed.get("subtitle") or "")
@@ -120,6 +121,8 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         except Exception as e:
             logger.warning("Failed to extract article", error=str(e))
 
+    version: str = str(parsed.version) if parsed.version else "unknown"
+
     return {
         "title": title,
         "description": description,
@@ -128,7 +131,7 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         "image_url": image_url,
         "ttl": ttl,
         "articles": articles,
-        "version": parsed.version or "unknown",
+        "version": version,
     }
 
 
@@ -137,7 +140,7 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
 # ==============================================================================
 
 
-def _extract_article_data(entry: dict[str, Any], feed_url: str) -> Optional[ArticleCreate]:
+def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate | None:
     """
     Convert a raw feedparser entry into a clean ArticleCreate schema.
     """
@@ -238,20 +241,22 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
             soup = BeautifulSoup(html_content, "html.parser")
             has_changes = False
             for tag in soup.find_all(["a", "img", "video", "source"]):
+                if not isinstance(tag, Tag):
+                    continue
                 if tag.has_attr("href"):
-                    val = tag["href"]
-                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                    val = tag.get("href")
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["href"] = urljoin(base_url, val)
                         has_changes = True
                 if tag.has_attr("src"):
-                    val = tag["src"]
-                    if val and not (val.startswith("data:") or val.startswith("mailto:")):
+                    val = tag.get("src")
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["src"] = urljoin(base_url, val)
                         has_changes = True
             if has_changes:
                 html_content = str(soup)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to fix relative URLs", error=str(e))
 
     try:
         clean_html = nh3.clean(
@@ -324,10 +329,13 @@ def _extract_image_url(entry: dict, clean_content: str, base_url: str | None) ->
     if clean_content:
         soup = BeautifulSoup(clean_content, "html.parser")
         for img in soup.find_all("img", src=True):
-            src = img["src"]
-            if "icon" in src or "emoji" in src:
+            if not isinstance(img, Tag):
                 continue
-            return src
+            src = img.get("src")
+            if src and isinstance(src, str):
+                if "icon" in src or "emoji" in src:
+                    continue
+                return src
 
     return None
 

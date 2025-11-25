@@ -8,9 +8,9 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import ArticleContent, FeedArticle, FeedSubscription, UserEntry
+from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.feed import FeedSubscription
 from app.typing.articles import ArticleUpdate
-
 
 # ============================================================================
 # USER ENTRY STATE MANAGEMENT
@@ -45,7 +45,7 @@ async def set_article_state(
     if is_read is not None:
         insert_values["is_read"] = is_read
         if is_read:
-            insert_values["read_at"] = current_time
+            insert_values["read_at"] = datetime.now(timezone.utc)
     if is_read_later is not None:
         insert_values["is_read_later"] = is_read_later
     if priority is not None:
@@ -147,6 +147,79 @@ async def mark_all_as_read(
         stmt = stmt.where(FeedSubscription.folder_id == folder_id)
 
     result = await db.execute(stmt)
+    await db.flush()
+
+    return result.rowcount
+
+
+async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, min_articles_per_feed: int) -> int:
+    """
+    Delete old article_contents that are eligible for cleanup.
+
+    IMPORTANT: This deletes article_contents (which cascade deletes feed_articles),
+    not feed_articles directly. Deleting feed_articles would leave orphaned content.
+
+    Eligibility criteria:
+    - Published more than retention_days ago
+    - Not in the top min_articles_per_feed newest articles for their feed
+    - Not saved (no user_article_states with is_read_later=True)
+    - Not clipped (no clipped_articles entry)
+
+    Args:
+        db: Database session
+        retention_days: Minimum age in days for articles to be eligible for deletion
+        min_articles_per_feed: Minimum number of newest articles to keep per feed
+
+    Returns:
+        Number of article_contents deleted
+    """
+    from sqlalchemy import text
+
+    # Set timeout first (must be separate statement for asyncpg)
+    await db.execute(text("SET LOCAL statement_timeout = '120min'"))
+
+    # Execute the deletion query
+    deletion_query = text(
+        """
+        WITH ranked_articles AS (
+            SELECT
+                ac.id AS content_id,
+                fa.feed_id,
+                ac.published_at AS published_or_created,
+                ROW_NUMBER() OVER (
+                    PARTITION BY fa.feed_id
+                    ORDER BY ac.published_at DESC
+                ) AS rn
+            FROM feed_articles fa
+            JOIN article_contents ac ON fa.content_id = ac.id
+        ),
+        eligible_contents AS (
+            SELECT ra.content_id
+            FROM ranked_articles ra
+            LEFT JOIN user_article_states uas
+                ON uas.article_id = (
+                    SELECT fa2.id FROM feed_articles fa2 WHERE fa2.content_id = ra.content_id LIMIT 1
+                )
+                AND uas.is_read_later = TRUE
+            LEFT JOIN clipped_articles ca
+                ON ca.content_id = ra.content_id
+            WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)
+              AND uas.id IS NULL       -- no saved states
+              AND ca.id IS NULL        -- not clipped
+              AND ra.rn > :min_articles -- not in top N newest
+        )
+        DELETE FROM article_contents
+        WHERE id IN (SELECT content_id FROM eligible_contents)
+        """
+    )
+
+    result = await db.execute(
+        deletion_query,
+        {
+            "retention_days": retention_days,
+            "min_articles": min_articles_per_feed,
+        },
+    )
     await db.flush()
 
     return result.rowcount

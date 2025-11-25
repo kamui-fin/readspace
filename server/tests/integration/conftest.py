@@ -383,9 +383,11 @@ async def cleanup_redis_keys(pattern: str):
     Args:
         pattern: Redis key pattern (e.g., "test:*")
     """
-    from app.core.redis_cache import RedisCache
+    import redis.asyncio as redis
+    from app.core.redis_cache import get_pool
 
-    cache = RedisCache()
-    # Implementation depends on your Redis cache interface
-    # This is a helper for tests that need to clean up Redis state
-    pass
+    pool = get_pool()
+    async with redis.Redis(connection_pool=pool) as client:
+        keys = await client.keys(pattern)
+        if keys:
+            await client.delete(*keys)

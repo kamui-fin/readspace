@@ -1,10 +1,10 @@
 import structlog
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 
 from app.core.config import get_settings
-from app.schemas.auth import TokenData
+from app.typing.user import TokenData
 
 logger = structlog.get_logger()
 
@@ -26,11 +26,9 @@ def verify_token(token: str) -> TokenData:
         )
 
         return TokenData(
-            sub=payload.get("sub"),
+            sub=str(payload.get("sub")),
             email=payload.get("email"),
             role=payload.get("role"),
-            app_metadata=payload.get("app_metadata", {}),
-            user_metadata=payload.get("user_metadata", {}),
         )
     except JWTError as e:
         logger.warning("JWT verification failed", error=str(e))
@@ -38,7 +36,7 @@ def verify_token(token: str) -> TokenData:
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from e
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> TokenData:

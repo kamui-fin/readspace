@@ -125,8 +125,6 @@ def upgrade() -> None:
         # State flags
         sa.Column('is_read', sa.Boolean(), nullable=False, server_default='false'),
         sa.Column('is_read_later', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('is_favorite', sa.Boolean(), nullable=False, server_default='false'),
-        sa.Column('is_archived', sa.Boolean(), nullable=False, server_default='false'),
         # Kept priority as requested, though optional
         sa.Column('priority', sa.String(20), nullable=False, server_default='MEDIUM'),
         

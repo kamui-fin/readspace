@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 
@@ -94,3 +95,15 @@ class FeedDetail(FeedSummary):
     next_fetch_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class FeedEnrichmentResponse(BaseModel):
+    """
+    AI enrichment response for feed metadata.
+    Used in: Batch feed enrichment via Gemini API.
+    """
+
+    enhanced_description: str | None = None
+    tags: list[str] = Field(default_factory=list)
+    category: str
+    popularity_estimate: int = Field(ge=1, le=100)

@@ -3,7 +3,7 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import ORJSONResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -137,7 +137,7 @@ async def delete_folder(
     folder_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> JSONResponse:
+) -> ORJSONResponse:
     """Delete a folder."""
     folder_service = FolderService(db=db, user_id=UUID(current_user.sub))
     try:
@@ -163,7 +163,7 @@ async def delete_folder(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
         logger.info("Folder deleted successfully", folder_id=folder_id, user_id=current_user.sub)
-        return JSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
+        return ORJSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
     except ValueError as e:
         logger.warning(
             "Failed to delete folder due to value error",

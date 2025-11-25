@@ -1,12 +1,13 @@
 """Article count queries"""
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import FeedArticle, FeedSubscription, UserEntry
+from app.models.article import FeedArticle, UserEntry
+from app.models.feed import FeedSubscription
 
 
 async def get_unread_counts_per_feed(
@@ -38,14 +39,14 @@ async def get_unread_counts_per_feed(
             FeedArticle.published_at > FeedSubscription.last_read_cutoff,
             or_(
                 UserEntry.is_read.is_(None),  # Not marked at all
-                UserEntry.is_read == False,  # Explicitly marked unread
+                ~UserEntry.is_read,  # Explicitly marked unread
             ),
         )
         .group_by(FeedArticle.feed_id)
     )
 
     result = await db.execute(stmt)
-    return {feed_id: count for feed_id, count in result.all()}
+    return {row.feed_id: row.unread_count for row in result.all()}
 
 
 async def count_read_later_articles(
@@ -56,7 +57,7 @@ async def count_read_later_articles(
     """Count read later articles - uses partial index."""
     stmt = select(func.count(UserEntry.id)).filter(
         UserEntry.user_id == user_id,
-        UserEntry.is_read_later == True,
+        UserEntry.is_read_later,
     )
 
     result = await db.execute(stmt)
@@ -107,7 +108,7 @@ async def count_total_unread_articles(
     # Articles explicitly marked as read
     read_stmt = select(func.count(UserEntry.id)).filter(
         UserEntry.user_id == user_id,
-        UserEntry.is_read == True,
+        UserEntry.is_read,
         UserEntry.feed_article_id.isnot(None),
     )
 

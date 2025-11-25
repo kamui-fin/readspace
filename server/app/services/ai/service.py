@@ -4,14 +4,14 @@ Functional AI Service: Summarization and Translation.
 
 import hashlib
 import re
-import time
+
 import structlog
 from google import genai
 from google.genai import types
 
+from app.core import redis_cache
 from app.core.config import get_settings
 from app.core.constants import AI_CACHE_TTL
-from app.core import redis_cache
 from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_translation_system_prompt
 
 logger = structlog.get_logger(__name__)

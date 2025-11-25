@@ -5,8 +5,9 @@ from uuid import UUID
 
 import structlog
 
-from app.models.enums import ImportStatus
 from app.services.feeds.service import add_feed
+from app.services.folder import ensure_default_folder
+from app.typing.common import ImportStatus
 from app.typing.opml import FeedImportError
 from app.workers.common import worker_db_factory
 from app.workers.opml.progress import update_import_progress
@@ -28,7 +29,7 @@ async def import_single_feed(
     Args:
         user_id: User UUID
         feed_url: Feed URL to import
-        folder_id: Folder ID for the feed
+        folder_id: Folder ID for the feed (empty string uses default folder)
         tag_names: Optional list of tag names
         feed_title: Optional feed title override
         update_existing: Whether to update existing feed
@@ -44,15 +45,21 @@ async def import_single_feed(
     )
 
     try:
+        # Resolve folder_id: use default folder if empty/None
+        if folder_id:
+            resolved_folder_id = UUID(folder_id)
+        else:
+            async with worker_db_factory() as db:
+                default_folder = await ensure_default_folder(db, user_id=user_id)
+                resolved_folder_id = default_folder.id
+
         # Use the core feed service to add/subscribe
         # add_feed handles: resolving URL, fetching, parsing, creating feed, subscribing
         subscription = await add_feed(
             session_factory=worker_db_factory,
             user_id=user_id,
             url=feed_url,
-            folder_id=UUID(folder_id)
-            if folder_id
-            else None,  # TODO: Handle default folder logic if None? Or assume caller handles it.
+            folder_id=resolved_folder_id,
             custom_title=feed_title,
         )
 
