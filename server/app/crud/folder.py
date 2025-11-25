@@ -73,16 +73,15 @@ async def upsert_batch(db: AsyncSession, folder_names: list[str], user_id: UUID)
             "name": name,
             "user_id": user_id,
             "created_at": current_time,
-            "updated_at": current_time,
         }
         for name in folder_names
     ]
 
-    # Efficient Upsert
+    # Efficient Upsert - insert new folders, update existing ones (no-op update to ensure return)
     stmt = insert(Folder).values(values)
     stmt = stmt.on_conflict_do_update(
         index_elements=["user_id", "name"],
-        set_={"updated_at": current_time},  # Touch timestamp to ensure return
+        set_={"name": stmt.excluded.name},  # No-op update to ensure returning works
     ).returning(Folder.id, Folder.name)
 
     result = await db.execute(stmt)

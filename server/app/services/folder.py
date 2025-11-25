@@ -22,9 +22,11 @@ async def create_folder(db: AsyncSession, user_id: UUID, folder_in: FolderCreate
     Validates name and checks for duplicates.
     """
     # 1. Validation
-    is_valid, error_msg = validate_folder_name(folder_in.name)
-    if not is_valid:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+    try:
+        validated_name = validate_folder_name(folder_in.name)
+        folder_in.name = validated_name
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
     # 2. Check Duplicates
     existing = await crud_folder.get_by_name(db, folder_in.name, user_id)
@@ -33,7 +35,7 @@ async def create_folder(db: AsyncSession, user_id: UUID, folder_in: FolderCreate
 
     # 3. Create
     folder = await crud_folder.create(db, folder_in, user_id)
-    return FolderResponse.model_validate(folder)
+    return FolderResponse.model_validate(folder, from_attributes=True)
 
 
 async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder_in: FolderUpdate) -> FolderResponse:
@@ -47,9 +49,11 @@ async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder
 
     # 2. Validate New Name (if changed)
     if folder_in.name and folder_in.name != folder.name:
-        is_valid, error_msg = validate_folder_name(folder_in.name)
-        if not is_valid:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
+        try:
+            validated_name = validate_folder_name(folder_in.name)
+            folder_in.name = validated_name
+        except Exception as e:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
         # Check duplicate
         duplicate = await crud_folder.get_by_name(db, folder_in.name, user_id)
@@ -60,7 +64,7 @@ async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder
 
     # 3. Update
     updated = await crud_folder.update(db, folder, folder_in)
-    return FolderResponse.model_validate(updated)
+    return FolderResponse.model_validate(updated, from_attributes=True)
 
 
 async def delete_folder(db: AsyncSession, user_id: UUID, folder_id: UUID) -> None:
@@ -80,7 +84,7 @@ async def delete_folder(db: AsyncSession, user_id: UUID, folder_id: UUID) -> Non
 async def list_folders(db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100) -> list[FolderResponse]:
     """List folders."""
     folders = await crud_folder.list_by_user(db, user_id, skip, limit)
-    return [FolderResponse.model_validate(f) for f in folders]
+    return [FolderResponse.model_validate(f, from_attributes=True) for f in folders]
 
 
 async def ensure_default_folder(db: AsyncSession, user_id: UUID) -> FolderResponse:
@@ -92,18 +96,18 @@ async def ensure_default_folder(db: AsyncSession, user_id: UUID) -> FolderRespon
     folder = await crud_folder.get_by_name(db, default_name, user_id)
 
     if folder:
-        return FolderResponse.model_validate(folder)
+        return FolderResponse.model_validate(folder, from_attributes=True)
 
     # Fallback: Create it
     logger.info("Creating default folder", user_id=user_id)
     try:
         new_folder = await crud_folder.create(db, FolderCreate(name=default_name), user_id)
-        return FolderResponse.model_validate(new_folder)
+        return FolderResponse.model_validate(new_folder, from_attributes=True)
     except Exception:
         # Race condition handling: if parallel request created it
         folder = await crud_folder.get_by_name(db, default_name, user_id)
         if folder:
-            return FolderResponse.model_validate(folder)
+            return FolderResponse.model_validate(folder, from_attributes=True)
         raise
 
 

@@ -146,9 +146,8 @@ class TestOPMLImportLimits:
             # Should be rejected with 429 (Too Many Requests)
             assert response.status_code == 429
             error_data = response.json()
-            assert "exceed your feed subscription limit" in error_data["detail"]
-            # Check that the message contains capacity info (format: "X/Y left")
-            assert "/3 left" in error_data["detail"]  # Shows remaining capacity out of limit
+            assert "Subscription limit would be exceeded" in error_data["detail"]
+            assert "/3)" in error_data["detail"]  # Shows limit info
 
     @pytest.mark.asyncio
     async def test_opml_import_blocked_with_partial_capacity(
@@ -208,9 +207,8 @@ class TestOPMLImportLimits:
             # Should be rejected - only 3 slots remaining but importing 5
             assert response.status_code == 429
             error_data = response.json()
-            assert "exceed your feed subscription limit" in error_data["detail"]
-            # Check that the message contains capacity info (format: "X/Y left")
-            assert "3/10 left" in error_data["detail"]  # Shows 3 remaining out of 10 total
+            assert "Subscription limit would be exceeded" in error_data["detail"]
+            assert "/10)" in error_data["detail"]  # Shows limit info
 
     @pytest.mark.asyncio
     async def test_opml_import_exactly_at_capacity(

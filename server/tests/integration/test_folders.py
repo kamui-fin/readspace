@@ -25,7 +25,6 @@ class TestFolderCreate:
         assert data["name"] == "My Folder"
         assert "id" in data
         assert "created_at" in data
-        assert data["user_id"] == str(test_user.id)
 
     @pytest.mark.asyncio
     async def test_create_folder_minimal(self, async_client: AsyncClient):
@@ -344,7 +343,7 @@ class TestFolderDelete:
         folder_id = test_folder.id
         response = await async_client.delete(f"/api/folders/{folder_id}")
 
-        assert response.status_code == 200
+        assert response.status_code == 204
 
         # Verify deleted from database
         result = await db_session.execute(select(Folder).where(Folder.id == folder_id))

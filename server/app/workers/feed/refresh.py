@@ -9,7 +9,6 @@ from app.core.constants import MAX_FEEDS_BATCH_SIZE
 from app.crud.feed.core import get_feeds_for_worker
 from app.services.feeds.service import refresh_feed
 from app.workers.common import worker_db_factory
-from app.workers.feed_tasks import refresh_single_feed_task
 
 logger = structlog.get_logger(__name__)
 
@@ -53,6 +52,9 @@ async def schedule_all_feeds() -> None:
     if not feed_ids:
         logger.info("No feeds to refresh")
         return
+
+    # Import here to avoid circular dependency
+    from app.workers.feed_tasks import refresh_single_feed_task
 
     for feed_id in feed_ids:
         await refresh_single_feed_task.kiq(feed_id)

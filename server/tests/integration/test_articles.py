@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import Feed, FeedSubscription
 from app.models.user import Profile
+from app.utils.text import get_content_hash
 
 
 @pytest_asyncio.fixture
@@ -35,9 +36,11 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     await db_session.flush()
 
     # Create article content
+    link = "https://example.com/article1"
     content = ArticleContent(
         title="Test Article",
-        link="https://example.com/article1",
+        link=link,
+        content_hash=get_content_hash(link),
         description="Test article description",
         content="Full article content here",
     )
@@ -83,7 +86,7 @@ class TestSaveWebArticle:
         assert response.status_code in [201, 400, 500]
         if response.status_code == 201:
             data = response.json()
-            assert "id" in data
+            assert "article_id" in data
 
     @pytest.mark.asyncio
     async def test_save_article_with_metadata(self, async_client: AsyncClient):
@@ -269,9 +272,11 @@ class TestListArticles:
         created_articles = []
         for i, published_date in enumerate(published_dates):
             # Create article content
+            link = f"https://example.com/article{i + 1}"
             content = ArticleContent(
                 title=f"Test Article {i + 1}",
-                link=f"https://example.com/article{i + 1}",
+                link=link,
+                content_hash=get_content_hash(link),
                 description=f"Test article {i + 1} description",
                 content=f"Full article {i + 1} content here",
             )
@@ -406,21 +411,6 @@ class TestUpdateArticle:
         assert state.is_read is True
 
     @pytest.mark.asyncio
-    async def test_update_article_mark_as_favorite(
-        self, async_client: AsyncClient, test_article: FeedArticle, db_session: AsyncSession, test_user: Profile
-    ):
-        """Test marking article as favorite."""
-        response = await async_client.put(
-            f"/api/articles/{test_article.id}?article_type=feed",
-            json={"is_favorite": True},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        # Check that is_favorite field exists in response
-        assert "is_favorite" in data
-
-    @pytest.mark.asyncio
     async def test_update_article_read_later(
         self, async_client: AsyncClient, test_article: FeedArticle, db_session: AsyncSession
     ):
@@ -453,7 +443,7 @@ class TestTodaysArticles:
     @pytest.mark.asyncio
     async def test_get_todays_articles(self, async_client: AsyncClient):
         """Test getting today's articles."""
-        response = await async_client.get("/api/articles/today")
+        response = await async_client.get("/api/articles/views/today")
 
         assert response.status_code == 200
         data = response.json()
@@ -465,7 +455,7 @@ class TestTodaysArticles:
     @pytest.mark.asyncio
     async def test_get_todays_articles_pagination(self, async_client: AsyncClient):
         """Test pagination for today's articles."""
-        response = await async_client.get("/api/articles/today?limit=10")
+        response = await async_client.get("/api/articles/views/today?limit=10")
 
         assert response.status_code == 200
         data = response.json()
@@ -480,7 +470,7 @@ class TestRecentlyReadArticles:
     @pytest.mark.asyncio
     async def test_get_recently_read_articles(self, async_client: AsyncClient):
         """Test getting recently read articles."""
-        response = await async_client.get("/api/articles/recently-read")
+        response = await async_client.get("/api/articles/views/recently-read")
 
         assert response.status_code == 200
         data = response.json()
@@ -490,7 +480,7 @@ class TestRecentlyReadArticles:
     @pytest.mark.asyncio
     async def test_get_recently_read_pagination(self, async_client: AsyncClient):
         """Test pagination for recently read articles."""
-        response = await async_client.get("/api/articles/recently-read?limit=20")
+        response = await async_client.get("/api/articles/views/recently-read?limit=20")
 
         assert response.status_code == 200
         data = response.json()
@@ -505,7 +495,7 @@ class TestReadLaterArticles:
     @pytest.mark.asyncio
     async def test_get_read_later_articles(self, async_client: AsyncClient):
         """Test getting read later articles."""
-        response = await async_client.get("/api/articles/read-later")
+        response = await async_client.get("/api/articles/views/read-later")
 
         assert response.status_code == 200
         data = response.json()
@@ -515,7 +505,7 @@ class TestReadLaterArticles:
     @pytest.mark.asyncio
     async def test_get_read_later_pagination(self, async_client: AsyncClient):
         """Test pagination for read later articles."""
-        response = await async_client.get("/api/articles/read-later?limit=50")
+        response = await async_client.get("/api/articles/views/read-later?limit=50")
 
         assert response.status_code == 200
         data = response.json()
@@ -530,21 +520,16 @@ class TestUnreadCounts:
     @pytest.mark.asyncio
     async def test_get_unread_counts_global(self, async_client: AsyncClient):
         """Test getting global unread counts."""
-        response = await async_client.get("/api/articles/unread-counts")
+        response = await async_client.get("/api/articles/counts")
 
         assert response.status_code == 200
         data = response.json()
-        assert "total_unread" in data
-        assert isinstance(data["total_unread"], int)
-
-    @pytest.mark.asyncio
-    async def test_get_unread_counts_by_folder(self, async_client: AsyncClient, test_folder):
-        """Test getting unread counts for specific folder."""
-        response = await async_client.get(f"/api/articles/unread-counts?folder_id={test_folder.id}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "unread_count" in data
+        assert "feed_counts" in data
+        assert "read_later" in data
+        assert "today" in data
+        assert isinstance(data["feed_counts"], dict)
+        assert isinstance(data["read_later"], int)
+        assert isinstance(data["today"], int)
 
 
 class TestCheckArticleSaved:

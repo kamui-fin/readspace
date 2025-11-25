@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, undefer
 
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
 from app.models.article import ArticleContent, FeedArticle, UserEntry
@@ -95,13 +95,22 @@ class ArticleTransformer:
         self,
         feed_article: FeedArticle,
         user_entry: UserEntry | None = None,
+        include_content: bool = False,
+        subscription: FeedSubscription | None = None,
     ) -> ArticleResponse:
         """Convert FeedArticle + UserEntry to ArticleResponse."""
         content = feed_article.content
         feed = feed_article.feed
 
         # Extract user state (matching actual UserEntry model fields)
-        is_read = user_entry.is_read if user_entry else False
+        # Check if article is read: either explicit UserEntry.is_read OR published before cutoff
+        is_read = False
+        if user_entry and user_entry.is_read:
+            is_read = True
+        elif subscription and subscription.last_read_cutoff:
+            # Article is implicitly read if published before the cutoff
+            is_read = feed_article.published_at <= subscription.last_read_cutoff
+        
         is_read_later = user_entry.is_read_later if user_entry else False
         priority = user_entry.priority if user_entry else "MEDIUM"
         read_at = user_entry.read_at if user_entry else None
@@ -112,7 +121,7 @@ class ArticleTransformer:
             title=content.title,
             link=content.link,
             description=self._truncate_description(content.description),
-            content=content.content,
+            content=content.content if include_content else None,
             image_url=content.image_url,
             author=content.author,
             published_at=feed_article.published_at,
@@ -131,24 +140,31 @@ class ArticleTransformer:
     def to_response(
         self,
         article: FeedArticle | tuple[FeedArticle, UserEntry | None],
+        include_content: bool = True,
     ) -> dict[str, Any]:
         """Convert article to response - handles both single and tuple formats."""
-        if isinstance(article, tuple):
-            feed_article, user_entry = article
-            response = self.entry_to_response(feed_article, user_entry)
+        # Check if it's a FeedArticle instance
+        if isinstance(article, FeedArticle):
+            response = self.entry_to_response(article, None, include_content=include_content)
+        # Otherwise try to unpack as a sequence (tuple, list, or SQLAlchemy Row)
         else:
-            response = self.entry_to_response(article, None)
+            try:
+                feed_article, user_entry = article
+                response = self.entry_to_response(feed_article, user_entry, include_content=include_content)
+            except (TypeError, ValueError):
+                # If unpacking fails, treat as single FeedArticle
+                response = self.entry_to_response(article, None, include_content=include_content)
         return response.model_dump()
 
-    def raw_row_to_response(self, row: Any) -> dict[str, Any]:
+    def raw_row_to_response(self, row: Any, include_content: bool = False) -> dict[str, Any]:
         """Convert raw SQLAlchemy row to response."""
         if hasattr(row, "_tuple"):
             # Row from query result
             feed_article, user_entry = row._tuple()
-            response = self.entry_to_response(feed_article, user_entry)
+            response = self.entry_to_response(feed_article, user_entry, include_content=include_content)
         else:
             # Single object
-            response = self.entry_to_response(row, None)
+            response = self.entry_to_response(row, None, include_content=include_content)
         return response.model_dump()
 
 
@@ -203,7 +219,7 @@ async def get_articles(
             (
                 selectinload(FeedArticle.content).undefer_group("content_details")
                 if load_full_content
-                else selectinload(FeedArticle.content)
+                else selectinload(FeedArticle.content).undefer(ArticleContent.description)
             ),
             selectinload(FeedArticle.feed),
         )
@@ -284,7 +300,12 @@ async def get_articles(
 
     # Transform rows to response dicts
     transformer = ArticleTransformer()
-    items = [transformer.entry_to_response(row[0], row[1]).model_dump() for row in rows_to_process]
+    items = [
+        transformer.entry_to_response(
+            row[0], row[1], include_content=load_full_content, subscription=row[2]
+        ).model_dump()
+        for row in rows_to_process
+    ]
 
     next_cursor = None
     if rows_to_process and has_more:
@@ -305,7 +326,7 @@ async def get_article_by_id(
     content_options = (
         selectinload(FeedArticle.content).undefer_group("content_details")
         if load_full_content
-        else selectinload(FeedArticle.content)
+        else selectinload(FeedArticle.content).undefer(ArticleContent.description)
     )
 
     stmt = (
@@ -362,7 +383,7 @@ async def get_read_later_articles(
     query = (
         select(UserEntry)
         .options(
-            selectinload(UserEntry.content),
+            selectinload(UserEntry.content).undefer(ArticleContent.description),
             selectinload(UserEntry.feed_article).selectinload(FeedArticle.feed),
         )
         .where(UserEntry.user_id == user_id, UserEntry.is_read_later)
@@ -378,15 +399,23 @@ async def get_read_later_articles(
     query = query.limit(params.limit + 1)
 
     result = await db.execute(query)
-    items = list(result.scalars().all())
+    user_entries = list(result.scalars().all())
 
-    has_more = len(items) > params.limit
-    if has_more:
-        items = items[: params.limit]
+    has_more = len(user_entries) > params.limit
+    entries_to_process = user_entries[: params.limit] if has_more else user_entries
+
+    # Transform UserEntry objects to response dicts
+    transformer = ArticleTransformer()
+    items = []
+    for entry in entries_to_process:
+        if entry.feed_article:
+            # This is a feed article
+            response = transformer.entry_to_response(entry.feed_article, entry, include_content=False)
+            items.append(response.model_dump())
 
     next_cursor = None
-    if items and has_more:
-        last_item = items[-1]
+    if entries_to_process and has_more:
+        last_item = entries_to_process[-1]
         next_cursor = _create_cursor(last_item.created_at)
 
     return CursorPaginationResult(items=items, next_cursor=next_cursor, has_more=has_more)

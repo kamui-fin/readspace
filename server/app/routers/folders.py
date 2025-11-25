@@ -55,7 +55,7 @@ async def get_folder(
     if not folder:
         logger.warning("Folder not found", folder_id=folder_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
-    return FolderResponse.model_validate(folder)
+    return FolderResponse.model_validate(folder, from_attributes=True)
 
 
 @router.put("/{folder_id}", response_model=FolderResponse)
@@ -97,6 +97,13 @@ async def mark_folder_all_read(
 ) -> dict[str, Any]:
     """Mark all articles in all feeds within a folder as read."""
     user_id = UUID(current_user.sub)
+    
+    # Verify folder exists and belongs to user
+    folder = await crud_folder.get_by_id(db, folder_id, user_id)
+    if not folder:
+        logger.warning("Folder not found for mark all read", folder_id=folder_id, user_id=current_user.sub)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+    
     # Use existing CRUD function
     updated_count = await mark_all_as_read(db, user_id=user_id, folder_id=folder_id)
 

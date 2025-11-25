@@ -18,13 +18,16 @@ async def test_clipped_article(db_session: AsyncSession, test_user: Profile):
     from app.models.enums import ArticlePriority
 
     # Create article content
+    # Note: published_at is not on ArticleContent - it's on FeedArticle for RSS feeds
+    # For clipped articles, we use created_at timestamp
+    from app.utils.text import get_content_hash
+    
     content = ArticleContent(
         title="Test Clipped Article",
         link="https://example.com/test-clipped-article",
         description="A test clipped article description",
         content="<p>Full HTML content of the article</p>",
-        published_at=datetime.now(UTC),
-        custom_metadata={"extracted_by": "chrome_extension"},
+        content_hash=get_content_hash("https://example.com/test-clipped-article"),
     )
     db_session.add(content)
     await db_session.flush()
@@ -71,8 +74,8 @@ class TestSaveWebArticle:
         assert "article_id" in data
 
     @pytest.mark.asyncio
-    async def test_save_article_without_content_fails(self, async_client: AsyncClient):
-        """Test saving article without content should fail."""
+    async def test_save_article_without_content_succeeds(self, async_client: AsyncClient):
+        """Test saving article without content succeeds (content is optional)."""
         response = await async_client.post(
             "/api/articles/",
             json={
@@ -81,8 +84,10 @@ class TestSaveWebArticle:
             },
         )
 
-        assert response.status_code == 400
-        assert "No content provided" in response.json()["detail"]
+        assert response.status_code == 201
+        data = response.json()
+        assert data["success"] is True
+        assert "article_id" in data
 
     @pytest.mark.asyncio
     async def test_save_article_with_priority(self, async_client: AsyncClient):
@@ -324,12 +329,14 @@ class TestReadLaterEndpoint:
     async def test_read_later_pagination(self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
         """Test pagination in read-later endpoint."""
         # Create multiple clipped articles
+        from app.utils.text import get_content_hash
+        
         for i in range(5):
             content = ArticleContent(
                 title=f"Article {i}",
                 link=f"https://example.com/article-{i}",
                 content=f"<p>Content {i}</p>",
-                published_at=datetime.now(UTC),
+                content_hash=get_content_hash(f"https://example.com/article-{i}"),
             )
             db_session.add(content)
             await db_session.flush()

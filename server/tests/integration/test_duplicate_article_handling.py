@@ -93,9 +93,9 @@ def mock_feed_fetch_duplicate_articles():
         else:
             raise ValueError(f"Unexpected feed URL: {url}")
 
-    with patch("app.services.feeds.fetcher.FeedFetcher.fetch_content", side_effect=mock_fetch):
-        with patch("app.services.feeds.creation.FeedCreationService._fetch_feed_content", side_effect=creation_fetch):
-            yield mock_fetch
+    # Patch the actual fetching function
+    with patch("app.services.feeds.fetching.fetch_feed_content", side_effect=mock_fetch):
+        yield mock_fetch
 
 
 class TestDuplicateArticleHandling:
@@ -218,9 +218,8 @@ class TestDuplicateArticleHandling:
         assert feed_a_shared_article.content_id == feed_b_shared_article.content_id, \
             "Both feeds should reference the same article_content"
 
-        # Verify updated_at was touched on the shared content
-        # (This happens when ON CONFLICT DO UPDATE is triggered)
-        assert shared_content_from_a.updated_at is not None
+        # Note: ArticleContent doesn't have updated_at field
+        # The important thing is that both feeds reference the same content_id
 
     @pytest.mark.asyncio
     async def test_duplicate_article_same_feed_multiple_refreshes(

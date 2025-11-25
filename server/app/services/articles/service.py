@@ -57,13 +57,9 @@ async def get_articles_with_cursor(
     result = await reader.get_articles(db, user_id, params, **filters)
 
     # 2. Transform Items
-    transformer = reader.ArticleTransformer()
-    transformed_items = []
-
-    for row in result.items:
-        # row is typically a tuple from the query (FeedArticle, UserEntry, ...)
-        # The reader.py transformer handles rows or objects
-        transformed_items.append(transformer.raw_row_to_response(row))
+    # Note: result.items are already transformed dicts from the CRUD layer
+    # No need to transform again
+    transformed_items = result.items
 
     # 3. Return generic result with transformed items
     # We construct a new model because result.items was SQLAlchemy objects

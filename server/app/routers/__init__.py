@@ -34,18 +34,20 @@ api_router.include_router(folders_router)
 api_router.include_router(users_router)
 
 # Include article routers with prefix
-api_router.include_router(articles_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_clipped_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_counts_router, prefix="/articles", tags=["Articles"])
-api_router.include_router(articles_enhancements_router, prefix="/articles", tags=["Articles"])
+# Note: Order matters! More specific routes must come before generic /{article_id} routes
 api_router.include_router(articles_views_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(articles_counts_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(articles_clipped_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(articles_enhancements_router, prefix="/articles", tags=["Articles"])
+api_router.include_router(articles_router, prefix="/articles", tags=["Articles"])
 
 # Include feed routers with prefix
+# Note: feeds_subscription_router must come before feeds_router to ensure POST / route is registered
+api_router.include_router(feeds_subscription_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_admin_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_bulk_router, prefix="/feeds", tags=["Feeds"])
 api_router.include_router(feeds_refresh_router, prefix="/feeds", tags=["Feeds"])
-api_router.include_router(feeds_subscription_router, prefix="/feeds", tags=["Feeds"])
 
 # Include OPML routers with prefix
 api_router.include_router(opml_import_router, prefix="/opml", tags=["OPML"])

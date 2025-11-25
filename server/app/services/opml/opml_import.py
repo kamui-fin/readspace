@@ -37,7 +37,7 @@ async def handle_opml_upload(
 
     # 2. Check subscription limits
     # This raises HTTPException(429) if limit exceeded
-    await enforce_subscription_limit(db, UUID(user_id))
+    await enforce_subscription_limit(db, UUID(user_id), additional_count=feed_count)
 
     # 3. Dispatch Orchestration Task
     # Local import to avoid circular dependency with workers

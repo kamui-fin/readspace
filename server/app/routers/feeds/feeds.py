@@ -143,7 +143,14 @@ async def get_feed(
         logger.warning("Feed not found", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-    return feed
+    # Check if user is subscribed to this feed
+    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
+    
+    # Create FeedDetail response with subscription status
+    feed_detail = FeedDetail.model_validate(feed)
+    feed_detail.is_subscribed = subscription is not None
+    
+    return feed_detail
 
 
 @router.put(

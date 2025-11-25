@@ -18,7 +18,7 @@ from app.typing.opml import FeedImportError
 from app.workers.common import ensure_uuid
 from app.workers.opml.import_feed import import_single_feed
 from app.workers.opml.import_opml import import_opml
-from app.workers.opml.progress import check_import_cancellation_flag, update_import_progress
+from app.workers.opml.progress import OpmlImportTracker
 
 logger = structlog.get_logger(__name__)
 
@@ -44,7 +44,8 @@ async def import_single_feed_task(
 
     # Check for cancellation before starting
     if parent_task_id:
-        is_cancelled = await check_import_cancellation_flag(parent_task_id)
+        tracker = OpmlImportTracker(parent_task_id)
+        is_cancelled = await tracker.is_cancelled()
         if is_cancelled:
             logger.info(
                 "Feed import cancelled",
@@ -54,10 +55,7 @@ async def import_single_feed_task(
             )
 
             # Update progress to reflect cancellation
-            await update_import_progress(
-                task_id=parent_task_id,
-                cancelled=True,
-            )
+            await tracker.cancel()
 
             return {
                 "success": False,
@@ -89,14 +87,14 @@ async def import_single_feed_task(
 
         # CRITICAL: Update progress even on catastrophic failure
         if parent_task_id:
-            await update_import_progress(
-                task_id=parent_task_id,
-                error=FeedImportError(
+            tracker = OpmlImportTracker(parent_task_id)
+            await tracker.mark_failure(
+                FeedImportError(
                     url=feed_url,
                     title=feed_title or "Unknown",
                     error=f"Task wrapper exception: {str(exc)}",
                     status="task_exception",
-                ),
+                )
             )
 
         # Re-raise to let Taskiq handle retry logic

@@ -99,11 +99,11 @@ async def admin_update_feed(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
-    if str(user_profile.role) != UserRole.ADMIN.value:
+    if user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to update global feed",
             user_id=current_user.sub,
-            user_role=str(user_profile.role),
+            user_role=user_profile.role,
             feed_id=feed_id,
         )
         raise HTTPException(
@@ -234,11 +234,11 @@ async def admin_delete_feed(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Admin access required",
         )
-    if str(user_profile.role) != UserRole.ADMIN.value:
+    if user_profile.role != UserRole.ADMIN:
         logger.warning(
             "Non-admin user attempted to delete global feed",
             user_id=current_user.sub,
-            user_role=str(user_profile.role),
+            user_role=user_profile.role,
             feed_id=feed_id,
         )
         raise HTTPException(

@@ -94,14 +94,18 @@ async def count_total_unread_articles(
     Count total unread articles across all feeds.
 
     Uses arithmetic: total articles after cutoff - explicitly marked read.
+    If cutoff is None, all articles in that feed are considered unread.
     """
-    # Total articles in subscribed feeds after last_read_cutoff
+    # Total articles in subscribed feeds after last_read_cutoff (or all if cutoff is None)
     total_stmt = (
         select(func.count(FeedArticle.id))
         .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
         .filter(
             FeedSubscription.user_id == user_id,
-            FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+            or_(
+                FeedSubscription.last_read_cutoff.is_(None),
+                FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+            ),
         )
     )
 

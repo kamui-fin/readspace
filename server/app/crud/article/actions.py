@@ -121,31 +121,35 @@ async def mark_all_as_read(
     """
     Mark all articles as read by updating last_read_cutoff.
 
-    This is the efficient way - no need to create individual user_entries.
-    Uses a single UPDATE query to avoid N+1 problem.
-
-    If feed_id is provided, uses the most recent article's published_at timestamp
-    as the cutoff. Otherwise uses current time.
+    Uses a single optimized query with a correlated subquery to avoid N+1 problem.
+    Each subscription's cutoff is set to its own feed's most recent article timestamp.
+    
+    If feed_id is provided, updates only that subscription.
+    If folder_id is provided, updates all subscriptions in that folder.
+    Otherwise, updates all user's subscriptions.
     """
-    # Get the most recent article's published_at timestamp for this feed
-    if feed_id:
-        result = await db.execute(
-            select(func.max(ArticleContent.published_at))
-            .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
-            .where(FeedArticle.feed_id == feed_id)
-        )
-        max_published_at = result.scalar_one_or_none()
-        cutoff_time = max_published_at if max_published_at else datetime.now(timezone.utc)
-    else:
-        cutoff_time = datetime.now(timezone.utc)
+    # Define a correlated subquery that finds the max published_at for each feed
+    # This runs once per row being updated, but all within a single SQL statement
+    latest_article_subquery = (
+        select(func.max(FeedArticle.published_at))
+        .where(FeedArticle.feed_id == FeedSubscription.feed_id)
+        .correlate(FeedSubscription)
+        .scalar_subquery()
+    )
 
-    stmt = update(FeedSubscription).where(FeedSubscription.user_id == user_id).values(last_read_cutoff=cutoff_time)
+    # Build the update statement
+    stmt = update(FeedSubscription).where(FeedSubscription.user_id == user_id)
 
+    # Apply filters based on context
     if feed_id:
         stmt = stmt.where(FeedSubscription.feed_id == feed_id)
-    if folder_id:
+    elif folder_id:
         stmt = stmt.where(FeedSubscription.folder_id == folder_id)
 
+    # Set last_read_cutoff to the feed's most recent article, or now() if no articles
+    stmt = stmt.values(last_read_cutoff=func.coalesce(latest_article_subquery, func.now()))
+
+    # Execute the single query
     result = await db.execute(stmt)
     await db.flush()
 
@@ -185,10 +189,10 @@ async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, 
             SELECT
                 ac.id AS content_id,
                 fa.feed_id,
-                ac.published_at AS published_or_created,
+                fa.published_at AS published_or_created,
                 ROW_NUMBER() OVER (
                     PARTITION BY fa.feed_id
-                    ORDER BY ac.published_at DESC
+                    ORDER BY fa.published_at DESC
                 ) AS rn
             FROM feed_articles fa
             JOIN article_contents ac ON fa.content_id = ac.id
@@ -196,16 +200,10 @@ async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, 
         eligible_contents AS (
             SELECT ra.content_id
             FROM ranked_articles ra
-            LEFT JOIN user_article_states uas
-                ON uas.article_id = (
-                    SELECT fa2.id FROM feed_articles fa2 WHERE fa2.content_id = ra.content_id LIMIT 1
-                )
-                AND uas.is_read_later = TRUE
-            LEFT JOIN clipped_articles ca
-                ON ca.content_id = ra.content_id
+            LEFT JOIN user_entries ue
+                ON ue.content_id = ra.content_id
             WHERE ra.published_or_created < NOW() - MAKE_INTERVAL(days => :retention_days)
-              AND uas.id IS NULL       -- no saved states
-              AND ca.id IS NULL        -- not clipped
+              AND ue.id IS NULL       -- no user entries (saved, clipped, or any interaction)
               AND ra.rn > :min_articles -- not in top N newest
         )
         DELETE FROM article_contents

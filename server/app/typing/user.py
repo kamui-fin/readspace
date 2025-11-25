@@ -9,11 +9,10 @@ class ProfileBase(BaseModel):
 
 
 class ProfileResponse(ProfileBase):
-    model_config = ConfigDict(from_attributes=True)
-
     id: UUID
     role: str
     created_at: datetime
+    updated_at: datetime
 
 
 class TokenData(BaseModel):

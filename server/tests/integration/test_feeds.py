@@ -31,7 +31,7 @@ class TestFeedSubscribe:
 
         assert response.status_code == 201
         data = response.json()
-        assert data["feed_id"] == str(test_feed.id)
+        assert data["feed"]["id"] == str(test_feed.id)
         assert data["user_id"] == str(test_user.id)
 
         # Verify subscription in database
@@ -114,7 +114,7 @@ class TestFeedAdd:
         assert "id" in data
         assert "feed" in data
         assert data["feed"]["title"] is not None
-        assert data["feed_id"] is not None
+        assert data["feed"]["id"] is not None
 
     @pytest.mark.asyncio
     async def test_add_feed_with_folder(self, async_client: AsyncClient, test_folder: Folder):
@@ -174,7 +174,7 @@ class TestFeedList:
         assert response.status_code == 200
         data = response.json()
         assert len(data) >= 1
-        assert any(f["id"] == str(test_feed.id) for f in data)
+        assert any(f["feed"]["id"] == str(test_feed.id) for f in data)
 
     @pytest.mark.asyncio
     async def test_list_feeds_filter_by_folder(
@@ -312,7 +312,7 @@ class TestFeedUpdate:
         db_session.add(subscription)
         await db_session.flush()
 
-        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"title": "Custom Title"})
+        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"custom_title": "Custom Title"})
 
         assert response.status_code == 200
         data = response.json()
@@ -348,7 +348,7 @@ class TestFeedUpdate:
     @pytest.mark.asyncio
     async def test_update_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
         """Test updating feed user is not subscribed to."""
-        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"title": "New Title"})
+        response = await async_client.put(f"/api/feeds/{test_feed.id}", json={"custom_title": "New Title"})
 
         assert response.status_code == 404
 

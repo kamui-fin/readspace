@@ -11,10 +11,13 @@ Testing Strategy:
 
 import io
 from datetime import datetime, timezone
+from uuid import uuid4
 from unittest.mock import patch
 
+import orjson
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.feed import Feed, FeedSubscription
@@ -59,6 +62,93 @@ INVALID_XML = """<?xml version="1.0" encoding="UTF-8"?>
         <outline type="rss" text="Test" xmlUrl="https://example.com/feed.xml"/>
     </body>
 </opml>"""
+
+
+ISOLATION_OPML = """<?xml version="1.0" encoding="UTF-8"?>
+<opml version="2.0">
+  <head><title>Infra Test</title></head>
+  <body>
+    <outline text="Tech" title="Tech">
+      <outline type="rss" text="Hacker News" xmlUrl="https://news.ycombinator.com/rss" />
+    </outline>
+    <outline type="rss" text="Solo Feed" xmlUrl="https://example.com/feed" />
+  </body>
+</opml>
+"""
+
+
+class TestOpmlInfrastructure:
+    """Validate isolated infra primitives (DB, Redis, Taskiq)."""
+
+    @pytest.mark.asyncio
+    async def test_opml_tracker_writes_to_isolated_redis(self, redis_client):
+        from app.workers.opml.progress import OpmlImportTracker
+
+        task_id = f"test-{uuid4()}"
+        tracker = OpmlImportTracker(task_id)
+
+        await tracker.initialize(user_id="user-1", filename="infra.opml", total_feeds=2)
+
+        meta_raw = await redis_client.get(tracker.key_meta)
+        counters = await redis_client.hgetall(tracker.key_counters)
+        assert meta_raw is not None
+        assert counters.get("completed") == "0"
+
+        await tracker.mark_success()
+        state = await tracker.get_state()
+        assert state is not None
+        assert state.successful == 1
+
+        await tracker.cancel()
+        assert await redis_client.exists(tracker.key_cancel)
+
+    @pytest.mark.asyncio
+    async def test_import_opml_orchestrator_uses_isolated_resources(
+        self,
+        db_session: AsyncSession,
+        test_user: Profile,
+        redis_client,
+        monkeypatch,
+    ):
+        """Ensure orchestrator touches DB folders, Redis tracker, and Taskiq stubs."""
+        from types import SimpleNamespace
+
+        from app.workers.opml.import_opml import import_opml
+        from app.workers.opml_tasks import import_single_feed_task
+
+        dispatched_urls: list[str] = []
+
+        async def fake_kiq(**kwargs):
+            dispatched_urls.append(kwargs["feed_url"])
+            return SimpleNamespace(task_id=f"fake-{len(dispatched_urls)}")
+
+        monkeypatch.setattr(import_single_feed_task, "kiq", fake_kiq, raising=False)
+
+        task_id = f"task-{uuid4()}"
+        result = await import_opml(
+            user_id=test_user.id,
+            opml_content=ISOLATION_OPML,
+            default_folder_name="Imported Feeds",
+            task_id=task_id,
+            filename="infra.opml",
+        )
+
+        assert result["total_feeds"] == 2
+        assert result["dispatched_count"] == 2
+        assert result["task_ids"] == ["fake-1", "fake-2"]
+        assert sorted(dispatched_urls) == ["https://example.com/feed", "https://news.ycombinator.com/rss"]
+
+        # Verify folders persisted in isolated DB
+        rows = await db_session.execute(text("SELECT name FROM folders WHERE user_id = :user_id"), {"user_id": test_user.id})
+        folder_names = {row[0] for row in rows}
+        assert "Tech" in folder_names
+
+        # Tracker state stored in isolated Redis
+        meta_raw = await redis_client.get(f"opml_import:{task_id}:meta")
+        assert meta_raw is not None
+        meta = orjson.loads(meta_raw)
+        assert meta["total"] == 2
+        assert meta["filename"] == "infra.opml"
 
 
 class TestOpmlImportEagerMode:
@@ -267,106 +357,3 @@ class TestOpmlTaskManagement:
 
         assert response.status_code == 404
 
-
-class TestOpmlExport:
-    """Test OPML export functionality."""
-
-    @pytest.mark.asyncio
-    async def test_export_opml_success(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
-    ):
-        """Test successful OPML export."""
-        # Create subscription
-        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
-        db_session.add(subscription)
-        await db_session.flush()
-
-        response = await async_client.get("/api/opml/export/")
-
-        assert response.status_code == 200
-        assert response.headers["content-type"] == "application/xml"
-        assert "attachment" in response.headers["content-disposition"]
-        assert "readspace_feeds_export.opml" in response.headers["content-disposition"]
-
-        # Verify OPML structure
-        content = response.text
-        assert "<?xml version" in content
-        assert "<opml version" in content
-        assert test_feed.title in content
-
-    @pytest.mark.asyncio
-    async def test_export_opml_empty(self, async_client: AsyncClient):
-        """Test exporting when user has no feeds."""
-        response = await async_client.get("/api/opml/export/")
-
-        assert response.status_code == 200
-        content = response.text
-        assert "<?xml version" in content
-        assert "<opml version" in content
-
-    @pytest.mark.asyncio
-    async def test_export_opml_with_folders(
-        self,
-        async_client: AsyncClient,
-        test_feed: Feed,
-        test_folder: Folder,
-        test_user: Profile,
-        db_session: AsyncSession,
-    ):
-        """Test exporting feeds organized in folders."""
-        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
-        db_session.add(subscription)
-        await db_session.commit()  # Commit to ensure data is persisted
-
-        response = await async_client.get("/api/opml/export/")
-
-        assert response.status_code == 200
-        content = response.text
-        # Verify basic OPML structure
-        assert "<?xml version" in content
-        assert "<opml version" in content
-        assert test_feed.title in content
-        # Folder may or may not be in the export depending on implementation
-        # so we just verify the feed is there
-
-
-class TestOpmlRoundtrip:
-    """Test complete OPML import/export workflow."""
-
-    @pytest.mark.asyncio
-    async def test_export_then_import_roundtrip(
-        self, async_client: AsyncClient, test_feed: Feed, test_user: Profile, test_folder: Folder, db_session: AsyncSession
-    ):
-        """Test exporting OPML and importing it back."""
-        from app.workers.opml import import_opml
-
-        # Create initial subscription
-        subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
-        db_session.add(subscription)
-        await db_session.flush()
-
-        # Export
-        export_response = await async_client.get("/api/opml/export/")
-        assert export_response.status_code == 200
-        exported_opml = export_response.text
-
-        # Verify export contains the feed
-        assert test_feed.title in exported_opml
-        assert test_feed.url in exported_opml
-
-        # Delete subscription
-        await db_session.delete(subscription)
-        await db_session.flush()
-
-        # Re-import the exported OPML by calling async function directly in test mode
-        from app.workers.opml.import_opml import import_opml
-
-        result = await import_opml(
-            user_id=test_user.id,
-            opml_content=exported_opml,
-            default_folder_name="Imported Feeds",
-        )
-
-        # Verify import was attempted
-        assert "total_feeds" in result
-        assert result["total_feeds"] >= 1

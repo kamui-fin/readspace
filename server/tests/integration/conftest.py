@@ -1,209 +1,318 @@
-"""Shared fixtures for e2e tests - True end-to-end with real services."""
+"""Isolated integration-test fixtures with dedicated resources."""
 
+from __future__ import annotations
+
+import asyncio
 import os
-import uuid
-from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import AsyncGenerator
+from urllib.parse import urlparse, urlunparse
 from uuid import uuid4
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
+from meilisearch_python_sdk import AsyncClient as MeiliClient
+from redis.asyncio import Redis
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
-from app.typing.user import TokenData
-
-# Load .env file before importing app modules
-try:
-    from dotenv import load_dotenv
-
-    # Load the .env file from server directory
-    env_path = Path(__file__).parent.parent.parent / ".env"
-    if env_path.exists():
-        load_dotenv(env_path)
-        print(f"✅ Loaded environment from {env_path}")
-    else:
-        print(f"⚠️  No .env file found at {env_path}")
-except ImportError:
-    print("⚠️  python-dotenv not installed, using system environment variables only")
-    print("   Install with: pip install python-dotenv")
+from taskiq import InMemoryBroker
 
 from app.core.config import get_settings
-from app.db.session import get_db
-from app.main import app
+from app.models.enums import UserRole
 from app.models.feed import Feed
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.services.user.auth import get_current_user
+from app.typing.user import TokenData
 
-# Get settings after loading .env
-settings = get_settings()
+SERVER_ROOT = Path(__file__).resolve().parents[2]
+MOCK_AUTH_SQL = SERVER_ROOT / "tests" / "mock_auth.sql"
+ASYNC_CONNECT_ARGS = {
+    "statement_cache_size": 0,
+    "prepared_statement_cache_size": 0,
+    "prepared_statement_name_func": lambda: f"__asyncpg_{uuid4()}__",
+}
+KEEP_TEST_DB_ENV = "PYTEST_KEEP_TEST_DB"
+TEST_DB_CONFIG: dict[str, str] = {}
 
-# Use your .env database URL or fall back to test default
-TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL", settings.DATABASE_URL_API.replace("postgresql://", "postgresql+asyncpg://")
-)
+# Load environment before settings are instantiated
+try:
+    from dotenv import load_dotenv  # type: ignore
 
-# Set test environment but preserve other settings from .env
-os.environ["ENVIRONMENT"] = "test"
-
-print(f"🔧 Using database: {TEST_DATABASE_URL}")
-print(f"🔧 Using Redis: {settings.REDIS_URL}")
-print(f"🔧 Environment: {settings.ENVIRONMENT}")
+    env_path = SERVER_ROOT / ".env"
+    if env_path.exists():
+        load_dotenv(env_path)
+except ImportError:
+    pass
 
 
-# Removed custom event_loop fixture - pytest-asyncio provides its own
-# Session-scoped event loop fixtures conflict with pytest-asyncio's function-scoped loops
+def _validate_identifier(value: str) -> str:
+    candidate = value.replace("_", "")
+    if not candidate.isalnum():
+        raise ValueError(f"Invalid identifier: {value}")
+    return value
 
 
-@pytest_asyncio.fixture(scope="function")
-async def db_engine():
-    """Create a test database engine connected to real test database."""
-    # Connection arguments for Supavisor transaction mode
-    # Must disable prepared statements for transaction mode pooler
-    # See: https://github.com/supabase/supavisor/issues/287
-    connect_args = {
-        "statement_cache_size": 0,
-        "prepared_statement_cache_size": 0,
-        "prepared_statement_name_func": lambda: f"__asyncpg_{uuid.uuid4()}__",
+def _redis_url_with_db(url: str, db_index: str) -> str:
+    db_index = db_index.lstrip("/")
+    if not db_index.isdigit():
+        raise ValueError("Redis DB index must be numeric")
+    parsed = urlparse(url)
+    return urlunparse(parsed._replace(path=f"/{db_index}"))
+
+
+def _load_auth_statements() -> list[str]:
+    if not MOCK_AUTH_SQL.exists():
+        raise FileNotFoundError(f"Missing mock auth schema: {MOCK_AUTH_SQL}")
+    content = MOCK_AUTH_SQL.read_text(encoding="utf-8")
+    return [stmt.strip() for stmt in content.split(";") if stmt.strip()]
+
+
+async def _prepare_test_database(base_settings) -> dict[str, str]:
+    try:
+        from alembic import command
+        from alembic.config import Config
+    except ImportError as exc:
+        raise ImportError(
+            "alembic is required to prepare the isolated test database. "
+            "Install server dependencies (e.g. `poetry install`)."
+        ) from exc
+    base_url = os.getenv("PYTEST_DB_BASE_URL", base_settings.DATABASE_URL_API)
+    admin_db = _validate_identifier(os.getenv("PYTEST_DB_ADMIN", "postgres"))
+    db_name = _validate_identifier(os.getenv("PYTEST_DB_NAME", "readspace_test"))
+
+    url_obj = make_url(base_url)
+    admin_sync = url_obj.set(database=admin_db)
+    test_sync = url_obj.set(database=db_name)
+
+    admin_async_url = str(admin_sync.set(drivername="postgresql+asyncpg"))
+    test_async_url = str(test_sync.set(drivername="postgresql+asyncpg"))
+    test_sync_url = str(test_sync.set(drivername="postgresql"))
+
+    admin_engine = create_async_engine(
+        admin_async_url,
+        isolation_level="AUTOCOMMIT",
+        poolclass=NullPool,
+        connect_args=ASYNC_CONNECT_ARGS,
+    )
+
+    drop_stmt = f"DROP DATABASE IF EXISTS {db_name}"
+    create_stmt = f"CREATE DATABASE {db_name}"
+
+    async with admin_engine.connect() as conn:
+        await conn.execute(
+            text(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = :db AND pid <> pg_backend_pid();
+                """
+            ),
+            {"db": db_name},
+        )
+        await conn.execute(text(drop_stmt))
+        await conn.execute(text(create_stmt))
+    await admin_engine.dispose()
+
+    bootstrap_engine = create_async_engine(
+        test_async_url,
+        poolclass=NullPool,
+        connect_args=ASYNC_CONNECT_ARGS,
+    )
+
+    async with bootstrap_engine.begin() as conn:
+        for statement in _load_auth_statements():
+            await conn.execute(text(statement))
+
+    alembic_cfg = Config(str(SERVER_ROOT / "alembic.ini"))
+    alembic_cfg.set_main_option("sqlalchemy.url", test_sync_url)
+    alembic_cfg.set_main_option("script_location", str(SERVER_ROOT / "alembic"))
+    await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
+
+    await bootstrap_engine.dispose()
+
+    return {
+        "name": db_name,
+        "async_url": test_async_url,
+        "sync_url": test_sync_url,
+        "admin_async_url": admin_async_url,
     }
-    engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool, echo=False, connect_args=connect_args)
-    yield engine
-    await engine.dispose()
+
+
+async def _drop_test_database(config: dict[str, str]) -> None:
+    admin_engine = create_async_engine(
+        config["admin_async_url"],
+        isolation_level="AUTOCOMMIT",
+        poolclass=NullPool,
+        connect_args=ASYNC_CONNECT_ARGS,
+    )
+    async with admin_engine.connect() as conn:
+        await conn.execute(
+            text(
+                """
+                SELECT pg_terminate_backend(pid)
+                FROM pg_stat_activity
+                WHERE datname = :db AND pid <> pg_backend_pid();
+                """
+            ),
+            {"db": config["name"]},
+        )
+        await conn.execute(text(f"DROP DATABASE IF EXISTS {config['name']}"))
+    await admin_engine.dispose()
+
+
+def _configure_test_env(base_settings, config: dict[str, str]) -> None:
+    test_sync_url = config["sync_url"]
+    os.environ["DATABASE_URL_API"] = test_sync_url
+    os.environ["DATABASE_URL_WORKER"] = test_sync_url
+    os.environ["TEST_DATABASE_URL"] = config["async_url"]
+    os.environ["ALEMBIC_DB_URL"] = test_sync_url
+    os.environ.setdefault("ENVIRONMENT", "test")
+
+    redis_base = os.getenv("PYTEST_REDIS_URL", base_settings.REDIS_URL)
+    redis_db = os.getenv("PYTEST_REDIS_DB", "9")
+    os.environ["REDIS_URL"] = _redis_url_with_db(redis_base, redis_db)
+
+    os.environ.setdefault("MEILISEARCH_INDEX_NAME", os.getenv("PYTEST_MEILI_INDEX", "test_feeds_pytest"))
+
+
+def pytest_sessionstart(session):
+    base_settings = get_settings()
+    config = asyncio.run(_prepare_test_database(base_settings))
+    _configure_test_env(base_settings, config)
+    get_settings.cache_clear()
+    get_settings()  # Re-initialize with overridden env
+    TEST_DB_CONFIG.update(config)
+    print(f"✅ Using isolated database '{config['name']}' for integration tests")
+
+
+def pytest_sessionfinish(session, exitstatus):
+    if not TEST_DB_CONFIG:
+        return
+    if os.getenv(KEEP_TEST_DB_ENV):
+        print(f"⚠️ Keeping test database '{TEST_DB_CONFIG['name']}' per {KEEP_TEST_DB_ENV}")
+        return
+    asyncio.run(_drop_test_database(TEST_DB_CONFIG))
+
+
+@pytest_asyncio.fixture(scope="session")
+async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
+    if not TEST_DB_CONFIG:
+        raise RuntimeError("Test database is not initialized")
+    engine = create_async_engine(
+        TEST_DB_CONFIG["async_url"],
+        poolclass=NullPool,
+        connect_args=ASYNC_CONNECT_ARGS,
+    )
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """
-    Create a test database session with transaction rollback.
-
-    Uses real database with transaction isolation - changes are rolled back after each test.
-    """
-    # Create a connection and transaction
+async def db_session(db_engine: AsyncEngine, monkeypatch) -> AsyncGenerator[AsyncSession, None]:
     connection = await db_engine.connect()
     transaction = await connection.begin()
+    session = AsyncSession(bind=connection, expire_on_commit=False)
+
+    @asynccontextmanager
+    async def _worker_db():
+        async with session.begin_nested():
+            yield session
+
+    patch_map = (
+        ("app.workers.common.worker_db", _worker_db),
+        ("app.workers.common.worker_db_factory", _worker_db),
+        ("app.workers.opml.import_opml.worker_db_factory", _worker_db),
+        ("app.workers.opml.import_feed.worker_db_factory", _worker_db),
+        ("app.workers.feed.refresh.worker_db_factory", _worker_db),
+        ("app.workers.feed.compaction.worker_db", _worker_db),
+    )
+    for target, replacement in patch_map:
+        monkeypatch.setattr(target, replacement, raising=False)
 
     try:
-        # Create session bound to the connection
-        session = AsyncSession(bind=connection, expire_on_commit=False)
-
         yield session
-
-        # Close the session
-        await session.close()
-
     finally:
-        # Always rollback the transaction to clean up test data
+        await session.close()
         await transaction.rollback()
         await connection.close()
 
 
 @pytest_asyncio.fixture(scope="function")
 async def test_user(db_session: AsyncSession) -> Profile:
-    """
-    Create a test user with auth entry in real database.
-
-    Creates both auth.users entry and profile for full e2e testing.
-    The profile will be auto-created by the database trigger.
-    """
-    user_id = str(uuid4())
+    user_id = uuid4()
     email = f"test-{uuid4().hex[:8]}@example.com"
-
-    # Create auth user in real auth schema - profile will be auto-created by trigger
     await db_session.execute(
         text(
             """
             INSERT INTO auth.users (
-                id, aud, role, email, encrypted_password, 
-                email_confirmed_at, confirmation_sent_at, 
+                id, aud, role, email, encrypted_password,
+                email_confirmed_at, confirmation_sent_at,
                 recovery_sent_at, created_at, updated_at,
                 raw_app_meta_data, raw_user_meta_data,
                 is_super_admin, is_sso_user, is_anonymous
             ) VALUES (
-                :user_id, 'authenticated', 'authenticated', :email, '', 
+                :user_id, 'authenticated', 'authenticated', :email, '',
                 NOW(), NOW(), NOW(), NOW(), NOW(),
                 '{}', '{}', FALSE, FALSE, FALSE
             ) ON CONFLICT (id) DO NOTHING
             """
         ),
-        {"user_id": user_id, "email": email},
+        {"user_id": str(user_id), "email": email},
     )
-
-    # Flush to make the user available in this transaction (trigger will fire)
     await db_session.flush()
-
-    # Now fetch the auto-created profile
-    result = await db_session.execute(text("SELECT id, email FROM profiles WHERE id = :user_id"), {"user_id": user_id})
-    profile_row = result.fetchone()
-
-    if not profile_row:
-        raise Exception(f"Profile was not auto-created for user {user_id}")
-
-    # Return a Profile object with the database default role
-    user = Profile(id=profile_row.id, email=profile_row.email, role="BASIC")
-    return user
+    profile = await db_session.get(Profile, user_id)
+    if profile is None:
+        profile = Profile(id=user_id, email=email, role=UserRole.BASIC)
+        db_session.add(profile)
+        await db_session.flush()
+    await db_session.refresh(profile)
+    return profile
 
 
 @pytest_asyncio.fixture(scope="function")
 async def admin_user(db_session: AsyncSession) -> Profile:
-    """Create an admin test user in real database."""
-    user_id = str(uuid4())
+    user_id = uuid4()
     email = f"admin-{uuid4().hex[:8]}@example.com"
-
-    # Create auth user - profile will be auto-created by trigger
     await db_session.execute(
         text(
             """
             INSERT INTO auth.users (
-                id, aud, role, email, encrypted_password, 
-                email_confirmed_at, confirmation_sent_at, 
+                id, aud, role, email, encrypted_password,
+                email_confirmed_at, confirmation_sent_at,
                 recovery_sent_at, created_at, updated_at,
                 raw_app_meta_data, raw_user_meta_data,
                 is_super_admin, is_sso_user, is_anonymous
             ) VALUES (
-                :user_id, 'authenticated', 'authenticated', :email, '', 
+                :user_id, 'authenticated', 'authenticated', :email, '',
                 NOW(), NOW(), NOW(), NOW(), NOW(),
                 '{}', '{}', FALSE, FALSE, FALSE
             ) ON CONFLICT (id) DO NOTHING
             """
         ),
-        {"user_id": user_id, "email": email},
+        {"user_id": str(user_id), "email": email},
     )
-
-    # Flush so trigger fires
     await db_session.flush()
-
-    # Update the profile to have admin role
-    await db_session.execute(text("UPDATE profiles SET role = 'ADMIN' WHERE id = :user_id"), {"user_id": user_id})
+    profile = await db_session.get(Profile, user_id)
+    if profile is None:
+        profile = Profile(id=user_id, email=email, role=UserRole.ADMIN)
+        db_session.add(profile)
+    else:
+        profile.role = UserRole.ADMIN
     await db_session.flush()
-
-    # Fetch the updated profile
-    result = await db_session.execute(
-        text("SELECT id, email, role FROM profiles WHERE id = :user_id"), {"user_id": user_id}
-    )
-    profile_row = result.fetchone()
-
-    if not profile_row:
-        raise Exception(f"Profile was not auto-created for admin user {user_id}")
-
-    # Return admin profile
-    user = Profile(id=profile_row.id, email=profile_row.email, role=profile_row.role)
-    return user
+    await db_session.refresh(profile)
+    return profile
 
 
 @pytest.fixture
 def mock_current_user(test_user: Profile):
-    """
-    Override auth dependency for testing.
-
-    Note: This is the ONLY mock in e2e tests - we mock auth to avoid JWT complexity,
-    but all other services (Redis, Celery, Database, etc.) are real.
-    """
-
-    async def override_get_current_user():
+    async def override_get_current_user() -> TokenData:
         return TokenData(sub=str(test_user.id), email=test_user.email)
 
     return override_get_current_user
@@ -211,171 +320,184 @@ def mock_current_user(test_user: Profile):
 
 @pytest.fixture
 def mock_admin_user(admin_user: Profile):
-    """Override auth dependency with admin user."""
-    async def override_get_current_user():
+    async def override_get_current_user() -> TokenData:
         return TokenData(sub=str(admin_user.id), email=admin_user.email)
 
     return override_get_current_user
 
 
-@pytest.fixture
-def client(db_session: AsyncSession, mock_current_user):
-    """
-    Create a test client for e2e testing.
-
-    Uses real database session and only mocks authentication.
-    All other services (Redis, Celery, external APIs) use real implementations.
-    """
+def _override_dependencies(app, db_session: AsyncSession, user_override):
+    from app.db.session import get_db, get_db_factory
+    from app.services.user.auth import get_current_user
 
     async def override_get_db():
         yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = mock_current_user
+    @asynccontextmanager
+    async def session_factory():
+        yield db_session
 
+    async def override_get_db_factory():
+        return session_factory
+
+    app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_factory] = override_get_db_factory
+    app.dependency_overrides[get_current_user] = user_override
+
+
+@pytest.fixture
+def client(db_session: AsyncSession, mock_current_user):
+    from app.main import app
+
+    _override_dependencies(app, db_session, mock_current_user)
     with TestClient(app) as test_client:
         yield test_client
-
     app.dependency_overrides.clear()
 
 
 @pytest.fixture
 def admin_client(db_session: AsyncSession, mock_admin_user):
-    """Create a test client with admin user."""
+    from app.main import app
 
-    async def override_get_db():
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = mock_admin_user
-
+    _override_dependencies(app, db_session, mock_admin_user)
     with TestClient(app) as test_client:
         yield test_client
+    app.dependency_overrides.clear()
 
+
+@pytest_asyncio.fixture
+async def async_client(db_session: AsyncSession, mock_current_user):
+    from app.main import app
+
+    _override_dependencies(app, db_session, mock_current_user)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as http_client:
+        yield http_client
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def async_admin_client(db_session: AsyncSession, mock_admin_user):
+    from app.main import app
+
+    _override_dependencies(app, db_session, mock_admin_user)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as http_client:
+        yield http_client
     app.dependency_overrides.clear()
 
 
 @pytest_asyncio.fixture
 async def test_folder(db_session: AsyncSession, test_user: Profile) -> Folder:
-    """Create a test folder in real database."""
     folder = Folder(id=uuid4(), user_id=test_user.id, name="Test Folder")
     db_session.add(folder)
-    await db_session.commit()  # Commit so API endpoints can see it
+    await db_session.flush()
     await db_session.refresh(folder)
     return folder
 
 
 @pytest_asyncio.fixture
 async def test_feed(db_session: AsyncSession) -> Feed:
-    """Create a test feed in real database using real RSS feed."""
     feed = Feed(
         id=uuid4(),
         url="https://hnrss.org/newest",
         title="Hacker News - Newest",
-        description="Hacker News newest stories RSS feed",
+        description="Hacker News newest stories",
         link="https://news.ycombinator.com",
         language="en",
     )
     db_session.add(feed)
-    await db_session.commit()  # Commit so API endpoints can see it
+    await db_session.flush()
     await db_session.refresh(feed)
     return feed
 
 
-@pytest_asyncio.fixture
-async def async_client(db_session: AsyncSession, mock_current_user):
-    """
-    Create an async test client for e2e testing.
-
-    Uses real database session and only mocks authentication.
-    All other services (Redis, Celery, external APIs) use real implementations.
-    """
-    from httpx import ASGITransport
-
-    async def override_get_db():
-        yield db_session
-
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = mock_current_user
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+@pytest_asyncio.fixture(scope="session")
+async def redis_client() -> AsyncGenerator[Redis, None]:
+    settings = get_settings()
+    client = Redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
+    await client.flushdb()
+    try:
         yield client
+    finally:
+        await client.flushdb()
+        await client.close()
 
-    app.dependency_overrides.clear()
+
+@pytest.fixture(scope="session", autouse=True)
+def configure_redis_pool(redis_client: Redis):
+    from app.core import redis_cache
+
+    patch = pytest.MonkeyPatch()
+    patch.setattr(redis_cache, "_pool", redis_client.connection_pool, raising=False)
+    patch.setattr(redis_cache, "get_pool", lambda: redis_client.connection_pool, raising=False)
+    yield
+    patch.undo()
+
+
+@pytest_asyncio.fixture(autouse=True)
+async def clean_redis(redis_client: Redis):
+    await redis_client.flushdb()
+    yield
+    await redis_client.flushdb()
+
+
+@pytest_asyncio.fixture(scope="session")
+async def meili_client():
+    settings = get_settings()
+    client = MeiliClient(
+        settings.MEILISEARCH_URL,
+        settings.MEILISEARCH_MASTER_KEY.get_secret_value(),
+    )
+    try:
+        await client.health()
+    except Exception as exc:
+        pytest.skip(f"Meilisearch unavailable: {exc}")
+    yield client
 
 
 @pytest_asyncio.fixture
-async def async_admin_client(db_session: AsyncSession, mock_admin_user):
-    """Create an async test client with admin user."""
-    from httpx import ASGITransport
+async def meili_test_index(meili_client, monkeypatch):
+    settings = get_settings()
+    base_name = settings.MEILISEARCH_INDEX_NAME
+    index_name = f"{base_name}_{uuid4().hex[:8]}"
+    try:
+        await meili_client.delete_index(index_name)
+    except Exception:
+        pass
+    await meili_client.create_index(index_name, primary_key="id")
+    monkeypatch.setattr(settings, "MEILISEARCH_INDEX_NAME", index_name, raising=False)
+    try:
+        yield index_name
+    finally:
+        try:
+            await meili_client.delete_index(index_name)
+        except Exception:
+            pass
 
-    async def override_get_db():
-        yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
-    app.dependency_overrides[get_current_user] = mock_admin_user
+@pytest.fixture(scope="session")
+def taskiq_broker():
+    from app.core.taskiq_app import broker
 
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        yield client
-
-    app.dependency_overrides.clear()
+    if not isinstance(broker, InMemoryBroker):
+        pytest.skip("Taskiq broker is not running in-memory; set ENVIRONMENT=test")
+    return broker
 
 
 @pytest_asyncio.fixture
 async def http_client():
-    """
-    Provide a real HTTP client for testing external API calls.
-
-    Use this for tests that need to make real HTTP requests.
-    """
     async with AsyncClient() as client:
         yield client
 
 
-# Helper functions for e2e tests
-
-
 async def wait_for_taskiq_task(task_id: str, timeout: int = 30, poll_interval: float = 0.5):
-    """
-    Wait for a Taskiq task to complete (for real Taskiq testing).
-
-    Args:
-        task_id: Taskiq task ID
-        timeout: Maximum time to wait in seconds
-        poll_interval: Time between status checks in seconds
-
-    Returns:
-        Task result when complete
-
-    Raises:
-        TimeoutError: If task doesn't complete within timeout
-    """
-    import asyncio
-
-    from app.core.taskiq_app import broker
-
-    start_time = asyncio.get_event_loop().time()
-
-    # For InMemoryBroker in tests, tasks execute immediately
-    # For real broker, you'd need to poll the result backend
-    # This is a placeholder - actual implementation depends on your result backend
-
-    # In test mode with InMemoryBroker, tasks are executed synchronously
-    # so this function is mainly for compatibility
-    await asyncio.sleep(0.1)  # Small delay to ensure task completes
-
-    return None  # Result handling depends on your result backend implementation
+    del task_id, timeout, poll_interval
+    await asyncio.sleep(0.1)
+    return None
 
 
 async def cleanup_redis_keys(pattern: str):
-    """
-    Clean up Redis keys matching pattern (for test cleanup).
-
-    Args:
-        pattern: Redis key pattern (e.g., "test:*")
-    """
     import redis.asyncio as redis
     from app.core.redis_cache import get_pool
 

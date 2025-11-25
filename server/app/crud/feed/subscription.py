@@ -29,10 +29,9 @@ SUBSCRIPTION_FEED_COLUMNS = [
 async def get_initial_cutoff(db: AsyncSession, feed_id: UUID) -> datetime | None:
     """Get the Nth most recent article timestamp."""
     result = await db.execute(
-        select(ArticleContent.published_at)
-        .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+        select(FeedArticle.published_at)
         .where(FeedArticle.feed_id == feed_id)
-        .order_by(ArticleContent.published_at.desc())
+        .order_by(FeedArticle.published_at.desc())
         .offset(INITIAL_UNREAD_COUNT)
         .limit(1)
     )
@@ -82,7 +81,7 @@ async def create_subscription(
     await db.execute(update(Feed).where(Feed.id == feed.id).values(subscriber_count=Feed.subscriber_count + 1))
 
     await db.flush()
-    await db.refresh(sub)
+    await db.refresh(sub, ["feed", "folder"])
     return sub
 
 
@@ -191,17 +190,28 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
     Returns:
         Number of subscriptions updated
     """
+    import structlog
+    logger = structlog.get_logger(__name__)
+    
+    # First, let's see what subscriptions match our criteria
+    debug_stmt = select(FeedSubscription.id, FeedSubscription.last_read_cutoff).where(
+        (FeedSubscription.last_read_cutoff.is_(None)) | (FeedSubscription.last_read_cutoff < cutoff_date)
+    )
+    debug_result = await db.execute(debug_stmt)
+    matching_subs = debug_result.fetchall()
+    logger.info(f"Subscriptions matching compaction criteria", count=len(matching_subs), cutoff_date=cutoff_date)
+    
     stmt = (
         update(FeedSubscription)
-        .values(
-            last_read_cutoff=func.greatest(
-                func.coalesce(FeedSubscription.last_read_cutoff, cutoff_date),
-                cutoff_date,
-            )
+        .where(
+            # Only update subscriptions where cutoff is NULL or older than the new cutoff
+            (FeedSubscription.last_read_cutoff.is_(None)) | (FeedSubscription.last_read_cutoff < cutoff_date)
         )
+        .values(last_read_cutoff=cutoff_date)
         .execution_options(synchronize_session=False)
     )
 
     result = await db.execute(stmt)
     await db.flush()
+    logger.info(f"Updated subscriptions", rowcount=result.rowcount)
     return result.rowcount

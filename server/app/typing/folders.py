@@ -12,12 +12,10 @@ class FolderCreate(FolderBase):
     pass
 
 
-class FolderUpdate(FolderBase):
-    pass
+class FolderUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=100)
 
 
 class FolderResponse(FolderBase):
-    model_config = ConfigDict(from_attributes=True)
-
     id: UUID
     created_at: datetime

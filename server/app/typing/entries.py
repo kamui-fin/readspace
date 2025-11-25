@@ -40,8 +40,6 @@ class EntryUpdate(BaseModel):
 class EntryBase(BaseModel):
     """Common fields for list and detail views."""
 
-    model_config = ConfigDict(from_attributes=True)
-
     id: UUID
 
     # Content Metadata (Flattened from ArticleContent)

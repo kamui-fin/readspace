@@ -35,7 +35,8 @@ class TestUserProfile:
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as client:
             response = await client.get("/api/users/profile")
-            assert response.status_code == 401
+            # FastAPI returns 403 for missing credentials, not 401
+            assert response.status_code == 403
 
     @pytest.mark.asyncio
     async def test_get_current_user_profile_not_found(self, db_session: AsyncSession):

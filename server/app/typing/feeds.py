@@ -67,8 +67,6 @@ class FeedSummary(FeedBase):
     Used in: Subscriptions List, Search Results.
     """
 
-    model_config = ConfigDict(from_attributes=True)
-
     id: UUID
     image_url: str | None = None
     language: str | None = None
@@ -91,10 +89,13 @@ class FeedDetail(FeedSummary):
     subscriber_count: int = 0
     top_level_category: str | None = None
 
+    # Subscription status (for preview mode)
+    is_subscribed: bool = False
+
     # Scheduling info (Debugging)
     next_fetch_at: datetime | None = None
     created_at: datetime
-    updated_at: datetime
+    updated_at: datetime | None = None
 
 
 class FeedEnrichmentResponse(BaseModel):

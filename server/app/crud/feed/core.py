@@ -128,11 +128,10 @@ async def get_recent_article_publication_times(db: AsyncSession, *, feed_id: UUI
         List of publication datetimes, ordered by most recent first
     """
     stmt = (
-        select(ArticleContent.published_at)
-        .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+        select(FeedArticle.published_at)
         .where(FeedArticle.feed_id == feed_id)
-        .where(ArticleContent.published_at.is_not(None))
-        .order_by(desc(ArticleContent.published_at))
+        .where(FeedArticle.published_at.is_not(None))
+        .order_by(desc(FeedArticle.published_at))
         .limit(limit)
     )
 

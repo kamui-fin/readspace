@@ -34,13 +34,21 @@ async def check_limit(db: AsyncSession, user_id: UUID, resource: str, user_role:
     return current_usage < limit
 
 
-async def enforce_subscription_limit(db: AsyncSession, user_id: UUID) -> None:
+async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional_count: int = 1) -> None:
     """
     High-level dependency: Checks subscription limit and raises 429 if exceeded.
+
+    Args:
+        db: Database session
+        user_id: User ID to check limits for
+        additional_count: Number of additional subscriptions being added (default 1)
 
     Usage:
         await enforce_subscription_limit(db, user_id)
         # proceed to create subscription...
+        
+        # For bulk operations:
+        await enforce_subscription_limit(db, user_id, additional_count=10)
     """
     profile = await get_profile_by_id(db, user_id=user_id)
     if not profile:
@@ -55,8 +63,8 @@ async def enforce_subscription_limit(db: AsyncSession, user_id: UUID) -> None:
     # Check limit
     if limit != -1:
         current = await get_current_usage(db, user_id, resource)
-        if current >= limit:
+        if current + additional_count > limit:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Subscription limit reached ({current}/{limit}). Please upgrade your plan.",
+                detail=f"Subscription limit would be exceeded ({current + additional_count}/{limit}). Please upgrade your plan.",
             )
