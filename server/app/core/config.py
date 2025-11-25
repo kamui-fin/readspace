@@ -112,7 +112,7 @@ class Settings(BaseSettings):
     @property
     def is_supabase_cloud(self) -> bool:
         """Detect if using Supabase Cloud by URL pattern."""
-        return ".pooler.supabase.com" in self.SUPABASE_DB_CONNECTION or ".supabase.co" in self.SUPABASE_DB_CONNECTION
+        return ".pooler.supabase.com" in self.DATABASE_URL_API or ".supabase.co" in self.DATABASE_URL_API
 
 
 @cache

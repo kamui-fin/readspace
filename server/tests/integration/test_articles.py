@@ -10,21 +10,16 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    ArticleContent,
-    Feed,
-    FeedArticle,
-    FeedSubscription,
-    Profile,
-    UserArticleState,
-)
+from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.feed import Feed, FeedSubscription
+from app.models.user import Profile
 
 
 @pytest_asyncio.fixture
 async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Profile):
     """Create a test article."""
     # Create a folder first
-    from app.models import Folder
+    from app.models.folder import Folder
 
     folder = Folder(
         id=uuid4(),
@@ -45,7 +40,6 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
         link="https://example.com/article1",
         description="Test article description",
         content="Full article content here",
-        published_at=datetime.now(UTC),
     )
     db_session.add(content)
     await db_session.flush()
@@ -54,18 +48,19 @@ async def test_article(db_session: AsyncSession, test_feed: Feed, test_user: Pro
     article = FeedArticle(
         feed_id=test_feed.id,
         content_id=content.id,
-        guid="test-guid-1",
+        guid_hash="test-guid-1",
+        published_at=datetime.now(UTC),
     )
     db_session.add(article)
     await db_session.flush()
 
     # Create user article state
-    state = UserArticleState(
+    state = UserEntry(
         user_id=test_user.id,
-        article_id=article.id,
+        content_id=content.id,
+        feed_article_id=article.id,
         is_read=False,
         is_read_later=False,
-        is_favorite=False,
     )
     db_session.add(state)
     await db_session.flush()
@@ -237,7 +232,7 @@ class TestListArticles:
     ):
         """Test that articles are returned in sorted order by published date (newest first)."""
         # Create a folder first
-        from app.models import Folder
+        from app.models.folder import Folder
 
         folder = Folder(
             id=uuid4(),
@@ -279,7 +274,6 @@ class TestListArticles:
                 link=f"https://example.com/article{i + 1}",
                 description=f"Test article {i + 1} description",
                 content=f"Full article {i + 1} content here",
-                published_at=published_date,
             )
             db_session.add(content)
             await db_session.flush()
@@ -288,18 +282,19 @@ class TestListArticles:
             article = FeedArticle(
                 feed_id=test_feed.id,
                 content_id=content.id,
-                guid=f"test-guid-{i + 1}",
+                guid_hash=f"test-guid-{i + 1}",
+                published_at=published_date,
             )
             db_session.add(article)
             await db_session.flush()
 
             # Create user article state
-            state = UserArticleState(
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
+                content_id=content.id,
+                feed_article_id=article.id,
                 is_read=False,
                 is_read_later=False,
-                is_favorite=False,
             )
             db_session.add(state)
             created_articles.append((article, content, published_date))
@@ -401,13 +396,13 @@ class TestUpdateArticle:
         # Verify in database
         await db_session.commit()  # Ensure changes are committed
         result = await db_session.execute(
-            select(UserArticleState).where(
-                UserArticleState.article_id == test_article.id,
-                UserArticleState.user_id == test_user.id,
+            select(UserEntry).where(
+                UserEntry.feed_article_id == test_article.id,
+                UserEntry.user_id == test_user.id,
             )
         )
         state = result.scalar_one_or_none()
-        assert state is not None, "UserArticleState should be created"
+        assert state is not None, "UserEntry should be created"
         assert state.is_read is True
 
     @pytest.mark.asyncio

@@ -5,7 +5,7 @@ Functional Redis Cache interface.
 from typing import Any
 
 import orjson
-import redis.asyncio as redis
+import redis.asyncio as aioredis
 import structlog
 
 from app.core.config import get_settings
@@ -13,10 +13,10 @@ from app.core.config import get_settings
 logger = structlog.get_logger(__name__)
 
 # Global pool singleton
-_pool: redis.ConnectionPool | None = None
+_pool: aioredis.ConnectionPool | None = None
 
 
-def get_pool() -> redis.ConnectionPool:
+def get_pool() -> aioredis.ConnectionPool:
     """Get or create the global connection pool."""
     global _pool
     if _pool is None:
@@ -25,7 +25,7 @@ def get_pool() -> redis.ConnectionPool:
             # Fallback or strict error depending on your needs
             raise ValueError("REDIS_URL is not configured")
 
-        _pool = redis.ConnectionPool.from_url(
+        _pool = aioredis.ConnectionPool.from_url(
             settings.REDIS_URL,
             encoding="utf-8",
             decode_responses=True,
@@ -51,7 +51,7 @@ async def get(key: str) -> Any | None:
     """Retrieve a value from cache."""
     try:
         pool = get_pool()
-        async with redis.Redis(connection_pool=pool) as client:
+        async with aioredis.Redis(connection_pool=pool) as client:
             val = await client.get(key)
             if val:
                 try:
@@ -68,7 +68,7 @@ async def set(key: str, value: Any, ttl_seconds: int | None = None) -> bool:
     """Set a value in cache."""
     try:
         pool = get_pool()
-        async with redis.Redis(connection_pool=pool) as client:
+        async with aioredis.Redis(connection_pool=pool) as client:
             # orjson handles datetime, UUID, Enum, Decimal, and Pydantic models automatically
             serialized = orjson.dumps(value).decode("utf-8")
 
@@ -86,7 +86,7 @@ async def delete(key: str) -> bool:
     """Delete a key."""
     try:
         pool = get_pool()
-        async with redis.Redis(connection_pool=pool) as client:
+        async with aioredis.Redis(connection_pool=pool) as client:
             await client.delete(key)
             return True
     except Exception as e:
@@ -98,7 +98,7 @@ async def exists(key: str) -> bool:
     """Check if key exists."""
     try:
         pool = get_pool()
-        async with redis.Redis(connection_pool=pool) as client:
+        async with aioredis.Redis(connection_pool=pool) as client:
             return bool(await client.exists(key))
     except Exception as e:
         logger.error("Redis EXISTS failed", key=key, error=str(e))

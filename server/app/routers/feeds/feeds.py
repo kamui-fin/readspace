@@ -19,7 +19,8 @@ from app.crud.feed.subscription import (
 )
 from app.db.session import get_db
 from app.services.user.auth import get_current_user
-from app.typing.subscriptions import FeedResponse, SubscriptionResponse, SubscriptionUpdate
+from app.typing.feeds import FeedDetail
+from app.typing.subscriptions import SubscriptionResponse, SubscriptionUpdate
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -28,14 +29,14 @@ router = APIRouter()
 
 @router.get(
     "/",
-    response_model=list[FeedResponse],
+    response_model=list[SubscriptionResponse],
     status_code=status.HTTP_200_OK,
     summary="List user's RSS feeds",
     description="Retrieve all RSS feeds the user is subscribed to with optional filtering and pagination",
     responses={
         200: {
             "description": "Successfully retrieved feeds list",
-            "model": list[FeedResponse],
+            "model": list[SubscriptionResponse],
         },
         400: {
             "description": "Bad request - invalid query parameters",
@@ -54,7 +55,7 @@ async def list_feeds(
     skip: int = Query(0, ge=0, description="Number of feeds to skip for pagination"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> list[FeedResponse]:
+) -> list[SubscriptionResponse]:
     """
     Retrieve all RSS feeds the authenticated user is subscribed to.
 
@@ -70,7 +71,7 @@ async def list_feeds(
         current_user: Authenticated user information
 
     Returns:
-        list[FeedResponse]: List of feed objects with subscription metadata
+        list[SubscriptionResponse]: List of subscription objects with embedded feed data
 
     Note:
         - Requires authentication
@@ -84,19 +85,18 @@ async def list_feeds(
         skip=skip,
         limit=100,
     )
-    # TODO: Transform subscriptions to FeedResponse list
-    return subscriptions
+    return [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
 
 
 @router.get(
     "/{feed_id}",
-    response_model=FeedResponse,
+    response_model=FeedDetail,
     summary="Get a specific RSS feed",
     description="Retrieve detailed information about a specific RSS feed by its UUID",
     responses={
         200: {
             "description": "Successfully retrieved feed details",
-            "model": FeedResponse,
+            "model": FeedDetail,
         },
         404: {
             "description": "Feed not found or user not subscribed to this feed",
@@ -109,7 +109,7 @@ async def get_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> FeedResponse:
+) -> FeedDetail:
     """
     Retrieve detailed information about a specific RSS feed.
 
@@ -124,7 +124,7 @@ async def get_feed(
         current_user: Authenticated user information
 
     Returns:
-        FeedResponse: Complete feed details with subscription status
+        FeedDetail: Complete feed details with subscription status
 
     Raises:
         HTTPException:
@@ -143,7 +143,6 @@ async def get_feed(
         logger.warning("Feed not found", feed_id=feed_id, user_id=current_user.sub)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-    # TODO: Transform Feed + Subscription to FeedResponse
     return feed
 
 
@@ -246,7 +245,6 @@ async def update_feed_settings(
         feed_id=updated_subscription.id,
         user_id=current_user.sub,
     )
-    # TODO: Transform to SubscriptionResponse
     return updated_subscription
 
 

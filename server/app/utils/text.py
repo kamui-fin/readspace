@@ -30,13 +30,46 @@ LANGUAGE_PATTERNS = [
 
 
 def get_content_hash(url: str) -> str:
-    """Generate SHA-256 hash for article content URL (deduplication)."""
+    """
+    Generate SHA-256 hash for article URL (cross-feed deduplication).
+
+    Purpose: Detect when the same article appears in multiple feeds.
+
+    Difference from guid_hash:
+    - guid_hash: Deduplicates within a single feed (uses RSS GUID)
+    - content_hash: Deduplicates across feeds (uses article URL)
+
+    Example:
+        Feed A and Feed B both contain article "https://example.com/post-1"
+        → Same content_hash allows detecting this duplicate
+    """
     normalized = url.strip().lower()
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
 def get_guid_hash(guid: str, fallback_link: str | None = None) -> str:
-    """Generate SHA-256 hash for RSS GUID with link fallback."""
+    """
+    Generate SHA-256 hash for RSS GUID (article deduplication within a feed).
+
+    Why GUID instead of link?
+    - RSS GUID is the official unique identifier per RSS spec
+    - GUID can be a URL, URN, or any unique string
+    - Same article might have different GUIDs across different feeds
+    - Link alone isn't reliable (can change, might not exist)
+
+    Example RSS:
+        <item>
+            <guid>urn:uuid:1234-5678</guid>  <!-- Not a URL! -->
+            <link>https://example.com/article</link>
+        </item>
+
+    Args:
+        guid: RSS GUID field value
+        fallback_link: Article link to use if GUID is empty
+
+    Returns:
+        SHA-256 hash string for deduplication
+    """
     value = guid.strip() if guid else ""
     if not value:
         if not fallback_link:

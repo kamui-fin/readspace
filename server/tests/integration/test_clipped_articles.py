@@ -8,7 +8,8 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, ClippedArticle, Profile
+from app.models.article import ArticleContent, UserEntry
+from app.models.user import Profile
 
 
 @pytest_asyncio.fixture
@@ -28,14 +29,14 @@ async def test_clipped_article(db_session: AsyncSession, test_user: Profile):
     db_session.add(content)
     await db_session.flush()
 
-    # Create clipped article
-    clipped = ClippedArticle(
+    # Create clipped article (UserEntry without feed_article_id)
+    clipped = UserEntry(
         user_id=test_user.id,
         content_id=content.id,
-        priority=ArticlePriority.MEDIUM,
+        feed_article_id=None,
+        priority=ArticlePriority.MEDIUM.value,
         is_read=False,
         is_read_later=True,
-        is_favorite=False,
     )
     db_session.add(clipped)
     await db_session.flush()
@@ -121,7 +122,7 @@ class TestSaveWebArticle:
 
     @pytest.mark.asyncio
     async def test_save_duplicate_article_updates_read_later(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle, db_session: AsyncSession
+        self, async_client: AsyncClient, test_clipped_article: UserEntry, db_session: AsyncSession
     ):
         """Test saving an already clipped article re-enables is_read_later."""
         # First, mark the existing article as NOT read later
@@ -148,7 +149,7 @@ class TestCheckArticleSaved:
     """Test checking if an article is already saved."""
 
     @pytest.mark.asyncio
-    async def test_check_saved_article_exists(self, async_client: AsyncClient, test_clipped_article: ClippedArticle):
+    async def test_check_saved_article_exists(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test checking a saved article returns the article data."""
         response = await async_client.get(
             "/api/articles/check-saved",
@@ -180,7 +181,7 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_priority(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test updating the priority of a clipped article."""
         response = await async_client.put(
@@ -193,7 +194,7 @@ class TestUpdateClippedArticle:
         assert data["priority"] == "HIGH"  # Enum is serialized as uppercase
 
     @pytest.mark.asyncio
-    async def test_update_clipped_article_note(self, async_client: AsyncClient, test_clipped_article: ClippedArticle):
+    async def test_update_clipped_article_note(self, async_client: AsyncClient, test_clipped_article: UserEntry):
         """Test updating the note of a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
@@ -206,7 +207,7 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_read_status(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test marking a clipped article as read."""
         response = await async_client.put(
@@ -221,7 +222,7 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_read_later(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test toggling read_later status on a clipped article."""
         response = await async_client.put(
@@ -235,7 +236,7 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_favorite(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test marking a clipped article as favorite."""
         response = await async_client.put(
@@ -249,7 +250,7 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_multiple_fields(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test updating multiple fields at once."""
         response = await async_client.put(
@@ -286,7 +287,7 @@ class TestReadLaterEndpoint:
 
     @pytest.mark.asyncio
     async def test_read_later_with_clipped_article(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
     ):
         """Test read-later endpoint includes clipped articles."""
         response = await async_client.get("/api/articles/read-later")
@@ -303,7 +304,7 @@ class TestReadLaterEndpoint:
 
     @pytest.mark.asyncio
     async def test_read_later_excludes_non_read_later_articles(
-        self, async_client: AsyncClient, test_clipped_article: ClippedArticle, db_session: AsyncSession
+        self, async_client: AsyncClient, test_clipped_article: UserEntry, db_session: AsyncSession
     ):
         """Test that read-later endpoint only includes articles marked as read_later."""
         # Mark the test article as NOT read later
@@ -333,10 +334,11 @@ class TestReadLaterEndpoint:
             db_session.add(content)
             await db_session.flush()
 
-            clipped = ClippedArticle(
+            clipped = UserEntry(
                 id=uuid4(),
                 user_id=test_user.id,
                 content_id=content.id,
+                feed_article_id=None,
                 is_read_later=True,
             )
             db_session.add(clipped)

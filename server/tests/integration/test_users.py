@@ -5,7 +5,7 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Profile
+from app.models.user import Profile
 
 
 class TestUserProfile:
@@ -41,7 +41,7 @@ class TestUserProfile:
     async def test_get_current_user_profile_not_found(self, db_session: AsyncSession):
         """Test getting profile when user doesn't exist in database."""
         from app.main import app
-        from app.schemas.auth import TokenData
+        from app.typing.user import TokenData
         from app.services.user.auth import get_current_user
         from httpx import ASGITransport, AsyncClient
 

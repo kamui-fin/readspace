@@ -1,22 +1,21 @@
 """OPML file import orchestration worker operations."""
 
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 from uuid import UUID
 
 import structlog
 
-from app.services.opml.opml_import import process_opml_import
+from app.crud import folder as crud_folder
 from app.services.opml.parsing import parse_opml
 from app.typing.common import ImportStatus
 from app.workers.common import worker_db_factory
-from app.workers.opml.progress import (
-    check_import_cancellation_flag,
-    initialize_import_progress,
-    update_import_progress,
-)
+from app.workers.opml.progress import OpmlImportTracker
 
 logger = structlog.get_logger(__name__)
+
+SessionFactory = Callable[[], Any]
 
 
 async def import_opml(
@@ -47,7 +46,8 @@ async def import_opml(
 
     # Check for cancellation at the start
     if task_id:
-        is_cancelled = await check_import_cancellation_flag(task_id)
+        tracker = OpmlImportTracker(task_id)
+        is_cancelled = await tracker.is_cancelled()
         if is_cancelled:
             logger.info(
                 "OPML import cancelled before starting",
@@ -65,30 +65,19 @@ async def import_opml(
         total_feeds = len(feeds)
 
         if task_id:
-            await initialize_import_progress(
-                task_id=task_id,
+            tracker = OpmlImportTracker(task_id)
+            await tracker.initialize(
                 user_id=str(user_id),
                 filename=filename or "unknown.opml",
                 total_feeds=total_feeds,
             )
-            await update_import_progress(
-                task_id=task_id,
-                status=ImportStatus.IN_PROGRESS,
-                started_at=datetime.now(timezone.utc).isoformat(),
-            )
 
         if not feeds:
-            if task_id:
-                await update_import_progress(
-                    task_id=task_id,
-                    status=ImportStatus.COMPLETED,
-                    completed_at=datetime.now(timezone.utc).isoformat(),
-                    message="No feeds found to import",
-                )
+            # No need to update progress - tracker auto-completes when completed == total (0 == 0)
             return {"status": ImportStatus.COMPLETED.value, "message": "No feeds found"}
 
         # Process import (creates folders and dispatches tasks)
-        result = await process_opml_import(
+        result = await _process_opml_import(
             worker_db_factory, user_id, opml_content, default_folder_name, parent_task_id=task_id
         )
 
@@ -112,11 +101,83 @@ async def import_opml(
 
         # Mark as failed in progress state
         if task_id:
-            await update_import_progress(
-                task_id=task_id,
-                status=ImportStatus.FAILED,
-                completed_at=datetime.now(timezone.utc).isoformat(),
-                message=f"Import failed: {str(exc)}",
-            )
+            tracker = OpmlImportTracker(task_id)
+            state = await tracker.get_state()
+            if state:
+                # Update metadata to mark as failed
+                async with tracker._client() as r:
+                    meta_raw = await r.get(tracker.key_meta)
+                    if meta_raw:
+                        import orjson
+                        meta = orjson.loads(meta_raw)
+                        meta["status"] = ImportStatus.FAILED.value
+                        meta["completed_at"] = datetime.now(timezone.utc).isoformat()
+                        meta["message"] = f"Import failed: {str(exc)}"
+                        await r.setex(tracker.key_meta, tracker._ttl, orjson.dumps(meta))
 
         raise exc
+
+
+async def _process_opml_import(
+    db_factory: SessionFactory,
+    user_id: UUID,
+    opml_content: str,
+    default_folder_name: str = "Imported Feeds",
+    parent_task_id: str | None = None,
+) -> dict[str, Any]:
+    """
+    Process an OPML string (Worker-facing).
+
+    Executed by the background worker.
+    1. Parses XML (CPU).
+    2. Acquires DB connection ONLY for folder creation.
+    3. Dispatches individual feed tasks.
+    """
+    # Lazy import to avoid circular dependency
+    from app.workers.opml_tasks import import_single_feed_task
+
+    # 1. Parse Content
+    raw_feeds = parse_opml(opml_content, default_folder_name)
+
+    logger.info("OPML Parsed in worker", user_id=str(user_id), count=len(raw_feeds))
+
+    # 2. Database Operations (Surgical Session)
+    folder_map = {}
+    async with db_factory() as db:
+        # Bulk Create Folders
+        folder_names = {f["folder_name"] for f in raw_feeds if f.get("folder_name")}
+        if folder_names:
+            folder_map = await crud_folder.upsert_batch(db, list(folder_names), user_id)
+
+    # 3. Dispatch Tasks
+    task_ids = []
+    dispatched_count = 0
+
+    for feed in raw_feeds:
+        folder_id = folder_map.get(feed.get("folder_name", ""))
+
+        try:
+            # Dispatch single feed import
+            task = await import_single_feed_task.kiq(
+                user_id=str(user_id),
+                feed_url=feed["xml_url"],
+                folder_id=str(folder_id) if folder_id else "",
+                feed_title=feed.get("title"),
+                parent_task_id=parent_task_id,
+                tag_names=[],
+            )
+            task_ids.append(task.task_id)
+            dispatched_count += 1
+        except Exception as e:
+            logger.error(
+                "Failed to dispatch feed import task", url=feed.get("xml_url"), error=str(e), user_id=str(user_id)
+            )
+
+    logger.info("OPML Import Dispatched", user_id=str(user_id), total=len(raw_feeds), dispatched=dispatched_count)
+
+    return {
+        "total_feeds": len(raw_feeds),
+        "dispatched_count": dispatched_count,
+        "task_ids": task_ids,
+        "status": "processing",
+    }

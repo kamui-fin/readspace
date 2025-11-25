@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
+from app.typing.user import TokenData
 
 # Load .env file before importing app modules
 try:
@@ -33,22 +34,17 @@ except ImportError:
 from app.core.config import get_settings
 from app.db.session import get_db
 from app.main import app
-from app.models import Feed, Folder, Profile
+from app.models.feed import Feed
+from app.models.folder import Folder
+from app.models.user import Profile
 from app.services.user.auth import get_current_user
 
 # Get settings after loading .env
 settings = get_settings()
 
-# Override any test conftest.py settings with our .env values
-if env_path.exists():
-    # Force reload the .env to override any previous test settings
-    load_dotenv(env_path, override=True)
-    # Update the environment to use our .env values
-    os.environ["SUPABASE_DB_CONNECTION"] = os.getenv("SUPABASE_DB_CONNECTION", settings.SUPABASE_DB_CONNECTION)
-
 # Use your .env database URL or fall back to test default
 TEST_DATABASE_URL = os.getenv(
-    "TEST_DATABASE_URL", settings.SUPABASE_DB_CONNECTION.replace("postgresql://", "postgresql+asyncpg://")
+    "TEST_DATABASE_URL", settings.DATABASE_URL_API.replace("postgresql://", "postgresql+asyncpg://")
 )
 
 # Set test environment but preserve other settings from .env
@@ -206,7 +202,6 @@ def mock_current_user(test_user: Profile):
     Note: This is the ONLY mock in e2e tests - we mock auth to avoid JWT complexity,
     but all other services (Redis, Celery, Database, etc.) are real.
     """
-    from app.schemas.auth import TokenData
 
     async def override_get_current_user():
         return TokenData(sub=str(test_user.id), email=test_user.email)
@@ -217,8 +212,6 @@ def mock_current_user(test_user: Profile):
 @pytest.fixture
 def mock_admin_user(admin_user: Profile):
     """Override auth dependency with admin user."""
-    from app.schemas.auth import TokenData
-
     async def override_get_current_user():
         return TokenData(sub=str(admin_user.id), email=admin_user.email)
 

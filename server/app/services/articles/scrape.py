@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 import nh3
 import structlog
-import trafilatura  # type: ignore[import-untyped]
+import trafilatura
 from bs4 import BeautifulSoup, Tag
 from trafilatura.downloads import ConfigParser
 from trafilatura.settings import DEFAULT_CONFIG

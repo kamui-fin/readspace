@@ -16,11 +16,14 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.article import create_articles_batch
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile
-from app.schemas import ArticleCreate
-from app.services.feeds.feed import FeedService
-from app.services.feeds.fetcher import FetchResult
+from app.crud.article.ingester import create_articles_batch
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
+from app.typing.articles import ArticleCreate
+from app.services.feeds.service import refresh_feed
+from app.services.feeds.fetching import FetchResult
 
 
 @pytest_asyncio.fixture
@@ -127,9 +130,6 @@ class TestBulkArticleCreation:
             title="Existing Article",
             link=shared_link,
             content="Existing content",
-            published_at=datetime.now(timezone.utc),  # Required field
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
         )
         db_session.add(existing_content)
         await db_session.flush()
@@ -143,7 +143,7 @@ class TestBulkArticleCreation:
                 title=f"New Article {i}",
                 link=shared_link if i == 1 else f"https://example.com/test-{test_id}/article-{i}",
                 content=f"New content {i}",
-                published_at=datetime.now(timezone.utc),  # Required field
+                published_at=datetime.now(timezone.utc),
                 user_id=placeholder_user_id,
             )
             for i in range(3)
@@ -243,9 +243,6 @@ class TestBulkArticleCreation:
             title="Shared Content",
             link="https://example.com/shared",
             content="Shared article content",
-            published_at=datetime.now(timezone.utc),  # Required field
-            created_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc),
         )
         db_session.add(existing_content)
 
@@ -254,8 +251,8 @@ class TestBulkArticleCreation:
             id=uuid4(),
             feed_id=feed.id,
             content_id=existing_content.id,
-            guid="existing-guid",
-            created_at=datetime.now(timezone.utc),
+            guid_hash="existing-guid",
+            published_at=datetime.now(timezone.utc),
         )
         db_session.add(existing_article)
         await db_session.flush()
@@ -366,20 +363,25 @@ class TestFeedServiceBulkIntegration:
 </rss>"""
 
         async def mock_fetch(*args, **kwargs):
-            return FetchResult(
-                status_code=200,
-                content=feed_xml,
-                headers={},
-                not_modified=False,
-            )
+            return {
+                "status_code": 200,
+                "content": feed_xml,
+                "headers": {},
+                "not_modified": False,
+                "error": None,
+            }
+
+        from app.db.session import get_db_factory
+
+        async def db_factory():
+            return db_session
 
         with patch(
-            "app.services.feeds.fetcher.FeedFetcher.fetch_content",
+            "app.services.feeds.fetching.fetch_feed_content",
             side_effect=mock_fetch,
         ):
             # Refresh the feed
-            feed_service = FeedService(db_session)
-            result = await feed_service.refresh_feed(feed_id=feed.id)
+            result = await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             assert result is not None
             assert result.id == feed.id
@@ -428,21 +430,25 @@ class TestFeedServiceBulkIntegration:
 
 
         async def mock_fetch(*args, **kwargs):
-            return FetchResult(
-                status_code=200,
-                content=feed_xml,
-                headers={},
-                not_modified=False,
-            )
+            return {
+                "status_code": 200,
+                "content": feed_xml,
+                "headers": {},
+                "not_modified": False,
+                "error": None,
+            }
+
+        from app.db.session import get_db_factory
+
+        async def db_factory():
+            return db_session
 
         with patch(
-            "app.services.feeds.fetcher.FeedFetcher.fetch_content",
+            "app.services.feeds.fetching.fetch_feed_content",
             side_effect=mock_fetch,
         ):
-            feed_service = FeedService(db_session)
-
             # First refresh
-            await feed_service.refresh_feed(feed_id=feed.id)
+            await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             # Verify 1 article created
             article_result_1 = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
@@ -450,7 +456,7 @@ class TestFeedServiceBulkIntegration:
             assert len(articles_1) == 1
 
             # Second refresh (same content)
-            await feed_service.refresh_feed(feed_id=feed.id, force_refetch=True)
+            await refresh_feed(session_factory=db_factory, feed_id=feed.id, force=True)
 
             # Should still have only 1 article (no duplicates)
             article_result_2 = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))

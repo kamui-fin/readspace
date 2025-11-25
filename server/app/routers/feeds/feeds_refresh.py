@@ -10,7 +10,7 @@ from app.core.custom_exceptions import FeedConnectionError, FeedParsingError, Fe
 from app.db.session import get_db_factory
 from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
-from app.typing.subscriptions import FeedResponse
+from app.typing.feeds import FeedDetail
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -19,13 +19,13 @@ router = APIRouter()
 
 @router.post(
     "/{feed_id}/refresh",
-    response_model=FeedResponse,
+    response_model=FeedDetail,
     summary="Refresh RSS feed",
     description="Manually trigger a refresh of a specific RSS feed to fetch new articles",
     responses={
         200: {
             "description": "Successfully triggered/completed feed refresh",
-            "model": FeedResponse,
+            "model": FeedDetail,
         },
         400: {
             "description": "Bad request - feed validation or parsing error",
@@ -72,7 +72,7 @@ async def refresh_feed_route(
     ),
     db_factory=Depends(get_db_factory),
     current_user: TokenData = Depends(get_current_user),
-) -> FeedResponse:
+) -> FeedDetail:
     """
     Manually trigger a refresh of a specific RSS feed to fetch new articles.
 
@@ -88,7 +88,7 @@ async def refresh_feed_route(
         current_user: Authenticated user information
 
     Returns:
-        FeedResponse: Updated feed details after refresh completion
+        FeedDetail: Updated feed details after refresh completion
 
     Refresh Process:
         1. Validates user access to the feed (unless preview mode)
@@ -132,7 +132,6 @@ async def refresh_feed_route(
             feed_id=refreshed_feed.id,
             user_id=current_user.sub,
         )
-        # TODO: Transform to FeedResponse
         return refreshed_feed
     except FeedConnectionError as e:
         logger.error(

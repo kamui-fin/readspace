@@ -149,7 +149,7 @@ async def mark_all_as_read(
     result = await db.execute(stmt)
     await db.flush()
 
-    return result.rowcount
+    return result.rowcount or 0
 
 
 async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, min_articles_per_feed: int) -> int:
@@ -222,4 +222,4 @@ async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, 
     )
     await db.flush()
 
-    return result.rowcount
+    return result.rowcount or 0

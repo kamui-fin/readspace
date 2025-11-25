@@ -17,7 +17,9 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Feed, FeedSubscription, Folder, Profile
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
 
 # Sample OPML content for testing
 VALID_OPML = """<?xml version="1.0" encoding="UTF-8"?>
@@ -67,15 +69,13 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test complete OPML import workflow by calling async functions directly."""
-        from app.workers.opml import import_opml
+        from app.workers.opml.import_opml import import_opml
 
         # Call the async function directly in test mode (no Celery)
         result = await import_opml(
             user_id=test_user.id,
             opml_content=MINIMAL_OPML,
             default_folder_name="Imported Feeds",
-            db=db_session,
-            
         )
 
         # Verify the result structure
@@ -98,15 +98,13 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, db_session: AsyncSession
     ):
         """Test OPML import creates folders correctly."""
-        from app.workers.opml import import_opml
+        from app.workers.opml.import_opml import import_opml
 
         # Call the async function directly in test mode (no Celery)
         result = await import_opml(
             user_id=test_user.id,
             opml_content=VALID_OPML,
             default_folder_name="Imported Feeds",
-            db=db_session,
-            
         )
 
         # Verify folders were created
@@ -124,7 +122,7 @@ class TestOpmlImportEagerMode:
         self, async_client: AsyncClient, test_user: Profile, test_folder: Folder, db_session: AsyncSession
     ):
         """Test individual feed import task executes correctly."""
-        from app.workers.opml import import_single_feed
+        from app.workers.opml.import_feed import import_single_feed
 
         # Execute async function directly with db session
         result = await import_single_feed(
@@ -134,7 +132,6 @@ class TestOpmlImportEagerMode:
             tag_names=[],
             feed_title="Hacker News",
             update_existing=False,
-            db=db_session,
         )
 
         # Verify result structure
@@ -226,7 +223,7 @@ class TestOpmlImportStatus:
     async def test_get_import_status_unauthorized(self, async_client: AsyncClient, test_user: Profile):
         """Test accessing another user's import task."""
         # Create a task for a different user
-        from app.routers.opml.utils import store_task_ownership as store_import_task_metadata
+        from app.services.opml.tasks import store_task_ownership as store_import_task_metadata
 
         other_user_id = "different-user-id"
         task_id = "other-user-task"
@@ -362,12 +359,12 @@ class TestOpmlRoundtrip:
         await db_session.flush()
 
         # Re-import the exported OPML by calling async function directly in test mode
+        from app.workers.opml.import_opml import import_opml
+
         result = await import_opml(
             user_id=test_user.id,
             opml_content=exported_opml,
             default_folder_name="Imported Feeds",
-            db=db_session,
-            
         )
 
         # Verify import was attempted

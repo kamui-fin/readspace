@@ -5,21 +5,15 @@ Orchestrates parsing, folder creation, and background task dispatch.
 Handles both the initial upload (router-facing) and the background processing (worker-facing).
 """
 
-from collections.abc import Callable
-from typing import Any
 from uuid import UUID
 
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import folder as crud_folder
 from app.services.opml.parsing import parse_opml
 from app.services.opml.tasks import store_task_ownership
 from app.services.user.resource_limits import enforce_subscription_limit
 from app.typing.opml import OpmlImportResponse
-from app.workers.opml_tasks import import_single_feed_task
-
-SessionFactory = Callable[[], Any]
 
 logger = structlog.get_logger(__name__)
 
@@ -78,65 +72,3 @@ async def handle_opml_upload(
         ),
         estimated_feeds=feed_count,
     )
-
-
-async def process_opml_import(
-    db_factory: SessionFactory,
-    user_id: UUID,
-    opml_content: str,
-    default_folder_name: str = "Imported Feeds",
-    parent_task_id: str | None = None,
-) -> dict[str, Any]:
-    """
-    Process an OPML string (Worker-facing).
-
-    Executed by the background worker.
-    1. Parses XML (CPU).
-    2. Acquires DB connection ONLY for folder creation.
-    3. Dispatches individual feed tasks.
-    """
-    # 1. Parse Content
-    raw_feeds = parse_opml(opml_content, default_folder_name)
-
-    logger.info("OPML Parsed in worker", user_id=str(user_id), count=len(raw_feeds))
-
-    # 2. Database Operations (Surgical Session)
-    folder_map = {}
-    async with db_factory() as db:
-        # Bulk Create Folders
-        folder_names = {f["folder_name"] for f in raw_feeds if f.get("folder_name")}
-        if folder_names:
-            folder_map = await crud_folder.upsert_batch(db, list(folder_names), user_id)
-
-    # 3. Dispatch Tasks
-    task_ids = []
-    dispatched_count = 0
-
-    for feed in raw_feeds:
-        folder_id = folder_map.get(feed.get("folder_name", ""))
-
-        try:
-            # Dispatch single feed import
-            task = await import_single_feed_task.kiq(
-                user_id=str(user_id),
-                feed_url=feed["xml_url"],
-                folder_id=str(folder_id) if folder_id else "",
-                feed_title=feed.get("title"),
-                parent_task_id=parent_task_id,
-                tag_names=[],
-            )
-            task_ids.append(task.task_id)
-            dispatched_count += 1
-        except Exception as e:
-            logger.error(
-                "Failed to dispatch feed import task", url=feed.get("xml_url"), error=str(e), user_id=str(user_id)
-            )
-
-    logger.info("OPML Import Dispatched", user_id=str(user_id), total=len(raw_feeds), dispatched=dispatched_count)
-
-    return {
-        "total_feeds": len(raw_feeds),
-        "dispatched_count": dispatched_count,
-        "task_ids": task_ids,
-        "status": "processing",
-    }

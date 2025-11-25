@@ -24,11 +24,6 @@ class Folder(Base):
         index=True,
     )
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=lambda: datetime.now(timezone.utc),
-        onupdate=lambda: datetime.now(timezone.utc),
-    )
 
     __table_args__ = (
         # UNIQUE constraint ensures one folder name per user

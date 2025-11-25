@@ -19,6 +19,12 @@ class SubscriptionCreate(SubscriptionBase):
     folder_id: UUID | str = "default"
 
 
+class SubscriptionCreateByFeedId(SubscriptionBase):
+    """Schema for subscribing to an existing feed by ID (no URL needed)."""
+
+    folder_id: UUID | str = "default"
+
+
 class SubscriptionUpdate(SubscriptionBase):
     folder_id: UUID | None = None
 

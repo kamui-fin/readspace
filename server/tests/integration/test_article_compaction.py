@@ -7,8 +7,11 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile, UserArticleState
-from app.workers.feed import compact_old_articles
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
+from app.workers.feed.compaction import compact_old_articles
 
 
 @pytest.mark.asyncio
@@ -51,7 +54,6 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
             link=f"https://example.com/e2e-old-{i}",
             description="Test article for E2E compaction",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -60,8 +62,8 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-old-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-old-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
@@ -75,7 +77,7 @@ async def test_compaction_task_deletes_old_articles_e2e(db_session: AsyncSession
     assert len(articles_before) == 70
 
     # Run compaction task
-    result = await compact_old_articles(db=db_session)
+    result = await compact_old_articles()
 
     # Commit to persist the changes
     await db_session.commit()
@@ -137,7 +139,6 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
             link=f"https://example.com/e2e-saved-{i}",
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -146,20 +147,21 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-saved-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-saved-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
 
         # Mark the oldest 5 articles (which would normally be deleted) as saved
         if i >= 65:  # These are the oldest 5
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
+                content_id=content.id,
+                feed_article_id=article.id,
                 is_read_later=True,
-                is_favorite=False,
             )
             db_session.add(state)
             saved_article_ids.append(article.id)
@@ -167,7 +169,7 @@ async def test_compaction_preserves_user_saved_articles_e2e(db_session: AsyncSes
     await db_session.commit()
 
     # Run compaction
-    result = await compact_old_articles(db=db_session)
+    result = await compact_old_articles()
 
     # Verify all saved articles still exist
     for saved_id in saved_article_ids:
@@ -262,7 +264,6 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
             link=f"https://example.com/e2e-shared-{i}",
             description="Shared article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -271,19 +272,20 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-shared-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-shared-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
         await db_session.flush()
 
         # User 1 saves the oldest article
         if i == 69:
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=test_user.id,
-                article_id=article.id,
-                is_favorite=True,
+                content_id=content.id,
+                feed_article_id=article.id,
                 is_read_later=False,
             )
             db_session.add(state)
@@ -291,12 +293,13 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
 
         # User 2 saves a different old article
         if i == 68:
-            state = UserArticleState(
-                id=uuid4(),
+            from app.models.article import UserEntry
+
+            state = UserEntry(
                 user_id=user2.id,
-                article_id=article.id,
+                content_id=content.id,
+                feed_article_id=article.id,
                 is_read_later=True,
-                is_favorite=False,
             )
             db_session.add(state)
             user2_saved_id = article.id
@@ -304,7 +307,7 @@ async def test_compaction_handles_multiple_users_e2e(db_session: AsyncSession, t
     await db_session.commit()
 
     # Run compaction
-    result = await compact_old_articles(db=db_session)
+    result = await compact_old_articles()
 
     # Verify both users' saved articles are preserved
     result = await db_session.execute(select(FeedArticle).where(FeedArticle.id == user1_saved_id))
@@ -353,7 +356,6 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
             link=f"https://example.com/e2e-retention-{i}",
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -362,8 +364,8 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-retention-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-retention-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
 
@@ -376,7 +378,7 @@ async def test_compaction_respects_retention_policy(db_session: AsyncSession, te
     assert initial_count == 70
 
     # Run compaction
-    result = await compact_old_articles(db=db_session)
+    result = await compact_old_articles()
 
     # Verify compaction deleted articles but kept minimum 50
     assert "deleted_articles" in result
@@ -424,7 +426,6 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
             link=f"https://example.com/e2e-task-{i}",
             description="Test article",
             content="Test content",
-            published_at=published_at,
         )
         db_session.add(content)
         await db_session.flush()
@@ -433,8 +434,8 @@ async def test_compaction_task_wrapper_e2e(db_session: AsyncSession, test_user: 
             id=uuid4(),
             feed_id=feed.id,
             content_id=content.id,
-            guid=f"e2e-task-{uuid4()}",
-            created_at=published_at,
+            guid_hash=f"e2e-task-{uuid4()}",
+            published_at=published_at,
         )
         db_session.add(article)
 

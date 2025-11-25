@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
-from app.schemas.user import ProfileResponse
 from app.services.user.auth import TokenData, get_current_user
+from app.typing.user import ProfileResponse
 
 router = APIRouter(prefix="/users", tags=["Users"])
 

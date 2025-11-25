@@ -12,7 +12,7 @@ from app.crud.feed.subscription import (
     delete_subscription,
     get_subscription_by_feed_id,
 )
-from app.crud.folder import get_folder
+from app.crud.folder import get_by_id as get_folder
 from app.db.session import get_db
 from app.services.user.auth import get_current_user
 from app.typing.user import TokenData

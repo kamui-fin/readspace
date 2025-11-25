@@ -9,8 +9,11 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Folder, Profile
-from app.services.feeds.fetcher import FetchResult
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
+from app.services.feeds.fetching import FetchResult
 
 
 @pytest.fixture
@@ -63,19 +66,21 @@ def mock_feed_fetch_duplicate_articles():
     async def mock_fetch(url: str, *args, **kwargs):
         """Return different feed content based on URL."""
         if "feed-a" in url:
-            return FetchResult(
-                status_code=200,
-                content=feed_a_response,
-                headers={},
-                not_modified=False
-            )
+            return {
+                "status_code": 200,
+                "content": feed_a_response,
+                "headers": {},
+                "not_modified": False,
+                "error": None,
+            }
         elif "feed-b" in url:
-            return FetchResult(
-                status_code=200,
-                content=feed_b_response,
-                headers={},
-                not_modified=False
-            )
+            return {
+                "status_code": 200,
+                "content": feed_b_response,
+                "headers": {},
+                "not_modified": False,
+                "error": None,
+            }
         else:
             raise ValueError(f"Unexpected feed URL: {url}")
 

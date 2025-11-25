@@ -78,3 +78,7 @@ class ArticleResponse(BaseModel):
 
     created_at: datetime
     feed: FeedInfo | dict[str, Any] | None = None
+    
+    # Auto-extracted content fields
+    extracted_content: str | None = None
+    extracted_read_time: int | None = None

@@ -13,13 +13,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.article import actions, reader
-from app.schemas import (
+from app.crud.article.reader import CursorPaginationResult
+from app.services.articles import scrape
+from app.typing.articles import (
     ArticleResponse,
     ArticleUpdate,
-    CursorPaginationResult,  # Your new Pydantic model from reader.py
 )
-from app.services.article import scrape
-from app.utils.content_detector import is_content_complete
+from app.utils.text import is_content_complete
 
 logger = structlog.get_logger(__name__)
 
@@ -45,7 +45,7 @@ async def _enrich_with_auto_extract(article: ArticleResponse) -> None:
 
 async def get_articles_with_cursor(
     db: AsyncSession, user_id: UUID, params: reader.CursorPaginationParams, **filters
-) -> CursorPaginationResult:
+) -> reader.CursorPaginationResult:
     """
     Get articles using the new cursor-based CRUD.
 

@@ -7,7 +7,9 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Feed, FeedSubscription, Folder, Profile
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
 
 
 class TestFeedSubscribe:

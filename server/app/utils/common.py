@@ -53,8 +53,43 @@ FOLDER_NAME_PATTERN = re.compile(r"^[\w\s\-_()\[\].]+$", re.UNICODE)
 # --- URL Utilities ---
 
 
+def transform_rsshub_url(url: str) -> str:
+    """
+    Transform rsshub:// URLs to actual HTTP URLs using configured RSShub instance.
+
+    Examples:
+        rsshub://twitter/user/elonmusk -> http://localhost:1200/twitter/user/elonmusk
+        rsshub:twitter/user/elonmusk -> http://localhost:1200/twitter/user/elonmusk
+    """
+    if not url or not isinstance(url, str):
+        return url
+
+    url = url.strip()
+    if not url.startswith("rsshub:"):
+        return url
+
+    settings = get_settings()
+    rsshub_base = settings.RSSHUB_URL.rstrip("/")
+
+    # Handle both rsshub:// and rsshub: formats
+    path = url.replace("rsshub://", "").replace("rsshub:", "")
+    path = path.lstrip("/")
+
+    return f"{rsshub_base}/{path}"
+
+
 def normalize_feed_url(url: str) -> str:
-    """Standardize feed URL: force HTTPS (mostly), lower domain, strip params."""
+    """
+    Standardize feed URL for deduplication and storage.
+
+    Purpose: Prevents duplicate feeds with slightly different URLs.
+    - Preserves rsshub:// scheme for storage (not transformed here)
+    - Forces HTTPS for http/https URLs
+    - Lowercases domain
+    - Strips tracking parameters
+
+    Used BEFORE storing feed URLs in database.
+    """
     if not url or not isinstance(url, str):
         return url
 
@@ -65,6 +100,14 @@ def normalize_feed_url(url: str) -> str:
         return url
 
     scheme = parsed.scheme.lower()
+
+    # Keep rsshub:// as-is for storage
+    if scheme == "rsshub":
+        # Just normalize the path
+        path = parsed.path.rstrip("/") if len(parsed.path) > 1 else parsed.path
+        return urlunparse((scheme, parsed.netloc, path, "", "", ""))
+
+    # Force HTTPS for web URLs
     if scheme in ("http", "https"):
         scheme = "https"
 
@@ -97,11 +140,21 @@ def normalize_feed_url(url: str) -> str:
 
 
 async def resolve_feed_url(url: str, timeout: int = 10) -> str:
-    """Follow redirects to find canonical URL."""
+    """
+    Follow redirects to find canonical URL.
+
+    For rsshub:// URLs, returns as-is (no HTTP resolution needed).
+    For http/https URLs, follows redirects to get final URL.
+    """
     if not url:
         return ""
 
     url = url.strip()
+
+    # RSShub URLs don't need resolution
+    if url.startswith("rsshub:"):
+        return normalize_feed_url(url)
+
     if not url.startswith(("http://", "https://")):
         return normalize_feed_url(url)
 

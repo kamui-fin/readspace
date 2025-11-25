@@ -61,8 +61,10 @@ async def fetch_feed_content(
     """
     Fetch feed content using conditional GET requests.
 
+    Handles rsshub:// URLs by transforming them to actual HTTP URLs.
+
     Args:
-        url: Target URL
+        url: Target URL (can be rsshub://, http://, or https://)
         etag: ETag from previous fetch
         last_modified: Last-Modified from previous fetch
         timeout: Request timeout in seconds
@@ -70,6 +72,11 @@ async def fetch_feed_content(
     Returns:
         FetchResult dict containing content/status/headers.
     """
+    from app.utils.common import transform_rsshub_url
+
+    # Transform rsshub:// URLs to actual HTTP URLs
+    fetch_url = transform_rsshub_url(url)
+
     client = get_http_client()
 
     headers = {}
@@ -79,7 +86,7 @@ async def fetch_feed_content(
         headers["If-Modified-Since"] = last_modified
 
     try:
-        response = await client.get(url, headers=headers, timeout=timeout)
+        response = await client.get(fetch_url, headers=headers, timeout=timeout)
 
         # Handle 304 Not Modified
         if response.status_code == 304:

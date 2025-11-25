@@ -9,8 +9,8 @@ from datetime import datetime, timezone
 from typing import Any, TypedDict, cast
 from urllib.parse import urljoin, urlparse
 
-import feedparser  # type: ignore
-import nh3  # type: ignore
+import feedparser
+import nh3
 import structlog
 from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser

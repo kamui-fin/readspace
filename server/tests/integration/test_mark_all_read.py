@@ -7,14 +7,10 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import (
-    ArticleContent,
-    Feed,
-    FeedArticle,
-    FeedSubscription,
-    Folder,
-    Profile,
-)
+from app.models.article import ArticleContent, FeedArticle
+from app.models.feed import Feed, FeedSubscription
+from app.models.folder import Folder
+from app.models.user import Profile
 
 
 @pytest.mark.asyncio
@@ -286,9 +282,9 @@ async def test_new_articles_after_mark_all_read_show_as_unread(
     await db_session.commit()
 
     # Get unread counts - new article should be unread
-    from app.crud.article import count_unread_articles
+    from app.crud.article.counts import count_total_unread_articles
 
-    unread_count = await count_unread_articles(db_session, user_id=test_user.id)
+    unread_count = await count_total_unread_articles(db_session, user_id=test_user.id)
 
     # Should have 1 unread article (the new one)
     assert unread_count == 1
@@ -300,7 +296,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
 ):
     """Test that subscribing to a feed with >10 articles only shows 10 as unread initially."""
     from app.core.constants import INITIAL_UNREAD_COUNT
-    from app.crud.article import count_unread_articles
+    from app.crud.article.counts import count_total_unread_articles
 
     # Create a folder
     folder = Folder(
@@ -368,7 +364,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
     assert subscription.last_read_cutoff is not None
 
     # Count unread articles for this user
-    unread_count = await count_unread_articles(db_session, user_id=test_user.id)
+    unread_count = await count_total_unread_articles(db_session, user_id=test_user.id)
 
     # Should have exactly INITIAL_UNREAD_COUNT unread articles (default is 10)
     assert unread_count == INITIAL_UNREAD_COUNT, (

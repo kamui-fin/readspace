@@ -7,7 +7,9 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, Profile, UserArticleState
+from app.models.article import ArticleContent, FeedArticle, UserEntry
+from app.models.feed import Feed, FeedSubscription
+from app.models.user import Profile
 
 
 @pytest_asyncio.fixture
@@ -26,7 +28,6 @@ async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, t
         link="https://example.com/article-full",
         description="Short description",
         content="This is the full article content that can be enhanced.",
-        published_at=datetime.now(UTC),
     )
     db_session.add(content)
     await db_session.flush()
@@ -35,15 +36,17 @@ async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, t
     article = FeedArticle(
         feed_id=test_feed.id,
         content_id=content.id,
-        guid="test-guid-enhancement",
+        guid_hash="test-guid-enhancement",
+        published_at=datetime.now(UTC),
     )
     db_session.add(article)
     await db_session.flush()
 
     # Create user article state
-    state = UserArticleState(
+    state = UserEntry(
         user_id=test_user.id,
-        article_id=article.id,
+        content_id=content.id,
+        feed_article_id=article.id,
         is_read=False,
     )
     db_session.add(state)

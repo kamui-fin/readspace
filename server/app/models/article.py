@@ -26,7 +26,7 @@ class ArticleContent(Base):
     content_hash = Column(String(64), nullable=False, unique=True, index=True)
     # Defer large text fields to reduce bandwidth in list queries
     # Use undefer() or undefer_group('content_details') when full content is needed
-    description = deferred(Column(String(5000)), group="content_details")
+    description = deferred(Column(Text), group="content_details")
     content = deferred(Column(Text), group="content_details")
     image_url = Column(String(2048))
     author = Column(String(500))
@@ -59,7 +59,7 @@ class FeedArticle(Base):
     guid_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     published_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
 
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships
     feed = relationship("Feed", back_populates="articles")
@@ -103,6 +103,12 @@ class UserEntry(Base):
     user_note: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()  # Automatically updates timestamp on changes
+    )
 
     # Relationships
     user = relationship("Profile", back_populates="entries")

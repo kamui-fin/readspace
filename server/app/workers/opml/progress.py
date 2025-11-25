@@ -1,280 +1,235 @@
-"""OPML import progress tracking utilities.
-
-This module is separate from routers to avoid circular imports.
-Workers can import these functions without importing router code.
+"""
+OPML import progress tracking utilities.
 """
 
-from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from typing import AsyncIterator
 
 import orjson
-import redis.asyncio as redis
+import redis.asyncio as aioredis  # Fixed import alias
 import structlog
 
+from app.core.config import get_settings
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
-from app.core.redis_cache import delete as redis_delete
-from app.core.redis_cache import exists as redis_exists
-from app.core.redis_cache import get as redis_get
 from app.core.redis_cache import get_pool
-from app.core.redis_cache import set as redis_set
 from app.typing.common import ImportStatus
 from app.typing.opml import FeedImportError, OpmlImportState
 
 logger = structlog.get_logger(__name__)
 
-
-@asynccontextmanager
-async def _get_redis() -> AsyncIterator[redis.Redis]:
-    """Get Redis client from connection pool as a context manager."""
-    pool = get_pool()
-    async with redis.Redis(connection_pool=pool) as client:
-        yield client
-
-
-async def set_import_cancellation_flag(task_id: str) -> None:
-    """Set cancellation flag for an import task."""
-    cancel_key = f"opml_import_cancel:{task_id}"
-    await redis_set(cancel_key, "1", ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-    logger.info("Set cancellation flag for import task", task_id=task_id)
-
-
-async def check_import_cancellation_flag(task_id: str) -> bool:
-    """Check if an import task has been cancelled."""
-    cancel_key = f"opml_import_cancel:{task_id}"
-    value = await redis_get(cancel_key)
-    return bool(value)
-
-
-async def initialize_import_progress(
-    task_id: str,
-    user_id: str,
-    filename: str,
-    total_feeds: int,
-) -> OpmlImportState:
-    """Initialize progress state for a new import task."""
-    state = OpmlImportState(
-        task_id=task_id,
-        user_id=user_id,
-        filename=filename,
-        total=total_feeds,
-        status=ImportStatus.PENDING,
-        # Initialize counters
-        completed=0,
-        successful=0,
-        failed=0,
-        already_existed=0,
-        skipped_limit=0,
-        cancelled_count=0,
-        errors=[],
-        message=None,
-        started_at=None,
-        completed_at=None,
-    )
-
-    progress_key = f"opml_import_progress:{task_id}"
-
-    # Store metadata (non-counter fields)
-    meta_data = {
-        "task_id": task_id,
-        "user_id": user_id,
-        "filename": filename,
-        "total": total_feeds,
-        "status": ImportStatus.PENDING.value,
-        "created_at": state.created_at,
-    }
-    await redis_set(f"{progress_key}:meta", meta_data, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-
-    # Initialize atomic counters (requires hash operations, so use direct Redis client)
-    async with _get_redis() as r:
-        await r.hset(
-            f"{progress_key}:counters",
-            mapping={
-                "completed": 0,
-                "successful": 0,
-                "failed": 0,
-                "already_existed": 0,
-                "skipped_limit": 0,
-                "cancelled_count": 0,
-            },
-        )
-        await r.expire(f"{progress_key}:counters", OPML_IMPORT_TASK_TTL_SECONDS)
-
-    logger.info(
-        "Initialized import progress state",
-        task_id=task_id,
-        user_id=user_id,
-        total_feeds=total_feeds,
-    )
-
-    return state
-
-
-async def get_import_progress(task_id: str) -> OpmlImportState | None:
-    """Get current import progress state from Redis."""
-    progress_key = f"opml_import_progress:{task_id}"
-
-    # Get metadata using redis_cache helper
-    meta = await redis_get(f"{progress_key}:meta")
-    if not meta:
-        return None
-
-    # Get atomic counters and errors list (requires hash/list operations)
-    async with _get_redis() as r:
-        counters = await r.hgetall(f"{progress_key}:counters")
-        errors_raw = await r.lrange(f"{progress_key}:errors", 0, -1)
-
-    # Parse errors
-    errors = [FeedImportError(**orjson.loads(e)) for e in errors_raw] if errors_raw else []
-
-    # Build state from metadata + counters
-    # Note: counters from Redis are strings (decode_responses=True), need int conversion
-    return OpmlImportState(
-        task_id=meta["task_id"],
-        user_id=meta["user_id"],
-        filename=meta["filename"],
-        created_at=meta.get("created_at"),
-        started_at=meta.get("started_at"),
-        completed_at=meta.get("completed_at"),
-        status=ImportStatus(meta.get("status", "pending")),
-        total=meta["total"],
-        completed=int(counters.get("completed", 0)),
-        successful=int(counters.get("successful", 0)),
-        failed=int(counters.get("failed", 0)),
-        already_existed=int(counters.get("already_existed", 0)),
-        skipped_limit=int(counters.get("skipped_limit", 0)),
-        cancelled_count=int(counters.get("cancelled_count", 0)),
-        errors=errors,
-        message=meta.get("message"),
-    )
-
-
-async def update_import_progress(
-    task_id: str,
-    success: bool = False,
-    already_exists: bool = False,
-    error: FeedImportError | None = None,
-    status: ImportStatus | None = None,
-    started_at: str | None = None,
-    completed_at: str | None = None,
-    message: str | None = None,
-    cancelled: bool = False,
-    skipped_limit: bool = False,
-) -> OpmlImportState | None:
-    """Atomically update import progress.
-
-    Uses Redis HINCRBY for atomic counter increments.
+class OpmlImportTracker:
     """
-    progress_key = f"opml_import_progress:{task_id}"
+    Encapsulates state management for a specific OPML import task.
+    """
 
-    # Check if exists using redis_cache helper
-    if not await redis_exists(f"{progress_key}:meta"):
-        logger.warning("Attempted to update non-existent import progress", task_id=task_id)
-        return None
+    def __init__(self, task_id: str):
+        self.task_id = task_id
+        self.pool = get_pool()
+        self._ttl = OPML_IMPORT_TASK_TTL_SECONDS
 
-    # Get current metadata
-    meta = await redis_get(f"{progress_key}:meta")
-    if not meta:
-        logger.warning("Failed to retrieve import progress metadata", task_id=task_id)
-        return None
+    # --- Key Management ---
+    @property
+    def key_base(self) -> str:
+        return f"opml_import:{self.task_id}"
 
-    # Atomically increment counters and update errors (requires hash/list operations)
-    async with _get_redis() as r:
-        # Atomically increment counters
-        if cancelled:
-            await r.hincrby(f"{progress_key}:counters", "cancelled_count", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed", 1)
-        elif skipped_limit:
-            await r.hincrby(f"{progress_key}:counters", "skipped_limit", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed", 1)
-        elif success:
-            if already_exists:
-                await r.hincrby(f"{progress_key}:counters", "already_existed", 1)
-            else:
-                await r.hincrby(f"{progress_key}:counters", "successful", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed", 1)
-        elif error:
-            await r.hincrby(f"{progress_key}:counters", "failed", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed", 1)
-            await r.rpush(f"{progress_key}:errors", error.model_dump_json())
-            await r.expire(f"{progress_key}:errors", OPML_IMPORT_TASK_TTL_SECONDS)
+    @property
+    def key_meta(self) -> str:
+        return f"{self.key_base}:meta"
 
-        # Refresh TTL
-        await r.expire(f"{progress_key}:counters", OPML_IMPORT_TASK_TTL_SECONDS)
+    @property
+    def key_counters(self) -> str:
+        return f"{self.key_base}:counters"
 
-        # Get current counters to check completion
-        counters = await r.hgetall(f"{progress_key}:counters")
+    @property
+    def key_errors(self) -> str:
+        return f"{self.key_base}:errors"
 
-    # Update metadata fields if provided
-    meta_changed = False
+    @property
+    def key_cancel(self) -> str:
+        return f"{self.key_base}:cancel"
 
-    if status:
-        meta["status"] = status.value
-        meta_changed = True
-    if started_at:
-        meta["started_at"] = started_at
-        meta_changed = True
-    if completed_at:
-        meta["completed_at"] = completed_at
-        meta_changed = True
-    if message:
-        meta["message"] = message
-        meta_changed = True
+    # --- Context Helper ---
+    @asynccontextmanager
+    async def _client(self) -> AsyncIterator[aioredis.Redis]:
+        """Provides a Redis client from the pool."""
+        async with aioredis.Redis(connection_pool=self.pool) as client:
+            yield client
 
-    # Check completion status
-    completed = int(counters.get("completed", 0))
-    total = meta["total"]
+    # --- Public API ---
 
-    # Auto-complete if all feeds processed
-    # Only if currently in progress
-    current_status = ImportStatus(meta.get("status", "pending"))
-    if completed >= total and current_status == ImportStatus.IN_PROGRESS:
-        meta["status"] = ImportStatus.COMPLETED.value
-        meta["completed_at"] = datetime.now(timezone.utc).isoformat()
-        meta_changed = True
+    async def initialize(self, user_id: str, filename: str, total_feeds: int) -> OpmlImportState:
+        """Sets up the initial state and zeroed counters."""
+        state = OpmlImportState(
+            task_id=self.task_id,
+            user_id=user_id,
+            filename=filename,
+            total=total_feeds,
+            status=ImportStatus.PENDING,
+            completed=0,
+            successful=0,
+            failed=0,
+            already_existed=0,
+            skipped_limit=0,
+            cancelled_count=0,
+            errors=[],
+        )
 
-        # Generate completion message
+        # Store static metadata
+        meta_data = {
+            "task_id": self.task_id,
+            "user_id": user_id,
+            "filename": filename,
+            "total": total_feeds,
+            "status": ImportStatus.PENDING.value,
+            "created_at": state.created_at,
+        }
+
+        async with self._client() as r:
+            async with r.pipeline() as pipe:
+                # 1. Set Metadata
+                pipe.setex(self.key_meta, self._ttl, orjson.dumps(meta_data))
+                
+                # 2. Init Counters
+                pipe.hset(
+                    self.key_counters,
+                    mapping={
+                        "completed": 0,
+                        "successful": 0,
+                        "failed": 0,
+                        "already_existed": 0,
+                        "skipped_limit": 0,
+                        "cancelled_count": 0,
+                    },
+                )
+                pipe.expire(self.key_counters, self._ttl)
+                await pipe.execute()
+
+        logger.info("Initialized import", task_id=self.task_id, user=user_id, total=total_feeds)
+        return state
+
+    async def get_state(self) -> OpmlImportState | None:
+        """Retrieves the full reconstructed state."""
+        async with self._client() as r:
+            # Fetch everything in parallel
+            meta_raw, counters, errors_raw = await r.mget(self.key_meta), await r.hgetall(self.key_counters), await r.lrange(self.key_errors, 0, -1)
+            
+            # Since mget returns a list for the first item, we need to handle the structure
+            # Wait, mget is for standard keys. We need distinct calls or a pipeline.
+            # Let's use a pipeline for reading to reduce latency.
+            async with r.pipeline() as pipe:
+                pipe.get(self.key_meta)
+                pipe.hgetall(self.key_counters)
+                pipe.lrange(self.key_errors, 0, -1)
+                meta_raw, counters, errors_raw = await pipe.execute()
+
+        if not meta_raw:
+            return None
+
+        meta = orjson.loads(meta_raw)
+        
+        # Parse Errors
+        errors = [FeedImportError(**orjson.loads(e)) for e in errors_raw] if errors_raw else []
+
+        return OpmlImportState(
+            **meta, # Unpacks task_id, user_id, filename, status, total, timestamps
+            completed=int(counters.get("completed", 0)),
+            successful=int(counters.get("successful", 0)),
+            failed=int(counters.get("failed", 0)),
+            already_existed=int(counters.get("already_existed", 0)),
+            skipped_limit=int(counters.get("skipped_limit", 0)),
+            cancelled_count=int(counters.get("cancelled_count", 0)),
+            errors=errors,
+        )
+
+    async def cancel(self) -> None:
+        """Sets the cancellation flag."""
+        async with self._client() as r:
+            await r.setex(self.key_cancel, self._ttl, "1")
+        logger.info("Import cancelled", task_id=self.task_id)
+
+    async def is_cancelled(self) -> bool:
+        async with self._client() as r:
+            return bool(await r.exists(self.key_cancel))
+
+    # --- Atomic Updates ---
+
+    async def mark_success(self, already_exists: bool = False) -> None:
+        """Increments success (or existed) counter."""
+        field = "already_existed" if already_exists else "successful"
+        await self._increment_stats(field)
+
+    async def mark_skipped(self) -> None:
+        """Increments skipped counter."""
+        await self._increment_stats("skipped_limit")
+
+    async def mark_failure(self, error: FeedImportError) -> None:
+        """Increments failed counter and pushes error details."""
+        async with self._client() as r:
+            async with r.pipeline() as pipe:
+                pipe.hincrby(self.key_counters, "failed", 1)
+                pipe.hincrby(self.key_counters, "completed", 1)
+                pipe.rpush(self.key_errors, error.model_dump_json())
+                # Refresh TTLs
+                pipe.expire(self.key_counters, self._ttl)
+                pipe.expire(self.key_errors, self._ttl)
+                results = await pipe.execute()
+                
+                # Check for completion using the new 'completed' value
+                # results[1] is the result of the second command (hincrby completed)
+                await self._check_completion(new_completed_count=results[1])
+
+    async def _increment_stats(self, field: str) -> None:
+        """Helper to atomically update counters."""
+        async with self._client() as r:
+            async with r.pipeline() as pipe:
+                pipe.hincrby(self.key_counters, field, 1)
+                pipe.hincrby(self.key_counters, "completed", 1)
+                pipe.expire(self.key_counters, self._ttl)
+                results = await pipe.execute()
+                
+                # results[1] is the new 'completed' value
+                await self._check_completion(new_completed_count=results[1])
+
+    # --- Internal Logic ---
+
+    async def _check_completion(self, new_completed_count: int) -> None:
+        """
+        Checks if the import is finished based on the atomic counter result.
+        If finished, updates the metadata status to COMPLETED.
+        """
+        # We need the 'total' to compare. 
+        # Optimization: Pass 'total' into the class init if it's immutable, 
+        # otherwise we have to fetch it. Fetching is safer.
+        
+        async with self._client() as r:
+            meta_raw = await r.get(self.key_meta)
+            if not meta_raw:
+                return
+            
+            meta = orjson.loads(meta_raw)
+            total = meta["total"]
+            current_status = meta.get("status")
+
+            if new_completed_count >= total and current_status == ImportStatus.IN_PROGRESS.value:
+                await self._finalize_import(meta, r)
+
+    async def _finalize_import(self, meta: dict, r: aioredis.Redis) -> None:
+        """Calculates final stats string and sets status to COMPLETED."""
+        counters = await r.hgetall(self.key_counters)
+        
         successful = int(counters.get("successful", 0))
         failed = int(counters.get("failed", 0))
         existed = int(counters.get("already_existed", 0))
         skipped = int(counters.get("skipped_limit", 0))
-        cancelled_cnt = int(counters.get("cancelled_count", 0))
+        
+        msg = f"{successful} feeds added. {existed} already existed."
+        if failed: msg += f" {failed} failed."
+        if skipped: msg += f" {skipped} skipped (limit)."
 
-        msg = f"{successful} feeds added. {existed} were already in your library."
-        if failed > 0:
-            msg += f" {failed} failed to import."
-        if skipped > 0:
-            msg += f" {skipped} skipped due to subscription limit."
-        if cancelled_cnt > 0:
-            msg += f" {cancelled_cnt} cancelled."
-            meta["status"] = ImportStatus.CANCELLED.value
-
+        meta["status"] = ImportStatus.COMPLETED.value
+        meta["completed_at"] = datetime.now(timezone.utc).isoformat()
         meta["message"] = msg
-
-        logger.info(
-            "Import completed automatically",
-            task_id=task_id,
-            successful=successful,
-            failed=failed,
-            already_existed=existed,
-            cancelled=cancelled_cnt,
-        )
-
-    # Save updated metadata using redis_cache helper
-    if meta_changed:
-        await redis_set(f"{progress_key}:meta", meta, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-
-    # Return updated state
-    return await get_import_progress(task_id)
-
-
-async def delete_import_progress(task_id: str) -> None:
-    """Delete import progress state from Redis."""
-    progress_key = f"opml_import_progress:{task_id}"
-
-    # Delete all related keys
-    await redis_delete(f"{progress_key}:meta")
-    await redis_delete(f"{progress_key}:counters")
-    await redis_delete(f"{progress_key}:errors")
-
-    logger.debug("Deleted import progress state", task_id=task_id)
+        
+        await r.setex(self.key_meta, self._ttl, orjson.dumps(meta))
+        logger.info("Import auto-completed", task_id=self.task_id)

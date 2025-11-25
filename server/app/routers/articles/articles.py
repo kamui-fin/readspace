@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import ERROR_ARTICLE_NOT_FOUND
 from app.crud.article.reader import CursorPaginationParams
 from app.db.session import get_db
-from app.schemas import ArticleResponse, ArticleUpdate
-from app.schemas.auth import TokenData
 from app.services.articles.service import get_article_details, get_articles_with_cursor, update_article_state
 from app.services.user.auth import get_current_user
+from app.typing.articles import ArticleResponse, ArticleUpdate
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()

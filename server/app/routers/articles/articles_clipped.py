@@ -201,7 +201,7 @@ async def check_article_saved(
                     "id": str(user_entry.id),
                     "title": content.title,
                     "note": user_entry.user_note,
-                    "priority": user_entry.priority.value if user_entry.priority else None,
+                    "priority": user_entry.priority if user_entry.priority else None,
                     "is_read": user_entry.is_read or False,
                     "is_read_later": user_entry.is_read_later or False,
                     "read_at": user_entry.read_at.isoformat() if user_entry.read_at else None,

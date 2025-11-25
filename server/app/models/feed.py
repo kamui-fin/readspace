@@ -57,7 +57,6 @@ class Feed(Base):
     last_error_message: Mapped[str | None] = mapped_column(String, nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships
     subscriptions = relationship("FeedSubscription", back_populates="feed", cascade="all, delete-orphan")
@@ -96,7 +95,6 @@ class FeedSubscription(Base):
     last_read_cutoff: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     # Relationships
     feed = relationship("Feed", back_populates="subscriptions")

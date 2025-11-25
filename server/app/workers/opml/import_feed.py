@@ -10,7 +10,7 @@ from app.services.folder import ensure_default_folder
 from app.typing.common import ImportStatus
 from app.typing.opml import FeedImportError
 from app.workers.common import worker_db_factory
-from app.workers.opml.progress import update_import_progress
+from app.workers.opml.progress import OpmlImportTracker
 
 logger = structlog.get_logger(__name__)
 
@@ -72,14 +72,8 @@ async def import_single_feed(
         )
 
         if parent_task_id:
-            await update_import_progress(
-                task_id=parent_task_id,
-                success=True,
-                # logic for already_exists might need to be derived from add_feed return?
-                # add_feed raises FeedSubscriptionError if already subscribed.
-                # So if we are here, it's likely a success (new or existing feed, but new subscription)
-                already_exists=False,
-            )
+            tracker = OpmlImportTracker(parent_task_id)
+            await tracker.mark_success(already_exists=False)
 
         return {
             "success": True,
@@ -109,12 +103,9 @@ async def import_single_feed(
         )
 
         if parent_task_id:
+            tracker = OpmlImportTracker(parent_task_id)
             if already_exists:
-                await update_import_progress(
-                    task_id=parent_task_id,
-                    success=True,
-                    already_exists=True,
-                )
+                await tracker.mark_success(already_exists=True)
             else:
                 error = FeedImportError(
                     url=feed_url,
@@ -122,10 +113,7 @@ async def import_single_feed(
                     error=error_msg,
                     status="failed",
                 )
-                await update_import_progress(
-                    task_id=parent_task_id,
-                    error=error,
-                )
+                await tracker.mark_failure(error)
 
         return {
             "success": already_exists,  # Technically success if we just want to ensure it's there

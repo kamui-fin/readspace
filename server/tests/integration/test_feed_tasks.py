@@ -17,7 +17,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Feed, FeedSubscription, Profile
+from app.models.feed import Feed, FeedSubscription
+from app.models.user import Profile
 
 
 class TestFeedRefreshTask:
@@ -26,7 +27,7 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_success(self, test_feed: Feed, db_session: AsyncSession):
         """Test refreshing a single feed via async function."""
-        from app.workers.feed import refresh_single_feed
+        from app.workers.feed.refresh import refresh_single_feed
 
         # Record initial state
         initial_last_fetched = test_feed.last_fetched_at
@@ -44,7 +45,7 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_with_string_uuid(self, test_feed: Feed, db_session: AsyncSession):
         """Test task handles UUID (no string conversion needed in async function)."""
-        from app.workers.feed import refresh_single_feed
+        from app.workers.feed.refresh import refresh_single_feed
 
         # Call with UUID directly - service manages its own sessions
         await refresh_single_feed(feed_id=test_feed.id)
@@ -57,7 +58,7 @@ class TestFeedRefreshTask:
     @pytest.mark.asyncio
     async def test_refresh_single_feed_task_nonexistent_feed(self, db_session: AsyncSession):
         """Test refreshing non-existent feed handles error gracefully."""
-        from app.workers.feed import refresh_single_feed
+        from app.workers.feed.refresh import refresh_single_feed
 
         fake_id = uuid4()
 
@@ -97,7 +98,7 @@ class TestFeedSchedulingTask:
     @pytest.mark.asyncio
     async def test_schedule_all_feed_refreshes_task(self, db_session: AsyncSession):
         """Test scheduling all feeds needing refresh."""
-        from app.workers.feed import schedule_all_feeds
+        from app.workers.feed.refresh import schedule_all_feeds
 
         # Create multiple feeds that need refresh
         feeds_to_create = 3
@@ -117,7 +118,7 @@ class TestFeedSchedulingTask:
 
         # Execute async function directly in test mode - service manages its own sessions
         try:
-            await schedule_all_feeds(test_mode=True)
+            await schedule_all_feeds()
         except Exception as e:
             # Feed refresh may fail due to network issues, rate limiting, or content size limits
             # With MAX_OPML_FILE_SIZE_MB = 5, feeds larger than 5MB will fail
@@ -138,7 +139,7 @@ class TestFeedSchedulingTask:
     async def test_schedule_feeds_respects_limit(self, db_session: AsyncSession):
         """Test that scheduling respects MAX_FEEDS_BATCH_SIZE limit."""
         from app.core.constants import MAX_FEEDS_BATCH_SIZE
-        from app.services.feeds.feed import FeedService
+        from app.crud.feed.core import get_feeds_for_worker
 
         # Create a small number of feeds (we just need to test the LIMIT works)
         # Don't create MAX_FEEDS_BATCH_SIZE feeds as that's too many for a test
@@ -156,8 +157,7 @@ class TestFeedSchedulingTask:
         await db_session.flush()
 
         # Verify the service correctly applies the limit when querying
-        feed_service = FeedService()
-        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(db=db_session, limit=3)
+        feeds_to_refresh = await get_feeds_for_worker(db_session, limit=3)
 
         # Should only return 3 feeds even though we have 5
         assert len(feeds_to_refresh) == 3
@@ -167,7 +167,7 @@ class TestFeedSchedulingTask:
         self, db_session: AsyncSession, test_user: Profile, test_folder
     ):
         """Test that recently fetched feeds are not scheduled."""
-        from app.services.feeds.feed import FeedService
+        from app.crud.feed.core import get_feeds_for_worker
 
         # Create feed that was just fetched
         recent_feed = Feed(
@@ -200,8 +200,7 @@ class TestFeedSchedulingTask:
         await db_session.flush()
 
         # Query for feeds needing refresh
-        feed_service = FeedService()
-        feeds_to_refresh = await feed_service.get_feeds_needing_refresh(db=db_session, limit=100)
+        feeds_to_refresh = await get_feeds_for_worker(db_session, limit=100)
 
         # Should only include old feed, not recent feed
         feed_ids = [feed.id for feed in feeds_to_refresh]
@@ -284,7 +283,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed import compact_unread_articles
+        from app.workers.feed.compaction import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -328,7 +327,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed import compact_unread_articles
+        from app.workers.feed.compaction import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -355,7 +354,7 @@ class TestUnreadCompactionTask:
         original_cutoff = subscription.last_read_cutoff
 
         # Run compaction
-        result = await compact_unread_articles(db=db_session)
+        result = await compact_unread_articles()
 
         # Refresh subscription
         await db_session.refresh(subscription)
@@ -371,7 +370,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed import compact_unread_articles
+        from app.workers.feed.compaction import compact_unread_articles
 
         # Create a feed with subscription
         feed = Feed(
@@ -394,7 +393,7 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Run compaction
-        result = await compact_unread_articles(db=db_session)
+        result = await compact_unread_articles()
 
         # Refresh subscription
         await db_session.refresh(subscription)
@@ -412,7 +411,7 @@ class TestUnreadCompactionTask:
         from datetime import datetime, timedelta, timezone
 
         from app.core.constants import UNREAD_RETENTION_DAYS
-        from app.workers.feed import compact_unread_articles
+        from app.workers.feed.compaction import compact_unread_articles
 
         # Create multiple feeds with old cutoffs
         old_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS + 10)
@@ -438,7 +437,7 @@ class TestUnreadCompactionTask:
         await db_session.commit()
 
         # Run compaction
-        result = await compact_unread_articles(db=db_session)
+        result = await compact_unread_articles()
 
         # Should report updating all 3 subscriptions
         assert "updated_subscriptions" in result

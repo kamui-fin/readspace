@@ -14,11 +14,7 @@ from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
 from app.core.redis_cache import delete, get, set
 from app.typing.common import ImportStatus
 from app.typing.opml import OpmlImportCancelResponse, OpmlImportStatusResponse, OpmlTaskMetadata
-from app.workers.opml.progress import (
-    get_import_progress,
-    set_import_cancellation_flag,
-    update_import_progress,
-)
+from app.workers.opml.progress import OpmlImportTracker
 
 logger = structlog.get_logger(__name__)
 
@@ -79,7 +75,8 @@ async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
 
     for task_id in task_ids:
         try:
-            state = await get_import_progress(task_id)
+            tracker = OpmlImportTracker(task_id)
+            state = await tracker.get_state()
 
             if not state:
                 # No progress state yet, task is still pending or lost
@@ -127,7 +124,8 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
     Get the current status and progress of an OPML import task.
     """
     # Get import progress state from Redis
-    state = await get_import_progress(task_id)
+    tracker = OpmlImportTracker(task_id)
+    state = await tracker.get_state()
 
     if not state:
         # Check if we have ownership record (task just queued)
@@ -239,7 +237,8 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
             detail="You don't have permission to cancel this import task.",
         )
 
-    state = await get_import_progress(task_id)
+    tracker = OpmlImportTracker(task_id)
+    state = await tracker.get_state()
     if not state:
         # Clean up and return "not found" equivalent or success if it's just gone
         await cleanup_task_ownership(task_id, user_id)
@@ -269,16 +268,19 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
         )
 
     # Set cancellation flag
-    await set_import_cancellation_flag(task_id)
+    await tracker.cancel()
 
     # Update progress if partially done
     if state.completed < state.total:
-        await update_import_progress(
-            task_id=task_id,
-            status=ImportStatus.CANCELLED,
-            completed_at=datetime.now(timezone.utc).isoformat(),
-            message=f"Import cancelled. {state.completed} of {state.total} feeds processed.",
-        )
+        import orjson
+        async with tracker._client() as r:
+            meta_raw = await r.get(tracker.key_meta)
+            if meta_raw:
+                meta = orjson.loads(meta_raw)
+                meta["status"] = ImportStatus.CANCELLED.value
+                meta["completed_at"] = datetime.now(timezone.utc).isoformat()
+                meta["message"] = f"Import cancelled. {state.completed} of {state.total} feeds processed."
+                await r.setex(tracker.key_meta, tracker._ttl, orjson.dumps(meta))
 
     await cleanup_task_ownership(task_id, user_id)
 

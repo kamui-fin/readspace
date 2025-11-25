@@ -7,7 +7,6 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
-from app.schemas.auth import TokenData
 from app.services.ai.service import generate_summary, translate_content
 from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
@@ -19,6 +18,7 @@ from app.typing.enhancements import (
     TranslateRequest,
     TranslateResponse,
 )
+from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
@@ -84,7 +84,7 @@ async def extract_full_text(
 @router.post("/{article_id}/summarize", response_model=SummarizeResponse)
 async def summarize_article(
     article_id: UUID,
-    request: SummarizeRequest = Body(default_factory=SummarizeRequest),
+    request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
     user: TokenData = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> SummarizeResponse:

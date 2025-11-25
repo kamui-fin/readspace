@@ -5,7 +5,8 @@ from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Folder, Profile
+from app.models.folder import Folder
+from app.models.user import Profile
 
 
 class TestFolderCreate:

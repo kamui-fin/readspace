@@ -12,6 +12,7 @@ from app.crud.feed.core import get_feed_by_id
 from app.crud.feed.subscription import create_subscription
 from app.db.session import get_db, get_db_factory
 from app.services.feeds.service import add_feed
+from app.services.folder import ensure_default_folder
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_subscription_limit
 from app.typing.feeds import FeedCreate
@@ -98,17 +99,23 @@ async def add_new_feed(
     # Check subscription limit before processing
     async with db_factory() as db:
         await enforce_subscription_limit(db, UUID(current_user.sub))
+        
+        # Resolve folder_id: get default folder if None or "default"
+        resolved_folder_id: UUID
+        if feed_in.folder_id is None or (isinstance(feed_in.folder_id, str) and feed_in.folder_id == "default"):
+            default_folder = await ensure_default_folder(db, UUID(current_user.sub))
+            resolved_folder_id = default_folder.id
+        elif isinstance(feed_in.folder_id, UUID):
+            resolved_folder_id = feed_in.folder_id
+        else:
+            resolved_folder_id = UUID(feed_in.folder_id)
 
     try:
         subscription = await add_feed(
             session_factory=db_factory,
             user_id=UUID(current_user.sub),
             url=str(feed_in.url),
-            folder_id=feed_in.folder_id
-            if isinstance(feed_in.folder_id, UUID)
-            else UUID(feed_in.folder_id)
-            if feed_in.folder_id != "default"
-            else None,
+            folder_id=resolved_folder_id,
             custom_title=None,
         )
 
