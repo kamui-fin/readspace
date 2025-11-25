@@ -182,9 +182,7 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
 
         interval = await scheduling.calculate_optimal_interval(db, updated_feed)
         if interval != updated_feed.adaptive_fetch_interval_minutes:
-            await update_feed(
-                db, feed=updated_feed, update_data={"adaptive_fetch_interval_minutes": interval}
-            )
+            await update_feed(db, feed=updated_feed, update_data={"adaptive_fetch_interval_minutes": interval})
 
         return updated_feed
 
@@ -193,9 +191,7 @@ async def get_user_feeds(
     session_factory: SessionFactory, user_id: UUID, folder_id: Optional[UUID] = None, skip: int = 0, limit: int = 100
 ) -> List[Any]:
     async with session_factory() as db:
-        subs = await get_subscriptions_by_user(
-            db, user_id=user_id, folder_id=folder_id, skip=skip, limit=limit
-        )
+        subs = await get_subscriptions_by_user(db, user_id=user_id, folder_id=folder_id, skip=skip, limit=limit)
         return subs
 
 

@@ -12,7 +12,8 @@ import structlog
 
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
 from app.core.redis_cache import RedisCache
-from app.schemas import FeedImportError, OpmlImportState
+from app.models.enums import ImportStatus
+from app.typing.opml import FeedImportError, OpmlImportState
 
 logger = structlog.get_logger(__name__)
 
@@ -38,13 +39,6 @@ async def check_import_cancellation_flag(task_id: str) -> bool:
         return bool(await r.get(cancel_key))
 
 
-async def clear_import_cancellation_flag(task_id: str) -> None:
-    """Clear cancellation flag for an import task."""
-    async with await _get_redis() as r:
-        cancel_key = f"opml_import_cancel:{task_id}"
-        await r.delete(cancel_key)
-
-
 async def initialize_import_progress(
     task_id: str,
     user_id: str,
@@ -56,8 +50,14 @@ async def initialize_import_progress(
         task_id=task_id,
         user_id=user_id,
         filename=filename,
-        total_feeds=total_feeds,
-        status="pending",
+        total=total_feeds,
+        status=ImportStatus.PENDING,
+        # Initialize counters
+        completed=0,
+        successful=0,
+        failed=0,
+        already_existed=0,
+        skipped_limit=0,
     )
 
     progress_key = f"opml_import_progress:{task_id}"
@@ -72,8 +72,8 @@ async def initialize_import_progress(
                     "task_id": task_id,
                     "user_id": user_id,
                     "filename": filename,
-                    "total_feeds": total_feeds,
-                    "status": "pending",
+                    "total": total_feeds,
+                    "status": ImportStatus.PENDING.value,
                     "created_at": state.created_at,
                 }
             ),
@@ -83,9 +83,9 @@ async def initialize_import_progress(
         await r.hset(
             f"{progress_key}:counters",
             mapping={
-                "completed_feeds": 0,
-                "successful_imports": 0,
-                "failed_imports": 0,
+                "completed": 0,
+                "successful": 0,
+                "failed": 0,
                 "already_existed": 0,
                 "skipped_limit": 0,
                 "cancelled_count": 0,
@@ -123,6 +123,8 @@ async def get_import_progress(task_id: str) -> OpmlImportState | None:
         errors = [FeedImportError(**json.loads(e)) for e in errors_raw] if errors_raw else []
 
         # Build state from metadata + counters
+        # Be careful with mapping old keys if structure changed, but we just wrote init code above.
+        # Note: counters from Redis are bytes, need int conversion
         return OpmlImportState(
             task_id=meta["task_id"],
             user_id=meta["user_id"],
@@ -130,14 +132,14 @@ async def get_import_progress(task_id: str) -> OpmlImportState | None:
             created_at=meta.get("created_at"),
             started_at=meta.get("started_at"),
             completed_at=meta.get("completed_at"),
-            status=meta.get("status", "pending"),
-            total_feeds=meta["total_feeds"],
-            completed_feeds=int(counters.get("completed_feeds", 0)),
-            successful_imports=int(counters.get("successful_imports", 0)),
-            failed_imports=int(counters.get("failed_imports", 0)),
-            already_existed=int(counters.get("already_existed", 0)),
-            skipped_limit=int(counters.get("skipped_limit", 0)),
-            cancelled_count=int(counters.get("cancelled_count", 0)),
+            status=ImportStatus(meta.get("status", "pending")),
+            total=meta["total"],
+            completed=int(counters.get(b"completed", 0)),
+            successful=int(counters.get(b"successful", 0)),
+            failed=int(counters.get(b"failed", 0)),
+            already_existed=int(counters.get(b"already_existed", 0)),
+            skipped_limit=int(counters.get(b"skipped_limit", 0)),
+            cancelled_count=int(counters.get(b"cancelled_count", 0)),
             errors=errors,
             message=meta.get("message"),
         )
@@ -148,7 +150,7 @@ async def update_import_progress(
     success: bool = False,
     already_exists: bool = False,
     error: FeedImportError | None = None,
-    status: str | None = None,
+    status: ImportStatus | None = None,
     started_at: str | None = None,
     completed_at: str | None = None,
     message: str | None = None,
@@ -170,19 +172,19 @@ async def update_import_progress(
         # Atomically increment counters
         if cancelled:
             await r.hincrby(f"{progress_key}:counters", "cancelled_count", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed_feeds", 1)
+            await r.hincrby(f"{progress_key}:counters", "completed", 1)
         elif skipped_limit:
             await r.hincrby(f"{progress_key}:counters", "skipped_limit", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed_feeds", 1)
+            await r.hincrby(f"{progress_key}:counters", "completed", 1)
         elif success:
             if already_exists:
                 await r.hincrby(f"{progress_key}:counters", "already_existed", 1)
             else:
-                await r.hincrby(f"{progress_key}:counters", "successful_imports", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed_feeds", 1)
+                await r.hincrby(f"{progress_key}:counters", "successful", 1)
+            await r.hincrby(f"{progress_key}:counters", "completed", 1)
         elif error:
-            await r.hincrby(f"{progress_key}:counters", "failed_imports", 1)
-            await r.hincrby(f"{progress_key}:counters", "completed_feeds", 1)
+            await r.hincrby(f"{progress_key}:counters", "failed", 1)
+            await r.hincrby(f"{progress_key}:counters", "completed", 1)
             await r.rpush(f"{progress_key}:errors", error.model_dump_json())
             await r.expire(f"{progress_key}:errors", OPML_IMPORT_TASK_TTL_SECONDS)
 
@@ -192,41 +194,49 @@ async def update_import_progress(
         # Update metadata fields if provided
         meta_json = await r.get(f"{progress_key}:meta")
         meta = json.loads(meta_json)
+        meta_changed = False
 
         if status:
-            meta["status"] = status
+            meta["status"] = status.value
+            meta_changed = True
         if started_at:
             meta["started_at"] = started_at
+            meta_changed = True
         if completed_at:
             meta["completed_at"] = completed_at
+            meta_changed = True
         if message:
             meta["message"] = message
+            meta_changed = True
 
         # Get current counters to check completion
         counters = await r.hgetall(f"{progress_key}:counters")
-        completed_feeds = int(counters.get("completed_feeds", 0))
-        total_feeds = meta["total_feeds"]
+        completed = int(counters.get(b"completed", 0))
+        total = meta["total"]
 
         # Auto-complete if all feeds processed
-        if completed_feeds >= total_feeds and meta.get("status") == "in_progress":
-            meta["status"] = "completed"
+        # Only if currently in progress
+        current_status = ImportStatus(meta.get("status", "pending"))
+        if completed >= total and current_status == ImportStatus.IN_PROGRESS:
+            meta["status"] = ImportStatus.COMPLETED.value
             meta["completed_at"] = datetime.now(timezone.utc).isoformat()
+            meta_changed = True
 
             # Generate completion message
-            successful = int(counters.get("successful_imports", 0))
-            failed = int(counters.get("failed_imports", 0))
-            existed = int(counters.get("already_existed", 0))
-            skipped = int(counters.get("skipped_limit", 0))
-            cancelled_count = int(counters.get("cancelled_count", 0))
+            successful = int(counters.get(b"successful", 0))
+            failed = int(counters.get(b"failed", 0))
+            existed = int(counters.get(b"already_existed", 0))
+            skipped = int(counters.get(b"skipped_limit", 0))
+            cancelled_cnt = int(counters.get(b"cancelled_count", 0))
 
             msg = f"{successful} feeds added. {existed} were already in your library."
             if failed > 0:
                 msg += f" {failed} failed to import."
             if skipped > 0:
                 msg += f" {skipped} skipped due to subscription limit."
-            if cancelled_count > 0:
-                msg += f" {cancelled_count} cancelled."
-                meta["status"] = "cancelled"
+            if cancelled_cnt > 0:
+                msg += f" {cancelled_cnt} cancelled."
+                meta["status"] = ImportStatus.CANCELLED.value
 
             meta["message"] = msg
 
@@ -236,11 +246,12 @@ async def update_import_progress(
                 successful=successful,
                 failed=failed,
                 already_existed=existed,
-                cancelled=cancelled_count,
+                cancelled=cancelled_cnt,
             )
 
         # Save updated metadata
-        await r.setex(f"{progress_key}:meta", OPML_IMPORT_TASK_TTL_SECONDS, json.dumps(meta))
+        if meta_changed:
+            await r.setex(f"{progress_key}:meta", OPML_IMPORT_TASK_TTL_SECONDS, json.dumps(meta))
 
     # Return updated state
     return await get_import_progress(task_id)

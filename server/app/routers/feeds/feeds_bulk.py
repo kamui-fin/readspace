@@ -1,3 +1,5 @@
+"""Bulk feed operations - delete and move multiple feeds."""
+
 from typing import Any
 from uuid import UUID
 
@@ -5,9 +7,10 @@ import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud import crud_folder, crud_subscription
+from app.crud.folder import get_folder
+from app.crud.feed.subscription import bulk_update_subscriptions_folder
 from app.db.session import get_db
-from app.schemas.auth import TokenData
+from app.typing.user import TokenData
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -151,26 +154,30 @@ async def bulk_update_feeds_folder(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
     # Verify folder ownership
-    folder = await crud_folder.get_folder(db, folder_id=folder_id, user_id=UUID(current_user.sub))
+    folder = await get_folder(db, folder_id=folder_id, user_id=UUID(current_user.sub))
     if not folder:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Folder not found or does not belong to user",
         )
 
-    result = await crud_subscription.update_subscriptions_folder_bulk(
-        db=db, feed_ids=feed_ids, folder_id=folder_id, user_id=UUID(current_user.sub)
+    # Bulk update subscriptions using CRUD function
+    updated_count = await bulk_update_subscriptions_folder(
+        db=db,
+        feed_ids=feed_ids,
+        user_id=UUID(current_user.sub),
+        folder_id=folder_id,
     )
 
     logger.info(
         "Bulk update feeds folder completed",
-        updated_count=len(result["updated_ids"]),
+        updated_count=updated_count,
         folder_id=folder_id,
         user_id=current_user.sub,
     )
 
     return {
-        "updated_count": len(result["updated_ids"]),
-        "updated_ids": [str(fid) for fid in result["updated_ids"]],
+        "updated_count": updated_count,
+        "updated_ids": [str(fid) for fid in feed_ids],
         "folder_id": str(folder_id),
     }

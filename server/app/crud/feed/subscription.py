@@ -3,17 +3,18 @@
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select, delete, and_, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, load_only
+from sqlalchemy.orm import joinedload
 
 from app.core.constants import INITIAL_UNREAD_COUNT
 from app.crud.feed.core import get_feed_by_url, create_feed, normalize_url
-from app.crud.folder import get_folder
+from app.crud.folder import get_by_id
 from app.models.article import ArticleContent, FeedArticle
+from app.typing.feeds import FeedBase
 from app.models.feed import Feed, FeedSubscription
-from app.schemas.subscriptions import SubscriptionCreate, SubscriptionUpdate
+from app.typing.subscriptions import SubscriptionCreate, SubscriptionUpdate
 
 # Minimal columns for list views
 SUBSCRIPTION_FEED_COLUMNS = [
@@ -50,17 +51,12 @@ async def create_subscription(
         feed = await get_feed_by_url(db, url=normalized_url)
 
         if not feed:
-        # Functional call to create the global feed if it doesn't exist
-        from app.schemas.feeds import FeedBase
-
-        # We use the URL as a temp title; the worker will correct it on first fetch
-        feed_base = FeedBase(url=normalized_url, title=str(subscription_in.url))
-        feed = await create_feed(db, feed_data=feed_base)
+            feed = await create_feed(db, feed_data=FeedBase(url=normalized_url, title=str(subscription_in.url)))
 
     # 2. Check Duplicates
     existing = await db.execute(select(FeedSubscription).filter_by(user_id=user_id, feed_id=feed.id))
     if existing.scalar_one_or_none():
-        raise IntegrityError("Already subscribed", params=None, orig=None)
+        raise IntegrityError("Already subscribed", params=None, original_exception=None)
 
     # 3. Handle Folder
     folder_id = subscription_in.folder_id
@@ -140,3 +136,45 @@ async def delete_subscription(db: AsyncSession, *, subscription_id: UUID, user_i
         .values(subscriber_count=Feed.subscriber_count - 1)
     )
     return sub
+
+
+async def update_subscription(
+    db: AsyncSession,
+    *,
+    subscription: FeedSubscription,
+    custom_title: str | None = None,
+    folder_id: UUID | None = None,
+    is_favorite: bool | None = None,
+) -> FeedSubscription:
+    """Update subscription fields."""
+    if custom_title is not None:
+        subscription.custom_title = custom_title
+    if folder_id is not None:
+        subscription.folder_id = folder_id
+    if is_favorite is not None:
+        subscription.is_favorite = is_favorite
+
+    await db.flush()
+    await db.refresh(subscription)
+    return subscription
+
+
+async def bulk_update_subscriptions_folder(
+    db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID, folder_id: UUID
+) -> int:
+    """
+    Bulk update folder_id for multiple subscriptions.
+    
+    Returns the number of subscriptions updated.
+    """
+    stmt = (
+        update(FeedSubscription)
+        .where(
+            FeedSubscription.feed_id.in_(feed_ids),
+            FeedSubscription.user_id == user_id,
+        )
+        .values(folder_id=folder_id)
+    )
+    result = await db.execute(stmt)
+    await db.flush()
+    return result.rowcount

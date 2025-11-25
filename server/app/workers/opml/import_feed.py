@@ -1,13 +1,13 @@
 """Single feed import worker operations."""
 
-import time
 from typing import Any
 from uuid import UUID
 
 import structlog
 
-from app.schemas import FeedImportError
-from app.services.opml.opml_import import OpmlImportService
+from app.models.enums import ImportStatus
+from app.services.feeds.service import add_feed
+from app.typing.opml import FeedImportError
 from app.workers.common import worker_db_factory
 from app.workers.opml.progress import update_import_progress
 
@@ -37,9 +37,6 @@ async def import_single_feed(
     Returns:
         Import result dictionary
     """
-
-    start_time = time.perf_counter()
-
     logger.info(
         "Starting feed import",
         user_id=str(user_id),
@@ -47,86 +44,86 @@ async def import_single_feed(
     )
 
     try:
-        opml_service = OpmlImportService(user_id=user_id)
-        result = await opml_service.import_single_feed(
-            worker_db_factory,
-            feed_url=feed_url,
-            folder_id=folder_id,
-            tag_names=tag_names,
-            feed_title=feed_title,
-            update_existing=update_existing,
+        # Use the core feed service to add/subscribe
+        # add_feed handles: resolving URL, fetching, parsing, creating feed, subscribing
+        subscription = await add_feed(
+            session_factory=worker_db_factory,
+            user_id=user_id,
+            url=feed_url,
+            folder_id=UUID(folder_id)
+            if folder_id
+            else None,  # TODO: Handle default folder logic if None? Or assume caller handles it.
+            custom_title=feed_title,
         )
 
-        duration = time.perf_counter() - start_time
-        status = result.get("status", "unknown")
-
+        # Success
         logger.info(
             "Feed import completed",
             user_id=str(user_id),
             feed_url=feed_url,
-            success=result.get("success", False),
-            status=status,
-            duration_seconds=round(duration, 3),
+            success=True,
         )
 
-        # Update progress state if we have a parent task
         if parent_task_id:
-            if result.get("success"):
+            await update_import_progress(
+                task_id=parent_task_id,
+                success=True,
+                # logic for already_exists might need to be derived from add_feed return?
+                # add_feed raises FeedSubscriptionError if already subscribed.
+                # So if we are here, it's likely a success (new or existing feed, but new subscription)
+                already_exists=False,
+            )
+
+        return {
+            "success": True,
+            "url": feed_url,
+            "title": subscription.custom_title or subscription.feed.title,  # Assuming subscription object structure
+            "status": ImportStatus.COMPLETED.value,
+        }
+
+    except Exception as exc:
+        # Check for specific exceptions
+        error_msg = str(exc)
+        status = ImportStatus.FAILED.value
+        already_exists = False
+
+        if "Already subscribed" in error_msg:
+            status = "already_exists"  # Not a real ImportStatus but useful for progress logic
+            already_exists = True
+            # We might want to count this as success in terms of "processed"?
+            # The progress tracker handles `already_exists` specially.
+
+        logger.error(
+            "Feed import failed",
+            user_id=str(user_id),
+            feed_url=feed_url,
+            error=error_msg,
+            exc_info=True,
+        )
+
+        if parent_task_id:
+            if already_exists:
                 await update_import_progress(
                     task_id=parent_task_id,
                     success=True,
-                    already_exists=(status == "already_exists"),
-                )
-            elif status == "limit_exceeded":
-                await update_import_progress(
-                    task_id=parent_task_id,
-                    skipped_limit=True,
+                    already_exists=True,
                 )
             else:
                 error = FeedImportError(
-                    url=result.get("url", feed_url),
-                    title=result.get("title", feed_title or "Unknown"),
-                    error=result.get("error", "Unknown error"),
-                    status=status,
+                    url=feed_url,
+                    title=feed_title or "Unknown",
+                    error=error_msg,
+                    status="failed",
                 )
                 await update_import_progress(
                     task_id=parent_task_id,
                     error=error,
                 )
 
-        return result
-    except Exception as exc:
-        duration = time.perf_counter() - start_time
-
-        logger.error(
-            "Feed import failed",
-            user_id=str(user_id),
-            feed_url=feed_url,
-            error=str(exc),
-            error_type=type(exc).__name__,
-            duration_seconds=round(duration, 3),
-            exc_info=True,
-        )
-
-        result = {
-            "success": False,
+        return {
+            "success": already_exists,  # Technically success if we just want to ensure it's there
             "url": feed_url,
             "title": feed_title or "Unknown",
-            "status": "task_failed",
-            "error": str(exc),
+            "status": status,
+            "error": error_msg,
         }
-
-        # Update progress state if we have a parent task
-        if parent_task_id:
-            error = FeedImportError(
-                url=feed_url,
-                title=feed_title or "Unknown",
-                error=str(exc),
-                status="task_failed",
-            )
-            await update_import_progress(
-                task_id=parent_task_id,
-                error=error,
-            )
-
-        return result

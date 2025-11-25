@@ -1,20 +1,22 @@
+"""Admin feed routes - update and delete global feed properties."""
+
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.core.constants import ERROR_FEED_NOT_FOUND
-from app.crud import crud_feed
+from app.crud.feed.core import admin_update_feed, delete_feed, get_feed_by_id
 from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
-from app.models import Feed
-from app.schemas.auth import TokenData
-from app.schemas.feeds import AdminFeedUpdate
-from app.schemas.subscriptions import FeedResponse
-from app.services.feeds.management import FeedManagementService
+from app.models.enums import UserRole
+from app.typing.feeds import AdminFeedUpdate
+from app.typing.subscriptions import FeedResponse
+from app.typing.user import TokenData
+from app.services.feeds.search.meilisearch import get_meilisearch_service
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -84,9 +86,7 @@ async def admin_update_feed(
         - Updates affect all users subscribed to the feed
         - Changes are applied to the global feed record
     """
-    # Check if user is admin by fetching their profile
-    from app.models.enums import UserRole
-
+    # Check if user is admin
     user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
@@ -101,7 +101,7 @@ async def admin_update_feed(
         )
 
     # Get the feed from the global feeds table
-    feed = await crud_feed.get_feed_by_id(db, feed_id=feed_id)
+    feed = await get_feed_by_id(db, feed_id=feed_id)
     if not feed:
         logger.warning(
             "Admin attempted to update non-existent feed",
@@ -110,64 +110,23 @@ async def admin_update_feed(
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-    # Update the feed metadata
+    # Update the feed metadata using CRUD function
     try:
-        updated_feed = await crud_feed.update_feed_metadata(
+        updated_feed = await admin_update_feed(
             db,
-            feed_db=feed,
+            feed=feed,
             title=feed_in.title,
             description=feed_in.description,
-            link=str(feed_in.link) if feed_in.link else None,
+            link=feed_in.link,
             language=feed_in.language,
             image_url=feed_in.image_url,
+            url=str(feed_in.url) if feed_in.url else None,
             ttl=feed_in.ttl,
             skip_hours=feed_in.skip_hours,
             skip_days=feed_in.skip_days,
+            top_level_category=feed_in.top_level_category,
+            popularity_score=feed_in.popularity_score,
         )
-
-        # Handle top_level_category separately since it's an enum
-        if feed_in.top_level_category is not None:
-            from app.models import FeedCategory
-
-            # Convert string to enum if needed
-            # The frontend sends the enum VALUE (e.g., "Design & Creativity")
-            # We need to find the matching enum and assign the enum itself (not .value)
-            if isinstance(feed_in.top_level_category, str):
-                try:
-                    category_enum = FeedCategory(feed_in.top_level_category)
-                    # Assign the enum itself, not its value - SQLAlchemy handles conversion
-                    updated_feed.top_level_category = category_enum
-                except ValueError as e:
-                    logger.warning(
-                        "Invalid category provided",
-                        category=feed_in.top_level_category,
-                        feed_id=feed_id,
-                    )
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Invalid category: {feed_in.top_level_category}",
-                    ) from e
-            else:
-                # If it's already a FeedCategory enum, use it directly
-                updated_feed.top_level_category = feed_in.top_level_category
-
-            db.add(updated_feed)
-            await db.flush()
-            await db.refresh(updated_feed)
-
-        # Handle popularity_score update
-        if feed_in.popularity_score is not None:
-            updated_feed.popularity_score = feed_in.popularity_score
-            db.add(updated_feed)
-            await db.flush()
-            await db.refresh(updated_feed)
-
-        # Handle URL update if provided
-        if feed_in.url is not None:
-            updated_feed.url = str(feed_in.url)
-            db.add(updated_feed)
-            await db.flush()
-            await db.refresh(updated_feed)
 
         logger.info(
             "Admin updated global feed successfully",
@@ -175,18 +134,27 @@ async def admin_update_feed(
             user_id=current_user.sub,
         )
 
-        # Return as FeedResponse
-        from app.db.session import db_session_factory
+        # TODO: Transform to FeedResponse
+        return updated_feed
 
-        feed_service = FeedManagementService(user_id=UUID(current_user.sub))
-        return await feed_service.get_feed(db_session_factory, feed_id=feed_id) or updated_feed
-
+    except ValueError as e:
+        logger.warning(
+            "Invalid feed update data",
+            error=str(e),
+            feed_id=feed_id,
+            user_id=current_user.sub,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e),
+        ) from e
     except Exception as e:
         logger.error(
             "Error updating global feed",
             error=str(e),
             feed_id=feed_id,
             user_id=current_user.sub,
+            exc_info=True,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -216,7 +184,7 @@ async def admin_delete_feed(
     feed_id: UUID,
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> JSONResponse:
+) -> Response:
     """
     Delete global feed (admin only).
 
@@ -230,7 +198,7 @@ async def admin_delete_feed(
         current_user: Authenticated user information (must be admin)
 
     Returns:
-        JSONResponse: Empty response with 204 status code on success
+        Response: Empty response with 204 status code on success
 
     Raises:
         HTTPException:
@@ -244,9 +212,7 @@ async def admin_delete_feed(
         - Cascading deletion removes all associated articles and subscriptions
         - This action cannot be undone
     """
-    # Check if user is admin by fetching their profile
-    from app.models.enums import UserRole
-
+    # Check if user is admin
     user_profile = await get_profile_by_id(db, user_id=UUID(current_user.sub))
     if not user_profile or user_profile.role != UserRole.ADMIN:
         logger.warning(
@@ -260,11 +226,15 @@ async def admin_delete_feed(
             detail="Admin access required",
         )
 
-    # Check if feed exists first
-    result = await db.execute(select(Feed).where(Feed.id == feed_id))
-    feed = result.scalar_one_or_none()
+    # Delete the feed using CRUD function
+    logger.info(
+        "Admin deleting global feed",
+        feed_id=feed_id,
+        user_id=current_user.sub,
+    )
 
-    if not feed:
+    deleted = await delete_feed(db, feed_id=feed_id)
+    if not deleted:
         logger.warning(
             "Admin attempted to delete non-existent feed",
             feed_id=feed_id,
@@ -272,23 +242,7 @@ async def admin_delete_feed(
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-    # Use raw SQL for efficient bulk deletion leveraging database cascades
-    # This is much faster than ORM cascade which loads each related object individually
-    from sqlalchemy import delete as sql_delete
-
-    logger.info(
-        "Admin deleting global feed with bulk SQL",
-        feed_id=feed_id,
-        user_id=current_user.sub,
-    )
-
-    # Delete the feed - database CASCADE will handle related records efficiently
-    await db.execute(sql_delete(Feed).where(Feed.id == feed_id))
-
     # Delete from Meilisearch search index
-    from app.core.config import get_settings
-    from app.services.feeds.search.meilisearch import get_meilisearch_service
-
     try:
         settings = get_settings()
         meilisearch_service = get_meilisearch_service(settings)
@@ -313,7 +267,4 @@ async def admin_delete_feed(
         feed_id=feed_id,
         user_id=current_user.sub,
     )
-    # Return 204 No Content without a response body
-    from starlette.responses import Response
-
     return Response(status_code=status.HTTP_204_NO_CONTENT)

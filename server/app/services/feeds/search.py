@@ -44,8 +44,6 @@ async def sync_feed(settings: Settings, feed: Feed) -> None:
 
 def _feed_to_document(feed: Feed) -> dict:
     tags = feed.tags or []
-    if hasattr(tags, "tolist"):
-        tags = tags.tolist()
 
     return {
         "id": str(feed.id),
@@ -56,6 +54,6 @@ def _feed_to_document(feed: Feed) -> dict:
         "language": feed.language,
         "image_url": feed.image_url,
         "tags": tags,
-        "top_level_category": (feed.top_level_category.value if feed.top_level_category else None),
+        "top_level_category": feed.top_level_category,
         "popularity_score": feed.popularity_score or 0.0,
     }

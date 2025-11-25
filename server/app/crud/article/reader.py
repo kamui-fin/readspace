@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
-from app.models import Feed, FeedArticle, FeedSubscription, UserEntry
+from app.models import ArticleContent, Feed, FeedArticle, FeedSubscription, UserEntry
 from app.typing.articles import ArticleResponse
 
 
@@ -317,6 +317,27 @@ async def get_article_by_id(
     )
 
     result = await db.execute(stmt)
+    return result.first()
+
+
+async def check_article_saved_by_url(
+    db: AsyncSession, *, url: str, user_id: UUID
+) -> tuple[ArticleContent, UserEntry | None] | None:
+    """
+    Check if an article is saved by URL.
+
+    Returns tuple of (ArticleContent, UserEntry | None) if content exists,
+    None if content doesn't exist.
+    """
+    result = await db.execute(
+        select(ArticleContent, UserEntry)
+        .outerjoin(
+            UserEntry,
+            (UserEntry.content_id == ArticleContent.id) & (UserEntry.user_id == user_id),
+        )
+        .where(ArticleContent.link == url)
+        .limit(1)
+    )
     return result.first()
 
 

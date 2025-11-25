@@ -1,19 +1,17 @@
-import time
+"""Feed refresh routes - manually trigger feed updates."""
+
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
-from app.core.custom_exceptions import (
-    FeedConnectionError,
-    FeedParsingError,
-    FeedValidationError,
-)
+from app.core.custom_exceptions import FeedConnectionError, FeedParsingError, FeedValidationError
 from app.db.session import get_db_factory
-from app.schemas.auth import TokenData
-from app.schemas.subscriptions import FeedResponse
-from app.services.feeds.management import FeedManagementService
+from app.typing.subscriptions import FeedResponse
+from app.typing.user import TokenData
+from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
 
 logger = structlog.get_logger(__name__)
@@ -63,7 +61,7 @@ router = APIRouter()
         500: {"description": "Internal server error during feed refresh"},
     },
 )
-async def refresh_feed(
+async def refresh_feed_route(
     feed_id: UUID,
     force_refetch: bool = Query(
         False,
@@ -87,7 +85,7 @@ async def refresh_feed(
         feed_id: UUID of the feed to refresh
         force_refetch: If True, ignores ETag/Last-Modified headers and forces full refetch
         preview: If True, allows refresh without user subscription (for feed preview)
-        db: Database session dependency
+        db_factory: Database session factory
         current_user: Authenticated user information
 
     Returns:
@@ -115,12 +113,13 @@ async def refresh_feed(
         - Force refetch bypasses HTTP caching for immediate updates
         - Refresh is synchronous and may take several seconds for large feeds
     """
-    start_time = time.perf_counter()
-    feed_service = FeedManagementService(user_id=UUID(current_user.sub))
     try:
-        refreshed_feed = await feed_service.refresh_feed(
-            db_factory, feed_id, force_refetch=force_refetch, preview_mode=preview
+        refreshed_feed = await refresh_feed(
+            session_factory=db_factory,
+            feed_id=feed_id,
+            force=force_refetch,
         )
+
         if not refreshed_feed:
             logger.warning(
                 "Feed not found for refresh or access denied",
@@ -129,53 +128,41 @@ async def refresh_feed(
             )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
 
-        duration = time.perf_counter() - start_time
-
         logger.info(
             "Feed refresh triggered/completed",
             feed_id=refreshed_feed.id,
             user_id=current_user.sub,
-            duration_seconds=round(duration, 3),
         )
+        # TODO: Transform to FeedResponse
         return refreshed_feed
     except FeedConnectionError as e:
-        duration = time.perf_counter() - start_time
-
         logger.error(
             "Connection error refreshing feed",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
-            duration_seconds=round(duration, 3),
         )
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=f"Could not connect to feed URL during refresh: {e}",
         ) from e
     except (FeedValidationError, FeedParsingError) as e:
-        duration = time.perf_counter() - start_time
-
         logger.warning(
             "Validation/parsing error during feed refresh",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
-            duration_seconds=round(duration, 3),
         )
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except HTTPException:
-        duration = time.perf_counter() - start_time
-        # Re-raise HTTP exceptions (like feed not found)
         raise
     except Exception as e:
-        duration = time.perf_counter() - start_time
-
         logger.error(
             "Unexpected error refreshing feed",
             error=str(e),
             user_id=current_user.sub,
             feed_id=feed_id,
-            duration_seconds=round(duration, 3),
+            exc_info=True,
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

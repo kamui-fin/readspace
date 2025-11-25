@@ -6,7 +6,9 @@ from uuid import UUID
 
 import structlog
 
-from app.services.opml.opml_import import OpmlImportService
+from app.models.enums import ImportStatus
+from app.services.opml.opml_import import process_opml_import
+from app.services.opml.parsing import parse_opml
 from app.workers.common import worker_db_factory
 from app.workers.opml.progress import (
     check_import_cancellation_flag,
@@ -31,15 +33,12 @@ async def import_opml(
     2. Creates folders (single transaction via service)
     3. Dispatches individual feed import tasks
 
-    The service manages its own database sessions internally.
-
     Args:
         user_id: User UUID
         opml_content: OPML file content
         default_folder_name: Default folder name for feeds without folders
         task_id: Optional task ID for cooperative cancellation
         filename: Original OPML filename
-        estimated_feeds: Estimated number of feeds to import
 
     Returns:
         Import result dictionary with metadata and dispatched task IDs
@@ -56,23 +55,15 @@ async def import_opml(
                 user_id=str(user_id),
             )
             return {
-                "status": "cancelled",
+                "status": ImportStatus.CANCELLED.value,
                 "message": "Import was cancelled before starting",
             }
 
     try:
-        opml_service = OpmlImportService(user_id=user_id)
+        # Initial parsing to get total feeds for progress tracking
+        feeds = parse_opml(opml_content, default_folder_name)
+        total_feeds = len(feeds)
 
-        # Extract feeds - this does: parse OPML (CPU) + create folders (DB)
-        feeds_data = await opml_service.extract_feeds_from_opml(
-            worker_db_factory,
-            opml_content=opml_content,
-            default_folder_name=default_folder_name,
-        )
-
-        total_feeds = len(feeds_data)
-
-        # Initialize progress state in Redis if we have a task_id
         if task_id:
             await initialize_import_progress(
                 task_id=task_id,
@@ -80,39 +71,37 @@ async def import_opml(
                 filename=filename or "unknown.opml",
                 total_feeds=total_feeds,
             )
-
-            # Mark as started
             await update_import_progress(
                 task_id=task_id,
-                status="in_progress",
+                status=ImportStatus.IN_PROGRESS,
                 started_at=datetime.now(timezone.utc).isoformat(),
             )
 
-        if not feeds_data:
+        if not feeds:
             if task_id:
                 await update_import_progress(
                     task_id=task_id,
-                    status="completed",
+                    status=ImportStatus.COMPLETED,
                     completed_at=datetime.now(timezone.utc).isoformat(),
                     message="No feeds found to import",
                 )
-            return {
-                "status": "completed",
-                "message": "No feeds found to import",
-            }
+            return {"status": ImportStatus.COMPLETED.value, "message": "No feeds found"}
 
-        # Dispatch individual tasks
-        result = await opml_service._dispatch_feed_tasks(feeds_data, task_id)
+        # Process import (creates folders and dispatches tasks)
+        result = await process_opml_import(
+            worker_db_factory, user_id, opml_content, default_folder_name, parent_task_id=task_id
+        )
 
         logger.info(
             "OPML import orchestration completed",
-            dispatched_tasks=len(result.get("task_ids", [])),
+            dispatched_tasks=result.get("dispatched_count", 0),
             total_feeds=total_feeds,
             user_id=str(user_id),
             task_id=task_id,
         )
 
         return result
+
     except Exception as exc:
         logger.error(
             "OPML import orchestration failed",
@@ -125,7 +114,7 @@ async def import_opml(
         if task_id:
             await update_import_progress(
                 task_id=task_id,
-                status="failed",
+                status=ImportStatus.FAILED,
                 completed_at=datetime.now(timezone.utc).isoformat(),
                 message=f"Import failed: {str(exc)}",
             )

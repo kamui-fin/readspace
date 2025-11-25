@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -123,10 +123,21 @@ async def mark_all_as_read(
 
     This is the efficient way - no need to create individual user_entries.
     Uses a single UPDATE query to avoid N+1 problem.
-    """
-    from sqlalchemy import update
 
-    cutoff_time = datetime.now(timezone.utc)
+    If feed_id is provided, uses the most recent article's published_at timestamp
+    as the cutoff. Otherwise uses current time.
+    """
+    # Get the most recent article's published_at timestamp for this feed
+    if feed_id:
+        result = await db.execute(
+            select(func.max(ArticleContent.published_at))
+            .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+            .where(FeedArticle.feed_id == feed_id)
+        )
+        max_published_at = result.scalar_one_or_none()
+        cutoff_time = max_published_at if max_published_at else datetime.now(timezone.utc)
+    else:
+        cutoff_time = datetime.now(timezone.utc)
 
     stmt = update(FeedSubscription).where(FeedSubscription.user_id == user_id).values(last_read_cutoff=cutoff_time)
 

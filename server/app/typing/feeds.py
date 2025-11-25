@@ -41,6 +41,22 @@ class FeedUpdateInternal(BaseModel):
     adaptive_fetch_interval_minutes: int | None = None
 
 
+class AdminFeedUpdate(BaseModel):
+    """Admin-only schema for updating global feed properties."""
+
+    title: str | None = None
+    description: str | None = None
+    link: str | None = None
+    language: str | None = None
+    image_url: str | None = None
+    url: HttpUrl | None = None
+    ttl: int | None = None
+    skip_hours: list[int] | None = None
+    skip_days: list[str] | None = None
+    top_level_category: str | None = None
+    popularity_score: float | None = None
+
+
 # ================= Output Schemas =================
 
 

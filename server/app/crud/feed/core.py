@@ -181,7 +181,7 @@ async def update_feed(db: AsyncSession, *, feed: Feed, update_data: dict) -> Fee
     for key, value in update_data.items():
         if hasattr(feed, key):
             setattr(feed, key, value)
-    
+
     db.add(feed)
     await db.flush()
     await db.refresh(feed)
@@ -204,3 +204,80 @@ async def update_enrichment_data(db: AsyncSession, *, feed: Feed, enrichment: di
 
     db.add(feed)
     return feed
+
+
+async def admin_update_feed(
+    db: AsyncSession,
+    *,
+    feed: Feed,
+    title: str | None = None,
+    description: str | None = None,
+    link: str | None = None,
+    language: str | None = None,
+    image_url: str | None = None,
+    url: str | None = None,
+    ttl: int | None = None,
+    skip_hours: list[int] | None = None,
+    skip_days: list[str] | None = None,
+    top_level_category: str | FeedCategory | None = None,
+    popularity_score: float | None = None,
+) -> Feed:
+    """
+    Admin-only function to update global feed properties.
+
+    Updates feed metadata that affects all users subscribed to the feed.
+    Handles all fields including category enums and URL normalization.
+    """
+    # Update basic metadata fields
+    if title is not None:
+        feed.title = title
+    if description is not None:
+        feed.description = description
+    if link is not None:
+        feed.link = link
+    if language is not None:
+        feed.language = language
+    if image_url is not None:
+        feed.image_url = image_url
+    if ttl is not None:
+        feed.ttl = ttl
+    if skip_hours is not None:
+        feed.skip_hours = skip_hours
+    if skip_days is not None:
+        feed.skip_days = skip_days
+
+    # Handle URL update with normalization
+    if url is not None:
+        feed.url = normalize_url(url)
+
+    # Handle top_level_category (must be string, converted to enum)
+    if top_level_category is not None:
+        try:
+            feed.top_level_category = FeedCategory(top_level_category)
+        except ValueError:
+            raise ValueError(f"Invalid category: {top_level_category}")
+
+    # Handle popularity_score
+    if popularity_score is not None:
+        feed.popularity_score = popularity_score
+
+    db.add(feed)
+    await db.flush()
+    await db.refresh(feed)
+    return feed
+
+
+async def delete_feed(db: AsyncSession, *, feed_id: UUID) -> bool:
+    """
+    Delete a global feed (admin only).
+
+    Database CASCADE will handle related records (articles, subscriptions).
+    Returns True if feed was deleted, False if not found.
+    """
+    feed = await get_feed_by_id(db, feed_id=feed_id)
+    if not feed:
+        return False
+
+    await db.delete(feed)
+    await db.flush()
+    return True
