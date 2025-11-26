@@ -374,7 +374,7 @@ class TestFeedRefresh:
 
         assert response.status_code == 200
         data = response.json()
-        assert data["id"] == str(test_feed.id)
+        assert data == {"message": "Feed refresh completed"}
 
     @pytest.mark.asyncio
     async def test_refresh_feed_not_subscribed(self, async_client: AsyncClient, test_feed: Feed):
@@ -392,6 +392,8 @@ class TestFeedRefresh:
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh?preview=true")
 
         assert response.status_code == 200
+        data = response.json()
+        assert data == {"message": "Feed refresh completed"}
 
 
 class TestFeedDelete:

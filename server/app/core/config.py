@@ -45,7 +45,7 @@ class Settings(BaseSettings):
     MEILISEARCH_MASTER_KEY: SecretStr
     MEILISEARCH_INDEX_NAME: str = "feeds"
 
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     @field_validator("GEMINI_API_KEY")
     @classmethod

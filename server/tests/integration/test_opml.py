@@ -111,6 +111,7 @@ class TestOpmlInfrastructure:
         monkeypatch,
     ):
         """Ensure orchestrator touches DB folders, Redis tracker, and Taskiq stubs."""
+        import asyncio
         from types import SimpleNamespace
 
         from app.workers.opml.import_opml import import_opml
@@ -149,6 +150,9 @@ class TestOpmlInfrastructure:
         meta = orjson.loads(meta_raw)
         assert meta["total"] == 2
         assert meta["filename"] == "infra.opml"
+        
+        # Allow any pending async operations to complete
+        await asyncio.sleep(0.1)
 
 
 class TestOpmlImportEagerMode:

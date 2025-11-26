@@ -192,14 +192,12 @@ async def get_article(
 
 @router.put(
     "/{article_id}",
-    response_model=ArticleResponse,
-    status_code=status.HTTP_200_OK,
+    status_code=status.HTTP_204_NO_CONTENT,
     summary="Update article status",
     description="Update an article's user-specific metadata and status flags",
     responses={
-        200: {
+        204: {
             "description": "Article successfully updated",
-            "model": ArticleResponse,
         },
         404: {
             "description": "Article not found or access denied",
@@ -231,9 +229,10 @@ async def get_article(
 async def update_article(
     article_id: UUID,
     article_in: ArticleUpdate = Body(...),
+    article_type: str = Query("feed", description="Article type: 'feed' or 'clipped'"),
     db: AsyncSession = Depends(get_db),
     current_user: TokenData = Depends(get_current_user),
-) -> ArticleResponse:
+) -> None:
     """
     Update an article's user-specific metadata and status flags.
 
@@ -248,7 +247,7 @@ async def update_article(
         current_user: Authenticated user token data
 
     Returns:
-        ArticleResponse: Updated article with modified status flags and metadata
+        None: No content returned on success
 
     Raises:
         HTTPException:
@@ -264,8 +263,9 @@ async def update_article(
         - Only user-specific metadata can be updated, not article content
         - Updates are scoped to the authenticated user
     """
+    is_clipped = article_type.lower() == "clipped"
     updated_article = await update_article_state(
-        db=db, article_id=article_id, user_id=UUID(current_user.sub), update_data=article_in
+        db=db, article_id=article_id, user_id=UUID(current_user.sub), update_data=article_in, is_clipped=is_clipped
     )
 
     if not updated_article:
@@ -275,5 +275,3 @@ async def update_article(
             user_id=current_user.sub,
         )
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_ARTICLE_NOT_FOUND)
-
-    return updated_article

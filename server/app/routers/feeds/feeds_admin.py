@@ -145,7 +145,7 @@ async def admin_update_feed(
             user_id=current_user.sub,
         )
 
-        return FeedDetail.model_validate(updated_feed)
+        return FeedDetail.model_validate(updated_feed, from_attributes=True)
 
     except ValueError as e:
         logger.warning(

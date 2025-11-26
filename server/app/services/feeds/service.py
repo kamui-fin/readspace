@@ -106,11 +106,12 @@ async def add_feed(
         return sub
 
 
-async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bool = False) -> Feed | None:
+async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bool = False) -> None:
+    """Refresh a feed. Does not return data."""
     async with session_factory() as db:
         feed = await get_feed_by_id(db, feed_id=feed_id)
         if not feed:
-            return None
+            return
 
         url = str(feed.url)
         etag = feed.etag_header if not force else None
@@ -125,7 +126,7 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
             feed = await get_feed_by_id(db, feed_id=feed_id)
             if feed:
                 await update_feed(db, feed=feed, update_data={"last_fetched_at": datetime.now(timezone.utc)})
-        return feed
+        return
 
     if fetch_result["error"]:
         logger.error("Feed refresh failed", feed_id=feed_id, error=fetch_result["error"])
@@ -136,13 +137,13 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
                 await update_feed(
                     db, feed=feed, update_data={"fetch_error_count": count, "last_error_message": fetch_result["error"]}
                 )
-        return None
+        return
 
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], url)
     except Exception as e:
         logger.error("Feed parse failed", feed_id=feed_id, error=str(e))
-        return None
+        return
 
     new_hash = calculate_feed_content_hash(parsed["articles"])
     if not force and new_hash == current_hash:
@@ -151,12 +152,12 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
             feed = await get_feed_by_id(db, feed_id=feed_id)
             if feed:
                 await update_feed(db, feed=feed, update_data={"last_fetched_at": datetime.now(timezone.utc)})
-        return feed
+        return
 
     async with session_factory() as db:
         feed = await get_feed_by_id(db, feed_id=feed_id)
         if not feed:
-            return None
+            return
 
         update_data = {
             "title": parsed["title"],
@@ -171,20 +172,19 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
         }
 
         if parsed["articles"]:
-            # Add feed_id to articles and save
             await _save_articles(db, feed, parsed["articles"])
-
             latest = max((a.published_at for a in parsed["articles"] if a.published_at), default=None)
             if latest:
                 update_data["last_article_published_at"] = latest
 
-        updated_feed = await update_feed(db, feed=feed, update_data=update_data)
+        await update_feed(db, feed=feed, update_data=update_data)
 
-        interval = await scheduling.calculate_optimal_interval(db, updated_feed)
-        if interval != updated_feed.adaptive_fetch_interval_minutes:
-            await update_feed(db, feed=updated_feed, update_data={"adaptive_fetch_interval_minutes": interval})
-
-        return updated_feed
+        # Refetch to calculate optimal interval
+        feed = await get_feed_by_id(db, feed_id=feed_id)
+        if feed:
+            interval = await scheduling.calculate_optimal_interval(db, feed)
+            if interval != feed.adaptive_fetch_interval_minutes:
+                await update_feed(db, feed=feed, update_data={"adaptive_fetch_interval_minutes": interval})
 
 
 async def get_user_feeds(

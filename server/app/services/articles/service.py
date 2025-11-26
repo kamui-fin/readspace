@@ -82,7 +82,7 @@ async def get_article_details(
     transformer = reader.ArticleTransformer()
     response = transformer.to_response(row)
 
-    # Cast dict to Pydantic if to_response returns dict (based on your reader.py)
+    # Cast dict to Pydantic if to_response returns dict
     if isinstance(response, dict):
         response = ArticleResponse(**response)
 
@@ -94,17 +94,13 @@ async def get_article_details(
 
 
 async def update_article_state(
-    db: AsyncSession, article_id: UUID, user_id: UUID, update_data: ArticleUpdate
-) -> ArticleResponse | None:
+    db: AsyncSession, article_id: UUID, user_id: UUID, update_data: ArticleUpdate, is_clipped: bool = False
+) -> bool:
     """
-    Update article state and return the formatted response.
+    Update article state. Returns True if successful, False if article not found.
     """
-    result = await actions.update_article_status(db, article_id=article_id, article_in=update_data, user_id=user_id)
+    result = await actions.update_article_status(
+        db, article_id=article_id, article_in=update_data, user_id=user_id, is_clipped=is_clipped
+    )
 
-    if not result:
-        return None
-
-    # Transform result (FeedArticle, UserEntry) -> Response
-    transformer = reader.ArticleTransformer()
-    response_dict = transformer.to_response(result)
-    return ArticleResponse(**response_dict)
+    return result is not None

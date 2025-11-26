@@ -147,7 +147,7 @@ async def get_feed(
     subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
     
     # Create FeedDetail response with subscription status
-    feed_detail = FeedDetail.model_validate(feed)
+    feed_detail = FeedDetail.model_validate(feed, from_attributes=True)
     feed_detail.is_subscribed = subscription is not None
     
     return feed_detail

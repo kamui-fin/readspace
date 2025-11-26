@@ -112,7 +112,7 @@ class ArticleTransformer:
             is_read = feed_article.published_at <= subscription.last_read_cutoff
         
         is_read_later = user_entry.is_read_later if user_entry else False
-        priority = user_entry.priority if user_entry else "MEDIUM"
+        priority = (user_entry.priority.upper() if user_entry and user_entry.priority else "MEDIUM")
         read_at = user_entry.read_at if user_entry else None
         user_note = user_entry.user_note if user_entry else None
 
@@ -136,6 +136,37 @@ class ArticleTransformer:
             created_at=feed_article.created_at,
             feed=self._extract_feed_info(feed),
         )
+
+    def clipped_to_response(
+        self,
+        content: ArticleContent,
+        user_entry: UserEntry,
+        include_content: bool = True,
+    ) -> dict[str, Any]:
+        """Convert clipped article (ArticleContent + UserEntry) to ArticleResponse."""
+        response_dict = ArticleResponse(
+            id=user_entry.id,
+            title=content.title,
+            link=content.link,
+            description=self._truncate_description(content.description),
+            content=content.content if include_content else None,
+            image_url=content.image_url,
+            author=content.author,
+            published_at=user_entry.created_at,  # Use created_at for clipped articles
+            estimated_read_time_minutes=content.estimated_read_time_minutes,
+            source_domain=self._extract_source_domain(content.link),
+            is_read=user_entry.is_read,
+            is_read_later=user_entry.is_read_later,
+            priority=user_entry.priority.upper() if user_entry.priority else "MEDIUM",  # Uppercase priority
+            read_at=user_entry.read_at,
+            user_note=user_entry.user_note,
+            article_type="clipped",
+            created_at=user_entry.created_at,
+            feed=None,  # Clipped articles don't have a feed
+        ).model_dump()
+        # Add note field for compatibility
+        response_dict["note"] = user_entry.user_note
+        return response_dict
 
     def to_response(
         self,
@@ -412,6 +443,10 @@ async def get_read_later_articles(
             # This is a feed article
             response = transformer.entry_to_response(entry.feed_article, entry, include_content=False)
             items.append(response.model_dump())
+        else:
+            # This is a clipped article
+            response = transformer.clipped_to_response(entry.content, entry, include_content=False)
+            items.append(response)
 
     next_cursor = None
     if entries_to_process and has_more:

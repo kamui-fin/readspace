@@ -86,15 +86,13 @@ async def _prepare_test_database(base_settings) -> dict[str, str]:
     db_name = _validate_identifier(os.getenv("PYTEST_DB_NAME", "readspace_test"))
 
     url_obj = make_url(base_url)
-    admin_sync = url_obj.set(database=admin_db)
-    test_sync = url_obj.set(database=db_name)
-
-    admin_async_url = str(admin_sync.set(drivername="postgresql+asyncpg"))
-    test_async_url = str(test_sync.set(drivername="postgresql+asyncpg"))
-    test_sync_url = str(test_sync.set(drivername="postgresql"))
+    # Keep as URL objects, don't convert to string (which hides password)
+    admin_async = url_obj.set(database=admin_db, drivername="postgresql+asyncpg")
+    test_async = url_obj.set(database=db_name, drivername="postgresql+asyncpg")
+    test_sync = url_obj.set(database=db_name, drivername="postgresql")
 
     admin_engine = create_async_engine(
-        admin_async_url,
+        admin_async,
         isolation_level="AUTOCOMMIT",
         poolclass=NullPool,
         connect_args=ASYNC_CONNECT_ARGS,
@@ -119,7 +117,7 @@ async def _prepare_test_database(base_settings) -> dict[str, str]:
     await admin_engine.dispose()
 
     bootstrap_engine = create_async_engine(
-        test_async_url,
+        test_async,
         poolclass=NullPool,
         connect_args=ASYNC_CONNECT_ARGS,
     )
@@ -129,7 +127,7 @@ async def _prepare_test_database(base_settings) -> dict[str, str]:
             await conn.execute(text(statement))
 
     alembic_cfg = Config(str(SERVER_ROOT / "alembic.ini"))
-    alembic_cfg.set_main_option("sqlalchemy.url", test_sync_url)
+    alembic_cfg.set_main_option("sqlalchemy.url", test_sync.render_as_string(hide_password=False))
     alembic_cfg.set_main_option("script_location", str(SERVER_ROOT / "alembic"))
     await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
 
@@ -137,9 +135,9 @@ async def _prepare_test_database(base_settings) -> dict[str, str]:
 
     return {
         "name": db_name,
-        "async_url": test_async_url,
-        "sync_url": test_sync_url,
-        "admin_async_url": admin_async_url,
+        "async_url": test_async.render_as_string(hide_password=False),
+        "sync_url": test_sync.render_as_string(hide_password=False),
+        "admin_async_url": admin_async.render_as_string(hide_password=False),
     }
 
 
@@ -412,27 +410,28 @@ async def test_feed(db_session: AsyncSession) -> Feed:
     return feed
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def redis_client() -> AsyncGenerator[Redis, None]:
     settings = get_settings()
     client = Redis.from_url(settings.REDIS_URL, encoding="utf-8", decode_responses=True)
-    await client.flushdb()
     try:
         yield client
     finally:
-        await client.flushdb()
         await client.close()
 
 
-@pytest.fixture(scope="session", autouse=True)
-def configure_redis_pool(redis_client: Redis):
+@pytest.fixture(scope="function", autouse=True)
+def configure_redis_pool():
+    """Configure Redis pool per test to avoid event loop issues."""
     from app.core import redis_cache
-
-    patch = pytest.MonkeyPatch()
-    patch.setattr(redis_cache, "_pool", redis_client.connection_pool, raising=False)
-    patch.setattr(redis_cache, "get_pool", lambda: redis_client.connection_pool, raising=False)
+    
+    # Reset the pool before each test
+    redis_cache._pool = None
+    
     yield
-    patch.undo()
+    
+    # Clean up after test
+    redis_cache._pool = None
 
 
 @pytest_asyncio.fixture(autouse=True)

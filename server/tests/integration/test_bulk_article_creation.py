@@ -125,11 +125,13 @@ class TestBulkArticleCreation:
         shared_link = f"https://example.com/test-{test_id}/shared-article"
 
         # Pre-create an article_content
+        from app.utils.text import get_content_hash
         existing_content = ArticleContent(
             id=uuid4(),
             title="Existing Article",
             link=shared_link,
             content="Existing content",
+            content_hash=get_content_hash(shared_link),
         )
         db_session.add(existing_content)
         await db_session.flush()
@@ -238,20 +240,23 @@ class TestBulkArticleCreation:
         feed, _ = test_feed_with_subscription
 
         # Pre-create an article_content
+        from app.utils.text import get_content_hash
         existing_content = ArticleContent(
             id=uuid4(),
             title="Shared Content",
             link="https://example.com/shared",
             content="Shared article content",
+            content_hash=get_content_hash("https://example.com/shared"),
         )
         db_session.add(existing_content)
 
         # Pre-create a feed_article
+        from app.utils.text import get_guid_hash
         existing_article = FeedArticle(
             id=uuid4(),
             feed_id=feed.id,
             content_id=existing_content.id,
-            guid_hash="existing-guid",
+            guid_hash=get_guid_hash("existing-guid"),
             published_at=datetime.now(timezone.utc),
         )
         db_session.add(existing_article)
@@ -371,20 +376,18 @@ class TestFeedServiceBulkIntegration:
                 "error": None,
             }
 
-        from app.db.session import get_db_factory
-
+        from contextlib import asynccontextmanager
+        
+        @asynccontextmanager
         async def db_factory():
-            return db_session
+            yield db_session
 
         with patch(
             "app.services.feeds.fetching.fetch_feed_content",
             side_effect=mock_fetch,
         ):
             # Refresh the feed
-            result = await refresh_feed(session_factory=db_factory, feed_id=feed.id)
-
-            assert result is not None
-            assert result.id == feed.id
+            await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             # Verify 3 articles were created via bulk insert
             article_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
@@ -438,10 +441,11 @@ class TestFeedServiceBulkIntegration:
                 "error": None,
             }
 
-        from app.db.session import get_db_factory
-
+        from contextlib import asynccontextmanager
+        
+        @asynccontextmanager
         async def db_factory():
-            return db_session
+            yield db_session
 
         with patch(
             "app.services.feeds.fetching.fetch_feed_content",

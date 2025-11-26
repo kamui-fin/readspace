@@ -35,6 +35,8 @@ class SubscriptionResponse(SubscriptionBase):
     Optimized for the "Sidebar" view.
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     user_id: UUID
     folder_id: UUID

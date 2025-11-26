@@ -11,6 +11,7 @@ from app.crud.article.reader import check_article_saved_by_url
 from app.db.session import get_db
 from app.services.articles.clipper import save_article_from_url
 from app.services.user.auth import get_current_user
+from app.typing.common import ArticlePriority
 from app.typing.entries import EntryCreateExternal
 from app.typing.user import TokenData
 
@@ -90,7 +91,7 @@ async def save_web_article(
             title=request.title,
             metadata=None,
             note=request.note,
-            priority=str(request.priority.value) if request.priority else "MEDIUM",
+            priority=request.priority.value if isinstance(request.priority, ArticlePriority) else str(request.priority),
         )
 
         logger.info(

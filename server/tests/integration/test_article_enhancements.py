@@ -1,6 +1,7 @@
 """E2E tests for article enhancement routes - using real services."""
 
 import hashlib
+from unittest.mock import patch
 from uuid import uuid4
 
 import pytest
@@ -11,6 +12,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import Feed, FeedSubscription
 from app.models.user import Profile
+
+
+@pytest.fixture(autouse=True)
+def mock_ai_service():
+    """Mock AI service to return test responses."""
+    with patch("app.services.ai.service.generate_summary") as mock_summary, patch(
+        "app.services.ai.service.translate_content"
+    ) as mock_translate:
+        mock_summary.return_value = "This is a test summary of the article content."
+        mock_translate.return_value = "Este es el contenido traducido."
+        yield
 
 
 @pytest_asyncio.fixture

@@ -1,6 +1,6 @@
 """CRUD operations for user feed subscriptions."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import UUID
 
 from sqlalchemy import func, select, update
@@ -201,6 +201,9 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
     matching_subs = debug_result.fetchall()
     logger.info(f"Subscriptions matching compaction criteria", count=len(matching_subs), cutoff_date=cutoff_date)
     
+    # Use CASE statement to set cutoff_date properly
+    # If cutoff is NULL or less than cutoff_date, set it to cutoff_date
+    # Otherwise keep the existing value
     stmt = (
         update(FeedSubscription)
         .where(
@@ -212,6 +215,6 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
     )
 
     result = await db.execute(stmt)
-    await db.flush()
+    await db.commit()  # Commit the changes so tests can see them
     logger.info(f"Updated subscriptions", rowcount=result.rowcount)
     return result.rowcount

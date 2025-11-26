@@ -72,43 +72,83 @@ async def update_article_status(
     article_id: UUID,
     article_in: ArticleUpdate,
     user_id: UUID,
-) -> tuple[FeedArticle, UserEntry] | None:
+    is_clipped: bool = False,
+) -> tuple[FeedArticle, UserEntry] | tuple[ArticleContent, UserEntry] | None:
     """
     Update article status - convenience wrapper that fetches article and updates state.
 
-    Returns both the FeedArticle and UserEntry for API responses.
+    Returns both the FeedArticle (or ArticleContent for clipped) and UserEntry for API responses.
     Uses atomic UPSERT internally via set_article_state().
+    
+    Args:
+        is_clipped: If True, treat article_id as UserEntry.id for clipped articles
     """
-    # Get the feed article
-    feed_article_result = await db.execute(
-        select(FeedArticle)
-        .options(
-            selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
-            selectinload(FeedArticle.feed),
+    if is_clipped:
+        # For clipped articles, article_id is the UserEntry.id
+        user_entry_result = await db.execute(
+            select(UserEntry)
+            .options(
+                selectinload(UserEntry.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+            )
+            .filter(UserEntry.id == article_id, UserEntry.user_id == user_id, UserEntry.feed_article_id.is_(None))
         )
-        .filter(FeedArticle.id == article_id)
-    )
-    feed_article = feed_article_result.scalar_one_or_none()
+        user_entry = user_entry_result.scalar_one_or_none()
+        
+        if not user_entry:
+            return None
+        
+        # Extract update data
+        update_data = article_in.model_dump(exclude_unset=True)
+        
+        # Update the user entry directly
+        if update_data.get("is_read") is not None:
+            user_entry.is_read = update_data["is_read"]
+            if update_data["is_read"]:
+                user_entry.read_at = datetime.now(timezone.utc)
+            else:
+                user_entry.read_at = None
+        if update_data.get("is_read_later") is not None:
+            user_entry.is_read_later = update_data["is_read_later"]
+        if update_data.get("priority") is not None:
+            user_entry.priority = update_data["priority"]
+        if update_data.get("user_note") is not None:
+            user_entry.user_note = update_data["user_note"]
+        
+        await db.flush()
+        
+        # Return ArticleContent and UserEntry for clipped articles
+        return user_entry.content, user_entry
+    else:
+        # Get the feed article
+        feed_article_result = await db.execute(
+            select(FeedArticle)
+            .options(
+                selectinload(FeedArticle.content).undefer(ArticleContent.description).undefer(ArticleContent.content),
+                selectinload(FeedArticle.feed),
+            )
+            .filter(FeedArticle.id == article_id)
+        )
+        feed_article = feed_article_result.scalar_one_or_none()
 
-    if not feed_article:
-        return None
+        if not feed_article:
+            return None
 
-    # Extract update data
-    update_data = article_in.model_dump(exclude_unset=True)
+        # Extract update data
+        update_data = article_in.model_dump(exclude_unset=True)
 
-    # Use the atomic upsert function
-    user_entry = await set_article_state(
-        db,
-        user_id=user_id,
-        content_id=feed_article.content_id,
-        feed_article_id=article_id,
-        is_read=update_data.get("is_read"),
-        is_read_later=update_data.get("is_read_later"),
-        priority=update_data.get("priority"),
-        user_note=update_data.get("user_note"),
-    )
+        # Use the atomic upsert function
+        user_entry = await set_article_state(
+            db,
+            user_id=user_id,
+            content_id=feed_article.content_id,
+            feed_article_id=article_id,
+            is_read=update_data.get("is_read"),
+            is_read_later=update_data.get("is_read_later"),
+            priority=update_data.get("priority"),
+            user_note=update_data.get("user_note"),
+        )
 
-    return feed_article, user_entry
+        return feed_article, user_entry
 
 
 async def mark_all_as_read(

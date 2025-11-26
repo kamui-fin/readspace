@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadF
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import MAX_OPML_FILE_SIZE_MB, SUPPORTED_OPML_EXTENSIONS
+from app.core.custom_exceptions import ValidationError
 from app.db.session import get_db
 from app.services.opml.opml_import import handle_opml_upload
 from app.services.opml.tasks import get_task_status
@@ -77,9 +78,15 @@ async def import_opml_file(
         )
     except HTTPException:
         raise
+    except ValidationError as e:
+        # Handle validation errors from parsing
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+    except ValueError as e:
+        # Handle other validation errors
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
         # Handle generic errors that might bubble up from parsing
-        if "Invalid XML" in str(e) or "RSS/Atom" in str(e):
+        if "Invalid XML" in str(e) or "RSS/Atom" in str(e) or "RSS feed" in str(e):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

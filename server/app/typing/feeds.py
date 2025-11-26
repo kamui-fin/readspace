@@ -67,6 +67,8 @@ class FeedSummary(FeedBase):
     Used in: Subscriptions List, Search Results.
     """
 
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     image_url: str | None = None
     language: str | None = None
@@ -81,6 +83,8 @@ class FeedDetail(FeedSummary):
     Heavy feed info.
     Used in: Feed Settings, Inspector.
     """
+
+    model_config = ConfigDict(from_attributes=True)
 
     description: str | None = None
 

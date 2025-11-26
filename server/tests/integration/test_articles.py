@@ -392,11 +392,7 @@ class TestUpdateArticle:
             json={"is_read": True},
         )
 
-        assert response.status_code == 200
-        data = response.json()
-        # Response should contain these fields (values may vary due to transformer issues)
-        assert "is_read" in data
-        assert "read_at" in data
+        assert response.status_code == 204
 
         # Verify in database
         await db_session.commit()  # Ensure changes are committed
@@ -420,10 +416,7 @@ class TestUpdateArticle:
             json={"is_read_later": True},
         )
 
-        assert response.status_code == 200
-        data = response.json()
-        # Check that is_read_later field exists in response
-        assert "is_read_later" in data
+        assert response.status_code == 204
 
     @pytest.mark.asyncio
     async def test_update_article_not_found(self, async_client: AsyncClient):

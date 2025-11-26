@@ -96,7 +96,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)
@@ -158,7 +158,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)
@@ -216,7 +216,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query, {"content_id": content.id})
@@ -262,7 +262,7 @@ class TestOrphanPrevention:
                 SELECT 1 FROM feed_articles fa WHERE fa.content_id = ac.id
             )
             AND NOT EXISTS (
-                SELECT 1 FROM clipped_articles ca WHERE ca.content_id = ac.id
+                SELECT 1 FROM user_entries ue WHERE ue.content_id = ac.id AND ue.feed_article_id IS NULL
             )
         """)
         orphan_result = await db_session.execute(orphan_query)

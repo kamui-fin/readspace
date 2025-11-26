@@ -7,7 +7,7 @@ Matches the 'UserEntry' database model.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 from .common import ArticlePriority
 
@@ -22,6 +22,14 @@ class EntryCreateExternal(BaseModel):
     content: str | None = None  # Optional manual content override
     priority: ArticlePriority = ArticlePriority.MEDIUM
     note: str | None = None
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, v):
+        """Normalize priority to uppercase if it's a string."""
+        if isinstance(v, str):
+            return v.upper()
+        return v
 
 
 class EntryUpdate(BaseModel):

@@ -7,6 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import FeedConnectionError, FeedParsingError, FeedValidationError
+from app.crud.feed.subscription import get_subscription_by_feed_id
 from app.db.session import get_db_factory
 from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
@@ -19,13 +20,13 @@ router = APIRouter()
 
 @router.post(
     "/{feed_id}/refresh",
-    response_model=FeedDetail,
+    status_code=status.HTTP_200_OK,
     summary="Refresh RSS feed",
     description="Manually trigger a refresh of a specific RSS feed to fetch new articles",
     responses={
         200: {
             "description": "Successfully triggered/completed feed refresh",
-            "model": FeedDetail,
+            "content": {"application/json": {"example": {"message": "Feed refresh completed"}}},
         },
         400: {
             "description": "Bad request - feed validation or parsing error",
@@ -72,7 +73,7 @@ async def refresh_feed_route(
     ),
     db_factory=Depends(get_db_factory),
     current_user: TokenData = Depends(get_current_user),
-) -> FeedDetail:
+) -> dict:
     """
     Manually trigger a refresh of a specific RSS feed to fetch new articles.
 
@@ -88,7 +89,7 @@ async def refresh_feed_route(
         current_user: Authenticated user information
 
     Returns:
-        FeedDetail: Updated feed details after refresh completion
+        dict: Success message
 
     Refresh Process:
         1. Validates user access to the feed (unless preview mode)
@@ -113,26 +114,31 @@ async def refresh_feed_route(
         - Refresh is synchronous and may take several seconds for large feeds
     """
     try:
-        refreshed_feed = await refresh_feed(
+        # Check if user has access (unless preview mode)
+        if not preview:
+            from app.crud.feed.subscription import get_subscription_by_feed_id
+            async with db_factory() as db:
+                subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
+                if not subscription:
+                    logger.warning(
+                        "Feed not found for refresh or access denied",
+                        feed_id=feed_id,
+                        user_id=current_user.sub,
+                    )
+                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
+        
+        await refresh_feed(
             session_factory=db_factory,
             feed_id=feed_id,
             force=force_refetch,
         )
 
-        if not refreshed_feed:
-            logger.warning(
-                "Feed not found for refresh or access denied",
-                feed_id=feed_id,
-                user_id=current_user.sub,
-            )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
-
         logger.info(
             "Feed refresh triggered/completed",
-            feed_id=refreshed_feed.id,
+            feed_id=feed_id,
             user_id=current_user.sub,
         )
-        return refreshed_feed
+        return {"message": "Feed refresh completed"}
     except FeedConnectionError as e:
         logger.error(
             "Connection error refreshing feed",
