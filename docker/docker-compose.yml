@@ -124,13 +124,7 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_worker
-    # Increased from 50 to 200 after optimizing DB connection usage
-    # With new I/O-separated pattern, connections are held <500ms vs 30s before
-    # This allows much higher concurrency with same connection pool (100 connections)
-    # Expected throughput: 1000+ feeds/minute = 60K+ feeds/hour per worker
-    command: taskiq worker app.core.taskiq_app:broker --fs-discover --tasks-pattern "app/workers/*.py" --max-async-tasks=100
-    ports:
-      - "9091:9090" # Prometheus metrics endpoint
+    command: taskiq worker app.core.taskiq_app:broker app.workers.registry --max-async-tasks 200
     volumes:
       - ../server:/app
     depends_on:
@@ -162,7 +156,7 @@ services:
       context: ../server
       dockerfile: Dockerfile.taskiq
     container_name: readspace_scheduler
-    command: taskiq scheduler app.core.taskiq_app:scheduler --fs-discover --tasks-pattern "app/workers/*.py"
+    command: taskiq scheduler app.core.taskiq_app:scheduler app.workers.registry 
     volumes:
       - ../server:/app
     depends_on:

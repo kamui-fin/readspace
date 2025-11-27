@@ -35,13 +35,14 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
                     "title": article_in.title,
                     "link": link_str,
                     "content_hash": get_content_hash(link_str),
-                    "description": article_in.content,
+                    "summary": getattr(article_in, "summary", None),
+                    "description": article_in.content,  # Deprecated: kept for backward compatibility
                     "content": article_in.content,
+                    "extracted_text": getattr(article_in, "extracted_text", None),
                     "author": article_in.author,
-                    # published_at is not in ArticleContent
                     "image_url": str(article_in.image_url) if article_in.image_url else None,
+                    "image_source": getattr(article_in, "image_source", None),
                     "estimated_read_time_minutes": getattr(article_in, "estimated_read_time_minutes", None),
-                    # created_at is not in ArticleContent
                 }
             )
             link_to_article[link_str] = article_in
@@ -131,10 +132,13 @@ async def upsert_article_content(
         "title": article_in.title,
         "link": str(article_in.link),
         "content_hash": content_hash,
+        "summary": getattr(article_in, "summary", None),
         "description": article_in.description,
         "content": article_in.content,
+        "extracted_text": getattr(article_in, "extracted_text", None),
         "author": article_in.author,
         "image_url": str(article_in.image_url) if article_in.image_url else None,
+        "image_source": getattr(article_in, "image_source", None),
         "estimated_read_time_minutes": article_in.estimated_read_time_minutes,
     }
 

@@ -36,30 +36,11 @@ async def get_feed_preview(
     # Parse feed content
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], url)
+        logger.info("Feed preview generated", url=url, title=response["title"])
+        return parsed
     except Exception as e:
         logger.error("Feed parse failed", url=url, error=str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to parse feed",
         ) from e
-
-    # Build response
-    response = {
-        "id": f"preview_feed_{hash(url)}",
-        "title": parsed["title"],
-        "description": parsed["description"],
-        "url": url,
-        "link": parsed["link"],
-        "image_url": parsed["image_url"],
-        "tags": [],
-        "language": parsed["language"],
-        "category": None,
-        "popularity_score": 0.0,
-        "relevance": 1.0,
-        "search_metadata": None,
-        "is_preview": True,
-        "preview_url": url,
-    }
-
-    logger.info("Feed preview generated", url=url, title=response["title"])
-    return response

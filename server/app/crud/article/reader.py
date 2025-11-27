@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, undefer
+from sqlalchemy.orm import selectinload
 
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
 from app.models.article import ArticleContent, FeedArticle, UserEntry
@@ -110,9 +110,9 @@ class ArticleTransformer:
         elif subscription and subscription.last_read_cutoff:
             # Article is implicitly read if published before the cutoff
             is_read = feed_article.published_at <= subscription.last_read_cutoff
-        
+
         is_read_later = user_entry.is_read_later if user_entry else False
-        priority = (user_entry.priority.upper() if user_entry and user_entry.priority else "MEDIUM")
+        priority = user_entry.priority.upper() if user_entry and user_entry.priority else "MEDIUM"
         read_at = user_entry.read_at if user_entry else None
         user_note = user_entry.user_note if user_entry else None
 
@@ -185,17 +185,6 @@ class ArticleTransformer:
             except (TypeError, ValueError):
                 # If unpacking fails, treat as single FeedArticle
                 response = self.entry_to_response(article, None, include_content=include_content)
-        return response.model_dump()
-
-    def raw_row_to_response(self, row: Any, include_content: bool = False) -> dict[str, Any]:
-        """Convert raw SQLAlchemy row to response."""
-        if hasattr(row, "_tuple"):
-            # Row from query result
-            feed_article, user_entry = row._tuple()
-            response = self.entry_to_response(feed_article, user_entry, include_content=include_content)
-        else:
-            # Single object
-            response = self.entry_to_response(row, None, include_content=include_content)
         return response.model_dump()
 
 

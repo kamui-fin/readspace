@@ -79,7 +79,7 @@ async def update_article_status(
 
     Returns both the FeedArticle (or ArticleContent for clipped) and UserEntry for API responses.
     Uses atomic UPSERT internally via set_article_state().
-    
+
     Args:
         is_clipped: If True, treat article_id as UserEntry.id for clipped articles
     """
@@ -93,13 +93,13 @@ async def update_article_status(
             .filter(UserEntry.id == article_id, UserEntry.user_id == user_id, UserEntry.feed_article_id.is_(None))
         )
         user_entry = user_entry_result.scalar_one_or_none()
-        
+
         if not user_entry:
             return None
-        
+
         # Extract update data
         update_data = article_in.model_dump(exclude_unset=True)
-        
+
         # Update the user entry directly
         if update_data.get("is_read") is not None:
             user_entry.is_read = update_data["is_read"]
@@ -113,9 +113,9 @@ async def update_article_status(
             user_entry.priority = update_data["priority"]
         if update_data.get("user_note") is not None:
             user_entry.user_note = update_data["user_note"]
-        
+
         await db.flush()
-        
+
         # Return ArticleContent and UserEntry for clipped articles
         return user_entry.content, user_entry
     else:
@@ -157,13 +157,13 @@ async def mark_all_as_read(
     user_id: UUID,
     feed_id: UUID | None = None,
     folder_id: UUID | None = None,
-) -> int:
+):
     """
     Mark all articles as read by updating last_read_cutoff.
 
     Uses a single optimized query with a correlated subquery to avoid N+1 problem.
     Each subscription's cutoff is set to its own feed's most recent article timestamp.
-    
+
     If feed_id is provided, updates only that subscription.
     If folder_id is provided, updates all subscriptions in that folder.
     Otherwise, updates all user's subscriptions.

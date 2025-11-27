@@ -1,4 +1,7 @@
-"""Article schemas."""
+"""
+Article schemas - DEPRECATED, use entries.py instead.
+Kept for backward compatibility during migration.
+"""
 
 from datetime import datetime
 from typing import Any
@@ -6,47 +9,33 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from .common import ArticlePriority
+from app.typing.common import ArticlePriority, response_config
 
-
-class ArticleCreate(BaseModel):
-    """
-    Internal Schema for creating a new article from a feed.
-    Used by the Feed Ingester.
-    """
-
-    title: str | None = None
-    link: str
-    guid: str
-
-    # Content
-    description: str | None = None
-    content: str | None = None
-
-    # Metadata
-    author: str | None = None
-    published_at: datetime
-    image_url: str | None = None
-    estimated_read_time_minutes: int | None = 1
-
-    # Relations
-    feed_id: UUID | None = None  # Optional during parsing phase
-
-    # Extra metadata for processing
-    user_id: UUID | None = None  # Optional, for context
+# ================= Requests =================
 
 
 class ArticleUpdate(BaseModel):
-    """User interaction updates for articles."""
+    """
+    User interaction updates for articles.
+    DEPRECATED: Use EntryUpdate from entries.py instead.
+    """
 
     is_read: bool | None = None
-    is_read_later: bool | None = None
-    priority: ArticlePriority | str | None = None
+    is_saved: bool | None = None
+    priority: ArticlePriority | None = None
     user_note: str | None = None
 
 
+# ================= Responses =================
+
+
 class FeedInfo(BaseModel):
-    """Feed information in article response."""
+    """
+    Feed information embedded in article response.
+    Lightweight version of FeedSummary.
+    """
+
+    model_config = response_config
 
     id: UUID
     title: str
@@ -56,7 +45,12 @@ class FeedInfo(BaseModel):
 
 
 class ArticleResponse(BaseModel):
-    """Article response schema for API."""
+    """
+    Article response schema for API.
+    DEPRECATED: Migrate to EntryDetail from entries.py for new code.
+    """
+
+    model_config = response_config
 
     id: UUID
     title: str | None = None
@@ -78,7 +72,7 @@ class ArticleResponse(BaseModel):
 
     created_at: datetime
     feed: FeedInfo | dict[str, Any] | None = None
-    
+
     # Auto-extracted content fields
     extracted_content: str | None = None
     extracted_read_time: int | None = None

@@ -1,21 +1,42 @@
+"""User/Profile schemas - pure Pydantic, separate from DB models."""
+
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, EmailStr
+
+from app.typing.common import UserRole, response_config
+
+# ================= Requests =================
 
 
-class ProfileBase(BaseModel):
-    email: EmailStr
+class ProfileUpdate(BaseModel):
+    """Update profile - all fields optional for PATCH."""
+
+    email: EmailStr | None = None
 
 
-class ProfileResponse(ProfileBase):
+# ================= Responses =================
+
+
+class ProfileResponse(BaseModel):
+    """Public profile response."""
+
+    model_config = response_config
+
     id: UUID
-    role: str
+    email: str
+    role: UserRole
     created_at: datetime
     updated_at: datetime
 
 
+# ================= Auth =================
+
+
 class TokenData(BaseModel):
-    sub: str
+    """JWT token payload data."""
+
+    sub: str  # User ID
     email: str | None = None
     role: str | None = None

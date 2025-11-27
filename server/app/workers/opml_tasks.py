@@ -1,12 +1,4 @@
-"""OPML import Taskiq tasks.
-
-This module defines Taskiq task wrappers that handle:
-- Database session management via get_worker_db()
-- Task scheduling and retry configuration
-- Cooperative cancellation checking
-
-The actual business logic is in app.workers.opml package.
-"""
+"""OPML import Taskiq tasks."""
 
 from typing import Annotated, Any
 
@@ -38,37 +30,20 @@ async def import_single_feed_task(
     update_existing: bool = False,
     parent_task_id: str | None = None,
 ) -> dict[str, Any]:
-    """Import a single feed - Taskiq task wrapper."""
+    """Import a single feed (Task Wrapper)."""
+    user_uuid = ensure_uuid(user_id)
 
-    user_id_uuid = ensure_uuid(user_id)
-
-    # Check for cancellation before starting
+    # Check Cancellation
     if parent_task_id:
         tracker = OpmlImportTracker(parent_task_id)
-        is_cancelled = await tracker.is_cancelled()
-        if is_cancelled:
-            logger.info(
-                "Feed import cancelled",
-                feed_url=feed_url,
-                parent_task_id=parent_task_id,
-                user_id=str(user_id_uuid),
-            )
-
-            # Update progress to reflect cancellation
-            await tracker.cancel()
-
-            return {
-                "success": False,
-                "url": feed_url,
-                "title": feed_title or "Unknown",
-                "status": "cancelled",
-                "error": "Import was cancelled by user",
-            }
+        if await tracker.is_cancelled():
+            logger.info("Task cancelled", parent_task_id=parent_task_id, url=feed_url)
+            await tracker.cancel()  # Re-confirm cancel state
+            return {"success": False, "status": "cancelled"}
 
     try:
-        # Service function manages its own sessions internally
         return await import_single_feed(
-            user_id=user_id_uuid,
+            user_id=user_uuid,
             feed_url=feed_url,
             folder_id=folder_id,
             tag_names=tag_names,
@@ -77,35 +52,22 @@ async def import_single_feed_task(
             parent_task_id=parent_task_id,
         )
     except Exception as exc:
-        logger.error(
-            "Unhandled exception in feed import task wrapper",
-            feed_url=feed_url,
-            error=str(exc),
-            user_id=str(user_id_uuid),
-            exc_info=True,
-        )
+        logger.error("Feed task failed", error=str(exc), url=feed_url, exc_info=True)
 
-        # CRITICAL: Update progress even on catastrophic failure
+        # Ensure progress is updated even on crash
         if parent_task_id:
-            tracker = OpmlImportTracker(parent_task_id)
-            await tracker.mark_failure(
+            await OpmlImportTracker(parent_task_id).mark_failure(
                 FeedImportError(
                     url=feed_url,
                     title=feed_title or "Unknown",
-                    error=f"Task wrapper exception: {str(exc)}",
+                    error=f"Task Exception: {str(exc)}",
                     status="task_exception",
                 )
             )
-
-        # Re-raise to let Taskiq handle retry logic
         raise
 
 
-@broker.task(
-    task_name="opml_tasks.import_opml",
-    retry_on_error=False,
-    max_retries=0,
-)
+@broker.task(task_name="opml_tasks.import_opml", retry_on_error=False)
 async def import_opml_task(
     user_id: str,
     opml_content: str,
@@ -113,16 +75,11 @@ async def import_opml_task(
     filename: str | None = None,
     context: Annotated[Context, TaskiqDepends()] | None = None,
 ) -> dict[str, Any]:
-    """Import OPML file by dispatching individual feed tasks."""
-    user_id_uuid = ensure_uuid(user_id)
-
-    # Get task_id from context for cooperative cancellation
-    task_id = None
-    if context and hasattr(context, "message"):
-        task_id = context.message.task_id
+    """Import OPML file (Orchestrator Wrapper)."""
+    task_id = context.message.task_id if context and hasattr(context, "message") else None
 
     return await import_opml(
-        user_id=user_id_uuid,
+        user_id=ensure_uuid(user_id),
         opml_content=opml_content,
         default_folder_name=default_folder_name,
         task_id=task_id,

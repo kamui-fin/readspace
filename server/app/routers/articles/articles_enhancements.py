@@ -1,11 +1,13 @@
 """Article enhancement endpoints for AI-powered features."""
 
+from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Body, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import NotFoundError, ValidationError
 from app.db.session import get_db
 from app.services.ai.service import generate_summary, translate_content
 from app.services.articles.scrape import extract_full_content
@@ -24,197 +26,106 @@ logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
-@router.post("/{article_id}/extract-full-text", response_model=ExtractionResponse)
+# --- Helpers ---
+async def get_article_or_404(db: AsyncSession, article_id: UUID, user_id: UUID) -> Any:
+    """Retrieves article details or raises NotFoundError."""
+    article = await get_article_details(db=db, article_id=article_id, user_id=user_id, allow_preview=False)
+    if not article:
+        raise NotFoundError(message="Article not found")
+    return article
+
+
+def resolve_content(request_content: str | None, article: Any) -> str:
+    """
+    Resolves content source priority: Request Body > Article Content > Description.
+    Raises ValidationError if no content is found.
+    """
+    content = request_content or article.content or article.description
+    if not content:
+        raise ValidationError(message="No content available to process")
+    return content
+
+
+# --- Routes ---
+@router.post(
+    "/{article_id}/extract-full-text", response_model=ExtractionResponse, summary="Extract full text from source URL"
+)
 async def extract_full_text(
     article_id: UUID,
-    user: TokenData = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    user: Annotated[TokenData, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> ExtractionResponse:
     """
-    Extract full text content from the article's original URL using trafilatura.
-
-    This endpoint fetches the complete article content from the source URL,
-    which is useful when the RSS feed only provides a summary or excerpt.
-    This is the manual extraction endpoint - automatic extraction happens
-    during article fetch if content is detected as incomplete.
-
-    Args:
-        article_id: UUID of the article to extract content for
-        user: Authenticated user token data
-        db: Database session dependency
-
-    Returns:
-        ExtractionResponse: Extracted content and read time estimate
-
-    Raises:
-        HTTPException:
-            - 404: Article not found
-            - 400: Article has no source URL
+    Manually trigger full-text extraction for an article.
     """
-    logger.info(
-        "Extracting full text for article",
-        article_id=str(article_id),
-        user_id=user.sub,
-    )
+    logger.bind(article_id=str(article_id), user_id=user.sub)
 
-    # Get the article to verify ownership and get URL
-    article = await get_article_details(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
-
-    if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+    # 1. Verify Article
+    article = await get_article_or_404(db, article_id, UUID(user.sub))
 
     if not article.link:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Article has no source URL available",
-        )
+        raise ValidationError(message="Article has no source URL available")
 
-    # Extract content using the scrape service
+    # 2. Extract (Service handles errors/exceptions)
     content, read_time, error = await extract_full_content(str(article.link), article.title)
 
-    if content and not error:
-        return ExtractionResponse(content=content, estimated_read_time_minutes=read_time)
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=error or "Failed to extract content",
-        )
+    if error:
+        # Mapping extraction specific logic error to HTTP 400
+        raise ValidationError(message=error)
+
+    return ExtractionResponse(content=content, estimated_read_time_minutes=read_time)
 
 
-@router.post("/{article_id}/summarize", response_model=SummarizeResponse)
+@router.post("/{article_id}/summarize", response_model=SummarizeResponse, summary="Generate AI summary")
 async def summarize_article(
     article_id: UUID,
-    request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
-    user: TokenData = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    user: Annotated[TokenData, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    request: SummarizeRequest = Body(default_factory=SummarizeRequest),
 ) -> SummarizeResponse:
     """
-    Generate an AI summary of the article content.
-
-    This endpoint creates a concise, high-quality summary that captures
-    the main points and key insights of the article.
-
-    Args:
-        article_id: UUID of the article to summarize
-        request: Optional content override
-        user: Authenticated user token data
-        db: Database session dependency
-
-    Returns:
-        SummarizeResponse: Generated summary
-
-    Raises:
-        HTTPException:
-            - 404: Article not found
-            - 400: No content available to summarize
+    Generate an AI summary of the article.
     """
-    logger.info(
-        "Generating summary for article",
-        article_id=str(article_id),
-        user_id=user.sub,
-    )
+    logger.bind(article_id=str(article_id), user_id=user.sub)
 
-    # Get the article to verify ownership and get content
-    article = await get_article_details(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
+    # 1. Fetch & Resolve Content
+    article = await get_article_or_404(db, article_id, UUID(user.sub))
+    content_to_use = resolve_content(request.content, article)
 
-    if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
+    # 2. Generate Summary
+    summary = await generate_summary(title=article.title or "", content=content_to_use)
 
-    # Use provided content if available, otherwise fall back to article content
-    content_to_summarize = request.content or article.content or article.description
-    if not content_to_summarize:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No content available to summarize",
-        )
-
-    # Generate summary using AI service
-    summary = await generate_summary(title=article.title or "", content=content_to_summarize)
-
-    if not summary:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service unavailable or failed to generate summary",
-        )
-
-    logger.info(
-        "Successfully generated summary",
-        article_id=str(article_id),
-        summary_length=len(summary),
-    )
-
+    logger.info("Successfully generated summary", summary_length=len(summary))
     return SummarizeResponse(summary=summary)
 
 
-@router.post("/{article_id}/translate", response_model=TranslateResponse)
+@router.post("/{article_id}/translate", response_model=TranslateResponse, summary="Translate article content")
 async def translate_article(
     article_id: UUID,
-    request: TranslateRequest = Body(...),
-    user: TokenData = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+    request: Annotated[TranslateRequest, Body(...)],
+    user: Annotated[TokenData, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
 ) -> TranslateResponse:
     """
     Translate the article content to a target language.
-
-    This endpoint translates the article content while preserving
-    formatting and maintaining the original meaning and tone.
-
-    Args:
-        article_id: UUID of the article to translate
-        request: Translation request with target language and optional content override
-        user: Authenticated user token data
-        db: Database session dependency
-
-    Returns:
-        TranslateResponse: Translated content and target language
-
-    Raises:
-        HTTPException:
-            - 404: Article not found
-            - 400: No content available to translate
-            - 503: AI service unavailable
     """
-    logger.info(
-        "Translating article",
-        article_id=str(article_id),
-        target_language=request.target_language,
-        user_id=user.sub,
+    logger.bind(article_id=str(article_id), user_id=user.sub, target_lang=str(request.target_language))
+
+    # 1. Fetch & Resolve Content
+    article = await get_article_or_404(db, article_id, UUID(user.sub))
+    content_to_use = resolve_content(request.content, article)
+
+    # 2. Translate
+    target_lang_str = (
+        request.target_language.value if hasattr(request.target_language, "value") else str(request.target_language)
     )
 
-    # Get the article to verify ownership and get content
-    article = await get_article_details(db=db, article_id=article_id, user_id=UUID(user.sub), allow_preview=False)
-
-    if not article:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Article not found")
-
-    # Use provided content if available, otherwise fall back to article content
-    content_to_translate = request.content or article.content or article.description
-    if not content_to_translate:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No content available to translate",
-        )
-
-    # Generate translation using AI service
     translated_content = await translate_content(
-        content=content_to_translate,
-        target_lang_code=request.target_language.value
-        if hasattr(request.target_language, "value")
-        else str(request.target_language),
+        content=content_to_use,
+        target_lang_code=target_lang_str,
     )
 
-    if not translated_content:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="AI service unavailable or failed to generate translation",
-        )
-
-    logger.info(
-        "Successfully translated article",
-        article_id=str(article_id),
-        target_language=request.target_language,
-    )
-
+    logger.info("Successfully translated article")
     return TranslateResponse(
         translated_content=translated_content,
         target_language=request.target_language,

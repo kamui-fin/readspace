@@ -1,13 +1,17 @@
-"""Global Feed definitions (User-agnostic)."""
+"""Feed schemas - DRY approach using SQLModel as base."""
 
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
+
+from app.typing.common import FeedCategory, response_config
+
+# ================= Base (Field Bundles) =================
 
 
 class FeedBase(BaseModel):
-    """Shared properties for creation and reading."""
+    """Core feed fields - reused across schemas."""
 
     url: str
     title: str = Field(..., max_length=500)
@@ -19,12 +23,14 @@ class FeedBase(BaseModel):
         return v or None
 
 
+# ================= Requests =================
+
+
 class FeedCreate(BaseModel):
     """Input for discovering/adding a feed."""
 
-    url: HttpUrl  # Strict validation on input
+    url: HttpUrl  # TODO: HttpUrl, but allow rsshub://
     folder_id: UUID | str = "default"
-    auto_subscribe: bool = True
 
 
 class FeedUpdateInternal(BaseModel):
@@ -34,9 +40,8 @@ class FeedUpdateInternal(BaseModel):
     description: str | None = None
     language: str | None = None
     image_url: str | None = None
-    ttl: int | None = None
 
-    # Scheduling optimization
+    # HTTP caching headers for conditional GET
     etag_header: str | None = None
     last_modified_header: str | None = None
     adaptive_fetch_interval_minutes: int | None = None
@@ -51,23 +56,20 @@ class AdminFeedUpdate(BaseModel):
     language: str | None = None
     image_url: str | None = None
     url: HttpUrl | None = None
-    ttl: int | None = None
-    skip_hours: list[int] | None = None
-    skip_days: list[str] | None = None
-    top_level_category: str | None = None
+    top_level_category: FeedCategory | None = None
     popularity_score: float | None = None
 
 
-# ================= Output Schemas =================
+# ================= Responses =================
 
 
 class FeedSummary(FeedBase):
     """
     Lightweight feed info.
-    Used in: Subscriptions List, Search Results.
+    Used in: Subscriptions List, Search Results, embedded in articles.
     """
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = response_config
 
     id: UUID
     image_url: str | None = None
@@ -80,18 +82,16 @@ class FeedSummary(FeedBase):
 
 class FeedDetail(FeedSummary):
     """
-    Heavy feed info.
+    Heavy feed info - extends summary with full metadata.
     Used in: Feed Settings, Inspector.
     """
-
-    model_config = ConfigDict(from_attributes=True)
 
     description: str | None = None
 
     # Advanced Metadata
     popularity_score: float = 0.0
     subscriber_count: int = 0
-    top_level_category: str | None = None
+    top_level_category: FeedCategory | None = None
 
     # Subscription status (for preview mode)
     is_subscribed: bool = False

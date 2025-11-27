@@ -19,7 +19,7 @@ from app.core.custom_exceptions import (
     NotFoundError,
 )
 from app.crud.article.ingester import create_articles_batch
-from app.crud.feed.core import create_feed, get_feed_by_id, get_feed_by_url, update_feed
+from app.crud.feed.core import calculate_next_fetch, create_feed, get_feed_by_id, get_feed_by_url, update_feed
 from app.crud.feed.subscription import (
     create_subscription,
     delete_subscription,
@@ -33,6 +33,7 @@ from app.typing.articles import ArticleCreate
 from app.typing.feeds import FeedBase
 from app.typing.subscriptions import SubscriptionCreate
 from app.utils.common import normalize_feed_url, resolve_feed_url
+from app.utils.http_cache import parse_ttl_from_headers
 from app.utils.text import calculate_feed_content_hash
 
 logger = structlog.get_logger(__name__)
@@ -74,10 +75,19 @@ async def add_feed(
     except Exception as e:
         raise FeedParsingError(f"Failed to parse feed: {e}") from e
 
+    # Handle permanent redirects - update the URL directly
+    final_url = fetch_result.get("final_url")
+    if fetch_result.get("permanent_redirect") and final_url and final_url != resolved_url:
+        logger.info("Permanent redirect detected", old_url=resolved_url, new_url=final_url)
+        normalized_url = normalize_feed_url(final_url)
+
     async with session_factory() as db:
         existing_feed = await get_feed_by_url(db, url=normalized_url)
         if existing_feed:
             return await _subscribe_to_existing_feed(db, user_id, existing_feed, folder_id, custom_title)
+
+        # Parse TTL from HTTP headers (Cache-Control or Expires)
+        ttl_from_headers = parse_ttl_from_headers(fetch_result["headers"])
 
         feed_data = {
             "url": normalized_url,
@@ -85,12 +95,14 @@ async def add_feed(
             "description": parsed["description"],
             "link": parsed["link"],
             "language": parsed["language"],
-            "image_url": parsed["image_url"],
-            "ttl": parsed["ttl"],
+            "image_url": parsed.get("image_url"),
+            "authors": parsed.get("author_name"),
             "last_fetched_at": datetime.now(timezone.utc),
+            "last_updated_at": parsed.get("last_updated_at"),
             "last_modified_header": fetch_result["headers"].get("Last-Modified"),
             "etag_header": fetch_result["headers"].get("ETag"),
             "content_hash": calculate_feed_content_hash(parsed["articles"]),
+            "ttl": ttl_from_headers,
         }
 
         feed_in = FeedBase(**feed_data)
@@ -125,7 +137,23 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
         async with session_factory() as db:
             feed = await get_feed_by_id(db, feed_id=feed_id)
             if feed:
-                await update_feed(db, feed=feed, update_data={"last_fetched_at": datetime.now(timezone.utc)})
+                # Update TTL even on 304 responses
+                ttl_from_headers = parse_ttl_from_headers(fetch_result["headers"])
+
+                update_data = {
+                    "last_fetched_at": datetime.now(timezone.utc),
+                }
+
+                if ttl_from_headers:
+                    update_data["ttl"] = ttl_from_headers
+
+                await update_feed(db, feed=feed, update_data=update_data)
+
+                # Recalculate next_fetch with updated TTL
+                feed = await get_feed_by_id(db, feed_id=feed_id)
+                if feed:
+                    next_fetch = calculate_next_fetch(feed)
+                    await update_feed(db, feed=feed, update_data={"next_fetch_at": next_fetch})
         return
 
     if fetch_result["error"]:
@@ -134,15 +162,39 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
             feed = await get_feed_by_id(db, feed_id=feed_id)
             if feed:
                 count = feed.fetch_error_count + 1
+                from app.crud.feed.core import calculate_next_fetch
+
+                # Update error count first so calculate_next_fetch can use it
                 await update_feed(
                     db, feed=feed, update_data={"fetch_error_count": count, "last_error_message": fetch_result["error"]}
                 )
+                # Refetch and calculate backoff
+                feed = await get_feed_by_id(db, feed_id=feed_id)
+                if feed:
+                    next_fetch = calculate_next_fetch(feed)
+                    await update_feed(db, feed=feed, update_data={"next_fetch_at": next_fetch})
         return
 
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], url)
     except Exception as e:
         logger.error("Feed parse failed", feed_id=feed_id, error=str(e))
+        # Treat parse errors like fetch errors - apply backoff
+        async with session_factory() as db:
+            feed = await get_feed_by_id(db, feed_id=feed_id)
+            if feed:
+                count = feed.fetch_error_count + 1
+                from app.crud.feed.core import calculate_next_fetch
+
+                await update_feed(
+                    db,
+                    feed=feed,
+                    update_data={"fetch_error_count": count, "last_error_message": f"Parse error: {str(e)}"},
+                )
+                feed = await get_feed_by_id(db, feed_id=feed_id)
+                if feed:
+                    next_fetch = calculate_next_fetch(feed)
+                    await update_feed(db, feed=feed, update_data={"next_fetch_at": next_fetch})
         return
 
     new_hash = calculate_feed_content_hash(parsed["articles"])
@@ -151,25 +203,54 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
         async with session_factory() as db:
             feed = await get_feed_by_id(db, feed_id=feed_id)
             if feed:
-                await update_feed(db, feed=feed, update_data={"last_fetched_at": datetime.now(timezone.utc)})
+                from app.crud.feed.core import calculate_next_fetch
+
+                next_fetch = calculate_next_fetch(feed)
+                await update_feed(
+                    db,
+                    feed=feed,
+                    update_data={"last_fetched_at": datetime.now(timezone.utc), "next_fetch_at": next_fetch},
+                )
         return
+
+    # Handle permanent redirects - update the URL directly
+    final_url = fetch_result.get("final_url")
+    if fetch_result.get("permanent_redirect") and final_url:
+        from app.utils.common import normalize_feed_url
+
+        new_normalized_url = normalize_feed_url(final_url)
+        logger.info(
+            "Permanent redirect detected during refresh", feed_id=feed_id, old_url=url, new_url=new_normalized_url
+        )
 
     async with session_factory() as db:
         feed = await get_feed_by_id(db, feed_id=feed_id)
         if not feed:
             return
 
+        # Parse TTL from HTTP headers
+        from app.utils.http_cache import parse_ttl_from_headers
+
+        ttl_from_headers = parse_ttl_from_headers(fetch_result["headers"])
+
         update_data = {
             "title": parsed["title"],
             "description": parsed["description"],
-            "image_url": parsed["image_url"],
+            "image_url": parsed.get("image_url"),
+            "author": parsed.get("author_name"),
             "last_fetched_at": datetime.now(timezone.utc),
+            "last_updated_at": parsed.get("last_updated_at"),
             "last_modified_header": fetch_result["headers"].get("Last-Modified"),
             "etag_header": fetch_result["headers"].get("ETag"),
             "content_hash": new_hash,
             "fetch_error_count": 0,
             "last_error_message": None,
+            "ttl": ttl_from_headers,
         }
+
+        # Update URL if permanent redirect occurred
+        if fetch_result.get("permanent_redirect") and final_url:
+            update_data["url"] = normalize_feed_url(final_url)
 
         if parsed["articles"]:
             await _save_articles(db, feed, parsed["articles"])
@@ -179,12 +260,20 @@ async def refresh_feed(session_factory: SessionFactory, feed_id: UUID, force: bo
 
         await update_feed(db, feed=feed, update_data=update_data)
 
-        # Refetch to calculate optimal interval
+        # Refetch to calculate optimal interval and next fetch time
         feed = await get_feed_by_id(db, feed_id=feed_id)
         if feed:
             interval = await scheduling.calculate_optimal_interval(db, feed)
             if interval != feed.adaptive_fetch_interval_minutes:
                 await update_feed(db, feed=feed, update_data={"adaptive_fetch_interval_minutes": interval})
+
+            # CRITICAL: Calculate and set next_fetch_at
+            from app.crud.feed.core import calculate_next_fetch
+
+            feed = await get_feed_by_id(db, feed_id=feed_id)  # Refetch with updated interval
+            if feed:
+                next_fetch = calculate_next_fetch(feed)
+                await update_feed(db, feed=feed, update_data={"next_fetch_at": next_fetch})
 
 
 async def get_user_feeds(

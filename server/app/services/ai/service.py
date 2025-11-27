@@ -119,16 +119,3 @@ def _make_cache_key(prefix: str, data: str) -> str:
 def _strip_html(html: str) -> str:
     text = re.sub(r"<[^>]+>", " ", html)
     return re.sub(r"\s+", " ", text).strip()
-
-
-def _get_lang_name(code: str) -> str:
-    params = {
-        "es": "Spanish",
-        "fr": "French",
-        "de": "German",
-        "zh": "Chinese",
-        "jp": "Japanese",
-        "ru": "Russian",
-        "pt": "Portuguese",
-    }
-    return params.get(code.lower(), code)

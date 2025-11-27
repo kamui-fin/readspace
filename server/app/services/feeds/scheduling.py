@@ -71,10 +71,6 @@ async def calculate_optimal_interval(db: AsyncSession, feed: Feed) -> int:
         # This ensures we catch new content without too much waste
         interval = int(avg_gap * 0.33)
 
-    # Respect TTL hint if provided by feed publisher
-    if feed.ttl:
-        interval = max(interval, feed.ttl)
-
     # Enforce system-wide bounds
     interval = max(MIN_REFRESH_INTERVAL_MINUTES, min(interval, MAX_REFRESH_INTERVAL_MINUTES))
 
@@ -84,7 +80,6 @@ async def calculate_optimal_interval(db: AsyncSession, feed: Feed) -> int:
         posts_per_hour=round(posts_per_hour, 3),
         avg_gap_minutes=int(avg_gap),
         calculated_interval=interval,
-        ttl_hint=feed.ttl,
     )
 
     return interval

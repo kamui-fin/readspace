@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, UploadFile, status
+"""OPML import routes - upload and status checking."""
+
+from typing import Annotated
+
+import structlog
+from fastapi import APIRouter, Depends, File, Form, Path, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import MAX_OPML_FILE_SIZE_MB, SUPPORTED_OPML_EXTENSIONS
@@ -10,106 +15,87 @@ from app.services.user.auth import get_current_user
 from app.typing.opml import OpmlImportResponse, OpmlImportStatusResponse
 from app.typing.user import TokenData
 
+logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+# --- Helpers ---
+async def validate_and_read_opml(file: UploadFile) -> str:
+    """
+    Validates file extension, size, and encoding. Returns decoded content string.
+    Raises ValidationError on failure.
+    """
+    # 1. Check Extension
+    if not file.filename or not file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
+        raise ValidationError(message="Invalid file type. Please upload a .opml or .xml file.")
+
+    # 2. Check Size
+    if file.size:
+        file_size_mb = file.size / (1024 * 1024)
+        if file_size_mb > MAX_OPML_FILE_SIZE_MB:
+            raise ValidationError(message=f"File too large. Maximum size is {MAX_OPML_FILE_SIZE_MB}MB.")
+
+    # 3. Read Content
+    content_bytes = await file.read()
+
+    # 4. Decode
+    try:
+        return content_bytes.decode("utf-8")
+    except UnicodeDecodeError as e:
+        raise ValidationError(message="File encoding error. Please ensure the OPML file is UTF-8 encoded.") from e
+    finally:
+        await file.close()
+
+
+# --- Routes ---
 @router.post(
     "/import/",
     response_model=OpmlImportResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Import RSS feeds from OPML file",
-    description=(
-        "Upload an OPML file to import RSS feeds into the user's library. "
-        "The import process runs asynchronously in the background."
-    ),
+    description="Upload an OPML file to asynchronously import RSS feeds.",
 )
 async def import_opml_file(
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
-    opml_file: UploadFile = File(
-        ...,
-        description="OPML file to import (.opml or .xml extension, max 50MB)",
-    ),
-    default_folder_name: str | None = Form(
-        "Imported Feeds",
-        description="Default folder name for feeds without a specified folder in the OPML",
-        min_length=1,
-        max_length=100,
-    ),
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
+    opml_file: Annotated[UploadFile, File(description="OPML/XML file (max 50MB)")],
+    default_folder_name: Annotated[str | None, Form(min_length=1, max_length=100)] = "Imported Feeds",
 ) -> OpmlImportResponse:
     """
-    Import RSS feeds from an OPML file asynchronously.
+    Initiates asynchronous OPML import.
     """
-    if not opml_file.filename or not opml_file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid file type. Please upload a .opml or .xml file.",
-        )
+    logger.bind(user_id=current_user.sub, filename=opml_file.filename)
 
-    content_bytes = await opml_file.read()
+    # 1. Validate & Read
+    content_str = await validate_and_read_opml(opml_file)
 
-    # Check file size
-    file_size_mb = len(content_bytes) / (1024 * 1024)
-    if file_size_mb > MAX_OPML_FILE_SIZE_MB:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail=f"File too large. Maximum size is {MAX_OPML_FILE_SIZE_MB}MB.",
-        )
+    # 2. Start Import Task
+    # Service raises ValidationError if XML parsing fails
+    response = await handle_opml_upload(
+        db,
+        current_user.sub,
+        content_str,
+        opml_file.filename or "unknown.opml",
+        default_folder_name or "Imported Feeds",
+    )
 
-    # Decode
-    try:
-        content_str = content_bytes.decode("utf-8")
-    except UnicodeDecodeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                "File encoding error. Please ensure the OPML file is saved with UTF-8 encoding, "
-                "or try exporting it again from your RSS reader."
-            ),
-        ) from e
-
-    try:
-        return await handle_opml_upload(
-            db,
-            current_user.sub,
-            content_str,
-            opml_file.filename or "unknown.opml",
-            default_folder_name or "Imported Feeds",
-        )
-    except HTTPException:
-        raise
-    except ValidationError as e:
-        # Handle validation errors from parsing
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-    except ValueError as e:
-        # Handle other validation errors
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-    except Exception as e:
-        # Handle generic errors that might bubble up from parsing
-        if "Invalid XML" in str(e) or "RSS/Atom" in str(e) or "RSS feed" in str(e):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your OPML file.",
-        ) from e
-    finally:
-        await opml_file.close()
+    logger.info("OPML import started successfully", task_id=response.task_id)
+    return response
 
 
 @router.get(
     "/import/status/{task_id}",
     response_model=OpmlImportStatusResponse,
     summary="Get OPML import task status",
-    description="Retrieve the current status and progress of an OPML import task.",
 )
 async def get_import_status(
-    task_id: str = Path(
-        ...,
-        description="Taskiq task ID returned from the import endpoint",
-    ),
-    current_user: TokenData = Depends(get_current_user),
+    task_id: Annotated[str, Path(description="Taskiq task ID")],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> OpmlImportStatusResponse:
     """
-    Get the current status and progress of an OPML import task.
+    Retrieve the current status and progress of an OPML import task.
     """
+    logger.bind(user_id=current_user.sub, task_id=task_id)
+
+    # Service handles logic, returns Pydantic model
     return await get_task_status(task_id, current_user.sub)

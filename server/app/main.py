@@ -49,6 +49,7 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
 )
 
+
 # --- Middleware Registration ---
 # Order matters: Inner runs first on request, Outer runs first on response
 # We want Compression LAST on response
@@ -76,6 +77,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error("Validation error", path=request.url.path, errors=exc.errors())
     return ORJSONResponse(status_code=422, content={"detail": exc.errors()})
 
+
+app.add_exception_handler(ReadspaceException, readspace_exception_handler)
 
 # --- Router ---
 app.include_router(api_router, prefix="/api")

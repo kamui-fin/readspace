@@ -6,72 +6,92 @@ Interacts with Redis for state management.
 """
 
 from datetime import datetime, timezone
+from typing import List
 
 import structlog
 from fastapi import HTTPException, status
+from redis.asyncio import Redis
 
 from app.core.constants import OPML_IMPORT_TASK_TTL_SECONDS
-from app.core.redis_cache import delete, get, set
+from app.core.redis_cache import get_pool
 from app.typing.common import ImportStatus
-from app.typing.opml import OpmlImportCancelResponse, OpmlImportStatusResponse, OpmlTaskMetadata
+from app.typing.opml import (
+    OpmlImportCancelResponse,
+    OpmlImportStatusResponse,
+    OpmlTaskMetadata,
+)
 from app.workers.opml.progress import OpmlImportTracker
 
 logger = structlog.get_logger(__name__)
 
 
-async def store_task_ownership(task_id: str, user_id: str) -> None:
+class TaskRepository:
     """
-    Store minimal ownership info for authorization.
+    Abstracts Redis keys and storage for User <-> Task relationships.
+    Uses Redis Sets (SADD/SREM) for atomic updates.
     """
-    # Store ownership for quick auth checks
-    owner_key = f"opml_task_owner:{task_id}"
-    await set(owner_key, user_id, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
 
-    # Add to user's task list for listing endpoint
-    user_tasks_key = f"opml_import_tasks:user:{user_id}"
-    existing_tasks = await get(user_tasks_key) or []
-    if task_id not in existing_tasks:
-        existing_tasks.append(task_id)
-        await set(user_tasks_key, existing_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
+    def __init__(self):
+        self.pool = get_pool()
+        self.ttl = OPML_IMPORT_TASK_TTL_SECONDS
+
+    def _owner_key(self, task_id: str) -> str:
+        return f"opml_task_owner:{task_id}"
+
+    def _user_list_key(self, user_id: str) -> str:
+        return f"opml_import_tasks:user:{user_id}"
+
+    async def assign_ownership(self, task_id: str, user_id: str) -> None:
+        async with Redis(connection_pool=self.pool) as r:
+            async with r.pipeline() as pipe:
+                # 1. Set direct ownership key
+                pipe.setex(self._owner_key(task_id), self.ttl, user_id)
+                # 2. Add to user's set of tasks (Atomic SADD)
+                pipe.sadd(self._user_list_key(user_id), task_id)
+                pipe.expire(self._user_list_key(user_id), self.ttl)
+                await pipe.execute()
+
+    async def get_owner(self, task_id: str) -> str | None:
+        async with Redis(connection_pool=self.pool) as r:
+            owner = await r.get(self._owner_key(task_id))
+            return owner.decode() if owner else None
+
+    async def remove_ownership(self, task_id: str, user_id: str) -> None:
+        async with Redis(connection_pool=self.pool) as r:
+            async with r.pipeline() as pipe:
+                pipe.delete(self._owner_key(task_id))
+                pipe.srem(self._user_list_key(user_id), task_id)
+                await pipe.execute()
+
+    async def get_user_task_ids(self, user_id: str) -> set[str]:
+        async with Redis(connection_pool=self.pool) as r:
+            members = await r.smembers(self._user_list_key(user_id))
+            return {m.decode() for m in members}
+
+
+# --- Service Functions ---
+
+repo = TaskRepository()
+
+
+async def store_task_ownership(task_id: str, user_id: str) -> None:
+    await repo.assign_ownership(task_id, user_id)
 
 
 async def get_task_owner(task_id: str) -> str | None:
-    """
-    Get task owner for authorization.
-    """
-    owner_key = f"opml_task_owner:{task_id}"
-    return await get(owner_key)
+    return await repo.get_owner(task_id)
 
 
-async def cleanup_task_ownership(task_id: str, user_id: str) -> None:
-    """
-    Clean up task ownership data.
-    """
-    # Remove ownership
-    owner_key = f"opml_task_owner:{task_id}"
-    await delete(owner_key)
-
-    # Remove from user's list
-    user_tasks_key = f"opml_import_tasks:user:{user_id}"
-    existing_tasks = await get(user_tasks_key) or []
-    if task_id in existing_tasks:
-        existing_tasks.remove(task_id)
-        if existing_tasks:
-            await set(user_tasks_key, existing_tasks, ttl_seconds=OPML_IMPORT_TASK_TTL_SECONDS)
-        else:
-            await delete(user_tasks_key)
-
-
-async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
+async def list_user_tasks(user_id: str) -> List[OpmlTaskMetadata]:
     """
     List all active OPML import tasks for the user.
-    Clean up completed/stale tasks.
+    Lazily cleans up tasks that have expired from Redis.
     """
-    user_tasks_key = f"opml_import_tasks:user:{user_id}"
-    task_ids = await get(user_tasks_key) or []
-
+    task_ids = await repo.get_user_task_ids(user_id)
     active_tasks = []
-    tasks_to_remove = []
+    
+    # We collect IDs that are totally missing from Redis to clean up the User Set
+    expired_ids = []
 
     for task_id in task_ids:
         try:
@@ -79,43 +99,46 @@ async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
             state = await tracker.get_state()
 
             if not state:
-                # No progress state yet, task is still pending or lost
-                # Create a pending metadata object
-                active_tasks.append(
-                    OpmlTaskMetadata(
-                        user_id=user_id,
-                        task_id=task_id,
-                        estimated_feeds=0,
-                        filename="unknown.opml",
-                        created_at=datetime.now(timezone.utc).isoformat(),
-                        status=ImportStatus.PENDING,
+                # If state is None, the data TTL expired, or it never started.
+                # Check if we still have ownership data (it might be just queued)
+                if await repo.get_owner(task_id):
+                     active_tasks.append(
+                        OpmlTaskMetadata(
+                            user_id=user_id,
+                            task_id=task_id,
+                            estimated_feeds=0,
+                            filename="processing...",
+                            created_at=datetime.now(timezone.utc).isoformat(),
+                            status=ImportStatus.PENDING,
+                        )
                     )
-                )
+                else:
+                    # Truly gone. Mark for cleanup.
+                    expired_ids.append(task_id)
                 continue
 
-            if state.status in [ImportStatus.COMPLETED, ImportStatus.CANCELLED, ImportStatus.FAILED]:
-                tasks_to_remove.append(task_id)
-            else:
-                active_tasks.append(state.to_metadata())
+            active_tasks.append(state.to_metadata())
 
         except Exception as e:
-            logger.warning("Error checking task status", task_id=task_id, error=str(e))
-            # Keep in list but mark unknown if we want, or just skip
+            logger.error("Error retrieving task metadata", task_id=task_id, error=str(e))
+            # Include as unknown rather than hiding it, so user knows something happened
             active_tasks.append(
                 OpmlTaskMetadata(
                     user_id=user_id,
                     task_id=task_id,
                     estimated_feeds=0,
-                    filename="unknown.opml",
+                    filename="error",
                     created_at=datetime.now(timezone.utc).isoformat(),
                     status=ImportStatus.UNKNOWN,
                 )
             )
 
-    # Clean up completed tasks
-    for task_id in tasks_to_remove:
-        await cleanup_task_ownership(task_id, user_id)
+    # Lazy cleanup of expired/orphaned IDs
+    for task_id in expired_ids:
+        await repo.remove_ownership(task_id, user_id)
 
+    # Sort by created_at desc (newest first)
+    active_tasks.sort(key=lambda x: x.created_at, reverse=True)
     return active_tasks
 
 
@@ -123,167 +146,121 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
     """
     Get the current status and progress of an OPML import task.
     """
-    # Get import progress state from Redis
     tracker = OpmlImportTracker(task_id)
     state = await tracker.get_state()
 
+    # 1. Handle Missing State (Expired or Queued)
     if not state:
-        # Check if we have ownership record (task just queued)
-        task_owner = await get_task_owner(task_id)
-        if task_owner:
-            if task_owner != user_id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You don't have permission to access this import task.",
-                )
-            # Task exists but hasn't started yet
-            return OpmlImportStatusResponse(
-                task_id=task_id,
-                status=ImportStatus.PENDING,
-                message="OPML import is queued and waiting to start.",
-                progress=None,
-                result=None,
-                error=None,
-                metadata=OpmlTaskMetadata(
-                    user_id=user_id,
-                    task_id=task_id,
-                    estimated_feeds=0,
-                    filename="unknown.opml",
-                    created_at=datetime.now(timezone.utc).isoformat(),
-                    status=ImportStatus.PENDING,
-                ),
-            )
-        else:
-            logger.warning("Task not found", task_id=task_id, user_id=user_id)
+        owner = await repo.get_owner(task_id)
+        if not owner:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Import task not found or has expired.",
             )
+        
+        if owner != user_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
-    # Verify ownership
-    if state.user_id != user_id:
-        logger.warning(
-            "Unauthorized access to import task",
+        # It exists in ownership but no state yet -> Pending
+        return OpmlImportStatusResponse(
             task_id=task_id,
-            user_id=user_id,
-            task_owner=state.user_id,
+            status=ImportStatus.PENDING,
+            message="OPML import is queued.",
+            metadata=OpmlTaskMetadata(
+                user_id=user_id,
+                task_id=task_id,
+                estimated_feeds=0,
+                filename="...",
+                created_at=datetime.now(timezone.utc).isoformat(),
+                status=ImportStatus.PENDING,
+            )
         )
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to access this import task.",
-        )
 
-    # Build response based on status
-    message = state.message
-    progress = None
-    result = None
-    error = None
+    # 2. Verify Ownership
+    if state.user_id != user_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
-    if state.status == ImportStatus.PENDING:
-        if not message:
-            message = "OPML import is queued and waiting to start."
-
-    elif state.status == ImportStatus.IN_PROGRESS:
-        if not message:
-            message = f"Importing feeds: {state.completed}/{state.total} completed"
-        progress = state.to_progress()
-
-    elif state.status in [ImportStatus.COMPLETED, ImportStatus.CANCELLED]:
-        if not message:
-            message = "Import completed."
-        result = state.to_result()
-        # Clean up ownership for completed task
-        await cleanup_task_ownership(task_id, user_id)
-
-    elif state.status == ImportStatus.FAILED:
-        if not message:
-            message = "OPML import failed. Please try again."
-        error = message  # In failed state, message usually contains error info?
-        # Actually errors are in state.errors list.
-        if state.errors:
-            error = f"Failed with {len(state.errors)} errors."
-
-        # Clean up ownership for failed task
-        await cleanup_task_ownership(task_id, user_id)
-
-    return OpmlImportStatusResponse(
+    # 3. Build Response
+    response = OpmlImportStatusResponse(
         task_id=task_id,
         status=state.status,
-        message=message or "Unknown status",
-        progress=progress,
-        result=result,
-        error=error,
-        metadata=state.to_metadata(),
+        message=state.message or "Processing...",
+        metadata=state.to_metadata()
     )
+
+    if state.status == ImportStatus.IN_PROGRESS:
+        response.progress = state.to_progress()
+        if not state.message:
+            # Use OPML title if available for better UX
+            source_name = state.opml_title or state.filename
+            response.message = f"Importing '{source_name}': {state.progress_percentage}%"
+
+    elif state.status in (ImportStatus.COMPLETED, ImportStatus.CANCELLED):
+        response.result = state.to_result()
+        # Note: We do NOT remove ownership here. We let it expire naturally 
+        # so the user can see the success message.
+
+    elif state.status == ImportStatus.FAILED:
+        response.error = state.message or "Unknown error"
+        if state.errors:
+            response.error = f"Failed with {len(state.errors)} errors."
+
+    return response
 
 
 async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelResponse:
     """
     Cancel a user's import task.
     """
-    # Verify ownership
-    owner = await get_task_owner(task_id)
-    if not owner:
-        # Not found or expired
-        await cleanup_task_ownership(task_id, user_id)
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Import task not found or has already completed.",
-        )
-
-    if owner != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to cancel this import task.",
-        )
+    owner = await repo.get_owner(task_id)
+    if not owner or owner != user_id:
+        # If it doesn't exist, we treat it as 404. If owned by another, 403.
+        # To avoid leaking existence, strict 404 is sometimes better, 
+        # but here we stick to standard HTTP semantics.
+        if not owner:
+            raise HTTPException(status_code=404, detail="Task not found.")
+        raise HTTPException(status_code=403, detail="Access denied.")
 
     tracker = OpmlImportTracker(task_id)
     state = await tracker.get_state()
+
+    # If state is gone but ownership exists, it's pending/stuck. 
+    # We just clean up ownership.
     if not state:
-        # Clean up and return "not found" equivalent or success if it's just gone
-        await cleanup_task_ownership(task_id, user_id)
+        await repo.remove_ownership(task_id, user_id)
         return OpmlImportCancelResponse(
             task_id=task_id,
-            message="Task not found or already completed.",
-            cancelled=False,
-            previous_state=ImportStatus.UNKNOWN,
+            message="Task cancelled (was pending).",
+            cancelled=True,
+            previous_state=ImportStatus.PENDING
         )
 
     if state.status in [ImportStatus.COMPLETED, ImportStatus.FAILED]:
-        await cleanup_task_ownership(task_id, user_id)
         return OpmlImportCancelResponse(
             task_id=task_id,
-            message=f"Task was already {state.status.value}.",
+            message=f"Cannot cancel: Task is {state.status.value}.",
             cancelled=False,
             previous_state=state.status,
         )
 
     if state.status == ImportStatus.CANCELLED:
-        await cleanup_task_ownership(task_id, user_id)
         return OpmlImportCancelResponse(
             task_id=task_id,
-            message="Task was already cancelled.",
+            message="Task is already cancelled.",
             cancelled=True,
             previous_state=ImportStatus.CANCELLED,
         )
 
-    # Set cancellation flag
+    # 1. Signal workers to stop
     await tracker.cancel()
-
-    # Update progress if partially done
-    if state.completed < state.total:
-        import orjson
-        async with tracker._client() as r:
-            meta_raw = await r.get(tracker.key_meta)
-            if meta_raw:
-                meta = orjson.loads(meta_raw)
-                meta["status"] = ImportStatus.CANCELLED.value
-                meta["completed_at"] = datetime.now(timezone.utc).isoformat()
-                meta["message"] = f"Import cancelled. {state.completed} of {state.total} feeds processed."
-                await r.setex(tracker.key_meta, tracker._ttl, orjson.dumps(meta))
-
-    await cleanup_task_ownership(task_id, user_id)
+    
+    # 2. Update the metadata immediately so UI reflects it
+    # (Previously this was manual JSON manipulation in tasks.py)
+    await tracker.mark_cancelled()
 
     return OpmlImportCancelResponse(
-        task_id=task_id, message="Cancellation requested.", cancelled=True, previous_state=state.status
+        task_id=task_id,
+        message="Cancellation processed.",
+        cancelled=True,
+        previous_state=state.status
     )

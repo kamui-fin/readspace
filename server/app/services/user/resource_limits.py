@@ -4,9 +4,9 @@ Resource limit enforcement logic.
 
 from uuid import UUID
 
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import NotFoundError, ResourceLimitError
 from app.core.resource_limits import RESOURCE_LIMITS
 from app.crud.profile import get_current_usage, get_profile_by_id
 
@@ -36,24 +36,28 @@ async def check_limit(db: AsyncSession, user_id: UUID, resource: str, user_role:
 
 async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional_count: int = 1) -> None:
     """
-    High-level dependency: Checks subscription limit and raises 429 if exceeded.
+    High-level dependency: Checks subscription limit and raises ResourceLimitError if exceeded.
 
     Args:
         db: Database session
         user_id: User ID to check limits for
         additional_count: Number of additional subscriptions being added (default 1)
 
+    Raises:
+        NotFoundError: If user profile not found
+        ResourceLimitError: If subscription limit would be exceeded
+
     Usage:
         await enforce_subscription_limit(db, user_id)
         # proceed to create subscription...
-        
+
         # For bulk operations:
         await enforce_subscription_limit(db, user_id, additional_count=10)
     """
     profile = await get_profile_by_id(db, user_id=user_id)
     if not profile:
         # Should technically never happen if auth middleware works
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User profile not found")
+        raise NotFoundError(message="User profile not found", error_code="USER_PROFILE_NOT_FOUND")
 
     resource = "max_subscriptions"
     user_role = str(profile.role)
@@ -64,7 +68,13 @@ async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional
     if limit != -1:
         current = await get_current_usage(db, user_id, resource)
         if current + additional_count > limit:
-            raise HTTPException(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                detail=f"Subscription limit would be exceeded ({current + additional_count}/{limit}). Please upgrade your plan.",
+            raise ResourceLimitError(
+                message="Subscription limit would be exceeded. Please upgrade your plan.",
+                error_code="SUBSCRIPTION_LIMIT_EXCEEDED",
+                details={
+                    "current_usage": current,
+                    "requested_additional": additional_count,
+                    "limit": limit,
+                    "would_be_total": current + additional_count,
+                },
             )

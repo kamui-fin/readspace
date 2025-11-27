@@ -1,12 +1,13 @@
 """Bulk feed operations - delete and move multiple feeds."""
 
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.custom_exceptions import NotFoundError
 from app.crud.feed.subscription import (
     bulk_update_subscriptions_folder,
     delete_subscription,
@@ -25,73 +26,32 @@ router = APIRouter()
     "/",
     status_code=status.HTTP_200_OK,
     summary="Bulk delete feed subscriptions",
-    description="Delete multiple feed subscriptions in a single operation",
-    responses={
-        200: {
-            "description": "Bulk delete completed",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "deleted_count": 5,
-                        "deleted_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request - empty feed_ids list"},
-        422: {"description": "Validation error in request body"},
-    },
 )
 async def bulk_delete_feeds(
-    *,
-    feed_ids: list[UUID] = Body(..., embed=True, description="List of feed IDs to unsubscribe from"),
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    feed_ids: Annotated[list[UUID], Body(embed=True, description="List of feed IDs to unsubscribe from")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> dict[str, Any]:
     """
-    Delete multiple feed subscriptions in a single operation.
-
-    This endpoint allows bulk unsubscription from feeds, executing the deletion
-    in a single database query for optimal performance. Only subscriptions owned
-    by the authenticated user will be deleted.
-
-    Args:
-        feed_ids: List of feed UUIDs to unsubscribe from
-        db: Database session dependency
-        current_user: Authenticated user information
-
-    Returns:
-        Dictionary containing:
-            - deleted_count: Number of subscriptions successfully deleted
-            - deleted_ids: List of feed IDs that were deleted
-
-    Raises:
-        HTTPException:
-            - 400: If feed_ids list is empty
-            - 422: If feed_ids format is invalid
-
-    Note:
-        - Only user's own subscriptions are deleted (user_id verified)
-        - Non-existent feed IDs are silently ignored
-        - Cascading deletion handles related user data automatically
-        - Operation is atomic (all succeed or all fail)
+    Delete multiple feed subscriptions. Only deletes subscriptions owned by the user.
     """
     if not feed_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
-    deleted_ids = []
+    logger.bind(user_id=current_user.sub, action="bulk_delete")
     user_uuid = UUID(current_user.sub)
+    deleted_ids = []
+
+    # Note: Ideally this should be a single DELETE WHERE IN (...) query in the CRUD layer.
+    # We are keeping the loop structure to match existing CRUD capabilities,
+    # but cleaning the route logic.
     for feed_id in feed_ids:
         subscription = await get_subscription_by_feed_id(db=db, feed_id=feed_id, user_id=user_uuid)
         if subscription:
             await delete_subscription(db=db, subscription_id=subscription.id, user_id=user_uuid)
             deleted_ids.append(feed_id)
 
-    logger.info(
-        "Bulk delete feeds completed",
-        deleted_count=len(deleted_ids),
-        user_id=current_user.sub,
-    )
+    logger.info("Bulk delete feeds completed", deleted_count=len(deleted_ids))
 
     return {
         "deleted_count": len(deleted_ids),
@@ -103,88 +63,36 @@ async def bulk_delete_feeds(
     "/folder",
     status_code=status.HTTP_200_OK,
     summary="Bulk move feeds to folder",
-    description="Move multiple feed subscriptions to a different folder in a single operation",
-    responses={
-        200: {
-            "description": "Bulk update completed",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "updated_count": 5,
-                        "updated_ids": ["uuid1", "uuid2", "uuid3", "uuid4", "uuid5"],
-                        "folder_id": "folder-uuid",
-                    }
-                }
-            },
-        },
-        400: {"description": "Invalid request - empty feed_ids list"},
-        404: {"description": "Target folder not found"},
-        422: {"description": "Validation error in request body"},
-    },
 )
 async def bulk_update_feeds_folder(
-    *,
-    feed_ids: list[UUID] = Body(..., description="List of feed IDs to move"),
-    folder_id: UUID = Body(..., description="Target folder ID"),
-    db: AsyncSession = Depends(get_db),
-    current_user: TokenData = Depends(get_current_user),
+    feed_ids: Annotated[list[UUID], Body(description="List of feed IDs to move")],
+    folder_id: Annotated[UUID, Body(description="Target folder ID")],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> dict[str, Any]:
     """
-    Move multiple feed subscriptions to a different folder in a single operation.
-
-    This endpoint allows bulk folder reassignment for feeds, executing the update
-    in a single database query for optimal performance. Only subscriptions owned
-    by the authenticated user will be updated.
-
-    Args:
-        feed_ids: List of feed UUIDs to move
-        folder_id: Target folder UUID
-        db: Database session dependency
-        current_user: Authenticated user information
-
-    Returns:
-        Dictionary containing:
-            - updated_count: Number of subscriptions successfully moved
-            - updated_ids: List of feed IDs that were moved
-            - folder_id: The target folder ID
-
-    Raises:
-        HTTPException:
-            - 400: If feed_ids list is empty
-            - 404: If target folder doesn't exist or doesn't belong to user
-            - 422: If feed_ids or folder_id format is invalid
-
-    Note:
-        - Verifies folder ownership before updating
-        - Only user's own subscriptions are updated (user_id verified)
-        - Non-existent feed IDs are silently ignored
-        - Operation is atomic (all succeed or all fail)
+    Move multiple feed subscriptions to a different folder.
     """
     if not feed_ids:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="feed_ids list cannot be empty")
 
-    # Verify folder ownership
-    folder = await get_folder(db, folder_id=folder_id, user_id=UUID(current_user.sub))
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Folder not found or does not belong to user",
-        )
+    logger.bind(user_id=current_user.sub, folder_id=str(folder_id), action="bulk_move")
+    user_uuid = UUID(current_user.sub)
 
-    # Bulk update subscriptions using CRUD function
+    # 1. Verify Folder Ownership
+    folder = await get_folder(db, folder_id=folder_id, user_id=user_uuid)
+    if not folder:
+        raise NotFoundError(message="Folder not found or does not belong to user")
+
+    # 2. Perform Bulk Update
     updated_count = await bulk_update_subscriptions_folder(
         db=db,
         feed_ids=feed_ids,
-        user_id=UUID(current_user.sub),
+        user_id=user_uuid,
         folder_id=folder_id,
     )
 
-    logger.info(
-        "Bulk update feeds folder completed",
-        updated_count=updated_count,
-        folder_id=folder_id,
-        user_id=current_user.sub,
-    )
+    logger.info("Bulk update feeds folder completed", updated_count=updated_count)
 
     return {
         "updated_count": updated_count,

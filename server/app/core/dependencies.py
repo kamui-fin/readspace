@@ -27,3 +27,23 @@ async def get_request_id(request: Request) -> str:
         str: The unique request ID for this request
     """
     return str(request.state.request_id)
+
+
+async def get_current_admin(
+    db: Annotated[AsyncSession, Depends(get_db)],
+    token_data: Annotated[TokenData, Depends(get_current_user)],
+) -> Profile:
+    """
+    Dependency that validates the user exists and has the ADMIN role.
+    Returns the user Profile object if successful.
+    """
+    user_id = UUID(token_data.sub)
+    profile = await get_profile_by_id(db, user_id=user_id)
+
+    if not profile or profile.role != UserRole.ADMIN:
+        logger.warning("Unauthorized admin access attempt", user_id=token_data.sub)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return profile

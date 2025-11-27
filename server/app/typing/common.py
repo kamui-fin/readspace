@@ -3,7 +3,9 @@
 from enum import Enum
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
+
+# Re-export enums from models for convenience
 
 T = TypeVar("T")
 
@@ -18,11 +20,13 @@ class PaginatedResponse(BaseModel, Generic[T]):
     pages: int
 
 
-# Re-export enums here to avoid circular imports in schema files
-class ArticlePriority(str, Enum):
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
+class CursorPaginatedResponse(BaseModel, Generic[T]):
+    """Generic wrapper for cursor-based pagination."""
+
+    items: list[T]
+    next_cursor: str | None = None
+    has_more: bool = False
+    total_count: int | None = None
 
 
 class ImportStatus(str, Enum):
@@ -60,3 +64,7 @@ class LanguageCode(str, Enum):
     TR = "tr"  # Turkish
     TH = "th"  # Thai
     VI = "vi"  # Vietnamese
+
+
+# Shared config for response models
+response_config = ConfigDict(from_attributes=True)

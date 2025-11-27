@@ -1,68 +1,48 @@
 """Feed refresh routes - manually trigger feed updates."""
 
+from typing import Annotated
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
-from app.core.custom_exceptions import FeedConnectionError, FeedParsingError, FeedValidationError
+from app.core.custom_exceptions import NotFoundError
 from app.crud.feed.subscription import get_subscription_by_feed_id
 from app.db.session import get_db_factory
 from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
-from app.typing.feeds import FeedDetail
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
 router = APIRouter()
 
 
+async def verify_subscription(db_factory, feed_id: UUID, user_id: UUID) -> None:
+    """
+    Verifies that a user is subscribed to a feed.
+
+    Raises:
+        NotFoundError: If the subscription does not exist.
+    """
+    async with db_factory() as db:
+        subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=user_id)
+        if not subscription:
+            # We raise the custom exception here.
+            # The Global Exception Handler will catch this and return 404.
+            raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
+
+
 @router.post(
     "/{feed_id}/refresh",
     status_code=status.HTTP_200_OK,
     summary="Refresh RSS feed",
-    description="Manually trigger a refresh of a specific RSS feed to fetch new articles",
-    responses={
-        200: {
-            "description": "Successfully triggered/completed feed refresh",
-            "content": {"application/json": {"example": {"message": "Feed refresh completed"}}},
-        },
-        400: {
-            "description": "Bad request - feed validation or parsing error",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "parsing_error": {
-                            "summary": "Feed parsing failed",
-                            "value": {"detail": "Invalid RSS/XML format"},
-                        },
-                        "validation_error": {
-                            "summary": "Feed validation failed",
-                            "value": {"detail": "Feed content validation failed"},
-                        },
-                    }
-                }
-            },
-        },
-        404: {
-            "description": "Feed not found or user not subscribed (unless preview mode)",
-            "content": {"application/json": {"example": {"detail": "Feed not found"}}},
-        },
-        422: {"description": "Invalid feed ID format or query parameters"},
-        503: {
-            "description": "Service unavailable - could not connect to feed URL",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Could not connect to feed URL during refresh: Connection timeout"}
-                }
-            },
-        },
-        500: {"description": "Internal server error during feed refresh"},
-    },
+    description="Manually trigger a refresh of a specific RSS feed to fetch new articles.",
 )
 async def refresh_feed_route(
     feed_id: UUID,
+    db_factory: Annotated[any, Depends(get_db_factory)],
+    current_user: Annotated[TokenData, Depends(get_current_user)],
     force_refetch: bool = Query(
         False,
         description="Force refetch even if not modified based on ETag/Last-Modified headers",
@@ -71,104 +51,36 @@ async def refresh_feed_route(
         False,
         description="Preview mode - refresh feed without requiring user subscription",
     ),
-    db_factory=Depends(get_db_factory),
-    current_user: TokenData = Depends(get_current_user),
 ) -> dict:
     """
-    Manually trigger a refresh of a specific RSS feed to fetch new articles.
-
-    This endpoint initiates an immediate refresh of the specified RSS feed,
-    bypassing the normal scheduled refresh cycle. It fetches the latest content
-    from the feed URL, parses new articles, and updates the database.
+    Initiates an immediate refresh of the specified RSS feed.
 
     Args:
         feed_id: UUID of the feed to refresh
-        force_refetch: If True, ignores ETag/Last-Modified headers and forces full refetch
-        preview: If True, allows refresh without user subscription (for feed preview)
-        db_factory: Database session factory
-        current_user: Authenticated user information
+        force_refetch: If True, ignores HTTP caching headers
+        preview: If True, allows refresh without user subscription
 
     Returns:
-        dict: Success message
-
-    Refresh Process:
-        1. Validates user access to the feed (unless preview mode)
-        2. Fetches current feed content from the source URL
-        3. Respects HTTP caching headers (ETag, Last-Modified) unless force_refetch=True
-        4. Parses RSS/Atom content and extracts articles
-        5. Updates feed metadata and adds new articles to database
-        6. Returns updated feed information
-
-    Raises:
-        HTTPException:
-            - 400: Feed parsing errors or content validation failures
-            - 404: Feed not found or user not subscribed (unless preview mode)
-            - 503: Network connectivity issues or feed server unavailable
-            - 500: Unexpected errors during refresh process
-
-    Note:
-        - Requires authentication
-        - In normal mode, user must be subscribed to refresh the feed
-        - Preview mode allows refreshing any feed for evaluation
-        - Force refetch bypasses HTTP caching for immediate updates
-        - Refresh is synchronous and may take several seconds for large feeds
+        JSON success message.
     """
-    try:
-        # Check if user has access (unless preview mode)
-        if not preview:
-            from app.crud.feed.subscription import get_subscription_by_feed_id
-            async with db_factory() as db:
-                subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
-                if not subscription:
-                    logger.warning(
-                        "Feed not found for refresh or access denied",
-                        feed_id=feed_id,
-                        user_id=current_user.sub,
-                    )
-                    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=ERROR_FEED_NOT_FOUND)
-        
-        await refresh_feed(
-            session_factory=db_factory,
-            feed_id=feed_id,
-            force=force_refetch,
-        )
+    # 1. Bind context to logger (Orthogonality)
+    # Any log generated within this scope will have these keys.
+    log = logger.bind(feed_id=str(feed_id), user_id=current_user.sub)
 
-        logger.info(
-            "Feed refresh triggered/completed",
-            feed_id=feed_id,
-            user_id=current_user.sub,
-        )
-        return {"message": "Feed refresh completed"}
-    except FeedConnectionError as e:
-        logger.error(
-            "Connection error refreshing feed",
-            error=str(e),
-            user_id=current_user.sub,
-            feed_id=feed_id,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=f"Could not connect to feed URL during refresh: {e}",
-        ) from e
-    except (FeedValidationError, FeedParsingError) as e:
-        logger.warning(
-            "Validation/parsing error during feed refresh",
-            error=str(e),
-            user_id=current_user.sub,
-            feed_id=feed_id,
-        )
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(
-            "Unexpected error refreshing feed",
-            error=str(e),
-            user_id=current_user.sub,
-            feed_id=feed_id,
-            exc_info=True,
-        )
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred during feed refresh.",
-        ) from e
+    # 2. Authorization (DRY)
+    # Check subscription unless in preview mode.
+    if not preview:
+        await verify_subscription(db_factory, feed_id, UUID(current_user.sub))
+
+    # 3. Business Logic
+    # We call the service directly. We do NOT use try/except here.
+    # If refresh_feed raises FeedConnectionError, the Global Handler catches it -> 503.
+    # If refresh_feed raises FeedParsingError, the Global Handler catches it -> 400.
+    await refresh_feed(
+        session_factory=db_factory,
+        feed_id=feed_id,
+        force=force_refetch,
+    )
+
+    log.info("Feed refresh completed successfully")
+    return {"message": "Feed refresh completed"}

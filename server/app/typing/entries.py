@@ -1,21 +1,43 @@
 """
-Unified Entry Schemas.
-Replaces the old split between 'FeedArticle' and 'ClippedArticle'.
-Matches the 'UserEntry' database model.
+Entry schemas - DRY approach using SQLModel as base.
+Unified schema for both feed articles and clipped/saved articles.
 """
 
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
+from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from .common import ArticlePriority
+from app.typing.common import ArticlePriority, response_config
 
-# ================= Inputs =================
+# ================= Base (Field Bundles) =================
+
+
+class EntryContentBase(BaseModel):
+    """Core content fields - from ArticleContent model."""
+
+    title: str | None = None
+    link: str
+    image_url: str | None = None
+    author: str | None = None
+    published_at: datetime | None = None
+    estimated_read_time_minutes: int | None = None
+
+
+class EntryUserStateBase(BaseModel):
+    """User interaction state - from UserEntry model."""
+
+    is_read: bool = False
+    is_read_later: bool = False
+    is_favorite: bool = False
+    priority: ArticlePriority = ArticlePriority.MEDIUM
+
+
+# ================= Requests =================
 
 
 class EntryCreateExternal(BaseModel):
-    """For manually saving a URL (Read-Later/Clipped)."""
+    """Create a manually saved entry (Read-Later/Clipped)."""
 
     url: HttpUrl
     title: str | None = None
@@ -33,7 +55,7 @@ class EntryCreateExternal(BaseModel):
 
 
 class EntryUpdate(BaseModel):
-    """User interaction updates."""
+    """Update user interaction state - all fields optional for PATCH."""
 
     is_read: bool | None = None
     is_read_later: bool | None = None
@@ -42,38 +64,29 @@ class EntryUpdate(BaseModel):
     user_note: str | None = None
 
 
-# ================= Outputs =================
+# ================= Responses =================
 
 
-class EntryBase(BaseModel):
-    """Common fields for list and detail views."""
+class EntryBase(EntryContentBase, EntryUserStateBase):
+    """
+    Base response combining content + user state.
+    Shared by list and detail views.
+    """
+
+    model_config = response_config
 
     id: UUID
 
-    # Content Metadata (Flattened from ArticleContent)
-    title: str | None = None
-    link: str
-    image_url: str | None = None
-    author: str | None = None
-    published_at: datetime | None = None
-    estimated_read_time_minutes: int | None = None
-
-    # User State (From UserEntry)
-    is_read: bool = False
-    is_read_later: bool = False
-    is_favorite: bool = False
-    priority: ArticlePriority = ArticlePriority.MEDIUM
-
-    # Context
+    # Context (denormalized for performance)
     feed_id: UUID | None = None
-    feed_title: str | None = None  # Denormalized for convenience
-    feed_icon: str | None = None  # Denormalized for convenience
+    feed_title: str | None = None
+    feed_icon: str | None = None
 
 
 class EntrySummary(EntryBase):
     """
-    The List View.
-    STRICTLY NO HTML CONTENT.
+    List view - lightweight, NO HTML content.
+    Optimized for feed/list rendering.
     """
 
     description: str | None = Field(None, max_length=300, description="Short text preview")
@@ -81,11 +94,11 @@ class EntrySummary(EntryBase):
 
 class EntryDetail(EntryBase):
     """
-    The Reader View.
-    Includes full HTML content.
+    Reader view - includes full HTML content.
+    Used for article reading page.
     """
 
-    # The heavy fields
+    # Heavy fields (deferred in DB queries)
     description: str | None = None  # Full description
     content: str | None = None  # Full HTML body
 

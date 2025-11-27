@@ -4,7 +4,9 @@ Custom application exceptions with structured error responses
 
 from typing import Any
 
-from fastapi import HTTPException, status
+import structlog
+from fastapi import HTTPException, Request, status
+from fastapi.responses import JSONResponse
 
 
 class ReadspaceException(Exception):
@@ -134,6 +136,12 @@ class ServiceUnavailableError(ReadspaceException):
     pass
 
 
+class ResourceLimitError(ReadspaceException):
+    """Raised when a user hits a usage limit (e.g. max subscriptions)"""
+
+    pass
+
+
 # Exception Mapper - Maps custom exceptions to HTTP exceptions
 EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     # Client errors (4xx)
@@ -152,6 +160,7 @@ EXCEPTION_STATUS_MAP: dict[type[ReadspaceException], int] = {
     StorageError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     DatabaseError: status.HTTP_500_INTERNAL_SERVER_ERROR,
     ConfigurationError: status.HTTP_500_INTERNAL_SERVER_ERROR,
+    ResourceLimitError: status.HTTP_429_TOO_MANY_REQUESTS,
 }
 
 
@@ -181,3 +190,43 @@ def to_http_exception(exc: ReadspaceException) -> HTTPException:
     detail = exc.to_dict()
 
     return HTTPException(status_code=status_code, detail=detail, headers=headers)
+
+
+logger = structlog.get_logger("api.errors")
+
+
+async def readspace_exception_handler(request: Request, exc: ReadspaceException):
+    """
+    Global handler for all ReadspaceException subclasses.
+    Automatically maps the exception to the correct HTTP status code and JSON format.
+    """
+    # 1. Determine Status Code from your existing MAP
+    # Use strict type checking first, fallback to parent classes, default to 500
+    status_code = EXCEPTION_STATUS_MAP.get(type(exc))
+
+    if not status_code:
+        # If specific class not mapped, check if it's a subclass of a mapped error
+        for mapped_exc, code in EXCEPTION_STATUS_MAP.items():
+            if isinstance(exc, mapped_exc):
+                status_code = code
+                break
+        else:
+            status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    # 2. Log it (Orthogonality: Logging logic lives here, not in the route)
+    # We can access request details here if needed
+    log_method = logger.error if status_code >= 500 else logger.warning
+    log_method(
+        "Application exception occurred",
+        error_code=exc.error_code,
+        message=exc.message,
+        details=exc.details,
+        path=request.url.path,
+        status_code=status_code,
+    )
+
+    # 3. Return JSON Response
+    return JSONResponse(
+        status_code=status_code,
+        content=exc.to_dict(),
+    )

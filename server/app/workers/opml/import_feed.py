@@ -24,28 +24,11 @@ async def import_single_feed(
     update_existing: bool = False,
     parent_task_id: str | None = None,
 ) -> dict[str, Any]:
-    """Import a single feed.
-
-    Args:
-        user_id: User UUID
-        feed_url: Feed URL to import
-        folder_id: Folder ID for the feed (empty string uses default folder)
-        tag_names: Optional list of tag names
-        feed_title: Optional feed title override
-        update_existing: Whether to update existing feed
-        parent_task_id: Parent OPML import task ID for progress tracking
-
-    Returns:
-        Import result dictionary
-    """
-    logger.info(
-        "Starting feed import",
-        user_id=str(user_id),
-        feed_url=feed_url,
-    )
+    """Execute import logic for a single feed."""
+    logger.info("Importing feed", user_id=str(user_id), url=feed_url)
 
     try:
-        # Resolve folder_id: use default folder if empty/None
+        # Resolve folder
         if folder_id:
             resolved_folder_id = UUID(folder_id)
         else:
@@ -53,8 +36,7 @@ async def import_single_feed(
                 default_folder = await ensure_default_folder(db, user_id=user_id)
                 resolved_folder_id = default_folder.id
 
-        # Use the core feed service to add/subscribe
-        # add_feed handles: resolving URL, fetching, parsing, creating feed, subscribing
+        # Service Call (Manages its own sessions via factory)
         subscription = await add_feed(
             session_factory=worker_db_factory,
             user_id=user_id,
@@ -63,62 +45,41 @@ async def import_single_feed(
             custom_title=feed_title,
         )
 
-        # Success
-        logger.info(
-            "Feed import completed",
-            user_id=str(user_id),
-            feed_url=feed_url,
-            success=True,
-        )
-
         if parent_task_id:
-            tracker = OpmlImportTracker(parent_task_id)
-            await tracker.mark_success(already_exists=False)
+            await OpmlImportTracker(parent_task_id).mark_success(already_exists=False)
 
         return {
             "success": True,
             "url": feed_url,
-            "title": subscription.custom_title or subscription.feed.title,  # Assuming subscription object structure
+            "title": subscription.custom_title or subscription.feed.title,
             "status": ImportStatus.COMPLETED.value,
         }
 
     except Exception as exc:
-        # Check for specific exceptions
         error_msg = str(exc)
-        status = ImportStatus.FAILED.value
-        already_exists = False
-
-        if "Already subscribed" in error_msg:
-            status = "already_exists"  # Not a real ImportStatus but useful for progress logic
-            already_exists = True
-            # We might want to count this as success in terms of "processed"?
-            # The progress tracker handles `already_exists` specially.
-
-        logger.error(
-            "Feed import failed",
-            user_id=str(user_id),
-            feed_url=feed_url,
-            error=error_msg,
-            exc_info=True,
-        )
+        is_duplicate = "Already subscribed" in error_msg
 
         if parent_task_id:
             tracker = OpmlImportTracker(parent_task_id)
-            if already_exists:
+            if is_duplicate:
                 await tracker.mark_success(already_exists=True)
             else:
-                error = FeedImportError(
-                    url=feed_url,
-                    title=feed_title or "Unknown",
-                    error=error_msg,
-                    status="failed",
+                await tracker.mark_failure(
+                    FeedImportError(
+                        url=feed_url,
+                        title=feed_title or "Unknown",
+                        error=error_msg,
+                        status="failed",
+                    )
                 )
-                await tracker.mark_failure(error)
+
+        if not is_duplicate:
+            logger.error("Feed import failed", url=feed_url, error=error_msg)
 
         return {
-            "success": already_exists,  # Technically success if we just want to ensure it's there
+            "success": is_duplicate,
             "url": feed_url,
             "title": feed_title or "Unknown",
-            "status": status,
+            "status": "already_exists" if is_duplicate else ImportStatus.FAILED.value,
             "error": error_msg,
         }

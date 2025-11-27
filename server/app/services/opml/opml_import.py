@@ -29,9 +29,7 @@ async def handle_opml_upload(
     Handle OPML file upload from the router.
     Validates content, checks limits, and dispatches the background task.
     """
-    # 1. Parse to validate structure and get count (CPU bound)
-    # This will raise ValidationError if invalid, which router should handle
-    # We use the parsing logic to count feeds accurately
+    # 1. Parse to validate structure and get count 
     feeds = parse_opml(opml_content, default_folder_name)
     feed_count = len(feeds)
 

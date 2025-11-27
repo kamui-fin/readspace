@@ -1,16 +1,16 @@
 """CRUD operations for user feed subscriptions."""
 
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.core.constants import INITIAL_UNREAD_COUNT
 from app.core.custom_exceptions import FeedSubscriptionError
 from app.crud.feed.core import create_feed, get_feed_by_url, normalize_url
-from app.models.article import ArticleContent, FeedArticle
+from app.models.article import FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.typing.feeds import FeedBase
 from app.typing.subscriptions import SubscriptionCreate
@@ -191,16 +191,17 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
         Number of subscriptions updated
     """
     import structlog
+
     logger = structlog.get_logger(__name__)
-    
+
     # First, let's see what subscriptions match our criteria
     debug_stmt = select(FeedSubscription.id, FeedSubscription.last_read_cutoff).where(
         (FeedSubscription.last_read_cutoff.is_(None)) | (FeedSubscription.last_read_cutoff < cutoff_date)
     )
     debug_result = await db.execute(debug_stmt)
     matching_subs = debug_result.fetchall()
-    logger.info(f"Subscriptions matching compaction criteria", count=len(matching_subs), cutoff_date=cutoff_date)
-    
+    logger.info("Subscriptions matching compaction criteria", count=len(matching_subs), cutoff_date=cutoff_date)
+
     # Use CASE statement to set cutoff_date properly
     # If cutoff is NULL or less than cutoff_date, set it to cutoff_date
     # Otherwise keep the existing value
@@ -216,5 +217,5 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
 
     result = await db.execute(stmt)
     await db.commit()  # Commit the changes so tests can see them
-    logger.info(f"Updated subscriptions", rowcount=result.rowcount)
+    logger.info("Updated subscriptions", rowcount=result.rowcount)
     return result.rowcount

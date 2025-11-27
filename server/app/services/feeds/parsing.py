@@ -23,54 +23,8 @@ logger = structlog.get_logger(__name__)
 # ==============================================================================
 # CONFIGURATION
 # ==============================================================================
-
-ALLOWED_TAGS = {
-    "a",
-    "abbr",
-    "acronym",
-    "b",
-    "blockquote",
-    "br",
-    "code",
-    "div",
-    "em",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "hr",
-    "i",
-    "img",
-    "li",
-    "ol",
-    "p",
-    "pre",
-    "span",
-    "strong",
-    "table",
-    "tbody",
-    "td",
-    "th",
-    "thead",
-    "tr",
-    "ul",
-    "video",
-    "source",
-    "figure",
-    "figcaption",
-}
-
-ALLOWED_ATTRIBUTES = {
-    "a": {"href", "title", "target"},
-    "img": {"src", "alt", "title", "width", "height"},
-    "video": {"src", "controls", "poster"},
-    "source": {"src", "type"},
-    "code": {"class"},
-    "span": {"class"},
-    "div": {"class"},
-}
+# HTML sanitization is handled by feedparser's built-in sanitizer
+# We only use nh3 for stripping HTML tags to create plain text summaries
 
 
 class ParsedFeed(TypedDict):
@@ -78,8 +32,9 @@ class ParsedFeed(TypedDict):
     description: str | None
     link: str | None
     language: str | None
-    image_url: str | None
-    ttl: int | None
+    icon_url: str | None
+    author_name: str | None
+    last_updated_at: datetime | None
     articles: list[ArticleCreate]
     version: str
 
@@ -87,41 +42,62 @@ class ParsedFeed(TypedDict):
 def parse_feed_content(content: str, url: str) -> ParsedFeed:
     """
     Parse raw feed content into a structured format.
-    Handles RSS/Atom normalization.
+    Handles RSS/Atom normalization with comprehensive field extraction.
+    Uses feedparser's built-in sanitization for security.
     """
-    parsed = feedparser.parse(content)
+    from time import mktime
+
+    from app.utils.image_extraction import find_feed_icon
+
+    # Enable feedparser's built-in HTML sanitization
+    parsed = feedparser.parse(content, sanitize_html=True)
 
     if parsed.bozo:
         logger.warning("Feed parsed with errors", url=url, error=str(parsed.bozo_exception))
 
     feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
+    # Basic metadata
     title = _clean_plain_text(feed.get("title", "")) or _extract_domain(url)
-    description = _clean_plain_text(feed.get("description") or feed.get("subtitle") or "")
+
+    # Prefer subtitle over description for the tagline
+    description = _clean_plain_text(feed.get("subtitle") or feed.get("description") or "")
+
     link = feed.get("link") or url
-    language = (feed.get("language") or "en").split("-")[0].lower()
+    language = "en"  # TODO: figure out how to get language consistently
 
-    image_url = feed.get("image", {}).get("href") or feed.get("logo")
+    # Rich UI images
+    image_url = find_feed_icon(feed)
 
-    ttl = None
-    if "ttl" in feed:
+    # Author information
+    author_name = None
+    if hasattr(feed, "author_detail") and hasattr(feed.author_detail, "name"):
+        author_name = str(feed.author_detail.name)[:255]
+    elif hasattr(feed, "author"):
+        author_name = str(feed.author)[:255]
+
+    # Last updated timestamp (from feed.updated_parsed)
+    last_updated_at = None
+    if hasattr(feed, "updated_parsed") and feed.updated_parsed:
         try:
-            ttl = int(feed["ttl"])
-        except (ValueError, TypeError):
+            last_updated_at = datetime.fromtimestamp(mktime(feed.updated_parsed), tz=timezone.utc)
+        except (ValueError, TypeError, OverflowError):
+            pass
+    elif hasattr(feed, "published_parsed") and feed.published_parsed:
+        try:
+            last_updated_at = datetime.fromtimestamp(mktime(feed.published_parsed), tz=timezone.utc)
+        except (ValueError, TypeError, OverflowError):
             pass
 
     articles: list[ArticleCreate] = []
 
     for entry in parsed.entries:
         try:
-            # No dummy_id needed as feed_id is Optional in ArticleCreate
             article = _extract_article_data(entry, feed_url=url)
             if article:
                 articles.append(article)
         except Exception as e:
             logger.warning("Failed to extract article", error=str(e))
-
-    version: str = str(parsed.version) if parsed.version else "unknown"
 
     return {
         "title": title,
@@ -129,9 +105,9 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         "link": link,
         "language": language,
         "image_url": image_url,
-        "ttl": ttl,
+        "author_name": author_name,
+        "last_updated_at": last_updated_at,
         "articles": articles,
-        "version": version,
     }
 
 
@@ -143,7 +119,10 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
 def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate | None:
     """
     Convert a raw feedparser entry into a clean ArticleCreate schema.
+    Implements comprehensive content and image extraction.
     """
+    from app.utils.image_extraction import find_best_article_image
+
     link = _extract_link(entry)
     if not link:
         return None
@@ -152,28 +131,53 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
     guid = _extract_guid(entry, fallback_link=link)
     published_at = _extract_published_date(entry)
 
-    # Content Processing
-    raw_content = _get_best_content_candidate(entry)
+    # Content Resolution (The Onion Strategy)
+    # Layer 1: Get the best content candidate
+    raw_summary = getattr(entry, "summary", "")
+    raw_content = ""
+
+    if hasattr(entry, "content"):
+        # Atom feeds return a list. Usually the last one is the most 'rich'
+        # e.g. [{'type': 'text/plain'}, {'type': 'text/html'}]
+        for c in entry.content:
+            if c.get("type") == "text/html":
+                raw_content = c.get("value", "")
+                break
+        if not raw_content and len(entry.content) > 0:
+            raw_content = entry.content[0].get("value", "")
+
+    # Fallback: if no content, use summary as content
+    if not raw_content:
+        raw_content = raw_summary
+
+    # Sanitize and fix relative URLs
     clean_content = _sanitize_and_fix_html(raw_content, base_url=feed_url or link)
+
+    # Create a clean summary for list views (pure text, no HTML)
     summary = _create_summary(entry, clean_content)
 
+    # Author extraction
     author = _extract_author(entry)
-    image_url = _extract_image_url(entry, clean_content, base_url=feed_url or link)
+
+    # Image extraction with source tracking
+    image_url, image_source = find_best_article_image(entry)
+    if image_url and (feed_url or link):
+        # Resolve relative URLs
+        image_url = urljoin(feed_url or link, image_url)
+
+    # Calculate reading time
     read_time = min(calculate_reading_time(clean_content, default_wpm=200), 60) if clean_content else 1
 
     return ArticleCreate(
         title=title,
         link=link,
         description=summary,
-        content=clean_content,
+        content=clean_content,  # Full HTML for reading view
         published_at=published_at,
         author=author,
         guid=guid,
         image_url=image_url,
         estimated_read_time_minutes=read_time,
-        # feed_id is Optional and will be assigned in service layer
-        feed_id=None,
-        user_id=None,
     )
 
 
@@ -219,6 +223,10 @@ def _extract_published_date(entry: dict) -> datetime:
 
 
 def _get_best_content_candidate(entry: dict) -> str:
+    """
+    Extract the best content from entry.
+    Feedparser already sanitizes HTML when sanitize_html=True is used.
+    """
     if "content" in entry:
         for c in entry["content"]:
             if c.get("type") in ["text/html", "application/xhtml+xml", "html"]:
@@ -233,6 +241,12 @@ def _get_best_content_candidate(entry: dict) -> str:
 
 
 def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
+    """
+    Fix relative URLs in HTML content.
+
+    Note: HTML sanitization is already handled by feedparser when sanitize_html=True.
+    We only need to resolve relative URLs here.
+    """
     if not html_content:
         return ""
 
@@ -258,17 +272,7 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
         except Exception as e:
             logger.debug("Failed to fix relative URLs", error=str(e))
 
-    try:
-        clean_html = nh3.clean(
-            html_content,
-            tags=ALLOWED_TAGS,
-            attributes=ALLOWED_ATTRIBUTES,
-            url_schemes={"http", "https", "mailto", "data"},
-        )
-        return clean_html
-    except Exception as e:
-        logger.error("HTML sanitization failed", error=str(e))
-        return ""
+    return html_content
 
 
 def _create_summary(entry: dict, clean_html_content: str) -> str:
@@ -305,38 +309,6 @@ def _extract_author(entry: dict) -> str | None:
         val = entry.get(key)
         if val and isinstance(val, str):
             return val[:200]
-    return None
-
-
-def _extract_image_url(entry: dict, clean_content: str, base_url: str | None) -> str | None:
-    def resolve(url):
-        if base_url and url:
-            return urljoin(base_url, url)
-        return url
-
-    if "media_content" in entry:
-        for media in entry["media_content"]:
-            if media.get("medium") == "image" or str(media.get("type")).startswith("image/"):
-                return resolve(media.get("url"))
-    if "enclosures" in entry:
-        for enc in entry["enclosures"]:
-            if str(enc.get("type")).startswith("image/"):
-                return resolve(enc.get("href"))
-    if "media_thumbnail" in entry:
-        if isinstance(entry["media_thumbnail"], list) and entry["media_thumbnail"]:
-            return resolve(entry["media_thumbnail"][0].get("url"))
-
-    if clean_content:
-        soup = BeautifulSoup(clean_content, "html.parser")
-        for img in soup.find_all("img", src=True):
-            if not isinstance(img, Tag):
-                continue
-            src = img.get("src")
-            if src and isinstance(src, str):
-                if "icon" in src or "emoji" in src:
-                    continue
-                return src
-
     return None
 
 

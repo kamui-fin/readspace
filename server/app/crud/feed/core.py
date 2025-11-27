@@ -17,7 +17,7 @@ import structlog
 from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.article import ArticleContent, FeedArticle
+from app.models.article import FeedArticle
 from app.models.feed import Feed, FeedCategory
 from app.typing.feeds import FeedBase
 
@@ -47,31 +47,36 @@ def normalize_url(url: str) -> str:
 
 def calculate_next_fetch(feed: Feed) -> datetime:
     """
-    Determines the next fetch time based on errors, TTL, and adaptive history.
-    This logic moves OUT of the SQL query and INTO Python.
+    Determines the next fetch time based on errors, adaptive history, and server hints.
+    Uses HTTP conditional GET (ETag/Last-Modified) for bandwidth efficiency.
+    Respects Cache-Control max-age and Expires headers from HTTP responses.
     """
+    import random
+
     now = datetime.now(timezone.utc)
 
-    # 1. Exponential Backoff for Errors
+    # 1. Exponential Backoff for Errors (with jitter to prevent thundering herd)
     if feed.fetch_error_count > 0:
         # 2^error_count * 60 minutes, capped at 12 hours
-        backoff = min(pow(2, feed.fetch_error_count) * 60, MAX_BACKOFF_MINUTES)
+        base_backoff = min(pow(2, feed.fetch_error_count) * 60, MAX_BACKOFF_MINUTES)
+        # Add ±25% jitter
+        jitter = random.uniform(0.75, 1.25)  # noqa: S311
+        backoff = int(base_backoff * jitter)
         return now + timedelta(minutes=backoff)
 
-    # 2. Determine Interval
-    interval = MIN_REFRESH_MINUTES
+    # 2. Determine base interval
+    # Priority: adaptive_fetch_interval > ttl (from Cache-Control/Expires) > default
     if feed.adaptive_fetch_interval_minutes:
         interval = feed.adaptive_fetch_interval_minutes
     elif feed.ttl:
-        # Respect Publisher TTL, clamped between 15 mins and 24 hours
-        interval = max(MIN_REFRESH_MINUTES, min(feed.ttl, MAX_REFRESH_MINUTES))
+        interval = feed.ttl
+    else:
+        interval = MIN_REFRESH_MINUTES
 
-    next_fetch = now + timedelta(minutes=interval)
+    # Enforce bounds
+    interval = max(MIN_REFRESH_MINUTES, min(interval, MAX_REFRESH_MINUTES))
 
-    # 3. Simple Skip Logic (Optimization: Don't do complex day matching here if unnecessary)
-    # If strictly needed, check feed.skip_hours/days here and bump `next_fetch`
-
-    return next_fetch
+    return now + timedelta(minutes=interval)
 
 
 # ==========================================
@@ -179,9 +184,7 @@ async def update_feed_after_fetch(
                 if val := metadata.get(key):
                     setattr(feed, key, str(val))
 
-            # Update Technical/RSS fields
-            if "ttl" in metadata:
-                feed.ttl = int(metadata["ttl"])
+            # Update HTTP caching headers
             if "etag" in metadata:
                 feed.etag_header = metadata["etag"]
             if "last_modified" in metadata:
@@ -240,9 +243,6 @@ async def admin_update_feed(
     language: str | None = None,
     image_url: str | None = None,
     url: str | None = None,
-    ttl: int | None = None,
-    skip_hours: list[int] | None = None,
-    skip_days: list[str] | None = None,
     top_level_category: str | FeedCategory | None = None,
     popularity_score: float | None = None,
 ) -> Feed:
@@ -263,12 +263,6 @@ async def admin_update_feed(
         feed.language = language
     if image_url is not None:
         feed.image_url = image_url
-    if ttl is not None:
-        feed.ttl = ttl
-    if skip_hours is not None:
-        feed.skip_hours = skip_hours
-    if skip_days is not None:
-        feed.skip_days = skip_days
 
     # Handle URL update with normalization
     if url is not None:
