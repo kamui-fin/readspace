@@ -15,21 +15,6 @@ router = APIRouter()
 
 
 @router.get(
-    "/import/tasks",
-    response_model=list[OpmlTaskMetadata],
-    summary="List user's active import tasks",
-)
-async def list_user_import_tasks(
-    current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> list[OpmlTaskMetadata]:
-    """
-    List all active OPML import tasks for the authenticated user.
-    """
-    logger.bind(user_id=current_user.sub)
-    return await list_user_tasks(current_user.sub)
-
-
-@router.get(
     "/import/active",
     response_model=OpmlTaskMetadata | None,
     summary="Get most recent active import task",
@@ -47,7 +32,11 @@ async def get_active_import_task(
         return None
 
     # Return the most recent task based on creation timestamp
-    return max(tasks, key=lambda x: x.created_at)
+    recent_task = max(tasks, key=lambda x: x.created_at)
+
+    # TODO: cleanup old tasks
+
+    return recent_task
 
 
 @router.delete(

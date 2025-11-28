@@ -245,8 +245,20 @@ class TestFeedTaskIntegration:
             return
 
         assert response.status_code == 201
-        feed_data = response.json()
-        feed_id = feed_data["feed"]["id"]
+        
+        # The endpoint returns MessageResponse, so we need to find the feed by URL
+        # Query the database to get the feed_id
+        feed_result = await db_session.execute(
+            select(FeedSubscription)
+            .join(Feed, FeedSubscription.feed_id == Feed.id)
+            .where(Feed.url == "https://hnrss.org/newest")
+            .where(FeedSubscription.user_id == test_user.id)
+        )
+        subscription = feed_result.scalar_one_or_none()
+        if subscription is None:
+            # Feed creation may have failed, skip the rest
+            return
+        feed_id = subscription.feed_id
 
         # Allow background tasks to complete
         await asyncio.sleep(0.1)

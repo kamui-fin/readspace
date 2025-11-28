@@ -411,7 +411,7 @@ class TestNextFetchAtSetOnRefresh:
         from app.utils.hashing import calculate_feed_content_hash
 
         parsed = parse_feed_content(mock_rss, "https://example.com/test-feed-hash")
-        content_hash = calculate_feed_content_hash(parsed["articles"])
+        content_hash = calculate_feed_content_hash(parsed.articles)
 
         feed = Feed(
             id=uuid4(),
@@ -874,7 +874,7 @@ class TestFeedMetadataFields:
         from app.utils.hashing import calculate_feed_content_hash
 
         parsed = parse_feed_content(mock_rss, "https://example.com/test-hash-feed")
-        content_hash = calculate_feed_content_hash(parsed["articles"])
+        content_hash = calculate_feed_content_hash(parsed.articles)
 
         feed = Feed(
             id=uuid4(),

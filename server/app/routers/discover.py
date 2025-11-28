@@ -4,12 +4,11 @@ Note: Search functionality has been migrated to Meilisearch with direct frontend
 The frontend now uses React InstantSearch to query Meilisearch directly.
 """
 
-from typing import Any
-
 import structlog
 from fastapi import APIRouter, HTTPException, Query, status
 
 from app.services.feeds import fetching, parsing
+from app.typing.feeds import ParsedFeed
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/discover", tags=["RSS Discovery"])
@@ -19,7 +18,7 @@ router = APIRouter(prefix="/discover", tags=["RSS Discovery"])
 async def get_feed_preview(
     *,
     url: str = Query(..., description="RSS feed URL to preview"),
-) -> dict[str, Any]:
+) -> ParsedFeed:
     """
     Get feed metadata from an RSS feed URL for preview purposes.
 
@@ -36,7 +35,7 @@ async def get_feed_preview(
     # Parse feed content
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], url)
-        logger.info("Feed preview generated", url=url, title=parsed["title"])
+        logger.info("Feed preview generated", url=url, title=parsed.title)
         return parsed
     except Exception as e:
         logger.error("Feed parse failed", url=url, error=str(e))

@@ -29,6 +29,12 @@ class CursorPaginatedResponse(BaseModel, Generic[T]):
     total_count: int | None = None
 
 
+class MessageResponse(BaseModel):
+    """Generic response for actions that return a simple message."""
+
+    message: str
+
+
 class ImportStatus(str, Enum):
     """Status of an OPML import task."""
 

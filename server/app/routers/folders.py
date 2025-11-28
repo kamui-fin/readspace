@@ -25,7 +25,7 @@ router = APIRouter(prefix="/folders", tags=["RSS Folders"])
 class FolderReadStatusResponse(BaseModel):
     message: str
     folder_id: str
-    updated_subscriptions: int | None  # Depending on what mark_all_as_read returns
+    updated_subscriptions: int
 
 
 # --- Helpers ---
@@ -37,7 +37,12 @@ async def verify_folder_exists(db: AsyncSession, folder_id: UUID, user_id: UUID)
 
 
 # --- Routes ---
-@router.post("/", response_model=FolderResponse, status_code=status.HTTP_201_CREATED, summary="Create folder")
+@router.post(
+    "/",
+    response_model=FolderResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create folder",
+)
 async def create_folder(
     folder_in: Annotated[FolderCreate, Body(description="Folder creation data")],
     db: Annotated[AsyncSession, Depends(get_db)],
@@ -66,24 +71,6 @@ async def list_folders(
     """
     logger.bind(user_id=current_user.sub)
     return await folder_service.list_folders(db, UUID(current_user.sub), skip, limit)
-
-
-@router.get("/{folder_id}", response_model=FolderResponse, summary="Get folder details")
-async def get_folder(
-    folder_id: UUID,
-    db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> FolderResponse:
-    """
-    Get a specific folder by its ID.
-    """
-    logger.bind(user_id=current_user.sub, folder_id=str(folder_id))
-
-    folder = await crud_folder.get_by_id(db, folder_id, UUID(current_user.sub))
-    if not folder:
-        raise NotFoundError(message="Folder not found")
-
-    return FolderResponse.model_validate(folder, from_attributes=True)
 
 
 @router.put("/{folder_id}", response_model=FolderResponse, summary="Update folder")

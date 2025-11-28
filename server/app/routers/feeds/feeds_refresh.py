@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, status
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
 from app.core.custom_exceptions import NotFoundError
@@ -12,6 +12,7 @@ from app.crud.feed.subscription import get_subscription_by_feed_id
 from app.db.session import get_db_factory
 from app.services.feeds.service import refresh_feed
 from app.services.user.auth import get_current_user
+from app.typing.common import MessageResponse
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -43,22 +44,13 @@ async def refresh_feed_route(
     feed_id: UUID,
     db_factory: Annotated[Any, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-    force_refetch: bool = Query(
-        False,
-        description="Force refetch even if not modified based on ETag/Last-Modified headers",
-    ),
-    preview: bool = Query(
-        False,
-        description="Preview mode - refresh feed without requiring user subscription",
-    ),
-) -> dict:
+) -> MessageResponse:
     """
     Initiates an immediate refresh of the specified RSS feed.
 
     Args:
         feed_id: UUID of the feed to refresh
         force_refetch: If True, ignores HTTP caching headers
-        preview: If True, allows refresh without user subscription
 
     Returns:
         JSON success message.
@@ -67,20 +59,14 @@ async def refresh_feed_route(
     # Any log generated within this scope will have these keys.
     log = logger.bind(feed_id=str(feed_id), user_id=current_user.sub)
 
-    # 2. Authorization (DRY)
-    # Check subscription unless in preview mode.
-    if not preview:
-        await verify_subscription(db_factory, feed_id, UUID(current_user.sub))
-
-    # 3. Business Logic
+    # 2. Business Logic
     # We call the service directly. We do NOT use try/except here.
     # If refresh_feed raises FeedConnectionError, the Global Handler catches it -> 503.
     # If refresh_feed raises FeedParsingError, the Global Handler catches it -> 400.
     await refresh_feed(
         session_factory=db_factory,
         feed_id=feed_id,
-        force=force_refetch,
     )
 
     log.info("Feed refresh completed successfully")
-    return {"message": "Feed refresh completed"}
+    return MessageResponse(message="Feed refresh completed")

@@ -79,9 +79,9 @@ class TestOrphanPrevention:
         # Parse and create articles
         parsed_feed = parse_feed_content(sample_feed_xml, str(test_feed.url))
         # Set feed_id on articles
-        for article in parsed_feed["articles"]:
+        for article in parsed_feed.articles:
             article.feed_id = test_feed.id
-        await create_articles_batch(db_session, articles_data=parsed_feed["articles"])
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count total article_contents
@@ -120,9 +120,9 @@ class TestOrphanPrevention:
         # Parse and create articles
         parsed_feed = parse_feed_content(duplicate_article_feed_xml, str(test_feed.url))
         # Set feed_id on articles
-        for article in parsed_feed["articles"]:
+        for article in parsed_feed.articles:
             article.feed_id = test_feed.id
-        await create_articles_batch(db_session, articles_data=parsed_feed["articles"])
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count article_contents for the duplicate link
@@ -174,9 +174,9 @@ class TestOrphanPrevention:
         # Create feed articles
         parsed_feed = parse_feed_content(sample_feed_xml, str(test_feed.url))
         # Set feed_id on articles
-        for article in parsed_feed["articles"]:
+        for article in parsed_feed.articles:
             article.feed_id = test_feed.id
-        await create_articles_batch(db_session, articles_data=parsed_feed["articles"])
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Get first content from our test feed
@@ -232,15 +232,15 @@ class TestOrphanPrevention:
         # Simulate concurrent ingestion by calling create_articles_batch multiple times
         parsed_feed = parse_feed_content(duplicate_article_feed_xml, str(test_feed.url))
         # Set feed_id on articles
-        for article in parsed_feed["articles"]:
+        for article in parsed_feed.articles:
             article.feed_id = test_feed.id
 
         # First ingestion
-        await create_articles_batch(db_session, articles_data=parsed_feed["articles"])
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Second ingestion (simulating concurrent/retry scenario)
-        await create_articles_batch(db_session, articles_data=parsed_feed["articles"])
+        await create_articles_batch(db_session, articles_data=parsed_feed.articles)
         await db_session.commit()
 
         # Count article_contents for the duplicate link

@@ -51,13 +51,9 @@ async def extract_favicon_and_canonical_url(
                 # Filter for high-quality icons
                 good_favicons = []
                 for fav in favicons:
-                    is_svg = (
-                        fav.format in ["svg", "svg+xml"] or "svg" in fav.url.lower()
-                    )
+                    is_svg = fav.format in ["svg", "svg+xml"] or "svg" in fav.url.lower()
                     is_data_uri = fav.url.startswith("data:")
-                    is_large = (fav.width and fav.width > 64) or (
-                        fav.height and fav.height > 64
-                    )
+                    is_large = (fav.width and fav.width > 64) or (fav.height and fav.height > 64)
 
                     if is_svg or is_data_uri or is_large:
                         good_favicons.append(fav)
@@ -66,9 +62,7 @@ async def extract_favicon_and_canonical_url(
                     # Check availability for first few candidates
                     checked_favicons = check_availability(good_favicons[:3])
                     for fav in checked_favicons:
-                        if fav.url and (
-                            fav.reachable is True or fav.url.startswith("data:")
-                        ):
+                        if fav.url and (fav.reachable is True or fav.url.startswith("data:")):
                             image_url = fav.url
                             break
 

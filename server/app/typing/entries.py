@@ -1,6 +1,6 @@
 """
-Entry schemas - DRY approach using SQLModel as base.
-Unified schema for both feed articles and clipped/saved articles.
+Entry schemas - Unified schema for both feed articles and clipped/saved articles.
+Maps directly to DB model: ArticleContent + UserEntry + FeedArticle.
 """
 
 from datetime import datetime
@@ -11,30 +11,84 @@ from pydantic import BaseModel, Field, HttpUrl, field_validator
 from app.models.enums import ArticlePriority
 from app.typing.common import response_config
 
-# ================= Base (Field Bundles) =================
+# ================= Base Field Bundles =================
 
 
-class EntryContentBase(BaseModel):
-    """Core content fields - from ArticleContent model."""
+class ContentFields(BaseModel):
+    """Core content fields - maps to ArticleContent table."""
 
     title: str | None = None
     link: str
+    description: str | None = None
+    content: str | None = None
     image_url: str | None = None
     author: str | None = None
-    published_at: datetime | None = None
     estimated_read_time_minutes: int | None = None
 
 
-class EntryUserStateBase(BaseModel):
-    """User interaction state - from UserEntry model."""
+class UserStateFields(BaseModel):
+    """User interaction state - maps to UserEntry table."""
 
     is_read: bool = False
-    is_saved: bool = False  # Maps to UserEntry.is_saved internally
-    is_favorite: bool = False
+    is_saved: bool = False
     priority: ArticlePriority = ArticlePriority.MEDIUM
+    user_note: str | None = None
+    read_at: datetime | None = None
 
 
-# ================= Requests =================
+class FeedContextFields(BaseModel):
+    """Denormalized feed context - NO embedded objects for performance."""
+
+    feed_id: UUID | None = None
+    feed_title: str | None = None
+    feed_icon: str | None = None
+    published_at: datetime | None = None
+
+
+# ================= API Responses =================
+
+
+class EntryListItem(ContentFields, UserStateFields, FeedContextFields):
+    """
+    List view - lightweight, NO heavy content.
+    Optimized for feed/list rendering.
+    """
+
+    model_config = response_config
+
+    id: UUID
+    source_domain: str | None = None
+    created_at: datetime
+    article_type: str = "feed"  # Deprecated: for backward compatibility
+
+    # Override to exclude heavy fields in lists
+    description: str | None = Field(None, max_length=300, description="Truncated preview")
+    content: None = None  # Never include in lists
+
+
+class EntryDetail(ContentFields, UserStateFields, FeedContextFields):
+    """
+    Detail view - includes full HTML content.
+    Used for article reading page.
+    """
+
+    model_config = response_config
+
+    id: UUID
+    source_domain: str | None = None
+    created_at: datetime
+    article_type: str = "feed"  # Deprecated: for backward compatibility
+
+    # Full fields (not truncated)
+    description: str | None = None
+    content: str | None = None
+
+    # Auto-extraction fields (added by service layer)
+    extracted_content: str | None = None
+    extracted_read_time: int | None = None
+
+
+# ================= API Requests =================
 
 
 class EntryCreateExternal(BaseModel):
@@ -42,7 +96,7 @@ class EntryCreateExternal(BaseModel):
 
     url: HttpUrl
     title: str | None = None
-    content: str | None = None  # Optional manual content override
+    content: str | None = None
     priority: ArticlePriority = ArticlePriority.MEDIUM
     note: str | None = None
 
@@ -59,50 +113,27 @@ class EntryUpdate(BaseModel):
     """Update user interaction state - all fields optional for PATCH."""
 
     is_read: bool | None = None
-    is_saved: bool | None = None  # Maps to UserEntry.is_saved internally
-    is_favorite: bool | None = None
+    is_saved: bool | None = None
     priority: ArticlePriority | None = None
     user_note: str | None = None
 
 
-# ================= Responses =================
+# ================= Internal (Feed Parsing) =================
 
 
-class EntryBase(EntryContentBase, EntryUserStateBase):
+class ArticleCreate(BaseModel):
     """
-    Base response combining content + user state.
-    Shared by list and detail views.
+    Internal schema for feed ingestion - NOT exposed in API.
+    Used by feed parsing workers.
     """
 
-    model_config = response_config
-
-    id: UUID
-
-    # Context (denormalized for performance)
     feed_id: UUID | None = None
-    feed_title: str | None = None
-    feed_icon: str | None = None
-
-
-class EntrySummary(EntryBase):
-    """
-    List view - lightweight, NO HTML content.
-    Optimized for feed/list rendering.
-    """
-
-    description: str | None = Field(None, max_length=300, description="Short text preview")
-
-
-class EntryDetail(EntryBase):
-    """
-    Reader view - includes full HTML content.
-    Used for article reading page.
-    """
-
-    # Heavy fields (deferred in DB queries)
-    description: str | None = None  # Full description
-    content: str | None = None  # Full HTML body
-
-    user_note: str | None = None
-    read_at: datetime | None = None
-    created_at: datetime
+    title: str | None = None
+    link: str
+    description: str | None = None
+    content: str | None = None
+    image_url: str | None = None
+    author: str | None = None
+    published_at: datetime
+    guid: str
+    estimated_read_time_minutes: int | None = None

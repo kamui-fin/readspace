@@ -1,11 +1,10 @@
 """Main feed routes - list, get, update, delete, unread-counts."""
 
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends, Query, status
-from fastapi.responses import ORJSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.constants import ERROR_FEED_NOT_FOUND
@@ -21,8 +20,13 @@ from app.crud.feed.subscription import (
 from app.db.session import get_db
 from app.models.feed import FeedSubscription
 from app.services.user.auth import get_current_user
+from app.typing.common import MessageResponse
 from app.typing.feeds import FeedDetail
-from app.typing.subscriptions import SubscriptionResponse, SubscriptionUpdate
+from app.typing.subscriptions import (
+    SubscriptionResponse,
+    SubscriptionResponseExtended,
+    SubscriptionUpdate,
+)
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -43,7 +47,7 @@ async def get_subscription_or_404(db: AsyncSession, feed_id: UUID, user_id: UUID
 # --- Routes ---
 @router.get(
     "/",
-    response_model=list[SubscriptionResponse],
+    response_model=list[SubscriptionResponse] | list[SubscriptionResponseExtended],
     status_code=status.HTTP_200_OK,
     summary="List user's RSS feeds",
 )
@@ -53,8 +57,9 @@ async def list_feeds(
     folder_id: UUID | None = Query(None, description="Filter feeds by folder ID"),
     tag_names: list[str] | None = Query(None, description="Filter by tags (AND logic)"),
     is_favorite: bool | None = Query(None, description="Filter by favorite status"),
+    extended: bool = Query(False, description="Return full feed details"),
     skip: int = Query(0, ge=0),
-) -> list[SubscriptionResponse]:
+) -> list[SubscriptionResponse] | list[SubscriptionResponseExtended]:
     """
     Retrieve all RSS feeds the user is subscribed to with optional filtering.
     """
@@ -64,9 +69,12 @@ async def list_feeds(
         db=db,
         user_id=UUID(current_user.sub),
         folder_id=folder_id,
+        extended=extended,
         skip=skip,
         limit=100,
     )
+    if extended:
+        return [SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions]
     return [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
 
 
@@ -103,7 +111,7 @@ async def get_feed(
 
 @router.put(
     "/{feed_id}",
-    response_model=SubscriptionResponse,
+    response_model=MessageResponse,
     summary="Update feed settings",
 )
 async def update_feed_settings(
@@ -111,7 +119,7 @@ async def update_feed_settings(
     feed_in: Annotated[SubscriptionUpdate, Body(description="Settings to update")],
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> SubscriptionResponse:
+) -> MessageResponse:
     """
     Update user-configurable settings (title, folder, favorite) for a subscription.
     """
@@ -122,7 +130,7 @@ async def update_feed_settings(
     subscription = await get_subscription_or_404(db, feed_id, user_uuid)
 
     # 2. Update
-    updated_subscription = await update_subscription(
+    await update_subscription(
         db=db,
         subscription=subscription,
         custom_title=feed_in.custom_title,
@@ -131,19 +139,20 @@ async def update_feed_settings(
     )
 
     logger.info("Feed settings updated successfully")
-    return updated_subscription
+    return MessageResponse(message="Feed settings updated successfully")
 
 
 @router.delete(
     "/{feed_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    response_model=MessageResponse,
+    status_code=status.HTTP_200_OK,
     summary="Delete RSS feed subscription",
 )
 async def delete_feed(
     feed_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> ORJSONResponse:
+) -> MessageResponse:
     """
     Unsubscribe from a feed and remove associated user data (read status, notes).
     """
@@ -161,11 +170,12 @@ async def delete_feed(
         raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
 
     logger.info("Feed deleted successfully")
-    return ORJSONResponse(status_code=status.HTTP_200_OK, content={"ok": True})
+    return MessageResponse(message="Feed deleted successfully")
 
 
 @router.put(
     "/{feed_id}/read-status",
+    response_model=MessageResponse,
     status_code=status.HTTP_200_OK,
     summary="Mark all articles in a feed as read",
 )
@@ -173,7 +183,7 @@ async def mark_feed_read(
     feed_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> dict[str, Any]:
+) -> MessageResponse:
     """
     Update the last_read_cutoff timestamp to mark all current articles as read.
     """
@@ -189,7 +199,4 @@ async def mark_feed_read(
 
     logger.info("All articles in feed marked as read")
 
-    return {
-        "message": "All articles marked as read",
-        "feed_id": str(feed_id),
-    }
+    return MessageResponse(message="All articles marked as read")

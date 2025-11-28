@@ -36,9 +36,7 @@ async def validate_and_read_opml(file: UploadFile) -> str:
     """
     # 1. Check Extension
     if not file.filename or not file.filename.endswith(SUPPORTED_OPML_EXTENSIONS):
-        raise ValidationError(
-            message="Invalid file type. Please upload a .opml or .xml file."
-        )
+        raise ValidationError(message="Invalid file type. Please upload a .opml or .xml file.")
 
     # 2. Check Size
     if file.size:
@@ -56,9 +54,7 @@ async def validate_and_read_opml(file: UploadFile) -> str:
     try:
         return content_bytes.decode("utf-8")
     except UnicodeDecodeError as e:
-        raise ValidationError(
-            message="File encoding error. Please ensure the OPML file is UTF-8 encoded."
-        ) from e
+        raise ValidationError(message="File encoding error. Please ensure the OPML file is UTF-8 encoded.") from e
     finally:
         await file.close()
 
@@ -75,9 +71,7 @@ async def import_opml_file(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
     opml_file: Annotated[UploadFile, File(description="OPML/XML file (max 50MB)")],
-    default_folder_name: Annotated[
-        str | None, Form(min_length=1, max_length=100)
-    ] = "Imported Feeds",
+    default_folder_name: Annotated[str | None, Form(min_length=1, max_length=100)] = "Imported Feeds",
 ) -> OpmlImportResponse:
     """
     Initiates asynchronous OPML import.

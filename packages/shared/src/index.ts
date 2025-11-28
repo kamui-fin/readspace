@@ -2,7 +2,7 @@
 export * from "./api/index";
 
 // Export all types
-export * from "./types/index";
+export * from "./api/types/index";
 
 // Export business logic utilities
 export * from "./utils/index";

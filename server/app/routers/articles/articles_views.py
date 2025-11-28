@@ -14,8 +14,8 @@ from app.crud.article.reader import (
 )
 from app.db.session import get_db
 from app.services.user.auth import get_current_user
-from app.typing.articles import ArticleResponse
 from app.typing.common import CursorPaginatedResponse
+from app.typing.entries import EntryListItem
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -24,7 +24,7 @@ router = APIRouter()
 
 @router.get(
     "/views/today",
-    response_model=CursorPaginatedResponse[ArticleResponse],
+    response_model=CursorPaginatedResponse[EntryListItem],
     status_code=status.HTTP_200_OK,
     summary="Get today's articles",
     description="Retrieve articles published in the last 24 hours.",
@@ -34,7 +34,7 @@ async def get_todays_articles(
     current_user: Annotated[TokenData, Depends(get_current_user)],
     cursor: str | None = Query(None, description="Cursor (article ID)"),
     limit: int = Query(50, ge=1, le=200),
-) -> CursorPaginatedResponse[ArticleResponse]:
+) -> CursorPaginatedResponse[EntryListItem]:
     """
     Retrieve articles published in the last 24 hours (UTC).
     """
@@ -61,7 +61,7 @@ async def get_todays_articles(
 
 @router.get(
     "/views/recently-read",
-    response_model=CursorPaginatedResponse[ArticleResponse],
+    response_model=CursorPaginatedResponse[EntryListItem],
     status_code=status.HTTP_200_OK,
     summary="Get recently read articles",
     description="Retrieve articles explicitly marked as read by the user.",
@@ -71,7 +71,7 @@ async def get_recently_read_articles(
     current_user: Annotated[TokenData, Depends(get_current_user)],
     cursor: str | None = Query(None, description="Cursor (article ID)"),
     limit: int = Query(50, ge=1, le=200),
-) -> CursorPaginatedResponse[ArticleResponse]:
+) -> CursorPaginatedResponse[EntryListItem]:
     """
     Retrieve articles that have been explicitly read by the user.
     """
@@ -94,7 +94,7 @@ async def get_recently_read_articles(
 
 @router.get(
     "/views/read-later",
-    response_model=CursorPaginatedResponse[ArticleResponse],
+    response_model=CursorPaginatedResponse[EntryListItem],
     status_code=status.HTTP_200_OK,
     summary="Get read later articles",
     description="Retrieve articles marked for reading later (includes RSS and clipped).",
@@ -104,7 +104,7 @@ async def get_read_later_articles(
     current_user: Annotated[TokenData, Depends(get_current_user)],
     cursor: str | None = Query(None, description="Cursor (article ID)"),
     limit: int = Query(50, ge=1, le=200),
-) -> CursorPaginatedResponse[ArticleResponse]:
+) -> CursorPaginatedResponse[EntryListItem]:
     """
     Retrieve user's "read later" list.
     """

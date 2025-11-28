@@ -19,12 +19,24 @@ class TestPreviewFeed:
             "app.services.feeds.parsing.parse_feed_content"
         ) as mock_parse:
 
+            from app.typing.feeds import ParsedFeed
+            from app.typing.entries import ArticleCreate
+            from datetime import datetime, timezone
+
             mock_fetch.return_value = {"content": b"dummy content", "error": None}
-            mock_parse.return_value = {
-                "title": "Hacker News: Newest",
-                "description": "Hacker News RSS",
-                "articles": [{"title": "Test Article", "link": "http://example.com"}],
-            }
+            mock_parse.return_value = ParsedFeed(
+                title="Hacker News: Newest",
+                description="Hacker News RSS",
+                link="https://news.ycombinator.com",
+                articles=[
+                    ArticleCreate(
+                        title="Test Article",
+                        link="http://example.com",
+                        guid="test-guid",
+                        published_at=datetime.now(timezone.utc),
+                    )
+                ],
+            )
 
             response = await async_client.get(
                 "/api/discover/preview?url=https://hnrss.org/newest"

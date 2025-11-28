@@ -13,7 +13,7 @@ from sqlalchemy.orm import selectinload
 from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import Feed, FeedSubscription
-from app.typing.articles import ArticleResponse
+from app.typing.entries import EntryDetail, EntryListItem
 from app.utils.urls import extract_domain_from_url
 
 # ============================================================================
@@ -58,21 +58,7 @@ class ArticleTransformer:
     """Transform database models to API responses."""
 
     @staticmethod
-    def _extract_feed_info(feed: Feed | None) -> dict[str, Any] | None:
-        """Extract feed information."""
-        if not feed:
-            return None
-
-        return {
-            "id": feed.id,
-            "title": feed.title,
-            "url": feed.url,
-            "link": feed.link,
-            "image_url": feed.image_url,
-        }
-
-    @staticmethod
-    def _truncate_description(description: str | None, max_length: int = 200) -> str | None:
+    def _truncate_description(description: str | None, max_length: int = 300) -> str | None:
         """Truncate description to max length."""
         if not description:
             return None
@@ -80,101 +66,143 @@ class ArticleTransformer:
             return description
         return description[:max_length].rsplit(" ", 1)[0] + "..."
 
-    def entry_to_response(
+    def to_entry_list_item(
         self,
         feed_article: FeedArticle,
         user_entry: UserEntry | None = None,
-        include_content: bool = False,
         subscription: FeedSubscription | None = None,
-    ) -> ArticleResponse:
-        """Convert FeedArticle + UserEntry to ArticleResponse."""
+    ) -> EntryListItem:
+        """Convert FeedArticle + UserEntry to lightweight list item."""
         content = feed_article.content
         feed = feed_article.feed
 
-        # Extract user state (matching actual UserEntry model fields)
-        # Check if article is read: either explicit UserEntry.is_read OR published before cutoff
+        # Compute is_read with cutoff logic
         is_read = False
         if user_entry and user_entry.is_read:
             is_read = True
         elif subscription and subscription.last_read_cutoff:
-            # Article is implicitly read if published before the cutoff
             is_read = feed_article.published_at <= subscription.last_read_cutoff
 
-        is_saved = user_entry.is_saved if user_entry else False
-        priority = user_entry.priority.upper() if user_entry and user_entry.priority else "MEDIUM"
-        read_at = user_entry.read_at if user_entry else None
-        user_note = user_entry.user_note if user_entry else None
-
-        return ArticleResponse(
+        return EntryListItem(
             id=feed_article.id,
             title=content.title,
             link=content.link,
-            description=self._truncate_description(content.description),
-            content=content.content if include_content else None,
+            description=self._truncate_description(content.description, 300),
+            content=None,  # Never in lists
             image_url=content.image_url,
             author=content.author,
-            published_at=feed_article.published_at,
             estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=is_read,
-            is_saved=is_saved,
-            priority=priority,
-            read_at=read_at,
-            user_note=user_note,
-            article_type="feed",
+            is_saved=user_entry.is_saved if user_entry else False,
+            priority=user_entry.priority if user_entry else "MEDIUM",
+            user_note=user_entry.user_note if user_entry else None,
+            read_at=user_entry.read_at if user_entry else None,
+            feed_id=feed_article.feed_id,
+            feed_title=feed.title if feed else None,
+            feed_icon=feed.image_url if feed else None,
+            published_at=feed_article.published_at,
             created_at=feed_article.created_at,
-            feed=self._extract_feed_info(feed),
+            article_type="feed",
         )
 
-    def clipped_to_response(
+    def to_entry_detail(
+        self,
+        feed_article: FeedArticle,
+        user_entry: UserEntry | None = None,
+        subscription: FeedSubscription | None = None,
+    ) -> EntryDetail:
+        """Convert FeedArticle + UserEntry to full detail with content."""
+        content = feed_article.content
+        feed = feed_article.feed
+
+        # Compute is_read with cutoff logic
+        is_read = False
+        if user_entry and user_entry.is_read:
+            is_read = True
+        elif subscription and subscription.last_read_cutoff:
+            is_read = feed_article.published_at <= subscription.last_read_cutoff
+
+        return EntryDetail(
+            id=feed_article.id,
+            title=content.title,
+            link=content.link,
+            description=content.description,  # Full description
+            content=content.content,  # Full content
+            image_url=content.image_url,
+            author=content.author,
+            estimated_read_time_minutes=content.estimated_read_time_minutes,
+            source_domain=extract_domain_from_url(content.link),
+            is_read=is_read,
+            is_saved=user_entry.is_saved if user_entry else False,
+            priority=user_entry.priority if user_entry else "MEDIUM",
+            user_note=user_entry.user_note if user_entry else None,
+            read_at=user_entry.read_at if user_entry else None,
+            feed_id=feed_article.feed_id,
+            feed_title=feed.title if feed else None,
+            feed_icon=feed.image_url if feed else None,
+            published_at=feed_article.published_at,
+            created_at=feed_article.created_at,
+            article_type="feed",
+        )
+
+    def clipped_to_entry_list_item(
         self,
         content: ArticleContent,
         user_entry: UserEntry,
-        include_content: bool = True,
-    ) -> dict[str, Any]:
-        """Convert clipped article (ArticleContent + UserEntry) to ArticleResponse."""
-        response_dict = ArticleResponse(
+    ) -> EntryListItem:
+        """Convert clipped article to list item."""
+        return EntryListItem(
             id=user_entry.id,
             title=content.title,
             link=content.link,
-            description=self._truncate_description(content.description),
-            content=content.content if include_content else None,
+            description=self._truncate_description(content.description, 300),
+            content=None,
             image_url=content.image_url,
             author=content.author,
-            published_at=user_entry.created_at,  # Use created_at for clipped articles
             estimated_read_time_minutes=content.estimated_read_time_minutes,
             source_domain=extract_domain_from_url(content.link),
             is_read=user_entry.is_read,
             is_saved=user_entry.is_saved,
-            priority=(user_entry.priority.upper() if user_entry.priority else "MEDIUM"),  # Uppercase priority
-            read_at=user_entry.read_at,
+            priority=user_entry.priority,
             user_note=user_entry.user_note,
-            article_type="clipped",
+            read_at=user_entry.read_at,
+            feed_id=None,
+            feed_title=None,
+            feed_icon=None,
+            published_at=user_entry.created_at,
             created_at=user_entry.created_at,
-            feed=None,  # Clipped articles don't have a feed
-        ).model_dump()
-        # Add note field for compatibility
-        response_dict["note"] = user_entry.user_note
-        return response_dict
+            article_type="clipped",
+        )
 
-    def to_response(
+    def clipped_to_entry_detail(
         self,
-        article: FeedArticle | tuple[FeedArticle, UserEntry | None],
-        include_content: bool = True,
-    ) -> dict[str, Any]:
-        """Convert article to response - handles both single and tuple formats."""
-        # Check if it's a FeedArticle instance
-        if isinstance(article, FeedArticle):
-            response = self.entry_to_response(article, None, include_content=include_content)
-        # Otherwise try to unpack as a sequence (tuple, list, or SQLAlchemy Row)
-        else:
-            try:
-                feed_article, user_entry = article
-                response = self.entry_to_response(feed_article, user_entry, include_content=include_content)
-            except (TypeError, ValueError):
-                # If unpacking fails, treat as single FeedArticle
-                response = self.entry_to_response(article, None, include_content=include_content)
-        return response.model_dump()
+        content: ArticleContent,
+        user_entry: UserEntry,
+    ) -> EntryDetail:
+        """Convert clipped article to full detail."""
+        return EntryDetail(
+            id=user_entry.id,
+            title=content.title,
+            link=content.link,
+            description=content.description,
+            content=content.content,
+            image_url=content.image_url,
+            author=content.author,
+            estimated_read_time_minutes=content.estimated_read_time_minutes,
+            source_domain=extract_domain_from_url(content.link),
+            is_read=user_entry.is_read,
+            is_saved=user_entry.is_saved,
+            priority=user_entry.priority,
+            user_note=user_entry.user_note,
+            read_at=user_entry.read_at,
+            feed_id=None,
+            feed_title=None,
+            feed_icon=None,
+            published_at=user_entry.created_at,
+            created_at=user_entry.created_at,
+            article_type="clipped",
+        )
 
 
 # ============================================================================
@@ -309,12 +337,14 @@ async def get_articles(
 
     # Transform rows to response dicts
     transformer = ArticleTransformer()
-    items = [
-        transformer.entry_to_response(
-            row[0], row[1], include_content=load_full_content, subscription=row[2]
-        ).model_dump()
-        for row in rows_to_process
-    ]
+    if load_full_content:
+        items = [
+            transformer.to_entry_detail(row[0], row[1], subscription=row[2]).model_dump() for row in rows_to_process
+        ]
+    else:
+        items = [
+            transformer.to_entry_list_item(row[0], row[1], subscription=row[2]).model_dump() for row in rows_to_process
+        ]
 
     next_cursor = None
     if rows_to_process and has_more:
@@ -419,12 +449,12 @@ async def get_read_later_articles(
     for entry in entries_to_process:
         if entry.feed_article:
             # This is a feed article
-            response = transformer.entry_to_response(entry.feed_article, entry, include_content=False)
+            response = transformer.to_entry_list_item(entry.feed_article, entry)
             items.append(response.model_dump())
         else:
             # This is a clipped article
-            response = transformer.clipped_to_response(entry.content, entry, include_content=False)
-            items.append(response)
+            response = transformer.clipped_to_entry_list_item(entry.content, entry)
+            items.append(response.model_dump())
 
     next_cursor = None
     if entries_to_process and has_more:

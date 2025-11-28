@@ -6,10 +6,10 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.typing.common import response_config
-from app.typing.feeds import FeedSummary
+from app.typing.feeds import FeedDetail, FeedSummary
 from app.typing.folders import FolderResponse
 
-# ================= Base (Field Bundle) =================
+# ================= Base =================
 
 
 class SubscriptionBase(BaseModel):
@@ -19,17 +19,23 @@ class SubscriptionBase(BaseModel):
     custom_title: str | None = None
 
 
+class SubscriptionCreateBase(BaseModel):
+    """Base for subscription creation fields."""
+
+    custom_title: str | None = None
+
+
 # ================= Requests =================
 
 
-class SubscriptionCreate(SubscriptionBase):
+class SubscriptionCreate(SubscriptionCreateBase):
     """Create subscription by URL - service discovers feed."""
 
     url: str  # Input can be loose string, service handles normalization
     folder_id: UUID | str = "default"
 
 
-class SubscriptionCreateByFeedId(SubscriptionBase):
+class SubscriptionCreateByFeedId(SubscriptionCreateBase):
     """Create subscription by existing feed ID - no discovery needed."""
 
     folder_id: UUID | str = "default"
@@ -38,9 +44,9 @@ class SubscriptionCreateByFeedId(SubscriptionBase):
 class SubscriptionUpdate(BaseModel):
     """Update subscription - all fields optional for PATCH."""
 
-    is_favorite: bool | None = None
     custom_title: str | None = None
     folder_id: UUID | None = None
+    is_favorite: bool | None = None
 
 
 # ================= Responses =================
@@ -55,14 +61,16 @@ class SubscriptionResponse(SubscriptionBase):
     model_config = response_config
 
     id: UUID
-    user_id: UUID
-    folder_id: UUID
 
-    # Dynamic/Calculated fields
-    unread_count: int = 0
-
-    # Embedded Objects
     feed: FeedSummary
-    folder: FolderResponse | None = None
+    folder: FolderResponse
 
     created_at: datetime
+
+
+class SubscriptionResponseExtended(SubscriptionResponse):
+    """
+    Extended response with full feed details.
+    """
+
+    feed: FeedDetail

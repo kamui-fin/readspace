@@ -251,6 +251,8 @@ async def admin_update_feed(
     url: str | None = None,
     top_level_category: str | FeedCategory | None = None,
     popularity_score: float | None = None,
+    tags: list[str] | None = None,
+    author: str | None = None,
 ) -> Feed:
     """
     Admin-only function to update global feed properties.
@@ -284,6 +286,14 @@ async def admin_update_feed(
     # Handle popularity_score
     if popularity_score is not None:
         feed.popularity_score = popularity_score
+
+    # Handle tags
+    if tags is not None:
+        feed.tags = tags
+
+    # Handle author
+    if author is not None:
+        feed.author = author
 
     db.add(feed)
     await db.flush()

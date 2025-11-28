@@ -17,8 +17,12 @@ from app.services.feeds.service import add_feed
 from app.services.folder import ensure_default_folder
 from app.services.user.auth import get_current_user
 from app.services.user.resource_limits import enforce_subscription_limit
+from app.typing.common import MessageResponse
 from app.typing.feeds import FeedCreate
-from app.typing.subscriptions import SubscriptionCreate, SubscriptionCreateByFeedId, SubscriptionResponse
+from app.typing.subscriptions import (
+    SubscriptionCreate,
+    SubscriptionCreateByFeedId,
+)
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -26,7 +30,9 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def resolve_target_folder(db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None) -> UUID:
+async def resolve_target_folder(
+    db: AsyncSession, user_id: UUID, folder_id_input: UUID | str | None
+) -> UUID:
     """Resolves 'default' string or None to the user's default folder UUID."""
     if folder_id_input is None or folder_id_input == "default":
         default_folder = await ensure_default_folder(db, user_id)
@@ -45,7 +51,7 @@ async def verify_feed_exists(db: AsyncSession, feed_id: UUID) -> Feed:
 # --- Routes ---
 @router.post(
     "/",
-    response_model=SubscriptionResponse,
+    response_model=MessageResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Add a new RSS feed",
     description="Add a new RSS feed by URL with automatic parsing, validation, and subscription creation.",
@@ -54,7 +60,7 @@ async def add_new_feed(
     feed_in: Annotated[FeedCreate, Body(description="Feed URL and folder assignment")],
     db_factory: Annotated[Any, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> SubscriptionResponse:
+) -> MessageResponse:
     """
     Add a new RSS feed by URL. Validates, parses, and creates subscription.
     """
@@ -80,12 +86,12 @@ async def add_new_feed(
     )
 
     logger.info("Feed added successfully", feed_id=str(subscription.feed_id))
-    return subscription
+    return MessageResponse(message="Feed added successfully")
 
 
 @router.post(
     "/{feed_id}/subscribe",
-    response_model=SubscriptionResponse,
+    response_model=MessageResponse,
     status_code=status.HTTP_201_CREATED,
     summary="Subscribe to an existing feed",
     description="Subscribe to an existing feed UUID without re-parsing URL.",
@@ -95,7 +101,7 @@ async def subscribe_to_feed(
     subscription_data: Annotated[SubscriptionCreateByFeedId, Body()],
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> SubscriptionResponse:
+) -> MessageResponse:
     """
     Subscribe to an existing RSS feed by its UUID.
     """
@@ -115,10 +121,11 @@ async def subscribe_to_feed(
             url=str(feed.url),
             folder_id=subscription_data.folder_id,
             custom_title=subscription_data.custom_title,
-            is_favorite=subscription_data.is_favorite,
         ),
         feed_db=feed,
     )
 
-    logger.info("Feed subscription created successfully", subscription_id=str(subscription.id))
-    return subscription
+    logger.info(
+        "Feed subscription created successfully", subscription_id=str(subscription.id)
+    )
+    return MessageResponse(message="Subscribed to feed successfully")

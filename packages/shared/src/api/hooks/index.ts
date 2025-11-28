@@ -1,6 +1,58 @@
-// Re-export all hooks from individual files
-export * from "./feeds";
-export * from "./article-enhancements";
+import { createArticleHooks } from "./use-articles";
+import { createFeedHooks } from "./use-feeds";
+import { createFolderHooks } from "./use-folders";
+import { createOpmlHooks } from "./use-opml";
 
-// Export configuration types
-export type { FeedHooksConfig } from "./feeds";
+// Export factory functions for custom configurations
+export { createFeedHooks, createArticleHooks, createFolderHooks, createOpmlHooks };
+
+// Re-export enhancement utilities
+export { ARTICLE_ENHANCEMENT_QUERY_KEYS, createTranslationQueryKey } from "./use-articles";
+
+// Create and export default hooks
+const defaultFeedHooks = createFeedHooks();
+const defaultArticleHooks = createArticleHooks();
+const defaultFolderHooks = createFolderHooks();
+const defaultOpmlHooks = createOpmlHooks();
+
+// Re-export all default hooks
+export const {
+    useFeeds,
+    useFeed,
+    useCreateFeed,
+    useUpdateFeed,
+    useRefreshFeed,
+    useDeleteFeed,
+    useAdminDeleteFeed,
+    useBulkDeleteFeeds,
+    useBulkUpdateFeedsFolder,
+    useSubscribeToFeed,
+} = defaultFeedHooks;
+
+export const {
+    useUnreadCounts,
+    useArticle,
+    useUpdateArticle,
+    useCheckArticleSaved,
+    useSaveArticle,
+    useUnsaveArticle,
+    useInfiniteArticles,
+    useInfiniteRecentlyReadArticles,
+    useInfiniteReadLaterArticles,
+    useInfiniteTodayArticles,
+    useExtractFullText,
+    useSummarizeArticle,
+    fetchTranslation,
+} = defaultArticleHooks;
+
+export const {
+    useFolders,
+    useCreateFolder,
+    useUpdateFolder,
+    useDeleteFolder,
+} = defaultFolderHooks;
+
+export const {
+    useImportOPML,
+    useImportTaskStatus,
+} = defaultOpmlHooks;

@@ -162,16 +162,14 @@ export function ArticleItem({
                             )}
 
                             {/* Feed favicon */}
-                            {(article.feed?.image_url ||
-                                (article.article_type === "clipped" &&
-                                    article.link)) &&
+                            {(article.feed_icon || article.link) &&
                             !feedImageError ? (
                                 <Image
                                     src={
-                                        article.feed?.image_url ||
+                                        article.feed_icon ||
                                         getFaviconUrl(article.link)
                                     }
-                                    alt={article.feed?.title || "Feed image"}
+                                    alt={article.feed_title || "Feed image"}
                                     width={12}
                                     height={12}
                                     className="h-3 w-3 shrink-0 rounded"
@@ -183,10 +181,9 @@ export function ArticleItem({
 
                             {/* Feed name or domain */}
                             <span className="text-[10px] text-muted-foreground truncate shrink-0 whitespace-nowrap overflow-hidden">
-                                {article.article_type === "clipped" &&
-                                article.link
+                                {article.link
                                     ? extractDomain(article.link)
-                                    : article.feed?.title || "Unknown Feed"}
+                                    : article.feed_title || "Unknown Feed"}
                             </span>
 
                             {/* Time display with clock icon */}

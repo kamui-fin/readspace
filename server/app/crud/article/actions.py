@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import FeedSubscription
-from app.typing.articles import ArticleUpdate
+from app.typing.entries import EntryUpdate
 
 # ============================================================================
 # USER ENTRY STATE MANAGEMENT
@@ -70,7 +70,7 @@ async def update_article_status(
     db: AsyncSession,
     *,
     article_id: UUID,
-    article_in: ArticleUpdate,
+    article_in: EntryUpdate,
     user_id: UUID,
     is_clipped: bool = False,
 ) -> tuple[FeedArticle, UserEntry] | tuple[ArticleContent, UserEntry] | None:

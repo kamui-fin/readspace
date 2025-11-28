@@ -138,13 +138,13 @@ class TestLanguageDetectionWithRealFeeds:
         # Extract article texts
         article_texts = [
             f"{article.title or ''} {article.description or ''}".strip()
-            for article in parsed["articles"][:5]
+            for article in parsed.articles[:5]
         ]
 
         # Detect language
         detected_lang = detect_feed_language(
-            title=parsed["title"],
-            description=parsed["description"],
+            title=parsed.title,
+            description=parsed.description,
             articles=article_texts,
         )
 
@@ -176,12 +176,12 @@ class TestLanguageDetectionWithRealFeeds:
         # Our detection should handle this
         article_texts = [
             f"{article.title or ''} {article.description or ''}".strip()
-            for article in parsed["articles"][:5]
+            for article in parsed.articles[:5]
         ]
 
         detected_lang = detect_feed_language(
-            title=parsed["title"],
-            description=parsed["description"],
+            title=parsed.title,
+            description=parsed.description,
             articles=article_texts,
         )
 

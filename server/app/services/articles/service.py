@@ -14,15 +14,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.constants import AUTO_EXTRACT_ON_FETCH, MIN_CONTENT_LENGTH
 from app.crud.article import reader
 from app.services.articles import scrape
-from app.typing.articles import (
-    ArticleResponse,
-)
+from app.typing.entries import EntryDetail
 from app.utils.text import is_content_complete
 
 logger = structlog.get_logger(__name__)
 
 
-async def _enrich_with_auto_extract(article: ArticleResponse) -> ArticleResponse:
+async def _enrich_with_auto_extract(article: EntryDetail) -> EntryDetail:
     """
     Business Logic: Checks if content is short/incomplete and attempts
     to fetch full content from the source URL. Returns enriched response.
@@ -49,7 +47,7 @@ async def _enrich_with_auto_extract(article: ArticleResponse) -> ArticleResponse
 
 async def get_article_details(
     db: AsyncSession, article_id: UUID, user_id: UUID, allow_preview: bool = False
-) -> ArticleResponse | None:
+) -> EntryDetail | None:
     """
     Get single article with business logic (Auto-Extraction).
     """
@@ -62,7 +60,7 @@ async def get_article_details(
     # 2. Transform directly to Pydantic
     feed_article, user_entry = row
     transformer = reader.ArticleTransformer()
-    response = transformer.entry_to_response(feed_article, user_entry, include_content=True)
+    response = transformer.to_entry_detail(feed_article, user_entry)
 
     # 3. Apply Business Logic (Auto Extract)
     if AUTO_EXTRACT_ON_FETCH:

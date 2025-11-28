@@ -24,6 +24,7 @@ class TestMeilisearchSyncOnFeedCreate:
         test_folder: Folder,
         meili_test_index: str,
         meili_client,
+        db_session: AsyncSession,
     ):
         """Test that adding a new feed syncs to Meilisearch."""
         # Mock external dependencies
@@ -45,17 +46,19 @@ class TestMeilisearchSyncOnFeedCreate:
                 "permanent_redirect": False,
             }
 
-            mock_parse.return_value = {
-                "title": "TechCrunch",
-                "description": "Tech news",
-                "link": "https://techcrunch.com",
-                "language": "en",
-                "articles": [],
-                "image_url": None,
-                "author_name": None,
-                "last_updated_at": None,
-                "tags": [],
-            }
+            from app.typing.feeds import ParsedFeed
+
+            mock_parse.return_value = ParsedFeed(
+                title="TechCrunch",
+                description="Tech news",
+                link="https://techcrunch.com",
+                language="en",
+                articles=[],
+                image_url=None,
+                author_name=None,
+                last_updated_at=None,
+                tags=[],
+            )
 
             # Add a new feed
             response = await async_client.post(
@@ -67,8 +70,14 @@ class TestMeilisearchSyncOnFeedCreate:
             )
 
         assert response.status_code == 201
-        data = response.json()
-        feed_id = data["feed"]["id"]
+
+        # Get feed ID from database since response only returns message
+        from sqlalchemy import select
+
+        stmt = select(Feed).where(Feed.url == "https://techcrunch.com/feed")
+        result = await db_session.execute(stmt)
+        feed = result.scalar_one()
+        feed_id = str(feed.id)
 
         # Wait for Meilisearch indexing
         import asyncio

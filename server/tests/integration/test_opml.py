@@ -372,13 +372,6 @@ class TestOpmlImportStatus:
 class TestOpmlTaskManagement:
     """Test OPML task listing and cancellation."""
 
-    @pytest.mark.asyncio
-    async def test_list_user_import_tasks_empty(self, async_client: AsyncClient):
-        """Test listing tasks when user has none."""
-        response = await async_client.get("/api/opml/import/tasks")
-
-        assert response.status_code == 200
-        assert response.json() == []
 
     @pytest.mark.asyncio
     async def test_get_active_import_task_none(self, async_client: AsyncClient):

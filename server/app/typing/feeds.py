@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 
 from app.models.enums import FeedCategory
 from app.typing.common import response_config
+from app.typing.entries import ArticleCreate
 
 # ================= Base (Field Bundles) =================
 
@@ -16,16 +17,10 @@ class FeedBase(BaseModel):
 
     url: str
     title: str = Field(..., max_length=500)
-    description: str
+    description: str = "Follow recent articles from this feed"
     link: str | None = None
-    language: str = "en"
+    language: str = "en" 
     image_url: str | None = None
-    author: str | None = None
-    last_fetched_at: datetime | None = None
-    last_updated_at: datetime | None = None
-    last_modified_header: str | None = None
-    etag_header: str | None = None
-    content_hash: str | None = None
 
     @field_validator("url", "link", mode="before")
     @classmethod
@@ -39,22 +34,8 @@ class FeedBase(BaseModel):
 class FeedCreate(BaseModel):
     """Input for discovering/adding a feed."""
 
-    url: HttpUrl  # TODO: HttpUrl, but allow rsshub://
+    url: HttpUrl
     folder_id: UUID | str = "default"
-
-
-class FeedUpdateInternal(BaseModel):
-    """Used by the worker to update global metadata."""
-
-    title: str | None = None
-    description: str | None = None
-    language: str | None = None
-    image_url: str | None = None
-
-    # HTTP caching headers for conditional GET
-    etag_header: str | None = None
-    last_modified_header: str | None = None
-    adaptive_fetch_interval_minutes: int | None = None
 
 
 class AdminFeedUpdate(BaseModel):
@@ -62,12 +43,14 @@ class AdminFeedUpdate(BaseModel):
 
     title: str | None = None
     description: str | None = None
-    link: str | None = None
+    link: HttpUrl | None = None
     language: str | None = None
     image_url: str | None = None
-    url: HttpUrl | None = None
+    url: str | None = None
     top_level_category: FeedCategory | None = None
     popularity_score: float | None = None
+    tags: list[str] | None = None
+    author: str | None = None
 
 
 # ================= Responses =================
@@ -82,12 +65,6 @@ class FeedSummary(FeedBase):
     model_config = response_config
 
     id: UUID
-    image_url: str | None = None
-    language: str | None = None
-
-    # Vital Stats
-    last_fetched_at: datetime | None = None
-    health_status: int = Field(default=0, serialization_alias="error_count")
 
 
 class FeedDetail(FeedSummary):
@@ -97,19 +74,34 @@ class FeedDetail(FeedSummary):
     """
 
     description: str | None = None
+    language: str = "en"
+    author: str | None = None
+
+    # Fetching Logic
+    last_fetched_at: datetime | None = None
+    next_fetch_at: datetime | None = None
+    adaptive_fetch_interval_minutes: int | None = None
+    last_error_message: str | None = None
+    error_count: int = Field(default=0, serialization_alias="error_count")
 
     # Advanced Metadata
     popularity_score: float = 0.0
     subscriber_count: int = 0
+
     top_level_category: FeedCategory | None = None
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def none_to_list(cls, v):
+        return v or []
 
     # Subscription status (for preview mode)
     is_subscribed: bool = False
 
-    # Scheduling info (Debugging)
-    next_fetch_at: datetime | None = None
+    # Timestamps
     created_at: datetime
-    updated_at: datetime | None = None
+    last_updated_at: datetime | None = None
 
 
 class FeedEnrichmentResponse(BaseModel):
@@ -199,3 +191,33 @@ class MeilisearchFeedDocument(BaseModel):
         if hasattr(v, "value"):
             return v.value
         return v
+
+
+class ParsedFeed(BaseModel):
+    """
+    Schema for feed preview data.
+    Returned by the discovery/preview endpoint.
+    """
+
+    title: str
+    description: str | None = None
+    link: str | None = None
+    language: str | None = None
+    image_url: str | None = None
+    author_name: str | None = None
+    last_updated_at: datetime | None = None
+    tags: list[str] = Field(default_factory=list)
+    articles: list["ArticleCreate"] = Field(default_factory=list)
+
+
+class BulkDeleteResponse(BaseModel):
+    """Response for bulk delete operations."""
+
+    deleted_count: int
+    deleted_ids: list[UUID]
+
+
+class BulkUpdateResponse(BaseModel):
+    """Response for bulk update operations."""
+
+    updated_count: int

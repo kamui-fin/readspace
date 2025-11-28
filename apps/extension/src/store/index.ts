@@ -7,7 +7,6 @@ import { browser } from '@/lib/browser'
 import { resetSupabaseClient } from '@/lib/supabase'
 import {
   DiscoveredFeed,
-  ExtensionSettings,
   Feed,
   Folder,
   PageMetadata,
@@ -16,6 +15,18 @@ import {
 import toast from 'react-hot-toast'
 import { create } from 'zustand'
 import { createJSONStorage, persist, StateStorage } from 'zustand/middleware'
+
+export interface ExtensionSettings {
+  readspace_url: string;
+  supabase_url: string;
+  supabase_anon_key: string;
+  google_client_id?: string; // For Firefox OAuth (Chrome uses manifest)
+  access_token?: string;
+  default_folder_id?: string;
+  auto_save: boolean;
+  show_reading_time: boolean;
+  theme: "light" | "dark" | "system";
+}
 
 interface ExtensionState {
   // Settings

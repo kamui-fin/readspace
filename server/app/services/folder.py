@@ -16,9 +16,7 @@ from app.utils.validators import validate_folder_name
 logger = structlog.get_logger(__name__)
 
 
-async def create_folder(
-    db: AsyncSession, user_id: UUID, folder_in: FolderCreate
-) -> FolderResponse:
+async def create_folder(db: AsyncSession, user_id: UUID, folder_in: FolderCreate) -> FolderResponse:
     """
     Create a new folder.
     Validates name and checks for duplicates.
@@ -28,9 +26,7 @@ async def create_folder(
         validated_name = validate_folder_name(folder_in.name)
         folder_in.name = validated_name
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-        ) from e
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
     # 2. Check Duplicates
     existing = await crud_folder.get_by_name(db, folder_in.name, user_id)
@@ -45,18 +41,14 @@ async def create_folder(
     return FolderResponse.model_validate(folder, from_attributes=True)
 
 
-async def update_folder(
-    db: AsyncSession, user_id: UUID, folder_id: UUID, folder_in: FolderUpdate
-) -> FolderResponse:
+async def update_folder(db: AsyncSession, user_id: UUID, folder_id: UUID, folder_in: FolderUpdate) -> FolderResponse:
     """
     Update folder name.
     """
     # 1. Get Existing
     folder = await crud_folder.get_by_id(db, folder_id, user_id)
     if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
     # 2. Validate New Name (if changed)
     if folder_in.name and folder_in.name != folder.name:
@@ -64,9 +56,7 @@ async def update_folder(
             validated_name = validate_folder_name(folder_in.name)
             folder_in.name = validated_name
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)
-            ) from e
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
 
         # Check duplicate
         duplicate = await crud_folder.get_by_name(db, folder_in.name, user_id)
@@ -89,17 +79,13 @@ async def delete_folder(db: AsyncSession, user_id: UUID, folder_id: UUID) -> Non
     """
     folder = await crud_folder.get_by_id(db, folder_id, user_id)
     if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
 
     await crud_folder.delete(db, folder)
     logger.info("Folder deleted", folder_id=folder_id, user_id=user_id)
 
 
-async def list_folders(
-    db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100
-) -> list[FolderResponse]:
+async def list_folders(db: AsyncSession, user_id: UUID, skip: int = 0, limit: int = 100) -> list[FolderResponse]:
     """List folders."""
     folders = await crud_folder.list_by_user(db, user_id, skip, limit)
     return [FolderResponse.model_validate(f, from_attributes=True) for f in folders]
@@ -119,9 +105,7 @@ async def ensure_default_folder(db: AsyncSession, user_id: UUID) -> FolderRespon
     # Fallback: Create it
     logger.info("Creating default folder", user_id=user_id)
     try:
-        new_folder = await crud_folder.create(
-            db, FolderCreate(name=default_name), user_id
-        )
+        new_folder = await crud_folder.create(db, FolderCreate(name=default_name), user_id)
         return FolderResponse.model_validate(new_folder, from_attributes=True)
     except Exception:
         # Race condition handling: if parallel request created it
@@ -131,8 +115,6 @@ async def ensure_default_folder(db: AsyncSession, user_id: UUID) -> FolderRespon
         raise
 
 
-async def create_folders_batch(
-    db: AsyncSession, user_id: UUID, names: list[str]
-) -> dict[str, UUID]:
+async def create_folders_batch(db: AsyncSession, user_id: UUID, names: list[str]) -> dict[str, UUID]:
     """Bulk create helper."""
     return await crud_folder.upsert_batch(db, names, user_id)

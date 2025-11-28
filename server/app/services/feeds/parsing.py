@@ -7,7 +7,7 @@ Zero DB dependencies.
 import re
 from datetime import datetime, timezone
 from time import mktime
-from typing import Any, TypedDict, cast
+from typing import Any, cast
 from urllib.parse import urljoin
 
 import feedparser
@@ -16,7 +16,8 @@ import structlog
 from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
 
-from app.typing.articles import ArticleCreate
+from app.typing.entries import ArticleCreate
+from app.typing.feeds import ParsedFeed
 from app.utils.text import calculate_reading_time, clean_html_text
 from app.utils.urls import extract_domain_from_url
 
@@ -27,18 +28,6 @@ logger = structlog.get_logger(__name__)
 # ==============================================================================
 # HTML sanitization is handled by feedparser's built-in sanitizer
 # We only use nh3 for stripping HTML tags to create plain text summaries
-
-
-class ParsedFeed(TypedDict):
-    title: str
-    description: str | None
-    link: str | None
-    language: str | None
-    image_url: str | None
-    author_name: str | None
-    last_updated_at: datetime | None
-    tags: list[str]
-    articles: list[ArticleCreate]
 
 
 def parse_feed_content(content: str, url: str) -> ParsedFeed:
@@ -52,9 +41,7 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     parsed = feedparser.parse(content, sanitize_html=True)
 
     if parsed.bozo:
-        logger.warning(
-            "Feed parsed with errors", url=url, error=str(parsed.bozo_exception)
-        )
+        logger.warning("Feed parsed with errors", url=url, error=str(parsed.bozo_exception))
 
     feed: dict[str, Any] = cast(dict[str, Any], parsed.feed)
 
@@ -86,16 +73,12 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
     last_updated_at = None
     if hasattr(feed, "updated_parsed") and feed.updated_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(
-                mktime(feed.updated_parsed), tz=timezone.utc
-            )
+            last_updated_at = datetime.fromtimestamp(mktime(feed.updated_parsed), tz=timezone.utc)
         except (ValueError, TypeError, OverflowError):
             pass
     elif hasattr(feed, "published_parsed") and feed.published_parsed:
         try:
-            last_updated_at = datetime.fromtimestamp(
-                mktime(feed.published_parsed), tz=timezone.utc
-            )
+            last_updated_at = datetime.fromtimestamp(mktime(feed.published_parsed), tz=timezone.utc)
         except (ValueError, TypeError, OverflowError):
             pass
 
@@ -116,17 +99,17 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         except Exception as e:
             logger.warning("Failed to extract article", error=str(e))
 
-    return {
-        "title": title,
-        "description": description,
-        "link": link,
-        "language": language,
-        "image_url": image_url,
-        "author_name": author_name,
-        "last_updated_at": last_updated_at,
-        "tags": tags,
-        "articles": articles,
-    }
+    return ParsedFeed(
+        title=title,
+        description=description,
+        link=link,
+        language=language,
+        image_url=image_url,
+        author_name=author_name,
+        last_updated_at=last_updated_at,
+        tags=tags,
+        articles=articles,
+    )
 
 
 # ==============================================================================
@@ -183,11 +166,7 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         image_url = urljoin(feed_url or link, image_url)
 
     # Calculate reading time
-    read_time = (
-        min(calculate_reading_time(clean_content, default_wpm=200), 60)
-        if clean_content
-        else 1
-    )
+    read_time = min(calculate_reading_time(clean_content, default_wpm=200), 60) if clean_content else 1
 
     return ArticleCreate(
         title=title,
@@ -280,20 +259,12 @@ def _sanitize_and_fix_html(html_content: str, base_url: str | None) -> str:
                     continue
                 if tag.has_attr("href"):
                     val = tag.get("href")
-                    if (
-                        val
-                        and isinstance(val, str)
-                        and not (val.startswith("data:") or val.startswith("mailto:"))
-                    ):
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["href"] = urljoin(base_url, val)
                         has_changes = True
                 if tag.has_attr("src"):
                     val = tag.get("src")
-                    if (
-                        val
-                        and isinstance(val, str)
-                        and not (val.startswith("data:") or val.startswith("mailto:"))
-                    ):
+                    if val and isinstance(val, str) and not (val.startswith("data:") or val.startswith("mailto:")):
                         tag["src"] = urljoin(base_url, val)
                         has_changes = True
             if has_changes:
@@ -380,11 +351,7 @@ def find_best_article_image(entry: Any) -> tuple[str | None, str]:
                 src = img.get("src")
                 if src and isinstance(src, str):
                     # Skip common tracking pixels and icons
-                    if (
-                        "icon" not in src.lower()
-                        and "emoji" not in src.lower()
-                        and "pixel" not in src.lower()
-                    ):
+                    if "icon" not in src.lower() and "emoji" not in src.lower() and "pixel" not in src.lower():
                         return src, "html_parse"
         except Exception as e:
             logger.debug("Failed to extract image from HTML", error=str(e))

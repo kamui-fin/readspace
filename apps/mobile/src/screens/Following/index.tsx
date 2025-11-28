@@ -380,19 +380,9 @@ export default function FollowingScreen() {
             const isClipped = article.article_type === 'clipped';
 
             // For feed articles
-            const feedTitle =
-                typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
-            const feedImageUrl =
-                typeof article.feed === 'object' && article.feed
-                    ? article.feed.image_url
-                    : undefined;
-
-            // Try multiple ways to get the feed ID
-            let feedId: string | undefined;
-            if (typeof article.feed === 'object' && article.feed) {
-                feedId = (article.feed as any).id;
-            } else if (typeof article.feed === 'string') {
-                feedId = article.feed;
+            const feedTitle = article.feed_title || undefined;
+            const feedImageUrl = article.feed_icon || undefined;
+            const feedId = article.feed_id || undefined;
             }
 
             // Check if there's a feed_id field directly on the article

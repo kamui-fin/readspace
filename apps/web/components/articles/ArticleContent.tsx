@@ -193,7 +193,7 @@ export function ArticleContent({
 
     // Show feed badge when not in a feed-specific view and article has feed info
     const shouldShowFeedBadge =
-        !isInFeedView && article.feed_id && article.feed?.title
+        !isInFeedView && article.feed_id && article.feed_title
 
     /**
      * Handles extraction of full text content from article URL
@@ -611,17 +611,17 @@ export function ArticleContent({
                         {/* Article Header */}
                         <div className="space-y-4 not-prose">
                             {/* Feed Link Badge - Show when not in feed-specific view */}
-                            {shouldShowFeedBadge && article.feed && (
+                            {shouldShowFeedBadge && (
                                 <Link
                                     href={`/feeds/${article.feed_id}/articles`}
                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-md hover:bg-muted transition-colors duration-200 group"
                                 >
-                                    {article.feed.image_url &&
+                                    {article.feed_icon &&
                                         !feedImageError ? (
                                         <Image
-                                            src={article.feed.image_url}
+                                            src={article.feed_icon}
                                             alt={
-                                                article.feed.title ||
+                                                article.feed_title ||
                                                 "Feed image"
                                             }
                                             width={16}
@@ -635,7 +635,7 @@ export function ArticleContent({
                                         <div className="h-4 w-4 shrink-0 rounded bg-primary/20" />
                                     )}
                                     <span className="text-xs font-medium tracking-wider uppercase text-muted-foreground group-hover:text-foreground transition-colors duration-200">
-                                        {article.feed.title}
+                                        {article.feed_title}
                                     </span>
                                 </Link>
                             )}

@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.crud.article.actions import set_article_state
 from app.crud.article.ingester import upsert_article_content
 from app.models.article import ArticleContent, UserEntry
-from app.typing.articles import ArticleCreate
+from app.typing.entries import ArticleCreate
 from app.utils.text import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
@@ -55,9 +55,7 @@ async def save_article_from_url(
 
     # 2. Delegate to CRUD: Content
     # This handles the "Check if exists, if not create, if yes update title" logic strictly in DB layer
-    article_content = await upsert_article_content(
-        db, article_in=content_in, update_title_if_changed=True
-    )
+    article_content = await upsert_article_content(db, article_in=content_in, update_title_if_changed=True)
 
     # 3. Delegate to CRUD: User State
     # This handles the "Mark as Read Later" logic

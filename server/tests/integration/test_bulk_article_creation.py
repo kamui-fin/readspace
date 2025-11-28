@@ -21,7 +21,7 @@ from app.models.article import ArticleContent, FeedArticle
 from app.models.feed import Feed, FeedSubscription
 from app.models.folder import Folder
 from app.models.user import Profile
-from app.typing.articles import ArticleCreate
+from app.typing.entries import ArticleCreate
 from app.services.feeds.service import refresh_feed
 from app.services.feeds.fetching import FetchResult
 
@@ -497,7 +497,7 @@ class TestFeedServiceBulkIntegration:
             assert len(articles_1) == 1
 
             # Second refresh (same content)
-            await refresh_feed(session_factory=db_factory, feed_id=feed.id, force=True)
+            await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             # Should still have only 1 article (no duplicates)
             article_result_2 = await db_session.execute(

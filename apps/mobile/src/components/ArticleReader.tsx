@@ -400,18 +400,9 @@ export function ArticleReader({
         []
     );
 
-    const feedTitle =
-        typeof article.feed === 'object' && article.feed ? article.feed.title : undefined;
-    const feedImageUrl =
-        typeof article.feed === 'object' && article.feed ? article.feed.image_url : undefined;
-
-    // Try multiple ways to get the feed ID
-    let feedId: string | undefined;
-    if (typeof article.feed === 'object' && article.feed) {
-        feedId = (article.feed as any).id;
-    } else if (typeof article.feed === 'string') {
-        feedId = article.feed;
-    }
+    const feedTitle = article.feed_title || undefined;
+    const feedImageUrl = article.feed_icon || undefined;
+    const feedId = article.feed_id || undefined;
 
     // Check if there's a feed_id field directly on the article
     if (!feedId && (article as any).feed_id) {
@@ -419,7 +410,7 @@ export function ArticleReader({
     }
 
     console.log('ArticleReader - Full article keys:', Object.keys(article));
-    console.log('ArticleReader - isClipped:', isClipped, 'feedId:', feedId, 'feedTitle:', feedTitle, 'article.feed:', article.feed);
+    console.log('ArticleReader - isClipped:', isClipped, 'feedId:', feedId, 'feedTitle:', feedTitle, 'feed_id:', article.feed_id);
 
     // For clipped articles, show domain and use created_at as saved date
     const displaySource = isClipped ? extractDomain(article.link) : feedTitle;

@@ -103,7 +103,6 @@ async def test_mark_feed_all_read_e2e(
     assert response.status_code == 200
     data = response.json()
     assert data["message"] == "All articles marked as read"
-    assert data["feed_id"] == str(feed.id)
 
     # Verify subscription was updated
     await db_session.refresh(subscription)
@@ -347,7 +346,7 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
 
     assert response.status_code == 201
     subscription_data = response.json()
-    assert subscription_data["feed"]["id"] == str(feed.id)
+    assert subscription_data["message"] == "Subscribed to feed successfully"
 
     # Get the subscription to check last_read_cutoff
     from sqlalchemy import select
@@ -419,6 +418,7 @@ async def test_subscription_with_fewer_articles_shows_all_as_unread(
     )
 
     assert response.status_code == 201
+    assert response.json()["message"] == "Subscribed to feed successfully"
 
     # Get the subscription
     from sqlalchemy import select

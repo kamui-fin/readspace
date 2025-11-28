@@ -13,8 +13,8 @@ from app.crud.article.reader import CursorPaginationParams, get_articles
 from app.db.session import get_db
 from app.services.articles.service import get_article_details
 from app.services.user.auth import get_current_user
-from app.typing.articles import ArticleResponse, ArticleUpdate
 from app.typing.common import CursorPaginatedResponse
+from app.typing.entries import EntryDetail, EntryListItem, EntryUpdate
 from app.typing.user import TokenData
 
 logger = structlog.get_logger(__name__)
@@ -24,7 +24,7 @@ router = APIRouter()
 # --- Routes ---
 @router.get(
     "/",
-    response_model=CursorPaginatedResponse[ArticleResponse],
+    response_model=CursorPaginatedResponse[EntryListItem],
     status_code=status.HTTP_200_OK,
     summary="List user articles with cursor pagination",
 )
@@ -37,7 +37,7 @@ async def list_articles(
     folder_id: UUID | None = Query(None),
     is_read: bool | None = Query(None),
     is_saved: bool | None = Query(None, alias="is_saved"),
-) -> CursorPaginatedResponse[ArticleResponse]:
+) -> CursorPaginatedResponse[EntryListItem]:
     """
     Retrieve articles using cursor-based pagination.
     """
@@ -55,10 +55,7 @@ async def list_articles(
 
     # 2. Query
     result = await get_articles(
-        db=db,
-        user_id=UUID(current_user.sub),
-        params=CursorPaginationParams(limit=limit, cursor=cursor),
-        **filters
+        db=db, user_id=UUID(current_user.sub), params=CursorPaginationParams(limit=limit, cursor=cursor), **filters
     )
 
     return CursorPaginatedResponse(
@@ -71,7 +68,7 @@ async def list_articles(
 
 @router.get(
     "/{article_id}",
-    response_model=ArticleResponse,
+    response_model=EntryDetail,
     status_code=status.HTTP_200_OK,
     summary="Get article by ID",
 )
@@ -79,7 +76,7 @@ async def get_article(
     article_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
-) -> ArticleResponse:
+) -> EntryDetail:
     """
     Retrieve a specific article with full content and metadata.
     """
@@ -92,9 +89,7 @@ async def get_article(
     )
 
     if not article:
-        logger.warning(
-            "Article not found", article_id=str(article_id), user_id=current_user.sub
-        )
+        logger.warning("Article not found", article_id=str(article_id), user_id=current_user.sub)
         raise NotFoundError(message="Article not found")
 
     return article
@@ -107,7 +102,7 @@ async def get_article(
 )
 async def update_article(
     article_id: UUID,
-    article_in: Annotated[ArticleUpdate, Body(...)],
+    article_in: Annotated[EntryUpdate, Body(...)],
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
     article_type: str = Query("feed", description="'feed' or 'clipped'"),

@@ -6,9 +6,7 @@ import structlog
 logger = structlog.get_logger(__name__)
 
 
-def parse_opml(
-    opml_content: str | bytes, default_folder_name: str = "Imported Feeds"
-) -> list[dict]:
+def parse_opml(opml_content: str | bytes, default_folder_name: str = "Imported Feeds") -> list[dict]:
     """
     Parse OPML content and extract feeds with folder structure.
 
@@ -19,8 +17,9 @@ def parse_opml(
     Returns:
         List of feed dictionaries with keys: xml_url, title, folder_name
     """
-    import xml.etree.ElementTree as ET
     from io import BytesIO
+
+    import defusedxml.ElementTree as ElementTree
 
     # 1. Strict XML Validation & Root Tag Check
     try:
@@ -32,13 +31,13 @@ def parse_opml(
 
         # Parse XML to check root element
         # This will raise ParseError if XML is malformed
-        tree = ET.parse(BytesIO(content_bytes))
+        tree = ElementTree.parse(BytesIO(content_bytes))
         root = tree.getroot()
 
         if root.tag.lower() != "opml":
             raise ValueError("Root element must be <opml>")
 
-    except ET.ParseError as e:
+    except ElementTree.ParseError as e:
         logger.error("Invalid XML structure", error=str(e))
         raise ValueError(f"Invalid XML format: {e}") from e
     except Exception as e:

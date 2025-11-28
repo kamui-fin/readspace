@@ -15,6 +15,7 @@ from app.crud.feed.core import get_feed_by_id
 from app.db.session import get_db
 from app.models.user import Profile
 from app.services.feeds.meilisearch import delete_feed as meilisearch_delete_feed
+from app.services.feeds.meilisearch import sync_feed
 from app.typing.feeds import AdminFeedUpdate, FeedDetail
 
 logger = structlog.get_logger(__name__)
@@ -54,17 +55,17 @@ async def admin_update_feed(
             feed=feed,
             title=feed_in.title,
             description=feed_in.description,
-            link=feed_in.link,
+            link=str(feed_in.link) if feed_in.link else None,
             language=feed_in.language,
             image_url=feed_in.image_url,
             url=str(feed_in.url) if feed_in.url else None,
             top_level_category=feed_in.top_level_category,
             popularity_score=feed_in.popularity_score,
+            tags=feed_in.tags,
+            author=feed_in.author,
         )
 
         # Sync to Meilisearch after admin update
-        from app.services.feeds.meilisearch import sync_feed
-
         try:
             settings = get_settings()
             await sync_feed(settings, updated_feed)
