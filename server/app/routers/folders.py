@@ -46,7 +46,7 @@ async def create_folder(
     """
     Create a new folder for the current user.
     """
-    logger.bind(user_id=current_user.sub, folder_title=folder_in.title)
+    logger.bind(user_id=current_user.sub, folder_title=folder_in.name)
 
     folder = await folder_service.create_folder(db, UUID(current_user.sub), folder_in)
 

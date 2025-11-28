@@ -6,7 +6,6 @@ Interacts with Redis for state management.
 """
 
 from datetime import datetime, timezone
-from typing import List
 
 import structlog
 from fastapi import HTTPException, status
@@ -54,7 +53,10 @@ class TaskRepository:
     async def get_owner(self, task_id: str) -> str | None:
         async with Redis(connection_pool=self.pool) as r:
             owner = await r.get(self._owner_key(task_id))
-            return owner.decode() if owner else None
+            if owner is None:
+                return None
+            # Handle both bytes and str (depending on decode_responses setting)
+            return owner.decode() if isinstance(owner, bytes) else owner
 
     async def remove_ownership(self, task_id: str, user_id: str) -> None:
         async with Redis(connection_pool=self.pool) as r:
@@ -82,14 +84,14 @@ async def get_task_owner(task_id: str) -> str | None:
     return await repo.get_owner(task_id)
 
 
-async def list_user_tasks(user_id: str) -> List[OpmlTaskMetadata]:
+async def list_user_tasks(user_id: str) -> list[OpmlTaskMetadata]:
     """
     List all active OPML import tasks for the user.
     Lazily cleans up tasks that have expired from Redis.
     """
     task_ids = await repo.get_user_task_ids(user_id)
     active_tasks = []
-    
+
     # We collect IDs that are totally missing from Redis to clean up the User Set
     expired_ids = []
 
@@ -102,7 +104,7 @@ async def list_user_tasks(user_id: str) -> List[OpmlTaskMetadata]:
                 # If state is None, the data TTL expired, or it never started.
                 # Check if we still have ownership data (it might be just queued)
                 if await repo.get_owner(task_id):
-                     active_tasks.append(
+                    active_tasks.append(
                         OpmlTaskMetadata(
                             user_id=user_id,
                             task_id=task_id,
@@ -157,7 +159,7 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Import task not found or has expired.",
             )
-        
+
         if owner != user_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied.")
 
@@ -173,7 +175,7 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
                 filename="...",
                 created_at=datetime.now(timezone.utc).isoformat(),
                 status=ImportStatus.PENDING,
-            )
+            ),
         )
 
     # 2. Verify Ownership
@@ -182,10 +184,7 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
 
     # 3. Build Response
     response = OpmlImportStatusResponse(
-        task_id=task_id,
-        status=state.status,
-        message=state.message or "Processing...",
-        metadata=state.to_metadata()
+        task_id=task_id, status=state.status, message=state.message or "Processing...", metadata=state.to_metadata()
     )
 
     if state.status == ImportStatus.IN_PROGRESS:
@@ -197,7 +196,7 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
 
     elif state.status in (ImportStatus.COMPLETED, ImportStatus.CANCELLED):
         response.result = state.to_result()
-        # Note: We do NOT remove ownership here. We let it expire naturally 
+        # Note: We do NOT remove ownership here. We let it expire naturally
         # so the user can see the success message.
 
     elif state.status == ImportStatus.FAILED:
@@ -215,7 +214,7 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
     owner = await repo.get_owner(task_id)
     if not owner or owner != user_id:
         # If it doesn't exist, we treat it as 404. If owned by another, 403.
-        # To avoid leaking existence, strict 404 is sometimes better, 
+        # To avoid leaking existence, strict 404 is sometimes better,
         # but here we stick to standard HTTP semantics.
         if not owner:
             raise HTTPException(status_code=404, detail="Task not found.")
@@ -224,7 +223,7 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
     tracker = OpmlImportTracker(task_id)
     state = await tracker.get_state()
 
-    # If state is gone but ownership exists, it's pending/stuck. 
+    # If state is gone but ownership exists, it's pending/stuck.
     # We just clean up ownership.
     if not state:
         await repo.remove_ownership(task_id, user_id)
@@ -232,7 +231,7 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
             task_id=task_id,
             message="Task cancelled (was pending).",
             cancelled=True,
-            previous_state=ImportStatus.PENDING
+            previous_state=ImportStatus.PENDING,
         )
 
     if state.status in [ImportStatus.COMPLETED, ImportStatus.FAILED]:
@@ -253,14 +252,11 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
 
     # 1. Signal workers to stop
     await tracker.cancel()
-    
+
     # 2. Update the metadata immediately so UI reflects it
     # (Previously this was manual JSON manipulation in tasks.py)
     await tracker.mark_cancelled()
 
     return OpmlImportCancelResponse(
-        task_id=task_id,
-        message="Cancellation processed.",
-        cancelled=True,
-        previous_state=state.status
+        task_id=task_id, message="Cancellation processed.", cancelled=True, previous_state=state.status
     )

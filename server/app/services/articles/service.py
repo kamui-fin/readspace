@@ -24,46 +24,31 @@ from app.utils.text import is_content_complete
 logger = structlog.get_logger(__name__)
 
 
-async def _enrich_with_auto_extract(article: ArticleResponse) -> None:
+async def _enrich_with_auto_extract(article: ArticleResponse) -> ArticleResponse:
     """
     Business Logic: Checks if content is short/incomplete and attempts
-    to fetch full content from the source URL. Mutates the response object.
+    to fetch full content from the source URL. Returns enriched response.
     """
     if not is_content_complete(article.content, threshold=MIN_CONTENT_LENGTH):
         if article.link:
             logger.info("Auto-extracting content", article_id=article.id)
 
-            extracted, read_time, error = await scrape.extract_full_content(str(article.link), article.title)
+            extracted, read_time, error = await scrape.extract_full_content(
+                str(article.link), article.title
+            )
 
             if extracted and not error:
-                article.extracted_content = extracted
-                article.extracted_read_time = read_time
-                article.content = extracted  # Optionally replace the main content for display
+                # Return new object with updates
+                return article.model_copy(
+                    update={
+                        "extracted_content": extracted,
+                        "extracted_read_time": read_time,
+                    }
+                )
             else:
                 logger.warning("Auto-extraction failed", error=error)
 
-
-async def get_articles_with_cursor(
-    db: AsyncSession, user_id: UUID, params: reader.CursorPaginationParams, **filters
-) -> reader.CursorPaginationResult:
-    """
-    Get articles using the new cursor-based CRUD.
-
-    This function exists primarily to handle the transformation of
-    SQLAlchemy rows into your unified `ArticleResponse` Pydantic models
-    before returning them to the API.
-    """
-    # 1. Call CRUD
-    result = await reader.get_articles(db, user_id, params, **filters)
-
-    # 2. Transform Items
-    # Note: result.items are already transformed dicts from the CRUD layer
-    # No need to transform again
-    transformed_items = result.items
-
-    # 3. Return generic result with transformed items
-    # We construct a new model because result.items was SQLAlchemy objects
-    return CursorPaginationResult(items=transformed_items, next_cursor=result.next_cursor, has_more=result.has_more)
+    return article
 
 
 async def get_article_details(
@@ -73,34 +58,22 @@ async def get_article_details(
     Get single article with business logic (Auto-Extraction).
     """
     # 1. Call CRUD
-    row = await reader.get_article_by_id(db, article_id=article_id, user_id=user_id, load_full_content=True)
+    row = await reader.get_article_by_id(
+        db, article_id=article_id, user_id=user_id, load_full_content=True
+    )
 
     if not row:
         return None
 
-    # 2. Transform
+    # 2. Transform directly to Pydantic
+    feed_article, user_entry = row
     transformer = reader.ArticleTransformer()
-    response = transformer.to_response(row)
-
-    # Cast dict to Pydantic if to_response returns dict
-    if isinstance(response, dict):
-        response = ArticleResponse(**response)
+    response = transformer.entry_to_response(
+        feed_article, user_entry, include_content=True
+    )
 
     # 3. Apply Business Logic (Auto Extract)
     if AUTO_EXTRACT_ON_FETCH:
-        await _enrich_with_auto_extract(response)
+        response = await _enrich_with_auto_extract(response)
 
     return response
-
-
-async def update_article_state(
-    db: AsyncSession, article_id: UUID, user_id: UUID, update_data: ArticleUpdate, is_clipped: bool = False
-) -> bool:
-    """
-    Update article state. Returns True if successful, False if article not found.
-    """
-    result = await actions.update_article_status(
-        db, article_id=article_id, article_in=update_data, user_id=user_id, is_clipped=is_clipped
-    )
-
-    return result is not None

@@ -1,5 +1,6 @@
 import re
 
+import nh3
 import structlog
 from bs4 import BeautifulSoup
 from iso639 import Lang
@@ -14,6 +15,18 @@ PUNCTUATION_PATTERN = re.compile(r"[^\w\s]")
 
 # Matches en-US, en_US, en-us, etc.
 LANG_CODE_PATTERN = re.compile(r"^([a-z]{2,3})(?:[-_][a-z0-9]+)?$", re.IGNORECASE)
+
+
+def clean_html_text(text: str | None) -> str:
+    """
+    Clean HTML text to plain text.
+    """
+    if not text:
+        return ""
+    # Use nh3 to strip all tags
+    text = nh3.clean(str(text), tags=set())
+    # Collapse whitespace
+    return re.sub(r"\s+", " ", text).strip()
 
 
 def is_content_complete(content: str | None, threshold: int = 500) -> bool:

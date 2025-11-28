@@ -1,6 +1,5 @@
 """User/Profile models - pure SQLAlchemy."""
 
-
 from sqlalchemy import Column, DateTime, ForeignKey, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID

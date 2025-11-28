@@ -5,7 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr
 
-from app.typing.common import UserRole, response_config
+from app.models.enums import UserRole
+from app.typing.common import response_config
 
 # ================= Requests =================
 

@@ -101,7 +101,9 @@ class OpmlImportTracker:
                 pipe.setex(self.key_meta, self._ttl, orjson.dumps(meta_data))
                 pipe.hset(
                     self.key_counters,
-                    mapping=dict.fromkeys(["completed", "successful", "failed", "already_existed", "skipped_limit", "cancelled_count"], 0),
+                    mapping=dict.fromkeys(
+                        ["completed", "successful", "failed", "already_existed", "skipped_limit", "cancelled_count"], 0
+                    ),
                 )
                 pipe.expire(self.key_counters, self._ttl)
                 await pipe.execute()
@@ -153,14 +155,14 @@ class OpmlImportTracker:
             # Read current counters to give an accurate final report
             counters_raw = await r.hgetall(self.key_counters)
             counters = {k.decode(): int(v) for k, v in counters_raw.items()}
-            
+
             completed = counters.get("completed", 0)
-            
+
             meta = orjson.loads(meta_raw)
             meta["status"] = ImportStatus.CANCELLED.value
             meta["completed_at"] = datetime.now(timezone.utc).isoformat()
             meta["message"] = f"Import cancelled. {completed} of {meta['total']} feeds processed."
-            
+
             await r.setex(self.key_meta, self._ttl, orjson.dumps(meta))
 
     async def is_cancelled(self) -> bool:

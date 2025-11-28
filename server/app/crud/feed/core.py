@@ -40,12 +40,14 @@ def normalize_url(url: str) -> str:
         scheme = "https" if parsed.scheme in ("http", "https") else parsed.scheme
         netloc = parsed.netloc.lower()
         path = parsed.path.rstrip("/") if parsed.path else ""
-        return urlunparse((scheme, netloc, path, parsed.params, parsed.query, parsed.fragment))
+        return urlunparse(
+            (scheme, netloc, path, parsed.params, parsed.query, parsed.fragment)
+        )
     except Exception:
         return url
 
 
-def calculate_next_fetch(feed: Feed) -> datetime:
+def calculate_next_fetch(feed: Feed, ttl: int | None = None) -> datetime:
     """
     Determines the next fetch time based on errors, adaptive history, and server hints.
     Uses HTTP conditional GET (ETag/Last-Modified) for bandwidth efficiency.
@@ -68,8 +70,8 @@ def calculate_next_fetch(feed: Feed) -> datetime:
     # Priority: adaptive_fetch_interval > ttl (from Cache-Control/Expires) > default
     if feed.adaptive_fetch_interval_minutes:
         interval = feed.adaptive_fetch_interval_minutes
-    elif feed.ttl:
-        interval = feed.ttl
+    elif ttl:
+        interval = ttl
     else:
         interval = MIN_REFRESH_MINUTES
 
@@ -120,7 +122,9 @@ async def create_feed(db: AsyncSession, *, feed_data: FeedBase) -> Feed:
     return db_feed
 
 
-async def get_recent_article_publication_times(db: AsyncSession, *, feed_id: UUID, limit: int = 30) -> list[datetime]:
+async def get_recent_article_publication_times(
+    db: AsyncSession, *, feed_id: UUID, limit: int = 30
+) -> list[datetime]:
     """
     Get recent article publication times for a feed.
 
@@ -167,7 +171,13 @@ async def get_feeds_for_worker(db: AsyncSession, *, limit: int = 100) -> list[Fe
 
 
 async def update_feed_after_fetch(
-    db: AsyncSession, *, feed: Feed, success: bool, metadata: dict | None = None, error_msg: str | None = None
+    db: AsyncSession,
+    *,
+    feed: Feed,
+    success: bool,
+    metadata: dict | None = None,
+    error_msg: str | None = None,
+    ttl: int | None = None,
 ) -> Feed:
     """
     Unified handler for post-fetch state updates.
@@ -196,7 +206,7 @@ async def update_feed_after_fetch(
 
     # CRITICAL: Calculate next fetch time immediately and save it
     # This keeps the "get_feeds_for_worker" query fast
-    feed.next_fetch_at = calculate_next_fetch(feed)
+    feed.next_fetch_at = calculate_next_fetch(feed, ttl=ttl)
 
     db.add(feed)
     # Note: Commit is left to the caller/worker
@@ -215,11 +225,15 @@ async def update_feed(db: AsyncSession, *, feed: Feed, update_data: dict) -> Fee
     return feed
 
 
-async def update_enrichment_data(db: AsyncSession, *, feed: Feed, enrichment: dict) -> Feed:
+async def update_enrichment_data(
+    db: AsyncSession, *, feed: Feed, enrichment: dict
+) -> Feed:
     """Update AI-derived metadata (Categories, Tags)."""
     if "top_level_category" in enrichment:
         try:
-            feed.top_level_category = FeedCategory(enrichment["top_level_category"]).value
+            feed.top_level_category = FeedCategory(
+                enrichment["top_level_category"]
+            ).value
         except ValueError:
             pass
 
@@ -317,7 +331,9 @@ async def get_feeds_needing_enrichment(db: AsyncSession, *, limit: int) -> list[
     return list(result.scalars().all())
 
 
-async def bulk_update_feeds_enrichment(db: AsyncSession, *, update_mappings: list[dict[str, Any]]) -> int:
+async def bulk_update_feeds_enrichment(
+    db: AsyncSession, *, update_mappings: list[dict[str, Any]]
+) -> int:
     """
     Apply bulk updates to feeds for enrichment data.
 

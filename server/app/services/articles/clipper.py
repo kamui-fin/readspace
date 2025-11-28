@@ -39,13 +39,6 @@ async def save_article_from_url(
     metadata = metadata or {}
 
     # 1. Prepare Content Data
-    # Logic: Determine published date
-    published_at = datetime.now(timezone.utc)
-
-    # Note: published_at is currently not stored in ArticleContent,
-    # but ArticleCreate requires it.
-    # If we parse metadata['published_at'], we should ensure it's a datetime.
-
     reading_time = calculate_reading_time(content)
 
     content_in = ArticleCreate(
@@ -56,13 +49,14 @@ async def save_article_from_url(
         description=metadata.get("description"),
         author=metadata.get("author"),
         image_url=metadata.get("image_url"),
-        published_at=published_at,
         estimated_read_time_minutes=reading_time,
     )
 
     # 2. Delegate to CRUD: Content
     # This handles the "Check if exists, if not create, if yes update title" logic strictly in DB layer
-    article_content = await upsert_article_content(db, article_in=content_in, update_title_if_changed=True)
+    article_content = await upsert_article_content(
+        db, article_in=content_in, update_title_if_changed=True
+    )
 
     # 3. Delegate to CRUD: User State
     # This handles the "Mark as Read Later" logic

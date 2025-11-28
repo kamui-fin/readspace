@@ -20,20 +20,6 @@ def _get_limit_for_role(role: str, resource: str) -> int:
     return role_limits.get(resource, 0)
 
 
-async def check_limit(db: AsyncSession, user_id: UUID, resource: str, user_role: str) -> bool:
-    """
-    Boolean check: Can the user perform this action?
-    """
-    limit = _get_limit_for_role(user_role, resource)
-
-    # -1 indicates unlimited
-    if limit == -1:
-        return True
-
-    current_usage = await get_current_usage(db, user_id, resource)
-    return current_usage < limit
-
-
 async def enforce_subscription_limit(db: AsyncSession, user_id: UUID, additional_count: int = 1) -> None:
     """
     High-level dependency: Checks subscription limit and raises ResourceLimitError if exceeded.

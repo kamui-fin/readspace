@@ -16,18 +16,22 @@ from google.genai import types
 from app.core.config import get_settings
 from app.services.ai.prompts import ENRICHMENT_SYSTEM_PROMPT
 from app.services.ai.service import _get_client  # Re-use the singleton
-from app.typing.feeds import FeedEnrichmentResponse
+from app.typing.feeds import FeedEnrichmentInput, FeedEnrichmentResponse
 
 logger = structlog.get_logger(__name__)
 
 
-async def enrich_feeds_batch(feeds: list[dict[str, Any]]) -> list[FeedEnrichmentResponse | None]:
+async def enrich_feeds_batch(
+    feeds: list[FeedEnrichmentInput],
+    timeout_seconds: int = 86400,
+) -> list[FeedEnrichmentResponse | None]:
     """
     Process a list of feeds via Gemini Batch API.
     """
+    if not feeds:
+        return []
+
     client = _get_client()
-    if not client or not feeds:
-        return [None] * len(feeds)
 
     temp_file_path = None
     uploaded_file = None
@@ -37,7 +41,9 @@ async def enrich_feeds_batch(feeds: list[dict[str, Any]]) -> list[FeedEnrichment
         temp_file_path = _create_batch_file(feeds)
 
         # 2. Upload
-        uploaded_file = client.files.upload(file=temp_file_path, config=types.UploadFileConfig(mime_type="jsonl"))
+        uploaded_file = client.files.upload(
+            file=temp_file_path, config=types.UploadFileConfig(mime_type="jsonl")
+        )
 
         # 3. Start Job
         if not uploaded_file.name:
@@ -46,7 +52,7 @@ async def enrich_feeds_batch(feeds: list[dict[str, Any]]) -> list[FeedEnrichment
         logger.info("Batch job started", job=job.name, size=len(feeds))
 
         # 4. Poll
-        job = await _poll_job(client, job.name)
+        job = await _poll_job(client, job.name, timeout_seconds)
 
         if job.state.name != "JOB_STATE_SUCCEEDED":
             logger.error("Batch job failed", state=job.state.name)
@@ -69,14 +75,27 @@ async def enrich_feeds_batch(feeds: list[dict[str, Any]]) -> list[FeedEnrichment
 # --- Internal Helpers ---
 
 
-def _create_batch_file(feeds: list[dict[str, Any]]) -> str:
+def _create_batch_file(feeds: list[FeedEnrichmentInput]) -> str:
     """Write requests to temp JSONL file."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
         for idx, feed in enumerate(feeds):
-            lang_note = f"Content Language: {feed.get('language', 'en')}. "
+            lang_note = f"Content Language: {feed.language}. "
+
+            extras = []
+            if feed.link:
+                extras.append(f"Website: {feed.link}")
+            if feed.url:
+                extras.append(f"RSS: {feed.url}")
+            if feed.tags:
+                extras.append(f"Tags: {', '.join(feed.tags)}")
+            if feed.contributors:
+                extras.append(f"Contributors: {', '.join(feed.contributors)}")
+
+            extra_text = "\n".join(extras)
+
             user_prompt = (
-                f"{lang_note}\nTitle: {feed.get('title')}\nDesc: {feed.get('description')}"
-                f"\nDomain: {feed.get('domain')}\n\n{ENRICHMENT_SYSTEM_PROMPT}"
+                f"{lang_note}\nTitle: {feed.title}\nDesc: {feed.description}"
+                f"\nDomain: {feed.domain}\n{extra_text}\n\n{ENRICHMENT_SYSTEM_PROMPT}"
             )
 
             request_obj = {
@@ -85,7 +104,7 @@ def _create_batch_file(feeds: list[dict[str, Any]]) -> str:
                     "contents": [{"parts": [{"text": user_prompt}]}],
                     "generationConfig": {
                         "temperature": 0.2,
-                        "maxOutputTokens": 400,
+                        "maxOutputTokens": 1000,
                         "responseMimeType": "application/json",
                         "responseJsonSchema": FeedEnrichmentResponse.model_json_schema(),
                     },
@@ -109,18 +128,32 @@ async def _start_batch_job(client: genai.Client, file_name: str) -> Any:
     raise RuntimeError("Quota exceeded")
 
 
-async def _poll_job(client: genai.Client, job_name: str) -> Any:
-    """Poll until done or 10m timeout."""
+async def _poll_job(
+    client: genai.Client, job_name: str, timeout_seconds: int = 86400
+) -> Any:
+    """Poll until done or timeout."""
     start = time.time()
-    while (time.time() - start) < 600:
+    while (time.time() - start) < timeout_seconds:
         job = client.batches.get(name=job_name)
-        if job and job.state and job.state.name in ("JOB_STATE_SUCCEEDED", "JOB_STATE_FAILED", "JOB_STATE_CANCELLED"):
+        if (
+            job
+            and job.state
+            and job.state.name
+            in (
+                "JOB_STATE_SUCCEEDED",
+                "JOB_STATE_FAILED",
+                "JOB_STATE_CANCELLED",
+                "JOB_STATE_EXPIRED",
+            )
+        ):
             return job
         await asyncio.sleep(10)
     raise TimeoutError("Batch job timed out")
 
 
-def _download_results(client: genai.Client, result_file: str, count: int) -> list[FeedEnrichmentResponse | None]:
+def _download_results(
+    client: genai.Client, result_file: str, count: int
+) -> list[FeedEnrichmentResponse | None]:
     results: list[FeedEnrichmentResponse | None] = [None] * count
     try:
         content = client.files.download(file=result_file)
@@ -129,7 +162,9 @@ def _download_results(client: genai.Client, result_file: str, count: int) -> lis
                 data = orjson.loads(line)
                 idx = int(data["key"])
                 if "response" in data:
-                    text = data["response"]["candidates"][0]["content"]["parts"][0]["text"]
+                    text = data["response"]["candidates"][0]["content"]["parts"][0][
+                        "text"
+                    ]
                     results[idx] = FeedEnrichmentResponse.model_validate_json(text)
             except (KeyError, ValueError, IndexError) as e:
                 logger.debug("Failed to parse batch result item", error=str(e))
@@ -145,8 +180,17 @@ def _download_results(client: genai.Client, result_file: str, count: int) -> lis
 def _cleanup(client: genai.Client, temp_path: str | None, uploaded_file: Any):
     if temp_path and os.path.exists(temp_path):
         os.unlink(temp_path)
-    if uploaded_file and client and hasattr(uploaded_file, "name") and uploaded_file.name:
+    if (
+        uploaded_file
+        and client
+        and hasattr(uploaded_file, "name")
+        and uploaded_file.name
+    ):
         try:
             client.files.delete(name=uploaded_file.name)
         except Exception as e:
-            logger.debug("Failed to delete uploaded file", file_name=uploaded_file.name, error=str(e))
+            logger.debug(
+                "Failed to delete uploaded file",
+                file_name=uploaded_file.name,
+                error=str(e),
+            )

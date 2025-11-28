@@ -19,8 +19,13 @@ from bs4 import BeautifulSoup, Tag
 from trafilatura.downloads import ConfigParser
 from trafilatura.settings import DEFAULT_CONFIG
 
-from app.core.constants import CONTENT_EXTRACTION_TIMEOUT
+from app.core.constants import (
+    ALLOWED_ATTRIBUTES,
+    ALLOWED_TAGS,
+    CONTENT_EXTRACTION_TIMEOUT,
+)
 from app.utils.text import calculate_reading_time
+from app.utils.urls import urls_match
 
 logger = structlog.get_logger(__name__)
 
@@ -28,54 +33,9 @@ logger = structlog.get_logger(__name__)
 # CONFIGURATION
 # ==============================================================================
 
-# Allow-list for nh3 sanitization
-ALLOWED_TAGS = {
-    "a",
-    "abbr",
-    "acronym",
-    "b",
-    "blockquote",
-    "br",
-    "code",
-    "div",
-    "em",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "hr",
-    "i",
-    "img",
-    "li",
-    "ol",
-    "p",
-    "pre",
-    "span",
-    "strong",
-    "table",
-    "tbody",
-    "td",
-    "th",
-    "thead",
-    "tr",
-    "ul",
-    "video",
-    "source",
-    "figure",
-    "figcaption",
-}
-
-ALLOWED_ATTRIBUTES = {
-    "a": {"href", "title", "target"},
-    "img": {"src", "alt", "title", "width", "height"},
-    "video": {"src", "controls", "poster"},
-    "source": {"src", "type"},
-    "code": {"class"},
-    "span": {"class"},
-    "div": {"class"},
-}
+# ==============================================================================
+# CONFIGURATION
+# ==============================================================================
 
 
 def _get_trafilatura_config() -> ConfigParser:
@@ -93,24 +53,14 @@ def _get_trafilatura_config() -> ConfigParser:
 # ==============================================================================
 
 
-def _urls_match(url1: str | None, url2: str | None) -> bool:
-    """
-    Compare two URLs loosely to check if they point to the same image.
-    Ignores scheme (http/https) to be safe.
-    """
-    if not url1 or not url2:
-        return False
-
-    try:
-        u1 = urlparse(url1)
-        u2 = urlparse(url2)
-        # Compare netloc + path. Ignore scheme and query params (often dynamic sizing)
-        return (u1.netloc == u2.netloc) and (u1.path == u2.path)
-    except Exception:
-        return url1 == url2
+# ==============================================================================
+# DOM MANIPULATION HELPERS (BeautifulSoup)
+# ==============================================================================
 
 
-def _remove_duplicate_title_heading(soup: BeautifulSoup, article_title: str | None) -> None:
+def _remove_duplicate_title_heading(
+    soup: BeautifulSoup, article_title: str | None
+) -> None:
     """
     Remove the first heading if it matches the article title.
     Mutates the soup object.
@@ -158,7 +108,7 @@ def _remove_duplicate_image(soup: BeautifulSoup, main_image_url: str | None) -> 
             else:
                 img_src = img_src_attr if isinstance(img_src_attr, str) else None
 
-            if img_src and _urls_match(img_src, main_image_url):
+            if img_src and urls_match(img_src, main_image_url):
                 logger.debug("Removing duplicate hero image from body", src=img_src)
                 # Optional: Remove parent figure if it contains only this image
                 parent = img.parent
@@ -185,7 +135,9 @@ def _fetch_and_extract(url: str, config: ConfigParser) -> str | None:
         return None
 
     # Extract with images allowed
-    return trafilatura.extract(downloaded, output_format="html", include_images=True, config=config)
+    return trafilatura.extract(
+        downloaded, output_format="html", include_images=True, config=config
+    )
 
 
 async def extract_full_content(

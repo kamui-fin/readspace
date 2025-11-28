@@ -3,11 +3,10 @@
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, cast
-from urllib.parse import urlparse
 from uuid import UUID
 
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -15,6 +14,7 @@ from app.core.constants import DEFAULT_CURSOR_LIMIT, MAX_CURSOR_LIMIT
 from app.models.article import ArticleContent, FeedArticle, UserEntry
 from app.models.feed import Feed, FeedSubscription
 from app.typing.articles import ArticleResponse
+from app.utils.text import clean_html_text
 
 # ============================================================================
 # PAGINATION UTILITIES
@@ -40,7 +40,9 @@ class CursorPaginationResult(BaseModel):
     """Result of cursor-based pagination."""
 
     items: list[Any] = Field(description="List of items for current page")
-    next_cursor: str | None = Field(description="Cursor for next page, None if no more pages")
+    next_cursor: str | None = Field(
+        description="Cursor for next page, None if no more pages"
+    )
     has_more: bool = Field(description="Whether there are more pages available")
 
     class Config:
@@ -58,17 +60,6 @@ class ArticleTransformer:
     """Transform database models to API responses."""
 
     @staticmethod
-    def _extract_source_domain(link: str | None) -> str | None:
-        """Extract domain from URL."""
-        if not link:
-            return None
-        try:
-            parsed = urlparse(link)
-            return parsed.netloc or None
-        except Exception:
-            return None
-
-    @staticmethod
     def _extract_feed_info(feed: Feed | None) -> dict[str, Any] | None:
         """Extract feed information."""
         if not feed:
@@ -83,7 +74,9 @@ class ArticleTransformer:
         }
 
     @staticmethod
-    def _truncate_description(description: str | None, max_length: int = 200) -> str | None:
+    def _truncate_description(
+        description: str | None, max_length: int = 200
+    ) -> str | None:
         """Truncate description to max length."""
         if not description:
             return None
@@ -112,7 +105,11 @@ class ArticleTransformer:
             is_read = feed_article.published_at <= subscription.last_read_cutoff
 
         is_read_later = user_entry.is_read_later if user_entry else False
-        priority = user_entry.priority.upper() if user_entry and user_entry.priority else "MEDIUM"
+        priority = (
+            user_entry.priority.upper()
+            if user_entry and user_entry.priority
+            else "MEDIUM"
+        )
         read_at = user_entry.read_at if user_entry else None
         user_note = user_entry.user_note if user_entry else None
 
@@ -157,7 +154,9 @@ class ArticleTransformer:
             source_domain=self._extract_source_domain(content.link),
             is_read=user_entry.is_read,
             is_read_later=user_entry.is_read_later,
-            priority=user_entry.priority.upper() if user_entry.priority else "MEDIUM",  # Uppercase priority
+            priority=(
+                user_entry.priority.upper() if user_entry.priority else "MEDIUM"
+            ),  # Uppercase priority
             read_at=user_entry.read_at,
             user_note=user_entry.user_note,
             article_type="clipped",
@@ -176,15 +175,21 @@ class ArticleTransformer:
         """Convert article to response - handles both single and tuple formats."""
         # Check if it's a FeedArticle instance
         if isinstance(article, FeedArticle):
-            response = self.entry_to_response(article, None, include_content=include_content)
+            response = self.entry_to_response(
+                article, None, include_content=include_content
+            )
         # Otherwise try to unpack as a sequence (tuple, list, or SQLAlchemy Row)
         else:
             try:
                 feed_article, user_entry = article
-                response = self.entry_to_response(feed_article, user_entry, include_content=include_content)
+                response = self.entry_to_response(
+                    feed_article, user_entry, include_content=include_content
+                )
             except (TypeError, ValueError):
                 # If unpacking fails, treat as single FeedArticle
-                response = self.entry_to_response(article, None, include_content=include_content)
+                response = self.entry_to_response(
+                    article, None, include_content=include_content
+                )
         return response.model_dump()
 
 
@@ -239,7 +244,9 @@ async def get_articles(
             (
                 selectinload(FeedArticle.content).undefer_group("content_details")
                 if load_full_content
-                else selectinload(FeedArticle.content).undefer(ArticleContent.description)
+                else selectinload(FeedArticle.content).undefer(
+                    ArticleContent.description
+                )
             ),
             selectinload(FeedArticle.feed),
         )
@@ -270,7 +277,9 @@ async def get_articles(
         if is_read_later:
             query = query.where(UserEntry.is_read_later)
         else:
-            query = query.where(or_(~UserEntry.is_read_later, UserEntry.is_read_later.is_(None)))
+            query = query.where(
+                or_(~UserEntry.is_read_later, UserEntry.is_read_later.is_(None))
+            )
 
     if priority is not None:
         query = query.where(UserEntry.priority == priority)
@@ -332,7 +341,9 @@ async def get_articles(
         last_item = rows_to_process[-1][0]
         next_cursor = _create_cursor(last_item.published_at)
 
-    return CursorPaginationResult(items=items, next_cursor=next_cursor, has_more=has_more)
+    return CursorPaginationResult(
+        items=items, next_cursor=next_cursor, has_more=has_more
+    )
 
 
 async def get_article_by_id(
@@ -383,7 +394,8 @@ async def check_article_saved_by_url(
         select(ArticleContent, UserEntry)
         .outerjoin(
             UserEntry,
-            (UserEntry.content_id == ArticleContent.id) & (UserEntry.user_id == user_id),
+            (UserEntry.content_id == ArticleContent.id)
+            & (UserEntry.user_id == user_id),
         )
         .where(ArticleContent.link == url)
         .limit(1)
@@ -430,11 +442,15 @@ async def get_read_later_articles(
     for entry in entries_to_process:
         if entry.feed_article:
             # This is a feed article
-            response = transformer.entry_to_response(entry.feed_article, entry, include_content=False)
+            response = transformer.entry_to_response(
+                entry.feed_article, entry, include_content=False
+            )
             items.append(response.model_dump())
         else:
             # This is a clipped article
-            response = transformer.clipped_to_response(entry.content, entry, include_content=False)
+            response = transformer.clipped_to_response(
+                entry.content, entry, include_content=False
+            )
             items.append(response)
 
     next_cursor = None
@@ -442,4 +458,67 @@ async def get_read_later_articles(
         last_item = entries_to_process[-1]
         next_cursor = _create_cursor(last_item.created_at)
 
-    return CursorPaginationResult(items=items, next_cursor=next_cursor, has_more=has_more)
+    return CursorPaginationResult(
+        items=items, next_cursor=next_cursor, has_more=has_more
+    )
+
+
+async def fetch_recent_article_texts_for_feeds(
+    db: AsyncSession,
+    feed_ids: list[UUID],
+    limit: int = 5,
+) -> dict[UUID, list[str]]:
+    """Fetch recent article texts for language detection.
+
+    Args:
+        db: Database session
+        feed_ids: List of feed IDs to fetch articles for
+        limit: Number of recent articles to fetch per feed
+
+    Returns:
+        Dictionary mapping feed_id to list of article text snippets
+    """
+    try:
+        # Use window function to get top N articles per feed in one query
+        subquery = (
+            select(
+                FeedArticle.feed_id,
+                ArticleContent.title,
+                ArticleContent.description,
+                func.row_number()
+                .over(
+                    partition_by=FeedArticle.feed_id,
+                    order_by=FeedArticle.published_at.desc(),
+                )
+                .label("rn"),
+            )
+            .join(FeedArticle, FeedArticle.content_id == ArticleContent.id)
+            .where(FeedArticle.feed_id.in_(feed_ids))
+            .subquery()
+        )
+
+        stmt = select(
+            subquery.c.feed_id, subquery.c.title, subquery.c.description
+        ).where(subquery.c.rn <= limit)
+
+        result = await db.execute(stmt)
+        rows = result.all()
+
+        result_map = {}
+        for feed_id, title, description in rows:
+            text_parts = []
+            if title:
+                text_parts.append(title)
+            if description:
+                text_parts.append(description)
+
+            if text_parts:
+                if feed_id not in result_map:
+                    result_map[feed_id] = []
+                result_map[feed_id].append(" ".join(text_parts))
+
+        return result_map
+
+    except Exception:
+        # Return empty dict on error - language detection will fall back to feed metadata
+        return {}

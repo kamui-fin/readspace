@@ -9,6 +9,7 @@ from fastapi.responses import ORJSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.core.config import get_settings
+from app.core.custom_exceptions import ReadspaceException, readspace_exception_handler
 from app.core.logging_config import setup_logging
 from app.core.redis_cache import close_pool, get_pool
 from app.core.taskiq_app import broker
@@ -27,13 +28,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """FastAPI lifespan context manager for startup/shutdown."""
     # Startup
     get_pool()  # Initialize Redis connection pool
-    await broker.startup()
+
+    # Only startup broker if not in test mode (InMemoryBroker doesn't need startup)
+    settings = get_settings()
+    if settings.ENVIRONMENT not in ("test", "pytest"):
+        await broker.startup()
+
     logger.info("Application startup complete")
 
     yield
 
     # Shutdown
-    await broker.shutdown()
+    if settings.ENVIRONMENT not in ("test", "pytest"):
+        await broker.shutdown()
     await close_pool()
     logger.info("Application shutdown complete")
 

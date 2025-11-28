@@ -16,14 +16,16 @@ from meilisearch_python_sdk import AsyncClient
 
 from app.core.config import Settings
 from app.models.feed import Feed
+from app.typing.feeds import MeilisearchFeedDocument
 
 logger = structlog.get_logger(__name__)
 
-_client: AsyncClient | None = None
-
 
 def get_client(settings: Settings) -> AsyncClient:
-    """Get or create Meilisearch async client (singleton pattern).
+    """Create a new Meilisearch async client.
+
+    Note: Creates a new client each time to avoid event loop issues in tests.
+    In production, the overhead is minimal as clients are lightweight.
 
     Args:
         settings: Application settings
@@ -31,13 +33,10 @@ def get_client(settings: Settings) -> AsyncClient:
     Returns:
         AsyncClient instance
     """
-    global _client
-    if _client is None:
-        _client = AsyncClient(
-            url=settings.MEILISEARCH_URL,
-            api_key=settings.MEILISEARCH_MASTER_KEY.get_secret_value(),
-        )
-    return _client
+    return AsyncClient(
+        url=settings.MEILISEARCH_URL,
+        api_key=settings.MEILISEARCH_MASTER_KEY.get_secret_value(),
+    )
 
 
 def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
@@ -49,52 +48,9 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
         feed: Feed ORM object or dict with feed data
 
     Returns:
-        Dictionary in Meilisearch document format
+        Dictionary in Meilisearch document format (via Pydantic model dump)
     """
-    if isinstance(feed, Feed):
-        tags = feed.tags or []
-        # SQLAlchemy SQLEnum returns the enum value (string) when accessed
-        # So feed.top_level_category is already a string, not an enum object
-        top_level_category = feed.top_level_category
-
-        return {
-            "id": str(feed.id),
-            "url": feed.url,
-            "title": feed.title,
-            "description": feed.description,
-            "link": feed.link,
-            "language": feed.language,
-            "image_url": feed.image_url,
-            "tags": tags,
-            "top_level_category": top_level_category,
-            "popularity_score": feed.popularity_score or 0.0,
-        }
-    else:
-        # Handle dict input (from enrichment snapshots)
-        tags = feed.get("tags") or []
-        top_level_category = feed.get("top_level_category")
-        if top_level_category is not None:
-            if isinstance(top_level_category, str):
-                # Already a string value
-                pass
-            elif hasattr(top_level_category, "value"):
-                # Enum object
-                top_level_category = top_level_category.value
-        else:
-            top_level_category = None
-
-        return {
-            "id": str(feed["id"]),
-            "url": feed.get("url", ""),
-            "title": feed.get("title", "Unknown Feed"),
-            "description": feed.get("description", ""),
-            "link": feed.get("link"),
-            "language": feed.get("language"),
-            "image_url": feed.get("image_url"),
-            "tags": tags,
-            "top_level_category": top_level_category,
-            "popularity_score": feed.get("popularity_score", 0.0),
-        }
+    return MeilisearchFeedDocument.model_validate(feed).model_dump(mode="json")
 
 
 async def sync_feed(settings: Settings, feed: Feed) -> None:
@@ -106,6 +62,7 @@ async def sync_feed(settings: Settings, feed: Feed) -> None:
         settings: Application settings
         feed: Feed ORM object to sync
     """
+    client = None
     try:
         client = get_client(settings)
         index = await client.get_index(settings.MEILISEARCH_INDEX_NAME)
@@ -116,6 +73,9 @@ async def sync_feed(settings: Settings, feed: Feed) -> None:
         logger.debug("Synced feed to Meilisearch", feed_id=str(feed.id))
     except Exception as e:
         logger.warning("Meilisearch sync failed", feed_id=str(feed.id), error=str(e))
+    finally:
+        if client:
+            await client.aclose()
 
 
 async def sync_feeds_batch(
@@ -125,7 +85,6 @@ async def sync_feeds_batch(
     """Sync multiple feeds to Meilisearch using batch update operation.
 
     Uses update_documents which performs upsert (add or update) operation.
-    This is the preferred method for batch operations per REFACTOR.md.
 
     Args:
         settings: Application settings
@@ -134,6 +93,7 @@ async def sync_feeds_batch(
     if not feeds:
         return
 
+    client = None
     try:
         client = get_client(settings)
         index = await client.get_index(settings.MEILISEARCH_INDEX_NAME)
@@ -146,7 +106,15 @@ async def sync_feeds_batch(
 
         logger.info("Synced feeds batch to Meilisearch", count=len(documents))
     except Exception as e:
-        logger.error("Meilisearch batch sync failed", count=len(feeds), error=str(e), exc_info=True)
+        logger.error(
+            "Meilisearch batch sync failed",
+            count=len(feeds),
+            error=str(e),
+            exc_info=True,
+        )
+    finally:
+        if client:
+            await client.aclose()
 
 
 async def delete_feed(settings: Settings, feed_id: str) -> None:
@@ -156,6 +124,7 @@ async def delete_feed(settings: Settings, feed_id: str) -> None:
         settings: Application settings
         feed_id: Feed ID as string
     """
+    client = None
     try:
         client = get_client(settings)
         index = await client.get_index(settings.MEILISEARCH_INDEX_NAME)
@@ -165,3 +134,6 @@ async def delete_feed(settings: Settings, feed_id: str) -> None:
         logger.debug("Deleted feed from Meilisearch", feed_id=feed_id)
     except Exception as e:
         logger.warning("Meilisearch delete failed", feed_id=feed_id, error=str(e))
+    finally:
+        if client:
+            await client.aclose()

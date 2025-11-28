@@ -75,6 +75,7 @@ openai = "^1.106.1"
 extract-favicon = "^0.5.3"
 lingua-language-detector = "^2.1.1"
 pgvector = "^0.4.1"
+tranco = "^0.7.0"
 google-genai = "^1.35.0"
 trafilatura = "^1.12.2"
 defusedxml = "^0.7.1"
@@ -88,7 +89,7 @@ python-dateutil = "^2.9.0.post0"
 nh3 = "^0.3.2"
 cryptography = "^46.0.3"
 sqlmodel = "^0.0.27"
-listparser2 = {extras = ["lxml"], version = "^0.2.0"}
+listparser = {extras = ["lxml"], version = "^0.20"}
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.15.0"

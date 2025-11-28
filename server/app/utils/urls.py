@@ -62,11 +62,28 @@ def normalize_feed_url(url: str) -> str:
             "referrer",
             "source",
         }
-        filtered_params = [p for p in parsed.query.split("&") if p.split("=")[0].lower() not in ignored_params]
+        filtered_params = [
+            p
+            for p in parsed.query.split("&")
+            if p.split("=")[0].lower() not in ignored_params
+        ]
         query = "&".join(filtered_params)
 
     path = parsed.path.rstrip("/") if len(parsed.path) > 1 else parsed.path
     return urlunparse((scheme, parsed.netloc.lower(), path, parsed.params, query, ""))
+
+
+def extract_domain_from_url(url: str | None) -> str:
+    """
+    Extract domain from URL.
+    """
+    if not url:
+        return ""
+    try:
+        parsed = urlparse(url)
+        return parsed.netloc or ""
+    except Exception:
+        return ""
 
 
 async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
@@ -87,9 +104,28 @@ async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
     try:
         # verify=False is risky but common for RSS feeds with bad certs.
         # Ideally, make this configurable.
-        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout, verify=False) as client:
+        async with httpx.AsyncClient(
+            follow_redirects=True, timeout=timeout, verify=False
+        ) as client:
             resp = await client.head(url)
             return normalize_feed_url(str(resp.url))
     except Exception:
         # Fallback to original if network fails
         return normalize_feed_url(url)
+
+
+def urls_match(url1: str | None, url2: str | None) -> bool:
+    """
+    Compare two URLs loosely to check if they point to the same resource.
+    Ignores scheme (http/https) to be safe.
+    """
+    if not url1 or not url2:
+        return False
+
+    try:
+        u1 = urlparse(url1)
+        u2 = urlparse(url2)
+        # Compare netloc + path. Ignore scheme and query params (often dynamic sizing)
+        return (u1.netloc == u2.netloc) and (u1.path == u2.path)
+    except Exception:
+        return url1 == url2

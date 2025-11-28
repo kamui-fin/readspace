@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.article import ArticleContent, FeedArticle
 from app.typing.articles import ArticleCreate
-from app.utils.text import get_content_hash, get_guid_hash
+from app.utils.hashing import get_content_hash, get_guid_hash
 
 
 async def create_articles_batch(db: AsyncSession, *, articles_data: list[ArticleCreate]) -> list[FeedArticle]:
@@ -35,13 +35,10 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
                     "title": article_in.title,
                     "link": link_str,
                     "content_hash": get_content_hash(link_str),
-                    "summary": getattr(article_in, "summary", None),
-                    "description": article_in.content,  # Deprecated: kept for backward compatibility
+                    "description": getattr(article_in, "summary", None),
                     "content": article_in.content,
-                    "extracted_text": getattr(article_in, "extracted_text", None),
                     "author": article_in.author,
                     "image_url": str(article_in.image_url) if article_in.image_url else None,
-                    "image_source": getattr(article_in, "image_source", None),
                     "estimated_read_time_minutes": getattr(article_in, "estimated_read_time_minutes", None),
                 }
             )

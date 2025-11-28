@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
 from app.core.constants import ERROR_FEED_NOT_FOUND
+from app.core.dependencies import get_current_admin
 from app.crud.feed.core import admin_update_feed as crud_admin_update_feed
 from app.crud.feed.core import delete_feed as crud_delete_feed
 from app.crud.feed.core import get_feed_by_id
@@ -38,7 +39,7 @@ async def admin_update_feed(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> FeedDetail:
     # 1. Bind context for all logs in this scope
-    log = logger.bind(feed_id=str(feed_id), user_id=str(admin_profile.user_id))
+    log = logger.bind(feed_id=str(feed_id), user_id=str(admin_profile.id))
 
     # 2. Check existence
     feed = await get_feed_by_id(db, feed_id=feed_id)
@@ -61,7 +62,15 @@ async def admin_update_feed(
             popularity_score=feed_in.popularity_score,
         )
 
-        # TODO: update meilisearch as well
+        # Sync to Meilisearch after admin update
+        from app.services.feeds.meilisearch import sync_feed
+
+        try:
+            settings = get_settings()
+            await sync_feed(settings, updated_feed)
+            log.info("Admin updated feed in Meilisearch")
+        except Exception as e:
+            log.warning("Failed to sync feed to Meilisearch", error=str(e))
 
         log.info("Admin updated global feed successfully")
         return FeedDetail.model_validate(updated_feed, from_attributes=True)
@@ -93,7 +102,7 @@ async def admin_delete_feed(
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> Response:
     # 1. Bind context
-    log = logger.bind(feed_id=str(feed_id), user_id=str(admin_profile.user_id))
+    log = logger.bind(feed_id=str(feed_id), user_id=str(admin_profile.id))
 
     log.info("Admin deleting global feed")
 

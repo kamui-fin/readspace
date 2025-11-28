@@ -65,6 +65,34 @@ class LanguageCode(str, Enum):
     TH = "th"  # Thai
     VI = "vi"  # Vietnamese
 
+    @property
+    def display_name(self) -> str:
+        """Get the English display name of the language."""
+        _names = {
+            "en": "English",
+            "es": "Spanish",
+            "fr": "French",
+            "de": "German",
+            "it": "Italian",
+            "pt": "Portuguese",
+            "ru": "Russian",
+            "ja": "Japanese",
+            "ko": "Korean",
+            "zh": "Chinese (Simplified)",
+            "ar": "Arabic",
+            "hi": "Hindi",
+            "nl": "Dutch",
+            "sv": "Swedish",
+            "no": "Norwegian",
+            "da": "Danish",
+            "fi": "Finnish",
+            "pl": "Polish",
+            "tr": "Turkish",
+            "th": "Thai",
+            "vi": "Vietnamese",
+        }
+        return _names.get(self.value, self.value)
+
 
 # Shared config for response models
 response_config = ConfigDict(from_attributes=True)

@@ -9,9 +9,28 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
-from app.typing.common import ArticlePriority, response_config
+from app.models.enums import ArticlePriority
+from app.typing.common import response_config
 
 # ================= Requests =================
+
+
+class ArticleCreate(BaseModel):
+    """
+    Schema for creating articles during feed parsing.
+    Used internally by feed ingestion system.
+    """
+
+    feed_id: UUID | None = None  # Set by service layer
+    title: str | None = None
+    link: str
+    description: str | None = None
+    content: str | None = None
+    image_url: str | None = None
+    author: str | None = None
+    published_at: datetime
+    guid: str
+    estimated_read_time_minutes: int | None = None
 
 
 class ArticleUpdate(BaseModel):

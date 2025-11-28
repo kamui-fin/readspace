@@ -8,7 +8,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, HttpUrl, field_validator
 
-from app.typing.common import ArticlePriority, response_config
+from app.models.enums import ArticlePriority
+from app.typing.common import response_config
 
 # ================= Base (Field Bundles) =================
 

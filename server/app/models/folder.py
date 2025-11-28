@@ -1,6 +1,5 @@
 """Folder model - pure SQLAlchemy."""
 
-
 from sqlalchemy import Column, DateTime, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
 from sqlalchemy.orm import relationship

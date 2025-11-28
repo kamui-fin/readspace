@@ -1,6 +1,6 @@
 """Feed subscription routes - subscribe and add feeds."""
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
@@ -52,7 +52,7 @@ async def verify_feed_exists(db: AsyncSession, feed_id: UUID) -> Feed:
 )
 async def add_new_feed(
     feed_in: Annotated[FeedCreate, Body(description="Feed URL and folder assignment")],
-    db_factory: Annotated[any, Depends(get_db_factory)],
+    db_factory: Annotated[Any, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> SubscriptionResponse:
     """

@@ -81,7 +81,7 @@ async def summarize_article(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
-    request: SummarizeRequest = Body(default_factory=SummarizeRequest),
+    request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
 ) -> SummarizeResponse:
     """
     Generate an AI summary of the article.
@@ -94,6 +94,9 @@ async def summarize_article(
 
     # 2. Generate Summary
     summary = await generate_summary(title=article.title or "", content=content_to_use)
+
+    if not summary:
+        raise ValidationError(message="Failed to generate summary")
 
     logger.info("Successfully generated summary", summary_length=len(summary))
     return SummarizeResponse(summary=summary)
@@ -124,6 +127,9 @@ async def translate_article(
         content=content_to_use,
         target_lang_code=target_lang_str,
     )
+
+    if not translated_content:
+        raise ValidationError(message="Failed to translate content")
 
     logger.info("Successfully translated article")
     return TranslateResponse(

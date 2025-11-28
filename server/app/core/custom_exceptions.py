@@ -195,11 +195,18 @@ def to_http_exception(exc: ReadspaceException) -> HTTPException:
 logger = structlog.get_logger("api.errors")
 
 
-async def readspace_exception_handler(request: Request, exc: ReadspaceException):
+async def readspace_exception_handler(request: Request, exc: Exception):
     """
     Global handler for all ReadspaceException subclasses.
     Automatically maps the exception to the correct HTTP status code and JSON format.
     """
+    if not isinstance(exc, ReadspaceException):
+        # Fallback for non-ReadspaceException exceptions
+        logger.error("Unexpected exception type", exc_type=type(exc).__name__, path=request.url.path)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"message": "An unexpected error occurred"},
+        )
     # 1. Determine Status Code from your existing MAP
     # Use strict type checking first, fallback to parent classes, default to 500
     status_code = EXCEPTION_STATUS_MAP.get(type(exc))

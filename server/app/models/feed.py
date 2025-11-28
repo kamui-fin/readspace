@@ -1,7 +1,15 @@
 """Feed and subscription models - pure SQLAlchemy."""
 
-
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID
@@ -26,7 +34,7 @@ class Feed(Base):
     image_url = Column(Text, nullable=True)
 
     # Fetching Logic
-    last_fetched_at = Column(DateTime(timezone=True), nullable=True)
+    last_fetched_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     next_fetch_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     adaptive_fetch_interval_minutes = Column(Integer, nullable=True)
     fetch_error_count = Column(Integer, nullable=False, default=0)
@@ -38,11 +46,13 @@ class Feed(Base):
     # Metadata
     tags = Column(ARRAY(Text), nullable=True)
     top_level_category = Column(
-        SQLEnum(FeedCategory, name="feedcategory"), nullable=False, server_default="MISCELLANEOUS"
+        SQLEnum(FeedCategory, name="feedcategory"),
+        nullable=False,
+        server_default="MISCELLANEOUS",
     )
     popularity_score = Column(Float, nullable=False, default=0.0)
     subscriber_count = Column(Integer, nullable=False, default=0)
-    author = Column(Text, nullable=True)
+    author = Column(Text, nullable=True)  # TODO: make sure we pull from contributors
 
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     last_updated_at = Column(DateTime(timezone=True), nullable=True)
@@ -58,9 +68,21 @@ class FeedSubscription(Base):
     __tablename__ = "feed_subscriptions"
 
     id = Column(SQLUUID(as_uuid=True), primary_key=True, server_default=func.gen_random_uuid())
-    user_id = Column(SQLUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False)
-    feed_id = Column(SQLUUID(as_uuid=True), ForeignKey("feeds.id", ondelete="CASCADE"), nullable=False)
-    folder_id = Column(SQLUUID(as_uuid=True), ForeignKey("folders.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("profiles.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    feed_id = Column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("feeds.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    folder_id = Column(
+        SQLUUID(as_uuid=True),
+        ForeignKey("folders.id", ondelete="CASCADE"),
+        nullable=False,
+    )
 
     is_favorite = Column(Boolean, nullable=False, default=False)
     custom_title = Column(Text, nullable=True)

@@ -22,7 +22,6 @@ SUBSCRIPTION_FEED_COLUMNS = [
     Feed.title,
     Feed.image_url,
     Feed.last_fetched_at,
-    Feed.last_article_published_at,
 ]
 
 

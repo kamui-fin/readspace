@@ -74,7 +74,7 @@ def upgrade() -> None:
             language text NOT NULL,
             image_url text,
             
-            last_fetched_at timestamp with time zone,
+            last_fetched_at timestamp with time zone NOT NULL DEFAULT now(),
             next_fetch_at timestamp with time zone NOT NULL DEFAULT now(),
             adaptive_fetch_interval_minutes integer,
             fetch_error_count integer NOT NULL DEFAULT 0,

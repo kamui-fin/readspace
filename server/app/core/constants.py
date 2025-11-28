@@ -13,7 +13,11 @@ OPML_IMPORT_TASK_TTL_SECONDS = 24 * 60 * 60  # Redis TTL for import tasks (24 ho
 SUPPORTED_OPML_EXTENSIONS = (".opml", ".xml")  # Allowed file extensions
 
 # Environment Configuration
-SHOW_DOCS_ENVIRONMENTS = ("development", "staging", "local")  # Environments to show API docs
+SHOW_DOCS_ENVIRONMENTS = (
+    "development",
+    "staging",
+    "local",
+)  # Environments to show API docs
 
 # Feed Refresh Intervals (in minutes)
 MIN_REFRESH_INTERVAL_MINUTES = 1
@@ -62,10 +66,14 @@ MIN_VALID_PUBLISHED_YEAR = 1990  # Minimum year for valid article publication da
 
 # Unread Article Management
 UNREAD_RETENTION_DAYS = 30  # Auto-mark articles older than this as read
-INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new subscriptions
+INITIAL_UNREAD_COUNT = (
+    10  # Number of recent articles to show as unread on new subscriptions
+)
 
 # Article Compaction (Cleanup)
-ARTICLE_RETENTION_DAYS = 7  # Delete articles older than 30 days (beyond minimum retention)
+ARTICLE_RETENTION_DAYS = (
+    7  # Delete articles older than 30 days (beyond minimum retention)
+)
 MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
 
 # Content Extraction
@@ -77,8 +85,14 @@ FAVICON_FETCH_TIMEOUT = 10  # seconds - timeout for fetching canonical URL and f
 # AI Service
 DEFAULT_AI_MAX_TOKENS = 1000  # Default maximum tokens for AI responses
 MAX_COMPOSITE_TEXT_LENGTH = 1000  # Maximum length for composite text in AI processing
-MAX_AI_SUMMARIZATION_CONTENT_BYTES = 100 * 1024  # Maximum content size for summarization (100KB)
-MAX_AI_TRANSLATION_CONTENT_BYTES = 50 * 1024  # Maximum content size for translation (50KB)
+MAX_AI_SUMMARIZATION_CONTENT_BYTES = (
+    100 * 1024
+)  # Maximum content size for summarization (100KB)
+MAX_AI_TRANSLATION_CONTENT_BYTES = (
+    50 * 1024
+)  # Maximum content size for translation (50KB)
+MAX_AI_INPUT_CHARS = 15000  # Maximum characters for AI input
+
 
 # Common Error Messages
 ERROR_FEED_NOT_FOUND = "Feed not found"
@@ -90,7 +104,9 @@ ERROR_INVALID_FOLDER_DATA = "Invalid folder data"
 
 # Response Compression Configuration
 COMPRESSION_MIN_SIZE = 500  # Minimum response size in bytes to compress
-COMPRESSION_LEVEL = 5  # Brotli compression level (0-11, higher = better compression but slower)
+COMPRESSION_LEVEL = (
+    5  # Brotli compression level (0-11, higher = better compression but slower)
+)
 COMPRESSION_CONTENT_TYPES = {
     "application/json",
     "application/javascript",
@@ -104,3 +120,53 @@ COMPRESSION_CONTENT_TYPES = {
 # Cursor Pagination Configuration
 DEFAULT_CURSOR_LIMIT = 50  # Default number of items per cursor page
 MAX_CURSOR_LIMIT = 200  # Maximum items allowed per cursor page
+
+
+# HTML Sanitization
+ALLOWED_TAGS = {
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "blockquote",
+    "br",
+    "code",
+    "div",
+    "em",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "hr",
+    "i",
+    "img",
+    "li",
+    "ol",
+    "p",
+    "pre",
+    "span",
+    "strong",
+    "table",
+    "tbody",
+    "td",
+    "th",
+    "thead",
+    "tr",
+    "ul",
+    "video",
+    "source",
+    "figure",
+    "figcaption",
+}
+
+ALLOWED_ATTRIBUTES = {
+    "a": {"href", "title", "target"},
+    "img": {"src", "alt", "title", "width", "height"},
+    "video": {"src", "controls", "poster"},
+    "source": {"src", "type"},
+    "code": {"class"},
+    "span": {"class"},
+    "div": {"class"},
+}

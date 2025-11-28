@@ -1,12 +1,19 @@
 from typing import Annotated
+from uuid import UUID
 
-from fastapi import Depends, Request
+import structlog
+from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
+from app.crud.profile import get_profile_by_id
 from app.db.session import get_db
+from app.models.enums import UserRole
+from app.models.user import Profile
 from app.services.user.auth import get_current_user
 from app.typing.user import TokenData
+
+logger = structlog.get_logger(__name__)
 
 SettingsType = Annotated[Settings, Depends(get_settings)]
 CurrentUser = Annotated[TokenData, Depends(get_current_user)]

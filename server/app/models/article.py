@@ -1,6 +1,5 @@
 """Article and content models - pure SQLAlchemy."""
 
-
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID as SQLUUID

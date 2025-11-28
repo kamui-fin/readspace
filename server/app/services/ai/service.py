@@ -4,6 +4,7 @@ Functional AI Service: Summarization and Translation.
 
 import hashlib
 import re
+from functools import lru_cache
 
 import structlog
 from google import genai
@@ -11,26 +12,24 @@ from google.genai import types
 
 from app.core import redis_cache
 from app.core.config import get_settings
-from app.core.constants import AI_CACHE_TTL
+from app.core.constants import AI_CACHE_TTL, MAX_AI_INPUT_CHARS
 from app.services.ai.prompts import SUMMARY_SYSTEM_PROMPT, get_translation_system_prompt
+from app.typing.common import LanguageCode
+from app.utils.text import clean_html_text
 
 logger = structlog.get_logger(__name__)
 
-# Module-level client singleton
-_client: genai.Client | None = None
 
-
+@lru_cache(maxsize=1)
 def _get_client() -> genai.Client | None:
     """Lazy load the Gemini client."""
-    global _client
-    if _client is None:
-        settings = get_settings()
-        if settings.ENABLE_AI and settings.GEMINI_API_KEY:
-            try:
-                _client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            except Exception as e:
-                logger.error("Failed to initialize Gemini client", error=str(e))
-    return _client
+    settings = get_settings()
+    if settings.ENABLE_AI and settings.GEMINI_API_KEY:
+        try:
+            return genai.Client(api_key=settings.GEMINI_API_KEY)
+        except Exception as e:
+            logger.error("Failed to initialize Gemini client", error=str(e))
+    return None
 
 
 async def generate_summary(title: str, content: str) -> str | None:
@@ -40,7 +39,7 @@ async def generate_summary(title: str, content: str) -> str | None:
         return None
 
     # 1. Prepare
-    clean_text = _strip_html(content)[:15000]
+    clean_text = clean_html_text(content)[:MAX_AI_INPUT_CHARS]
 
     # 2. Cache Check
     cache_key = _make_cache_key("summary", f"{title}:{clean_text}")
@@ -51,7 +50,11 @@ async def generate_summary(title: str, content: str) -> str | None:
     user_prompt = f"Title: {title}\n\nContent: {clean_text}\n\nProvide a summary in the same language as the content."
 
     result = await _call_gemini(
-        client, prompt=user_prompt, system_instruction=SUMMARY_SYSTEM_PROMPT, max_tokens=400, temperature=0.3
+        client,
+        prompt=user_prompt,
+        system_instruction=SUMMARY_SYSTEM_PROMPT,
+        max_tokens=400,
+        temperature=0.3,
     )
 
     if result:
@@ -66,7 +69,7 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
     if not client:
         return None
 
-    truncated = content[:12000]
+    truncated = content[:MAX_AI_INPUT_CHARS]
     target_lang = _get_lang_name(target_lang_code)
 
     cache_key = _make_cache_key("translate", f"{target_lang}:{truncated}")
@@ -83,7 +86,9 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
 
     if result:
         # Cleanup potential markdown fences
-        result = re.sub(r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE)
+        result = re.sub(
+            r"^```(?:html)?\n|\n```$", "", result.strip(), flags=re.MULTILINE
+        )
         await redis_cache.set(cache_key, result, ttl_seconds=AI_CACHE_TTL)
 
     return result
@@ -93,7 +98,11 @@ async def translate_content(content: str, target_lang_code: str) -> str | None:
 
 
 async def _call_gemini(
-    client: genai.Client, prompt: str, system_instruction: str, max_tokens: int, temperature: float
+    client: genai.Client,
+    prompt: str,
+    system_instruction: str,
+    max_tokens: int,
+    temperature: float,
 ) -> str | None:
     """Raw API call wrapper."""
     settings = get_settings()
@@ -102,7 +111,9 @@ async def _call_gemini(
             model=settings.GEMINI_MODEL,
             contents=prompt,
             config=types.GenerateContentConfig(
-                system_instruction=system_instruction, temperature=temperature, max_output_tokens=max_tokens
+                system_instruction=system_instruction,
+                temperature=temperature,
+                max_output_tokens=max_tokens,
             ),
         )
         return response.text.strip() if response.text else None
@@ -116,6 +127,9 @@ def _make_cache_key(prefix: str, data: str) -> str:
     return f"ai:{prefix}:{hashed}"
 
 
-def _strip_html(html: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", html)
-    return re.sub(r"\s+", " ", text).strip()
+def _get_lang_name(lang_code: str) -> str:
+    """Convert ISO 639-1 language code to language name."""
+    try:
+        return LanguageCode(lang_code.lower()).display_name
+    except ValueError:
+        return lang_code

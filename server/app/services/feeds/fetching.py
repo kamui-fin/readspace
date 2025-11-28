@@ -1,8 +1,4 @@
-"""
-Feed fetching module handling HTTP requests.
-Strictly handles Network I/O. No database dependencies.
-"""
-
+from functools import lru_cache
 from typing import TypedDict
 
 import httpx
@@ -15,11 +11,9 @@ from app.core.constants import (
     HTTP_CLIENT_MAX_KEEPALIVE,
     HTTP_CLIENT_POOL_LIMITS,
 )
+from app.utils.urls import transform_rsshub_url
 
 logger = structlog.get_logger(__name__)
-
-# Singleton client container
-_client: httpx.AsyncClient | None = None
 
 
 class FetchResult(TypedDict):
@@ -28,33 +22,40 @@ class FetchResult(TypedDict):
     status_code: int
     not_modified: bool
     error: str | None
-    final_url: str | None  # URL after following redirects
-    permanent_redirect: bool  # True if 301/308 redirect occurred
+    final_url: str | None
+    permanent_redirect: bool
 
 
-def get_http_client() -> httpx.AsyncClient:
-    """
-    Get or create the singleton HTTP client.
-    This client is persistent across the application lifecycle.
-    """
-    global _client
-    if _client is None:
-        limits = httpx.Limits(
+@lru_cache(maxsize=1)
+def _get_client() -> httpx.AsyncClient:
+    """Cached singleton HTTP client."""
+    return httpx.AsyncClient(
+        limits=httpx.Limits(
             max_connections=HTTP_CLIENT_POOL_LIMITS,
             max_keepalive_connections=HTTP_CLIENT_MAX_KEEPALIVE,
             keepalive_expiry=HTTP_CLIENT_KEEPALIVE_EXPIRY,
-        )
-        _client = httpx.AsyncClient(
-            limits=limits,
-            follow_redirects=True,
-            timeout=DEFAULT_RSS_TIMEOUT,
-            headers={
-                "User-Agent": BROWSER_USER_AGENT,
-                "Accept-Encoding": "gzip, deflate, br",  # Request compression
-            },
-            verify=False,  # noqa: S501  # Many RSS feeds have bad SSL
-        )
-    return _client
+        ),
+        follow_redirects=True,
+        timeout=DEFAULT_RSS_TIMEOUT,
+        headers={
+            "User-Agent": BROWSER_USER_AGENT,
+            "Accept-Encoding": "gzip, deflate, br",
+        },
+        verify=False,  # noqa: S501
+    )
+
+
+def _build_error_result(status_code: int, error_msg: str) -> FetchResult:
+    """Helper to construct uniform error responses."""
+    return {
+        "content": "",
+        "headers": {},
+        "status_code": status_code,
+        "not_modified": False,
+        "error": error_msg,
+        "final_url": None,
+        "permanent_redirect": False,
+    }
 
 
 async def fetch_feed_content(
@@ -64,120 +65,46 @@ async def fetch_feed_content(
     timeout: int = DEFAULT_RSS_TIMEOUT,
     if_modified_since_timestamp: int | None = None,
 ) -> FetchResult:
-    """
-    Fetch feed content using conditional GET requests.
-
-    Handles rsshub:// URLs by transforming them to actual HTTP URLs.
-    Supports feed delta updates via If-Modified-Since timestamp.
-
-    Args:
-        url: Target URL (can be rsshub://, http://, or https://)
-        etag: ETag from previous fetch
-        last_modified: Last-Modified from previous fetch
-        timeout: Request timeout in seconds
-        if_modified_since_timestamp: Unix timestamp for delta updates (A-IM: feed)
-
-    Returns:
-        FetchResult dict containing content/status/headers.
-    """
-    from app.utils.common import transform_rsshub_url
-
-    # Transform rsshub:// URLs to actual HTTP URLs
+    """Fetch feed content with conditional headers and delta support."""
     fetch_url = transform_rsshub_url(url)
 
-    client = get_http_client()
-
-    headers = {}
-    if etag:
-        headers["If-None-Match"] = etag
-    if last_modified:
-        headers["If-Modified-Since"] = last_modified
-
-    # Support for feed delta updates
-    if if_modified_since_timestamp:
-        headers["A-IM"] = "feed"
+    # Build conditional headers dynamically
+    headers = {
+        k: v
+        for k, v in {
+            "If-None-Match": etag,
+            "If-Modified-Since": last_modified,
+            "A-IM": "feed" if if_modified_since_timestamp else None,
+        }.items()
+        if v
+    }
 
     try:
-        response = await client.get(fetch_url, headers=headers, timeout=timeout)
+        response = await _get_client().get(fetch_url, headers=headers, timeout=timeout)
 
-        # Detect permanent redirects
-        permanent_redirect = False
-        final_url = str(response.url) if response.url else fetch_url
+        # Status checks
+        is_error = response.status_code >= 400
+        is_not_modified = response.status_code == 304
 
-        # Check if we were redirected and if it was permanent
-        if response.history:
-            for hist_response in response.history:
-                if hist_response.status_code in (301, 308):
-                    permanent_redirect = True
-                    break
-
-        # Handle 304 Not Modified
-        if response.status_code == 304:
-            return {
-                "content": "",
-                "headers": dict[str, str](response.headers),
-                "status_code": 304,
-                "not_modified": True,
-                "error": None,
-                "final_url": final_url,
-                "permanent_redirect": permanent_redirect,
-            }
-
-        # Handle 226 IM Used (feed delta response)
-        if response.status_code == 226:
-            logger.info("Received feed delta update", url=url)
-            return {
-                "content": response.text,
-                "headers": dict[str, str](response.headers),
-                "status_code": 226,
-                "not_modified": False,
-                "error": None,
-                "final_url": final_url,
-                "permanent_redirect": permanent_redirect,
-            }
-
-        # Handle other errors
-        if response.status_code >= 400:
+        if is_error:
             logger.warning("Feed fetch failed", url=url, status=response.status_code)
-            return {
-                "content": "",
-                "headers": dict[str, str](response.headers),
-                "status_code": response.status_code,
-                "not_modified": False,
-                "error": f"HTTP {response.status_code}",
-                "final_url": final_url,
-                "permanent_redirect": permanent_redirect,
-            }
+        elif response.status_code == 226:
+            logger.info("Received feed delta update", url=url)
 
         return {
-            "content": response.text,
-            "headers": dict[str, str](response.headers),
+            "content": "" if is_error or is_not_modified else response.text,
+            "headers": dict(response.headers),
             "status_code": response.status_code,
-            "not_modified": False,
-            "error": None,
-            "final_url": final_url,
-            "permanent_redirect": permanent_redirect,
+            "not_modified": is_not_modified,
+            "error": f"HTTP {response.status_code}" if is_error else None,
+            "final_url": str(response.url),
+            "permanent_redirect": any(h.status_code in (301, 308) for h in response.history),
         }
 
     except httpx.TimeoutException:
         logger.warning("Feed fetch timed out", url=url)
-        return {
-            "content": "",
-            "headers": {},
-            "status_code": 408,
-            "not_modified": False,
-            "error": "Timeout",
-            "final_url": None,
-            "permanent_redirect": False,
-        }
+        return _build_error_result(408, "Timeout")
+
     except Exception as e:
         logger.error("Feed fetch error", url=url, error=str(e))
-        return {
-            "content": "",
-            "headers": {},
-            "status_code": 500,
-            "not_modified": False,
-            "error": str(e),
-            "final_url": None,
-            "permanent_redirect": False,
-        }
+        return _build_error_result(500, str(e))

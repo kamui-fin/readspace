@@ -441,7 +441,7 @@ async def clean_redis(redis_client: Redis):
     await redis_client.flushdb()
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def meili_client():
     settings = get_settings()
     client = MeiliClient(
@@ -453,6 +453,7 @@ async def meili_client():
     except Exception as exc:
         pytest.skip(f"Meilisearch unavailable: {exc}")
     yield client
+    await client.aclose()
 
 
 @pytest_asyncio.fixture

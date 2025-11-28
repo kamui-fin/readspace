@@ -1,6 +1,6 @@
 """Feed refresh routes - manually trigger feed updates."""
 
-from typing import Annotated
+from typing import Annotated, Any
 from uuid import UUID
 
 import structlog
@@ -41,7 +41,7 @@ async def verify_subscription(db_factory, feed_id: UUID, user_id: UUID) -> None:
 )
 async def refresh_feed_route(
     feed_id: UUID,
-    db_factory: Annotated[any, Depends(get_db_factory)],
+    db_factory: Annotated[Any, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
     force_refetch: bool = Query(
         False,

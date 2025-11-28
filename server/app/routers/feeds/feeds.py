@@ -19,7 +19,7 @@ from app.crud.feed.subscription import (
     update_subscription,
 )
 from app.db.session import get_db
-from app.models.feed import Subscription
+from app.models.feed import FeedSubscription
 from app.services.user.auth import get_current_user
 from app.typing.feeds import FeedDetail
 from app.typing.subscriptions import SubscriptionResponse, SubscriptionUpdate
@@ -30,7 +30,7 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def get_subscription_or_404(db: AsyncSession, feed_id: UUID, user_id: UUID) -> Subscription:
+async def get_subscription_or_404(db: AsyncSession, feed_id: UUID, user_id: UUID) -> FeedSubscription:
     """
     Retrieves a user's subscription or raises NotFoundError.
     """

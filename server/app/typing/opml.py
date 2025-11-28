@@ -1,7 +1,7 @@
 """OPML import/export schema definitions."""
 
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -10,6 +10,7 @@ from app.typing.common import ImportStatus
 
 class OpmlTaskMetadata(BaseModel):
     """Metadata for OPML import tasks."""
+
     user_id: str
     task_id: str
     estimated_feeds: int = Field(ge=0)
@@ -22,6 +23,7 @@ class OpmlTaskMetadata(BaseModel):
 
 class FeedImportError(BaseModel):
     """Error information for a failed feed import."""
+
     url: str
     title: str = "Unknown"
     error: str
@@ -30,6 +32,7 @@ class FeedImportError(BaseModel):
 
 class OpmlImportProgress(BaseModel):
     """Progress counters."""
+
     completed: int = Field(0, ge=0)
     total: int = Field(0, ge=0)
     successful: int = Field(0, ge=0)
@@ -43,6 +46,7 @@ class OpmlImportState(OpmlImportProgress):
     Complete state of an OPML import stored in Redis.
     Source of truth for: opml_import_progress:{task_id}
     """
+
     task_id: str
     user_id: str
     filename: str
@@ -76,17 +80,13 @@ class OpmlImportState(OpmlImportProgress):
 
     def to_result(self) -> "OpmlImportResult":
         """Generates the final summary result."""
-        msg = (
-            f"{self.successful} feeds added. "
-            f"{self.already_existed} pre-existing. "
-            f"{self.failed} failed."
-        )
+        msg = f"{self.successful} feeds added. {self.already_existed} pre-existing. {self.failed} failed."
         if self.skipped_limit > 0:
             msg += f" {self.skipped_limit} skipped (limit reached)."
-            
+
         return OpmlImportResult(
             # Pass all fields from self (OpmlImportProgress)
-            **self.model_dump(include=OpmlImportProgress.model_fields.keys()),
+            **self.model_dump(include=set(OpmlImportProgress.model_fields.keys())),
             total_feeds=self.total,
             message=self.message or msg,
             errors=[e.model_dump() for e in self.errors] if self.errors else None,
@@ -95,6 +95,7 @@ class OpmlImportState(OpmlImportProgress):
 
 class OpmlImportResult(OpmlImportProgress):
     """Final result summary."""
+
     total_feeds: int
     message: str
     errors: list[dict[str, Any]] | None = None
@@ -102,18 +103,28 @@ class OpmlImportResult(OpmlImportProgress):
 
 class OpmlImportStatusResponse(BaseModel):
     """API Response for status polling."""
+
     task_id: str
     status: ImportStatus
     message: str
-    progress: Optional[OpmlImportProgress] = None
-    result: Optional[OpmlImportResult] = None
-    error: Optional[str] = None
-    metadata: Optional[OpmlTaskMetadata] = None
+    progress: OpmlImportProgress | None = None
+    result: OpmlImportResult | None = None
+    error: str | None = None
+    metadata: OpmlTaskMetadata | None = None
+
+
+class OpmlImportResponse(BaseModel):
+    """API Response for initiating OPML import."""
+
+    task_id: str
+    message: str
+    estimated_feeds: int = 0
 
 
 class OpmlImportCancelResponse(BaseModel):
     """API Response for cancellation."""
+
     task_id: str
     message: str
     cancelled: bool
-    previous_state: Optional[ImportStatus] = None
+    previous_state: ImportStatus | None = None

@@ -36,7 +36,7 @@ async def get_feed_preview(
     # Parse feed content
     try:
         parsed = parsing.parse_feed_content(fetch_result["content"], url)
-        logger.info("Feed preview generated", url=url, title=response["title"])
+        logger.info("Feed preview generated", url=url, title=parsed["title"])
         return parsed
     except Exception as e:
         logger.error("Feed parse failed", url=url, error=str(e))
