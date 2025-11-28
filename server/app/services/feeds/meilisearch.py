@@ -43,6 +43,7 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
     """Convert Feed ORM object or dict to Meilisearch document format.
 
     Pure function - no side effects, just data transformation.
+    Uses Pydantic's from_attributes to handle ORM conversion.
 
     Args:
         feed: Feed ORM object or dict with feed data
@@ -50,7 +51,34 @@ def feed_to_document(feed: Feed | dict[str, Any]) -> dict[str, Any]:
     Returns:
         Dictionary in Meilisearch document format (via Pydantic model dump)
     """
-    return MeilisearchFeedDocument.model_validate(feed).model_dump(mode="json")
+    if isinstance(feed, Feed):
+        # Pydantic can handle ORM objects directly with from_attributes=True
+        # But we need to convert UUID to string and handle None tags
+        doc = MeilisearchFeedDocument.model_validate(
+            {
+                "id": str(feed.id),
+                "url": feed.url,
+                "title": feed.title,
+                "description": feed.description,
+                "link": feed.link,
+                "language": feed.language,
+                "image_url": feed.image_url,
+                "tags": feed.tags if feed.tags is not None else [],
+                "top_level_category": feed.top_level_category,
+                "popularity_score": feed.popularity_score,
+                "author": feed.author,
+            }
+        )
+    else:
+        # Handle dict input
+        feed_dict = dict(feed)
+        if "id" in feed_dict and not isinstance(feed_dict["id"], str):
+            feed_dict["id"] = str(feed_dict["id"])
+        if feed_dict.get("tags") is None:
+            feed_dict["tags"] = []
+        doc = MeilisearchFeedDocument.model_validate(feed_dict)
+
+    return doc.model_dump(mode="json")
 
 
 async def sync_feed(settings: Settings, feed: Feed) -> None:

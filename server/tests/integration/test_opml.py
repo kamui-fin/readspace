@@ -137,10 +137,16 @@ class TestOpmlInfrastructure:
         assert result["total_feeds"] == 2
         assert result["dispatched_count"] == 2
         assert result["task_ids"] == ["fake-1", "fake-2"]
-        assert sorted(dispatched_urls) == ["https://example.com/feed", "https://news.ycombinator.com/rss"]
+        assert sorted(dispatched_urls) == [
+            "https://example.com/feed",
+            "https://news.ycombinator.com/rss",
+        ]
 
         # Verify folders persisted in isolated DB
-        rows = await db_session.execute(text("SELECT name FROM folders WHERE user_id = :user_id"), {"user_id": test_user.id})
+        rows = await db_session.execute(
+            text("SELECT name FROM folders WHERE user_id = :user_id"),
+            {"user_id": test_user.id},
+        )
         folder_names = {row[0] for row in rows}
         assert "Tech" in folder_names
 
@@ -150,7 +156,7 @@ class TestOpmlInfrastructure:
         meta = orjson.loads(meta_raw)
         assert meta["total"] == 2
         assert meta["filename"] == "infra.opml"
-        
+
         # Allow any pending async operations to complete
         await asyncio.sleep(0.1)
 
@@ -204,7 +210,9 @@ class TestOpmlImportEagerMode:
         # Verify folders were created
         from sqlalchemy import select
 
-        db_result = await db_session.execute(select(Folder).where(Folder.user_id == test_user.id))
+        db_result = await db_session.execute(
+            select(Folder).where(Folder.user_id == test_user.id)
+        )
         folders = db_result.scalars().all()
         folder_names = {f.name for f in folders}
 
@@ -213,7 +221,11 @@ class TestOpmlImportEagerMode:
 
     @pytest.mark.asyncio
     async def test_import_single_feed_task_execution(
-        self, async_client: AsyncClient, test_user: Profile, test_folder: Folder, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_user: Profile,
+        test_folder: Folder,
+        db_session: AsyncSession,
     ):
         """Test individual feed import task executes correctly."""
         from app.workers.opml.import_feed import import_single_feed
@@ -255,13 +267,19 @@ class TestOpmlImportValidation:
         response = await async_client.post("/api/opml/import/", files=files)
 
         assert response.status_code == 400
-        assert "Invalid file type" in response.json()["detail"]
+        assert "Invalid file type" in response.json()["message"]
 
     @pytest.mark.asyncio
     async def test_import_opml_file_too_large(self, async_client: AsyncClient):
         """Test importing file that exceeds size limit."""
         large_content = "x" * (51 * 1024 * 1024)  # 51MB
-        files = {"opml_file": ("large.opml", io.BytesIO(large_content.encode()), "application/xml")}
+        files = {
+            "opml_file": (
+                "large.opml",
+                io.BytesIO(large_content.encode()),
+                "application/xml",
+            )
+        }
 
         response = await async_client.post("/api/opml/import/", files=files)
 
@@ -271,15 +289,23 @@ class TestOpmlImportValidation:
     @pytest.mark.asyncio
     async def test_import_opml_invalid_xml(self, async_client: AsyncClient):
         """Test importing malformed XML."""
-        files = {"opml_file": ("invalid.opml", io.BytesIO(INVALID_XML.encode()), "application/xml")}
+        files = {
+            "opml_file": (
+                "invalid.opml",
+                io.BytesIO(INVALID_XML.encode()),
+                "application/xml",
+            )
+        }
 
         response = await async_client.post("/api/opml/import/", files=files)
 
         assert response.status_code == 400
-        assert "Invalid" in response.json()["detail"]
+        assert "Invalid" in response.json()["message"]
 
     @pytest.mark.asyncio
-    async def test_import_opml_rss_feed_instead_of_opml(self, async_client: AsyncClient):
+    async def test_import_opml_rss_feed_instead_of_opml(
+        self, async_client: AsyncClient
+    ):
         """Test uploading RSS feed instead of OPML."""
         rss_content = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
@@ -289,12 +315,18 @@ class TestOpmlImportValidation:
     </channel>
 </rss>"""
 
-        files = {"opml_file": ("feed.xml", io.BytesIO(rss_content.encode()), "application/xml")}
+        files = {
+            "opml_file": (
+                "feed.xml",
+                io.BytesIO(rss_content.encode()),
+                "application/xml",
+            )
+        }
 
         response = await async_client.post("/api/opml/import/", files=files)
 
         assert response.status_code == 400
-        assert "OPML" in response.json()["detail"]
+        assert "OPML" in response.json()["message"]
 
 
 class TestOpmlImportStatus:
@@ -314,10 +346,14 @@ class TestOpmlImportStatus:
         assert response.status_code >= 400
 
     @pytest.mark.asyncio
-    async def test_get_import_status_unauthorized(self, async_client: AsyncClient, test_user: Profile):
+    async def test_get_import_status_unauthorized(
+        self, async_client: AsyncClient, test_user: Profile
+    ):
         """Test accessing another user's import task."""
         # Create a task for a different user
-        from app.services.opml.tasks import store_task_ownership as store_import_task_metadata
+        from app.services.opml.tasks import (
+            store_task_ownership as store_import_task_metadata,
+        )
 
         other_user_id = "different-user-id"
         task_id = "other-user-task"
@@ -330,7 +366,7 @@ class TestOpmlImportStatus:
         response = await async_client.get(f"/api/opml/import/status/{task_id}")
 
         assert response.status_code == 403
-        assert "permission" in response.json()["detail"].lower()
+        assert "access denied" in response.json()["detail"].lower()
 
 
 class TestOpmlTaskManagement:
@@ -360,4 +396,3 @@ class TestOpmlTaskManagement:
         response = await async_client.delete(f"/api/opml/import/cancel/{task_id}")
 
         assert response.status_code == 404
-

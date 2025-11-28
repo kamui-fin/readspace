@@ -24,7 +24,7 @@ async def set_article_state(
     content_id: UUID,
     feed_article_id: UUID | None = None,
     is_read: bool | None = None,
-    is_read_later: bool | None = None,
+    is_saved: bool | None = None,
     priority: str | None = None,
     user_note: str | None = None,
 ) -> UserEntry:
@@ -46,8 +46,8 @@ async def set_article_state(
         insert_values["is_read"] = is_read
         if is_read:
             insert_values["read_at"] = datetime.now(timezone.utc)
-    if is_read_later is not None:
-        insert_values["is_read_later"] = is_read_later
+    if is_saved is not None:
+        insert_values["is_saved"] = is_saved
     if priority is not None:
         insert_values["priority"] = priority
     if user_note is not None:
@@ -107,8 +107,8 @@ async def update_article_status(
                 user_entry.read_at = datetime.now(timezone.utc)
             else:
                 user_entry.read_at = None
-        if update_data.get("is_read_later") is not None:
-            user_entry.is_read_later = update_data["is_read_later"]
+        if update_data.get("is_saved") is not None:
+            user_entry.is_saved = update_data["is_saved"]
         if update_data.get("priority") is not None:
             user_entry.priority = update_data["priority"]
         if update_data.get("user_note") is not None:
@@ -143,7 +143,7 @@ async def update_article_status(
             content_id=feed_article.content_id,
             feed_article_id=article_id,
             is_read=update_data.get("is_read"),
-            is_read_later=update_data.get("is_read_later"),
+            is_saved=update_data.get("is_saved"),
             priority=update_data.get("priority"),
             user_note=update_data.get("user_note"),
         )
@@ -206,7 +206,7 @@ async def delete_old_article_contents(db: AsyncSession, *, retention_days: int, 
     Eligibility criteria:
     - Published more than retention_days ago
     - Not in the top min_articles_per_feed newest articles for their feed
-    - Not saved (no user_article_states with is_read_later=True)
+    - Not saved (no user_entries with is_saved=True)
     - Not clipped (no clipped_articles entry)
 
     Args:

@@ -4,6 +4,7 @@ import pytest
 
 from app.services.feeds.language_detection import (
     detect_feed_language,
+    detect_language,
 )
 
 
@@ -13,55 +14,59 @@ class TestLanguageDetection:
     def test_detect_english_text(self):
         """Test detection of English text."""
         text = "This is a sample English text about technology and programming."
-        result = detect_feed_language(text)
+        result = detect_language(text)
         assert result == "en"
 
     def test_detect_spanish_text(self):
         """Test detection of Spanish text."""
         text = "Este es un texto de ejemplo en español sobre tecnología y programación."
-        result = detect_feed_language(text)
+        result = detect_language(text)
         assert result == "es"
 
     def test_detect_french_text(self):
         """Test detection of French text."""
         text = "Ceci est un exemple de texte en français sur la technologie et la programmation."
-        result = detect_feed_language(text)
+        result = detect_language(text)
         assert result == "fr"
 
     def test_detect_german_text(self):
         """Test detection of German text."""
-        text = "Dies ist ein Beispieltext auf Deutsch über Technologie und Programmierung."
-        result = detect_feed_language(text)
+        text = (
+            "Dies ist ein Beispieltext auf Deutsch über Technologie und Programmierung."
+        )
+        result = detect_language(text)
         assert result == "de"
 
     def test_short_text_returns_none(self):
         """Test that very short text returns None."""
         text = "Hi"
-        result = detect_feed_language(text)
+        result = detect_language(text)
         assert result is None
 
     def test_empty_text_returns_none(self):
         """Test that empty text returns None."""
-        result = detect_feed_language("")
+        result = detect_language("")
         assert result is None
 
     def test_low_confidence_returns_none(self):
         """Test that low confidence detection returns None."""
         # Ambiguous word that exists in multiple languages
         text = "prologue"
-        result = detect_feed_language(text, min_confidence=0.9)
+        result = detect_language(text, min_confidence=0.9)
         assert result is None
 
     def test_detect_from_feed_content_with_all_fields(self):
         """Test detection from complete feed content."""
         title = "Technology News and Updates"
-        description = "The latest news about technology, programming, and software development."
+        description = (
+            "The latest news about technology, programming, and software development."
+        )
         articles = [
             "New Python release brings performance improvements",
             "JavaScript framework comparison for 2025",
             "Machine learning trends in artificial intelligence",
         ]
-        
+
         result = detect_feed_language(title, description, articles)
         assert result == "en"
 
@@ -94,7 +99,7 @@ class TestLanguageDetection:
             "Nueva versión de Python mejora el rendimiento",
             "Comparación de frameworks de JavaScript",
         ]
-        
+
         result = detect_feed_language(title, description, articles)
         assert result == "es"
 
@@ -105,63 +110,81 @@ class TestLanguageDetectionWithRealFeeds:
     """Integration tests with real RSS feeds."""
 
     async def test_hacker_news_feed_language_detection(self):
-        """Test language detection with Hacker News RSS feed."""
-        import httpx
+        """Test language detection with Hacker News RSS feed (Mocked)."""
         from app.services.feeds import parsing
-        
-        # Fetch HN RSS feed
+
+        # Mock HN RSS feed content
+        content = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+    <title>Hacker News: Newest</title>
+    <description>Hacker News Newest Links</description>
+    <item>
+        <title>Show HN: My new project</title>
+        <description>I built this thing using Python and Rust.</description>
+    </item>
+    <item>
+        <title>Launch of the new AI model</title>
+        <description>Details about the architecture and training process.</description>
+    </item>
+</channel>
+</rss>
+"""
         url = "https://hnrss.org/newest"
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            content = response.content
-        
+
         # Parse feed
         parsed = parsing.parse_feed_content(content, url)
-        
+
         # Extract article texts
         article_texts = [
             f"{article.title or ''} {article.description or ''}".strip()
             for article in parsed["articles"][:5]
         ]
-        
+
         # Detect language
-        detected_lang = detect_language_from_feed_content(
+        detected_lang = detect_feed_language(
             title=parsed["title"],
             description=parsed["description"],
-            article_texts=article_texts,
+            articles=article_texts,
         )
-        
+
         # HN is primarily English
         assert detected_lang == "en"
-        
+
     async def test_feed_without_language_metadata(self):
-        """Test detection for feeds that don't provide language metadata."""
-        import httpx
+        """Test detection for feeds that don't provide language metadata (Mocked)."""
         from app.services.feeds import parsing
-        
-        # Use a feed known to not include language metadata
-        url = "https://hnrss.org/newest"
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.get(url)
-            response.raise_for_status()
-            content = response.content
-        
+
+        # Mock feed without language metadata
+        content = b"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+<channel>
+    <title>Random Blog</title>
+    <description>Just some random thoughts</description>
+    <item>
+        <title>First post</title>
+        <description>This is the first post on this blog.</description>
+    </item>
+</channel>
+</rss>
+"""
+        url = "https://example.com/feed"
+
         parsed = parsing.parse_feed_content(content, url)
-        
+
         # If feed doesn't provide language, it should be None or empty
         # Our detection should handle this
         article_texts = [
             f"{article.title or ''} {article.description or ''}".strip()
             for article in parsed["articles"][:5]
         ]
-        
-        detected_lang = detect_language_from_feed_content(
+
+        detected_lang = detect_feed_language(
             title=parsed["title"],
             description=parsed["description"],
-            article_texts=article_texts,
+            articles=article_texts,
         )
-        
+
         # Should detect a valid language code
         assert detected_lang is not None
         assert len(detected_lang) == 2  # ISO 639-1 code

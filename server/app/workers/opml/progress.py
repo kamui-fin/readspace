@@ -22,8 +22,11 @@ class OpmlImportTracker:
 
     def __init__(self, task_id: str):
         self.task_id = task_id
-        self.pool = get_pool()
         self._ttl = OPML_IMPORT_TASK_TTL_SECONDS
+
+    @property
+    def pool(self):
+        return get_pool()
 
     @property
     def key_base(self) -> str:
@@ -102,7 +105,15 @@ class OpmlImportTracker:
                 pipe.hset(
                     self.key_counters,
                     mapping=dict.fromkeys(
-                        ["completed", "successful", "failed", "already_existed", "skipped_limit", "cancelled_count"], 0
+                        [
+                            "completed",
+                            "successful",
+                            "failed",
+                            "already_existed",
+                            "skipped_limit",
+                            "cancelled_count",
+                        ],
+                        0,
                     ),
                 )
                 pipe.expire(self.key_counters, self._ttl)
@@ -123,7 +134,11 @@ class OpmlImportTracker:
             return None
 
         meta = orjson.loads(meta_raw)
-        counters = {k.decode(): int(v) for k, v in counters_raw.items()} if counters_raw else {}
+        counters = (
+            {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
+            if counters_raw
+            else {}
+        )
         errors = [FeedImportError(**orjson.loads(e)) for e in errors_raw] if errors_raw else []
 
         return OpmlImportState(
@@ -154,7 +169,7 @@ class OpmlImportTracker:
 
             # Read current counters to give an accurate final report
             counters_raw = await r.hgetall(self.key_counters)
-            counters = {k.decode(): int(v) for k, v in counters_raw.items()}
+            counters = {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
 
             completed = counters.get("completed", 0)
 
@@ -206,9 +221,12 @@ class OpmlImportTracker:
 
     async def _finalize_import(self, meta: dict, r: aioredis.Redis) -> None:
         counters_raw = await r.hgetall(self.key_counters)
-        counters = {k.decode(): int(v) for k, v in counters_raw.items()}
+        counters = {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
 
-        msg_parts = [f"{counters.get('successful', 0)} added", f"{counters.get('already_existed', 0)} existed"]
+        msg_parts = [
+            f"{counters.get('successful', 0)} added",
+            f"{counters.get('already_existed', 0)} existed",
+        ]
         if failed := counters.get("failed", 0):
             msg_parts.append(f"{failed} failed")
 

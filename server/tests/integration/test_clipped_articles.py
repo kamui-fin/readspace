@@ -20,8 +20,8 @@ async def test_clipped_article(db_session: AsyncSession, test_user: Profile):
     # Create article content
     # Note: published_at is not on ArticleContent - it's on FeedArticle for RSS feeds
     # For clipped articles, we use created_at timestamp
-    from app.utils.text import get_content_hash
-    
+    from app.utils.hashing import get_content_hash
+
     content = ArticleContent(
         title="Test Clipped Article",
         link="https://example.com/test-clipped-article",
@@ -39,7 +39,7 @@ async def test_clipped_article(db_session: AsyncSession, test_user: Profile):
         feed_article_id=None,
         priority=ArticlePriority.MEDIUM.value,
         is_read=False,
-        is_read_later=True,
+        is_saved=True,
     )
     db_session.add(clipped)
     await db_session.flush()
@@ -74,7 +74,9 @@ class TestSaveWebArticle:
         assert "article_id" in data
 
     @pytest.mark.asyncio
-    async def test_save_article_without_content_succeeds(self, async_client: AsyncClient):
+    async def test_save_article_without_content_succeeds(
+        self, async_client: AsyncClient
+    ):
         """Test saving article without content succeeds (content is optional)."""
         response = await async_client.post(
             "/api/articles/",
@@ -127,11 +129,14 @@ class TestSaveWebArticle:
 
     @pytest.mark.asyncio
     async def test_save_duplicate_article_updates_read_later(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_clipped_article: UserEntry,
+        db_session: AsyncSession,
     ):
-        """Test saving an already clipped article re-enables is_read_later."""
+        """Test saving an already clipped article re-enables is_saved."""
         # First, mark the existing article as NOT read later
-        test_clipped_article.is_read_later = False
+        test_clipped_article.is_saved = False
         await db_session.commit()
 
         # Try to save the same URL again
@@ -154,7 +159,9 @@ class TestCheckArticleSaved:
     """Test checking if an article is already saved."""
 
     @pytest.mark.asyncio
-    async def test_check_saved_article_exists(self, async_client: AsyncClient, test_clipped_article: UserEntry):
+    async def test_check_saved_article_exists(
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
+    ):
         """Test checking a saved article returns the article data."""
         response = await async_client.get(
             "/api/articles/check-saved",
@@ -164,8 +171,7 @@ class TestCheckArticleSaved:
         assert response.status_code == 200
         data = response.json()
         assert data["is_saved"] is True
-        assert data["id"] == str(test_clipped_article.id)
-        assert data["is_read_later"] is True
+        assert data["article_id"] == str(test_clipped_article.id)
 
     @pytest.mark.asyncio
     async def test_check_saved_article_not_exists(self, async_client: AsyncClient):
@@ -186,18 +192,23 @@ class TestUpdateClippedArticle:
 
     @pytest.mark.asyncio
     async def test_update_clipped_article_priority(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_clipped_article: UserEntry,
+        db_session: AsyncSession,
     ):
         """Test updating the priority of a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
-            json={"priority": "high"},
+            json={"priority": "HIGH"},
         )
 
         assert response.status_code == 204
 
     @pytest.mark.asyncio
-    async def test_update_clipped_article_note(self, async_client: AsyncClient, test_clipped_article: UserEntry):
+    async def test_update_clipped_article_note(
+        self, async_client: AsyncClient, test_clipped_article: UserEntry
+    ):
         """Test updating the note of a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
@@ -225,7 +236,7 @@ class TestUpdateClippedArticle:
         """Test toggling read_later status on a clipped article."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
-            json={"is_read_later": False},
+            json={"is_saved": False},
         )
 
         assert response.status_code == 204
@@ -237,7 +248,7 @@ class TestUpdateClippedArticle:
         """Test updating priority to high."""
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
-            json={"priority": "high"},
+            json={"priority": "HIGH"},
         )
 
         assert response.status_code == 204
@@ -250,7 +261,7 @@ class TestUpdateClippedArticle:
         response = await async_client.put(
             f"/api/articles/{test_clipped_article.id}?article_type=clipped",
             json={
-                "priority": "low",
+                "priority": "LOW",
                 "user_note": "New comprehensive note",
                 "is_read": True,
             },
@@ -285,18 +296,28 @@ class TestReadLaterEndpoint:
         assert len(data["items"]) >= 1
 
         # Find our test clipped article
-        clipped_item = next((item for item in data["items"] if item["id"] == str(test_clipped_article.id)), None)
+        clipped_item = next(
+            (
+                item
+                for item in data["items"]
+                if item["id"] == str(test_clipped_article.id)
+            ),
+            None,
+        )
         assert clipped_item is not None
         assert clipped_item["article_type"] == "clipped"
-        assert clipped_item["is_read_later"] is True
+        assert clipped_item["is_saved"] is True
 
     @pytest.mark.asyncio
     async def test_read_later_excludes_non_read_later_articles(
-        self, async_client: AsyncClient, test_clipped_article: UserEntry, db_session: AsyncSession
+        self,
+        async_client: AsyncClient,
+        test_clipped_article: UserEntry,
+        db_session: AsyncSession,
     ):
         """Test that read-later endpoint only includes articles marked as read_later."""
         # Mark the test article as NOT read later
-        test_clipped_article.is_read_later = False
+        test_clipped_article.is_saved = False
         await db_session.commit()
 
         response = await async_client.get("/api/articles/views/read-later")
@@ -309,12 +330,15 @@ class TestReadLaterEndpoint:
         assert str(test_clipped_article.id) not in article_ids
 
     @pytest.mark.asyncio
-    async def test_read_later_pagination(self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile):
+    async def test_read_later_pagination(
+        self, async_client: AsyncClient, db_session: AsyncSession, test_user: Profile
+    ):
         """Test pagination in read-later endpoint."""
         # Create multiple clipped articles
-        from app.utils.text import get_content_hash
-        
+        from app.utils.hashing import get_content_hash
+
         from datetime import timedelta
+
         base_time = datetime.now(UTC)
         for i in range(5):
             content = ArticleContent(
@@ -331,8 +355,9 @@ class TestReadLaterEndpoint:
                 user_id=test_user.id,
                 content_id=content.id,
                 feed_article_id=None,
-                is_read_later=True,
-                created_at=base_time - timedelta(seconds=i),  # Ensure different timestamps
+                is_saved=True,
+                created_at=base_time
+                - timedelta(seconds=i),  # Ensure different timestamps
             )
             db_session.add(clipped)
 
@@ -348,7 +373,9 @@ class TestReadLaterEndpoint:
         assert data["next_cursor"] is not None
 
         # Test fetching next page
-        next_response = await async_client.get(f"/api/articles/views/read-later?limit=3&cursor={data['next_cursor']}")
+        next_response = await async_client.get(
+            f"/api/articles/views/read-later?limit=3&cursor={data['next_cursor']}"
+        )
 
         assert next_response.status_code == 200
         next_data = next_response.json()

@@ -57,7 +57,7 @@ async def count_read_later_articles(
     """Count read later articles - uses partial index."""
     stmt = select(func.count(UserEntry.id)).filter(
         UserEntry.user_id == user_id,
-        UserEntry.is_read_later,
+        UserEntry.is_saved,
     )
 
     result = await db.execute(stmt)

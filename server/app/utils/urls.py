@@ -62,11 +62,7 @@ def normalize_feed_url(url: str) -> str:
             "referrer",
             "source",
         }
-        filtered_params = [
-            p
-            for p in parsed.query.split("&")
-            if p.split("=")[0].lower() not in ignored_params
-        ]
+        filtered_params = [p for p in parsed.query.split("&") if p.split("=")[0].lower() not in ignored_params]
         query = "&".join(filtered_params)
 
     path = parsed.path.rstrip("/") if len(parsed.path) > 1 else parsed.path
@@ -104,9 +100,7 @@ async def resolve_canonical_url(url: str, timeout: int = 10) -> str:
     try:
         # verify=False is risky but common for RSS feeds with bad certs.
         # Ideally, make this configurable.
-        async with httpx.AsyncClient(
-            follow_redirects=True, timeout=timeout, verify=False
-        ) as client:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=timeout, verify=False) as client:
             resp = await client.head(url)
             return normalize_feed_url(str(resp.url))
     except Exception:

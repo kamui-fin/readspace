@@ -127,7 +127,9 @@ async def _prepare_test_database(base_settings) -> dict[str, str]:
             await conn.execute(text(statement))
 
     alembic_cfg = Config(str(SERVER_ROOT / "alembic.ini"))
-    alembic_cfg.set_main_option("sqlalchemy.url", test_sync.render_as_string(hide_password=False))
+    alembic_cfg.set_main_option(
+        "sqlalchemy.url", test_sync.render_as_string(hide_password=False)
+    )
     alembic_cfg.set_main_option("script_location", str(SERVER_ROOT / "alembic"))
     await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
 
@@ -175,7 +177,9 @@ def _configure_test_env(base_settings, config: dict[str, str]) -> None:
     redis_db = os.getenv("PYTEST_REDIS_DB", "9")
     os.environ["REDIS_URL"] = _redis_url_with_db(redis_base, redis_db)
 
-    os.environ.setdefault("MEILISEARCH_INDEX_NAME", os.getenv("PYTEST_MEILI_INDEX", "test_feeds_pytest"))
+    os.environ.setdefault(
+        "MEILISEARCH_INDEX_NAME", os.getenv("PYTEST_MEILI_INDEX", "test_feeds_pytest")
+    )
 
 
 def pytest_sessionstart(session):
@@ -192,7 +196,9 @@ def pytest_sessionfinish(session, exitstatus):
     if not TEST_DB_CONFIG:
         return
     if os.getenv(KEEP_TEST_DB_ENV):
-        print(f"⚠️ Keeping test database '{TEST_DB_CONFIG['name']}' per {KEEP_TEST_DB_ENV}")
+        print(
+            f"⚠️ Keeping test database '{TEST_DB_CONFIG['name']}' per {KEEP_TEST_DB_ENV}"
+        )
         return
     asyncio.run(_drop_test_database(TEST_DB_CONFIG))
 
@@ -213,7 +219,9 @@ async def db_engine() -> AsyncGenerator[AsyncEngine, None]:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(db_engine: AsyncEngine, monkeypatch) -> AsyncGenerator[AsyncSession, None]:
+async def db_session(
+    db_engine: AsyncEngine, monkeypatch
+) -> AsyncGenerator[AsyncSession, None]:
     connection = await db_engine.connect()
     transaction = await connection.begin()
     session = AsyncSession(bind=connection, expire_on_commit=False)
@@ -230,6 +238,7 @@ async def db_session(db_engine: AsyncEngine, monkeypatch) -> AsyncGenerator[Asyn
         ("app.workers.opml.import_feed.worker_db_factory", _worker_db),
         ("app.workers.feed.refresh.worker_db_factory", _worker_db),
         ("app.workers.feed.compaction.worker_db", _worker_db),
+        ("app.workers.feed.enrichment.worker_db", _worker_db),
     )
     for target, replacement in patch_map:
         monkeypatch.setattr(target, replacement, raising=False)
@@ -369,7 +378,9 @@ async def async_client(db_session: AsyncSession, mock_current_user):
 
     _override_dependencies(app, db_session, mock_current_user)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as http_client:
+    async with AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as http_client:
         yield http_client
     app.dependency_overrides.clear()
 
@@ -380,7 +391,9 @@ async def async_admin_client(db_session: AsyncSession, mock_admin_user):
 
     _override_dependencies(app, db_session, mock_admin_user)
     transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as http_client:
+    async with AsyncClient(
+        transport=transport, base_url="http://testserver"
+    ) as http_client:
         yield http_client
     app.dependency_overrides.clear()
 
@@ -420,17 +433,19 @@ async def redis_client() -> AsyncGenerator[Redis, None]:
         await client.close()
 
 
-@pytest.fixture(scope="function", autouse=True)
-def configure_redis_pool():
+@pytest_asyncio.fixture(scope="function", autouse=True)
+async def configure_redis_pool():
     """Configure Redis pool per test to avoid event loop issues."""
     from app.core import redis_cache
-    
+
     # Reset the pool before each test
     redis_cache._pool = None
-    
+
     yield
-    
+
     # Clean up after test
+    if redis_cache._pool:
+        await redis_cache.close_pool()
     redis_cache._pool = None
 
 
@@ -491,7 +506,9 @@ async def http_client():
         yield client
 
 
-async def wait_for_taskiq_task(task_id: str, timeout: int = 30, poll_interval: float = 0.5):
+async def wait_for_taskiq_task(
+    task_id: str, timeout: int = 30, poll_interval: float = 0.5
+):
     del task_id, timeout, poll_interval
     await asyncio.sleep(0.1)
     return None

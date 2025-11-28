@@ -45,6 +45,7 @@ async def test_feed_with_subscription(db_session: AsyncSession, test_user: Profi
         url="https://example.com/feed.xml",
         title="Test Feed",
         description="Test feed description",
+        language="en",
         link="https://example.com",
         created_at=datetime.now(timezone.utc),
     )
@@ -95,19 +96,25 @@ class TestBulkArticleCreation:
         ]
 
         # Bulk insert
-        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(
+            db_session, articles_data=articles_data
+        )
 
         # Verify all 10 were created
         assert len(created_articles) == 10
 
         # Verify feed_articles were created for this feed
-        article_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+        article_result = await db_session.execute(
+            select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+        )
         articles = article_result.scalars().all()
         assert len(articles) == 10
 
         # Verify article_contents were created for the specific links
         content_links = [f"https://example.com/article-{i}" for i in range(10)]
-        content_result = await db_session.execute(select(ArticleContent).where(ArticleContent.link.in_(content_links)))
+        content_result = await db_session.execute(
+            select(ArticleContent).where(ArticleContent.link.in_(content_links))
+        )
         contents = content_result.scalars().all()
         assert len(contents) == 10
 
@@ -125,7 +132,8 @@ class TestBulkArticleCreation:
         shared_link = f"https://example.com/test-{test_id}/shared-article"
 
         # Pre-create an article_content
-        from app.utils.text import get_content_hash
+        from app.utils.hashing import get_content_hash
+
         existing_content = ArticleContent(
             id=uuid4(),
             title="Existing Article",
@@ -143,7 +151,11 @@ class TestBulkArticleCreation:
                 feed_id=feed.id,
                 guid=f"guid-{test_id}-{i}",
                 title=f"New Article {i}",
-                link=shared_link if i == 1 else f"https://example.com/test-{test_id}/article-{i}",
+                link=(
+                    shared_link
+                    if i == 1
+                    else f"https://example.com/test-{test_id}/article-{i}"
+                ),
                 content=f"New content {i}",
                 published_at=datetime.now(timezone.utc),
                 user_id=placeholder_user_id,
@@ -151,19 +163,25 @@ class TestBulkArticleCreation:
             for i in range(3)
         ]
 
-        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(
+            db_session, articles_data=articles_data
+        )
 
         # Should create 3 feed_articles (linking to existing + new content)
         assert len(created_articles) == 3
 
         # Verify the existing content was reused (not duplicated)
-        reused_result = await db_session.execute(select(ArticleContent).where(ArticleContent.link == shared_link))
+        reused_result = await db_session.execute(
+            select(ArticleContent).where(ArticleContent.link == shared_link)
+        )
         reused_contents = reused_result.scalars().all()
         assert len(reused_contents) == 1
         assert reused_contents[0].id == existing_content.id
 
         # Verify all 3 feed_articles were created for this feed
-        feed_articles_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+        feed_articles_result = await db_session.execute(
+            select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+        )
         feed_articles = feed_articles_result.scalars().all()
         assert len(feed_articles) == 3
 
@@ -191,7 +209,9 @@ class TestBulkArticleCreation:
             for i in range(5)
         ]
 
-        first_batch = await create_articles_batch(db_session, articles_data=initial_articles)
+        first_batch = await create_articles_batch(
+            db_session, articles_data=initial_articles
+        )
         assert len(first_batch) == 5
 
         # Try to insert overlapping batch with same guids but different links
@@ -210,7 +230,9 @@ class TestBulkArticleCreation:
             for i in range(3, 8)
         ]
 
-        second_batch = await create_articles_batch(db_session, articles_data=overlapping_articles)
+        second_batch = await create_articles_batch(
+            db_session, articles_data=overlapping_articles
+        )
 
         # First batch created guids: 0, 1, 2, 3, 4 (5 articles)
         # Second batch tries to create guids: 3, 4, 5, 6, 7 (5 articles)
@@ -219,7 +241,9 @@ class TestBulkArticleCreation:
         assert len(second_batch) == 3
 
         # Verify total feed_articles is 8 (5 from first + 3 from second)
-        article_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+        article_result = await db_session.execute(
+            select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+        )
         all_articles = article_result.scalars().all()
         assert len(all_articles) == 8
 
@@ -240,7 +264,8 @@ class TestBulkArticleCreation:
         feed, _ = test_feed_with_subscription
 
         # Pre-create an article_content
-        from app.utils.text import get_content_hash
+        from app.utils.hashing import get_content_hash
+
         existing_content = ArticleContent(
             id=uuid4(),
             title="Shared Content",
@@ -251,7 +276,8 @@ class TestBulkArticleCreation:
         db_session.add(existing_content)
 
         # Pre-create a feed_article
-        from app.utils.text import get_guid_hash
+        from app.utils.hashing import get_guid_hash
+
         existing_article = FeedArticle(
             id=uuid4(),
             feed_id=feed.id,
@@ -297,7 +323,9 @@ class TestBulkArticleCreation:
             ),
         ]
 
-        created_articles = await create_articles_batch(db_session, articles_data=articles_data)
+        created_articles = await create_articles_batch(
+            db_session, articles_data=articles_data
+        )
 
         # Should create 2 new feed_articles (new-guid-1 and new-guid-2)
         # existing-guid should be skipped
@@ -305,7 +333,9 @@ class TestBulkArticleCreation:
 
         # Verify the shared content was reused (not duplicated)
         shared_content_result = await db_session.execute(
-            select(ArticleContent).where(ArticleContent.link == "https://example.com/shared")
+            select(ArticleContent).where(
+                ArticleContent.link == "https://example.com/shared"
+            )
         )
         shared_contents = shared_content_result.scalars().all()
         assert len(shared_contents) == 1
@@ -313,13 +343,17 @@ class TestBulkArticleCreation:
 
         # Verify new content was created
         new_content_result = await db_session.execute(
-            select(ArticleContent).where(ArticleContent.link == "https://example.com/new-link-2")
+            select(ArticleContent).where(
+                ArticleContent.link == "https://example.com/new-link-2"
+            )
         )
         new_contents = new_content_result.scalars().all()
         assert len(new_contents) == 1
 
         # Verify 3 feed_articles exist for this feed (1 existing + 2 new)
-        article_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+        article_result = await db_session.execute(
+            select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+        )
         articles = article_result.scalars().all()
         assert len(articles) == 3
 
@@ -377,7 +411,7 @@ class TestFeedServiceBulkIntegration:
             }
 
         from contextlib import asynccontextmanager
-        
+
         @asynccontextmanager
         async def db_factory():
             yield db_session
@@ -390,7 +424,9 @@ class TestFeedServiceBulkIntegration:
             await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             # Verify 3 articles were created via bulk insert
-            article_result = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+            article_result = await db_session.execute(
+                select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+            )
             articles = article_result.scalars().all()
             assert len(articles) == 3
 
@@ -431,7 +467,6 @@ class TestFeedServiceBulkIntegration:
     </channel>
 </rss>"""
 
-
         async def mock_fetch(*args, **kwargs):
             return {
                 "status_code": 200,
@@ -442,7 +477,7 @@ class TestFeedServiceBulkIntegration:
             }
 
         from contextlib import asynccontextmanager
-        
+
         @asynccontextmanager
         async def db_factory():
             yield db_session
@@ -455,7 +490,9 @@ class TestFeedServiceBulkIntegration:
             await refresh_feed(session_factory=db_factory, feed_id=feed.id)
 
             # Verify 1 article created
-            article_result_1 = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+            article_result_1 = await db_session.execute(
+                select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+            )
             articles_1 = article_result_1.scalars().all()
             assert len(articles_1) == 1
 
@@ -463,13 +500,17 @@ class TestFeedServiceBulkIntegration:
             await refresh_feed(session_factory=db_factory, feed_id=feed.id, force=True)
 
             # Should still have only 1 article (no duplicates)
-            article_result_2 = await db_session.execute(select(FeedArticle).where(FeedArticle.feed_id == feed.id))
+            article_result_2 = await db_session.execute(
+                select(FeedArticle).where(FeedArticle.feed_id == feed.id)
+            )
             articles_2 = article_result_2.scalars().all()
             assert len(articles_2) == 1
 
             # Should still have only 1 article_content for this specific link
             content_result = await db_session.execute(
-                select(ArticleContent).where(ArticleContent.link == "https://example.com/article-1")
+                select(ArticleContent).where(
+                    ArticleContent.link == "https://example.com/article-1"
+                )
             )
             contents = content_result.scalars().all()
             assert len(contents) == 1

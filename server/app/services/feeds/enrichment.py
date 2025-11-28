@@ -214,9 +214,7 @@ def build_feed_update_mapping(
             article_stats=feed_snapshot.article_stats,
         )
 
-        update_mapping["popularity_score"] = float(
-            popularity_data.get("popularity_score", 0.5)
-        )
+        update_mapping["popularity_score"] = float(popularity_data.get("popularity_score", 0.5))
 
     return update_mapping
 

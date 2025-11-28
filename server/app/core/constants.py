@@ -66,14 +66,10 @@ MIN_VALID_PUBLISHED_YEAR = 1990  # Minimum year for valid article publication da
 
 # Unread Article Management
 UNREAD_RETENTION_DAYS = 30  # Auto-mark articles older than this as read
-INITIAL_UNREAD_COUNT = (
-    10  # Number of recent articles to show as unread on new subscriptions
-)
+INITIAL_UNREAD_COUNT = 10  # Number of recent articles to show as unread on new subscriptions
 
 # Article Compaction (Cleanup)
-ARTICLE_RETENTION_DAYS = (
-    7  # Delete articles older than 30 days (beyond minimum retention)
-)
+ARTICLE_RETENTION_DAYS = 7  # Delete articles older than 30 days (beyond minimum retention)
 MIN_ARTICLES_PER_FEED = 50  # Keep at least 50 newest articles per feed
 
 # Content Extraction
@@ -85,12 +81,8 @@ FAVICON_FETCH_TIMEOUT = 10  # seconds - timeout for fetching canonical URL and f
 # AI Service
 DEFAULT_AI_MAX_TOKENS = 1000  # Default maximum tokens for AI responses
 MAX_COMPOSITE_TEXT_LENGTH = 1000  # Maximum length for composite text in AI processing
-MAX_AI_SUMMARIZATION_CONTENT_BYTES = (
-    100 * 1024
-)  # Maximum content size for summarization (100KB)
-MAX_AI_TRANSLATION_CONTENT_BYTES = (
-    50 * 1024
-)  # Maximum content size for translation (50KB)
+MAX_AI_SUMMARIZATION_CONTENT_BYTES = 100 * 1024  # Maximum content size for summarization (100KB)
+MAX_AI_TRANSLATION_CONTENT_BYTES = 50 * 1024  # Maximum content size for translation (50KB)
 MAX_AI_INPUT_CHARS = 15000  # Maximum characters for AI input
 
 
@@ -104,9 +96,7 @@ ERROR_INVALID_FOLDER_DATA = "Invalid folder data"
 
 # Response Compression Configuration
 COMPRESSION_MIN_SIZE = 500  # Minimum response size in bytes to compress
-COMPRESSION_LEVEL = (
-    5  # Brotli compression level (0-11, higher = better compression but slower)
-)
+COMPRESSION_LEVEL = 5  # Brotli compression level (0-11, higher = better compression but slower)
 COMPRESSION_CONTENT_TYPES = {
     "application/json",
     "application/javascript",

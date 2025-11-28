@@ -43,15 +43,8 @@ def calculate_interval_from_pub_times(pub_times: list[datetime]) -> int:
     posts_per_hour = len(pub_times) / time_span_hours
 
     # Calculate average gap between consecutive posts
-    gaps_minutes = [
-        (pub_times[i] - pub_times[i + 1]).total_seconds() / 60
-        for i in range(len(pub_times) - 1)
-    ]
-    avg_gap = (
-        sum(gaps_minutes) / len(gaps_minutes)
-        if gaps_minutes
-        else DEFAULT_REFRESH_INTERVAL_MINUTES
-    )
+    gaps_minutes = [(pub_times[i] - pub_times[i + 1]).total_seconds() / 60 for i in range(len(pub_times) - 1)]
+    avg_gap = sum(gaps_minutes) / len(gaps_minutes) if gaps_minutes else DEFAULT_REFRESH_INTERVAL_MINUTES
 
     # Determine interval based on posting frequency
     if posts_per_hour >= 1.0:
@@ -66,9 +59,7 @@ def calculate_interval_from_pub_times(pub_times: list[datetime]) -> int:
         interval = int(avg_gap * 0.33)
 
     # Enforce system-wide bounds
-    return max(
-        MIN_REFRESH_INTERVAL_MINUTES, min(interval, MAX_REFRESH_INTERVAL_MINUTES)
-    )
+    return max(MIN_REFRESH_INTERVAL_MINUTES, min(interval, MAX_REFRESH_INTERVAL_MINUTES))
 
 
 async def calculate_optimal_interval(db: AsyncSession, feed: Feed) -> int:
@@ -88,9 +79,7 @@ async def calculate_optimal_interval(db: AsyncSession, feed: Feed) -> int:
         Optimal fetch interval in minutes, bounded by MIN/MAX constants
     """
     # Query recent article publication times (use existing tables!)
-    pub_times = await get_recent_article_publication_times(
-        db, feed_id=feed.id, limit=30
-    )
+    pub_times = await get_recent_article_publication_times(db, feed_id=feed.id, limit=30)
 
     if len(pub_times) < 2:
         logger.debug(
@@ -135,9 +124,7 @@ def calculate_error_backoff_interval(consecutive_errors: int) -> int:
     base_delay_minutes = min((2**consecutive_errors) * 60, MAX_ERROR_BACKOFF_MINUTES)
 
     # Add jitter (±25%) to prevent thundering herd when many feeds fail/recover simultaneously
-    jitter_multiplier = random.uniform(
-        0.75, 1.25
-    )  # noqa: S311 - non-cryptographic jitter for load distribution
+    jitter_multiplier = random.uniform(0.75, 1.25)  # noqa: S311 - non-cryptographic jitter for load distribution
     final_interval = int(base_delay_minutes * jitter_multiplier)
 
     logger.info(

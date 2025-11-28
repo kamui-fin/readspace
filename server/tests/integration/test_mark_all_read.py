@@ -25,7 +25,7 @@ async def create_test_article(
     """Helper to create article content and feed article with proper hashes."""
     content_hash = hashlib.sha256(link.encode()).hexdigest()
     guid_hash = hashlib.sha256(guid.encode()).hexdigest()
-    
+
     content = ArticleContent(
         id=uuid4(),
         title=title,
@@ -34,7 +34,7 @@ async def create_test_article(
     )
     db_session.add(content)
     await db_session.flush()  # Flush to get content.id
-    
+
     article = FeedArticle(
         id=uuid4(),
         feed_id=feed_id,
@@ -43,7 +43,7 @@ async def create_test_article(
         published_at=published_at,
     )
     db_session.add(article)
-    
+
     return content, article
 
 
@@ -65,6 +65,8 @@ async def test_mark_feed_all_read_e2e(
         id=uuid4(),
         url="https://example.com/mark-read-feed.xml",
         title="Mark Read Test Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -132,6 +134,8 @@ async def test_mark_folder_all_read_e2e(
             id=uuid4(),
             url=f"https://example.com/folder-feed-{feed_num}.xml",
             title=f"Folder Feed {feed_num}",
+            description="Test feed description",
+            language="en",
         )
         db_session.add(feed)
         await db_session.flush()
@@ -198,7 +202,7 @@ async def test_mark_feed_all_read_returns_404_for_non_existent_subscription(
     )
 
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -213,7 +217,7 @@ async def test_mark_folder_all_read_returns_404_for_non_existent_folder(
     )
 
     assert response.status_code == 404
-    assert "not found" in response.json()["detail"].lower()
+    assert "not found" in response.json()["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -234,6 +238,8 @@ async def test_new_articles_after_mark_all_read_show_as_unread(
         id=uuid4(),
         url="https://example.com/new-after-feed.xml",
         title="New After Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -312,6 +318,8 @@ async def test_new_subscription_with_many_articles_shows_initial_unread_limit(
         id=uuid4(),
         url=f"https://example.com/many-articles-feed-{uuid4().hex[:8]}.xml",
         title="Many Articles Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -385,6 +393,8 @@ async def test_subscription_with_fewer_articles_shows_all_as_unread(
         id=uuid4(),
         url=f"https://example.com/few-articles-feed-{uuid4().hex[:8]}.xml",
         title="Few Articles Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -449,6 +459,8 @@ async def test_mark_feed_all_read_updates_article_list_is_read_field(
         id=uuid4(),
         url="https://example.com/article-list-test.xml",
         title="Article List Test Feed",
+        description="Test feed description",
+        language="en",
     )
     db_session.add(feed)
     await db_session.flush()
@@ -528,6 +540,8 @@ async def test_mark_folder_all_read_updates_article_list_is_read_field(
             id=uuid4(),
             url=f"https://example.com/folder-article-list-{feed_num}.xml",
             title=f"Folder Article List Feed {feed_num}",
+            description="Test feed description",
+            language="en",
         )
         db_session.add(feed)
         await db_session.flush()

@@ -78,6 +78,10 @@ class OpmlImportState(OpmlImportProgress):
             status=self.status,
         )
 
+    def to_progress(self) -> OpmlImportProgress:
+        """Extracts progress counters."""
+        return OpmlImportProgress(**self.model_dump(include=set(OpmlImportProgress.model_fields.keys())))
+
     def to_result(self) -> "OpmlImportResult":
         """Generates the final summary result."""
         msg = f"{self.successful} feeds added. {self.already_existed} pre-existing. {self.failed} failed."

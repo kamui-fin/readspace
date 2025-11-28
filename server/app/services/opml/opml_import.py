@@ -15,6 +15,8 @@ from app.services.opml.tasks import store_task_ownership
 from app.services.user.resource_limits import enforce_subscription_limit
 from app.typing.opml import OpmlImportResponse
 
+from app.core.custom_exceptions import ValidationError
+
 logger = structlog.get_logger(__name__)
 
 
@@ -30,8 +32,16 @@ async def handle_opml_upload(
     Validates content, checks limits, and dispatches the background task.
     """
     # 1. Parse to validate structure and get count
-    feeds = parse_opml(opml_content, default_folder_name)
+    # 1. Parse to validate structure and get count
+    try:
+        feeds = parse_opml(opml_content, default_folder_name)
+    except ValueError as e:
+        raise ValidationError(message=str(e)) from e
+
     feed_count = len(feeds)
+
+    if feed_count == 0:
+        raise ValidationError(message="No feed entries found in OPML file.")
 
     # 2. Check subscription limits
     # This raises HTTPException(429) if limit exceeded

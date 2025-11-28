@@ -11,7 +11,9 @@ from app.typing.articles import ArticleCreate
 from app.utils.hashing import get_content_hash, get_guid_hash
 
 
-async def create_articles_batch(db: AsyncSession, *, articles_data: list[ArticleCreate]) -> list[FeedArticle]:
+async def create_articles_batch(
+    db: AsyncSession, *, articles_data: list[ArticleCreate]
+) -> list[FeedArticle]:
     """Create multiple articles in batch using optimized bulk inserts."""
     if not articles_data:
         return []
@@ -38,16 +40,21 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
                     "description": getattr(article_in, "summary", None),
                     "content": article_in.content,
                     "author": article_in.author,
-                    "image_url": str(article_in.image_url) if article_in.image_url else None,
-                    "estimated_read_time_minutes": getattr(article_in, "estimated_read_time_minutes", None),
+                    "image_url": (
+                        str(article_in.image_url) if article_in.image_url else None
+                    ),
+                    "estimated_read_time_minutes": getattr(
+                        article_in, "estimated_read_time_minutes", None
+                    )
+                    or 0,
                 }
             )
             link_to_article[link_str] = article_in
 
     content_insert_stmt = pg_insert(ArticleContent).values(content_mappings)
-    content_insert_stmt = content_insert_stmt.on_conflict_do_nothing(index_elements=["content_hash"]).returning(
-        ArticleContent.id, ArticleContent.link
-    )
+    content_insert_stmt = content_insert_stmt.on_conflict_do_nothing(
+        index_elements=["content_hash"]
+    ).returning(ArticleContent.id, ArticleContent.link)
 
     content_result = await db.execute(content_insert_stmt)
     content_rows = content_result.fetchall()
@@ -57,7 +64,9 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
 
     if missing_links:
         existing_content_result = await db.execute(
-            select(ArticleContent.id, ArticleContent.link).where(ArticleContent.link.in_(missing_links))
+            select(ArticleContent.id, ArticleContent.link).where(
+                ArticleContent.link.in_(missing_links)
+            )
         )
         existing_rows = existing_content_result.fetchall()
         content_rows = list(content_rows) + list(existing_rows)
@@ -75,7 +84,9 @@ async def create_articles_batch(db: AsyncSession, *, articles_data: list[Article
                     {
                         "feed_id": article_in.feed_id,
                         "content_id": content_id,
-                        "guid_hash": get_guid_hash(article_in.guid, fallback_link=link_str),
+                        "guid_hash": get_guid_hash(
+                            article_in.guid, fallback_link=link_str
+                        ),
                         "published_at": article_in.published_at,
                         "created_at": current_time,
                     }
@@ -129,14 +140,11 @@ async def upsert_article_content(
         "title": article_in.title,
         "link": str(article_in.link),
         "content_hash": content_hash,
-        "summary": getattr(article_in, "summary", None),
         "description": article_in.description,
         "content": article_in.content,
-        "extracted_text": getattr(article_in, "extracted_text", None),
         "author": article_in.author,
         "image_url": str(article_in.image_url) if article_in.image_url else None,
-        "image_source": getattr(article_in, "image_source", None),
-        "estimated_read_time_minutes": article_in.estimated_read_time_minutes,
+        "estimated_read_time_minutes": article_in.estimated_read_time_minutes or 0,
     }
 
     stmt = pg_insert(ArticleContent).values(values)
@@ -155,7 +163,8 @@ async def upsert_article_content(
     else:
         # Force return of existing row if conflict
         stmt = stmt.on_conflict_do_update(
-            index_elements=["content_hash"], set_={"content_hash": stmt.excluded.content_hash}
+            index_elements=["content_hash"],
+            set_={"content_hash": stmt.excluded.content_hash},
         )
 
     stmt = stmt.returning(ArticleContent)

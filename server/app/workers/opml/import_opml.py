@@ -89,15 +89,28 @@ async def _process_opml_import(
 
     # Batch create folders (Single DB Session)
     async with db_factory() as db:
-        folders = {f.get("folder_name") for f in raw_feeds if f.get("folder_name")}
-        folder_map = await crud_folder.upsert_batch(db, list(folders), user_id) if folders else {}
+        # Extract folder names, handling both string and list cases
+        folder_names = set()
+        for f in raw_feeds:
+            folder_name = f.get("folder_name")
+            if folder_name:
+                # Handle case where folder_name might be a list
+                if isinstance(folder_name, list):
+                    folder_name = folder_name[0] if folder_name else None
+                if folder_name:
+                    folder_names.add(folder_name)
+        folder_map = await crud_folder.upsert_batch(db, list(folder_names), user_id) if folder_names else {}
 
     # Dispatch Tasks
     task_ids = []
     dispatched = 0
 
     for feed in raw_feeds:
-        folder_id = folder_map.get(feed.get("folder_name", ""))
+        folder_name = feed.get("folder_name", "")
+        # Handle case where folder_name might be a list
+        if isinstance(folder_name, list):
+            folder_name = folder_name[0] if folder_name else ""
+        folder_id = folder_map.get(folder_name)
         try:
             task = await import_single_feed_task.kiq(
                 user_id=str(user_id),

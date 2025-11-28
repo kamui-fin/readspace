@@ -194,7 +194,7 @@ class TestOrphanPrevention:
             user_id=test_user.id,
             feed_article_id=None,
             is_read=False,
-            is_read_later=True,
+            is_saved=True,
         )
         db_session.add(clipped)
         await db_session.commit()

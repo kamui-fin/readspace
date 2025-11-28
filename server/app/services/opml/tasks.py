@@ -31,8 +31,11 @@ class TaskRepository:
     """
 
     def __init__(self):
-        self.pool = get_pool()
         self.ttl = OPML_IMPORT_TASK_TTL_SECONDS
+
+    @property
+    def pool(self):
+        return get_pool()
 
     def _owner_key(self, task_id: str) -> str:
         return f"opml_task_owner:{task_id}"
@@ -68,7 +71,7 @@ class TaskRepository:
     async def get_user_task_ids(self, user_id: str) -> set[str]:
         async with Redis(connection_pool=self.pool) as r:
             members = await r.smembers(self._user_list_key(user_id))
-            return {m.decode() for m in members}
+            return {m.decode() if isinstance(m, bytes) else m for m in members}
 
 
 # --- Service Functions ---
@@ -184,7 +187,10 @@ async def get_task_status(task_id: str, user_id: str) -> OpmlImportStatusRespons
 
     # 3. Build Response
     response = OpmlImportStatusResponse(
-        task_id=task_id, status=state.status, message=state.message or "Processing...", metadata=state.to_metadata()
+        task_id=task_id,
+        status=state.status,
+        message=state.message or "Processing...",
+        metadata=state.to_metadata(),
     )
 
     if state.status == ImportStatus.IN_PROGRESS:
@@ -258,5 +264,8 @@ async def cancel_user_task(task_id: str, user_id: str) -> OpmlImportCancelRespon
     await tracker.mark_cancelled()
 
     return OpmlImportCancelResponse(
-        task_id=task_id, message="Cancellation processed.", cancelled=True, previous_state=state.status
+        task_id=task_id,
+        message="Cancellation processed.",
+        cancelled=True,
+        previous_state=state.status,
     )

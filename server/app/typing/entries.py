@@ -29,7 +29,7 @@ class EntryUserStateBase(BaseModel):
     """User interaction state - from UserEntry model."""
 
     is_read: bool = False
-    is_read_later: bool = False
+    is_saved: bool = False  # Maps to UserEntry.is_saved internally
     is_favorite: bool = False
     priority: ArticlePriority = ArticlePriority.MEDIUM
 
@@ -59,7 +59,7 @@ class EntryUpdate(BaseModel):
     """Update user interaction state - all fields optional for PATCH."""
 
     is_read: bool | None = None
-    is_read_later: bool | None = None
+    is_saved: bool | None = None  # Maps to UserEntry.is_saved internally
     is_favorite: bool | None = None
     priority: ArticlePriority | None = None
     user_note: str | None = None

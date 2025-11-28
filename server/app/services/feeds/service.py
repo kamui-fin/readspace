@@ -24,15 +24,14 @@ from app.crud.feed import core as feed_crud
 from app.crud.feed.core import update_feed_after_fetch
 from app.crud.feed.subscription import (
     create_subscription,
-    delete_subscription,
     get_subscription_by_feed_id,
-    get_subscriptions_by_user,
 )
 from app.crud.folder import get_by_id as get_folder
 from app.models.feed import Feed
 from app.services.feeds import fetching, parsing, scheduling
 from app.services.feeds.domain_authority import get_domain_authority_score
 from app.services.feeds.http_cache import parse_ttl_from_headers
+from app.services.feeds.language_detection import detect_feed_language
 from app.services.feeds.meilisearch import sync_feed
 from app.typing.articles import ArticleCreate
 from app.typing.feeds import FeedBase
@@ -95,10 +94,10 @@ async def add_feed(
                 f"{a.title or ''} {a.description or ''}".strip()
                 for a in parsed["articles"]
             ]
-            language = detect_language_from_feed_content(
+            language = detect_feed_language(
                 title=parsed["title"],
                 description=parsed["description"],
-                article_texts=article_texts,
+                articles=article_texts,
             )
             logger.info("Auto-detected language", url=normalized_url, language=language)
 
@@ -247,11 +246,6 @@ async def refresh_feed(
 
         if parsed["articles"]:
             await _save_articles(db, feed, parsed["articles"])
-            if latest := max(
-                (a.published_at for a in parsed["articles"] if a.published_at),
-                default=None,
-            ):
-                feed.last_article_published_at = latest
 
         feed.content_hash = new_hash
         ttl = parse_ttl_from_headers(fetch_result["headers"])

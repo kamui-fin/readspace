@@ -1,11 +1,10 @@
-from typing import Any, Optional
 
 from app.typing.feeds import ArticleStats, FeedScoringData
 
 
 def calculate_quality_score(
     feed_data: FeedScoringData,
-    article_stats: Optional[ArticleStats] = None,
+    article_stats: ArticleStats | None = None,
 ) -> float:
     """
     Calculate a quality score (0.0 - 1.0) based on metadata completeness and content quality.
@@ -68,7 +67,7 @@ def calculate_hybrid_popularity_score(
     feed_data: FeedScoringData,
     llm_popularity_estimate: int,
     domain_authority_score: float = 0.0,
-    article_stats: Optional[ArticleStats] = None,
+    article_stats: ArticleStats | None = None,
 ) -> dict[str, float]:
     """Calculate hybrid popularity score combining LLM estimate, domain authority, and quality.
 
@@ -92,9 +91,7 @@ def calculate_hybrid_popularity_score(
 
     # Hybrid score: weighted combination
     # 40% LLM estimate, 30% domain authority, 30% quality
-    popularity_score = (
-        (llm_score * 0.4) + (domain_authority_score * 0.3) + (quality_score * 0.3)
-    )
+    popularity_score = (llm_score * 0.4) + (domain_authority_score * 0.3) + (quality_score * 0.3)
 
     return {
         "popularity_score": popularity_score,

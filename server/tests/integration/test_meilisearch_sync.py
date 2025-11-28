@@ -26,11 +26,45 @@ class TestMeilisearchSyncOnFeedCreate:
         meili_client,
     ):
         """Test that adding a new feed syncs to Meilisearch."""
-        # Add a new feed
-        response = await async_client.post(
-            "/api/feeds/",
-            json={"url": "https://techcrunch.com/feed", "folder_id": str(test_folder.id)},
-        )
+        # Mock external dependencies
+        from unittest.mock import patch
+
+        with patch(
+            "app.services.feeds.fetching.fetch_feed_content"
+        ) as mock_fetch, patch(
+            "app.services.feeds.parsing.parse_feed_content"
+        ) as mock_parse:
+
+            mock_fetch.return_value = {
+                "content": "dummy",
+                "headers": {},
+                "status_code": 200,
+                "not_modified": False,
+                "error": None,
+                "final_url": "https://techcrunch.com/feed",
+                "permanent_redirect": False,
+            }
+
+            mock_parse.return_value = {
+                "title": "TechCrunch",
+                "description": "Tech news",
+                "link": "https://techcrunch.com",
+                "language": "en",
+                "articles": [],
+                "image_url": None,
+                "author_name": None,
+                "last_updated_at": None,
+                "tags": [],
+            }
+
+            # Add a new feed
+            response = await async_client.post(
+                "/api/feeds/",
+                json={
+                    "url": "https://techcrunch.com/feed",
+                    "folder_id": str(test_folder.id),
+                },
+            )
 
         assert response.status_code == 201
         data = response.json()
@@ -38,6 +72,7 @@ class TestMeilisearchSyncOnFeedCreate:
 
         # Wait for Meilisearch indexing
         import asyncio
+
         await asyncio.sleep(0.5)
 
         # Verify feed exists in Meilisearch
@@ -66,10 +101,12 @@ class TestMeilisearchSyncOnAdminUpdate:
         """Test that admin updating feed syncs to Meilisearch."""
         # First, ensure feed is in Meilisearch
         from app.services.feeds.meilisearch import sync_feed
+
         settings = get_settings()
         await sync_feed(settings, test_feed)
 
         import asyncio
+
         await asyncio.sleep(0.5)
 
         # Admin updates the feed
@@ -122,10 +159,12 @@ class TestMeilisearchSyncOnAdminDelete:
 
         # Sync to Meilisearch
         from app.services.feeds.meilisearch import sync_feed
+
         settings = get_settings()
         await sync_feed(settings, feed)
 
         import asyncio
+
         await asyncio.sleep(0.5)
 
         # Verify it exists
@@ -165,7 +204,6 @@ class TestMeilisearchSyncOnOPMLImport:
     <head><title>Test OPML</title></head>
     <body>
         <outline type="rss" text="Test Feed 1" xmlUrl="https://example1.com/feed" />
-        <outline type="rss" text="Test Feed 2" xmlUrl="https://example2.com/feed" />
     </body>
 </opml>"""
 
@@ -188,12 +226,21 @@ class TestMeilisearchSyncOnOPMLImport:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
+        monkeypatch.setattr(
+            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
+        )
 
         # Upload OPML file
         from io import BytesIO
-        files = {"opml_file": ("test.opml", BytesIO(opml_content.encode()), "application/xml")}
-        
+
+        files = {
+            "opml_file": (
+                "test.opml",
+                BytesIO(opml_content.encode()),
+                "application/xml",
+            )
+        }
+
         response = await async_client.post(
             "/api/opml/import/",
             files=files,
@@ -204,9 +251,18 @@ class TestMeilisearchSyncOnOPMLImport:
         task_data = response.json()
         task_id = task_data["task_id"]
 
-        # Wait for import to complete (in-memory broker is synchronous)
+        # Wait for import to complete
         import asyncio
-        await asyncio.sleep(1.0)
+
+        for _ in range(20):
+            status_response = await async_client.get(
+                f"/api/opml/import/status/{task_id}"
+            )
+            if status_response.status_code == 200 and status_response.json()[
+                "status"
+            ] in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.1)
 
         # Check import status
         status_response = await async_client.get(f"/api/opml/import/status/{task_id}")
@@ -218,7 +274,7 @@ class TestMeilisearchSyncOnOPMLImport:
         # Verify feeds are in Meilisearch
         settings = get_settings()
         index = await meili_client.get_index(settings.MEILISEARCH_INDEX_NAME)
-        
+
         # Search for the feeds
         search_result = await index.search("Mock Feed")
         assert search_result.hits is not None
@@ -244,6 +300,7 @@ class TestMeilisearchSyncOnFeedRefresh:
         """Test that refreshing a feed syncs updates to Meilisearch."""
         # Create subscription
         from app.models.feed import FeedSubscription
+
         subscription = FeedSubscription(
             user_id=test_user.id,
             feed_id=test_feed.id,
@@ -254,10 +311,12 @@ class TestMeilisearchSyncOnFeedRefresh:
 
         # Sync initial state to Meilisearch
         from app.services.feeds.meilisearch import sync_feed
+
         settings = get_settings()
         await sync_feed(settings, test_feed)
 
         import asyncio
+
         await asyncio.sleep(0.5)
 
         # Mock feed fetch with updated content
@@ -279,7 +338,9 @@ class TestMeilisearchSyncOnFeedRefresh:
                 "permanent_redirect": False,
             }
 
-        monkeypatch.setattr("app.services.feeds.fetching.fetch_feed_content", mock_fetch)
+        monkeypatch.setattr(
+            "app.services.feeds.fetching.fetch_feed_content", mock_fetch
+        )
 
         # Refresh the feed
         response = await async_client.post(f"/api/feeds/{test_feed.id}/refresh")

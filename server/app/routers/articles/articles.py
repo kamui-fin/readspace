@@ -8,9 +8,10 @@ from fastapi import APIRouter, Body, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import NotFoundError
-from app.crud.article.reader import CursorPaginationParams
+from app.crud.article.actions import update_article_status
+from app.crud.article.reader import CursorPaginationParams, get_articles
 from app.db.session import get_db
-from app.services.articles.service import get_article_details, get_articles_with_cursor, update_article_state
+from app.services.articles.service import get_article_details
 from app.services.user.auth import get_current_user
 from app.typing.articles import ArticleResponse, ArticleUpdate
 from app.typing.common import CursorPaginatedResponse
@@ -35,7 +36,7 @@ async def list_articles(
     feed_id: UUID | None = Query(None),
     folder_id: UUID | None = Query(None),
     is_read: bool | None = Query(None),
-    is_read_later: bool | None = Query(None),
+    is_saved: bool | None = Query(None, alias="is_saved"),
 ) -> CursorPaginatedResponse[ArticleResponse]:
     """
     Retrieve articles using cursor-based pagination.
@@ -47,14 +48,17 @@ async def list_articles(
             "feed_id": feed_id,
             "folder_id": folder_id,
             "is_read": is_read,
-            "is_read_later": is_read_later,
+            "is_saved": is_saved,
         }.items()
         if v is not None
     }
 
     # 2. Query
-    result = await get_articles_with_cursor(
-        db=db, user_id=UUID(current_user.sub), params=CursorPaginationParams(limit=limit, cursor=cursor), **filters
+    result = await get_articles(
+        db=db,
+        user_id=UUID(current_user.sub),
+        params=CursorPaginationParams(limit=limit, cursor=cursor),
+        **filters
     )
 
     return CursorPaginatedResponse(
@@ -81,11 +85,16 @@ async def get_article(
     """
     # Uses service directly, but checks explicitly for existence
     article = await get_article_details(
-        db=db, article_id=article_id, user_id=UUID(current_user.sub), allow_preview=False
+        db=db,
+        article_id=article_id,
+        user_id=UUID(current_user.sub),
+        allow_preview=False,
     )
 
     if not article:
-        logger.warning("Article not found", article_id=str(article_id), user_id=current_user.sub)
+        logger.warning(
+            "Article not found", article_id=str(article_id), user_id=current_user.sub
+        )
         raise NotFoundError(message="Article not found")
 
     return article
@@ -106,14 +115,18 @@ async def update_article(
     """
     Update user-specific article metadata (read status, notes, priority).
     """
-    updated_article = await update_article_state(
+    updated_article = await update_article_status(
         db=db,
         article_id=article_id,
         user_id=UUID(current_user.sub),
-        update_data=article_in,
+        article_in=article_in,
         is_clipped=(article_type.lower() == "clipped"),
     )
 
     if not updated_article:
-        logger.warning("Article update failed/not found", article_id=str(article_id), user_id=current_user.sub)
+        logger.warning(
+            "Article update failed/not found",
+            article_id=str(article_id),
+            user_id=current_user.sub,
+        )
         raise NotFoundError(message="Article not found")

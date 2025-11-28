@@ -78,8 +78,8 @@ async def extract_favicon_and_canonical_url(
                 google_favicon = from_google(canonical_url, size=256)
                 if google_favicon and google_favicon.url:
                     image_url = google_favicon.url
-            except Exception:
-                pass  # Favicon fetching is non-critical
+            except Exception as e:
+                logger.warning("Favicon fetch failed", error=str(e))
 
         result = FaviconResult(image_url=image_url)
 

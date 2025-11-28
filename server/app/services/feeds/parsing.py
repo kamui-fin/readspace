@@ -6,12 +6,12 @@ Zero DB dependencies.
 
 import re
 from datetime import datetime, timezone
+from time import mktime
 from typing import Any, TypedDict, cast
 from urllib.parse import urljoin
 
 import feedparser
 import nh3
-from time import mktime
 import structlog
 from bs4 import BeautifulSoup, Tag
 from dateutil import parser as date_parser
@@ -177,7 +177,7 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
     author = _extract_author(entry)
 
     # Image extraction with source tracking
-    image_url, image_source = find_best_article_image(entry)
+    image_url, _ = find_best_article_image(entry)
     if image_url and (feed_url or link):
         # Resolve relative URLs
         image_url = urljoin(feed_url or link, image_url)
@@ -386,8 +386,8 @@ def find_best_article_image(entry: Any) -> tuple[str | None, str]:
                         and "pixel" not in src.lower()
                     ):
                         return src, "html_parse"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to extract image from HTML", error=str(e))
 
     return None, "none"
 

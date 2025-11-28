@@ -25,7 +25,9 @@ class TestFeedRefreshTask:
     """Test individual feed refresh task execution."""
 
     @pytest.mark.asyncio
-    async def test_refresh_single_feed_task_success(self, test_feed: Feed, db_session: AsyncSession):
+    async def test_refresh_single_feed_task_success(
+        self, test_feed: Feed, db_session: AsyncSession
+    ):
         """Test refreshing a single feed via async function."""
         from sqlalchemy import select
         from app.workers.feed.refresh import refresh_single_feed
@@ -46,7 +48,9 @@ class TestFeedRefreshTask:
         assert refreshed_feed is not None
 
     @pytest.mark.asyncio
-    async def test_refresh_single_feed_task_with_string_uuid(self, test_feed: Feed, db_session: AsyncSession):
+    async def test_refresh_single_feed_task_with_string_uuid(
+        self, test_feed: Feed, db_session: AsyncSession
+    ):
         """Test task handles UUID (no string conversion needed in async function)."""
         from sqlalchemy import select
         from app.workers.feed.refresh import refresh_single_feed
@@ -64,7 +68,9 @@ class TestFeedRefreshTask:
         assert refreshed_feed is not None
 
     @pytest.mark.asyncio
-    async def test_refresh_single_feed_task_nonexistent_feed(self, db_session: AsyncSession):
+    async def test_refresh_single_feed_task_nonexistent_feed(
+        self, db_session: AsyncSession
+    ):
         """Test refreshing non-existent feed handles error gracefully."""
         from app.workers.feed.refresh import refresh_single_feed
 
@@ -91,6 +97,8 @@ class TestFeedSchedulingTask:
             feed = Feed(
                 url=f"https://example.com/feed{i}.xml",
                 title=f"Test Feed {i}",
+                description="Test feed description",
+                language="en",
                 # Set last_fetched_at to past so they need refresh
                 last_fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
             )
@@ -109,7 +117,9 @@ class TestFeedSchedulingTask:
             error_msg = str(e).lower()
             if "too large" in error_msg:
                 # Expected failure for feeds exceeding 10MB limit (MAX_FEED_CONTENT_SIZE_MB)
-                assert "10mb" in error_msg or "10.0mb" in error_msg, f"Expected 10MB limit error, got: {e}"
+                assert (
+                    "10mb" in error_msg or "10.0mb" in error_msg
+                ), f"Expected 10MB limit error, got: {e}"
             # For other errors, just log and continue - the test is about scheduling, not actual refresh
 
         # Note: In test mode, feeds are refreshed directly
@@ -132,6 +142,8 @@ class TestFeedSchedulingTask:
             feed = Feed(
                 url=f"https://example.com/batch-feed{i}.xml",
                 title=f"Batch Feed {i}",
+                description="Test feed description",
+                language="en",
                 last_fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
                 subscriber_count=1,  # Must have subscribers to be eligible for scheduling
             )
@@ -156,30 +168,40 @@ class TestFeedSchedulingTask:
         recent_feed = Feed(
             url="https://example.com/recent-feed.xml",
             title="Recent Feed",
+            description="Test feed description",
+            language="en",
             last_fetched_at=datetime.now(timezone.utc),  # Just now
-            next_fetch_at=datetime.now(timezone.utc) + timedelta(hours=1),  # Not due yet
+            next_fetch_at=datetime.now(timezone.utc)
+            + timedelta(hours=1),  # Not due yet
             subscriber_count=1,  # Has subscribers
         )
         db_session.add(recent_feed)
         await db_session.flush()
 
         # Add subscription so it's included in scheduling
-        recent_sub = FeedSubscription(user_id=test_user.id, feed_id=recent_feed.id, folder_id=test_folder.id)
+        recent_sub = FeedSubscription(
+            user_id=test_user.id, feed_id=recent_feed.id, folder_id=test_folder.id
+        )
         db_session.add(recent_sub)
 
         # Create feed that needs refresh (next_fetch_at in the past)
         old_feed = Feed(
             url="https://example.com/old-feed.xml",
             title="Old Feed",
+            description="Test feed description",
+            language="en",
             last_fetched_at=datetime.now(timezone.utc) - timedelta(hours=2),
-            next_fetch_at=datetime.now(timezone.utc) - timedelta(minutes=1),  # Due for refresh
+            next_fetch_at=datetime.now(timezone.utc)
+            - timedelta(minutes=1),  # Due for refresh
             subscriber_count=1,  # Has subscribers
         )
         db_session.add(old_feed)
         await db_session.flush()
 
         # Add subscription so it's included in scheduling
-        old_sub = FeedSubscription(user_id=test_user.id, feed_id=old_feed.id, folder_id=test_folder.id)
+        old_sub = FeedSubscription(
+            user_id=test_user.id, feed_id=old_feed.id, folder_id=test_folder.id
+        )
         db_session.add(old_sub)
 
         await db_session.flush()
@@ -206,7 +228,7 @@ class TestFeedTaskIntegration:
     ):
         """Test complete workflow: add feed -> refresh -> verify articles."""
         import asyncio
-        
+
         # Add a real feed
         response = await async_client.post(
             "/api/feeds/",
@@ -259,12 +281,16 @@ class TestUnreadCompactionTask:
             id=uuid4(),
             url=f"https://example.com/unread-compact-{uuid4().hex[:8]}.xml",
             title="Unread Compaction Test Feed",
+            description="Test feed description",
+            language="en",
         )
         db_session.add(feed)
         await db_session.flush()
 
         # Create subscription with old cutoff (more than UNREAD_RETENTION_DAYS ago)
-        old_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS + 10)
+        old_cutoff = datetime.now(timezone.utc) - timedelta(
+            days=UNREAD_RETENTION_DAYS + 10
+        )
         subscription = FeedSubscription(
             id=uuid4(),
             user_id=test_user.id,
@@ -284,14 +310,18 @@ class TestUnreadCompactionTask:
         # The worker commits in a separate transaction. Expire the test session to see changes.
         db_session.expire_all()
         await db_session.refresh(subscription)
-        
-        expected_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS)
+
+        expected_cutoff = datetime.now(timezone.utc) - timedelta(
+            days=UNREAD_RETENTION_DAYS
+        )
 
         # Cutoff should be advanced to UNREAD_RETENTION_DAYS ago
         assert subscription.last_read_cutoff is not None
         assert subscription.last_read_cutoff > old_cutoff
         # Should be approximately UNREAD_RETENTION_DAYS ago (within 5 seconds)
-        assert abs((subscription.last_read_cutoff - expected_cutoff).total_seconds()) < 5
+        assert (
+            abs((subscription.last_read_cutoff - expected_cutoff).total_seconds()) < 5
+        )
 
     @pytest.mark.asyncio
     async def test_unread_compaction_preserves_recent_cutoffs(
@@ -308,6 +338,8 @@ class TestUnreadCompactionTask:
             id=uuid4(),
             url=f"https://example.com/recent-compact-{uuid4().hex[:8]}.xml",
             title="Recent Compaction Test Feed",
+            description="Test feed description",
+            language="en",
         )
         db_session.add(feed)
         await db_session.flush()
@@ -353,6 +385,8 @@ class TestUnreadCompactionTask:
             id=uuid4(),
             url=f"https://example.com/null-compact-{uuid4().hex[:8]}.xml",
             title="Null Cutoff Test Feed",
+            description="Test feed description",
+            language="en",
         )
         db_session.add(feed)
         await db_session.flush()
@@ -379,9 +413,13 @@ class TestUnreadCompactionTask:
         await db_session.refresh(subscription)
 
         # Cutoff should now be set to UNREAD_RETENTION_DAYS ago
-        expected_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS)
+        expected_cutoff = datetime.now(timezone.utc) - timedelta(
+            days=UNREAD_RETENTION_DAYS
+        )
         assert subscription.last_read_cutoff is not None
-        assert abs((subscription.last_read_cutoff - expected_cutoff).total_seconds()) < 5
+        assert (
+            abs((subscription.last_read_cutoff - expected_cutoff).total_seconds()) < 5
+        )
 
     @pytest.mark.asyncio
     async def test_unread_compaction_reports_updated_count(
@@ -394,13 +432,17 @@ class TestUnreadCompactionTask:
         from app.workers.feed.compaction import compact_unread_articles
 
         # Create multiple feeds with old cutoffs
-        old_cutoff = datetime.now(timezone.utc) - timedelta(days=UNREAD_RETENTION_DAYS + 10)
+        old_cutoff = datetime.now(timezone.utc) - timedelta(
+            days=UNREAD_RETENTION_DAYS + 10
+        )
 
         for i in range(3):
             feed = Feed(
                 id=uuid4(),
                 url=f"https://example.com/count-test-{i}-{uuid4().hex[:8]}.xml",
                 title=f"Count Test Feed {i}",
+                description="Test feed description",
+                language="en",
             )
             db_session.add(feed)
             await db_session.flush()
@@ -418,7 +460,7 @@ class TestUnreadCompactionTask:
 
         # Run compaction
         result = await compact_unread_articles()
-        
+
         # Commit to see worker's changes
         await db_session.commit()
 

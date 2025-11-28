@@ -33,7 +33,7 @@ class ArticleCheckResponse(BaseModel):
     note: str | None = None
     priority: ArticlePriority | int | None = None
     is_read: bool = False
-    is_read_later: bool = False
+    is_saved: bool = False
     read_at: str | None = None
 
 
@@ -111,12 +111,11 @@ async def check_article_saved(
     # 4. Return Hit
     # Pydantic handles the serialization of UUIDs and Enums automatically
     return ArticleCheckResponse(
-        is_saved=True,
         article_id=str(user_entry.id),
         title=content.title,
         note=user_entry.user_note,
         priority=user_entry.priority,
         is_read=user_entry.is_read or False,
-        is_read_later=user_entry.is_read_later or False,
+        is_saved=True,
         read_at=user_entry.read_at.isoformat() if user_entry.read_at else None,
     )

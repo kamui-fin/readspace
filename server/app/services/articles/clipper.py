@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID
 
 import structlog
@@ -50,6 +50,7 @@ async def save_article_from_url(
         author=metadata.get("author"),
         image_url=metadata.get("image_url"),
         estimated_read_time_minutes=reading_time,
+        published_at=datetime.now(UTC),
     )
 
     # 2. Delegate to CRUD: Content
@@ -64,7 +65,7 @@ async def save_article_from_url(
         db,
         user_id=user_id,
         content_id=article_content.id,  # type: ignore
-        is_read_later=True,
+        is_saved=True,
         priority=priority,
         user_note=note,
     )

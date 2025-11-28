@@ -83,7 +83,7 @@ class ArticleResponse(BaseModel):
     source_domain: str | None = None
 
     is_read: bool = False
-    is_read_later: bool = False
+    is_saved: bool = False  # Maps to UserEntry.is_saved internally
     priority: str = "MEDIUM"
     read_at: datetime | None = None
     user_note: str | None = None

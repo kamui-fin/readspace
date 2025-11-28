@@ -41,9 +41,7 @@ async def enrich_feeds_batch(
         temp_file_path = _create_batch_file(feeds)
 
         # 2. Upload
-        uploaded_file = client.files.upload(
-            file=temp_file_path, config=types.UploadFileConfig(mime_type="jsonl")
-        )
+        uploaded_file = client.files.upload(file=temp_file_path, config=types.UploadFileConfig(mime_type="jsonl"))
 
         # 3. Start Job
         if not uploaded_file.name:
@@ -128,9 +126,7 @@ async def _start_batch_job(client: genai.Client, file_name: str) -> Any:
     raise RuntimeError("Quota exceeded")
 
 
-async def _poll_job(
-    client: genai.Client, job_name: str, timeout_seconds: int = 86400
-) -> Any:
+async def _poll_job(client: genai.Client, job_name: str, timeout_seconds: int = 86400) -> Any:
     """Poll until done or timeout."""
     start = time.time()
     while (time.time() - start) < timeout_seconds:
@@ -151,9 +147,7 @@ async def _poll_job(
     raise TimeoutError("Batch job timed out")
 
 
-def _download_results(
-    client: genai.Client, result_file: str, count: int
-) -> list[FeedEnrichmentResponse | None]:
+def _download_results(client: genai.Client, result_file: str, count: int) -> list[FeedEnrichmentResponse | None]:
     results: list[FeedEnrichmentResponse | None] = [None] * count
     try:
         content = client.files.download(file=result_file)
@@ -162,9 +156,7 @@ def _download_results(
                 data = orjson.loads(line)
                 idx = int(data["key"])
                 if "response" in data:
-                    text = data["response"]["candidates"][0]["content"]["parts"][0][
-                        "text"
-                    ]
+                    text = data["response"]["candidates"][0]["content"]["parts"][0]["text"]
                     results[idx] = FeedEnrichmentResponse.model_validate_json(text)
             except (KeyError, ValueError, IndexError) as e:
                 logger.debug("Failed to parse batch result item", error=str(e))
@@ -180,12 +172,7 @@ def _download_results(
 def _cleanup(client: genai.Client, temp_path: str | None, uploaded_file: Any):
     if temp_path and os.path.exists(temp_path):
         os.unlink(temp_path)
-    if (
-        uploaded_file
-        and client
-        and hasattr(uploaded_file, "name")
-        and uploaded_file.name
-    ):
+    if uploaded_file and client and hasattr(uploaded_file, "name") and uploaded_file.name:
         try:
             client.files.delete(name=uploaded_file.name)
         except Exception as e:

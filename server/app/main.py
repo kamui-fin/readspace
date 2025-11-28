@@ -80,7 +80,9 @@ app.add_middleware(BaseHTTPMiddleware, dispatch=logging_middleware)
 
 # --- Exception Handlers ---
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> ORJSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> ORJSONResponse:
     logger.error("Validation error", path=request.url.path, errors=exc.errors())
     return ORJSONResponse(status_code=422, content={"detail": exc.errors()})
 

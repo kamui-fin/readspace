@@ -26,12 +26,16 @@ def mock_ai_service():
 
 
 @pytest_asyncio.fixture
-async def test_article_with_content(db_session: AsyncSession, test_feed: Feed, test_user: Profile, test_folder):
+async def test_article_with_content(
+    db_session: AsyncSession, test_feed: Feed, test_user: Profile, test_folder
+):
     """Create a test article with full content."""
     from datetime import UTC, datetime
 
     # Create subscription with folder (required by schema)
-    subscription = FeedSubscription(user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id)
+    subscription = FeedSubscription(
+        user_id=test_user.id, feed_id=test_feed.id, folder_id=test_folder.id
+    )
     db_session.add(subscription)
     await db_session.flush()
 
@@ -79,12 +83,14 @@ class TestExtractFullText:
         self, async_client: AsyncClient, test_article_with_content: FeedArticle
     ):
         """Test extracting full text using real extraction service."""
-        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/extract-full-text")
+        response = await async_client.post(
+            f"/api/articles/{test_article_with_content.id}/extract-full-text"
+        )
 
         # Extraction from example.com will fail with 404, expect 400
         assert response.status_code == 400
         data = response.json()
-        assert "detail" in data
+        assert "message" in data
 
     @pytest.mark.asyncio
     async def test_extract_full_text_not_found(self, async_client: AsyncClient):
@@ -97,7 +103,9 @@ class TestExtractFullText:
     @pytest.mark.asyncio
     async def test_extract_full_text_invalid_uuid(self, async_client: AsyncClient):
         """Test with invalid UUID."""
-        response = await async_client.post("/api/articles/invalid-uuid/extract-full-text")
+        response = await async_client.post(
+            "/api/articles/invalid-uuid/extract-full-text"
+        )
 
         assert response.status_code == 422
 
@@ -110,7 +118,9 @@ class TestSummarizeArticle:
         self, async_client: AsyncClient, test_article_with_content: FeedArticle
     ):
         """Test article summarization using real AI service."""
-        response = await async_client.post(f"/api/articles/{test_article_with_content.id}/summarize")
+        response = await async_client.post(
+            f"/api/articles/{test_article_with_content.id}/summarize"
+        )
 
         assert response.status_code == 200
         data = response.json()
@@ -230,16 +240,22 @@ class TestArticleEnhancementIntegration:
     """Integration tests for article enhancement features with real services."""
 
     @pytest.mark.asyncio
-    async def test_enhancement_workflow(self, async_client: AsyncClient, test_article_with_content: FeedArticle):
+    async def test_enhancement_workflow(
+        self, async_client: AsyncClient, test_article_with_content: FeedArticle
+    ):
         """Test complete enhancement workflow: extract -> summarize -> translate."""
         article_id = test_article_with_content.id
 
         # 1. Extract full text (will fail with example.com URL)
-        extract_response = await async_client.post(f"/api/articles/{article_id}/extract-full-text")
+        extract_response = await async_client.post(
+            f"/api/articles/{article_id}/extract-full-text"
+        )
         assert extract_response.status_code == 400  # Extraction fails for example.com
 
         # 2. Summarize the content (real AI service)
-        summarize_response = await async_client.post(f"/api/articles/{article_id}/summarize")
+        summarize_response = await async_client.post(
+            f"/api/articles/{article_id}/summarize"
+        )
         assert summarize_response.status_code == 200
 
         # 3. Translate the content (real AI service)

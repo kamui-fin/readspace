@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field, HttpUrl, field_validator
 from app.models.enums import FeedCategory
 from app.typing.common import response_config
 
-
 # ================= Base (Field Bundles) =================
 
 

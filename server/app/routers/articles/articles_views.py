@@ -8,10 +8,11 @@ import structlog
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.crud.article.reader import CursorPaginationParams
-from app.crud.article.reader import get_read_later_articles as get_read_later_articles_crud
+from app.crud.article.reader import CursorPaginationParams, get_articles
+from app.crud.article.reader import (
+    get_read_later_articles as get_read_later_articles_crud,
+)
 from app.db.session import get_db
-from app.services.articles.service import get_articles_with_cursor
 from app.services.user.auth import get_current_user
 from app.typing.articles import ArticleResponse
 from app.typing.common import CursorPaginatedResponse
@@ -42,7 +43,7 @@ async def get_todays_articles(
     now_utc = datetime.now(UTC)
     twenty_four_hours_ago = now_utc - timedelta(hours=24)
 
-    result = await get_articles_with_cursor(
+    result = await get_articles(
         db=db,
         user_id=UUID(current_user.sub),
         params=CursorPaginationParams(limit=limit, cursor=cursor),
@@ -76,7 +77,7 @@ async def get_recently_read_articles(
     """
     logger.bind(user_id=current_user.sub, view="recently_read")
 
-    result = await get_articles_with_cursor(
+    result = await get_articles(
         db=db,
         user_id=UUID(current_user.sub),
         params=CursorPaginationParams(limit=limit, cursor=cursor),
