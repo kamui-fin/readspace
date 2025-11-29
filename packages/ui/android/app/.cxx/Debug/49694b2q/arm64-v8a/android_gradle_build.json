@@ -1,0 +1,140 @@
+{
+  "buildFiles": [
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/@react-native-async-storage/async-storage/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/@react-native-community/datetimepicker/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/@react-native-community/slider/android/src/main/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-gesture-handler/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-pager-view/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-reanimated/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-safe-area-context/android/src/main/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-screens/android/src/main/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-svg/android/src/main/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-track-player/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-worklets/android/build/generated/source/codegen/jni/CMakeLists.txt",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native/ReactAndroid/cmake-utils/default-app-setup/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/Users/enkyuan/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/.cxx/Debug/49694b2q/arm64-v8a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/Users/enkyuan/Library/Android/sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/.cxx/Debug/49694b2q/arm64-v8a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "appmodules::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "appmodules",
+      "output": "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libappmodules.so",
+      "runtimeFiles": [
+        "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_RNCSlider.so",
+        "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_safeareacontext.so",
+        "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_rnscreens.so",
+        "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_rnsvg.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    },
+    "react_codegen_NitroModulesSpec::@472a82f9c57d3d3b8644": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_NitroModulesSpec"
+    },
+    "react_codegen_RNCSlider::@4898bc4726ecf1751b6a": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNCSlider",
+      "output": "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_RNCSlider.so",
+      "runtimeFiles": [
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    },
+    "react_codegen_RNDateTimePickerCGen::@59b70ddc31ba2f8ef1d2": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_RNDateTimePickerCGen"
+    },
+    "react_codegen_TrackPlayerSpec::@a0ce3d372287884a5e2b": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_TrackPlayerSpec"
+    },
+    "react_codegen_pagerview::@7032a8921530ec438d60": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_pagerview"
+    },
+    "react_codegen_rnasyncstorage::@1596841e19ec5b9eeffe": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnasyncstorage"
+    },
+    "react_codegen_rngesturehandler_codegen::@39f233abcd2c728bc6ec": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rngesturehandler_codegen"
+    },
+    "react_codegen_rnreanimated::@8afabad14bfffa3f8b9a": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnreanimated"
+    },
+    "react_codegen_rnscreens::@25bcbd507e98d3a854ad": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnscreens",
+      "output": "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_rnscreens.so",
+      "runtimeFiles": [
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so"
+      ]
+    },
+    "react_codegen_rnsvg::@4f40eb209d0c0b4a3b65": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnsvg",
+      "output": "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_rnsvg.so",
+      "runtimeFiles": [
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so"
+      ]
+    },
+    "react_codegen_rnworklets::@68f58d84d4754f193387": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_rnworklets"
+    },
+    "react_codegen_safeareacontext::@7984cd80db47aa7b952a": {
+      "toolchain": "toolchain",
+      "abi": "arm64-v8a",
+      "artifactName": "react_codegen_safeareacontext",
+      "output": "/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a/libreact_codegen_safeareacontext.so",
+      "runtimeFiles": [
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab/modules/fbjni/libs/android.arm64-v8a/libfbjni.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/jsi/libs/android.arm64-v8a/libjsi.so",
+        "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab/modules/reactnative/libs/android.arm64-v8a/libreactnative.so"
+      ]
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/Users/enkyuan/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/Users/enkyuan/Library/Android/sdk/ndk/27.1.12297006/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [],
+  "cppFileExtensions": ["cpp"]
+}

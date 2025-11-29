@@ -1,3 +1,4 @@
+import { CloseIcon } from '@components/icons/close';
 import { LanguageIcon } from '@components/icons/language';
 import { Button } from '@components/ui/button';
 import {
@@ -133,29 +134,43 @@ export const SearchBar = forwardRef<React.ComponentRef<typeof Input>, SearchBarP
     };
 
     const leftElement = (
-      <View style={{ padding: 8, paddingLeft: 16 }}>
+      <View style={{ padding: 8, paddingLeft: 12 }}>
         <Monicon name="solar:magnifer-linear" size={20} color={colors.grey} strokeWidth={2.4} />
       </View>
     );
 
     return (
-      <Input
-        ref={ref}
-        className="w-full"
-        placeholder="What are you looking for?"
-        value={value}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onSubmitEditing={() => handleSubmit()}
-        returnKeyType="search"
-        inputStyle={{
-          textAlignVertical: 'center',
-          textAlign: 'left',
-        }}
-        leftElement={leftElement}
-        rightElement={rightElement}
-        {...props}
-      />
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1">
+          <Input
+            ref={ref}
+            className="w-full"
+            placeholder="What are you looking for?"
+            value={value}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onSubmitEditing={() => handleSubmit()}
+            returnKeyType="search"
+            inputStyle={{
+              textAlignVertical: 'center',
+              textAlign: 'left',
+            }}
+            leftElement={leftElement}
+            rightElement={rightElement}
+            {...props}
+          />
+        </View>
+        {showCancelButton && (
+          <Button
+            variant="icon"
+            size="medium"
+            fullWidth={false}
+            onPress={onCancel}
+            className="bg-grey6 dark:bg-grey6-dark rounded-full h-12 w-12 items-center justify-center">
+            <CloseIcon size={24} color={colors.black} />
+          </Button>
+        )}
+      </View>
     );
   }
 );

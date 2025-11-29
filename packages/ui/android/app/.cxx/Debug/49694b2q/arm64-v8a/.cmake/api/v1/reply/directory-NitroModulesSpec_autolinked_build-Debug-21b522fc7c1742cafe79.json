@@ -1,0 +1,12 @@
+{
+  "backtraceGraph": {
+    "commands": [],
+    "files": [],
+    "nodes": []
+  },
+  "installers": [],
+  "paths": {
+    "build": "NitroModulesSpec_autolinked_build",
+    "source": "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-nitro-modules/android/build/generated/source/codegen/jni"
+  }
+}

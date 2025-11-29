@@ -1,4 +1,3 @@
-import { colorScheme } from 'nativewind';
 import { Appearance, type ColorSchemeName } from 'react-native';
 import { createMMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
@@ -39,13 +38,6 @@ interface ThemeActions {
 
 export type ThemeStore = ThemeState & ThemeActions;
 
-// Helper to apply theme immediately
-const applyTheme = (theme: Theme, systemColorScheme: ColorSchemeName) => {
-  const effectiveScheme =
-    theme === 'system' ? (systemColorScheme === 'dark' ? 'dark' : 'light') : theme;
-  colorScheme.set(effectiveScheme);
-};
-
 export const useThemeStore = create<ThemeStore>()(
   persist(
     (set, get) => ({
@@ -55,12 +47,10 @@ export const useThemeStore = create<ThemeStore>()(
 
       setTheme: (theme) => {
         set({ theme });
-        applyTheme(theme, get().systemColorScheme);
       },
 
       setSystemColorScheme: (colorScheme) => {
         set({ systemColorScheme: colorScheme });
-        applyTheme(get().theme, colorScheme);
       },
 
       getEffectiveColorScheme: () => {
@@ -83,8 +73,6 @@ export const useThemeStore = create<ThemeStore>()(
       }),
       onRehydrateStorage: () => (state) => {
         if (state) {
-          // Apply theme immediately after rehydration
-          applyTheme(state.theme, state.systemColorScheme);
           state.setHydrated();
         }
       },

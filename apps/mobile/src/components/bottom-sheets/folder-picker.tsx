@@ -86,12 +86,6 @@ export const FolderPickerBottomSheet = forwardRef<
           </View>
         }>
         <View className="gap-3">
-          {/* No Folder Option */}
-          <Radio
-            label="No folder"
-            selected={selectedFolderId === null}
-            onPress={() => handleSelect(null)}
-          />
           {/* Folder Options */}
           {typedFolders.map((folder) => (
             <Radio

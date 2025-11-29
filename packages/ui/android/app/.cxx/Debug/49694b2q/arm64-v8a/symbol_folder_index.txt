@@ -1,0 +1,1 @@
+/Users/enkyuan/Desktop/Projects/readspace/packages/ui/android/app/build/intermediates/cxx/Debug/49694b2q/obj/arm64-v8a

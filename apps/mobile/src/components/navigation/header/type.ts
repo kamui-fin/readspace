@@ -35,6 +35,7 @@ export interface StickyHeaderProps extends BaseHeaderProps {
   scrollY?: SharedValue<number>;
   scrollDirection?: SharedValue<'up' | 'down'>;
   onHeaderHeightChange?: (height: number) => void;
+  onTitlePress?: () => void; // Make title clickable
   activeTab?: never;
   onTabChange?: never;
   showSort?: never;

@@ -279,7 +279,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />
@@ -295,7 +295,7 @@ export function ArticleScreen({ articleId, isSubscribed = true }: ArticleScreenP
           onClose={handleClose}
           onShare={handleShare}
           onBookmark={handleBookmark}
-          onMenuPress={() => {}}
+          onMenuPress={() => { }}
           isBookmarked={false}
           isClipped={false}
         />

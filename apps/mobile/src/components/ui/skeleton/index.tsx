@@ -11,7 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-const skeletonVariants = cva('bg-grey5 dark:bg-grey5-dark', {
+const skeletonVariants = cva('bg-grey6 dark:bg-grey6-dark', {
   variants: {
     variant: {
       rectangle: 'rounded-lg',
@@ -71,14 +71,14 @@ export function Skeleton({
     };
   });
 
-  const customStyle: any = {};
+  const customStyle: Record<string, number | string> = {};
   if (width !== undefined) customStyle.width = width;
   if (height !== undefined) customStyle.height = height;
 
   return (
     <Animated.View
       className={clsx(skeletonVariants({ variant, size }), className)}
-      style={[customStyle, animate ? animatedStyle : undefined]}
+      style={[customStyle as object, animate ? animatedStyle : undefined]}
     />
   );
 }
@@ -105,9 +105,10 @@ export function SkeletonGroup({
 }: SkeletonGroupProps) {
   return (
     <View className={clsx('flex-col', className)} style={{ gap: spacing }}>
+      {/* biome-ignore lint/suspicious/noArrayIndexKey: Skeleton items are static and don't reorder */}
       {Array.from({ length: count }).map((_, index) => (
         <Skeleton
-          key={index}
+          key={`skeleton-${index}`}
           variant={variant}
           size={size}
           className={itemClassName}

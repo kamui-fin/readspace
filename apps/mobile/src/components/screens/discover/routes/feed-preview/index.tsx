@@ -2,7 +2,7 @@ import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
-} from '@components/modals/folder-picker.modal';
+} from '@/components/modals/folder-picker';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Button } from '@components/ui/button';
 import { Card } from '@components/ui/card';
@@ -24,7 +24,7 @@ import {
   useFeed,
 } from '@readspace/shared';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useRouter, useSegments } from 'expo-router';
+import { useLocalSearchParams, useRouter, useSegments } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dimensions,
@@ -36,7 +36,7 @@ import {
   ScrollView,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -51,6 +51,7 @@ interface FeedPreviewScreenProps {
 export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   const router = useRouter();
   const segments = useSegments();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const folderPickerRef = useRef<FolderPickerModalRef>(null);
   const [pendingSimilarFeedUrl, setPendingSimilarFeedUrl] = useState<string | null>(null);
@@ -184,8 +185,13 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   }, [shouldShowPreviewBanner, feedId, refetchArticles]);
 
   const handleBack = useCallback(() => {
-    router.back();
-  }, [router]);
+    // If we have a returnTo param, navigate there instead of going back
+    if (returnTo) {
+      router.push(returnTo);
+    } else {
+      router.back();
+    }
+  }, [router, returnTo]);
 
   const handleSimilarFeedFollowRequest = useCallback((feedUrl: string) => {
     setPendingSimilarFeedUrl(feedUrl);
@@ -284,7 +290,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
   // Only show full skeleton during initial feed loading, not during preview refresh
   if (isFeedLoading && !isPreviewRefreshing) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
         <ScrollView showsVerticalScrollIndicator={false} className="px-6 pt-2">
           <View className="mb-6" />
           <View className="mb-4">
@@ -304,13 +310,13 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
             ))}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (!feed) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
         <View className="flex-1 items-center justify-center px-6">
           <Text
             size="base"
@@ -319,13 +325,13 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
             Feed not found
           </Text>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
     <>
-      <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{
@@ -381,8 +387,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
             <Text
               size="2xl"
               fontFamily="geist-bold"
-              style={{ letterSpacing: -0.48 }}
-              className="mb-2 text-black dark:text-black-dark">
+              className="mb-2 tracking-heading text-black dark:text-black-dark">
               {feed.title || 'Untitled Feed'}
             </Text>
 
@@ -494,8 +499,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
           <View className="mb-8 mt-8">
             <View className="mb-5 flex-row items-center justify-between px-6">
               <Text
-                style={{ letterSpacing: -0.36 }}
-                className="font-geist-bold text-lg text-black dark:text-black-dark">
+                className="font-geist-medium tracking-heading text-lg text-black dark:text-black-dark">
                 Recent articles
               </Text>
               {articles.length > 0 && (
@@ -564,8 +568,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
           <View className="px-6 pb-8">
             <View className="mb-2 flex-row items-center justify-between">
               <Text
-                style={{ letterSpacing: -0.36 }}
-                className="font-geist-bold text-lg text-black dark:text-black-dark">
+                className="font-geist-medium tracking-heading text-lg text-black dark:text-black-dark">
                 You might also like
               </Text>
               {similarFeeds.length > 0 && (
@@ -596,7 +599,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
                       <View
                         className="h-4 rounded"
                         style={{
-                          width: '75%',
+                          width: '100%',
                           backgroundColor: colors.grey5,
                         }}
                       />
@@ -634,7 +637,7 @@ export function FeedPreviewScreen({ feedId }: FeedPreviewScreenProps) {
             )}
           </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
 
       {/* Folder Picker Modal/Bottom Sheet - Shared for main feed and similar feeds */}
       {isIOS ? (

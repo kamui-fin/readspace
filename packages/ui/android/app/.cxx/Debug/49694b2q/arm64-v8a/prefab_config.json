@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "prefabPath": "/Users/enkyuan/.gradle/caches/modules-2/files-2.1/com.google.prefab/cli/2.1.0/aa32fec809c44fa531f01dcfb739b5b3304d3050/cli-2.1.0-all.jar",
+  "packages": [
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-nitro-modules/android/build/intermediates/prefab_package/debug/prefab",
+    "/Users/enkyuan/.gradle/caches/8.14.3/transforms/80104bb6e704adcf5f2e0c7d97f0d5f7/transformed/react-android-0.81.4-debug/prefab",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-reanimated/android/build/intermediates/prefab_package/debug/prefab",
+    "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-worklets/android/build/intermediates/prefab_package/debug/prefab",
+    "/Users/enkyuan/.gradle/caches/8.14.3/transforms/7c804b23ffe8a5dff3d0d918fb3d387b/transformed/hermes-android-0.81.4-debug/prefab",
+    "/Users/enkyuan/.gradle/caches/8.14.3/transforms/cf87204a79df5808c3d52f935c0041b4/transformed/fbjni-0.7.0/prefab"
+  ]
+}

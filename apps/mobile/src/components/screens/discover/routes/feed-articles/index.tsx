@@ -2,7 +2,7 @@ import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
-} from '@components/modals/folder-picker.modal';
+} from '@/components/modals/folder-picker';
 import { FeedPreviewBanner } from '@components/screens/discover/ui/feed-preview.banner';
 import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
 import { Button } from '@components/ui/button';
@@ -19,7 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useRouter, useSegments } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { Platform, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -151,7 +151,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
 
   if (isLoading) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
         <View className="px-4 pb-2">
           <View className="flex-row items-center">
             <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
@@ -178,13 +178,13 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
         <View className="px-6">
           <ArticleCardSkeletonList count={5} />
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   if (isError) {
     return (
-      <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+      <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
         <View className="px-4 pb-2">
           <View className="flex-row items-center">
             <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
@@ -219,12 +219,12 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
             Go Back
           </Button>
         </View>
-      </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+    <View className="flex-1 bg-white dark:bg-white-dark" style={{ paddingTop: insets.top }}>
       <View className="px-4 pb-2">
         <View className="flex-row items-center">
           <Button variant="icon" size="small" fullWidth={false} onPress={handleBack}>
@@ -266,7 +266,7 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
           <Text
             size="lg"
             fontFamily="geist-semibold"
-            className="mt-4 text-center text-black dark:text-black-dark">
+            className="mt-4 text-center tracking-heading text-black dark:text-black-dark">
             No articles yet
           </Text>
           <Text
@@ -298,6 +298,6 @@ export function FeedArticlesScreen({ feedId }: FeedArticlesScreenProps) {
       ) : (
         <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
       )}
-    </SafeAreaView>
+    </View>
   );
 }

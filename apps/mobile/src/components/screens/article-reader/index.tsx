@@ -523,7 +523,7 @@ export function ArticleReader({
       {article.image_url && (
         <Galeria urls={[article.image_url]}>
           <Galeria.Image>
-            <View className="w-full bg-black" style={{ height: 240, marginTop: insets.top + 32 }}>
+            <View className="w-full bg-black" style={{ height: 240, marginTop: insets.top + 64 }}>
               <ExpoImage
                 source={{ uri: article.image_url }}
                 style={{ width: '100%', height: '100%' }}
@@ -544,7 +544,11 @@ export function ArticleReader({
         {!isClipped && feedId ? (
           <Pressable
             onPress={() => {
-              router.push(`/(protected)/(tabs)/discover/feed/${feedId}`);
+              // Store current article ID in the navigation params so feed can navigate back correctly
+              router.push({
+                pathname: `/(protected)/(tabs)/discover/feed/${feedId}` as any,
+                params: { returnTo: `/(protected)/articles/${article.id}` },
+              });
             }}
             style={{
               marginBottom: 8,
@@ -590,8 +594,8 @@ export function ArticleReader({
         <Text
           size="lg"
           fontFamily="geist-bold"
-          className="mb-3 leading-tight text-primary-foreground dark:text-primary-foreground-dark"
-          style={{ letterSpacing: -0.72, fontSize: 30 }}>
+          className="mb-3 text-primary-foreground dark:text-primary-foreground-dark"
+          style={{ letterSpacing: -0.72, fontSize: 30, lineHeight: 38 }}>
           {stripHtml(article.title)}
         </Text>
 
@@ -680,17 +684,20 @@ export function ArticleReader({
               // Apply italic font if inside italic context
               const linkStyle = isInsideItalic
                 ? {
-                    ...tagsStyles.a,
-                    fontFamily: 'EBGaramond_500Medium_Italic',
-                    fontStyle: 'italic' as const,
-                  }
+                  ...tagsStyles.a,
+                  fontFamily: 'EBGaramond_500Medium_Italic',
+                  fontStyle: 'italic' as const,
+                }
                 : tagsStyles.a;
+
+              // Safely access tbaseStyle with null check
+              const baseTStyle = props.TDefaultRenderer?.props?.tbaseStyle || {};
 
               return (
                 <props.TDefaultRenderer
                   {...props}
                   tbaseStyle={{
-                    ...props.TDefaultRenderer.props.tbaseStyle,
+                    ...baseTStyle,
                     ...linkStyle,
                   }}
                 />

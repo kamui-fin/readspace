@@ -27,7 +27,7 @@ const cardVariants = cva('bg-background dark:bg-background-dark', {
 
 export interface CardProps
   extends Omit<PressableProps, 'children'>,
-    VariantProps<typeof cardVariants> {
+  VariantProps<typeof cardVariants> {
   children?: ReactNode;
   className?: string;
   // Feed variant props
@@ -249,7 +249,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
           <View className="p-4">
             {timestamp && (
               <View className="mb-2 flex-row items-center gap-2">
-                <View className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <View className="h-2 w-2 rounded-full bg-primary" />
                 <Text
                   size="md"
                   fontFamily="geist"
@@ -262,7 +262,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             )}
             {title && (
               <Text
-                size="base"
+                size="md"
                 fontFamily="geist-semibold"
                 className="leading-6 text-primary-foreground dark:text-primary-foreground-dark"
                 numberOfLines={3}
@@ -272,7 +272,7 @@ export const Card = forwardRef<React.ComponentRef<typeof Pressable>, CardProps>(
             )}
             {description && (
               <Text
-                size="lg"
+                size="sm"
                 fontFamily="geist"
                 className="mt-2 leading-5 text-grey2 dark:text-grey2"
                 numberOfLines={3}

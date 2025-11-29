@@ -33,10 +33,15 @@ const textVariants = cva('', {
       'mono-semibold': 'font-geist-mono-semibold',
       'mono-bold': 'font-geist-mono-bold',
     },
+    variant: {
+      heading: 'tracking-heading',
+      body: '',
+    },
   },
   defaultVariants: {
     size: 'base',
     fontFamily: 'geist',
+    variant: 'body',
   },
 });
 
@@ -46,14 +51,19 @@ export interface TextProps
   extends Omit<RNTextProps, 'className'>,
     VariantProps<typeof textVariants> {
   className?: string;
+  variant?: 'heading' | 'body';
 }
 
 export const Text = forwardRef<RNText, TextProps>(
-  ({ className, size = 'base', fontFamily, ...props }, ref) => {
+  ({ className, size = 'base', fontFamily, variant, ...props }, ref) => {
+    // Automatically apply heading variant for large text sizes if variant not specified
+    const effectiveVariant =
+      variant ?? (size && ['xl', '2xl', '3xl', '4xl'].includes(size) ? 'heading' : 'body');
+
     return (
       <RNText
         ref={ref}
-        className={clsx(textVariants({ size, fontFamily }), className)}
+        className={clsx(textVariants({ size, fontFamily, variant: effectiveVariant }), className)}
         {...props}
       />
     );

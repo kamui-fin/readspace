@@ -100,7 +100,7 @@ export function ArticleListItem({ item, onToggleRead, onBookmark }: ArticleListI
   }
 
   if (item.type === 'divider') {
-    return <View className="mx-4 h-[0.5px] bg-light-grey dark:bg-mid-grey-dark" />;
+    return <View className="mx-4 h-[1px] bg-light-grey dark:bg-mid-grey-dark" />;
   }
 
   if (item.type === 'article' && item.data) {

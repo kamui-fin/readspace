@@ -43,7 +43,12 @@ export default function FollowingRoute() {
 
   // Calculate safe minimum header height (safe area + title + tabs + padding)
   // This ensures content never appears under header, even if headerHeight is 0
-  const safeMinimumHeight = insets.top + 10 + 80 + 50 + 16; // ~156px + safe area
+  // When viewing feed/folder (no tabs), reduce height by 50px (tab height)
+  const safeMinimumHeight = useMemo(() => {
+    const baseHeight = insets.top + 10 + 80 + 16; // safe area + padding + title + bottom padding
+    const tabsHeight = isViewingFeedOrFolder ? 0 : 50; // Only include tabs when not viewing feed/folder
+    return baseHeight + tabsHeight;
+  }, [insets.top, isViewingFeedOrFolder]);
 
   // Persist header height - only update when we get a valid (> 0) height
   // This prevents headerHeight from dropping to 0 during remeasurements
@@ -120,16 +125,26 @@ export default function FollowingRoute() {
 
   return (
     <View className="flex-1 bg-background dark:bg-background-dark">
-      <Header
-        variant="tabbed"
-        title={headerTitle}
-        scrollY={scrollY}
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onHeaderHeightChange={handleHeaderHeightChange}
-        actionButton={filterActionButton}
-        onTitlePress={handleTitlePress}
-      />
+      {isViewingFeedOrFolder ? (
+        <Header
+          variant="sticky"
+          title={headerTitle}
+          scrollY={scrollY}
+          onHeaderHeightChange={handleHeaderHeightChange}
+          onTitlePress={handleTitlePress}
+        />
+      ) : (
+        <Header
+          variant="tabbed"
+          title={headerTitle}
+          scrollY={scrollY}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onHeaderHeightChange={handleHeaderHeightChange}
+          actionButton={filterActionButton}
+          onTitlePress={handleTitlePress}
+        />
+      )}
       <FollowingScreen
         activeTab={activeTab}
         scrollY={scrollY}

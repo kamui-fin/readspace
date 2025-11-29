@@ -11,8 +11,8 @@ import { COLORS } from '@lib/constants/colors';
 import { Monicon } from '@monicon/native';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StatusBar, Text, useWindowDimensions, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export function WelcomeScreen() {
   const insets = useSafeAreaInsets();
@@ -92,9 +92,7 @@ export function WelcomeScreen() {
   };
 
   return (
-    <SafeAreaView className="dark:bg-screen_background flex-1 bg-background" edges={['top']}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-
+    <View className="dark:bg-screen_background flex-1 bg-background" style={{ paddingTop: insets.top }}>
       <View
         className="flex-1 items-start justify-center"
         style={{ paddingHorizontal: horizontalPadding, paddingTop: topPadding }}>
@@ -148,6 +146,6 @@ export function WelcomeScreen() {
           )}
         </Button>
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

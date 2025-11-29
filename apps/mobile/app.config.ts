@@ -4,7 +4,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Readspace',
   slug: 'readspace',
-  scheme: 'readspace',
   version: '1.0.0',
   assetBundlePatterns: ['**/*'],
   orientation: 'portrait',
@@ -12,7 +11,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   userInterfaceStyle: 'light',
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.readspace.app',
+    bundleIdentifier: 'com.readspace.rss',
     // Google Sign In requires reverse client ID scheme
     // The scheme is constructed from your Google OAuth iOS Client ID
     // Format: com.googleusercontent.apps.{CLIENT_ID_WITHOUT_SUFFIX}
@@ -33,7 +32,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/app/adaptive-icon.png',
       backgroundColor: '#ffffff',
     },
-    package: 'com.readspace.app',
+    package: 'com.readspace.rss',
     // Google Sign In intent filter for Android
     intentFilters: [
       {
@@ -42,7 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
         data: [
           {
             scheme: 'https',
-            host: 'readspace.app',
+            host: 'readspace.rss',
           },
         ],
         category: ['BROWSABLE', 'DEFAULT'],
@@ -51,6 +50,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   web: {
     favicon: './assets/app/favicon.png',
+  },
+  developmentClient: {
+    silentLaunch: true,
   },
   experiments: {
     tsconfigPaths: true,

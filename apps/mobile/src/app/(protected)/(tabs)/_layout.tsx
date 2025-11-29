@@ -31,6 +31,7 @@ export default function TabsLayout() {
     scrollDirection: SharedValue<'up' | 'down'>;
   } | null>(null);
   const [similarFeedsTitle, setSimilarFeedsTitle] = useState<string>('Similar feeds');
+  const [isSearching, setIsSearching] = useState(false);
   const setScrollValues = useCallback(
     (newScrollY: SharedValue<number>, newScrollDirection: SharedValue<'up' | 'down'>) => {
       setScrollValuesState({
@@ -71,6 +72,8 @@ export default function TabsLayout() {
     setSimilarFeedsScrollValues,
     similarFeedsTitle,
     setSimilarFeedsTitle,
+    isSearching,
+    setIsSearching,
   };
 
   // Get header config based on route
@@ -101,6 +104,7 @@ export default function TabsLayout() {
 
     switch (currentRoute) {
       case 'discover':
+        if (isSearching) return null;
         return {
           title: 'Discover',
           subtitle: undefined,

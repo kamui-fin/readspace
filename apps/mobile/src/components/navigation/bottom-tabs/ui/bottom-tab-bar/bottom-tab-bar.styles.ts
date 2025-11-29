@@ -7,8 +7,11 @@ export const styles = StyleSheet.create({
     bottom: 30,
     left: 20,
     right: 20,
+    alignItems: 'center',
   },
-  container: {},
+  container: {
+    transform: [{ scale: 1.2 }],
+  },
   floatingBarWrapper: {
     overflow: 'hidden',
     backgroundColor: COLORS.transparent,

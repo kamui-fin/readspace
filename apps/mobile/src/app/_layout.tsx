@@ -1,7 +1,10 @@
 import 'global.css';
 import { SplashScreenController } from '@components/screens/splash';
 import { SessionProvider } from '@contexts/auth-context';
+import { ThemeProvider } from '@contexts/theme-provider';
 import { ToastProvider } from '@contexts/toast-provider';
+import { useThemeStore } from '@stores/theme';
+import clsx from 'clsx';
 import {
   EBGaramond_400Regular,
   EBGaramond_400Regular_Italic,
@@ -31,6 +34,7 @@ import {
   GeistMono_700Bold,
 } from '@expo-google-fonts/geist-mono';
 import { BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
@@ -62,10 +66,12 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>
-        <SplashScreenController />
-        <RootNavigator />
-      </SessionProvider>
+      <ThemeProvider>
+        <SessionProvider>
+          <SplashScreenController />
+          <RootNavigator />
+        </SessionProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
@@ -73,6 +79,8 @@ export default function RootLayout() {
 function RootNavigator() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [fontError, setFontError] = useState<Error | null>(null);
+  const getEffectiveColorScheme = useThemeStore((state) => state.getEffectiveColorScheme);
+  const isDark = getEffectiveColorScheme() === 'dark';
 
   useEffect(() => {
     async function loadFonts() {
@@ -130,16 +138,18 @@ function RootNavigator() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <BottomSheetModalProvider>
-        <ToastProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(protected)" />
-            <Stack.Screen name="(auth)" />
-          </Stack>
-        </ToastProvider>
-      </BottomSheetModalProvider>
+    <GestureHandlerRootView style={{ flex: 1 }} className={clsx(isDark && 'dark')}>
+      <KeyboardProvider>
+        <BottomSheetModalProvider>
+          <ToastProvider>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(protected)" />
+              <Stack.Screen name="(auth)" />
+            </Stack>
+          </ToastProvider>
+        </BottomSheetModalProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

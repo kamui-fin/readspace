@@ -14,6 +14,7 @@ const chipVariants = cva('flex-row items-center rounded-full', {
     size: {
       small: 'px-2 py-1.5',
       medium: 'px-3 py-2.5',
+      category: 'px-5 py-3 justify-center',
     },
     selected: {
       true: '',
@@ -44,6 +45,7 @@ const chipTextVariants = cva('font-geist-semibold', {
     size: {
       small: 'text-xs',
       medium: 'text-sm',
+      category: 'text-sm',
     },
     selected: {
       true: '',

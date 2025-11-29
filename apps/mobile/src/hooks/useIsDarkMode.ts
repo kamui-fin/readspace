@@ -1,6 +1,8 @@
-import { useColorScheme } from 'react-native';
+import { useThemeStore } from "@stores/theme";
 
 export const useIsDarkMode = () => {
-  const colorScheme = useColorScheme();
-  return colorScheme === 'dark';
+	const getEffectiveColorScheme = useThemeStore(
+		(state) => state.getEffectiveColorScheme
+	);
+	return getEffectiveColorScheme() === "dark";
 };

@@ -1,449 +1,439 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: any is used for compatibility with the toast library */
 
-import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker';
+import { FolderPickerBottomSheet } from "@components/bottom-sheets/folder-picker";
 import {
-  FolderPickerModal,
-  type FolderPickerModalRef,
-} from '@components/modals/folder-picker.modal';
-import { ArticleCardSkeletonList } from '@components/screens/following/ui/article-card.skeleton';
-import { InfiniteScrollList } from '@components/ui/infinite-scroll-list';
-import { toast } from '@components/ui/toast';
-import { useToast } from '@contexts/toast-provider';
-import { useIsDarkMode } from '@hooks/useIsDarkMode';
-import { BOTTOM_TABBAR_BASE_HEIGHT } from '@lib/constants/app';
-import { COLORS } from '@lib/constants/colors';
+	FolderPickerModal,
+	type FolderPickerModalRef,
+} from "@/components/modals/folder-picker";
+import { ArticleCardSkeletonList } from "@components/screens/following/ui/article-card.skeleton";
+import { InfiniteScrollList } from "@components/ui/infinite-scroll-list";
+import { toast } from "@components/ui/toast";
+import { useToast } from "@contexts/toast-provider";
+import { useIsDarkMode } from "@hooks/useIsDarkMode";
+import { BOTTOM_TABBAR_BASE_HEIGHT } from "@lib/constants/app";
+import { COLORS } from "@lib/constants/colors";
 import {
-  useCreateFeed,
-  useFeed,
-  useFeeds,
-  useUnreadCounts,
-  useUpdateArticle,
-} from '@readspace/shared';
-import { useFeedViewStore } from '@stores/feed-view';
-import { getTabKey, getTabName, useFollowingStore } from '@stores/following';
-import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+	useCreateFeed,
+	useFeed,
+	useFeeds,
+	useUnreadCounts,
+	useUpdateArticle,
+} from "@readspace/shared";
+import { useFeedViewStore } from "@stores/feed-view";
+import { getTabKey, getTabName, useFollowingStore } from "@stores/following";
+import * as Haptics from "expo-haptics";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  Platform,
-  RefreshControl,
-  View,
-} from 'react-native';
-import type { SharedValue } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+	type NativeScrollEvent,
+	type NativeSyntheticEvent,
+	Platform,
+	RefreshControl,
+	View,
+} from "react-native";
+import type { SharedValue } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { EmptyStateView } from './components/empty-state-view';
-import { ArticleListItem } from './components/article-list-item';
-import { useArticleQueries } from '../../../hooks/useArticleQueries';
-import { useScrollReset } from '../../../hooks/useScrollReset';
-import { createListItems, processArticles, type ListItem } from '../../../lib/utils/article';
+import { EmptyStateView } from "@components/screens/following/components/empty-state-view";
+import { ArticleListItem } from "@components/screens/following/components/article-list-item";
+import { useArticleQueries } from "@hooks/useArticleQueries";
+import { useScrollReset } from "@hooks/useScrollReset";
+import {
+	createListItems,
+	processArticles,
+	type ListItem,
+} from "@lib/utils/article";
 
 interface FollowingScreenProps {
-  activeTab: number;
-  scrollY: SharedValue<number>;
-  headerHeight: number;
-  safeMinimumHeight: number;
+	activeTab: number;
+	scrollY: SharedValue<number>;
+	headerHeight: number;
+	safeMinimumHeight: number;
 }
 
 export function FollowingScreen({
-  activeTab,
-  scrollY,
-  headerHeight,
-  safeMinimumHeight,
+	activeTab,
+	scrollY,
+	headerHeight,
+	safeMinimumHeight,
 }: FollowingScreenProps) {
-  const listRef = useRef<any>(null);
-  const { showToast, updateToast } = useToast();
-  const insets = useSafeAreaInsets();
-  const isDark = useIsDarkMode();
-  const colors = COLORS[isDark ? 'dark' : 'light'];
-  const folderPickerRef = useRef<FolderPickerModalRef>(null);
+	const listRef = useRef<any>(null);
+	const { showToast, updateToast } = useToast();
+	const insets = useSafeAreaInsets();
+	const isDark = useIsDarkMode();
+	const colors = COLORS[isDark ? "dark" : "light"];
+	const folderPickerRef = useRef<FolderPickerModalRef>(null);
 
-  // Refs for tracking state
-  const isResettingRef = useRef(false);
-  const loadingToastIdRef = useRef<string | null>(null);
-  const prevIsLoadingRef = useRef(false);
-  const prevArticleCountRef = useRef(0);
-  const [refreshing, setRefreshing] = useState(false);
+	// Refs for tracking state
+	const isResettingRef = useRef(false);
 
-  // Get state and actions from Zustand stores
-  const tabKey = getTabKey(activeTab);
-  const filter = useFollowingStore((state) => state.filter);
-  const isLoadingMore = useFollowingStore((state) => state.isLoadingMore);
-  const setLoadingState = useFollowingStore((state) => state.setLoadingState);
-  const setArticleCount = useFollowingStore((state) => state.setArticleCount);
-  const setIsLoadingMore = useFollowingStore((state) => state.setIsLoadingMore);
+	const prevIsLoadingRef = useRef(false);
+	const prevArticleCountRef = useRef(0);
+	const [refreshing, setRefreshing] = useState(false);
 
-  // Feed view store for preview mode and feed/folder views
-  const viewType = useFeedViewStore((state) => state.viewType);
-  const selectedId = useFeedViewStore((state) => state.selectedId);
-  const selectedName = useFeedViewStore((state) => state.selectedName);
-  const isPreviewMode = useFeedViewStore((state) => state.isPreviewMode);
+	// Get state and actions from Zustand stores
+	const tabKey = getTabKey(activeTab);
+	const filter = useFollowingStore((state) => state.filter);
+	const isLoadingMore = useFollowingStore((state) => state.isLoadingMore);
+	const setLoadingState = useFollowingStore((state) => state.setLoadingState);
+	const setArticleCount = useFollowingStore((state) => state.setArticleCount);
+	const setIsLoadingMore = useFollowingStore((state) => state.setIsLoadingMore);
 
-  // Compute safe padding that always has a fallback
-  // Uses headerHeight if available (> 0), otherwise falls back to safeMinimumHeight
-  // This handles all edge cases: initial render, tab switches, remeasurements
-  const contentPaddingTop = useMemo(() => {
-    const effectiveHeight = headerHeight > 0 ? headerHeight : safeMinimumHeight;
-    return effectiveHeight + 64; // Add 64px spacing below header for first post offset
-  }, [headerHeight, safeMinimumHeight]);
+	// Feed view store for preview mode and feed/folder views
+	const viewType = useFeedViewStore((state) => state.viewType);
+	const selectedId = useFeedViewStore((state) => state.selectedId);
+	const selectedName = useFeedViewStore((state) => state.selectedName);
+	const isPreviewMode = useFeedViewStore((state) => state.isPreviewMode);
 
-  // Compute bottom padding to account for tab bar
-  // Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
-  // Add extra spacing (16px) for better visual separation
-  const contentPaddingBottom = useMemo(() => {
-    const tabBarHeight = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * insets.bottom;
-    return tabBarHeight + 16;
-  }, [insets.bottom]);
+	// Check if we're viewing a specific feed or folder
+	const isViewingFeedOrFolder =
+		(viewType === "feed" ||
+			viewType === "folder" ||
+			viewType === "feedPreview") &&
+		!!selectedId;
 
-  // Fetch feed data for preview mode banner
-  const { data: feedData } = useFeed(selectedId || '', {
-    enabled: isPreviewMode && !!selectedId,
-  });
+	// Compute safe padding that always has a fallback
+	// Uses headerHeight if available (> 0), otherwise falls back to safeMinimumHeight
+	// This handles all edge cases: initial render, tab switches, remeasurements
+	const contentPaddingTop = useMemo(() => {
+		const effectiveHeight = headerHeight > 0 ? headerHeight : safeMinimumHeight;
+		// Reduce extra spacing when viewing feed/folder (8px vs 64px)
+		const extraSpacing = isViewingFeedOrFolder ? 8 : 64;
+		return effectiveHeight + extraSpacing;
+	}, [headerHeight, safeMinimumHeight, isViewingFeedOrFolder]);
 
-  // Check if we're viewing a specific feed or folder
-  const isViewingFeedOrFolder =
-    (viewType === 'feed' || viewType === 'folder' || viewType === 'feedPreview') && !!selectedId;
+	// Compute bottom padding to account for tab bar
+	// Tab bar height = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * safeAreaBottom (from BottomTabbar component)
+	// Add extra spacing (16px) for better visual separation
+	const contentPaddingBottom = useMemo(() => {
+		const tabBarHeight = BOTTOM_TABBAR_BASE_HEIGHT + 0.8 * insets.bottom;
+		return tabBarHeight + 16;
+	}, [insets.bottom]);
 
-  // Determine query parameters based on view type
-  const feedFolderParams = useMemo(() => {
-    // If viewing a specific feed or feed preview
-    if ((viewType === 'feed' || viewType === 'feedPreview') && selectedId) {
-      return { feedIds: [selectedId] };
-    }
-    // If viewing a folder
-    if (viewType === 'folder' && selectedId) {
-      return { folderId: selectedId };
-    }
-    // Default: no feed/folder filter
-    return {};
-  }, [viewType, selectedId]);
+	// Fetch feed data for preview mode banner
+	const { data: feedData } = useFeed(selectedId || "", {
+		enabled: isPreviewMode && !!selectedId,
+	});
 
-  // Use custom hook to manage article queries
-  const { activeQuery } = useArticleQueries({
-    activeTab,
-    isViewingFeedOrFolder,
-    feedFolderParams,
-  });
+	// Determine query parameters based on view type
+	const feedFolderParams = useMemo(() => {
+		// If viewing a specific feed or feed preview
+		if ((viewType === "feed" || viewType === "feedPreview") && selectedId) {
+			return { feedIds: [selectedId] };
+		}
+		// If viewing a folder
+		if (viewType === "folder" && selectedId) {
+			return { folderId: selectedId };
+		}
+		// Default: no feed/folder filter
+		return {};
+	}, [viewType, selectedId]);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, isError } = activeQuery;
+	// Use custom hook to manage article queries
+	const { activeQuery } = useArticleQueries({
+		activeTab,
+		isViewingFeedOrFolder,
+		feedFolderParams,
+	});
 
-  // Article mutations
-  const updateArticle = useUpdateArticle();
-  const createFeed = useCreateFeed();
+	const {
+		data,
+		fetchNextPage,
+		hasNextPage,
+		isFetchingNextPage,
+		isLoading,
+		isError,
+	} = activeQuery;
 
-  // Get unread counts and feeds data - kept for potential future use
-  useUnreadCounts();
-  useFeeds();
+	// Article mutations
+	const updateArticle = useUpdateArticle();
+	const createFeed = useCreateFeed();
 
-  // Process articles: flatten, deduplicate, and apply filters
-  const allArticles = useMemo(() => {
-    return processArticles(data, isViewingFeedOrFolder, activeTab, filter);
-  }, [data, filter, isViewingFeedOrFolder, activeTab]);
+	// Get unread counts and feeds data - kept for potential future use
+	useUnreadCounts();
+	useFeeds();
 
-  // Group articles by date and create flat list with sections and dividers
-  const listItems = useMemo(() => {
-    return createListItems(allArticles);
-  }, [allArticles]);
+	// Process articles: flatten, deduplicate, and apply filters
+	const allArticles = useMemo(() => {
+		return processArticles(data, isViewingFeedOrFolder, activeTab, filter);
+	}, [data, filter, isViewingFeedOrFolder, activeTab]);
 
-  // Mutation handlers
-  const handleFolderSelect = useCallback(
-    (folderId: string | null) => {
-      if (!feedData?.url) {
-        toast.error('Feed URL is missing');
-        return;
-      }
+	// Group articles by date and create flat list with sections and dividers
+	const listItems = useMemo(() => {
+		return createListItems(allArticles);
+	}, [allArticles]);
 
-      createFeed.mutate(
-        {
-          url: feedData.url,
-          folder_id: folderId || undefined,
-          silent: false,
-        },
-        {
-          onSuccess: () => {
-            toast.success(`Following ${feedData.title}`);
-            // Exit preview mode
-            const { selectFeed } = useFeedViewStore.getState();
-            selectFeed(feedData.id, feedData.title);
-          },
-          onError: (error: any) => {
-            toast.error(error?.message || 'Failed to follow feed');
-          },
-        }
-      );
-    },
-    [feedData, createFeed]
-  );
+	// Mutation handlers
+	const handleFolderSelect = useCallback(
+		(folderId: string | null) => {
+			if (!feedData?.url) {
+				toast.error("Feed URL is missing");
+				return;
+			}
 
-  const handleBookmark = useCallback(
-    (articleId: string, currentlySaved: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+			createFeed.mutate(
+				{
+					url: feedData.url,
+					folder_id: folderId || undefined,
+					silent: false,
+				},
+				{
+					onSuccess: () => {
+						toast.success(`Following ${feedData.title}`);
+						// Exit preview mode
+						const { selectFeed } = useFeedViewStore.getState();
+						selectFeed(feedData.id, feedData.title);
+					},
+					onError: (error: any) => {
+						toast.error(error?.message || "Failed to follow feed");
+					},
+				},
+			);
+		},
+		[feedData, createFeed],
+	);
 
-      const newValue = !currentlySaved;
-      updateArticle.mutate(
-        {
-          articleId,
-          data: { is_read_later: newValue },
-          articleType,
-        },
-        {
-          onError: () => {
-            toast.error('Failed to update bookmark');
-          },
-        }
-      );
-    },
-    [updateArticle]
-  );
+	const handleBookmark = useCallback(
+		(
+			articleId: string,
+			currentlySaved: boolean,
+			articleType: "feed" | "clipped" = "feed",
+		) => {
+			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
-  const handleToggleRead = useCallback(
-    (articleId: string, currentlyRead: boolean, articleType: 'feed' | 'clipped' = 'feed') => {
-      const newValue = !currentlyRead;
-      updateArticle.mutate(
-        {
-          articleId,
-          data: { is_read: newValue },
-          articleType,
-        },
-        {
-          onError: () => {
-            toast.error('Failed to update read status');
-          },
-        }
-      );
-    },
-    [updateArticle]
-  );
+			const newValue = !currentlySaved;
+			updateArticle.mutate(
+				{
+					articleId,
+					data: { is_read_later: newValue },
+					articleType,
+				},
+				{
+					onError: () => {
+						toast.error("Failed to update bookmark");
+					},
+				},
+			);
+		},
+		[updateArticle],
+	);
 
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      await activeQuery.refetch();
-    } finally {
-      setRefreshing(false);
-    }
-  }, [activeQuery]);
+	const handleToggleRead = useCallback(
+		(
+			articleId: string,
+			currentlyRead: boolean,
+			articleType: "feed" | "clipped" = "feed",
+		) => {
+			const newValue = !currentlyRead;
+			updateArticle.mutate(
+				{
+					articleId,
+					data: { is_read: newValue },
+					articleType,
+				},
+				{
+					onError: () => {
+						toast.error("Failed to update read status");
+					},
+				},
+			);
+		},
+		[updateArticle],
+	);
 
-  // Sync loading state and article count to store
-  useEffect(() => {
-    setLoadingState(tabKey, isLoading);
-  }, [isLoading, tabKey, setLoadingState]);
+	const handleRefresh = useCallback(async () => {
+		setRefreshing(true);
+		try {
+			await activeQuery.refetch();
+		} finally {
+			setRefreshing(false);
+		}
+	}, [activeQuery]);
 
-  useEffect(() => {
-    setArticleCount(tabKey, allArticles.length);
-  }, [allArticles.length, tabKey, setArticleCount]);
+	// Sync loading state and article count to store
+	useEffect(() => {
+		setLoadingState(tabKey, isLoading);
+	}, [isLoading, tabKey, setLoadingState]);
 
-  // Show toast when initial loading completes
-  useEffect(() => {
-    const tabName = getTabName(activeTab);
+	useEffect(() => {
+		setArticleCount(tabKey, allArticles.length);
+	}, [allArticles.length, tabKey, setArticleCount]);
 
-    if (prevIsLoadingRef.current && !isLoading && allArticles.length > 0) {
-      toast.success(`Loaded ${allArticles.length} ${tabName}`);
-    }
+	// Sync loading state and article count
+	useEffect(() => {
+		// Always clear loading state when isFetchingNextPage becomes false
+		if (isLoadingMore && !isFetchingNextPage) {
+			setIsLoadingMore(false);
+		}
 
-    if (prevIsLoadingRef.current && !isLoading && isError) {
-      toast.error(`Failed to load ${tabName}`);
-    }
+		prevIsLoadingRef.current = isLoading;
+		prevArticleCountRef.current = allArticles.length;
+	}, [
+		isLoading,
+		allArticles.length,
+		isFetchingNextPage,
+		isLoadingMore,
+		setIsLoadingMore,
+	]);
 
-    // Show toast when "load more" completes
-    if (isLoadingMore && !isFetchingNextPage) {
-      // Always clear loading state when isFetchingNextPage becomes false
-      if (loadingToastIdRef.current) {
-        if (allArticles.length > prevArticleCountRef.current) {
-          const loadedCount = allArticles.length - prevArticleCountRef.current;
-          // Update the promise toast with the actual count
-          updateToast(loadingToastIdRef.current, {
-            type: 'success',
-            title: `Loaded ${loadedCount} more article${loadedCount !== 1 ? 's' : ''}`,
-            duration: 3000,
-          });
-        } else {
-          // No new articles loaded, dismiss the toast
-          updateToast(loadingToastIdRef.current, {
-            type: 'error',
-            title: 'No more articles',
-            duration: 2000,
-          });
-        }
-        loadingToastIdRef.current = null;
-      }
-      setIsLoadingMore(false);
-    }
+	const handleEndReached = () => {
+		// Prevent multiple simultaneous fetches
+		if (hasNextPage && !isFetchingNextPage && !isLoadingMore) {
+			setIsLoadingMore(true);
+			const previousCount = allArticles.length;
+			prevArticleCountRef.current = previousCount;
 
-    prevIsLoadingRef.current = isLoading;
-    prevArticleCountRef.current = allArticles.length;
-  }, [
-    isLoading,
-    allArticles.length,
-    activeTab,
-    isError,
-    isFetchingNextPage,
-    isLoadingMore,
-    setIsLoadingMore,
-    updateToast,
-  ]);
+			// Fetch next page
+			fetchNextPage().catch(() => {
+				setIsLoadingMore(false);
+			});
+		}
+	};
 
-  const handleEndReached = () => {
-    // Prevent multiple simultaneous fetches
-    if (hasNextPage && !isFetchingNextPage && !isLoadingMore) {
-      setIsLoadingMore(true);
-      const previousCount = allArticles.length;
-      prevArticleCountRef.current = previousCount;
+	// Reset scroll position when tab, filter, or view changes
+	useScrollReset({
+		listRef,
+		scrollY,
+		isResettingRef,
+		dependencies: [activeTab],
+	});
 
-      // Show loading toast and store the toastId
-      loadingToastIdRef.current = showToast({
-        type: 'promise',
-        title: 'Loading more articles...',
-        duration: 999999, // Keep visible until we update it
-      });
+	useScrollReset({
+		listRef,
+		scrollY,
+		isResettingRef,
+		dependencies: [filter],
+	});
 
-      // Fetch next page
-      fetchNextPage().catch(() => {
-        // On error, update toast to show error
-        if (loadingToastIdRef.current) {
-          updateToast(loadingToastIdRef.current, {
-            type: 'error',
-            title: 'Failed to load more articles',
-            duration: 3000,
-          });
-          loadingToastIdRef.current = null;
-        }
-        setIsLoadingMore(false);
-      });
-    }
-  };
+	useScrollReset({
+		listRef,
+		scrollY,
+		isResettingRef,
+		dependencies: [viewType, selectedName],
+	});
 
-  // Reset scroll position when tab, filter, or view changes
-  useScrollReset({
-    listRef,
-    scrollY,
-    isResettingRef,
-    dependencies: [activeTab],
-  });
+	// Use regular function instead of useAnimatedScrollHandler for LegendList compatibility
+	// Add safeguards to prevent edge cases where scrollY might be non-zero when it shouldn't be
+	const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+		// Ignore scroll events during reset to prevent race conditions
+		if (isResettingRef.current) {
+			return;
+		}
 
-  useScrollReset({
-    listRef,
-    scrollY,
-    isResettingRef,
-    dependencies: [filter],
-  });
+		const currentScrollY = event.nativeEvent.contentOffset.y;
 
-  useScrollReset({
-    listRef,
-    scrollY,
-    isResettingRef,
-    dependencies: [viewType, selectedName],
-  });
+		// Clamp very small values to 0 to handle floating point precision issues
+		// This prevents header from being slightly sticky when scroll is at top
+		const clampedScrollY = currentScrollY < 1 ? 0 : currentScrollY;
 
-  // Use regular function instead of useAnimatedScrollHandler for LegendList compatibility
-  // Add safeguards to prevent edge cases where scrollY might be non-zero when it shouldn't be
-  const scrollHandler = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    // Ignore scroll events during reset to prevent race conditions
-    if (isResettingRef.current) {
-      return;
-    }
+		scrollY.value = clampedScrollY;
+	};
 
-    const currentScrollY = event.nativeEvent.contentOffset.y;
+	const renderItem = useCallback(
+		(item: ListItem) => {
+			return (
+				<ArticleListItem
+					item={item}
+					onToggleRead={handleToggleRead}
+					onBookmark={handleBookmark}
+				/>
+			);
+		},
+		[handleToggleRead, handleBookmark],
+	);
 
-    // Clamp very small values to 0 to handle floating point precision issues
-    // This prevents header from being slightly sticky when scroll is at top
-    const clampedScrollY = currentScrollY < 1 ? 0 : currentScrollY;
+	const renderFooter = () => {
+		if (!isFetchingNextPage) return null;
+		return (
+			<View className="py-4">
+				<ArticleCardSkeletonList count={3} />
+			</View>
+		);
+	};
 
-    scrollY.value = clampedScrollY;
-  };
+	const renderEmpty = useCallback(() => {
+		return (
+			<EmptyStateView
+				isLoading={isLoading}
+				activeTab={activeTab}
+				refreshing={refreshing}
+				onRefresh={handleRefresh}
+				refreshColor={colors.secondary}
+			/>
+		);
+	}, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary]);
 
-  const renderItem = useCallback(
-    (item: ListItem) => {
-      return (
-        <ArticleListItem item={item} onToggleRead={handleToggleRead} onBookmark={handleBookmark} />
-      );
-    },
-    [handleToggleRead, handleBookmark]
-  );
+	// If empty and not loading, render empty state outside scrollable list
+	// This prevents scrolling on empty state and ensures header stays in place
+	const isEmptyState = !isLoading && listItems.length === 0;
 
-  const renderFooter = () => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View className="py-4">
-        <ArticleCardSkeletonList count={3} />
-      </View>
-    );
-  };
+	if (isEmptyState) {
+		return (
+			<>
+				{renderEmpty()}
 
-  const renderEmpty = useCallback(() => {
-    return (
-      <EmptyStateView
-        isLoading={isLoading}
-        activeTab={activeTab}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        refreshColor={colors.secondary}
-      />
-    );
-  }, [isLoading, activeTab, refreshing, handleRefresh, colors.secondary]);
+				{/* Folder picker bottom sheet */}
+				<FolderPickerBottomSheet
+					ref={folderPickerRef}
+					onFolderSelect={handleFolderSelect}
+				/>
+			</>
+		);
+	}
 
-  // If empty and not loading, render empty state outside scrollable list
-  // This prevents scrolling on empty state and ensures header stays in place
-  const isEmptyState = !isLoading && listItems.length === 0;
+	return (
+		<>
+			<InfiniteScrollList
+				ref={listRef}
+				data={listItems}
+				renderItem={renderItem}
+				keyExtractor={(item) => item.id}
+				onEndReached={handleEndReached}
+				hasMore={hasNextPage ?? false}
+				isLoading={isFetchingNextPage}
+				ListFooterComponent={renderFooter}
+				ListEmptyComponent={renderEmpty}
+				estimatedItemSize={200}
+				onScroll={scrollHandler}
+				scrollEventThrottle={16}
+				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={handleRefresh}
+						tintColor={colors.secondary}
+						colors={[colors.secondary]}
+					/>
+				}
+				contentContainerStyle={{
+					// Always apply paddingTop to account for header height
+					// Header is always absolute for tabbed variant, so content needs padding
+					// Uses computed safe padding that handles all edge cases:
+					// - Initial render (headerHeight = 0) → uses safeMinimumHeight
+					// - Tab switches (headerHeight might temporarily be 0) → uses safeMinimumHeight
+					// - Normal state (headerHeight > 0) → uses actual headerHeight
+					paddingTop: contentPaddingTop,
+					// Always apply paddingBottom to account for bottom tab bar
+					// Tab bar is absolutely positioned, so content needs padding to prevent overlap
+					// Uses computed padding that accounts for tab bar height + safe area + spacing
+					// Add extra padding if in preview mode for the banner
+					paddingBottom: isPreviewMode
+						? contentPaddingBottom + 80
+						: contentPaddingBottom,
+				}}
+			/>
 
-  if (isEmptyState) {
-    return (
-      <>
-        {renderEmpty()}
-
-        {/* Folder picker bottom sheet */}
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <InfiniteScrollList
-        ref={listRef}
-        data={listItems}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        onEndReached={handleEndReached}
-        hasMore={hasNextPage ?? false}
-        isLoading={isFetchingNextPage}
-        ListFooterComponent={renderFooter}
-        ListEmptyComponent={renderEmpty}
-        estimatedItemSize={200}
-        onScroll={scrollHandler}
-        scrollEventThrottle={16}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={colors.secondary}
-            colors={[colors.secondary]}
-          />
-        }
-        contentContainerStyle={{
-          // Always apply paddingTop to account for header height
-          // Header is always absolute for tabbed variant, so content needs padding
-          // Uses computed safe padding that handles all edge cases:
-          // - Initial render (headerHeight = 0) → uses safeMinimumHeight
-          // - Tab switches (headerHeight might temporarily be 0) → uses safeMinimumHeight
-          // - Normal state (headerHeight > 0) → uses actual headerHeight
-          paddingTop: contentPaddingTop,
-          // Always apply paddingBottom to account for bottom tab bar
-          // Tab bar is absolutely positioned, so content needs padding to prevent overlap
-          // Uses computed padding that accounts for tab bar height + safe area + spacing
-          // Add extra padding if in preview mode for the banner
-          paddingBottom: isPreviewMode ? contentPaddingBottom + 80 : contentPaddingBottom,
-        }}
-      />
-
-      {/* Folder picker modal/bottom sheet */}
-      {Platform.OS === 'ios' ? (
-        <FolderPickerModal ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      ) : (
-        <FolderPickerBottomSheet ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-      )}
-    </>
-  );
+			{/* Folder picker modal/bottom sheet */}
+			{Platform.OS === "ios" ? (
+				<FolderPickerModal
+					ref={folderPickerRef}
+					onFolderSelect={handleFolderSelect}
+				/>
+			) : (
+				<FolderPickerBottomSheet
+					ref={folderPickerRef}
+					onFolderSelect={handleFolderSelect}
+				/>
+			)}
+		</>
+	);
 }

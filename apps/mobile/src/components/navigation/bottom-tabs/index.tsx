@@ -98,9 +98,9 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, 
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
         }}>
-        <Animated.View style={[styles.container, { flex: 1, marginRight: 12 }]}>
+        <Animated.View style={styles.container}>
           <Animated.View
             style={[styles.floatingBarWrapper, animatedFloatingBarStyle, animatedTabBarStyle]}>
             <BlurView intensity={100} tint={blurTint} style={styles.blurView}>

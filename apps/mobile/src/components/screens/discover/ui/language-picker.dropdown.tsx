@@ -7,7 +7,7 @@ import {
   BottomSheetScrollView,
 } from '@gorhom/bottom-sheet';
 import { COLORS } from '@lib/constants/colors';
-import { useColorScheme } from 'nativewind';
+import { useIsDarkMode } from '@hooks/useIsDarkMode';
 import { forwardRef, useCallback, useState } from 'react';
 import { View } from 'react-native';
 
@@ -37,8 +37,8 @@ export const LanguagePicker = forwardRef<BottomSheetModal, LanguagePickerProps>(
     { onLanguageChange, initialLanguage, languages = DEFAULT_LANGUAGES, title = 'Pick a language' },
     ref
   ) => {
-    const { colorScheme } = useColorScheme();
-    const colors = COLORS[colorScheme ?? 'light'];
+    const isDark = useIsDarkMode();
+    const colors = COLORS[isDark ? 'dark' : 'light'];
     // Use the first language's value as default if initialLanguage is not provided
     const [selectedLanguage, setSelectedLanguage] = useState<string>(
       initialLanguage || languages[0]?.value || 'english'

@@ -2,7 +2,7 @@ import { FolderPickerBottomSheet } from '@components/bottom-sheets/folder-picker
 import {
   FolderPickerModal,
   type FolderPickerModalRef,
-} from '@components/modals/folder-picker.modal';
+} from '@/components/modals/folder-picker';
 import { FeedListItem } from '@components/screens/discover/ui/feed-list-item.card';
 import { Skeleton } from '@components/ui/skeleton';
 import { Text } from '@components/ui/text';
@@ -297,7 +297,7 @@ export function SimilarFeedsScreen({ feedId }: SimilarFeedsScreenProps) {
             <Text
               size="lg"
               fontFamily="geist-semibold"
-              className="mt-4 text-center text-black dark:text-black-dark">
+              className="mt-4 text-center tracking-heading text-black dark:text-black-dark">
               No similar feeds found
             </Text>
             <Text

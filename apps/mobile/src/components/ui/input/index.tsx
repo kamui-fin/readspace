@@ -133,8 +133,6 @@ export const Input = forwardRef((props: InputProps, ref: any) => {
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          // @ts-expect-error
-          readOnly={disabled}
           onFocus={onFocus}
           onBlur={onBlur}
           nativeID={inputId}

@@ -23,6 +23,8 @@ export interface DiscoverScrollContextType {
   ) => void;
   similarFeedsTitle?: string;
   setSimilarFeedsTitle?: (title: string) => void;
+  isSearching?: boolean;
+  setIsSearching?: (isSearching: boolean) => void;
 }
 
 export const DiscoverScrollContext = createContext<DiscoverScrollContextType>({});

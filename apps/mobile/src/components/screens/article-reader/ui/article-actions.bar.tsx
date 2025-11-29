@@ -147,8 +147,8 @@ export function ArticleActionBar({
           style={
             !isClipped && isBookmarked
               ? {
-                  backgroundColor: colors.icon_bg_yellow,
-                }
+                backgroundColor: colors.icon_bg_yellow,
+              }
               : undefined
           }>
           <Monicon
@@ -168,9 +168,7 @@ export function ArticleActionBar({
         {/* Menu Button */}
         {menuTrigger || (
           <Button variant="icon" size="small" fullWidth={false} onPress={onMenuPress}>
-            <View style={{ transform: [{ rotate: '90deg' }] }}>
-              <Monicon name="solar:menu-dots-bold" size={18} strokeWidth={2.4} color={greyColor} />
-            </View>
+            <Monicon name="solar:menu-dots-bold" size={18} strokeWidth={2.4} color={greyColor} />
           </Button>
         )}
       </View>

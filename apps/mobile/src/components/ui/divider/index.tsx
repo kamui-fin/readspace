@@ -1,5 +1,5 @@
-import React from 'react';
-import { DimensionValue, StyleProp, StyleSheet, View, ViewProps, ViewStyle } from 'react-native';
+import type React from 'react';
+import { type DimensionValue, type StyleProp, View, type ViewProps, type ViewStyle } from 'react-native';
 
 export interface DividerProps extends ViewProps {
   /**  Applies style to the divider. */
@@ -27,11 +27,11 @@ export const Divider: React.FC<DividerProps> = ({
   ...rest
 }) => (
   <View
-    className={`bg-grey4 dark:bg-grey4-dark ${className || ''}`}
+    className={`bg-divider dark:bg-divider-dark ${className || ''}`}
     style={[
       orientation === 'horizontal'
-        ? { width: width as DimensionValue, height: 0.5 } // Increased from hairlineWidth to 0.5
-        : { width: 0.5, height: height as DimensionValue }, // Increased from hairlineWidth to 0.5
+        ? { width: width as DimensionValue, height: 1 }
+        : { width: 1, height: height as DimensionValue },
       style,
     ]}
     {...rest}

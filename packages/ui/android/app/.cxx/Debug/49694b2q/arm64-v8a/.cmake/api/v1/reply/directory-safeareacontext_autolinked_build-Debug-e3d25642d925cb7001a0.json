@@ -1,0 +1,12 @@
+{
+  "backtraceGraph": {
+    "commands": [],
+    "files": [],
+    "nodes": []
+  },
+  "installers": [],
+  "paths": {
+    "build": "safeareacontext_autolinked_build",
+    "source": "/Users/enkyuan/Desktop/Projects/readspace/node_modules/react-native-safe-area-context/android/src/main/jni"
+  }
+}

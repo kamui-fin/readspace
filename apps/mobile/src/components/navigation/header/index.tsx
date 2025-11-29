@@ -82,7 +82,7 @@ const titleVariants = cva('leading-8 text-primary-foreground dark:text-primary-f
 });
 
 const subtitleVariants = cva(
-  'font-geist-semibold text-lg text-grey2 dark:text-grey2 mt-1 opacity-80'
+  'font-geist-medium text-lg text-grey2 dark:text-grey2 mt-1 opacity-80'
 );
 
 const actionsContainerVariants = cva('flex-row items-center gap-3');
