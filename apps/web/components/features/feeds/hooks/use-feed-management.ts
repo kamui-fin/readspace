@@ -164,7 +164,54 @@ export function useFeedManagement() {
         }
     }
 
-    return {
+    // Modal states
+    const [currentFeed, setCurrentFeed] = useState<FeedRowData | null>(null)
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+    const [isBulkEditFolderModalOpen, setIsBulkEditFolderModalOpen] =
+        useState(false)
+
+    /**
+     * Handle edit feed action
+     */
+    const handleEditFeed = (feed: FeedRowData) => {
+        setCurrentFeed(feed)
+        setIsEditModalOpen(true)
+    }
+
+    /**
+     * Handle delete feed action
+     */
+    const handleDeleteFeed = (feed: FeedRowData) => {
+        setCurrentFeed(feed)
+        setIsDeleteModalOpen(true)
+    }
+
+    /**
+     * Close all modals
+     */
+    const closeModals = () => {
+        setIsEditModalOpen(false)
+        setIsDeleteModalOpen(false)
+        setIsBulkEditFolderModalOpen(false)
+        setCurrentFeed(null)
+    }
+
+    /**
+     * Handle successful feed deletion
+     */
+    const handleFeedDeleted = (feedId: string) => {
+        closeModals()
+    }
+
+    /**
+     * Handle bulk operation completion
+     */
+    const handleBulkOperationComplete = () => {
+        closeModals()
+    }
+
+    const controllerResult = {
         feeds: filteredFeeds,
         folders: typedFolders,
         isLoading: isLoadingFeeds || isLoadingFolders,
@@ -183,5 +230,21 @@ export function useFeedManagement() {
         isAllSelected:
             selectedFeedIds.length === filteredFeeds.length &&
             filteredFeeds.length > 0,
+
+        // Modal state & handlers
+        currentFeed,
+        isEditModalOpen,
+        isDeleteModalOpen,
+        isBulkEditFolderModalOpen,
+        setIsBulkEditFolderModalOpen,
+        handleEditFeed,
+        handleDeleteFeed,
+        closeModals,
+        handleFeedDeleted,
+        handleBulkOperationComplete,
     }
+
+    return controllerResult
 }
+
+export type UseFeedManagementResult = ReturnType<typeof useFeedManagement>

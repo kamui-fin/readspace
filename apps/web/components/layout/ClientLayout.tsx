@@ -1,9 +1,7 @@
 "use client"
 
 import { ThemeProvider } from "@/components/providers/ThemeProvider"
-import {
-    SidebarLeftProvider,
-} from "@/components/ui/sidebar"
+import { SidebarLeftProvider } from "@/components/ui/sidebar"
 import { Toaster } from "react-hot-toast"
 import { useEffect, useState } from "react"
 

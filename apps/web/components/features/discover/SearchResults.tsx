@@ -1,5 +1,10 @@
 import NextImage from "next/image"
-import { useInfiniteHits, useInstantSearch, usePagination, useStats } from "react-instantsearch"
+import {
+    useInfiniteHits,
+    useInstantSearch,
+    usePagination,
+    useStats,
+} from "react-instantsearch"
 
 import { FeedCard } from "@/components/features/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"

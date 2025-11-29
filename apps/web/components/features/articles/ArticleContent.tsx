@@ -1,16 +1,12 @@
-
 "use client"
-
 
 import { useEffect, useRef, useState } from "react"
 
 import { type Article } from "@readspace/shared"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleToolbar } from "./ArticleToolbar"
-import { useArticleAI } from "./hooks/useArticleAI"
-import { useArticleInteractions } from "./hooks/useArticleInteractions"
-
-
+import { useArticleAI } from "../hooks/useArticleAI"
+import { useArticleInteractions } from "../hooks/useArticleInteractions"
 
 /**
  * Custom hook to track responsive breakpoints safely (avoiding hydration issues)
@@ -33,10 +29,6 @@ function useResponsive() {
 
     return { isMobile }
 }
-
-
-
-
 
 interface ArticleContentProps {
     /** The article to display */
@@ -94,12 +86,7 @@ export function ArticleContent({
         "original" | "extracted" | "translated"
     >(article.extracted_content ? "extracted" : "original")
 
-
     const { isMobile } = useResponsive()
-
-
-
-
 
     const {
         optimisticReadLater,
@@ -235,8 +222,8 @@ export function ArticleContent({
                                     <div className="flex flex-col items-center justify-center py-8 text-center">
                                         <div className="mx-auto max-w-md">
                                             <p className="text-sm text-muted-foreground">
-                                                This article doesn&apos;t
-                                                have any content available.
+                                                This article doesn&apos;t have
+                                                any content available.
                                             </p>
                                         </div>
                                     </div>
@@ -245,7 +232,7 @@ export function ArticleContent({
                         })()}
                     </article>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     )
 }

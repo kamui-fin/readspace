@@ -40,7 +40,7 @@ export default function ImportStatusPage() {
         isLoading,
         error: statusError,
         handleCancelImport,
-        isCancelling
+        isCancelling,
     } = useOpmlTaskStatus(taskId)
 
     // Invalidate queries when import completes
@@ -79,7 +79,9 @@ export default function ImportStatusPage() {
                     "Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart."
                 )
             } else if (statusError.message.includes("403")) {
-                setErrorMsg("You don't have permission to view this import task.")
+                setErrorMsg(
+                    "You don't have permission to view this import task."
+                )
             } else {
                 setErrorMsg(
                     "Error checking import status. Please try refreshing the page."
@@ -215,7 +217,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                            100
+                                                100
                                         )}
                                         %
                                     </span>
@@ -269,7 +271,9 @@ export default function ImportStatusPage() {
                                     className="text-destructive hover:text-destructive"
                                 >
                                     <X className="h-4 w-4 mr-2" />
-                                    {isCancelling ? "Cancelling..." : "Cancel Import"}
+                                    {isCancelling
+                                        ? "Cancelling..."
+                                        : "Cancel Import"}
                                 </Button>
                             </div>
                         </CardContent>
@@ -457,7 +461,9 @@ export default function ImportStatusPage() {
                                 className="text-destructive hover:text-destructive"
                             >
                                 <X className="h-4 w-4 mr-2" />
-                                {isCancelling ? "Cancelling..." : "Cancel Import"}
+                                {isCancelling
+                                    ? "Cancelling..."
+                                    : "Cancel Import"}
                             </Button>
                         </CardContent>
                     </Card>

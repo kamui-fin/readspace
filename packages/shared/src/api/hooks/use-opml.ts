@@ -43,7 +43,13 @@ export function useImportTaskStatus(
     queryFn: () =>
       ApiClient.getImportTaskStatus(taskId!) as Promise<OpmlImportStatusResponse>,
     enabled: !!taskId && enabled,
-    refetchInterval: 3000, // Poll every 3 seconds
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (data && data.status !== "in_progress") {
+        return false;
+      }
+      return 3000;
+    },
     retry: false, // Don't retry failed status checks
     ...options,
   });

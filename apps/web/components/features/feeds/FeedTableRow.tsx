@@ -58,10 +58,10 @@ export interface FeedRowData {
     link: string | null
     folder_id: string | null
     image_url: string | null
-    is_favorite?: boolean
+    is_favorite: boolean
     error_count: number
-    last_updated_at?: string | null
-    last_error_message?: string | null
+    last_updated_at: string | null
+    last_error_message: string | null
 }
 
 interface FeedTableRowProps {

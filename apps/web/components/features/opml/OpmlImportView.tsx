@@ -53,8 +53,8 @@ export default function OpmlImportView() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                        activeImports.length > 0 &&
-                        activeImports[0] ? (
+                    activeImports.length > 0 &&
+                    activeImports[0] ? (
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -85,10 +85,11 @@ export default function OpmlImportView() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${isDragging
-                                ? "border-primary bg-primary/5"
-                                : "border-dashed border-2"
-                                }`}
+                            className={`transition-colors duration-200 ${
+                                isDragging
+                                    ? "border-primary bg-primary/5"
+                                    : "border-dashed border-2"
+                            }`}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

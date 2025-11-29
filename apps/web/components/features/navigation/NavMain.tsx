@@ -29,8 +29,6 @@ import { FolderModal } from "./modals/FolderModal"
 import { SidebarFeedsSkeleton } from "./SidebarSkeleton"
 import { useFeedsNavigation } from "./hooks/useFeedsNavigation"
 
-
-
 /**
  * Feeds navigation component that displays the user's RSS feeds organized by folders.
  * Handles feed/folder creation, deletion, and navigation with optimistic updates.
@@ -68,14 +66,16 @@ export function FeedsNavigation({
                 <div className="mb-6">
                     <SidebarGroupLabel>Pinned</SidebarGroupLabel>
                     <SidebarMenu>
-                        {favoriteFeedItems.map((feed: SubFeedItemData, index: number) => (
-                            <SubFeedItem
-                                key={feed.id}
-                                item={feed}
-                                index={index}
-                                disableAnimation={true}
-                            />
-                        ))}
+                        {favoriteFeedItems.map(
+                            (feed: SubFeedItemData, index: number) => (
+                                <SubFeedItem
+                                    key={feed.id}
+                                    item={feed}
+                                    index={index}
+                                    disableAnimation={true}
+                                />
+                            )
+                        )}
                     </SidebarMenu>
                 </div>
             )}

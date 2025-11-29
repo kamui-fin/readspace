@@ -44,7 +44,6 @@ export function useArticlesController({
     // Hooks
     const isMobile = useIsMobile()
 
-
     // Data queries
     const { data: allUserFeeds } = useFeeds({})
     const { data: allFolders } = useFolders({ enabled: !!folderId })
@@ -203,7 +202,7 @@ export function useArticlesController({
         })
     }
 
-    return {
+    const controllerResult = {
         // State & Data
         isMobile,
         feedData,
@@ -226,6 +225,8 @@ export function useArticlesController({
         isRecentlyReadMode,
         isReadLaterMode,
         isTodayMode,
+        feedId,
+        folderId,
 
         // Loading States
         isDeepRefreshing: refreshFeed.isPending,
@@ -243,4 +244,8 @@ export function useArticlesController({
         handleMarkAsRead,
         setIsSubscriptionModalOpen,
     }
+
+    return controllerResult
 }
+
+export type UseArticlesControllerResult = ReturnType<typeof useArticlesController>

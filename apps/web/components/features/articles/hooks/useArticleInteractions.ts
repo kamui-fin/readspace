@@ -45,17 +45,9 @@ export function useArticleInteractions({
     onArticleRemoved,
 }: UseArticleInteractionsProps) {
     const [hasMarkedRead, setHasMarkedRead] = useState(false)
-    const [optimisticReadLater, setOptimisticReadLater] = useState(
-        article.is_saved
-    )
 
     const queryClient = useQueryClient()
     const updateArticle = useUpdateArticle()
-
-    // Sync optimistic state when article changes
-    useEffect(() => {
-        setOptimisticReadLater(article.is_saved)
-    }, [article.is_saved])
 
     // Reset read state when article ID changes
     useEffect(() => {
@@ -64,7 +56,6 @@ export function useArticleInteractions({
 
     const handleMarkAsRead = () => {
         // Mark as read and remove from read later instantly
-        setOptimisticReadLater(false)
         setHasMarkedRead(true)
         toast.success("Article marked as read")
 
@@ -93,10 +84,10 @@ export function useArticleInteractions({
                                 .map((item: Article) =>
                                     item.id === article.id
                                         ? {
-                                              ...item,
-                                              is_read: true,
-                                              is_saved: false,
-                                          }
+                                            ...item,
+                                            is_read: true,
+                                            is_saved: false,
+                                        }
                                         : item
                                 ) || [],
                     })),
@@ -134,7 +125,6 @@ export function useArticleInteractions({
                 },
                 onError: () => {
                     // Revert optimistic update on error
-                    setOptimisticReadLater(true)
                     setHasMarkedRead(false)
                     toast.error(
                         "Failed to mark article as read. Please try again."
@@ -153,8 +143,30 @@ export function useArticleInteractions({
     }
 
     const handleToggleReadLater = () => {
-        const newReadLaterState = !optimisticReadLater
-        setOptimisticReadLater(newReadLaterState)
+        const newReadLaterState = !article.is_saved
+
+        // Optimistically update the articles cache
+        queryClient.setQueriesData(
+            { queryKey: [RSS_QUERY_KEYS.ARTICLES] },
+            (oldData: ArticlesInfiniteData | undefined) => {
+                if (!oldData?.pages) return oldData
+                return {
+                    ...oldData,
+                    pages: oldData.pages.map((page: ArticlesPageData) => ({
+                        ...page,
+                        items:
+                            page.items?.map((item: Article) =>
+                                item.id === article.id
+                                    ? {
+                                        ...item,
+                                        is_saved: newReadLaterState,
+                                    }
+                                    : item
+                            ) || [],
+                    })),
+                }
+            }
+        )
 
         // Show toast immediately for instant feedback
         toast.success(
@@ -175,7 +187,9 @@ export function useArticleInteractions({
             {
                 onError: () => {
                     // Revert optimistic update on error and show error
-                    setOptimisticReadLater(!newReadLaterState)
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                    })
                     toast.error("Failed to update article. Please try again.")
                 },
             }
@@ -245,7 +259,7 @@ export function useArticleInteractions({
 
     return {
         hasMarkedRead,
-        optimisticReadLater,
+        optimisticReadLater: article.is_saved,
         handleMarkAsRead,
         handleToggleReadLater,
         handleScrollMarkAsRead,

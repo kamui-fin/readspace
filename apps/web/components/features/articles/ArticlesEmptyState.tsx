@@ -9,8 +9,6 @@ import Link from "next/link"
 import { useState } from "react"
 import { toast } from "sonner"
 
-
-
 function GetStartedCards() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-lg mx-auto">
@@ -301,15 +299,15 @@ export function ArticlesEmptyState({
                         {feedId
                             ? "No articles in this feed"
                             : folderId
-                                ? "No articles in this folder"
-                                : "No articles found"}
+                              ? "No articles in this folder"
+                              : "No articles found"}
                     </h3>
                     <p className="text-sm text-muted-foreground/80 dark:text-muted-foreground leading-relaxed">
                         {feedId
                             ? "This feed hasn&apos;t published any articles yet, or they may not have loaded"
                             : folderId
-                                ? "No feeds in this folder have published articles yet"
-                                : "Try refreshing or check back later for new content"}
+                              ? "No feeds in this folder have published articles yet"
+                              : "Try refreshing or check back later for new content"}
                     </p>
                 </div>
                 {onRefresh && feedId && (

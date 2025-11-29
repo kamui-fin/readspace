@@ -1,33 +1,18 @@
 import { ArticleDetailContainer } from "./ArticleDetailContainer"
 import { ArticleContentSkeleton } from "./ArticleContentSkeleton"
-import type { Article } from "@readspace/shared"
+import { useArticlesContext } from "./ArticlesContext"
 
-interface ArticlesDetailProps {
-    article?: Article | null
-    isLoading?: boolean
-    isRecentlyReadMode: boolean
-    isReadLaterMode: boolean
-    shouldShowPreviewBanner: boolean
-    onMarkAsRead: () => void
-    onArticleRemoved: () => void
-    onBack: () => void
-}
+export function ArticlesDetail() {
+    const {
+        selectedArticle,
+        isRecentlyReadMode,
+        isReadLaterMode,
+        shouldShowPreviewBanner,
+        handleMarkAsRead,
+        handleBackToList,
+    } = useArticlesContext()
 
-export function ArticlesDetail({
-    article,
-    isLoading,
-    isRecentlyReadMode,
-    isReadLaterMode,
-    shouldShowPreviewBanner,
-    onMarkAsRead,
-    onArticleRemoved,
-    onBack,
-}: ArticlesDetailProps) {
-    if (isLoading) {
-        return <ArticleContentSkeleton />
-    }
-
-    if (!article) {
+    if (!selectedArticle) {
         return (
             <div className="flex h-full items-center justify-center text-muted-foreground bg-muted/5">
                 <div className="text-center">
@@ -44,14 +29,14 @@ export function ArticlesDetail({
 
     return (
         <ArticleDetailContainer
-            key={article.id}
-            article={article}
+            key={selectedArticle.id}
+            article={selectedArticle}
             isRecentlyReadMode={isRecentlyReadMode}
             isReadLaterMode={isReadLaterMode}
             shouldShowPreviewBanner={shouldShowPreviewBanner}
-            onMarkAsRead={onMarkAsRead}
-            onArticleRemoved={onArticleRemoved}
-            onBack={onBack}
+            onMarkAsRead={handleMarkAsRead}
+            onArticleRemoved={() => { }}
+            onBack={handleBackToList}
         />
     )
 }

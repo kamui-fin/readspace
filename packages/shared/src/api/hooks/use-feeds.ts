@@ -107,6 +107,16 @@ export function useCreateFeed(
         mutationKey: mutationKeys.createFeed(),
         mutationFn: (feed: { url: string; folder_id: string }) =>
             ApiClient.createFeed(feed),
+        onSuccess: (newSubscription) => {
+            // Update feeds list with new subscription
+            queryClient.setQueryData<Subscription[] | SubscriptionExtended[]>(
+                queryKeys.feeds(),
+                (old) => {
+                    if (!old) return [newSubscription];
+                    return [...old, newSubscription];
+                }
+            );
+        },
         onSettled: (data) => {
             queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
             queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });

@@ -1,5 +1,4 @@
 import {
-    createTranslationQueryKey,
     fetchTranslation,
     useExtractFullText,
     useSummarizeArticle,
@@ -118,30 +117,6 @@ export function useArticleAI({
                     ? article.extracted_content
                     : article.content || article.description || ""
 
-            // Check cache first
-            const queryKey = createTranslationQueryKey(
-                article.id,
-                targetLanguage,
-                contentToUse
-            )
-
-            type TranslationCache = {
-                translated_content: string
-            }
-            const cachedData =
-                queryClient.getQueryData<TranslationCache>(queryKey)
-
-            if (cachedData && cachedData.translated_content) {
-                const newKey = `translated-${targetLanguage}-${article.id}`
-                setContentKey(newKey)
-                setTranslatedContent(cachedData.translated_content)
-                setTranslatedLanguage(targetLanguage)
-                onContentChange(cachedData.translated_content, newKey)
-                // Switch to translated tab
-                setContentSource("translated")
-                toast.success(`Article translated successfully`)
-                return
-            }
 
             // Fetch new translation with caching
             const data = await fetchTranslation(

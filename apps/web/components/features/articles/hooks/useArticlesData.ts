@@ -53,17 +53,26 @@ export function useArticlesData({
     }, [feedId, folderId, publishedSince, publishedUntil])
 
     // Use appropriate infinite query based on mode
-    const todayQuery = useInfiniteTodayArticles({ limit: 25 }, {
-        enabled: mode === "today",
-    })
+    const todayQuery = useInfiniteTodayArticles(
+        { limit: 25 },
+        {
+            enabled: mode === "today",
+        }
+    )
 
-    const recentlyReadQuery = useInfiniteRecentlyReadArticles({ limit: 25 }, {
-        enabled: mode === "recentlyRead",
-    })
+    const recentlyReadQuery = useInfiniteRecentlyReadArticles(
+        { limit: 25 },
+        {
+            enabled: mode === "recentlyRead",
+        }
+    )
 
-    const readLaterQuery = useInfiniteReadLaterArticles({ limit: 25 }, {
-        enabled: mode === "readLater",
-    })
+    const readLaterQuery = useInfiniteReadLaterArticles(
+        { limit: 25 },
+        {
+            enabled: mode === "readLater",
+        }
+    )
 
     const allArticlesQuery = useInfiniteArticles(queryParams, {
         enabled:
@@ -77,10 +86,10 @@ export function useArticlesData({
         mode === "today"
             ? todayQuery
             : mode === "recentlyRead"
-                ? recentlyReadQuery
-                : mode === "readLater"
-                    ? readLaterQuery
-                    : allArticlesQuery
+              ? recentlyReadQuery
+              : mode === "readLater"
+                ? readLaterQuery
+                : allArticlesQuery
 
     const {
         data,
@@ -96,7 +105,10 @@ export function useArticlesData({
     // Flatten paginated data into a single array
     const articles = useMemo(() => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const infiniteData = data as { pages: ArticlesPageData[]; pageParams: any[] }
+        const infiniteData = data as {
+            pages: ArticlesPageData[]
+            pageParams: any[]
+        }
         if (!infiniteData?.pages) return []
         return infiniteData.pages.flatMap(
             (page: ArticlesPageData) => page.items

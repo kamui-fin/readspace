@@ -29,15 +29,15 @@ import { toast } from "sonner"
 
 interface EditFeedDialogProps {
     feed: FeedSummary &
-    Partial<
-        Pick<
-            FeedDetail,
-            | "description"
-            | "language"
-            | "top_level_category"
-            | "popularity_score"
+        Partial<
+            Pick<
+                FeedDetail,
+                | "description"
+                | "language"
+                | "top_level_category"
+                | "popularity_score"
+            >
         >
-    >
     isOpen: boolean
     onClose: () => void
 }

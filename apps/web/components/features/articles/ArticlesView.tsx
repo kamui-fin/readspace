@@ -9,6 +9,7 @@ import { useArticlesController } from "./hooks/useArticlesController"
 import { ArticlesLayout } from "./ArticlesLayout"
 import { ArticlesSidebar } from "./ArticlesSidebar"
 import { ArticlesDetail } from "./ArticlesDetail"
+import { ArticlesProvider } from "./ArticlesContext"
 
 interface ArticlesViewProps {
     /** Initial title for the sidebar */
@@ -34,45 +35,23 @@ interface ArticlesViewProps {
  * with list and content views.
  */
 export function ArticlesView(props: ArticlesViewProps) {
+    const controller = useArticlesController(props)
     const {
-        // State & Data
-        isMobile,
-        feedData,
         feedError,
         isFeedLoading,
         allArticles,
         filteredArticles,
         isArticlesLoading,
         isFetching,
-        isFetchingNextPage,
-        hasNextPage,
-        selectedArticleId,
-        selectedArticle,
-        showContent,
-        showUnreadOnly,
-        sidebarTitle,
-        unreadCount,
-        shouldShowPreviewBanner,
+        feedData,
         isSubscriptionModalOpen,
-        isRecentlyReadMode,
-        isReadLaterMode,
-        isTodayMode,
-
-        // Loading States
-        isDeepRefreshing,
-        isMarkingAllRead,
-
-        // Actions
-        fetchNextPage,
-        handleArticleSelect,
-        handleBackToList,
-        toggleShowUnreadOnly,
-        handleRefreshWithMessage,
-        handleDeepRefresh,
-        handleMarkAllAsRead,
-        handleMarkAsRead,
         setIsSubscriptionModalOpen,
-    } = useArticlesController(props)
+        handleRefreshWithMessage,
+        toggleShowUnreadOnly,
+        shouldShowPreviewBanner,
+        isMobile,
+        showContent,
+    } = controller
 
     const isInitialLoading = isArticlesLoading && allArticles.length === 0
 
@@ -129,59 +108,23 @@ export function ArticlesView(props: ArticlesViewProps) {
     }
 
     return (
-        <div className="flex h-[100dvh] md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
-            <ArticlesLayout
-                isMobile={isMobile}
-                showContent={showContent}
-                sidebar={
-                    <ArticlesSidebar
-                        title={sidebarTitle}
-                        unreadCount={unreadCount}
-                        showUnreadOnly={showUnreadOnly}
-                        isReadLaterMode={isReadLaterMode}
-                        feedId={props.feedId}
-                        folderId={props.folderId}
-                        isDeepRefreshing={isDeepRefreshing}
-                        isMarkingAllRead={isMarkingAllRead}
-                        onToggleUnreadOnly={toggleShowUnreadOnly}
-                        onDeepRefresh={handleDeepRefresh}
-                        onMarkAllRead={handleMarkAllAsRead}
-                        shouldShowPreviewBanner={shouldShowPreviewBanner}
-                        feedData={feedData}
-                        onFollow={() => setIsSubscriptionModalOpen(true)}
-                        articles={filteredArticles}
-                        selectedArticleId={selectedArticleId}
-                        onArticleSelect={handleArticleSelect}
-                        fetchNextPage={fetchNextPage}
-                        hasNextPage={hasNextPage}
-                        isLoading={isArticlesLoading}
-                        isFetching={isFetching}
-                        isFetchingNextPage={isFetchingNextPage}
-                        isRecentlyReadMode={isRecentlyReadMode}
-                        isTodayMode={isTodayMode}
-                    />
-                }
-                detail={
-                    <ArticlesDetail
-                        article={selectedArticle}
-                        isLoading={false} // Loading handled by skeleton in parent if needed, or we can pass isArticlesLoading but that's for the list mostly
-                        isRecentlyReadMode={isRecentlyReadMode}
-                        isReadLaterMode={isReadLaterMode}
-                        shouldShowPreviewBanner={shouldShowPreviewBanner}
-                        onMarkAsRead={handleMarkAsRead}
-                        onArticleRemoved={() => { }}
-                        onBack={handleBackToList}
-                    />
-                }
-            />
-
-            {feedData && (
-                <FeedSubscriptionModal
-                    isOpen={isSubscriptionModalOpen}
-                    onClose={() => setIsSubscriptionModalOpen(false)}
-                    feed={feedData}
+        <ArticlesProvider value={controller}>
+            <div className="flex h-[100dvh] md:h-[calc(100vh-1rem)] w-full bg-background md:rounded-xl md:shadow-sm">
+                <ArticlesLayout
+                    isMobile={!!isMobile}
+                    showContent={showContent}
+                    sidebar={<ArticlesSidebar />}
+                    detail={<ArticlesDetail />}
                 />
-            )}
-        </div>
+
+                {feedData && (
+                    <FeedSubscriptionModal
+                        isOpen={isSubscriptionModalOpen}
+                        onClose={() => setIsSubscriptionModalOpen(false)}
+                        feed={feedData}
+                    />
+                )}
+            </div>
+        </ArticlesProvider>
     )
 }

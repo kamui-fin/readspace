@@ -53,7 +53,10 @@ export function useOpmlImport() {
                 const existingUrls = new Set<string>()
 
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const countFeeds = (outlines: Array<{ xmlUrl?: string; outlines?: any[] }>, level = 0) => {
+                const countFeeds = (
+                    outlines: Array<{ xmlUrl?: string; outlines?: any[] }>,
+                    level = 0
+                ) => {
                     if (level > 1) {
                         hasNestedCategories = true
                     }

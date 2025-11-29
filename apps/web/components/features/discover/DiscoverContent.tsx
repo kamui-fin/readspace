@@ -108,7 +108,12 @@ export function DiscoverContent({ onAiSettingsChange }: DiscoverContentProps) {
             // Apply the filter
             refineLanguage(targetLang)
         }
-    }, [activeLanguage, languageItems.length, persistedLanguage, refineLanguage])
+    }, [
+        activeLanguage,
+        languageItems.length,
+        persistedLanguage,
+        refineLanguage,
+    ])
 
     // Determine display language (show "all" if no language filter is active)
     const displayLanguage =

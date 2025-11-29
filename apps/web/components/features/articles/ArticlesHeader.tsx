@@ -8,39 +8,28 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { CheckCheck, Eye, EyeOff, RefreshCw } from "lucide-react"
+import { useArticlesContext } from "./ArticlesContext"
 
-interface ArticlesHeaderProps {
-    title: string
-    unreadCount: number
-    showUnreadOnly: boolean
-    isReadLaterMode: boolean
-    feedId?: string
-    folderId?: string
-    isDeepRefreshing: boolean
-    isMarkingAllRead: boolean
-    onToggleUnreadOnly: () => void
-    onDeepRefresh: () => void
-    onMarkAllRead: () => void
-}
+export function ArticlesHeader() {
+    const {
+        sidebarTitle,
+        unreadCount,
+        showUnreadOnly,
+        isReadLaterMode,
+        feedId,
+        folderId,
+        isDeepRefreshing,
+        isMarkingAllRead,
+        toggleShowUnreadOnly,
+        handleDeepRefresh,
+        handleMarkAllAsRead,
+    } = useArticlesContext()
 
-export function ArticlesHeader({
-    title,
-    unreadCount,
-    showUnreadOnly,
-    isReadLaterMode,
-    feedId,
-    folderId,
-    isDeepRefreshing,
-    isMarkingAllRead,
-    onToggleUnreadOnly,
-    onDeepRefresh,
-    onMarkAllRead,
-}: ArticlesHeaderProps) {
     return (
         <div className="flex-shrink-0 flex items-center justify-between border-b px-4 py-3 h-[60px]">
             <div className="flex items-center gap-2 flex-1 min-w-0">
                 <SidebarLeftTrigger className="flex-shrink-0" />
-                <h1 className="text-lg font-semibold truncate">{title}</h1>
+                <h1 className="text-lg font-semibold truncate">{sidebarTitle}</h1>
                 {unreadCount > 0 && (
                     <Badge
                         variant="outline"
@@ -61,7 +50,7 @@ export function ArticlesHeader({
                                     }
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={onToggleUnreadOnly}
+                                    onClick={toggleShowUnreadOnly}
                                 >
                                     {showUnreadOnly ? (
                                         <Eye className="h-4 w-4" />
@@ -86,15 +75,14 @@ export function ArticlesHeader({
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={onDeepRefresh}
+                                    onClick={handleDeepRefresh}
                                     disabled={isDeepRefreshing}
                                 >
                                     <RefreshCw
-                                        className={`h-4 w-4 ${
-                                            isDeepRefreshing
-                                                ? "animate-spin"
-                                                : ""
-                                        }`}
+                                        className={`h-4 w-4 ${isDeepRefreshing
+                                            ? "animate-spin"
+                                            : ""
+                                            }`}
                                     />
                                 </Button>
                             </TooltipTrigger>
@@ -112,7 +100,7 @@ export function ArticlesHeader({
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8"
-                                    onClick={onMarkAllRead}
+                                    onClick={handleMarkAllAsRead}
                                     disabled={isMarkingAllRead}
                                 >
                                     <CheckCheck className="h-4 w-4" />

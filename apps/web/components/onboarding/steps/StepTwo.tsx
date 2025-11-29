@@ -256,53 +256,51 @@ const StepTwo: React.FC = () => {
         >
             <div className="max-h-96 overflow-y-auto pr-2">
                 <AnimatePresence initial={false}>
-                    {displayedFeeds.map(
-                        (feed: OnboardingFeed) => (
+                    {displayedFeeds.map((feed: OnboardingFeed) => (
+                        <motion.div
+                            key={feed.id}
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{
+                                duration: 0.2,
+                                ease: "easeOut",
+                            }}
+                            style={{ overflow: "hidden" }}
+                        >
                             <motion.div
-                                key={feed.id}
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
+                                initial={{
+                                    opacity: 0,
+                                    y: -8,
+                                    scale: 0.98,
+                                }}
+                                animate={{
+                                    opacity: 1,
+                                    y: 0,
+                                    scale: 1,
+                                }}
+                                exit={{
+                                    opacity: 0,
+                                    y: 8,
+                                    scale: 0.98,
+                                }}
                                 transition={{
-                                    duration: 0.2,
+                                    duration: 0.15,
                                     ease: "easeOut",
                                 }}
-                                style={{ overflow: "hidden" }}
                             >
-                                <motion.div
-                                    initial={{
-                                        opacity: 0,
-                                        y: -8,
-                                        scale: 0.98,
-                                    }}
-                                    animate={{
-                                        opacity: 1,
-                                        y: 0,
-                                        scale: 1,
-                                    }}
-                                    exit={{
-                                        opacity: 0,
-                                        y: 8,
-                                        scale: 0.98,
-                                    }}
-                                    transition={{
-                                        duration: 0.15,
-                                        ease: "easeOut",
-                                    }}
-                                >
-                                    <OnboardingFeedCard
-                                        feed={feed}
-                                        onSubscribed={handleFeedSubscribed}
-                                        isFollowing={
-                                            subscribedFeeds?.some(
-                                                (f) => f.id === feed.id
-                                            ) ?? false
-                                        }
-                                    />
-                                </motion.div>
+                                <OnboardingFeedCard
+                                    feed={feed}
+                                    onSubscribed={handleFeedSubscribed}
+                                    isFollowing={
+                                        subscribedFeeds?.some(
+                                            (f) => f.id === feed.id
+                                        ) ?? false
+                                    }
+                                />
                             </motion.div>
-                        )
-                    )}
+                        </motion.div>
+                    ))}
                 </AnimatePresence>
             </div>
 

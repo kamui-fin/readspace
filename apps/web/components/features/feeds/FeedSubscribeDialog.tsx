@@ -104,36 +104,6 @@ export function FeedSubscribeDialog({
                 folder_id: folderId,
             })
 
-            // Optimistically update the feeds query data to reflect the new subscription
-            queryClient.setQueryData(
-                [RSS_QUERY_KEYS.FEEDS],
-                (old: Subscription[] | undefined) => {
-                    if (!old) return old
-                    const feedUrl = isPreviewFeed ? feed.url : feed.url
-                    const feedExists = old.some(
-                        (f) =>
-                            normalizeUrl(f.feed.url) === normalizeUrl(feedUrl)
-                    )
-                    if (!feedExists) {
-                        const newSubscription: Subscription = {
-                            id: "temp-id-" + Date.now(),
-                            is_favorite: false,
-                            custom_title: null,
-                            created_at: new Date().toISOString(),
-                            folder:
-                                folders?.find((f) => f.id === folderId) || null,
-                            feed: {
-                                ...feed,
-                                id: "temp-feed-id-" + Date.now(),
-                                error_count: 0,
-                            } as FeedSummary,
-                        }
-                        return [...old, newSubscription]
-                    }
-                    return old
-                }
-            )
-
             toast.success("Successfully subscribed to feed")
             handleClose()
         } catch (error: unknown) {

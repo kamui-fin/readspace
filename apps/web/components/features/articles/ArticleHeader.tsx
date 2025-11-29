@@ -63,8 +63,8 @@ export function ArticleHeader({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                addSuffix: true,
-            })
+                  addSuffix: true,
+              })
         : "Date unknown"
 
     return (

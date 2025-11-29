@@ -72,9 +72,7 @@ function EmptyState() {
     )
 }
 
-export default function SimilarFeedsView({
-    feedId,
-}: SimilarFeedsClientProps) {
+export default function SimilarFeedsView({ feedId }: SimilarFeedsClientProps) {
     const { similarFeeds, error, isLoading } = useSimilarFeedsById(feedId)
 
     const renderContent = () => {

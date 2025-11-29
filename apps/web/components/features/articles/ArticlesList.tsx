@@ -8,59 +8,28 @@ import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 import { useArticleGrouping } from "./hooks/useArticleGrouping"
 import { useArticleVirtualizer } from "./hooks/useArticleVirtualizer"
 
-interface ArticlesListProps {
-    /** Array of articles to display */
-    articles: Article[]
-    /** Currently selected article ID */
-    selectedArticleId: string | null
-    /** Whether articles are currently loading */
-    isLoading: boolean
-    /** Whether more articles are being fetched */
-    isFetching: boolean
-    /** Whether the next page is being fetched */
-    isFetchingNextPage: boolean
-    /** Whether there are more articles to load */
-    hasNextPage: boolean | undefined
-    /** Whether to show only unread articles */
-    showUnreadOnly: boolean
-    /** Whether in recently read mode */
-    isRecentlyReadMode?: boolean
-    /** Whether in read later mode */
-    isReadLaterMode?: boolean
-    /** Whether in today mode */
-    isTodayMode?: boolean
-    /** Sidebar title for the current view */
-    sidebarTitle?: string
-    /** Feed ID for empty state */
-    feedId?: string
-    /** Folder ID for empty state */
-    folderId?: string
-    /** Function to fetch next page of articles */
-    fetchNextPage: () => void
-    /** Function called when an article is selected */
-    onArticleSelect: (articleId: string) => void
-}
+import { useArticlesContext } from "./ArticlesContext"
 
 /**
  * ArticlesList component handles the rendering and infinite scroll behavior
  * for the articles list view.
  */
-export function ArticlesList({
-    articles,
-    selectedArticleId,
-    isLoading,
-
-    isFetchingNextPage,
-    hasNextPage,
-    showUnreadOnly,
-    isRecentlyReadMode = false,
-    isReadLaterMode = false,
-    isTodayMode = false,
-    feedId,
-    folderId,
-    fetchNextPage,
-    onArticleSelect,
-}: ArticlesListProps) {
+export function ArticlesList() {
+    const {
+        filteredArticles: articles,
+        selectedArticleId,
+        isArticlesLoading: isLoading,
+        isFetchingNextPage,
+        hasNextPage,
+        showUnreadOnly,
+        isRecentlyReadMode = false,
+        isReadLaterMode = false,
+        isTodayMode = false,
+        feedId,
+        folderId,
+        fetchNextPage,
+        handleArticleSelect: onArticleSelect,
+    } = useArticlesContext()
     // Group articles by date
     const { filteredArticles, allRows } = useArticleGrouping({
         articles,
@@ -68,8 +37,6 @@ export function ArticlesList({
         isRecentlyReadMode,
         isTodayMode,
     })
-
-
 
     // Virtualization logic
     const { parentRef, rowVirtualizer, isSticky, isActiveSticky } =

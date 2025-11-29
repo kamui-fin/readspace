@@ -2,12 +2,15 @@ import { useMemo } from "react"
 import type { Subscription } from "@readspace/shared"
 
 interface UseArticleUnreadCountProps {
-    unreadCounts: {
-        read_later_count?: number
-        today_count?: number
-        feed_counts?: Record<string, number>
-        total_unread?: number
-    } | null | undefined
+    unreadCounts:
+        | {
+              read_later_count?: number
+              today_count?: number
+              feed_counts?: Record<string, number>
+              total_unread?: number
+          }
+        | null
+        | undefined
     feedId?: string
     folderId?: string
     mode?: "allArticles" | "recentlyRead" | "readLater" | "today"
