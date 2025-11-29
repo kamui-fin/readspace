@@ -3,6 +3,7 @@ import {
   useQuery,
   type UseMutationOptions,
   type UseQueryOptions,
+  useQueryClient,
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { queryKeys } from "../query-keys";
@@ -10,6 +11,8 @@ import type {
   ImportStatus,
   OpmlImportResponse,
   OpmlTaskMetadata,
+  OpmlImportCancelResponse,
+  OpmlImportStatusResponse,
 } from "../types";
 
 export function createOpmlHooks() {
@@ -28,9 +31,9 @@ export function createOpmlHooks() {
     enabled: boolean = true,
     options?: Omit<
       UseQueryOptions<
-        ImportStatus,
+        OpmlImportStatusResponse,
         Error,
-        ImportStatus,
+        OpmlImportStatusResponse,
         ReturnType<typeof queryKeys.opmlImportStatus>
       >,
       "queryKey" | "queryFn"
@@ -39,7 +42,7 @@ export function createOpmlHooks() {
     return useQuery({
       queryKey: queryKeys.opmlImportStatus(taskId),
       queryFn: () =>
-        ApiClient.getImportTaskStatus(taskId!) as Promise<ImportStatus>,
+        ApiClient.getImportTaskStatus(taskId!) as Promise<OpmlImportStatusResponse>,
       enabled: !!taskId && enabled,
       refetchInterval: 3000, // Poll every 3 seconds
       retry: false, // Don't retry failed status checks
@@ -66,9 +69,24 @@ export function createOpmlHooks() {
     });
   }
 
+  function useCancelImportTask(
+    options?: UseMutationOptions<OpmlImportCancelResponse, unknown, string>,
+  ) {
+    const queryClient = useQueryClient();
+    return useMutation({
+      mutationFn: (taskId: string) =>
+        ApiClient.cancelImportTask(taskId) as Promise<OpmlImportCancelResponse>,
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: queryKeys.opmlImportTasks() });
+      },
+      ...options,
+    });
+  }
+
   return {
     useImportOPML,
     useImportTaskStatus,
     useActiveImportTask,
+    useCancelImportTask,
   };
 }

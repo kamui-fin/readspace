@@ -3,7 +3,6 @@
 @config '../tailwind.config.ts';
 
 /* Import local design tokens */
-@import "../lib/design-tokens/globals.css";
 
 @layer utilities {
     button {

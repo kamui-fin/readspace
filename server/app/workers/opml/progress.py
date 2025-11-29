@@ -121,6 +121,15 @@ class OpmlImportTracker:
 
         return state
 
+    async def mark_in_progress(self) -> None:
+        """Updates status to IN_PROGRESS."""
+        async with self._client() as r:
+            meta_raw = await r.get(self.key_meta)
+            if meta_raw:
+                meta = orjson.loads(meta_raw)
+                meta["status"] = ImportStatus.IN_PROGRESS.value
+                await r.setex(self.key_meta, self._ttl, orjson.dumps(meta))
+
     async def get_state(self) -> OpmlImportState | None:
         """Reconstruct full state from Redis."""
         async with self._client() as r:
@@ -135,11 +144,18 @@ class OpmlImportTracker:
 
         meta = orjson.loads(meta_raw)
         counters = (
-            {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
+            {
+                (k.decode() if isinstance(k, bytes) else k): int(v)
+                for k, v in counters_raw.items()
+            }
             if counters_raw
             else {}
         )
-        errors = [FeedImportError(**orjson.loads(e)) for e in errors_raw] if errors_raw else []
+        errors = (
+            [FeedImportError(**orjson.loads(e)) for e in errors_raw]
+            if errors_raw
+            else []
+        )
 
         return OpmlImportState(
             **meta,
@@ -169,14 +185,19 @@ class OpmlImportTracker:
 
             # Read current counters to give an accurate final report
             counters_raw = await r.hgetall(self.key_counters)
-            counters = {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
+            counters = {
+                (k.decode() if isinstance(k, bytes) else k): int(v)
+                for k, v in counters_raw.items()
+            }
 
             completed = counters.get("completed", 0)
 
             meta = orjson.loads(meta_raw)
             meta["status"] = ImportStatus.CANCELLED.value
             meta["completed_at"] = datetime.now(timezone.utc).isoformat()
-            meta["message"] = f"Import cancelled. {completed} of {meta['total']} feeds processed."
+            meta["message"] = (
+                f"Import cancelled. {completed} of {meta['total']} feeds processed."
+            )
 
             await r.setex(self.key_meta, self._ttl, orjson.dumps(meta))
 
@@ -216,12 +237,18 @@ class OpmlImportTracker:
                 return
 
             meta = orjson.loads(meta_raw)
-            if new_completed_count >= meta["total"] and meta.get("status") == ImportStatus.IN_PROGRESS.value:
+            if new_completed_count >= meta["total"] and meta.get("status") in (
+                ImportStatus.IN_PROGRESS.value,
+                ImportStatus.PENDING.value,
+            ):
                 await self._finalize_import(meta, r)
 
     async def _finalize_import(self, meta: dict, r: aioredis.Redis) -> None:
         counters_raw = await r.hgetall(self.key_counters)
-        counters = {(k.decode() if isinstance(k, bytes) else k): int(v) for k, v in counters_raw.items()}
+        counters = {
+            (k.decode() if isinstance(k, bytes) else k): int(v)
+            for k, v in counters_raw.items()
+        }
 
         msg_parts = [
             f"{counters.get('successful', 0)} added",

@@ -17,8 +17,9 @@ from app.crud.feed.subscription import (
     get_subscriptions_by_user,
     update_subscription,
 )
-from app.db.session import get_db
+from app.db.session import get_db, get_db_factory
 from app.models.feed import FeedSubscription
+from app.services.feeds.service import refresh_feed, SessionFactory
 from app.services.user.auth import get_current_user
 from app.typing.common import MessageResponse
 from app.typing.feeds import FeedDetail
@@ -34,11 +35,15 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def get_subscription_or_404(db: AsyncSession, feed_id: UUID, user_id: UUID) -> FeedSubscription:
+async def get_subscription_or_404(
+    db: AsyncSession, feed_id: UUID, user_id: UUID
+) -> FeedSubscription:
     """
     Retrieves a user's subscription or raises NotFoundError.
     """
-    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=user_id)
+    subscription = await get_subscription_by_feed_id(
+        db, feed_id=feed_id, user_id=user_id
+    )
     if not subscription:
         raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
     return subscription
@@ -74,7 +79,9 @@ async def list_feeds(
         limit=100,
     )
     if extended:
-        return [SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions]
+        return [
+            SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions
+        ]
     return [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
 
 
@@ -86,6 +93,7 @@ async def list_feeds(
 async def get_feed(
     feed_id: UUID,
     db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     current_user: Annotated[TokenData, Depends(get_current_user)],
 ) -> FeedDetail:
     """
@@ -100,9 +108,27 @@ async def get_feed(
         raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
 
     # 2. Check Subscription Status
-    subscription = await get_subscription_by_feed_id(db, feed_id=feed_id, user_id=UUID(current_user.sub))
+    subscription = await get_subscription_by_feed_id(
+        db, feed_id=feed_id, user_id=UUID(current_user.sub)
+    )
 
-    # 3. Merge Data
+    # 3. Auto-Refresh if not subscribed (Preview Mode)
+    # If the user is not subscribed, we want to ensure they see fresh content
+    # so they can decide whether to subscribe.
+    if not subscription:
+        logger.info(
+            "Auto-refreshing unsubscribed feed for preview", feed_id=str(feed_id)
+        )
+        # We use a separate session factory for the service call to ensure isolation
+        await refresh_feed(db_factory, feed_id)
+
+        # Re-fetch the feed to get the updated data
+        feed = await get_feed_by_id(db, feed_id=feed_id)
+        if not feed:
+            # Should not happen since we just refreshed it, but handle safely
+            raise NotFoundError(message=ERROR_FEED_NOT_FOUND)
+
+    # 4. Merge Data
     feed_detail = FeedDetail.model_validate(feed, from_attributes=True)
     feed_detail.is_subscribed = subscription is not None
 
@@ -163,7 +189,9 @@ async def delete_feed(
     subscription = await get_subscription_or_404(db, feed_id, user_uuid)
 
     # 2. Delete
-    success = await delete_subscription(db=db, subscription_id=subscription.id, user_id=user_uuid)
+    success = await delete_subscription(
+        db=db, subscription_id=subscription.id, user_id=user_uuid
+    )
 
     if not success:
         # Should rarely happen if get_subscription_or_404 passed, but safe to check

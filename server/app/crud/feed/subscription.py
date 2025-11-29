@@ -24,6 +24,9 @@ SUBSCRIPTION_FEED_COLUMNS = [
     Feed.id,
     Feed.url,
     Feed.title,
+    Feed.description,
+    Feed.link,
+    Feed.language,
     Feed.image_url,
     Feed.last_fetched_at,
 ]
@@ -62,7 +65,9 @@ async def create_subscription(
             )
 
     # 2. Check Duplicates
-    existing = await db.execute(select(FeedSubscription).filter_by(user_id=user_id, feed_id=feed.id))
+    existing = await db.execute(
+        select(FeedSubscription).filter_by(user_id=user_id, feed_id=feed.id)
+    )
     if existing.scalar_one_or_none():
         raise FeedSubscriptionError("Already subscribed to this feed")
 
@@ -92,7 +97,9 @@ async def create_subscription(
     return sub
 
 
-async def get_subscription_by_feed_id(db: AsyncSession, *, feed_id: UUID, user_id: UUID) -> FeedSubscription | None:
+async def get_subscription_by_feed_id(
+    db: AsyncSession, *, feed_id: UUID, user_id: UUID
+) -> FeedSubscription | None:
     """Get subscription by feed_id and user_id."""
     stmt = (
         select(FeedSubscription)
@@ -100,7 +107,9 @@ async def get_subscription_by_feed_id(db: AsyncSession, *, feed_id: UUID, user_i
             joinedload(FeedSubscription.feed).load_only(*SUBSCRIPTION_FEED_COLUMNS),
             joinedload(FeedSubscription.folder),
         )
-        .filter(FeedSubscription.feed_id == feed_id, FeedSubscription.user_id == user_id)
+        .filter(
+            FeedSubscription.feed_id == feed_id, FeedSubscription.user_id == user_id
+        )
     )
     result = await db.execute(stmt)
     return result.scalar_one_or_none()
@@ -116,7 +125,7 @@ async def get_subscriptions_by_user(
     limit: int = 100,
 ) -> list[FeedSubscription]:
     stmt = select(FeedSubscription).filter(FeedSubscription.user_id == user_id)
-    
+
     # Load feed with appropriate detail level
     if extended:
         # Load all feed fields for extended response
@@ -130,7 +139,7 @@ async def get_subscriptions_by_user(
             joinedload(FeedSubscription.feed).load_only(*SUBSCRIPTION_FEED_COLUMNS),
             joinedload(FeedSubscription.folder),
         )
-    
+
     if folder_id is not None:
         stmt = stmt.filter(FeedSubscription.folder_id == folder_id)
     stmt = stmt.order_by(
@@ -142,7 +151,9 @@ async def get_subscriptions_by_user(
     return list(result.scalars().all())
 
 
-async def delete_subscription(db: AsyncSession, *, subscription_id: UUID, user_id: UUID):
+async def delete_subscription(
+    db: AsyncSession, *, subscription_id: UUID, user_id: UUID
+):
     sub = await db.get(FeedSubscription, subscription_id)
     if not sub or sub.user_id != user_id:
         return None
@@ -158,7 +169,9 @@ async def delete_subscription(db: AsyncSession, *, subscription_id: UUID, user_i
     return sub
 
 
-async def bulk_delete_subscriptions(db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID) -> list[UUID]:
+async def bulk_delete_subscriptions(
+    db: AsyncSession, *, feed_ids: list[UUID], user_id: UUID
+) -> list[UUID]:
     """
     Bulk delete subscriptions by feed IDs.
     Returns the list of feed IDs that were actually deleted.
@@ -235,7 +248,9 @@ async def bulk_update_subscriptions_folder(
     return result.rowcount
 
 
-async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetime) -> int:
+async def compact_unread_subscriptions(
+    db: AsyncSession, *, cutoff_date: datetime
+) -> int:
     """
     Update last_read_cutoff for all subscriptions to compact unread articles.
 
@@ -252,7 +267,8 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
 
     # First, let's see what subscriptions match our criteria
     debug_stmt = select(FeedSubscription.id, FeedSubscription.last_read_cutoff).where(
-        (FeedSubscription.last_read_cutoff.is_(None)) | (FeedSubscription.last_read_cutoff < cutoff_date)
+        (FeedSubscription.last_read_cutoff.is_(None))
+        | (FeedSubscription.last_read_cutoff < cutoff_date)
     )
     debug_result = await db.execute(debug_stmt)
     matching_subs = debug_result.fetchall()
@@ -269,7 +285,8 @@ async def compact_unread_subscriptions(db: AsyncSession, *, cutoff_date: datetim
         update(FeedSubscription)
         .where(
             # Only update subscriptions where cutoff is NULL or older than the new cutoff
-            (FeedSubscription.last_read_cutoff.is_(None)) | (FeedSubscription.last_read_cutoff < cutoff_date)
+            (FeedSubscription.last_read_cutoff.is_(None))
+            | (FeedSubscription.last_read_cutoff < cutoff_date)
         )
         .values(last_read_cutoff=cutoff_date)
         .execution_options(synchronize_session=False)

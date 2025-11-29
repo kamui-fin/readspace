@@ -86,7 +86,9 @@ const StepTwo: React.FC = () => {
             // Interleave results from different categories for diversity
             const interleavedFeeds: OnboardingFeed[] = []
             const categoryResults = multiSearchResults.results.map(
-                (result: any) =>
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (result: { hits: any[] }) =>
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     result.hits.map((hit: any) => ({
                         id: hit.id,
                         title: hit.title,
@@ -100,11 +102,11 @@ const StepTwo: React.FC = () => {
             )
 
             // Interleave: take one from each category in round-robin fashion
-            let maxLength = Math.max(...categoryResults.map((r) => r.length))
+            const maxLength = Math.max(...categoryResults.map((r) => r.length))
             for (let i = 0; i < maxLength; i++) {
                 for (const categoryFeeds of categoryResults) {
                     if (i < categoryFeeds.length) {
-                        interleavedFeeds.push(categoryFeeds[i])
+                        interleavedFeeds.push(categoryFeeds[i]!)
                     }
                 }
             }
@@ -137,6 +139,7 @@ const StepTwo: React.FC = () => {
                 filter: 'language = "en"',
             })
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const similarFeeds = results.hits.map((hit: any) => ({
                 id: hit.id,
                 title: hit.title,
@@ -254,7 +257,7 @@ const StepTwo: React.FC = () => {
             <div className="max-h-96 overflow-y-auto pr-2">
                 <AnimatePresence initial={false}>
                     {displayedFeeds.map(
-                        (feed: OnboardingFeed, index: number) => (
+                        (feed: OnboardingFeed) => (
                             <motion.div
                                 key={feed.id}
                                 initial={{ height: 0, opacity: 0 }}

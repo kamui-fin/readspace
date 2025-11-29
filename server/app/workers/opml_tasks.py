@@ -73,10 +73,20 @@ async def import_opml_task(
     opml_content: str,
     default_folder_name: str = "Imported Feeds",
     filename: str | None = None,
-    context: Annotated[Context, TaskiqDepends()] | None = None,
+    context: Context = TaskiqDepends(),
 ) -> dict[str, Any]:
     """Import OPML file (Orchestrator Wrapper)."""
-    task_id = context.message.task_id if context and hasattr(context, "message") else None
+    task_id = (
+        context.message.task_id if context and hasattr(context, "message") else None
+    )
+
+    logger.info("Task wrapper called", task_id=task_id, has_context=bool(context))
+
+    if not task_id:
+        logger.error(
+            "Task ID missing in wrapper",
+            context_dir=dir(context) if context else "None",
+        )
 
     return await import_opml(
         user_id=ensure_uuid(user_id),

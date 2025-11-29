@@ -16,7 +16,7 @@ export const articles = {
   getArticles: (params: {
     cursor?: string;
     limit?: number;
-    feed_ids?: string[];
+    feed_id?: string;
     folder_id?: string;
     is_read?: boolean;
     is_saved?: boolean;
@@ -29,8 +29,7 @@ export const articles = {
     const queryParams = new URLSearchParams();
     if (params.cursor) queryParams.append("cursor", params.cursor);
     if (params.limit) queryParams.append("limit", params.limit.toString());
-    if (params.feed_ids)
-      params.feed_ids.forEach((id) => queryParams.append("feed_ids", id));
+    if (params.feed_id) queryParams.append("feed_id", params.feed_id);
     if (params.folder_id) queryParams.append("folder_id", params.folder_id);
     if (params.is_read !== undefined)
       queryParams.append("is_read", params.is_read.toString());

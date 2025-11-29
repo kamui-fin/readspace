@@ -3,10 +3,15 @@ import { getAuthToken } from "@/lib/auth/token-cache"
 import { ApiClient } from "@readspace/shared"
 
 // Configure the shared ApiClient once with global token cache
-ApiClient.configure({
-    baseUrl: env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8008",
-    getAuthToken,
-})
+export const configureApiClient = () => {
+    ApiClient.configure({
+        baseUrl: env.NEXT_PUBLIC_API_BASE_URL || "http://0.0.0.0:8008",
+        getAuthToken,
+    })
+}
+
+// Auto-configure on import
+configureApiClient()
 
 /**
  * Pre-configured API client for the web application.

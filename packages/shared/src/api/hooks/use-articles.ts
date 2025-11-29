@@ -176,7 +176,7 @@ export function createArticleHooks() {
   // Infinite Query Hooks
   function useInfiniteArticles(
     params: {
-      feedIds?: string[];
+      feedId?: string;
       folderId?: string;
       limit?: number;
       isRead?: boolean;
@@ -212,7 +212,7 @@ export function createArticleHooks() {
         string | null
       >) =>
         ApiClient.getArticles({
-          feed_ids: params.feedIds,
+          feed_id: params.feedId,
           folder_id: params.folderId,
           cursor: pageParam || undefined,
           limit: params.limit || 25,

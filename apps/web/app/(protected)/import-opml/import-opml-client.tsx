@@ -1,31 +1,22 @@
 "use client"
 
-import Header from "@/components/navigation/Header"
+
+import Header from "@/components/features/navigation/Header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { opmlParse, type OutlineNode } from "@/lib/opml"
 import {
-    OpmlTaskMetadata,
     RSS_QUERY_KEYS,
     useActiveImportTask,
     useImportOPML,
     ApiError,
+    parseOpml,
 } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import { Clock, FileText, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { toast } from "react-hot-toast"
 
-// OPML import response types
-interface OPMLImportResponse {
-    processing_mode: "background"
-    task_id: string
-    message: string
-    estimated_feeds: number
-    check_status_url: string
-    status_page_url: string
-}
 
 export default function ImportOPMLPageClient() {
     const [isUploading, setIsUploading] = useState(false)
@@ -37,7 +28,24 @@ export default function ImportOPMLPageClient() {
 
     // Use the hook for active imports
     const { data: activeTask } = useActiveImportTask()
-    const activeImports = activeTask ? [activeTask] : []
+    const activeImports = useMemo(
+        () => (activeTask ? [activeTask] : []),
+        [activeTask]
+    )
+
+    // Poll for status updates if we have active imports
+    useEffect(() => {
+        if (activeImports.length > 0) {
+            const interval = setInterval(() => {
+                // Invalidate query to trigger refetch
+                queryClient.invalidateQueries({
+                    queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+                })
+            }, 2000)
+
+            return () => clearInterval(interval)
+        }
+    }, [activeImports.length, queryClient])
 
     // Use the hook for import mutation
     const importOpml = useImportOPML({
@@ -106,9 +114,9 @@ export default function ImportOPMLPageClient() {
                     }
                 }
 
-                const parsedOpml = opmlParse(content)
+                const parsedOpml = parseOpml(content)
 
-                if (!parsedOpml || !parsedOpml.opml || !parsedOpml.opml.body) {
+                if (!parsedOpml || !parsedOpml.body) {
                     return {
                         isValid: false,
                         feedCount: 0,
@@ -121,7 +129,8 @@ export default function ImportOPMLPageClient() {
                 let hasNestedCategories = false
                 const existingUrls = new Set<string>()
 
-                const countFeeds = (outlines: OutlineNode[], level = 0) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const countFeeds = (outlines: Array<{ xmlUrl?: string; outlines?: any[] }>, level = 0) => {
                     if (level > 1) {
                         hasNestedCategories = true
                     }
@@ -132,13 +141,13 @@ export default function ImportOPMLPageClient() {
                                 feedCount++
                                 existingUrls.add(outline.xmlUrl)
                             }
-                        } else if (outline.subs) {
-                            countFeeds(outline.subs, level + 1)
+                        } else if (outline.outlines) {
+                            countFeeds(outline.outlines, level + 1)
                         }
                     }
                 }
 
-                countFeeds(parsedOpml.opml.body.subs ?? [])
+                countFeeds(parsedOpml.body.outlines ?? [])
 
                 return {
                     isValid: feedCount > 0,
@@ -268,8 +277,8 @@ export default function ImportOPMLPageClient() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                    activeImports.length > 0 &&
-                    activeImports[0] ? (
+                        activeImports.length > 0 &&
+                        activeImports[0] ? (
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -300,11 +309,10 @@ export default function ImportOPMLPageClient() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${
-                                isDragging
-                                    ? "border-primary bg-primary/5"
-                                    : "border-dashed border-2"
-                            }`}
+                            className={`transition-colors duration-200 ${isDragging
+                                ? "border-primary bg-primary/5"
+                                : "border-dashed border-2"
+                                }`}
                             onDrop={handleFileDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

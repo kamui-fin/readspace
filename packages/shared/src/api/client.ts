@@ -13,7 +13,16 @@ export * from "./types/articles";
 export * from "./types/folders";
 export * from "./types/opml";
 
-class BaseApiClient extends CoreApiClient {}
+import { ApiClientConfig } from "./core";
+
+class BaseApiClient extends CoreApiClient {
+  static configure(config: ApiClientConfig) {
+    // Ensure the base class is configured, as endpoints use it directly
+    CoreApiClient.configure(config);
+    // Also configure this class (inherited behavior)
+    super.configure(config);
+  }
+}
 
 Object.assign(BaseApiClient, feeds, folders, opml, articles, discover, users);
 

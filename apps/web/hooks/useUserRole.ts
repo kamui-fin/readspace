@@ -1,25 +1,13 @@
-import { ApiClient, USER_QUERY_KEYS } from "@readspace/shared"
-import { useQuery } from "@tanstack/react-query"
-
-// Define user profile type with role
-interface UserProfile {
-    id?: string
-    email?: string
-    role?: "BASIC" | "PRO" | "ADMIN"
-    created_at?: string
-    updated_at?: string
-}
+import { useProfile } from "@readspace/shared"
 
 export function useUserRole() {
     const {
         data: profile,
         isLoading,
         error,
-    } = useQuery<UserProfile>({
-        queryKey: [USER_QUERY_KEYS.PROFILE],
-        queryFn: () => ApiClient.getProfile() as Promise<UserProfile>,
-        retry: false, // Don't retry on auth failures
-        staleTime: 5 * 60 * 1000, // 5 minutes
+    } = useProfile({
+        retry: false,
+        staleTime: 5 * 60 * 1000,
         refetchOnWindowFocus: false,
     })
 

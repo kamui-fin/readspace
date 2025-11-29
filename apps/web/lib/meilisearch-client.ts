@@ -30,7 +30,7 @@ if (!MEILISEARCH_SEARCH_KEY) {
 export function createSearchClient(
     getHybridConfig?: () => HybridSearchConfig | undefined
 ) {
-    const config: any = {
+    const config: Record<string, unknown> = {
         primaryKey: "id",
         placeholderSearch: true,
         keepZeroFacets: true,
@@ -49,7 +49,8 @@ export function createSearchClient(
         ...baseClient,
         searchClient: {
             ...baseClient.searchClient,
-            search(requests: any[]) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            search(requests: Array<Record<string, any>>) {
                 // Apply hybrid search params dynamically if enabled
                 const hybridConfig = getHybridConfig?.()
                 if (hybridConfig) {
@@ -84,7 +85,7 @@ export function createSearchClient(
                         Array.isArray(params.facetFilters)
                     ) {
                         const hasCategoryFilter = params.facetFilters.some(
-                            (filter: any) => {
+                            (filter: string | string[]) => {
                                 if (typeof filter === "string") {
                                     return filter.startsWith(
                                         "top_level_category:"
@@ -107,7 +108,7 @@ export function createSearchClient(
                     // Also check regular filter field (Meilisearch uses this)
                     if (params?.filter && Array.isArray(params.filter)) {
                         const hasCategoryInFilter = params.filter.some(
-                            (filterGroup: any) => {
+                            (filterGroup: string | string[]) => {
                                 if (Array.isArray(filterGroup)) {
                                     return filterGroup.some(
                                         (f: string) =>
@@ -149,6 +150,7 @@ export function createSearchClient(
                     })
                 }
 
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 return baseClient.searchClient.search(requests as any)
             },
         },

@@ -1,6 +1,6 @@
 "use client"
 
-import { ArticlesView } from "@/components/articles"
+import { ArticlesView } from "@/components/features/articles/ArticlesView"
 import { use } from "react"
 
 interface PageProps {

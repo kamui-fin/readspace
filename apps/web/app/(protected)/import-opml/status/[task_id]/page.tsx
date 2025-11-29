@@ -10,7 +10,12 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
+import {
+    useCancelImportTask,
+    useImportTaskStatus,
+    RSS_QUERY_KEYS,
+
+} from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     Activity,
@@ -27,71 +32,33 @@ import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 
 // Import status response types
-interface ImportTaskStatus {
-    task_id: string
-    status: "pending" | "in_progress" | "completed" | "failed"
-    message?: string
-    result?: {
-        imported_count: number
-        failed_count: number
-        already_existed_count: number
-        total_feeds: number
-        summary: {
-            successful: number
-            failed: number
-            already_existed: number
-        }
-        errors?: Array<{
-            url: string
-            title: string
-            error: string
-            status: string
-        }>
-    }
-    error?: string
-    progress?: {
-        completed: number
-        total: number
-        successful: number
-        failed: number
-        already_existed: number
-    }
-    metadata?: {
-        user_id: string
-        task_id: string
-        estimated_feeds: number
-        filename: string
-        created_at: string
-        status: string
-    }
-}
 
 export default function ImportStatusPage() {
-    const [taskStatus, setTaskStatus] = useState<ImportTaskStatus | null>(null)
-    const [isLoading, setIsLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
-    const [showErrorDetails, setShowErrorDetails] = useState(false)
-
     const params = useParams()
     const router = useRouter()
     const queryClient = useQueryClient()
     const taskId = params.task_id as string
 
+    const [error, setError] = useState<string | null>(null)
+    const [showErrorDetails, setShowErrorDetails] = useState(false)
+
+    const {
+        data: taskStatus,
+        isLoading,
+        error: statusError,
+    } = useImportTaskStatus(taskId)
+    const cancelImport = useCancelImportTask()
+
     const handleCancelImport = async () => {
         try {
-            const response = await ApiClient.cancelImportTask(taskId)
+            const response = await cancelImport.mutateAsync(taskId)
 
             // Check if cancellation was successful
             if (response.cancelled) {
                 toast.success("Import cancelled successfully")
-            } else {
-                toast.success(response.message || "Task was already completed")
-            }
-
-            if (response.cancelled) {
-                toast.success("Import cancelled")
                 router.push("/import-opml")
             } else {
+                toast.success(response.message || "Task was already completed")
                 router.push("/import-opml")
             }
         } catch (error) {
@@ -102,105 +69,52 @@ export default function ImportStatusPage() {
         }
     }
 
-    // Poll for task status
+    // Invalidate queries when import completes
     useEffect(() => {
-        if (!taskId) return
-
-        let pollInterval: ReturnType<typeof setInterval> | null = null
-
-        const pollStatus = async () => {
-            try {
-                const status = (await ApiClient.getImportTaskStatus(
-                    taskId
-                )) as unknown as ImportTaskStatus
-                setTaskStatus(status)
-                setError(null)
-
-                if (status.status === "completed") {
-                    // Invalidate queries when import completes
-                    await Promise.all([
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.FEEDS],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.FOLDERS],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.ARTICLES],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
-                        }),
-                        queryClient.invalidateQueries({
-                            queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
-                        }),
-                    ])
-                } else if (status.status === "failed") {
-                    toast.error(
-                        `Import failed: ${status.error || "Unknown error"}`
-                    )
-                }
-            } catch (error: unknown) {
-                console.error("Error polling task status:", error)
-
-                if (error instanceof Error) {
-                    if (error.message.includes("404")) {
-                        setError(
-                            "Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart."
-                        )
-                    } else if (error.message.includes("403")) {
-                        setError(
-                            "You don't have permission to view this import task."
-                        )
-                    } else {
-                        setError(
-                            "Error checking import status. Please try refreshing the page."
-                        )
-                    }
-                } else {
-                    setError("An unknown error occurred.")
-                }
-
-                // Stop polling on error
-                if (pollInterval) {
-                    clearInterval(pollInterval)
-                    pollInterval = null
-                }
-            } finally {
-                setIsLoading(false)
+        if (taskStatus?.status === "completed") {
+            const invalidate = async () => {
+                await Promise.all([
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.FEEDS],
+                    }),
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.FOLDERS],
+                    }),
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.ARTICLES],
+                    }),
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.UNREAD_COUNTS],
+                    }),
+                    queryClient.invalidateQueries({
+                        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+                    }),
+                ])
             }
+            invalidate()
+        } else if (taskStatus?.status === "failed") {
+            toast.error(`Import failed: ${taskStatus.error || "Unknown error"}`)
         }
+    }, [taskStatus?.status, taskStatus?.error, queryClient])
 
-        // Initial load
-        pollStatus()
-
-        // Start polling interval
-        pollInterval = setInterval(() => {
-            // Only continue polling if we don't have an error and task is still active
-            if (
-                !error &&
-                taskStatus?.status &&
-                !["completed", "failed"].includes(taskStatus.status)
-            ) {
-                pollStatus()
-            } else if (
-                taskStatus?.status &&
-                ["completed", "failed"].includes(taskStatus.status)
-            ) {
-                // Stop polling when task is done
-                if (pollInterval) {
-                    clearInterval(pollInterval)
-                    pollInterval = null
-                }
+    // Handle errors
+    useEffect(() => {
+        if (statusError) {
+            if (statusError.message.includes("404")) {
+                setError(
+                    "Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart."
+                )
+            } else if (statusError.message.includes("403")) {
+                setError("You don't have permission to view this import task.")
+            } else {
+                setError(
+                    "Error checking import status. Please try refreshing the page."
+                )
             }
-        }, 2000) // Poll every 2 seconds
-
-        return () => {
-            if (pollInterval) {
-                clearInterval(pollInterval)
-            }
+        } else {
+            setError(null)
         }
-    }, [taskId, queryClient, error, taskStatus?.status])
+    }, [statusError])
 
     const renderStatus = () => {
         if (isLoading) {
@@ -327,7 +241,7 @@ export default function ImportStatusPage() {
                                         {Math.round(
                                             (progress.completed /
                                                 progress.total) *
-                                                100
+                                            100
                                         )}
                                         %
                                     </span>
@@ -429,7 +343,7 @@ export default function ImportStatusPage() {
                                 <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
                                         <div className="text-2xl font-semibold text-secondary">
-                                            {result.summary?.successful || 0}
+                                            {result.successful || 0}
                                         </div>
                                         <div className="text-sm font-medium text-secondary">
                                             Successfully Imported
@@ -439,8 +353,7 @@ export default function ImportStatusPage() {
                                 <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
                                         <div className="text-2xl font-semibold text-yellow-700 dark:text-yellow-400">
-                                            {result.summary?.already_existed ||
-                                                0}
+                                            {result.already_existed || 0}
                                         </div>
                                         <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
                                             Already Existed
@@ -450,7 +363,7 @@ export default function ImportStatusPage() {
                                 <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-destructive/10 rounded-lg border border-destructive/20">
                                     <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
                                         <div className="text-2xl font-semibold text-destructive">
-                                            {result.summary?.failed || 0}
+                                            {result.failed || 0}
                                         </div>
                                         <div className="text-sm font-medium text-destructive">
                                             Import Failed

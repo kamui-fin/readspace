@@ -7,7 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type { FeedDetail, FeedSummary, Subscription, SubscriptionExtended } from "../types";
+import type { ArticleCountsResponse, FeedDetail, FeedSummary, Subscription, SubscriptionExtended } from "../types";
 
 export function createFeedHooks() {
     function useFeeds(
@@ -158,6 +158,27 @@ export function createFeedHooks() {
         });
     }
 
+    function usePreviewFeed(
+        options?: UseMutationOptions<
+            FeedDetail,
+            unknown,
+            string
+        >,
+    ) {
+        const queryClient = useQueryClient();
+        return useMutation({
+            mutationKey: ["preview-feed"],
+            mutationFn: async (feedId: string) => {
+                return ApiClient.refreshFeed(feedId, true, true);
+            },
+            onSuccess: () => {
+                // Invalidate articles to ensure the preview articles are shown
+                queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+            },
+            ...options,
+        });
+    }
+
     function useMarkFeedAllRead(
         options?: UseMutationOptions<
             { message: string; feed_id: string },
@@ -265,6 +286,44 @@ export function createFeedHooks() {
         });
     }
 
+    function useAdminUpdateFeed(
+        options?: UseMutationOptions<
+            FeedDetail,
+            unknown,
+            {
+                feedId: string;
+                data: {
+                    title?: string;
+                    description?: string;
+                    language?: string;
+                    top_level_category?: string;
+                    url?: string;
+                    link?: string;
+                    image_url?: string;
+                    popularity_score?: number;
+                };
+            },
+            unknown
+        >,
+    ) {
+        const queryClient = useQueryClient();
+        return useMutation({
+            mutationKey: mutationKeys.adminUpdateFeed(),
+            mutationFn: ({
+                feedId,
+                data,
+            }: {
+                feedId: string;
+                data: any;
+            }) => ApiClient.adminUpdateFeed(feedId, data),
+            onSettled: (_data, _error, { feedId }) => {
+                queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
+            },
+            ...options,
+        });
+    }
+
     function useBulkDeleteFeeds(
         options?: UseMutationOptions<
             { deleted_count: number; deleted_ids: string[] },
@@ -349,18 +408,18 @@ export function createFeedHooks() {
     function useFeedUnreadCounts(
         options?: Omit<
             UseQueryOptions<
-                Record<string, number>,
+                ArticleCountsResponse,
                 Error,
                 Record<string, number>,
-                ReturnType<typeof queryKeys.feedUnreadCounts>
+                ReturnType<typeof queryKeys.unreadCounts>
             >,
-            "queryKey" | "queryFn"
+            "queryKey" | "queryFn" | "select"
         >,
     ) {
         return useQuery({
-            queryKey: queryKeys.feedUnreadCounts(),
-            queryFn: () =>
-                ApiClient.get<Record<string, number>>("/api/feeds/unread-counts"),
+            queryKey: queryKeys.unreadCounts(),
+            queryFn: () => ApiClient.getUnreadCounts(),
+            select: (data) => data.feed_counts,
             refetchInterval: 60000, // Poll every minute
             ...options,
         });
@@ -372,10 +431,12 @@ export function createFeedHooks() {
         useCreateFeed,
         useUpdateFeed,
         useRefreshFeed,
+        usePreviewFeed,
         useRefreshAllFeeds,
         useRefreshStatus,
         useDeleteFeed,
         useAdminDeleteFeed,
+        useAdminUpdateFeed,
         useBulkDeleteFeeds,
         useBulkUpdateFeedsFolder,
         useSubscribeToFeed,

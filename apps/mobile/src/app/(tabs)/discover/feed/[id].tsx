@@ -79,8 +79,8 @@ export default function FeedPreviewScreen() {
     const { data: articlesData, isLoading: isArticlesLoading, refetch: refetchArticles } = useQuery({
         queryKey: ['feed-articles', id],
         queryFn: async () => {
-            const response = await ApiClient.rss.getArticles({
-                feed_ids: [id],
+            const response = await ApiClient.getArticles({
+                feed_id: id,
                 limit: 5,
             });
             return response;
@@ -91,7 +91,7 @@ export default function FeedPreviewScreen() {
     // Fetch similar feeds (top 4 for preview)
     const { data: similarData, isLoading: isSimilarLoading } = useQuery<SimilarFeedsResponse>({
         queryKey: ['similar-feeds-preview', id, 4],
-        queryFn: () => ApiClient.rss.getSimilarFeeds(id, { limit: 4 }),
+        queryFn: () => ApiClient.getSimilarFeeds(id, { limit: 4 }),
         enabled: !!id,
     });
 

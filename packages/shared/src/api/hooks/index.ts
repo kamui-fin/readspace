@@ -2,6 +2,7 @@ import { createArticleHooks } from "./use-articles";
 import { createFeedHooks } from "./use-feeds";
 import { createFolderHooks } from "./use-folders";
 import { createOpmlHooks } from "./use-opml";
+import { createUserHooks } from "./use-users";
 
 // Export factory functions for custom configurations
 export {
@@ -9,6 +10,7 @@ export {
   createArticleHooks,
   createFolderHooks,
   createOpmlHooks,
+  createUserHooks,
 };
 
 // Re-export enhancement utilities
@@ -22,6 +24,7 @@ const defaultFeedHooks = createFeedHooks();
 const defaultArticleHooks = createArticleHooks();
 const defaultFolderHooks = createFolderHooks();
 const defaultOpmlHooks = createOpmlHooks();
+const defaultUserHooks = createUserHooks();
 
 // Re-export all default hooks
 export const {
@@ -30,8 +33,10 @@ export const {
   useCreateFeed,
   useUpdateFeed,
   useRefreshFeed,
+  usePreviewFeed,
   useDeleteFeed,
   useAdminDeleteFeed,
+  useAdminUpdateFeed,
   useBulkDeleteFeeds,
   useBulkUpdateFeedsFolder,
   useSubscribeToFeed,
@@ -63,5 +68,7 @@ export const {
   useMarkFolderAllRead,
 } = defaultFolderHooks;
 
-export const { useImportOPML, useImportTaskStatus, useActiveImportTask } =
+export const { useImportOPML, useImportTaskStatus, useActiveImportTask, useCancelImportTask } =
   defaultOpmlHooks;
+
+export const { useProfile } = defaultUserHooks;

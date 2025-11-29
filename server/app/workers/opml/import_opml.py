@@ -18,7 +18,9 @@ from app.workers.opml.progress import OpmlImportTracker
 logger = structlog.get_logger(__name__)
 
 # Type definition for session factory
-SessionFactory = Callable[[], Coroutine[Any, Any, AsyncSession]]  # Simplified for brevity
+SessionFactory = Callable[
+    [], Coroutine[Any, Any, AsyncSession]
+]  # Simplified for brevity
 
 
 async def import_opml(
@@ -61,10 +63,21 @@ async def import_opml(
 
         # 4. Process (Folder creation + Task dispatch)
         result = await _process_opml_import(
-            worker_db_factory, user_id, opml_content, default_folder_name, parent_task_id=task_id
+            worker_db_factory,
+            user_id,
+            opml_content,
+            default_folder_name,
+            parent_task_id=task_id,
         )
 
-        logger.info("OPML dispatch complete", dispatched=result.get("dispatched_count"), total=total_feeds)
+        if task_id:
+            await tracker.mark_in_progress()
+
+        logger.info(
+            "OPML dispatch complete",
+            dispatched=result.get("dispatched_count"),
+            total=total_feeds,
+        )
         return result
 
     except Exception as exc:
@@ -99,7 +112,11 @@ async def _process_opml_import(
                     folder_name = folder_name[0] if folder_name else None
                 if folder_name:
                     folder_names.add(folder_name)
-        folder_map = await crud_folder.upsert_batch(db, list(folder_names), user_id) if folder_names else {}
+        folder_map = (
+            await crud_folder.upsert_batch(db, list(folder_names), user_id)
+            if folder_names
+            else {}
+        )
 
     # Dispatch Tasks
     task_ids = []

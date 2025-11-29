@@ -1,4 +1,4 @@
-import { readspaceConfig } from "./lib/design-tokens/tailwind.config"
+import { readspaceConfig } from "./design-tokens/tailwind.config"
 import type { Config } from "tailwindcss"
 
 const config: Config = {

@@ -1,10 +1,9 @@
 "use client"
 
 // Import api-client to ensure ApiClient is configured before any queries run
-import "@/lib/api-client"
+import { configureApiClient } from "@/lib/api-client"
 import { initAuthStateListener } from "@/lib/auth/token-cache"
 import { getQueryClient } from "@/lib/get-query-client"
-import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { ReactNode, useEffect } from "react"
 
@@ -17,6 +16,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
     //       have a suspense boundary between this and the code that may
     //       suspend because React will throw away the client on the initial
     //       render if it suspends and there is no boundary
+    configureApiClient()
     const queryClient = getQueryClient()
 
     // Initialize auth state listener

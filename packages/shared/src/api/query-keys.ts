@@ -123,6 +123,7 @@ export const MUTATION_KEYS = {
   REFRESH_ALL_FEEDS: "refresh-all-feeds",
   DELETE_FEED: "delete-feed",
   ADMIN_DELETE_FEED: "admin-delete-feed",
+  ADMIN_UPDATE_FEED: "admin-update-feed",
   BULK_DELETE_FEEDS: "bulk-delete-feeds",
   BULK_UPDATE_FEEDS_FOLDER: "bulk-update-feeds-folder",
   SUBSCRIBE_TO_FEED: "subscribe-to-feed",
@@ -148,6 +149,7 @@ export const mutationKeys = {
   refreshAllFeeds: () => [MUTATION_KEYS.REFRESH_ALL_FEEDS] as const,
   deleteFeed: () => [MUTATION_KEYS.DELETE_FEED] as const,
   adminDeleteFeed: () => [MUTATION_KEYS.ADMIN_DELETE_FEED] as const,
+  adminUpdateFeed: () => [MUTATION_KEYS.ADMIN_UPDATE_FEED] as const,
   bulkDeleteFeeds: () => [MUTATION_KEYS.BULK_DELETE_FEEDS] as const,
   bulkUpdateFeedsFolder: () =>
     [MUTATION_KEYS.BULK_UPDATE_FEEDS_FOLDER] as const,

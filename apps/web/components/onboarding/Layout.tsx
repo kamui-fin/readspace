@@ -1,9 +1,7 @@
 "use client"
 
 import { useCurrentUser } from "@/hooks/useCurrentUser"
-import ReadspaceLogo from "@/public/readspace.svg"
 import { useOnboardingStore } from "@/stores/onboarding"
-import Image from "next/image"
 import { useRouter } from "next/navigation"
 import React, { ReactNode } from "react"
 import OnboardingProgress from "./progress"

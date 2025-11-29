@@ -17,7 +17,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { InstantSearch } from "react-instantsearch"
 
-import { DiscoverContent } from "@/components/discover/DiscoverContent"
+import { DiscoverContent } from "@/components/features/discover/DiscoverContent"
 import {
     createHybridSearchParams,
     createSearchClient,
@@ -73,6 +73,7 @@ export default function DiscoverPageClient({
 
     return (
         <InstantSearch
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             searchClient={searchClient as any}
             indexName={FEEDS_INDEX_NAME}
         >

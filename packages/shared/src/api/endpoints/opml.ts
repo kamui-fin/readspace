@@ -4,6 +4,7 @@ import {
   OpmlImportCancelResponse,
   OpmlImportResponse,
   OpmlTaskMetadata,
+  OpmlImportStatusResponse,
 } from "../types/opml";
 
 export const opml = {
@@ -13,7 +14,7 @@ export const opml = {
       formData,
     ) as Promise<OpmlImportResponse>,
   getImportTaskStatus: (taskId: string) =>
-    ApiClient.get<ImportStatus>(`/api/opml/import/status/${taskId}`),
+    ApiClient.get<OpmlImportStatusResponse>(`/api/opml/import/status/${taskId}`),
   getActiveImportTask: () =>
     ApiClient.get<OpmlTaskMetadata | null>("/api/opml/import/active"),
   cancelImportTask: (taskId: string) =>

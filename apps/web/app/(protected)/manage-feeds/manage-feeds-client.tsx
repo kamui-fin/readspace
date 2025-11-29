@@ -1,12 +1,13 @@
 "use client"
 
-import { BulkEditFolderModal } from "@/components/feeds/BulkEditFolderModal"
-import { FeedDeleteModal } from "@/components/feeds/FeedDeleteModal"
-import { FeedEditModal } from "@/components/feeds/FeedEditModal"
-import { FeedFiltersPanel } from "@/components/feeds/FeedFiltersPanel"
-import { FeedTableRow } from "@/components/feeds/FeedTableRow"
-import { ManageFeedsPageSkeleton } from "@/components/feeds/ManageFeedsSkeleton"
-import Header from "@/components/navigation/Header"
+import { BulkEditFolderModal } from "@/components/features/feeds/BulkEditFolderModal"
+import { FeedDeleteModal } from "@/components/features/feeds/FeedDeleteModal"
+import { FeedEditModal } from "@/components/features/feeds/FeedEditModal"
+import { FeedFiltersPanel } from "@/components/features/feeds/FeedFiltersPanel"
+import { FeedTableRow } from "@/components/features/feeds/FeedTableRow"
+
+import { ManageFeedsPageSkeleton } from "@/components/features/feeds/ManageFeedsSkeleton"
+import Header from "@/components/features/navigation/Header"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
     Table,
@@ -23,7 +24,7 @@ import {
     useFeeds,
     useFolders,
     useUpdateFeed,
-    type Subscription,
+
     type SubscriptionExtended,
 } from "@readspace/shared"
 import { useMemo, useState } from "react"
@@ -31,7 +32,7 @@ import { toast } from "react-hot-toast"
 import { useDebounce } from "use-debounce"
 
 // Define the Feed type expected by the component
-import type { FeedRowData } from "@/components/feeds/FeedTableRow"
+import type { FeedRowData } from "@/components/features/feeds/FeedTableRow"
 
 /**
  * Main client component for managing RSS feeds.
@@ -48,18 +49,20 @@ export default function ManageFeedsPageClient() {
 
     // Map subscriptions to flat Feed objects
     const feeds: FeedRowData[] = useMemo(() => {
-        return (subscriptions as unknown as SubscriptionExtended[]).map(sub => ({
-            id: sub.feed.id,
-            title: sub.custom_title || sub.feed.title,
-            url: sub.feed.url,
-            link: sub.feed.link,
-            folder_id: sub.folder?.id || null,
-            image_url: sub.feed.image_url || null,
-            is_favorite: sub.is_favorite,
-            error_count: sub.feed.error_count,
-            last_updated_at: sub.feed.last_updated_at,
-            last_error_message: sub.feed.last_error_message
-        }))
+        return (subscriptions as unknown as SubscriptionExtended[]).map(
+            (sub) => ({
+                id: sub.feed.id,
+                title: sub.custom_title || sub.feed.title,
+                url: sub.feed.url,
+                link: sub.feed.link,
+                folder_id: sub.folder?.id || null,
+                image_url: sub.feed.image_url || null,
+                is_favorite: sub.is_favorite,
+                error_count: sub.feed.error_count,
+                last_updated_at: sub.feed.last_updated_at,
+                last_error_message: sub.feed.last_error_message,
+            })
+        )
     }, [subscriptions])
 
     // Search and filter state

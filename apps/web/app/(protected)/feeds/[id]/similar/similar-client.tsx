@@ -3,19 +3,13 @@
 import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 
-import { FeedCard } from "@/components/feeds/FeedCard"
-import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
+import { FeedCard } from "@/components/features/feeds/FeedCard"
+import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
 import { FEEDS_INDEX_NAME, meilisearchClient } from "@/lib/meilisearch-client"
 import { type FeedSummary } from "@readspace/shared"
 
 interface SimilarFeedsClientProps {
     feedId: string
-}
-
-interface Feed {
-    title?: string | null
-    url?: string
-    image_url?: string | null
 }
 
 interface MeilisearchHit {

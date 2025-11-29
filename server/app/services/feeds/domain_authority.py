@@ -27,7 +27,11 @@ class DomainScore(BaseModel):
 def _get_tranco_list():
     """Cached loader for the Tranco list to avoid file I/O on every call."""
     try:
-        return Tranco(cache=True, cache_dir=".tranco").list()
+        # Force download if cache is corrupted or empty
+        t = Tranco(cache=True, cache_dir=".tranco")
+        # Trigger list load to ensure it works
+        t.list()
+        return t
     except Exception as e:
         logger.error("Failed to load Tranco list", error=str(e))
         return None

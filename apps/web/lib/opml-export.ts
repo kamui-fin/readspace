@@ -1,3 +1,4 @@
+import { generateOpml, type Opml } from "@readspace/shared"
 import type { Folder } from "@readspace/shared"
 
 /**
@@ -43,9 +44,6 @@ export function generateOPMLContent(
     feedsToExport: FeedForOPML[],
     folders: Folder[]
 ): string {
-    const now = new Date()
-    const dateString = now.toUTCString()
-
     // Group feeds by folder
     const foldersMap = new Map<string, FeedForOPML[]>()
 
@@ -59,43 +57,46 @@ export function generateOPMLContent(
         foldersMap.get(folderName)!.push(feed)
     })
 
-    let opmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<opml version="2.0">
-    <head>
-        <title>Readspace Feeds Export</title>
-        <dateCreated>${dateString}</dateCreated>
-    </head>
-    <body>
-`
+    const outlines: Opml.Outline<Date>[] = []
 
     // Add feeds grouped by folders
     for (const [folderName, folderFeeds] of foldersMap) {
         if (foldersMap.size > 1 || folderName !== "Uncategorized") {
-            opmlContent += `        <outline text="${folderName}" title="${folderName}">
-`
-            folderFeeds.forEach((feed) => {
-                const title = feed.title || feed.url
-                const htmlUrl = feed.link || feed.url
-                opmlContent += `            <outline text="${title}" title="${title}" type="rss" xmlUrl="${feed.url}" htmlUrl="${htmlUrl}"/>
-`
-            })
-            opmlContent += `        </outline>
-`
+            const folderOutline: Opml.Outline<Date> = {
+                text: folderName,
+                title: folderName,
+                outlines: folderFeeds.map((feed) => ({
+                    text: feed.title || feed.url,
+                    title: feed.title || feed.url,
+                    type: "rss",
+                    xmlUrl: feed.url,
+                    htmlUrl: feed.link || undefined,
+                })),
+            }
+            outlines.push(folderOutline)
         } else {
             // Put feeds directly in body if only uncategorized
             folderFeeds.forEach((feed) => {
-                const title = feed.title || feed.url
-                const htmlUrl = feed.link || feed.url
-                opmlContent += `        <outline text="${title}" title="${title}" type="rss" xmlUrl="${feed.url}" htmlUrl="${htmlUrl}"/>
-`
+                outlines.push({
+                    text: feed.title || feed.url,
+                    title: feed.title || feed.url,
+                    type: "rss",
+                    xmlUrl: feed.url,
+                    htmlUrl: feed.link || undefined,
+                })
             })
         }
     }
 
-    opmlContent += `    </body>
-</opml>`
-
-    return opmlContent
+    return generateOpml({
+        head: {
+            title: "Readspace Feeds Export",
+            dateCreated: new Date(),
+        },
+        body: {
+            outlines,
+        },
+    })
 }
 
 /**
