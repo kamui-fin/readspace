@@ -8,7 +8,7 @@ import {
     fuzzySearch,
     useFeeds,
     useFolders,
-    useFeedUnreadCounts,
+    useUnreadCounts,
 } from "@readspace/shared"
 import { Search, Star } from "lucide-react"
 import Image from "next/image"
@@ -41,7 +41,8 @@ export function FeedSearchCommand({
     // Data queries
     const { data: feeds = [] } = useFeeds()
     const { data: folders = [] } = useFolders()
-    const { data: feedUnreadCounts } = useFeedUnreadCounts()
+    const { data: unreadCounts } = useUnreadCounts()
+    const feedUnreadCounts = unreadCounts?.feed_counts
 
     // Type-safe folder data
     const typedFolders = React.useMemo(

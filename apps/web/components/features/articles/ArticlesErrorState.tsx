@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { AlertCircle, AlertTriangle, RefreshCw, WifiOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 

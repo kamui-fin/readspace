@@ -10,12 +10,7 @@ import {
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-    useCancelImportTask,
-    useImportTaskStatus,
-    RSS_QUERY_KEYS,
-
-} from "@readspace/shared"
+import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
 import {
     Activity,
@@ -27,47 +22,26 @@ import {
     XCircle,
 } from "lucide-react"
 import Link from "next/link"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
-
-// Import status response types
+import { useOpmlTaskStatus } from "@/components/features/opml/hooks/use-opml-task-status"
 
 export default function ImportStatusPage() {
     const params = useParams()
-    const router = useRouter()
     const queryClient = useQueryClient()
     const taskId = params.task_id as string
 
-    const [error, setError] = useState<string | null>(null)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const [showErrorDetails, setShowErrorDetails] = useState(false)
 
     const {
-        data: taskStatus,
+        task: taskStatus,
         isLoading,
         error: statusError,
-    } = useImportTaskStatus(taskId)
-    const cancelImport = useCancelImportTask()
-
-    const handleCancelImport = async () => {
-        try {
-            const response = await cancelImport.mutateAsync(taskId)
-
-            // Check if cancellation was successful
-            if (response.cancelled) {
-                toast.success("Import cancelled successfully")
-                router.push("/import-opml")
-            } else {
-                toast.success(response.message || "Task was already completed")
-                router.push("/import-opml")
-            }
-        } catch (error) {
-            console.error("Error cancelling import task:", error)
-            toast.error(
-                "Failed to cancel import. It may have already completed."
-            )
-        }
-    }
+        handleCancelImport,
+        isCancelling
+    } = useOpmlTaskStatus(taskId)
 
     // Invalidate queries when import completes
     useEffect(() => {
@@ -101,18 +75,18 @@ export default function ImportStatusPage() {
     useEffect(() => {
         if (statusError) {
             if (statusError.message.includes("404")) {
-                setError(
+                setErrorMsg(
                     "Import task not found or has expired. This may happen if the task was completed long ago or if there was a system restart."
                 )
             } else if (statusError.message.includes("403")) {
-                setError("You don't have permission to view this import task.")
+                setErrorMsg("You don't have permission to view this import task.")
             } else {
-                setError(
+                setErrorMsg(
                     "Error checking import status. Please try refreshing the page."
                 )
             }
         } else {
-            setError(null)
+            setErrorMsg(null)
         }
     }, [statusError])
 
@@ -150,7 +124,7 @@ export default function ImportStatusPage() {
             )
         }
 
-        if (error) {
+        if (errorMsg) {
             return (
                 <Card>
                     <CardHeader>
@@ -159,7 +133,7 @@ export default function ImportStatusPage() {
                             <CardTitle>Task Not Found</CardTitle>
                         </div>
                         <CardDescription className="text-destructive">
-                            {error}
+                            {errorMsg}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -291,10 +265,11 @@ export default function ImportStatusPage() {
                                     variant="outline"
                                     size="sm"
                                     onClick={handleCancelImport}
+                                    disabled={isCancelling}
                                     className="text-destructive hover:text-destructive"
                                 >
                                     <X className="h-4 w-4 mr-2" />
-                                    Cancel Import
+                                    {isCancelling ? "Cancelling..." : "Cancel Import"}
                                 </Button>
                             </div>
                         </CardContent>
@@ -478,10 +453,11 @@ export default function ImportStatusPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={handleCancelImport}
+                                disabled={isCancelling}
                                 className="text-destructive hover:text-destructive"
                             >
                                 <X className="h-4 w-4 mr-2" />
-                                Cancel Import
+                                {isCancelling ? "Cancelling..." : "Cancel Import"}
                             </Button>
                         </CardContent>
                     </Card>

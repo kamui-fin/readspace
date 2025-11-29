@@ -2,7 +2,7 @@ import "@/lib/api-client"
 import { getQueryClient } from "@/lib/get-query-client"
 import { ApiClient, RSS_QUERY_KEYS } from "@readspace/shared"
 import { dehydrate, HydrationBoundary } from "@tanstack/react-query"
-import ImportOPMLPageClient from "./import-opml-client"
+import OpmlImportView from "@/components/features/opml/OpmlImportView"
 
 // Force dynamic rendering since we're using cookies for auth
 export const dynamic = "force-dynamic"
@@ -18,7 +18,7 @@ export default async function ImportOPMLPage() {
 
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ImportOPMLPageClient />
+            <OpmlImportView />
         </HydrationBoundary>
     )
 }

@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import type { Article } from "@readspace/shared"
 
 interface UseArticlesViewProps {

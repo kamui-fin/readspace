@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query"
-import { ApiClient, type FeedDiscoveryResult } from "@readspace/shared"
+import { type FeedDiscoveryResult, usePreviewFeedUrl } from "@readspace/shared"
 import { useMemo } from "react"
 
 /**
@@ -40,15 +39,8 @@ export function useFeedPreview(query: string): UseFeedPreviewResult {
         isLoading,
         error,
         isError,
-    } = useQuery({
-        queryKey: ["feedPreview", trimmedQuery],
-        queryFn: async () => {
-            const response = await ApiClient.previewFeed(trimmedQuery)
-            return response
-        },
+    } = usePreviewFeedUrl(trimmedQuery, {
         enabled: isUrlQuery && trimmedQuery.length > 0,
-        retry: false,
-        staleTime: 5 * 60 * 1000, // 5 minutes
     })
 
     const errorMessage = useMemo(() => {

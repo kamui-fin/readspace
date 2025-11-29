@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from "react"
 import { type Article } from "@readspace/shared"
 import { AnimatedContent } from "./AnimatedContent"
 import { ArticleToolbar } from "./ArticleToolbar"
-import { useArticleAI } from "./useArticleAI"
-import { useArticleInteractions } from "./useArticleInteractions"
+import { useArticleAI } from "./hooks/useArticleAI"
+import { useArticleInteractions } from "./hooks/useArticleInteractions"
 
 
 

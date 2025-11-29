@@ -5,7 +5,7 @@ import { ArticlesErrorState } from "./ArticlesErrorState"
 import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
 import { FeedSubscriptionModal } from "@/components/features/feeds/FeedSubscriptionModal"
 import { Button } from "@/components/ui/button"
-import { useArticlesController } from "./useArticlesController"
+import { useArticlesController } from "./hooks/useArticlesController"
 import { ArticlesLayout } from "./ArticlesLayout"
 import { ArticlesSidebar } from "./ArticlesSidebar"
 import { ArticlesDetail } from "./ArticlesDetail"
@@ -169,7 +169,7 @@ export function ArticlesView(props: ArticlesViewProps) {
                         isReadLaterMode={isReadLaterMode}
                         shouldShowPreviewBanner={shouldShowPreviewBanner}
                         onMarkAsRead={handleMarkAsRead}
-                        onArticleRemoved={() => {}}
+                        onArticleRemoved={() => { }}
                         onBack={handleBackToList}
                     />
                 }

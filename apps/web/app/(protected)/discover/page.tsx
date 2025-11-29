@@ -1,5 +1,5 @@
 import "@/lib/api-client"
-import DiscoverPageClient from "./discover-client"
+import DiscoverView from "@/components/features/discover/DiscoverView"
 
 export const metadata = {
     title: "Discover Feeds | Readspace",
@@ -16,5 +16,5 @@ export default async function DiscoverPage({
         ? params.language[0]
         : params.language || "en"
 
-    return <DiscoverPageClient initialLanguage={language} />
+    return <DiscoverView initialLanguage={language} />
 }

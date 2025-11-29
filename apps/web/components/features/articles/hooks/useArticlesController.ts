@@ -13,10 +13,10 @@ import {
     type Subscription,
     type Folder,
 } from "@readspace/shared"
-import { useArticlesData } from "./hooks/useArticlesData"
-import { useArticlesView } from "./hooks/useArticlesView"
-import { useArticleUnreadCount } from "./hooks/useArticleUnreadCount"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useArticlesData } from "./useArticlesData"
+import { useArticlesView } from "./useArticlesView"
+import { useArticleUnreadCount } from "./useArticleUnreadCount"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 interface UseArticlesControllerProps {
     initialSidebarTitle?: string

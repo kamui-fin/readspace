@@ -1,11 +1,11 @@
 "use client"
 
 import { useParams } from "next/navigation"
-import SimilarFeedsClient from "./similar-client"
+import SimilarFeedsView from "@/components/features/feeds/SimilarFeedsView"
 
 export default function SimilarFeedsPage() {
     const params = useParams()
     const feedId = params.id as string
 
-    return <SimilarFeedsClient feedId={feedId} />
+    return <SimilarFeedsView feedId={feedId} />
 }

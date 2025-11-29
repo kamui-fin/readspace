@@ -5,8 +5,8 @@ import { CalendarIcon } from "lucide-react"
 import { ArticleItem } from "./ArticleItem"
 import { ArticlesEmptyState } from "./ArticlesEmptyState"
 import { ArticlesViewSkeleton } from "./ArticlesViewSkeleton"
-import { useArticleGrouping } from "./useArticleGrouping"
-import { useArticleVirtualizer } from "./useArticleVirtualizer"
+import { useArticleGrouping } from "./hooks/useArticleGrouping"
+import { useArticleVirtualizer } from "./hooks/useArticleVirtualizer"
 
 interface ArticlesListProps {
     /** Array of articles to display */

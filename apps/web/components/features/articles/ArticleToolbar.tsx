@@ -13,7 +13,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { colorTokens } from "@/design-tokens/colors"
 import type { Article } from "@readspace/shared"
 import {
@@ -241,8 +241,8 @@ export function ArticleToolbar({
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
                                 : isReadLater
-                                  ? "Remove from Read Later"
-                                  : "Save for Later"}
+                                    ? "Remove from Read Later"
+                                    : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 

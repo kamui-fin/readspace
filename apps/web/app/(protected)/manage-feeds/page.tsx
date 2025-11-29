@@ -1,4 +1,4 @@
-import ManageFeedsPageClient from "./manage-feeds-client"
+import ManageFeedsView from "@/components/features/feeds/ManageFeedsView"
 
 export const metadata = {
     title: "Manage Feeds | Readspace",
@@ -6,5 +6,5 @@ export const metadata = {
 }
 
 export default function ManageFeedsPage() {
-    return <ManageFeedsPageClient />
+    return <ManageFeedsView />
 }

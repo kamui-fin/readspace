@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button"
-import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { useOnboardingStore } from "@/stores/onboarding"
 import { meilisearchClient, FEEDS_INDEX_NAME } from "@/lib/meilisearch-client"
 import { useFeeds } from "@readspace/shared"
@@ -9,7 +9,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import React, { useState } from "react"
 import OnboardingLayout from "../Layout"
-import { OnboardingFeedCard } from "../OnboardingFeedCard"
+import { OnboardingFeedCard } from "@/components/features/feeds/OnboardingFeedCard"
 
 type FeedDiscoveryResult = {
     id: string

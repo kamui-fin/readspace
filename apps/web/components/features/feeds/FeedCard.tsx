@@ -7,7 +7,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useUserRole } from "@/hooks/useUserRole"
+import { useUserRole } from "@/hooks/use-user-role"
 import {
     useAdminDeleteFeed,
     type FeedSummary,

@@ -12,7 +12,7 @@ import {
 import { CategoryGrid } from "./CategoryGrid"
 import { CustomSearchBox } from "./CustomSearchBox"
 import { DiscoverLayout } from "./DiscoverLayout"
-import { useFeedPreview } from "./useFeedPreview"
+import { useFeedPreview } from "./hooks/useFeedPreview"
 import { usePersistentState } from "./hooks/usePersistentState"
 import { SearchResults } from "./SearchResults"
 

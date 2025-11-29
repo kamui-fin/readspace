@@ -1,5 +1,5 @@
 import { CategoryBadge } from "@/components/ui/category-badge"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 import { FEED_CATEGORIES, MOBILE_CATEGORY_NAMES } from "@readspace/shared"
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCurrentUser } from "@/hooks/useCurrentUser"
+import { useCurrentUser } from "@/hooks/use-current-user"
 import { useOnboardingStore } from "@/stores/onboarding"
 import { useRouter } from "next/navigation"
 import React, { ReactNode } from "react"

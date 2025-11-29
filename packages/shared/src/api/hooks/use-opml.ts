@@ -15,78 +15,69 @@ import type {
   OpmlImportStatusResponse,
 } from "../types";
 
-export function createOpmlHooks() {
-  function useImportOPML(
-    options?: UseMutationOptions<OpmlImportResponse, unknown, FormData>,
-  ) {
-    return useMutation({
-      mutationFn: (formData: FormData) =>
-        ApiClient.importOPML(formData) as Promise<OpmlImportResponse>,
-      ...options,
-    });
-  }
+export function useImportOPML(
+  options?: UseMutationOptions<OpmlImportResponse, unknown, FormData>,
+) {
+  return useMutation({
+    mutationFn: (formData: FormData) =>
+      ApiClient.importOPML(formData) as Promise<OpmlImportResponse>,
+    ...options,
+  });
+}
 
-  function useImportTaskStatus(
-    taskId: string | null,
-    enabled: boolean = true,
-    options?: Omit<
-      UseQueryOptions<
-        OpmlImportStatusResponse,
-        Error,
-        OpmlImportStatusResponse,
-        ReturnType<typeof queryKeys.opmlImportStatus>
-      >,
-      "queryKey" | "queryFn"
+export function useImportTaskStatus(
+  taskId: string | null,
+  enabled: boolean = true,
+  options?: Omit<
+    UseQueryOptions<
+      OpmlImportStatusResponse,
+      Error,
+      OpmlImportStatusResponse,
+      ReturnType<typeof queryKeys.opmlImportStatus>
     >,
-  ) {
-    return useQuery({
-      queryKey: queryKeys.opmlImportStatus(taskId),
-      queryFn: () =>
-        ApiClient.getImportTaskStatus(taskId!) as Promise<OpmlImportStatusResponse>,
-      enabled: !!taskId && enabled,
-      refetchInterval: 3000, // Poll every 3 seconds
-      retry: false, // Don't retry failed status checks
-      ...options,
-    });
-  }
+    "queryKey" | "queryFn"
+  >,
+) {
+  return useQuery({
+    queryKey: queryKeys.opmlImportStatus(taskId),
+    queryFn: () =>
+      ApiClient.getImportTaskStatus(taskId!) as Promise<OpmlImportStatusResponse>,
+    enabled: !!taskId && enabled,
+    refetchInterval: 3000, // Poll every 3 seconds
+    retry: false, // Don't retry failed status checks
+    ...options,
+  });
+}
 
-  function useActiveImportTask(
-    options?: Omit<
-      UseQueryOptions<
-        OpmlTaskMetadata | null,
-        Error,
-        OpmlTaskMetadata | null,
-        ReturnType<typeof queryKeys.opmlImportTasks>
-      >,
-      "queryKey" | "queryFn"
+export function useActiveImportTask(
+  options?: Omit<
+    UseQueryOptions<
+      OpmlTaskMetadata | null,
+      Error,
+      OpmlTaskMetadata | null,
+      ReturnType<typeof queryKeys.opmlImportTasks>
     >,
-  ) {
-    return useQuery({
-      queryKey: queryKeys.opmlImportTasks(),
-      queryFn: () => ApiClient.getActiveImportTask(),
-      refetchInterval: 5000, // Poll every 5 seconds
-      ...options,
-    });
-  }
+    "queryKey" | "queryFn"
+  >,
+) {
+  return useQuery({
+    queryKey: queryKeys.opmlImportTasks(),
+    queryFn: () => ApiClient.getActiveImportTask(),
+    refetchInterval: 5000, // Poll every 5 seconds
+    ...options,
+  });
+}
 
-  function useCancelImportTask(
-    options?: UseMutationOptions<OpmlImportCancelResponse, unknown, string>,
-  ) {
-    const queryClient = useQueryClient();
-    return useMutation({
-      mutationFn: (taskId: string) =>
-        ApiClient.cancelImportTask(taskId) as Promise<OpmlImportCancelResponse>,
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: queryKeys.opmlImportTasks() });
-      },
-      ...options,
-    });
-  }
-
-  return {
-    useImportOPML,
-    useImportTaskStatus,
-    useActiveImportTask,
-    useCancelImportTask,
-  };
+export function useCancelImportTask(
+  options?: UseMutationOptions<OpmlImportCancelResponse, unknown, string>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (taskId: string) =>
+      ApiClient.cancelImportTask(taskId) as Promise<OpmlImportCancelResponse>,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.opmlImportTasks() });
+    },
+    ...options,
+  });
 }

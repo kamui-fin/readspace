@@ -37,7 +37,7 @@ interface DiscoverPageClientProps {
  * - Manages AI search state via localStorage
  * - Provides the search client to child components via InstantSearch context
  */
-export default function DiscoverPageClient({
+export default function DiscoverView({
     initialLanguage,
 }: DiscoverPageClientProps) {
     // AI search state - defaults to disabled

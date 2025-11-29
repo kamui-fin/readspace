@@ -1,29 +1,13 @@
 "use client"
 
-import { useQuery } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 
 import { FeedCard } from "@/components/features/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
-import { FEEDS_INDEX_NAME, meilisearchClient } from "@/lib/meilisearch-client"
-import { type FeedSummary } from "@readspace/shared"
+import { useSimilarFeedsById } from "@/components/features/discover/hooks/use-similar-feeds-by-id"
 
 interface SimilarFeedsClientProps {
     feedId: string
-}
-
-interface MeilisearchHit {
-    id: string
-    url: string
-    title: string
-    description?: string | null
-    link?: string | null
-    language?: string | null
-    image_url?: string | null
-    tags?: string[]
-    top_level_category?: string | null
-    popularity_score?: number | null
-    _rankingScore?: number
 }
 
 function PageHeader() {
@@ -50,17 +34,6 @@ function PageLayout({ children }: PageLayoutProps) {
             </main>
         </div>
     )
-}
-
-function convertHitToFeed(hit: MeilisearchHit): FeedSummary {
-    return {
-        id: hit.id,
-        url: hit.url,
-        title: hit.title,
-        link: hit.link ?? null,
-        image_url: hit.image_url ?? null,
-        error_count: 0,
-    }
 }
 
 interface ErrorMessageProps {
@@ -99,35 +72,13 @@ function EmptyState() {
     )
 }
 
-export default function SimilarFeedsClient({
+export default function SimilarFeedsView({
     feedId,
 }: SimilarFeedsClientProps) {
-    // Query for similar feeds using Meilisearch
-    const {
-        data: similarResults,
-        error: similarError,
-        isLoading: isLoadingSimilar,
-    } = useQuery({
-        queryKey: ["similarFeeds", feedId],
-        queryFn: async () => {
-            const index = meilisearchClient.index(FEEDS_INDEX_NAME)
-            const results = await index.searchSimilarDocuments({
-                id: feedId,
-                limit: 50,
-                embedder: "default",
-                showRankingScore: true,
-            })
-            return results
-        },
-        staleTime: 5 * 60 * 1000, // 5 minutes
-        retry: 2,
-        enabled: !!feedId,
-    })
-
-    const similarFeeds = similarResults?.hits || []
+    const { similarFeeds, error, isLoading } = useSimilarFeedsById(feedId)
 
     const renderContent = () => {
-        if (isLoadingSimilar) {
+        if (isLoading) {
             return (
                 <div className="space-y-4">
                     {Array.from({ length: 5 }).map((_, index) => (
@@ -137,8 +88,8 @@ export default function SimilarFeedsClient({
             )
         }
 
-        if (similarError) {
-            return <ErrorMessage error={similarError as Error} />
+        if (error) {
+            return <ErrorMessage error={error as Error} />
         }
 
         if (similarFeeds.length === 0) {
@@ -147,10 +98,10 @@ export default function SimilarFeedsClient({
 
         return (
             <div className="flex flex-col divide-y divide-border/40">
-                {(similarFeeds as MeilisearchHit[]).map((hit) => (
+                {similarFeeds.map((feed) => (
                     <FeedCard
-                        key={hit.id}
-                        feed={convertHitToFeed(hit)}
+                        key={feed.id}
+                        feed={feed}
                         showSimilarButton={true}
                         showPreviewButton={true}
                         showFollowButton={true}

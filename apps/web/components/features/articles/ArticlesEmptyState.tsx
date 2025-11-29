@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
-import { useIsMobile } from "@/hooks/useMobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
 import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
 import Link from "next/link"

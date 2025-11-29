@@ -6,7 +6,7 @@ import { usePostHog } from "posthog-js/react"
 
 import posthog from "posthog-js"
 import { PostHogProvider as PHProvider } from "posthog-js/react"
-import { useIsCloudProd } from "@/hooks/useIsCloudProd"
+import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
 
 function PostHogPageView() {
     const pathname = usePathname()
