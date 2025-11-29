@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { colorTokens } from "@/design-tokens/colors"
-import type { Article } from "@readspace/shared"
 import {
     ArrowLeft,
     BookmarkIcon,
@@ -31,50 +30,39 @@ import {
 import { useState } from "react"
 import { toast } from "react-hot-toast"
 import { LanguageSelector } from "./LanguageSelector"
+import { useArticleContext } from "./ArticleContext"
 
 interface ArticleToolbarProps {
-    article: Article
-    isReadLater: boolean
-    contentSource?: "original" | "extracted" | "translated"
-    onContentSourceChange?: (
-        source: "original" | "extracted" | "translated"
-    ) => void
-    onToggleReadLater: () => void
-    onMarkAsRead?: () => void
-    onExtractFullText: () => Promise<void>
-    onSummarize: () => Promise<void>
-    onTranslate: (language: string) => Promise<void>
-    isExtracting?: boolean
-    isSummarizing?: boolean
-    isTranslating?: boolean
-    onBack?: () => void
     hideBackground?: boolean
-    isReadLaterMode?: boolean
-    hasTranslatedContent?: boolean
-    translatedLanguage?: string | null
 }
 
 export function ArticleToolbar({
-    article,
-    isReadLater,
-    contentSource = "original",
-    onContentSourceChange,
-    onToggleReadLater,
-    onMarkAsRead,
-    onExtractFullText,
-    onSummarize,
-    onTranslate,
-    isExtracting = false,
-    isSummarizing = false,
-    isTranslating = false,
-    onBack,
     hideBackground = false,
-    isReadLaterMode = false,
-    hasTranslatedContent = false,
-    translatedLanguage = null,
 }: ArticleToolbarProps) {
+    const {
+        article,
+        contentSource,
+        setContentSource,
+        handleMarkAsRead,
+        handleToggleReadLater,
+        handleExtractContent,
+        handleSummarize,
+        handleTranslate,
+        extractFullText,
+        summarizeArticle,
+        isTranslating,
+        onBack,
+        isReadLaterMode,
+        translatedContent,
+        translatedLanguage,
+    } = useArticleContext()
+
     const [showLanguageSelector, setShowLanguageSelector] = useState(false)
     const isMobile = useIsMobile()
+
+    const hasTranslatedContent = !!translatedContent
+    const isExtracting = extractFullText.isFetching
+    const isSummarizing = summarizeArticle.isFetching
 
     const handleCopyUrl = async () => {
         if (!article.link) {
@@ -102,7 +90,7 @@ export function ArticleToolbar({
 
     const handleTranslateClick = (language: string) => {
         setShowLanguageSelector(false)
-        onTranslate(language)
+        handleTranslate(language)
     }
 
     return (
@@ -134,7 +122,7 @@ export function ArticleToolbar({
                 className={`flex items-center ${isMobile ? "gap-1" : "gap-1"}`}
             >
                 {/* Content Source Tabs - Show when link is available */}
-                {article.link && onContentSourceChange && (
+                {article.link && setContentSource && (
                     <div className="mr-2">
                         <Tabs
                             value={contentSource}
@@ -144,14 +132,14 @@ export function ArticleToolbar({
                                     | "extracted"
                                     | "translated"
                                 // Always update the content source state for immediate tab feedback
-                                onContentSourceChange(newSource)
+                                setContentSource(newSource)
 
                                 // If switching to extracted and no content exists yet, trigger extraction
                                 if (
                                     newSource === "extracted" &&
                                     !article.extracted_content
                                 ) {
-                                    onExtractFullText()
+                                    handleExtractContent()
                                 }
                             }}
                             className="w-auto inline-block"
@@ -199,37 +187,37 @@ export function ArticleToolbar({
                                 className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110`}
                                 style={{
                                     backgroundColor:
-                                        isReadLaterMode && isReadLater
+                                        isReadLaterMode && article.is_saved
                                             ? colorTokens.accent.DEFAULT
                                             : "transparent",
                                     color:
-                                        isReadLaterMode && isReadLater
+                                        isReadLaterMode && article.is_saved
                                             ? colorTokens.accent.foreground
                                             : colorTokens.foreground,
                                 }}
                                 onClick={
                                     isReadLaterMode
-                                        ? onMarkAsRead
-                                        : onToggleReadLater
+                                        ? handleMarkAsRead
+                                        : handleToggleReadLater
                                 }
                             >
                                 {isReadLaterMode ? (
                                     <Check
                                         className="h-4 w-4 transition-all duration-200 hover:scale-110"
                                         style={{
-                                            color: isReadLater
+                                            color: article.is_saved
                                                 ? colorTokens.primary.DEFAULT
                                                 : colorTokens.muted.foreground,
                                         }}
                                     />
                                 ) : (
                                     <BookmarkIcon
-                                        className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${isReadLater ? "scale-110" : ""}`}
+                                        className={`h-4 w-4 transition-all duration-200 hover:scale-110 ${article.is_saved ? "scale-110" : ""}`}
                                         style={{
-                                            fill: isReadLater
+                                            fill: article.is_saved
                                                 ? colorTokens.primary.DEFAULT
                                                 : "transparent",
-                                            color: isReadLater
+                                            color: article.is_saved
                                                 ? colorTokens.primary.DEFAULT
                                                 : colorTokens.foreground,
                                         }}
@@ -240,9 +228,9 @@ export function ArticleToolbar({
                         <TooltipContent>
                             {isReadLaterMode
                                 ? "Mark as Read & Remove"
-                                : isReadLater
-                                  ? "Remove from Read Later"
-                                  : "Save for Later"}
+                                : article.is_saved
+                                    ? "Remove from Read Later"
+                                    : "Save for Later"}
                         </TooltipContent>
                     </Tooltip>
 
@@ -291,7 +279,7 @@ export function ArticleToolbar({
                                 variant="ghost"
                                 size="sm"
                                 className={`${isMobile ? "h-9 w-9" : "h-8 w-8"} p-0 transition-all duration-200 hover:scale-110 hover:bg-muted/60`}
-                                onClick={onSummarize}
+                                onClick={handleSummarize}
                                 disabled={isSummarizing}
                             >
                                 {isSummarizing ? (

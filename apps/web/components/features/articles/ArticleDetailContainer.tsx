@@ -1,5 +1,5 @@
-import { useState, useCallback } from "react"
 import { ArticleContent } from "./ArticleContent"
+import { ArticleContentProvider } from "./ArticleContext"
 import type { Article } from "@readspace/shared"
 
 interface ArticleDetailContainerProps {
@@ -7,6 +7,7 @@ interface ArticleDetailContainerProps {
     isRecentlyReadMode: boolean
     isReadLaterMode: boolean
     shouldShowPreviewBanner: boolean
+    shouldShowFeedBadge: boolean
     onMarkAsRead: () => void
     onArticleRemoved: () => void
     onBack: () => void
@@ -17,53 +18,23 @@ export function ArticleDetailContainer({
     isRecentlyReadMode,
     isReadLaterMode,
     shouldShowPreviewBanner,
+    shouldShowFeedBadge,
     onMarkAsRead,
     onArticleRemoved,
     onBack,
 }: ArticleDetailContainerProps) {
-    // Internal state for the article view
-    // This state is reset when the key (article.id) changes in the parent
-    const [currentContent, setCurrentContent] = useState("")
-    const [currentReadTime, setCurrentReadTime] = useState<number | null>(null)
-    const [isShowingSummary, setIsShowingSummary] = useState(false)
-    const [isTranslating, setIsTranslating] = useState(false)
-
-    const handleContentChange = useCallback((content: string) => {
-        setCurrentContent(content)
-    }, [])
-
-    const handleReadTimeChange = useCallback((readTime: number | null) => {
-        setCurrentReadTime(readTime)
-    }, [])
-
-    const handleSummaryChange = useCallback(
-        (summary: string | null, isShowing: boolean) => {
-            setIsShowingSummary(isShowing)
-        },
-        []
-    )
-
-    const handleTranslationChange = useCallback((translating: boolean) => {
-        setIsTranslating(translating)
-    }, [])
-
     return (
-        <ArticleContent
+        <ArticleContentProvider
             article={article}
-            currentContent={currentContent}
-            currentReadTime={currentReadTime}
-            isShowingSummary={isShowingSummary}
-            isTranslating={isTranslating}
             isRecentlyReadMode={isRecentlyReadMode}
             isReadLaterMode={isReadLaterMode}
             shouldShowPreviewBanner={shouldShowPreviewBanner}
-            onContentChange={handleContentChange}
-            onReadTimeChange={handleReadTimeChange}
-            onSummaryChange={handleSummaryChange}
-            onTranslationChange={handleTranslationChange}
+            shouldShowFeedBadge={shouldShowFeedBadge}
             onMarkAsRead={onMarkAsRead}
             onArticleRemoved={onArticleRemoved}
             onBack={onBack}
-        />
+        >
+            <ArticleContent />
+        </ArticleContentProvider>
     )
 }

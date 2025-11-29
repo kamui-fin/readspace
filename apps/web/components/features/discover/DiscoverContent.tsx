@@ -12,8 +12,8 @@ import {
 import { CategoryGrid } from "./CategoryGrid"
 import { CustomSearchBox } from "./CustomSearchBox"
 import { DiscoverLayout } from "./DiscoverLayout"
-import { useFeedPreview } from "./hooks/useFeedPreview"
-import { usePersistentState } from "./hooks/usePersistentState"
+import { useFeedPreview } from "./hooks/use-feed-preview"
+import { usePersistentState } from "./hooks/use-persistent-state"
 import { SearchResults } from "./SearchResults"
 
 interface DiscoverContentProps {

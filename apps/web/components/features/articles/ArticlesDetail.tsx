@@ -10,6 +10,7 @@ export function ArticlesDetail() {
         shouldShowPreviewBanner,
         handleMarkAsRead,
         handleBackToList,
+        feedId,
     } = useArticlesContext()
 
     if (!selectedArticle) {
@@ -34,6 +35,7 @@ export function ArticlesDetail() {
             isRecentlyReadMode={isRecentlyReadMode}
             isReadLaterMode={isReadLaterMode}
             shouldShowPreviewBanner={shouldShowPreviewBanner}
+            shouldShowFeedBadge={!feedId}
             onMarkAsRead={handleMarkAsRead}
             onArticleRemoved={() => { }}
             onBack={handleBackToList}

@@ -1,31 +1,20 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { Skeleton } from "@/components/ui/skeleton"
 import { RSS_QUERY_KEYS } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
-import {
-    Activity,
-    CheckCircle,
-    ChevronLeft,
-    Clock,
-    FileText,
-    X,
-    XCircle,
-} from "lucide-react"
+import { ChevronLeft } from "lucide-react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useEffect, useState } from "react"
 import { toast } from "react-hot-toast"
 import { useOpmlTaskStatus } from "@/components/features/opml/hooks/use-opml-task-status"
+import { LoadingCard } from "@/components/features/opml/status/LoadingCard"
+import { ErrorCard } from "@/components/features/opml/status/ErrorCard"
+import { ProgressCard } from "@/components/features/opml/status/ProgressCard"
+import { ResultsCard } from "@/components/features/opml/status/ResultsCard"
+import { PendingCard } from "@/components/features/opml/status/PendingCard"
+import { FailedCard } from "@/components/features/opml/status/FailedCard"
 
 export default function ImportStatusPage() {
     const params = useParams()
@@ -33,7 +22,6 @@ export default function ImportStatusPage() {
     const taskId = params.task_id as string
 
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
-    const [showErrorDetails, setShowErrorDetails] = useState(false)
 
     const {
         task: taskStatus,
@@ -94,424 +82,45 @@ export default function ImportStatusPage() {
 
     const renderStatus = () => {
         if (isLoading) {
-            return (
-                <Card>
-                    <CardHeader className="pb-4">
-                        <div className="space-y-4">
-                            <div className="flex items-start gap-3">
-                                <Skeleton className="h-6 w-6 rounded-full flex-shrink-0" />
-                                <div className="min-w-0 flex-1 space-y-3">
-                                    <Skeleton className="h-6 w-48" />
-                                    <div className="space-y-2">
-                                        <Skeleton className="h-4 w-32" />
-                                        <Skeleton className="h-4 w-40" />
-                                    </div>
-                                </div>
-                            </div>
-                            <Skeleton className="h-3 w-24 ml-9" />
-                        </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-full" />
-                            <Skeleton className="h-2 w-full rounded-full" />
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <Skeleton className="h-24 rounded-lg" />
-                            <Skeleton className="h-24 rounded-lg" />
-                            <Skeleton className="h-24 rounded-lg" />
-                        </div>
-                    </CardContent>
-                </Card>
-            )
+            return <LoadingCard />
         }
 
         if (errorMsg) {
-            return (
-                <Card>
-                    <CardHeader>
-                        <div className="flex items-center gap-3">
-                            <XCircle className="h-6 w-6 text-destructive" />
-                            <CardTitle>Task Not Found</CardTitle>
-                        </div>
-                        <CardDescription className="text-destructive">
-                            {errorMsg}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                        <div className="text-sm text-muted-foreground">
-                            <p>This can happen if:</p>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                                <li>
-                                    The import was completed or failed long ago
-                                </li>
-                                <li>
-                                    The task data expired from temporary storage
-                                </li>
-                                <li>There was a system restart</li>
-                            </ul>
-                        </div>
-                        <div className="flex gap-3 pt-2">
-                            <Button asChild className="flex-1">
-                                <Link href="/import-opml">
-                                    Start New Import
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline">
-                                <Link href="/feeds">View Feeds</Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            )
+            return <ErrorCard message={errorMsg} />
         }
 
         if (!taskStatus) return null
 
-        const { status, progress, result, metadata } = taskStatus
+        const { status } = taskStatus
 
         return (
             <div className="space-y-6">
                 {/* Progress Card (for in-progress imports) */}
-                {status === "in_progress" && progress && (
-                    <Card>
-                        <CardHeader className="pb-4">
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <Activity className="h-6 w-6 text-blue-600 animate-pulse flex-shrink-0 mt-0.5" />
-                                    <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">
-                                            Import in Progress
-                                        </CardTitle>
-                                        <div className="space-y-2">
-                                            {metadata?.filename && (
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">
-                                                        {metadata.filename}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className="text-sm text-muted-foreground">
-                                                Processing {progress.completed}{" "}
-                                                of {progress.total} feeds
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {metadata?.created_at && (
-                                    <div className="text-xs text-muted-foreground pl-9">
-                                        Started:{" "}
-                                        {new Date(
-                                            metadata.created_at
-                                        ).toLocaleString()}
-                                    </div>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <div className="flex justify-between text-sm text-muted-foreground">
-                                    <span>Progress</span>
-                                    <span>
-                                        {Math.round(
-                                            (progress.completed /
-                                                progress.total) *
-                                                100
-                                        )}
-                                        %
-                                    </span>
-                                </div>
-                                <Progress
-                                    value={
-                                        (progress.completed / progress.total) *
-                                        100
-                                    }
-                                    className="h-2"
-                                />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-secondary">
-                                            {progress.successful}
-                                        </div>
-                                        <div className="text-sm font-medium text-secondary">
-                                            Successfully Imported
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-yellow-700 dark:text-yellow-400">
-                                            {progress.already_existed}
-                                        </div>
-                                        <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                                            Already Existed
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-1">
-                                        <div className="text-2xl font-semibold text-destructive">
-                                            {progress.failed}
-                                        </div>
-                                        <div className="text-sm font-medium text-destructive">
-                                            Import Failed
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="pt-2">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleCancelImport}
-                                    disabled={isCancelling}
-                                    className="text-destructive hover:text-destructive"
-                                >
-                                    <X className="h-4 w-4 mr-2" />
-                                    {isCancelling
-                                        ? "Cancelling..."
-                                        : "Cancel Import"}
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {status === "in_progress" && (
+                    <ProgressCard
+                        task={taskStatus}
+                        onCancel={handleCancelImport}
+                        isCancelling={isCancelling}
+                    />
                 )}
 
                 {/* Results Card (for completed imports) */}
-                {status === "completed" && result && (
-                    <Card>
-                        <CardHeader className="pb-4">
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
-                                    <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">
-                                            Import Complete
-                                        </CardTitle>
-                                        <div className="space-y-2">
-                                            {metadata?.filename && (
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">
-                                                        {metadata.filename}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <div className="text-sm text-muted-foreground">
-                                                Your OPML file has been
-                                                successfully processed.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                {metadata?.created_at && (
-                                    <div className="text-xs text-muted-foreground pl-9">
-                                        Started:{" "}
-                                        {new Date(
-                                            metadata.created_at
-                                        ).toLocaleString()}
-                                    </div>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-secondary/10 rounded-lg border border-secondary/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-secondary">
-                                            {result.successful || 0}
-                                        </div>
-                                        <div className="text-sm font-medium text-secondary">
-                                            Successfully Imported
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-yellow-700 dark:text-yellow-400">
-                                            {result.already_existed || 0}
-                                        </div>
-                                        <div className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                                            Already Existed
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex items-center justify-between sm:flex-col sm:text-center p-4 bg-destructive/10 rounded-lg border border-destructive/20">
-                                    <div className="flex items-center gap-3 sm:flex-col sm:gap-2">
-                                        <div className="text-2xl font-semibold text-destructive">
-                                            {result.failed || 0}
-                                        </div>
-                                        <div className="text-sm font-medium text-destructive">
-                                            Import Failed
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {result.errors && result.errors.length > 0 && (
-                                <div className="border-t pt-4">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() =>
-                                            setShowErrorDetails(
-                                                !showErrorDetails
-                                            )
-                                        }
-                                        className="text-muted-foreground hover:text-foreground"
-                                    >
-                                        {showErrorDetails ? "Hide" : "Show"}{" "}
-                                        failed feeds ({result.errors.length})
-                                    </Button>
-
-                                    {showErrorDetails && (
-                                        <div className="mt-3 max-h-48 overflow-y-auto space-y-2">
-                                            {result.errors.map(
-                                                (error, index) => (
-                                                    <div
-                                                        key={index}
-                                                        className="bg-red-500/10 border border-red-500/20 rounded p-3 text-sm"
-                                                    >
-                                                        <div className="font-medium text-red-900 dark:text-red-300">
-                                                            {error.title ||
-                                                                "Unknown feed"}
-                                                        </div>
-                                                        <div className="text-red-700 dark:text-red-400 text-xs mt-1 truncate">
-                                                            {error.url}
-                                                        </div>
-                                                        <div className="text-red-600 dark:text-red-400 text-xs mt-1">
-                                                            {error.error}
-                                                        </div>
-                                                    </div>
-                                                )
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex flex-col sm:flex-row gap-3 pt-4">
-                                <Button asChild className="flex-1">
-                                    <Link href="/today">View Articles</Link>
-                                </Button>
-                                <Button asChild variant="outline">
-                                    <Link href="/import-opml">Import More</Link>
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {status === "completed" && (
+                    <ResultsCard task={taskStatus} />
                 )}
 
                 {/* Pending Card */}
                 {status === "pending" && (
-                    <Card>
-                        <CardHeader className="pb-4">
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <Clock className="h-6 w-6 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                    <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">
-                                            Import Queued
-                                        </CardTitle>
-                                        <div className="space-y-2">
-                                            {metadata?.filename && (
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">
-                                                        {metadata.filename}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <p className="text-sm text-muted-foreground">
-                                                Your import will start
-                                                processing shortly.
-                                                {metadata?.estimated_feeds && (
-                                                    <span>
-                                                        {" "}
-                                                        Estimated{" "}
-                                                        {
-                                                            metadata.estimated_feeds
-                                                        }{" "}
-                                                        feeds to process.
-                                                    </span>
-                                                )}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {metadata?.created_at && (
-                                    <div className="text-xs text-muted-foreground pl-9">
-                                        Queued:{" "}
-                                        {new Date(
-                                            metadata.created_at
-                                        ).toLocaleString()}
-                                    </div>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={handleCancelImport}
-                                disabled={isCancelling}
-                                className="text-destructive hover:text-destructive"
-                            >
-                                <X className="h-4 w-4 mr-2" />
-                                {isCancelling
-                                    ? "Cancelling..."
-                                    : "Cancel Import"}
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <PendingCard
+                        task={taskStatus}
+                        onCancel={handleCancelImport}
+                        isCancelling={isCancelling}
+                    />
                 )}
 
                 {/* Failed Card */}
                 {status === "failed" && (
-                    <Card>
-                        <CardHeader className="pb-4">
-                            <div className="space-y-4">
-                                <div className="flex items-start gap-3">
-                                    <XCircle className="h-6 w-6 text-destructive flex-shrink-0 mt-0.5" />
-                                    <div className="min-w-0 flex-1">
-                                        <CardTitle className="text-lg mb-3">
-                                            Import Failed
-                                        </CardTitle>
-                                        <div className="space-y-2">
-                                            {metadata?.filename && (
-                                                <div className="flex items-center gap-2">
-                                                    <FileText className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
-                                                    <span className="text-sm text-muted-foreground truncate">
-                                                        {metadata.filename}
-                                                    </span>
-                                                </div>
-                                            )}
-                                            <p className="text-sm text-destructive">
-                                                {taskStatus.error ||
-                                                    "The import process encountered an error."}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                                {metadata?.created_at && (
-                                    <div className="text-xs text-muted-foreground pl-9">
-                                        Started:{" "}
-                                        {new Date(
-                                            metadata.created_at
-                                        ).toLocaleString()}
-                                    </div>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                            <Button asChild variant="outline">
-                                <Link href="/import-opml">Try Again</Link>
-                            </Button>
-                        </CardContent>
-                    </Card>
+                    <FailedCard task={taskStatus} />
                 )}
             </div>
         )

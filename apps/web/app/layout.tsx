@@ -10,8 +10,8 @@ import {
     notoSerifTC,
 } from "@/lib/fonts"
 import "./globals.css"
-import { PostHogProvider } from "@/components/providers/PosthogProvider"
-import { cn } from "@readspace/shared"
+import { PosthogProvider } from "@/components/providers/PosthogProvider"
+import { cn } from "@/lib/utils"
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://app.readspace.ai"
 
@@ -109,11 +109,11 @@ export default function RootLayout({
                     "font-sans antialiased mt-0"
                 )}
             >
-                <PostHogProvider>
+                <PosthogProvider>
                     <QueryProvider>
                         <main className="w-full">{children}</main>
                     </QueryProvider>
-                </PostHogProvider>
+                </PosthogProvider>
             </body>
         </html>
     )

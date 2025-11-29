@@ -5,7 +5,7 @@ import { ManageFeedsTable } from "@/components/features/feeds/ManageFeedsTable"
 import { ManageFeedsToolbar } from "@/components/features/feeds/ManageFeedsToolbar"
 import { ManageFeedsProvider } from "@/components/features/feeds/ManageFeedsContext"
 import { ManageFeedsPageSkeleton } from "@/components/features/feeds/ManageFeedsSkeleton"
-import Header from "@/components/features/navigation/Header"
+import AppHeader from "@/components/features/navigation/AppHeader"
 import { useFeedManagement } from "@/components/features/feeds/hooks/use-feed-management"
 
 /**
@@ -33,7 +33,7 @@ export default function ManageFeedsView() {
     return (
         <ManageFeedsProvider value={controller}>
             <div className="flex flex-col h-full">
-                <Header
+                <AppHeader
                     breadcrumbItems={[
                         { href: "/manage-feeds", label: "Manage Feeds" },
                     ]}

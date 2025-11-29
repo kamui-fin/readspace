@@ -13,9 +13,9 @@ import {
     type Subscription,
     type Folder,
 } from "@readspace/shared"
-import { useArticlesData } from "./useArticlesData"
-import { useArticlesView } from "./useArticlesView"
-import { useArticleUnreadCount } from "./useArticleUnreadCount"
+import { useArticlesData } from "./use-articles-data"
+import { useArticlesView } from "./use-articles-view"
+import { useArticleUnreadCount } from "./use-article-unread-count"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface UseArticlesControllerProps {

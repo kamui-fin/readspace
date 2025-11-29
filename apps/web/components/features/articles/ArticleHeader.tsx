@@ -1,59 +1,27 @@
 import { ArticleToolbar } from "./ArticleToolbar"
-import { type Article } from "@readspace/shared"
+import { useArticleContext } from "./ArticleContext"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 
 interface ArticleHeaderProps {
-    article: Article
     currentReadTime: number | null
-    isRecentlyReadMode: boolean
     shouldShowFeedBadge: boolean
-    shouldShowPreviewBanner: boolean
     isMobile: boolean
-    optimisticReadLater: boolean
-    contentSource: "original" | "extracted" | "translated"
-    translatedContent: string | null
-    translatedLanguage: string | null
-    onContentSourceChange: (
-        source: "original" | "extracted" | "translated"
-    ) => void
-    onToggleReadLater: () => void
-    onMarkAsRead: () => void
-    onExtractFullText: () => Promise<void>
-    onSummarize: () => Promise<void>
-    onTranslate: (lang: string) => Promise<void>
-    isExtracting: boolean
-    isSummarizing: boolean
-    isTranslating: boolean
-    onBack?: () => void
-    isReadLaterMode: boolean
 }
 
 export function ArticleHeader({
-    article,
     currentReadTime,
-    isRecentlyReadMode,
     shouldShowFeedBadge,
-    shouldShowPreviewBanner,
     isMobile,
-    optimisticReadLater,
-    contentSource,
-    translatedContent,
-    translatedLanguage,
-    onContentSourceChange,
-    onToggleReadLater,
-    onMarkAsRead,
-    onExtractFullText,
-    onSummarize,
-    onTranslate,
-    isExtracting,
-    isSummarizing,
-    isTranslating,
-    onBack,
-    isReadLaterMode,
 }: ArticleHeaderProps) {
+    const {
+        article,
+        isRecentlyReadMode,
+        shouldShowPreviewBanner,
+    } = useArticleContext()
+
     const [feedImageError, setFeedImageError] = useState(false)
 
     const publishedAtString = article.published_at
@@ -63,8 +31,8 @@ export function ArticleHeader({
         ? isRecentlyReadMode && readAtString
             ? `Read ${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     return (
@@ -124,23 +92,7 @@ export function ArticleHeader({
                 {/* Desktop Article Toolbar */}
                 {!shouldShowPreviewBanner && !isMobile && (
                     <ArticleToolbar
-                        article={article}
-                        isReadLater={optimisticReadLater}
-                        contentSource={contentSource}
-                        onContentSourceChange={onContentSourceChange}
-                        hasTranslatedContent={!!translatedContent}
-                        translatedLanguage={translatedLanguage}
-                        onToggleReadLater={onToggleReadLater}
-                        onMarkAsRead={onMarkAsRead}
-                        onExtractFullText={onExtractFullText}
-                        onSummarize={onSummarize}
-                        onTranslate={onTranslate}
-                        isExtracting={isExtracting}
-                        isSummarizing={isSummarizing}
-                        isTranslating={isTranslating}
-                        onBack={onBack}
                         hideBackground={true}
-                        isReadLaterMode={isReadLaterMode}
                     />
                 )}
             </div>

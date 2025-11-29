@@ -17,9 +17,10 @@ import { User } from "@supabase/supabase-js"
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { NavMain } from "./NavMain"
-import { NavSecondary } from "./NavSecondary"
-import { NavUser } from "./NavUser"
+import { SidebarMain } from "./SidebarMain"
+import { SidebarSecondary } from "./SidebarSecondary"
+import { Logo } from "@/components/ui/logo"
+import { SidebarUser } from "./SidebarUser"
 
 const data = {
     navSecondary: [
@@ -115,32 +116,21 @@ export function AppSidebar({
                                     href="/today"
                                     className="flex items-center"
                                 >
-                                    <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                                        <Image
-                                            src="/readspace.svg"
-                                            width={30}
-                                            height={30}
-                                            alt=""
-                                            className="rounded"
-                                        />
-                                    </div>
-                                    <span className="truncate font-logo text-xl font-medium tracking-normal pb-[2px]">
-                                        readspace
-                                    </span>
+                                    <Logo showText={true} iconSize={30} textSize="text-xl pb-[2px]" />
                                 </Link>
                             </SidebarLeftMenuButton>
                         </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarHeader>
                 <SidebarContent>
-                    <NavMain />
-                    <NavSecondary
+                    <SidebarMain />
+                    <SidebarSecondary
                         items={data.navSecondary}
                         className="mt-auto"
                     />
                 </SidebarContent>
                 <SidebarFooter>
-                    <NavUser
+                    <SidebarUser
                         avatar={avatar}
                         name={name}
                         email={email}

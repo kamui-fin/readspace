@@ -16,7 +16,7 @@ import { MailIcon } from "lucide-react"
 import * as React from "react"
 import { z } from "zod"
 import { signUp } from "@/app/(auth)/signup/actions"
-import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -28,29 +28,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-
-const createSignUpSchema = (isCloudProd: boolean) => {
-    const baseSchema = z.object({
-        email: z.string().email("Please enter a valid email address"),
-        username: z.string().min(3, "Username must be at least 3 characters"),
-        password: z.string().min(6, "Password must be at least 6 characters"),
-        confirmPassword: z.string(),
-        acceptTerms: z.boolean().optional(),
-    })
-
-    const cloudSchema = baseSchema.extend({
-        acceptTerms: z.boolean().refine((val) => val === true, {
-            message: "You must accept the terms and conditions",
-        }),
-    })
-
-    const schema = isCloudProd ? cloudSchema : baseSchema
-
-    return schema.refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords don't match",
-        path: ["confirmPassword"],
-    })
-}
+import { createSignUpSchema } from "./lib/schemas"
 
 function VerificationNotice() {
     return (
@@ -76,10 +54,12 @@ export function SignupForm({
 }: React.ComponentProps<"div">) {
     const [isAwaitingVerification, setIsAwaitingVerification] =
         React.useState(false)
-    const isCloudProd = useIsCloudProd()
+    const [isLoading, setIsLoading] = React.useState(false)
+    const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
+    const isProd = isCloudProd()
     const router = useRouter()
 
-    const schema = createSignUpSchema(isCloudProd)
+    const schema = createSignUpSchema(isProd)
     type SignUpFormValues = z.infer<typeof schema>
 
     const form = useForm<SignUpFormValues>({
@@ -96,14 +76,14 @@ export function SignupForm({
 
     const onSubmit = async (values: SignUpFormValues) => {
         try {
-            const result = await signUp(values, isCloudProd)
+            const result = await signUp(values, isProd)
 
             if (result?.error) {
                 toast.error(result.error)
                 return
             }
 
-            if (isCloudProd) {
+            if (isProd) {
                 setIsAwaitingVerification(true)
             } else {
                 router.push("/")
@@ -206,7 +186,7 @@ export function SignupForm({
                                 )}
                             />
 
-                            {isCloudProd && (
+                            {isProd && (
                                 <FormField
                                     control={form.control}
                                     name="acceptTerms"

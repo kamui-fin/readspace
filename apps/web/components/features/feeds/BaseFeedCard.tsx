@@ -3,18 +3,18 @@ import { cn, useFeeds, type FeedSummary } from "@readspace/shared"
 import { Trash2 } from "lucide-react"
 import NextImage from "next/image"
 import { useState } from "react"
-import { FeedSubscribeDialog } from "./FeedSubscribeDialog"
+import { FeedSubscriptionModal } from "./FeedSubscriptionModal"
 import { FeedUnsubscribeDialog } from "./FeedUnsubscribeDialog"
 
 interface BaseFeedCardProps {
     /** The feed to display */
     feed:
-        | (FeedSummary & { description?: string | null })
-        | (FeedSummary & {
-              is_preview: true
-              preview_url: string
-              description?: string | null
-          })
+    | (FeedSummary & { description?: string | null })
+    | (FeedSummary & {
+        is_preview: true
+        preview_url: string
+        description?: string | null
+    })
     /** Variant for styling */
     variant?: "default" | "preview"
     /** Additional className */
@@ -101,7 +101,7 @@ export function BaseFeedCard({
             className={cn(
                 "w-full",
                 isPreview &&
-                    "p-4 border-2 border-dashed border-primary bg-primary/5 dark:bg-primary/10 rounded-lg",
+                "p-4 border-2 border-dashed border-primary bg-primary/5 dark:bg-primary/10 rounded-lg",
                 className
             )}
         >
@@ -127,24 +127,23 @@ export function BaseFeedCard({
                         />
                     )}
                     <div
-                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${
-                            feed.title?.toLowerCase().includes("techcrunch")
-                                ? "bg-green-600"
-                                : feed.title
-                                        ?.toLowerCase()
-                                        .includes("hacker news")
-                                  ? "bg-orange-500"
-                                  : "bg-gray-600"
-                        }`}
+                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${feed.title?.toLowerCase().includes("techcrunch")
+                            ? "bg-green-600"
+                            : feed.title
+                                ?.toLowerCase()
+                                .includes("hacker news")
+                                ? "bg-orange-500"
+                                : "bg-gray-600"
+                            }`}
                         style={{ display: feed.image_url ? "none" : "flex" }}
                     >
                         {feed.title?.toLowerCase().includes("techcrunch")
                             ? "TC"
                             : feed.title?.toLowerCase().includes("hacker news")
-                              ? "Y"
-                              : feed.title
-                                ? feed.title.charAt(0).toUpperCase()
-                                : "F"}
+                                ? "Y"
+                                : feed.title
+                                    ? feed.title.charAt(0).toUpperCase()
+                                    : "F"}
                     </div>
                 </div>
 
@@ -176,8 +175,8 @@ export function BaseFeedCard({
                                         isFollowed
                                             ? "outline"
                                             : isPreview
-                                              ? "default"
-                                              : "secondary"
+                                                ? "default"
+                                                : "secondary"
                                     }
                                     onClick={handleFollowClick}
                                     className={cn(
@@ -185,7 +184,7 @@ export function BaseFeedCard({
                                         isFollowed
                                             ? "text-destructive hover:text-destructive border-destructive/20 hover:bg-destructive/10"
                                             : isPreview &&
-                                                  "bg-primary hover:bg-primary/90 text-primary-foreground"
+                                            "bg-primary hover:bg-primary/90 text-primary-foreground"
                                     )}
                                 >
                                     {isFollowed && (
@@ -224,15 +223,10 @@ export function BaseFeedCard({
                 </div>
             </div>
 
-            <FeedSubscribeDialog
+            <FeedSubscriptionModal
                 isOpen={isSubscribeModalOpen}
                 onClose={() => setIsSubscribeModalOpen(false)}
                 feed={feed}
-                isPreviewFeed={isPreviewFeed}
-                previewUrl={
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    isPreviewFeed ? (feed as any).preview_url : undefined
-                }
             />
 
             <FeedUnsubscribeDialog

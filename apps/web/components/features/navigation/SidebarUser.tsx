@@ -22,14 +22,14 @@ import { Skeleton } from "@/components/ui/skeleton"
 import Link from "next/link"
 import ThemeSwitcher from "./ThemeSwitcher"
 
-interface NavUserProps {
+interface SidebarUserProps {
     avatar: string
     name: string | null
     email: string | null
     handleSignOut: () => void
 }
 
-export function NavUser({ avatar, name, email, handleSignOut }: NavUserProps) {
+export function SidebarUser({ avatar, name, email, handleSignOut }: SidebarUserProps) {
     const { isMobile } = useSidebarLeft()
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 

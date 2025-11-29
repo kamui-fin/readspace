@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useMemo, useState } from "react"
 import { type Article } from "@readspace/shared"
-import { useArticleAI } from "../hooks/useArticleAI"
-import { useArticleInteractions } from "../hooks/useArticleInteractions"
-import { useIsMobile } from "../../../../hooks/use-mobile"
+import { useArticleAI } from "./hooks/use-article-ai"
+import { useArticleInteractions } from "./hooks/use-article-interactions"
+import { useIsMobile } from "@/hooks/use-mobile"
 
 type UseArticleAIResult = ReturnType<typeof useArticleAI>
 type UseArticleInteractionsResult = ReturnType<typeof useArticleInteractions>
@@ -17,6 +17,14 @@ interface ArticleContextValue extends UseArticleAIResult, UseArticleInteractions
     isTranslating: boolean
     onBack?: () => void
     isReadLaterMode: boolean
+    isRecentlyReadMode: boolean
+    shouldShowPreviewBanner: boolean
+    // New state values
+    currentContent: string
+    currentReadTime: number | null
+    isShowingSummary: boolean
+    setCurrentReadTime: (time: number | null) => void
+    shouldShowFeedBadge: boolean
 }
 
 const ArticleContext = createContext<ArticleContextValue | null>(null)
@@ -30,13 +38,10 @@ export function useArticleContext() {
 interface ArticleProviderProps {
     article: Article
     children: React.ReactNode
-    isTranslating: boolean
-    onContentChange: (content: string, key: string) => void
-    onSummaryChange: (summary: string | null, isShowing: boolean) => void
-    onTranslationChange: (isTranslating: boolean) => void
     isRecentlyReadMode?: boolean
     isReadLaterMode?: boolean
     shouldShowPreviewBanner?: boolean
+    shouldShowFeedBadge?: boolean
     onMarkAsRead?: () => void
     onArticleRemoved?: () => void
     onBack?: () => void
@@ -45,29 +50,45 @@ interface ArticleProviderProps {
 export function ArticleContentProvider({
     article,
     children,
-    isTranslating,
-    onContentChange,
-    onSummaryChange,
-    onTranslationChange,
     isRecentlyReadMode = false,
     isReadLaterMode = false,
     shouldShowPreviewBanner = false,
+    shouldShowFeedBadge = false,
     onMarkAsRead,
     onArticleRemoved,
     onBack,
 }: ArticleProviderProps) {
+    // Internal state moved from ArticleDetailContainer
+    const [currentContent, setCurrentContent] = useState("")
+    const [currentReadTime, setCurrentReadTime] = useState<number | null>(null)
+    const [isShowingSummary, setIsShowingSummary] = useState(false)
+    const [isTranslating, setIsTranslating] = useState(false)
+
     const [contentSource, setContentSource] = useState<"original" | "extracted" | "translated">(
         article.extracted_content ? "extracted" : "original"
     )
 
     const isMobile = useIsMobile()
 
+    // Handlers that were previously passed as props
+    const handleContentChange = (content: string, _key: string) => {
+        setCurrentContent(content)
+    }
+
+    const handleSummaryChange = (summary: string | null, isShowing: boolean) => {
+        setIsShowingSummary(isShowing)
+    }
+
+    const handleTranslationChange = (translating: boolean) => {
+        setIsTranslating(translating)
+    }
+
     const aiResult = useArticleAI({
         article,
         contentSource,
-        onContentChange,
-        onSummaryChange,
-        onTranslationChange,
+        onContentChange: handleContentChange,
+        onSummaryChange: handleSummaryChange,
+        onTranslationChange: handleTranslationChange,
         setContentSource,
     })
 
@@ -97,6 +118,13 @@ export function ArticleContentProvider({
         isTranslating,
         onBack,
         isReadLaterMode,
+        isRecentlyReadMode,
+        shouldShowPreviewBanner,
+        currentContent,
+        currentReadTime,
+        isShowingSummary,
+        setCurrentReadTime,
+        shouldShowFeedBadge,
     }), [
         aiResult,
         interactionsResult,
@@ -106,6 +134,12 @@ export function ArticleContentProvider({
         isTranslating,
         onBack,
         isReadLaterMode,
+        isRecentlyReadMode,
+        shouldShowPreviewBanner,
+        currentContent,
+        currentReadTime,
+        isShowingSummary,
+        shouldShowFeedBadge,
     ])
 
     return (

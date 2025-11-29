@@ -76,19 +76,11 @@ export interface FeedDiscoveryResult {
   id: string;
   url: string;
   title: string;
-  description?: string;
+  description: string;
   link?: string;
-  site_url?: string;
   image_url?: string;
-  icon_url?: string;
-  language?: string;
-  category?: string;
-  top_level_category?: string;
-  popularity_score?: number;
-  relevance?: number;
-  search_metadata?: any;
-  is_preview?: boolean;
-  preview_url?: string;
-  is_subscribed?: boolean;
+  language: string;
+  top_level_category: string;
+  popularity_score: number;
   tags?: string[];
 }

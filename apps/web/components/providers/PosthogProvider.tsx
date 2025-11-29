@@ -6,7 +6,7 @@ import { usePostHog } from "posthog-js/react"
 
 import posthog from "posthog-js"
 import { PostHogProvider as PHProvider } from "posthog-js/react"
-import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 
 function PostHogPageView() {
     const pathname = usePathname()
@@ -28,24 +28,19 @@ function PostHogPageView() {
     return null
 }
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
-    const isCloudProd = useIsCloudProd()
-
+export function PosthogProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
-        if (isCloudProd && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-            posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
-                api_host:
-                    process.env.NEXT_PUBLIC_POSTHOG_HOST ||
-                    "https://us.i.posthog.com",
+        if (isCloudProd() && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+            posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY!, {
+                api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
                 person_profiles: "identified_only",
                 capture_pageview: false, // Disable automatic pageview capture, as we capture manually
-                capture_pageleave: true, // Enable pageleave capture
             })
         }
-    }, [isCloudProd])
+    }, [])
 
     // Only wrap with PHProvider if we're in cloud prod and have the key
-    if (isCloudProd && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    if (isCloudProd() && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
         return (
             <PHProvider client={posthog}>
                 <PostHogPageView />

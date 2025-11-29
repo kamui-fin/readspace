@@ -11,7 +11,6 @@ import { FeedCardSkeleton } from "@/components/features/feeds/FeedCardSkeleton"
 import { FeedPreviewCard } from "@/components/features/feeds/FeedPreviewCard"
 import { Button } from "@/components/ui/button"
 import {
-    feedDiscoveryResultToFeed,
     type FeedDiscoveryResult,
     type FeedSummary,
 } from "@readspace/shared"
@@ -65,14 +64,13 @@ export function SearchResults({
             folder_id: "",
             folder_name: null,
             is_favorite: false,
-            top_level_category:
-                previewFeed.top_level_category || previewFeed.category,
+            top_level_category: previewFeed.top_level_category,
             unread_count: 0,
             last_refreshed_at: null,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
             is_preview: true,
-            preview_url: previewFeed.preview_url!,
+            preview_url: previewFeed.link,
         }
     }
 
@@ -178,21 +176,14 @@ export function SearchResults({
                         language: hitData.language,
                         image_url: hitData.image_url,
                         tags: hitData.tags || [],
-                        category: hitData.top_level_category,
+                        top_level_category: hitData.top_level_category,
                         popularity_score: hitData.popularity_score,
-                        relevance: 0,
-                        search_metadata: undefined,
-                        is_preview: false,
-                        preview_url: undefined,
-                        is_subscribed: false,
                     }
-
-                    const feed = feedDiscoveryResultToFeed(discoveryResult)
 
                     return (
                         <FeedCard
                             key={hitData.id}
-                            feed={feed as FeedSummary}
+                            feed={discoveryResult}
                             className="py-8"
                         />
                     )

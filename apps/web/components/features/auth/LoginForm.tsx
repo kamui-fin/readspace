@@ -15,7 +15,8 @@ import { createClient } from "@/lib/supabase/client"
 import { cn } from "@readspace/shared"
 import { useRouter } from "next/navigation"
 import * as React from "react"
-import { useIsCloudProd } from "@/hooks/use-is-cloud-prod"
+import { useState } from "react"
+import { isCloudProd } from "@/lib/is-cloud-prod"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -28,13 +29,7 @@ import {
     FormLabel,
     FormMessage,
 } from "@/components/ui/form"
-
-const loginSchema = z.object({
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(1, "Password is required"),
-})
-
-type LoginFormValues = z.infer<typeof loginSchema>
+import { loginSchema, type LoginFormValues } from "./lib/schemas"
 
 export function LoginForm({
     className,
@@ -42,7 +37,9 @@ export function LoginForm({
 }: React.ComponentProps<"div">) {
     const router = useRouter()
     const supabase = createClient()
-    const isCloudProd = useIsCloudProd()
+    const [isLoading, setIsLoading] = useState(false)
+    const [isGoogleLoading, setIsGoogleLoading] = useState(false)
+    const isProd = isCloudProd()
 
     const form = useForm<LoginFormValues>({
         // @ts-ignore
@@ -117,7 +114,7 @@ export function LoginForm({
                             onSubmit={form.handleSubmit(onSubmit)}
                             className="grid gap-6"
                         >
-                            {isCloudProd && (
+                            {isProd && (
                                 <>
                                     <div className="flex flex-col gap-4">
                                         <GoogleSignInButton className="w-full" />
@@ -154,7 +151,7 @@ export function LoginForm({
                                         <FormItem>
                                             <div className="flex items-center">
                                                 <FormLabel>Password</FormLabel>
-                                                {isCloudProd && (
+                                                {isProd && (
                                                     <a
                                                         href="/login/reset"
                                                         className="ml-auto text-sm underline-offset-4 hover:underline"

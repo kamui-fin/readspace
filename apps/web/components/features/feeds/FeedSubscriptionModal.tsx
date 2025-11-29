@@ -14,7 +14,7 @@ import { useFolders } from "@readspace/shared"
 import { AlertCircle, Loader2, Rss } from "lucide-react"
 import NextImage from "next/image"
 import { FolderSelect } from "./FolderSelect"
-import { useFeedSubscription } from "./hooks/useFeedSubscription"
+import { useFeedSubscription } from "./hooks/use-feed-subscription"
 
 interface FeedSubscriptionModalProps {
     feed: {
@@ -105,9 +105,8 @@ export function FeedSubscriptionModal({
                                 />
                             ) : null}
                             <div
-                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm ${
-                                    feed.image_url ? "hidden" : "flex"
-                                }`}
+                                className={`absolute inset-0 bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white font-semibold text-xs sm:text-sm ${feed.image_url ? "hidden" : "flex"
+                                    }`}
                             >
                                 {feed.title
                                     ? feed.title.charAt(0).toUpperCase()
@@ -127,7 +126,7 @@ export function FeedSubscriptionModal({
                                     {feed.title ||
                                         (feed.link
                                             ? new URL(feed.link).pathname ||
-                                              "/rss"
+                                            "/rss"
                                             : "Untitled Feed")}
                                 </h3>
                             </div>

@@ -1,6 +1,6 @@
 import { useModalStore } from "@/stores/modal-store"
 import { useEffect, useState } from "react"
-import { useFeedTree, type FeedItem } from "./useFeedTree"
+import { useFeedTree, type FeedItem } from "./use-feed-tree"
 
 export type { FeedItem }
 

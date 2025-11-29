@@ -23,11 +23,20 @@ export type OpmlImportProgress = {
   skipped_limit: number;
 };
 
+export type OpmlImportError = {
+  title?: string;
+  url?: string;
+  error?: string;
+  [key: string]: any;
+};
+
 export type OpmlImportResult = OpmlImportProgress & {
   total_feeds: number;
   message: string;
-  errors?: Array<Record<string, any>>;
+  errors?: Array<OpmlImportError>;
 };
+
+export type OpmlImportTask = OpmlImportStatusResponse;
 
 export type OpmlTaskMetadata = {
   user_id: string;

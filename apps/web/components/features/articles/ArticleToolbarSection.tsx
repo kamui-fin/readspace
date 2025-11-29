@@ -1,6 +1,6 @@
 "use client"
 
-import { useIsMobile } from "../../../../hooks/use-mobile"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { useArticleContext } from "./ArticleContext"
 import { ArticleToolbar } from "./ArticleToolbar"
 

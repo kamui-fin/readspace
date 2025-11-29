@@ -1,7 +1,7 @@
 import type { Range } from "@tanstack/react-virtual"
 import { defaultRangeExtractor, useVirtualizer } from "@tanstack/react-virtual"
 import { useCallback, useEffect, useMemo, useRef } from "react"
-import { ArticleRow } from "./useArticleGrouping"
+import { ArticleRow } from "./use-article-grouping"
 
 interface UseArticleVirtualizerProps {
     allRows: ArticleRow[]

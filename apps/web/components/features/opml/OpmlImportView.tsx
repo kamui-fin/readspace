@@ -1,11 +1,11 @@
 "use client"
 
-import Header from "@/components/features/navigation/Header"
+import Header from "@/components/features/navigation/AppHeader"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Clock, FileText, Upload } from "lucide-react"
 import { useRef } from "react"
-import { useOpmlImport } from "@/components/features/opml/hooks/use-opml-import"
+import { useOpmlImport } from "./hooks/use-opml-import"
 import { useActiveTaskPolling } from "@/components/features/opml/hooks/use-active-task-polling"
 
 export default function OpmlImportView() {
@@ -53,8 +53,8 @@ export default function OpmlImportView() {
 
                     {/* Show active import status or upload section */}
                     {activeImports &&
-                    activeImports.length > 0 &&
-                    activeImports[0] ? (
+                        activeImports.length > 0 &&
+                        activeImports[0] ? (
                         <Card>
                             <CardContent className="p-4">
                                 <div className="flex items-center justify-between">
@@ -85,11 +85,10 @@ export default function OpmlImportView() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${
-                                isDragging
+                            className={`transition-colors duration-200 ${isDragging
                                     ? "border-primary bg-primary/5"
                                     : "border-dashed border-2"
-                            }`}
+                                }`}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}

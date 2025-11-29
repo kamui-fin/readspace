@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext } from "react"
-import type { UseArticlesControllerResult } from "../hooks/useArticlesController"
+import type { UseArticlesControllerResult } from "./hooks/use-articles-controller"
 
 const ArticlesContext = createContext<UseArticlesControllerResult | null>(null)
 

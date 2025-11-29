@@ -27,7 +27,7 @@ import { SubFeedItem, type SubFeedItemData } from "./items/SubFeedItem"
 import { FeedModal } from "./modals/FeedModal"
 import { FolderModal } from "./modals/FolderModal"
 import { SidebarFeedsSkeleton } from "./SidebarSkeleton"
-import { useFeedsNavigation } from "./hooks/useFeedsNavigation"
+import { useFeedsNavigation } from "./hooks/use-feeds-navigation"
 
 /**
  * Feeds navigation component that displays the user's RSS feeds organized by folders.
@@ -178,7 +178,7 @@ export function FeedsNavigation({
  * Main navigation component that combines all navigation sections.
  * Provides a clean interface for RSS feed management and reading.
  */
-export function NavMain() {
+export function SidebarMain() {
     const { isMobile, toggleSidebar } = useSidebarLeft()
 
     const mainNavItems: MainNavItem[] = [

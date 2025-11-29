@@ -13,7 +13,7 @@ import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { motion } from "framer-motion"
 import React from "react"
 
-interface HeaderProps {
+interface AppHeaderProps {
     // Ensure href is optional as the last item might not have one
     breadcrumbItems: { label: string; href?: string }[]
     children?: React.ReactNode
@@ -36,7 +36,7 @@ const breadcrumbItem = {
     show: { opacity: 1, y: 0 },
 }
 
-const Header: React.FC<HeaderProps> = ({
+const AppHeader: React.FC<AppHeaderProps> = ({
     classAttributes = "",
     children,
     rightContent,
@@ -69,7 +69,7 @@ const Header: React.FC<HeaderProps> = ({
                                     <motion.div variants={breadcrumbItem}>
                                         <BreadcrumbItem>
                                             {index ===
-                                            breadcrumbItems.length - 1 ? (
+                                                breadcrumbItems.length - 1 ? (
                                                 <BreadcrumbPage className="block truncate">
                                                     {breadcrumb.label}
                                                 </BreadcrumbPage>
@@ -96,4 +96,4 @@ const Header: React.FC<HeaderProps> = ({
     )
 }
 
-export default Header
+export default AppHeader

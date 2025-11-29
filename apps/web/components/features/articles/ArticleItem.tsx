@@ -45,8 +45,8 @@ export function ArticleItem({
         ? isRecentlyReadMode && readAtString
             ? `${formatDistanceToNow(parseISO(readAtString), { addSuffix: true })}`
             : formatDistanceToNow(parseISO(publishedAtString), {
-                  addSuffix: true,
-              })
+                addSuffix: true,
+            })
         : "Date unknown"
 
     /**
@@ -88,18 +88,6 @@ export function ArticleItem({
             return new URL(url).hostname
         } catch {
             return url
-        }
-    }
-
-    /**
-     * Get favicon URL for a domain
-     */
-    const getFaviconUrl = (url: string): string => {
-        try {
-            const domain = new URL(url).hostname
-            return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
-        } catch {
-            return "/placeholders/avatar.png"
         }
     }
 
@@ -163,12 +151,9 @@ export function ArticleItem({
 
                             {/* Feed favicon */}
                             {(article.feed_icon || article.link) &&
-                            !feedImageError ? (
+                                !feedImageError ? (
                                 <Image
-                                    src={
-                                        article.feed_icon ||
-                                        getFaviconUrl(article.link)
-                                    }
+                                    src={article.feed_icon || ""}
                                     alt={article.feed_title || "Feed image"}
                                     width={12}
                                     height={12}
@@ -198,11 +183,10 @@ export function ArticleItem({
 
                     {/* Article title */}
                     <h3
-                        className={`text-sm font-medium leading-snug line-clamp-2 ${
-                            article.is_read
-                                ? "text-muted-foreground"
-                                : "text-foreground"
-                        }`}
+                        className={`text-sm font-medium leading-snug line-clamp-2 ${article.is_read
+                            ? "text-muted-foreground"
+                            : "text-foreground"
+                            }`}
                         style={{
                             wordBreak: "break-word",
                             overflowWrap: "break-word",
@@ -215,11 +199,10 @@ export function ArticleItem({
                     {/* Article description/content preview */}
                     {displayText && (
                         <p
-                            className={`text-xs leading-relaxed line-clamp-2 ${
-                                article.is_read
-                                    ? "text-muted-foreground/70"
-                                    : "text-muted-foreground"
-                            }`}
+                            className={`text-xs leading-relaxed line-clamp-2 ${article.is_read
+                                ? "text-muted-foreground/70"
+                                : "text-muted-foreground"
+                                }`}
                             style={{
                                 wordBreak: "break-word",
                                 overflowWrap: "break-word",

@@ -1,19 +1,8 @@
 import { createClient } from "@/lib/supabase/client"
-import { z } from "zod"
+
 
 // Initialize the Supabase client
 const supabase = createClient()
-
-export const signInSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-})
-
-export const signUpSchema = z.object({
-    email: z.string().email(),
-    password: z.string().min(6),
-    username: z.string().min(3),
-})
 
 export async function signInWithEmail(email: string, password: string) {
     const { data, error } = await supabase.auth.signInWithPassword({

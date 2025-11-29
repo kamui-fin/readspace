@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { DeleteConfirmDialog } from "@/components/features/feeds/DeleteConfirmDialog"
 import { RenameDialog } from "@/components/features/feeds/RenameDialog"
-import { useFeedContextMenu } from "@/components/features/feeds/hooks/useFeedContextMenu"
+import { useFeedContextMenu } from "@/components/features/feeds/hooks/use-feed-context-menu"
 import { cn } from "@readspace/shared"
 import { MoreHorizontal, Pencil, Star, Trash2 } from "lucide-react"
 
