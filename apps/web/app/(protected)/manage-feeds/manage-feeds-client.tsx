@@ -23,11 +23,15 @@ import {
     useFeeds,
     useFolders,
     useUpdateFeed,
-    type Feed,
+    type Subscription,
+    type SubscriptionExtended,
 } from "@readspace/shared"
 import { useMemo, useState } from "react"
 import { toast } from "react-hot-toast"
 import { useDebounce } from "use-debounce"
+
+// Define the Feed type expected by the component
+import type { FeedRowData } from "@/components/feeds/FeedTableRow"
 
 /**
  * Main client component for managing RSS feeds.
@@ -36,11 +40,27 @@ import { useDebounce } from "use-debounce"
 export default function ManageFeedsPageClient() {
     // Data queries
     const {
-        data: feeds = [],
+        data: subscriptions = [],
         isLoading: isLoadingFeeds,
         error: feedsError,
-    } = useFeeds()
+    } = useFeeds({ extended: true })
     const { data: folders = [], isLoading: isLoadingFolders } = useFolders()
+
+    // Map subscriptions to flat Feed objects
+    const feeds: FeedRowData[] = useMemo(() => {
+        return (subscriptions as unknown as SubscriptionExtended[]).map(sub => ({
+            id: sub.feed.id,
+            title: sub.custom_title || sub.feed.title,
+            url: sub.feed.url,
+            link: sub.feed.link,
+            folder_id: sub.folder?.id || null,
+            image_url: sub.feed.image_url || null,
+            is_favorite: sub.is_favorite,
+            error_count: sub.feed.error_count,
+            last_updated_at: sub.feed.last_updated_at,
+            last_error_message: sub.feed.last_error_message
+        }))
+    }, [subscriptions])
 
     // Search and filter state
     const [searchTerm, setSearchTerm] = useState("")
@@ -51,7 +71,7 @@ export default function ManageFeedsPageClient() {
     const [selectedFeedIds, setSelectedFeedIds] = useState<string[]>([])
 
     // Modal states
-    const [currentFeed, setCurrentFeed] = useState<Feed | null>(null)
+    const [currentFeed, setCurrentFeed] = useState<FeedRowData | null>(null)
     const [isEditModalOpen, setIsEditModalOpen] = useState(false)
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
     const [isBulkEditFolderModalOpen, setIsBulkEditFolderModalOpen] =
@@ -62,7 +82,7 @@ export default function ManageFeedsPageClient() {
     const bulkDeleteFeedsMutation = useBulkDeleteFeeds()
 
     // Type-safe folder data
-    const typedFolders = (folders as Array<{ id: string; name: string }>) || []
+    const typedFolders = folders || []
 
     /**
      * Filter and search feeds based on current criteria
@@ -119,14 +139,13 @@ export default function ManageFeedsPageClient() {
             data: {
                 folder_id: newFolderId === null ? undefined : newFolderId,
             },
-            silent: false,
         })
     }
 
     /**
      * Handle edit feed action
      */
-    const handleEditFeed = (feed: Feed) => {
+    const handleEditFeed = (feed: FeedRowData) => {
         setCurrentFeed(feed)
         setIsEditModalOpen(true)
     }
@@ -134,7 +153,7 @@ export default function ManageFeedsPageClient() {
     /**
      * Handle delete feed action
      */
-    const handleDeleteFeed = (feed: Feed) => {
+    const handleDeleteFeed = (feed: FeedRowData) => {
         setCurrentFeed(feed)
         setIsDeleteModalOpen(true)
     }

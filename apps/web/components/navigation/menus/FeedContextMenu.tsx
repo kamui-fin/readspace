@@ -101,7 +101,7 @@ export function FeedContextMenu({
                 )
             } else {
                 updateFeed.mutate(
-                    { feedId: itemId, data: { title: newName.trim() } },
+                    { feedId: itemId, data: { custom_title: newName.trim() } },
                     {
                         onSuccess: () => {
                             setIsRenameModalOpen(false)
@@ -135,7 +135,7 @@ export function FeedContextMenu({
             updateFeed.mutate({
                 feedId: itemId,
                 data: { is_favorite: !isFavorite },
-                silent: true,
+                // silent: true, // Removed as it's not supported
             })
         }
     }

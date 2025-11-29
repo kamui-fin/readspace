@@ -21,15 +21,24 @@ import {
 import {
     ApiClient,
     FEED_CATEGORIES,
-    type Feed,
-    type FeedDiscoveryResult,
+    type FeedSummary,
+    type FeedDetail,
 } from "@readspace/shared"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { toast } from "sonner"
 
 interface EditFeedDialogProps {
-    feed: Feed | FeedDiscoveryResult
+    feed: FeedSummary &
+        Partial<
+            Pick<
+                FeedDetail,
+                | "description"
+                | "language"
+                | "top_level_category"
+                | "popularity_score"
+            >
+        >
     isOpen: boolean
     onClose: () => void
 }
@@ -37,17 +46,13 @@ interface EditFeedDialogProps {
 export function EditFeedDialog({ feed, isOpen, onClose }: EditFeedDialogProps) {
     const [title, setTitle] = useState(feed.title || "")
     const [description, setDescription] = useState(feed.description || "")
-    const [language, setLanguage] = useState(
-        "language" in feed ? feed.language || "" : ""
-    )
-    const [category, setCategory] = useState(
-        "top_level_category" in feed ? feed.top_level_category || "" : ""
-    )
+    const [language, setLanguage] = useState(feed.language || "")
+    const [category, setCategory] = useState(feed.top_level_category || "")
     const [url, setUrl] = useState(feed.url)
     const [link, setLink] = useState(feed.link || "")
     const [imageUrl, setImageUrl] = useState(feed.image_url || "")
     const [popularityScore, setPopularityScore] = useState(
-        "popularity_score" in feed ? feed.popularity_score || 0 : 0
+        feed.popularity_score || 0
     )
 
     const queryClient = useQueryClient()
@@ -62,7 +67,7 @@ export function EditFeedDialog({ feed, isOpen, onClose }: EditFeedDialogProps) {
             link?: string
             image_url?: string
             popularity_score?: number
-        }) => ApiClient.rss.adminUpdateFeed(feed.id, updates),
+        }) => ApiClient.adminUpdateFeed(feed.id, updates),
         onSuccess: () => {
             toast.success("Feed updated successfully")
             // Invalidate feed queries to refetch the updated data
@@ -97,22 +102,16 @@ export function EditFeedDialog({ feed, isOpen, onClose }: EditFeedDialogProps) {
         // Only include changed fields
         if (title !== feed.title) updates.title = title
         if (description !== feed.description) updates.description = description
-        if (language !== (("language" in feed && feed.language) || ""))
+        if (language !== (feed.language || ""))
             updates.language = language || undefined
-        if (
-            category !==
-            (("top_level_category" in feed && feed.top_level_category) || "")
-        ) {
+        if (category !== (feed.top_level_category || "")) {
             updates.top_level_category = category || undefined
         }
         if (url !== feed.url) updates.url = url
         if (link !== (feed.link || "")) updates.link = link || undefined
         if (imageUrl !== (feed.image_url || ""))
             updates.image_url = imageUrl || undefined
-        if (
-            popularityScore !==
-            (("popularity_score" in feed && feed.popularity_score) || 0)
-        ) {
+        if (popularityScore !== (feed.popularity_score || 0)) {
             updates.popularity_score = popularityScore
         }
 

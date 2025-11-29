@@ -13,7 +13,7 @@ export default async function ImportOPMLPage() {
     // Prefetch active import tasks
     await queryClient.prefetchQuery({
         queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
-        queryFn: () => ApiClient.rss.listImportTasks(),
+        queryFn: () => ApiClient.getActiveImportTask(),
     })
 
     return (

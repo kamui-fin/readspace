@@ -587,15 +587,15 @@ async function handleSaveToReadspace(url: string, tab?: browser.Tabs.Tab) {
       ...trimmedData,
       metadata: trimmedData.metadata
         ? (Object.fromEntries(
-            Object.entries(trimmedData.metadata).filter(
-              ([_, value]) => value !== undefined
-            )
-          ) as Record<string, string>)
+          Object.entries(trimmedData.metadata).filter(
+            ([_, value]) => value !== undefined
+          )
+        ) as Record<string, string>)
         : undefined,
     }
 
     // Save to Readspace API
-    await ApiClient.rss.saveArticle(requestBody)
+    await ApiClient.saveArticle(requestBody)
 
     browser.notifications.create('save-success', {
       type: 'basic',
@@ -789,9 +789,9 @@ async function handleGoogleOAuth(): Promise<{
     if (!clientId) {
       throw new Error(
         'Google OAuth client ID not configured. ' +
-          (manifest.oauth2
-            ? 'Please set it in the manifest.'
-            : 'Please add it in Settings.')
+        (manifest.oauth2
+          ? 'Please set it in the manifest.'
+          : 'Please add it in Settings.')
       )
     }
 

@@ -4,7 +4,12 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Command } from "cmdk"
 import * as Dialog from "@radix-ui/react-dialog"
-import { fuzzySearch, useFeeds, useFolders } from "@readspace/shared"
+import {
+    fuzzySearch,
+    useFeeds,
+    useFolders,
+    useFeedUnreadCounts,
+} from "@readspace/shared"
 import { Search, Star } from "lucide-react"
 import Image from "next/image"
 import "./feed-search-command.scss"
@@ -36,6 +41,7 @@ export function FeedSearchCommand({
     // Data queries
     const { data: feeds = [] } = useFeeds()
     const { data: folders = [] } = useFolders()
+    const { data: feedUnreadCounts } = useFeedUnreadCounts()
 
     // Type-safe folder data
     const typedFolders = (folders as Array<{ id: string; name: string }>) || []
@@ -45,7 +51,16 @@ export function FeedSearchCommand({
         if (!searchValue.trim()) {
             return feeds.slice(0, 100)
         }
-        return fuzzySearch(feeds, searchValue, ["title", "url"]).slice(0, 100)
+        // Create a searchable array
+        const searchableItems = feeds.map((feed) => ({
+            original: feed,
+            title: feed.custom_title || feed.feed.title,
+            url: feed.feed.url,
+        }))
+
+        return fuzzySearch(searchableItems, searchValue, ["title", "url"])
+            .slice(0, 100)
+            .map((item) => item.original)
     }, [feeds, searchValue])
 
     // Group feeds by folder (no separate favorites group)
@@ -62,8 +77,8 @@ export function FeedSearchCommand({
         // Group feeds
         filteredFeeds.forEach((feed) => {
             // Add to folder or no_folder (no separate favorites)
-            if (feed.folder_id) {
-                groups[feed.folder_id]?.push(feed)
+            if (feed.folder?.id) {
+                groups[feed.folder.id]?.push(feed)
             } else {
                 groups.no_folder!.push(feed)
             }
@@ -122,43 +137,51 @@ export function FeedSearchCommand({
 
                     return (
                         <Command.Group key={folder.id} heading={folder.name}>
-                            {folderFeeds.map((feed) => (
-                                <Command.Item
-                                    key={feed.id}
-                                    value={`${feed.title} ${feed.link || feed.url}`}
-                                    onSelect={() => handleSelectFeed(feed.id)}
-                                >
-                                    <div cmdk-framer-icon-wrapper="">
-                                        {feed.image_url ? (
-                                            <Image
-                                                src={feed.image_url}
-                                                alt=""
-                                                width={32}
-                                                height={32}
-                                            />
-                                        ) : (
-                                            <div className="feed-placeholder" />
-                                        )}
-                                    </div>
-                                    <div cmdk-framer-item-meta="">
-                                        <span>{feed.title}</span>
-                                        {feed.link && (
-                                            <span cmdk-framer-item-subtitle="">
-                                                {feed.link}
+                            {folderFeeds.map((feed) => {
+                                const unreadCount =
+                                    feedUnreadCounts?.[feed.feed.id] || 0
+                                return (
+                                    <Command.Item
+                                        key={feed.id}
+                                        value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
+                                        onSelect={() =>
+                                            handleSelectFeed(feed.feed.id)
+                                        }
+                                    >
+                                        <div cmdk-framer-icon-wrapper="">
+                                            {feed.feed.image_url ? (
+                                                <Image
+                                                    src={feed.feed.image_url}
+                                                    alt=""
+                                                    width={32}
+                                                    height={32}
+                                                />
+                                            ) : (
+                                                <div className="feed-placeholder" />
+                                            )}
+                                        </div>
+                                        <div cmdk-framer-item-meta="">
+                                            <span>
+                                                {feed.custom_title ||
+                                                    feed.feed.title}
                                             </span>
+                                            {feed.feed.link && (
+                                                <span cmdk-framer-item-subtitle="">
+                                                    {feed.feed.link}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {feed.is_favorite && (
+                                            <Star className="feed-star-icon" />
                                         )}
-                                    </div>
-                                    {feed.is_favorite && (
-                                        <Star className="feed-star-icon" />
-                                    )}
-                                    {feed.unread_count != null &&
-                                        feed.unread_count > 0 && (
+                                        {unreadCount > 0 && (
                                             <kbd cmdk-framer-badge="">
-                                                {feed.unread_count}
+                                                {unreadCount}
                                             </kbd>
                                         )}
-                                </Command.Item>
-                            ))}
+                                    </Command.Item>
+                                )
+                            })}
                         </Command.Group>
                     )
                 })}
@@ -167,43 +190,51 @@ export function FeedSearchCommand({
                 {groupedFeeds.no_folder &&
                     groupedFeeds.no_folder.length > 0 && (
                         <Command.Group heading="No Folder">
-                            {groupedFeeds.no_folder.map((feed) => (
-                                <Command.Item
-                                    key={feed.id}
-                                    value={`${feed.title} ${feed.link || feed.url}`}
-                                    onSelect={() => handleSelectFeed(feed.id)}
-                                >
-                                    <div cmdk-framer-icon-wrapper="">
-                                        {feed.image_url ? (
-                                            <Image
-                                                src={feed.image_url}
-                                                alt=""
-                                                width={32}
-                                                height={32}
-                                            />
-                                        ) : (
-                                            <div className="feed-placeholder" />
-                                        )}
-                                    </div>
-                                    <div cmdk-framer-item-meta="">
-                                        <span>{feed.title}</span>
-                                        {feed.link && (
-                                            <span cmdk-framer-item-subtitle="">
-                                                {feed.link}
+                            {groupedFeeds.no_folder.map((feed) => {
+                                const unreadCount =
+                                    feedUnreadCounts?.[feed.feed.id] || 0
+                                return (
+                                    <Command.Item
+                                        key={feed.id}
+                                        value={`${feed.custom_title || feed.feed.title} ${feed.feed.link || feed.feed.url}`}
+                                        onSelect={() =>
+                                            handleSelectFeed(feed.feed.id)
+                                        }
+                                    >
+                                        <div cmdk-framer-icon-wrapper="">
+                                            {feed.feed.image_url ? (
+                                                <Image
+                                                    src={feed.feed.image_url}
+                                                    alt=""
+                                                    width={32}
+                                                    height={32}
+                                                />
+                                            ) : (
+                                                <div className="feed-placeholder" />
+                                            )}
+                                        </div>
+                                        <div cmdk-framer-item-meta="">
+                                            <span>
+                                                {feed.custom_title ||
+                                                    feed.feed.title}
                                             </span>
+                                            {feed.feed.link && (
+                                                <span cmdk-framer-item-subtitle="">
+                                                    {feed.feed.link}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {feed.is_favorite && (
+                                            <Star className="feed-star-icon" />
                                         )}
-                                    </div>
-                                    {feed.is_favorite && (
-                                        <Star className="feed-star-icon" />
-                                    )}
-                                    {feed.unread_count != null &&
-                                        feed.unread_count > 0 && (
+                                        {unreadCount > 0 && (
                                             <kbd cmdk-framer-badge="">
-                                                {feed.unread_count}
+                                                {unreadCount}
                                             </kbd>
                                         )}
-                                </Command.Item>
-                            ))}
+                                    </Command.Item>
+                                )
+                            })}
                         </Command.Group>
                     )}
             </Command.List>

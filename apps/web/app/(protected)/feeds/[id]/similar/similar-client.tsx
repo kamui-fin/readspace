@@ -6,10 +6,7 @@ import type { ReactNode } from "react"
 import { FeedCard } from "@/components/feeds/FeedCard"
 import { FeedCardSkeleton } from "@/components/feeds/FeedCardSkeleton"
 import { FEEDS_INDEX_NAME, meilisearchClient } from "@/lib/meilisearch-client"
-import {
-    feedDiscoveryResultToFeed,
-    type FeedDiscoveryResult,
-} from "@readspace/shared"
+import { type FeedSummary } from "@readspace/shared"
 
 interface SimilarFeedsClientProps {
     feedId: string
@@ -61,25 +58,15 @@ function PageLayout({ children }: PageLayoutProps) {
     )
 }
 
-function convertHitToFeed(hit: MeilisearchHit) {
-    const discoveryResult: FeedDiscoveryResult = {
+function convertHitToFeed(hit: MeilisearchHit): FeedSummary {
+    return {
         id: hit.id,
         url: hit.url,
         title: hit.title,
-        description: hit.description ?? null,
         link: hit.link ?? null,
-        language: hit.language ?? null,
         image_url: hit.image_url ?? null,
-        tags: hit.tags || [],
-        category: hit.top_level_category ?? null,
-        popularity_score: hit.popularity_score ?? 0,
-        relevance: hit._rankingScore || 0,
-        search_metadata: undefined,
-        is_preview: false,
-        preview_url: undefined,
-        is_subscribed: false,
+        error_count: 0,
     }
-    return feedDiscoveryResultToFeed(discoveryResult)
 }
 
 interface ErrorMessageProps {

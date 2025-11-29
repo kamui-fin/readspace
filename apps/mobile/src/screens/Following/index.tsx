@@ -317,7 +317,7 @@ export default function FollowingScreen() {
             updateArticle.mutate(
                 {
                     articleId,
-                    data: { is_read_later: newValue },
+                    data: { is_saved: newValue },
                     articleType,
                 },
                 {
@@ -383,170 +383,170 @@ export default function FollowingScreen() {
             const feedTitle = article.feed_title || undefined;
             const feedImageUrl = article.feed_icon || undefined;
             const feedId = article.feed_id || undefined;
-            }
+        }
 
-            // Check if there's a feed_id field directly on the article
-            if (!feedId && (article as any).feed_id) {
-                feedId = (article as any).feed_id;
-            }
+        // Check if there's a feed_id field directly on the article
+        if (!feedId && (article as any).feed_id) {
+            feedId = (article as any).feed_id;
+        }
 
-            // For clipped articles - get favicon from domain
-            const getFaviconUrl = (url: string): string => {
-                try {
-                    const domain = new URL(url).hostname;
-                    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
-                } catch {
-                    return '';
+        // For clipped articles - get favicon from domain
+        const getFaviconUrl = (url: string): string => {
+            try {
+                const domain = new URL(url).hostname;
+                return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+            } catch {
+                return '';
+            }
+        };
+
+        const displayFaviconUrl = isClipped && article.link
+            ? getFaviconUrl(article.link)
+            : feedImageUrl;
+
+        return (
+            <ArticleListItem
+                className="px-4"
+                source={feedTitle || 'Unknown'}
+                timestamp={
+                    article.published_at
+                        ? formatRelativeDate(new Date(article.published_at))
+                        : 'Unknown'
                 }
-            };
-
-            const displayFaviconUrl = isClipped && article.link
-                ? getFaviconUrl(article.link)
-                : feedImageUrl;
-
-            return (
-                <ArticleListItem
-                    className="px-4"
-                    source={feedTitle || 'Unknown'}
-                    timestamp={
-                        article.published_at
-                            ? formatRelativeDate(new Date(article.published_at))
-                            : 'Unknown'
-                    }
-                    title={article.title}
-                    description={article.description || undefined}
-                    imageUrl={article.image_url || undefined}
-                    faviconUrl={displayFaviconUrl || undefined}
-                    isRead={article.is_read || false}
-                    isSaved={article.is_read_later || false}
-                    articleType={article.article_type}
-                    priority={article.priority || undefined}
-                    note={article.note || undefined}
-                    articleUrl={article.link}
-                    feedId={feedId || undefined}
-                    onPress={() => router.push(`/articles/${article.id}`)}
-                    onBookmark={() => handleBookmark(article.id, article.is_read_later || false, article.article_type)}
-                    onToggleRead={() => handleToggleRead(article.id, article.is_read || false, article.article_type)}
-                />
-            );
-        }
-
-        return null;
-    };
-
-    const renderFooter = () => {
-        if (!isFetchingNextPage) return null;
-        return (
-            <View className="py-4">
-                <ActivityIndicator size="small" color="#6A994E" />
-            </View>
-        );
-    };
-
-    const emptyStateMessage = useMemo(() => {
-        switch (activeTab) {
-            case 0:
-                return "No articles for today yet. Check back later!";
-            case 1:
-                return "No saved articles. Swipe right on articles to bookmark them.";
-            case 2:
-                return "No articles yet. Add some feeds to get started!";
-            case 3:
-                return "No recently read articles.";
-            default:
-                return "No articles available.";
-        }
-    }, [activeTab]);
-
-    if (isInitialLoading) {
-        return (
-            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
-                <Header
-                    variant="tabbed"
-                    title={title}
-                    tabs={TAB_CONFIGS}
-                    activeTab={activeTab}
-                    onTabChange={selectTab}
-                    unreadCount={isPreviewMode ? 0 : unreadCount}
-                    scrollY={scrollY}
-                    onHeaderHeightChange={setHeaderHeight}
-                    rightAction={toggleUnreadButton}
-                />
-                <ArticleListSkeleton count={6} className="mt-28" />
-            </SafeAreaView>
+                title={article.title}
+                description={article.description || undefined}
+                imageUrl={article.image_url || undefined}
+                faviconUrl={displayFaviconUrl || undefined}
+                isRead={article.is_read || false}
+                isSaved={article.is_saved || false}
+                articleType={article.article_type}
+                priority={article.priority || undefined}
+                note={article.user_note || undefined}
+                articleUrl={article.link}
+                feedId={feedId || undefined}
+                onPress={() => router.push(`/articles/${article.id}`)}
+                onBookmark={() => handleBookmark(article.id, article.is_saved || false, article.article_type)}
+                onToggleRead={() => handleToggleRead(article.id, article.is_read || false, article.article_type)}
+            />
         );
     }
 
+    return null;
+};
+
+const renderFooter = () => {
+    if (!isFetchingNextPage) return null;
     return (
-        <>
-            <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
-                <Header
-                    variant="tabbed"
-                    title={title}
-                    tabs={TAB_CONFIGS}
-                    activeTab={activeTab}
-                    onTabChange={selectTab}
-                    unreadCount={isPreviewMode ? 0 : unreadCount}
-                    scrollY={scrollY}
-                    onHeaderHeightChange={setHeaderHeight}
-                    rightAction={toggleUnreadButton}
-                />
-                <LegendList
-                    data={listItems}
-                    renderItem={renderItem}
-                    estimatedItemSize={120}
-                    contentContainerStyle={{
-                        paddingTop: headerHeight,
-                        paddingBottom: isPreviewMode ? 80 : 16,
-                    }}
-                    onScroll={scrollHandler}
-                    scrollEventThrottle={16}
-                    keyExtractor={(item) => item.id}
-                    onEndReached={handleEndReached}
-                    onEndReachedThreshold={0.5}
-                    ListFooterComponent={renderFooter}
-                    ListEmptyComponent={
-                        !isInitialLoading ? (
-                            <View className="items-center justify-center px-6 py-20">
-                                <Monicon
-                                    name="solar:inbox-broken"
-                                    size={64}
-                                    color="#90988B"
-                                />
-                                <Text className="text-center mt-4 font-geist-medium text-lg text-black dark:text-black-dark mb-2">
-                                    Nothing here yet
-                                </Text>
-                                <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">
-                                    {emptyStateMessage}
-                                </Text>
-                            </View>
-                        ) : null
-                    }
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={handleRefresh}
-                            progressBackgroundColor={colors.white}
-                            tintColor="#6A994E"
-                            colors={['#6A994E']}
-                            progressViewOffset={headerHeight}
-                        />
-                    }
-                />
-
-                {/* Sticky preview banner at bottom */}
-                {isPreviewMode && feedData && (
-                    <View className="absolute bottom-0 left-0 right-0">
-                        <FeedPreviewBanner
-                            feedTitle={feedData.title}
-                            onFollow={handleFollowFromPreview}
-                        />
-                    </View>
-                )}
-            </SafeAreaView>
-
-            {/* Folder picker bottom sheet */}
-            <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
-        </>
+        <View className="py-4">
+            <ActivityIndicator size="small" color="#6A994E" />
+        </View>
     );
+};
+
+const emptyStateMessage = useMemo(() => {
+    switch (activeTab) {
+        case 0:
+            return "No articles for today yet. Check back later!";
+        case 1:
+            return "No saved articles. Swipe right on articles to bookmark them.";
+        case 2:
+            return "No articles yet. Add some feeds to get started!";
+        case 3:
+            return "No recently read articles.";
+        default:
+            return "No articles available.";
+    }
+}, [activeTab]);
+
+if (isInitialLoading) {
+    return (
+        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+            <Header
+                variant="tabbed"
+                title={title}
+                tabs={TAB_CONFIGS}
+                activeTab={activeTab}
+                onTabChange={selectTab}
+                unreadCount={isPreviewMode ? 0 : unreadCount}
+                scrollY={scrollY}
+                onHeaderHeightChange={setHeaderHeight}
+                rightAction={toggleUnreadButton}
+            />
+            <ArticleListSkeleton count={6} className="mt-28" />
+        </SafeAreaView>
+    );
+}
+
+return (
+    <>
+        <SafeAreaView className="flex-1 bg-white dark:bg-white-dark" edges={['top']}>
+            <Header
+                variant="tabbed"
+                title={title}
+                tabs={TAB_CONFIGS}
+                activeTab={activeTab}
+                onTabChange={selectTab}
+                unreadCount={isPreviewMode ? 0 : unreadCount}
+                scrollY={scrollY}
+                onHeaderHeightChange={setHeaderHeight}
+                rightAction={toggleUnreadButton}
+            />
+            <LegendList
+                data={listItems}
+                renderItem={renderItem}
+                estimatedItemSize={120}
+                contentContainerStyle={{
+                    paddingTop: headerHeight,
+                    paddingBottom: isPreviewMode ? 80 : 16,
+                }}
+                onScroll={scrollHandler}
+                scrollEventThrottle={16}
+                keyExtractor={(item) => item.id}
+                onEndReached={handleEndReached}
+                onEndReachedThreshold={0.5}
+                ListFooterComponent={renderFooter}
+                ListEmptyComponent={
+                    !isInitialLoading ? (
+                        <View className="items-center justify-center px-6 py-20">
+                            <Monicon
+                                name="solar:inbox-broken"
+                                size={64}
+                                color="#90988B"
+                            />
+                            <Text className="text-center mt-4 font-geist-medium text-lg text-black dark:text-black-dark mb-2">
+                                Nothing here yet
+                            </Text>
+                            <Text className="text-center font-geist text-base text-grey dark:text-grey-dark">
+                                {emptyStateMessage}
+                            </Text>
+                        </View>
+                    ) : null
+                }
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={handleRefresh}
+                        progressBackgroundColor={colors.white}
+                        tintColor="#6A994E"
+                        colors={['#6A994E']}
+                        progressViewOffset={headerHeight}
+                    />
+                }
+            />
+
+            {/* Sticky preview banner at bottom */}
+            {isPreviewMode && feedData && (
+                <View className="absolute bottom-0 left-0 right-0">
+                    <FeedPreviewBanner
+                        feedTitle={feedData.title}
+                        onFollow={handleFollowFromPreview}
+                    />
+                </View>
+            )}
+        </SafeAreaView>
+
+        {/* Folder picker bottom sheet */}
+        <FolderPicker ref={folderPickerRef} onFolderSelect={handleFolderSelect} />
+    </>
+);
 }

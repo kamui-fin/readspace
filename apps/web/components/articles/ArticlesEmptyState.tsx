@@ -3,7 +3,12 @@
 import { Button } from "@/components/ui/button"
 import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/useMobile"
-import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
+import {
+    useFeeds,
+    useFolders,
+    useRefreshFeed,
+    ApiClient,
+} from "@readspace/shared"
 import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
 import Link from "next/link"
 import { useState } from "react"
@@ -86,10 +91,13 @@ export function ArticlesEmptyState({
     )
 
     const typedFolders = (folders as Array<{ id: string; name: string }>) || []
-    const typedFeeds = (feeds as Array<{ id: string; title: string }>) || []
+    const subscribedFeeds = (feeds || []).map((sub) => ({
+        id: sub.feed.id,
+        title: sub.custom_title || sub.feed.title,
+    }))
 
     const hasNoFolders = typedFolders.length === 0
-    const hasNoFeeds = typedFeeds.length === 0
+    const hasNoFeeds = subscribedFeeds.length === 0
     const isLoading = isFoldersLoading || isFeedsLoading
 
     // Deep refresh: poll external RSS feed (only for individual feeds)
@@ -100,10 +108,7 @@ export function ArticlesEmptyState({
         toast.loading("Checking for new articles...", { id: "deep-refresh" })
 
         try {
-            await refreshFeed.mutateAsync({
-                feedId: feedId,
-                forceRefetch: true,
-            })
+            await ApiClient.refreshFeed(feedId, true)
             // After deep refresh completes, refetch articles
             if (onRefresh) {
                 onRefresh()

@@ -1,8 +1,8 @@
 import { BaseFeedCard } from "@/components/feeds/BaseFeedCard"
-import { type Feed } from "@readspace/shared"
+import { type FeedSummary } from "@readspace/shared"
 
 interface FeedPreviewCardProps {
-    feed: Feed & {
+    feed: FeedSummary & {
         is_preview: true
         preview_url: string
     }

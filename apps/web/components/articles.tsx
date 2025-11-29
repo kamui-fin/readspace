@@ -20,7 +20,12 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useIsMobile } from "@/hooks/useMobile"
-import type { Article, Feed, Folder } from "@readspace/shared"
+import type {
+    Article,
+    FeedDetail,
+    Subscription,
+    Folder,
+} from "@readspace/shared"
 import {
     ApiClient,
     useArticle,
@@ -34,6 +39,8 @@ import {
     useRefreshFeed,
     useUnreadCounts,
     useUpdateArticle,
+    useMarkFeedAllRead,
+    useMarkFolderAllRead,
 } from "@readspace/shared"
 import { RSS_QUERY_KEYS } from "@readspace/shared/src/api/query-keys"
 import { useQueryClient } from "@tanstack/react-query"
@@ -111,7 +118,9 @@ export function ArticlesView({
     const [isTranslating, setIsTranslating] = useState(false)
     const [isDeepRefreshing, setIsDeepRefreshing] = useState(false)
     const [isPreviewRefreshing, setIsPreviewRefreshing] = useState(false)
-    const [previewFeedData, setPreviewFeedData] = useState<Feed | null>(null)
+    const [previewFeedData, setPreviewFeedData] = useState<FeedDetail | null>(
+        null
+    )
     const [isMarkingAllRead, setIsMarkingAllRead] = useState(false)
     const [previewRefreshFailed, setPreviewRefreshFailed] = useState(false)
 
@@ -166,17 +175,17 @@ export function ArticlesView({
     const sidebarTitle = isRecentlyReadMode
         ? "Recently Read"
         : isReadLaterMode
-          ? "Read Later"
-          : isTodayMode
-            ? "Today"
-            : feedId && feedData?.title
-              ? feedData.title
-              : folderId && allFolders
-                ? (allFolders as Folder[])?.find((f) => f.id === folderId)
-                      ?.name ||
-                  initialSidebarTitle ||
-                  "All Articles"
-                : initialSidebarTitle || "All Articles"
+            ? "Read Later"
+            : isTodayMode
+                ? "Today"
+                : feedId && feedData?.title
+                    ? feedData.title
+                    : folderId && allFolders
+                        ? (allFolders as Folder[])?.find((f) => f.id === folderId)
+                            ?.name ||
+                        initialSidebarTitle ||
+                        "All Articles"
+                        : initialSidebarTitle || "All Articles"
 
     // Calculate unread count for the badge based on current view
     const unreadCount = useMemo(() => {
@@ -204,17 +213,25 @@ export function ArticlesView({
         }
 
         if (feedId) {
-            // Individual feed: get unread count from the feed data
-            const currentFeed = (allUserFeeds as Feed[])?.find(
-                (f) => f.id === feedId
-            )
-            return currentFeed?.unread_count || 0
+            // Individual feed: get unread count from the unread counts data
+            return unreadCounts?.feed_counts?.[feedId] || 0
         } else if (folderId) {
             // Folder view: get unread count for this folder
-            const folderUnreadCounts = typedUnreadCounts?.unread_by_folder as
-                | Record<string, number>
-                | undefined
-            return folderUnreadCounts?.[folderId] ?? 0
+            // Note: ArticleCountsResponse doesn't have unread_by_folder, we might need to compute it or update type
+            // For now, let's assume it's not available or use a different approach if needed.
+            // Actually, let's check ArticleCountsResponse again. It has feed_counts, read_later, today.
+            // It does NOT have unread_by_folder.
+            // We can compute it from feed_counts if we have feed-folder mapping.
+            // But for now, let's return 0 to avoid errors, or try to sum up feeds in folder.
+            if (!allUserFeeds) return 0
+            const feedsInFolder = (allUserFeeds as Subscription[]).filter(
+                (s) => s.folder?.id === folderId
+            )
+            return feedsInFolder.reduce(
+                (acc, sub) =>
+                    acc + (unreadCounts?.feed_counts?.[sub.feed.id] || 0),
+                0
+            )
         } else {
             // All articles view: get total unread count
             return typedUnreadCounts?.total_unread || 0
@@ -277,10 +294,10 @@ export function ArticlesView({
     const activeQuery = isTodayMode
         ? todayQuery
         : isRecentlyReadMode
-          ? recentlyReadQuery
-          : isReadLaterMode
-            ? readLaterQuery
-            : allArticlesQuery
+            ? recentlyReadQuery
+            : isReadLaterMode
+                ? readLaterQuery
+                : allArticlesQuery
 
     const {
         data,
@@ -392,10 +409,6 @@ export function ArticlesView({
         updateArticle.mutate({
             articleId: selectedArticle.id,
             data: { is_read: true },
-            articleType:
-                "article_type" in selectedArticle
-                    ? selectedArticle.article_type
-                    : "feed",
         })
     }
 
@@ -487,6 +500,9 @@ export function ArticlesView({
     }
 
     // Mark all articles as read (for feed or folder)
+    const markFeedAllRead = useMarkFeedAllRead()
+    const markFolderAllRead = useMarkFolderAllRead()
+
     const handleMarkAllAsRead = async () => {
         if (!feedId && !folderId) return
 
@@ -495,12 +511,12 @@ export function ArticlesView({
 
         try {
             if (feedId) {
-                await ApiClient.rss.markFeedAllRead(feedId)
+                await markFeedAllRead.mutateAsync(feedId)
                 toast.success("All articles marked as read!", {
                     id: "mark-all-read",
                 })
             } else if (folderId) {
-                await ApiClient.rss.markFolderAllRead(folderId)
+                await markFolderAllRead.mutateAsync(folderId)
                 toast.success("All articles in folder marked as read!", {
                     id: "mark-all-read",
                 })
@@ -540,8 +556,7 @@ export function ArticlesView({
             console.log("[Preview Mode] Refreshing feed for preview:", feedId)
 
             // Call API directly with preview=true parameter
-            ApiClient.rss
-                .refreshFeed(feedId, true, true)
+            ApiClient.refreshFeed(feedId, true, true)
                 .then((feed) => {
                     console.log("[Preview Mode] Feed refresh successful")
                     // Store the feed data from refresh response
@@ -622,7 +637,7 @@ export function ArticlesView({
             // Select first article (or first unread if filter is on)
             const firstArticle = showUnreadOnly
                 ? sortedArticles.find((a: Article) => !a.is_read) ||
-                  sortedArticles[0]
+                sortedArticles[0]
                 : sortedArticles[0]
 
             if (firstArticle?.id) {
@@ -822,9 +837,9 @@ export function ArticlesView({
                                                         feedId
                                                             ? handleDeepRefresh
                                                             : () =>
-                                                                  handleRefreshWithMessage(
-                                                                      "Refreshing articles..."
-                                                                  )
+                                                                handleRefreshWithMessage(
+                                                                    "Refreshing articles..."
+                                                                )
                                                     }
                                                     disabled={isDeepRefreshing}
                                                 >
@@ -848,7 +863,9 @@ export function ArticlesView({
                                 <div className="flex-shrink-0">
                                     <FeedPreviewBanner
                                         feedTitle={feedData?.title}
-                                        feedDescription={feedData?.description}
+                                        feedDescription={
+                                            feedData?.description || undefined
+                                        }
                                         onFollow={() =>
                                             setIsSubscriptionModalOpen(true)
                                         }
@@ -987,7 +1004,9 @@ export function ArticlesView({
                                 {shouldShowPreviewBanner && (
                                     <FeedPreviewBanner
                                         feedTitle={feedData?.title}
-                                        feedDescription={feedData?.description}
+                                        feedDescription={
+                                            feedData?.description || undefined
+                                        }
                                         onFollow={() =>
                                             setIsSubscriptionModalOpen(true)
                                         }

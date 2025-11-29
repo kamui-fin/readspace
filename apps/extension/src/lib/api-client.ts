@@ -11,14 +11,14 @@ import { getSupabaseClient } from './supabase'
  */
 let storeGetter:
   | (() => {
-      settings: {
-        access_token?: string
-        readspace_url?: string
-        supabase_url?: string
-        supabase_anon_key?: string
-      }
-      updateToken: (token: string) => Promise<void>
-    })
+    settings: {
+      access_token?: string
+      readspace_url?: string
+      supabase_url?: string
+      supabase_anon_key?: string
+    }
+    updateToken: (token: string) => Promise<void>
+  })
   | null = null
 
 /**
@@ -156,8 +156,8 @@ export function configureExtensionApiClient() {
  * ```typescript
  * import { ApiClient } from '@/lib/api-client'
  *
- * const articles = await ApiClient.rss.getArticles({ page: 1 })
- * const folders = await ApiClient.rss.getFolders()
+ * const articles = await ApiClient.getArticles({ page: 1 })
+ * const folders = await ApiClient.getFolders()
  * ```
  */
 export { ApiClient }

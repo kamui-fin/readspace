@@ -15,7 +15,7 @@ ApiClient.configure({
  * ```typescript
  * import { ApiClient } from '@/lib/api-client'
  *
- * const articles = await ApiClient.rss.getArticles({ page: 1 })
- * const folders = await ApiClient.rss.getFolders()
+ * const articles = await ApiClient.getArticles({ page: 1 })
+ * const folders = await ApiClient.getFolders()
  * ```
  */

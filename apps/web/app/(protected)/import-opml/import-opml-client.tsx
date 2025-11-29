@@ -5,12 +5,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { opmlParse, type OutlineNode } from "@/lib/opml"
 import {
-    ActiveImportTask,
-    ApiClient,
-    ApiError,
+    OpmlTaskMetadata,
     RSS_QUERY_KEYS,
+    useActiveImportTask,
+    useImportOPML,
+    ApiError,
 } from "@readspace/shared"
-import { useQuery } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import { Clock, FileText, Upload } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useCallback, useRef, useState } from "react"
@@ -32,12 +33,49 @@ export default function ImportOPMLPageClient() {
 
     const fileInputRef = useRef<HTMLInputElement>(null)
     const router = useRouter()
+    const queryClient = useQueryClient()
 
-    // Use the prefetched data for active imports
-    const { data: activeImports = [] } = useQuery<ActiveImportTask[]>({
-        queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
-        queryFn: () => ApiClient.rss.listImportTasks(),
-        refetchInterval: 5000, // Poll every 5 seconds for updates
+    // Use the hook for active imports
+    const { data: activeTask } = useActiveImportTask()
+    const activeImports = activeTask ? [activeTask] : []
+
+    // Use the hook for import mutation
+    const importOpml = useImportOPML({
+        onSuccess: (data) => {
+            // Redirect to the status page immediately
+            router.push(`/import-opml/status/${data.task_id}`)
+
+            // Show success message
+            toast.success(
+                `Processing ${data.estimated_feeds} feeds. Import will run silently in background.`
+            )
+
+            // Invalidate tasks query
+            queryClient.invalidateQueries({
+                queryKey: [RSS_QUERY_KEYS.OPML_IMPORT_TASKS],
+            })
+        },
+        onError: (error) => {
+            console.error("Error uploading OPML file:", error)
+
+            // Handle resource limit errors (429) with user-friendly message
+            if (error instanceof ApiError && error.status === 429) {
+                toast.error(error.message, { duration: 8000 })
+                return
+            }
+
+            // Handle other API errors with their specific messages
+            if (error instanceof ApiError) {
+                toast.error(error.message)
+                return
+            }
+
+            // Generic error handling for unknown errors
+            toast.error("Failed to import OPML file. Please try again.")
+        },
+        onSettled: () => {
+            setIsUploading(false)
+        },
     })
 
     const validateOpmlFile = useCallback(
@@ -160,42 +198,9 @@ export default function ImportOPMLPageClient() {
             formData.append("default_folder_name", "Imported Feeds")
 
             setIsUploading(true)
-
-            try {
-                const data = (await ApiClient.rss.importOPML(
-                    formData
-                )) as OPMLImportResponse
-
-                // Redirect to the status page immediately
-                router.push(`/import-opml/status/${data.task_id}`)
-
-                // Show success message with better context
-                toast.success(
-                    `Processing ${validation.feedCount} feeds. Import will run silently in background.`
-                )
-            } catch (error) {
-                console.error("Error uploading OPML file:", error)
-
-                // Handle resource limit errors (429) with user-friendly message
-                if (error instanceof ApiError && error.status === 429) {
-                    toast.error(error.message, { duration: 8000 })
-                    setIsUploading(false)
-                    return
-                }
-
-                // Handle other API errors with their specific messages
-                if (error instanceof ApiError) {
-                    toast.error(error.message)
-                    setIsUploading(false)
-                    return
-                }
-
-                // Generic error handling for unknown errors
-                toast.error("Failed to import OPML file. Please try again.")
-                setIsUploading(false)
-            }
+            importOpml.mutate(formData)
         },
-        [activeImports, router, validateOpmlFile]
+        [activeImports, validateOpmlFile, importOpml]
     )
 
     const handleFileDrop = useCallback(

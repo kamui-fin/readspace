@@ -12,13 +12,13 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useUpdateFeed, type Feed } from "@readspace/shared"
+import { useUpdateFeed, type FeedSummary } from "@readspace/shared"
 
 interface FeedEditModalProps {
     /** Whether the modal is open */
     isOpen: boolean
     /** Feed to edit */
-    feed: Feed | null
+    feed: FeedSummary | null
     /** Callback when modal should close */
     onClose: () => void
 }
@@ -55,9 +55,8 @@ export function FeedEditModal({ isOpen, feed, onClose }: FeedEditModalProps) {
             {
                 feedId: feed.id,
                 data: {
-                    title: editFeedTitle.trim(),
+                    custom_title: editFeedTitle.trim(),
                 },
-                silent: false, // Use built-in toast notifications
             },
             {
                 onSuccess: () => {

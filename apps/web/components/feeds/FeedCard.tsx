@@ -10,7 +10,7 @@ import {
 import { useUserRole } from "@/hooks/useUserRole"
 import {
     useAdminDeleteFeed,
-    type Feed,
+    type FeedSummary,
     type FeedDiscoveryResult,
 } from "@readspace/shared"
 import { Eye, MoreVertical, Pencil, Sparkles, Trash2 } from "lucide-react"
@@ -18,7 +18,7 @@ import Link from "next/link"
 import { useState } from "react"
 
 interface FeedCardProps {
-    feed: Feed | FeedDiscoveryResult
+    feed: FeedSummary | FeedDiscoveryResult
     className?: string
     showFollowButton?: boolean
     showSimilarButton?: boolean
@@ -112,7 +112,7 @@ export function FeedCard({
 
             {/* Edit Feed Dialog */}
             <EditFeedDialog
-                feed={feed}
+                feed={feed as FeedSummary}
                 isOpen={isEditDialogOpen}
                 onClose={() => setIsEditDialogOpen(false)}
             />

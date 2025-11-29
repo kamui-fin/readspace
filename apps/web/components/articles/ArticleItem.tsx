@@ -125,7 +125,7 @@ export function ArticleItem({
 
     // Determine display text for content preview
     const displayText = stripHTML(
-        article.note || article.description || article.content || ""
+        article.user_note || article.description || article.content || ""
     )
 
     return (

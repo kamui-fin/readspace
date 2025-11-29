@@ -1,13 +1,13 @@
 export type Folder = {
-    id: string;
-    name: string;
-    created_at: string;
+  id: string;
+  name: string;
+  created_at: string;
 };
 
 export type FolderCreate = {
-    name: string;
+  name: string;
 };
 
 export type FolderUpdate = {
-    name?: string;
+  name?: string;
 };

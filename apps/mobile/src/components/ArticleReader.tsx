@@ -578,10 +578,10 @@ export function ArticleReader({
                 </Text>
 
                 {/* Note for clipped articles */}
-                {isClipped && article.note && (
+                {isClipped && article.user_note && (
                     <View className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 border border-amber-200 dark:border-amber-800">
                         <Text className="font-geist text-sm leading-relaxed text-grey dark:text-grey-dark">
-                            {article.note}
+                            {article.user_note}
                         </Text>
                     </View>
                 )}

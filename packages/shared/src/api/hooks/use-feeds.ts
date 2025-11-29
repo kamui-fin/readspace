@@ -7,26 +7,33 @@ import {
 } from "@tanstack/react-query";
 import { ApiClient } from "../client";
 import { RSS_QUERY_KEYS, mutationKeys, queryKeys } from "../query-keys";
-import type { FeedSummary, Subscription } from "../types";
+import type { FeedDetail, FeedSummary, Subscription, SubscriptionExtended } from "../types";
 
 export function createFeedHooks() {
     function useFeeds(
         params?: {
             folderId?: string;
             isFavorite?: boolean;
+            extended?: boolean;
         },
         options?: Omit<
-            UseQueryOptions<Subscription[], Error, Subscription[], ReturnType<typeof queryKeys.feeds>>,
+            UseQueryOptions<
+                Subscription[] | SubscriptionExtended[],
+                Error,
+                Subscription[] | SubscriptionExtended[],
+                ReturnType<typeof queryKeys.feeds>
+            >,
             "queryKey" | "queryFn"
         >,
     ) {
         return useQuery({
             queryKey: queryKeys.feeds(params),
             queryFn: () =>
-                ApiClient.rss.getFeeds({
+                ApiClient.getFeeds({
                     folder_id: params?.folderId,
                     is_favorite: params?.isFavorite,
-                }) as Promise<Subscription[]>,
+                    extended: params?.extended,
+                }),
             ...options,
         });
     }
@@ -34,13 +41,18 @@ export function createFeedHooks() {
     function useFeed(
         feedId: string,
         options?: Omit<
-            UseQueryOptions<FeedSummary, Error, FeedSummary, ReturnType<typeof queryKeys.feed>>,
+            UseQueryOptions<
+                FeedDetail,
+                Error,
+                FeedDetail,
+                ReturnType<typeof queryKeys.feed>
+            >,
             "queryKey" | "queryFn"
         >,
     ) {
         return useQuery({
             queryKey: queryKeys.feed(feedId),
-            queryFn: () => ApiClient.rss.getFeed(feedId),
+            queryFn: () => ApiClient.getFeed(feedId),
             enabled: !!feedId,
             ...options,
         });
@@ -59,10 +71,8 @@ export function createFeedHooks() {
         const queryClient = useQueryClient();
         return useMutation({
             mutationKey: mutationKeys.createFeed(),
-            mutationFn: (feed: {
-                url: string;
-                folder_id: string;
-            }) => ApiClient.rss.createFeed(feed),
+            mutationFn: (feed: { url: string; folder_id: string }) =>
+                ApiClient.createFeed(feed),
             onSettled: (data) => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
@@ -107,7 +117,7 @@ export function createFeedHooks() {
                     is_favorite?: boolean;
                     custom_title?: string;
                 };
-            }) => ApiClient.rss.updateFeed(feedId, data),
+            }) => ApiClient.updateFeed(feedId, data),
             onSettled: (_data, _error, { feedId }) => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FOLDERS] });
@@ -137,9 +147,29 @@ export function createFeedHooks() {
                 feedId: string;
                 forceRefetch?: boolean;
             }) => {
-                await ApiClient.rss.refreshFeed(feedId, forceRefetch);
+                await ApiClient.refreshFeed(feedId, forceRefetch);
             },
             onSuccess: (_, { feedId }) => {
+                queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
+                queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
+                queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
+            },
+            ...options,
+        });
+    }
+
+    function useMarkFeedAllRead(
+        options?: UseMutationOptions<
+            { message: string; feed_id: string },
+            unknown,
+            string
+        >,
+    ) {
+        const queryClient = useQueryClient();
+        return useMutation({
+            mutationKey: mutationKeys.markFeedAllRead(),
+            mutationFn: (feedId: string) => ApiClient.markFeedAllRead(feedId),
+            onSuccess: (_, feedId) => {
                 queryClient.invalidateQueries({ queryKey: queryKeys.feed(feedId) });
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.ARTICLES] });
                 queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
@@ -153,7 +183,7 @@ export function createFeedHooks() {
     ) {
         return useMutation({
             mutationKey: mutationKeys.refreshAllFeeds(),
-            mutationFn: () => ApiClient.rss.refreshAllFeeds(),
+            mutationFn: () => ApiClient.refreshAllFeeds(),
             ...options,
         });
     }
@@ -162,14 +192,18 @@ export function createFeedHooks() {
         taskId: string | null,
         enabled: boolean = true,
         options?: Omit<
-            UseQueryOptions<unknown, Error, unknown, ReturnType<typeof queryKeys.refreshStatus>>,
+            UseQueryOptions<
+                unknown,
+                Error,
+                unknown,
+                ReturnType<typeof queryKeys.refreshStatus>
+            >,
             "queryKey" | "queryFn"
         >,
     ) {
         return useQuery({
             queryKey: queryKeys.refreshStatus(taskId),
-            queryFn: () =>
-                ApiClient.rss.getRefreshStatus(taskId!) as Promise<unknown>,
+            queryFn: () => ApiClient.getRefreshStatus(taskId!) as Promise<unknown>,
             enabled: enabled && !!taskId,
             refetchInterval: 2000, // Poll every 2 seconds
             refetchIntervalInBackground: false,
@@ -191,13 +225,8 @@ export function createFeedHooks() {
         const queryClient = useQueryClient();
         return useMutation({
             mutationKey: mutationKeys.deleteFeed(),
-            mutationFn: async ({
-                feedId,
-            }: {
-                feedId: string;
-                silent?: boolean;
-            }) => {
-                await ApiClient.rss.deleteFeed(feedId);
+            mutationFn: async ({ feedId }: { feedId: string; silent?: boolean }) => {
+                await ApiClient.deleteFeed(feedId);
             },
             onSettled: (_data, _error, { feedId }) => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
@@ -223,13 +252,8 @@ export function createFeedHooks() {
         const queryClient = useQueryClient();
         return useMutation({
             mutationKey: mutationKeys.adminDeleteFeed(),
-            mutationFn: async ({
-                feedId,
-            }: {
-                feedId: string;
-                silent?: boolean;
-            }) => {
-                await ApiClient.rss.adminDeleteFeed(feedId);
+            mutationFn: async ({ feedId }: { feedId: string; silent?: boolean }) => {
+                await ApiClient.adminDeleteFeed(feedId);
             },
             onSettled: (_data, _error, { feedId }) => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
@@ -253,7 +277,7 @@ export function createFeedHooks() {
         return useMutation({
             mutationKey: mutationKeys.bulkDeleteFeeds(),
             mutationFn: ({ feedIds }: { feedIds: string[] }) =>
-                ApiClient.rss.bulkDeleteFeeds(feedIds),
+                ApiClient.bulkDeleteFeeds(feedIds),
             onSettled: () => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
                 queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
@@ -284,7 +308,7 @@ export function createFeedHooks() {
             }: {
                 feedIds: string[];
                 folderId: string;
-            }) => ApiClient.rss.bulkUpdateFeedsFolder(feedIds, folderId),
+            }) => ApiClient.bulkUpdateFeedsFolder(feedIds, folderId),
             onSettled: () => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
             },
@@ -312,12 +336,32 @@ export function createFeedHooks() {
                 feedId: string;
                 folderId: string;
             }): Promise<void> => {
-                await ApiClient.rss.subscribeToFeed(feedId, { folder_id: folderId });
+                await ApiClient.subscribeToFeed(feedId, { folder_id: folderId });
             },
             onSettled: () => {
                 queryClient.invalidateQueries({ queryKey: [RSS_QUERY_KEYS.FEEDS] });
                 queryClient.invalidateQueries({ queryKey: queryKeys.unreadCounts() });
             },
+            ...options,
+        });
+    }
+
+    function useFeedUnreadCounts(
+        options?: Omit<
+            UseQueryOptions<
+                Record<string, number>,
+                Error,
+                Record<string, number>,
+                ReturnType<typeof queryKeys.feedUnreadCounts>
+            >,
+            "queryKey" | "queryFn"
+        >,
+    ) {
+        return useQuery({
+            queryKey: queryKeys.feedUnreadCounts(),
+            queryFn: () =>
+                ApiClient.get<Record<string, number>>("/api/feeds/unread-counts"),
+            refetchInterval: 60000, // Poll every minute
             ...options,
         });
     }
@@ -335,5 +379,7 @@ export function createFeedHooks() {
         useBulkDeleteFeeds,
         useBulkUpdateFeedsFolder,
         useSubscribeToFeed,
+        useFeedUnreadCounts,
+        useMarkFeedAllRead,
     };
 }

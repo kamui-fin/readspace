@@ -17,12 +17,21 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { TableCell, TableRow } from "@/components/ui/table"
-import type { Feed } from "@readspace/shared"
 import { formatDistanceToNow, parseISO } from "date-fns"
 import { useEffect, useState } from "react"
+import {
+    AlertTriangle,
+    CheckCircle,
+    Edit3,
+    ExternalLink,
+    MoreHorizontal,
+    Trash2,
+    AlertCircle,
+} from "lucide-react"
+import Image from "next/image"
 
 // Custom hook to handle time formatting without hydration issues
-function useRelativeTime(dateString: string | null) {
+function useRelativeTime(dateString: string | null | undefined) {
     const [timeString, setTimeString] = useState<string | null>(null)
     const [isClient, setIsClient] = useState(false)
 
@@ -42,19 +51,22 @@ function useRelativeTime(dateString: string | null) {
     return timeString
 }
 
-import {
-    AlertTriangle,
-    CheckCircle,
-    Edit3,
-    ExternalLink,
-    MoreHorizontal,
-    Trash2,
-} from "lucide-react"
-import Image from "next/image"
+export interface FeedRowData {
+    id: string
+    title: string
+    url: string
+    link: string | null
+    folder_id: string | null
+    image_url: string | null
+    is_favorite?: boolean
+    error_count: number
+    last_updated_at?: string | null
+    last_error_message?: string | null
+}
 
 interface FeedTableRowProps {
     /** Feed data to display */
-    feed: Feed
+    feed: FeedRowData
     /** Whether this row is selected */
     isSelected: boolean
     /** Available folders for folder selection */
@@ -64,9 +76,9 @@ interface FeedTableRowProps {
     /** Callback when folder is changed */
     onFolderChange: (feedId: string, newFolderId: string | null) => void
     /** Callback when edit action is triggered */
-    onEdit: (feed: Feed) => void
+    onEdit: (feed: FeedRowData) => void
     /** Callback when delete action is triggered */
-    onDelete: (feed: Feed) => void
+    onDelete: (feed: FeedRowData) => void
 }
 
 /**
@@ -83,25 +95,19 @@ export function FeedTableRow({
     onDelete,
 }: FeedTableRowProps) {
     // Use the hydration-safe relative time hook
-    const relativeTime = useRelativeTime(feed.last_article_published_at)
+    const relativeTime = useRelativeTime(feed.last_updated_at)
+
     /**
      * Determine if a feed should be considered "dead" based on error count and last activity
      */
-    const isFeedDead = (feed: Feed): boolean => {
-        if (feed.fetch_error_count > 5) return true
+    const isFeedDead = (feed: FeedRowData): boolean => {
+        if ((feed.error_count || 0) > 5) return true
 
-        if (feed.last_article_published_at) {
+        if (feed.last_updated_at) {
             const ninetyDaysAgo = new Date()
             ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-            if (parseISO(feed.last_article_published_at) < ninetyDaysAgo) {
+            if (parseISO(feed.last_updated_at) < ninetyDaysAgo) {
                 return true
-            }
-        } else {
-            // If no last_article_published_at and it has been fetched, it might be dead
-            if (feed.last_fetched_at && feed.fetch_error_count === 0) {
-                const ninetyDaysAgo = new Date()
-                ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-                if (parseISO(feed.last_fetched_at) < ninetyDaysAgo) return true
             }
         }
         return false
@@ -118,7 +124,7 @@ export function FeedTableRow({
      * Handle folder selection change
      */
     const handleFolderChange = (newFolderId: string) => {
-        if (newFolderId === "none") {
+        if (newFolderId === "unorganized") {
             onFolderChange(feed.id, null)
         } else {
             onFolderChange(feed.id, newFolderId)
@@ -140,6 +146,7 @@ export function FeedTableRow({
     }
 
     const isDead = isFeedDead(feed)
+    const errorCount = feed.error_count || 0
 
     return (
         <TableRow data-state={isSelected ? "selected" : undefined}>
@@ -171,6 +178,15 @@ export function FeedTableRow({
                         >
                             {feed.title || "N/A"}
                         </span>
+                        {errorCount > 0 && (
+                            <span
+                                className="flex items-center text-destructive text-xs"
+                                title={feed.last_error_message || "Fetch error"}
+                            >
+                                <AlertCircle className="h-3 w-3 mr-1" />
+                                {errorCount} errors
+                            </span>
+                        )}
                         <a
                             href={feed.url}
                             target="_blank"
@@ -188,13 +204,14 @@ export function FeedTableRow({
             {/* Folder selection */}
             <TableCell>
                 <Select
-                    value={feed.folder_id || "none"}
+                    value={feed.folder_id || "unorganized"}
                     onValueChange={handleFolderChange}
                 >
                     <SelectTrigger className="h-8 text-xs">
                         <SelectValue placeholder="Select folder" />
                     </SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="unorganized">Unorganized</SelectItem>
                         {folders.map((folder) => (
                             <SelectItem key={folder.id} value={folder.id}>
                                 {folder.name}
@@ -210,16 +227,16 @@ export function FeedTableRow({
                     <Badge
                         variant="destructive"
                         className="whitespace-nowrap"
-                        title={`Error count: ${feed.fetch_error_count}. ${feed.last_error_message || ""}`}
+                        title={`Error count: ${errorCount}. ${feed.last_error_message || ""}`}
                     >
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Dead
                     </Badge>
-                ) : feed.fetch_error_count > 0 ? (
+                ) : errorCount > 0 ? (
                     <Badge
-                        variant="secondary" // Changed from "orange" which may not exist
+                        variant="secondary"
                         className="whitespace-nowrap"
-                        title={`Error count: ${feed.fetch_error_count}. ${feed.last_error_message || ""}`}
+                        title={`Error count: ${errorCount}. ${feed.last_error_message || ""}`}
                     >
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         Warning
@@ -233,16 +250,8 @@ export function FeedTableRow({
             </TableCell>
 
             {/* Last post date */}
-            <TableCell className="text-right text-xs">
-                {feed.last_article_published_at ? (
-                    <div className="text-muted-foreground whitespace-nowrap">
-                        {relativeTime || "Loading..."}
-                    </div>
-                ) : (
-                    <div className="text-muted-foreground whitespace-nowrap">
-                        No posts yet
-                    </div>
-                )}
+            <TableCell className="hidden md:table-cell text-muted-foreground text-right text-xs">
+                {relativeTime || "Never"}
             </TableCell>
 
             {/* Actions dropdown */}

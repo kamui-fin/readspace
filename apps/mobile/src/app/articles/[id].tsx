@@ -120,11 +120,11 @@ export default function ArticleScreen() {
     const handleBookmark = useCallback(() => {
         if (!article) return;
 
-        const newValue = !article.is_read_later;
+        const newValue = !article.is_saved;
         updateArticle.mutate(
             {
                 articleId: article.id,
-                data: { is_read_later: newValue },
+                data: { is_saved: newValue },
                 articleType: article.article_type || 'feed',
             },
             {
@@ -142,7 +142,7 @@ export default function ArticleScreen() {
         updateArticle.mutate(
             {
                 articleId: article.id,
-                data: { is_read_later: false },
+                data: { is_saved: false },
                 articleType: article.article_type || 'feed',
             },
             {
@@ -343,12 +343,12 @@ export default function ArticleScreen() {
                             name={
                                 isClipped
                                     ? 'solar:check-circle-bold'
-                                    : article.is_read_later
+                                    : article.is_saved
                                         ? 'solar:bookmark-bold'
                                         : 'solar:bookmark-linear'
                             }
                             size={20}
-                            color={isClipped ? '#6A994E' : article.is_read_later ? '#FBBC04' : colors.black}
+                            color={isClipped ? '#6A994E' : article.is_saved ? '#FBBC04' : colors.black}
                         />
                     </Pressable>
 

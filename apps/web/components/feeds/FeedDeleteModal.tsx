@@ -9,13 +9,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { useDeleteFeed, type Feed } from "@readspace/shared"
+import { useDeleteFeed, type FeedSummary } from "@readspace/shared"
 
 interface FeedDeleteModalProps {
     /** Whether the modal is open */
     isOpen: boolean
     /** Feed to delete */
-    feed: Feed | null
+    feed: FeedSummary | null
     /** Callback when modal should close */
     onClose: () => void
     /** Callback when feed is successfully deleted */

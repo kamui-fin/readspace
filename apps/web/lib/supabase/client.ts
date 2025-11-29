@@ -3,7 +3,8 @@ import { env } from "@/env"
 import { createBrowserClient } from "@supabase/ssr"
 
 // Singleton browser client to prevent creating multiple instances
-let browserClient: ReturnType<typeof createBrowserClient<Database>> | null = null
+let browserClient: ReturnType<typeof createBrowserClient<Database>> | null =
+    null
 
 export const createClient = () => {
     // Only create client in browser environment

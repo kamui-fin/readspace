@@ -11,12 +11,12 @@ const TOKEN_CACHE_TTL = 50 * 1000
 
 /**
  * Get authentication token with global caching and request deduplication.
- * 
+ *
  * This function ensures that:
  * 1. Only ONE token fetch happens at a time (mutex via refreshPromise)
  * 2. Token is cached globally and shared across all API calls
  * 3. Supabase client is reused (singleton pattern)
- * 
+ *
  * @returns Promise<string | null> - Auth token or null if not authenticated
  */
 export const getAuthToken = async (): Promise<string | null> => {
@@ -100,7 +100,7 @@ export const initAuthStateListener = () => {
     if (typeof window === "undefined") return
 
     const supabase = createBrowserClient()
-    
+
     supabase.auth.onAuthStateChange((event) => {
         if (event === "SIGNED_OUT") {
             clearTokenCache()

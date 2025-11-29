@@ -79,7 +79,7 @@ export default function ImportStatusPage() {
 
     const handleCancelImport = async () => {
         try {
-            const response = await ApiClient.rss.cancelImportTask(taskId)
+            const response = await ApiClient.cancelImportTask(taskId)
 
             // Check if cancellation was successful
             if (response.cancelled) {
@@ -88,9 +88,9 @@ export default function ImportStatusPage() {
                 toast.success(response.message || "Task was already completed")
             }
 
-            // Redirect to import page as suggested by backend
-            if (response.redirect_url) {
-                router.push(response.redirect_url)
+            if (response.cancelled) {
+                toast.success("Import cancelled")
+                router.push("/import-opml")
             } else {
                 router.push("/import-opml")
             }
@@ -110,9 +110,9 @@ export default function ImportStatusPage() {
 
         const pollStatus = async () => {
             try {
-                const status = (await ApiClient.rss.getImportTaskStatus(
+                const status = (await ApiClient.getImportTaskStatus(
                     taskId
-                )) as ImportTaskStatus
+                )) as unknown as ImportTaskStatus
                 setTaskStatus(status)
                 setError(null)
 

@@ -8,7 +8,13 @@ import {
     useSidebarLeft,
 } from "@/components/ui/sidebar"
 import { useModalStore } from "@/lib/stores/modal-store"
-import { useFeeds, useFeedUnreadCounts, useFolders, useUnreadCounts } from "@readspace/shared"
+import {
+    useFeeds,
+    useFeedUnreadCounts,
+    useFolders,
+    useUnreadCounts,
+} from "@readspace/shared"
+import type { Subscription, Folder } from "@readspace/shared"
 import {
     BookmarkIcon,
     Compass,
@@ -90,46 +96,49 @@ export function FeedsNavigation({
 
     // Memoized type-safe data transformations
     const typedFolders = React.useMemo(
-        () => (folders as Array<{ id: string; name: string }>) || [],
+        () => (folders as Folder[]) || [],
         [folders]
     )
     const typedFeeds = React.useMemo(
         () =>
-            ((feeds as Array<{
-                id: string
-                title: string
-                folder_id: string | null
-                image_url?: string
-                is_favorite?: boolean
-            }>) || []).map(feed => ({
-                ...feed,
-                unread_count: feedUnreadCounts?.[feed.id] ?? 0
-            })),
+            ((feeds as unknown as Subscription[]) || []).map(
+                (subscription) => ({
+                    id: subscription.feed.id,
+                    title: subscription.custom_title || subscription.feed.title,
+                    url: subscription.feed.url,
+                    folder_id: subscription.folder?.id || null,
+                    image_url: subscription.feed.image_url || undefined,
+                    is_favorite: subscription.is_favorite,
+                    unread_count: feedUnreadCounts?.[subscription.feed.id] ?? 0,
+                    // Keep the subscription ID for operations that need it
+                    subscription_id: subscription.id,
+                })
+            ),
         [feeds, feedUnreadCounts]
     )
-    const typedUnreadCounts = React.useMemo(
-        () => {
-            const counts = (unreadCounts as {
+    const typedUnreadCounts = React.useMemo(() => {
+        const counts =
+            (unreadCounts as {
                 total_unread?: number
                 read_later_count?: number
                 today_count?: number
             }) || {}
 
-            // Calculate per-folder counts from feedUnreadCounts
-            const unread_by_folder: Record<string, number> = {}
-            typedFeeds.forEach(feed => {
-                if (feed.folder_id) {
-                    unread_by_folder[feed.folder_id] = (unread_by_folder[feed.folder_id] || 0) + (feed.unread_count || 0)
-                }
-            })
-
-            return {
-                ...counts,
-                unread_by_folder
+        // Calculate per-folder counts from feedUnreadCounts
+        const unread_by_folder: Record<string, number> = {}
+        typedFeeds.forEach((feed) => {
+            if (feed.folder_id) {
+                unread_by_folder[feed.folder_id] =
+                    (unread_by_folder[feed.folder_id] || 0) +
+                    (feed.unread_count || 0)
             }
-        },
-        [unreadCounts, typedFeeds]
-    )
+        })
+
+        return {
+            ...counts,
+            unread_by_folder,
+        }
+    }, [unreadCounts, typedFeeds])
 
     // Group feeds by folder
     const feedsByFolder = React.useMemo(() => {
@@ -377,10 +386,7 @@ export function FeedsNavigation({
                     setFeedError(null)
                 }}
                 selectedFolderId={selectedFolderId}
-                folders={typedFolders.map((f) => ({
-                    id: f.id,
-                    name: f.name,
-                }))}
+                folders={typedFolders}
                 error={feedError}
                 onClearError={handleClearFeedError}
             />

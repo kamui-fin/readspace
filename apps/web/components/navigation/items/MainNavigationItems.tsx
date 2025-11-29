@@ -40,7 +40,7 @@ export function MainNavigationItems({
     const pathname = usePathname()
 
     // Fetch unread counts for special items
-    const { data: unreadCounts } = useUnreadCounts(undefined, {
+    const { data: unreadCounts } = useUnreadCounts({
         refetchOnMount: false,
         refetchOnWindowFocus: false,
         staleTime: 0, // Always consider stale so invalidation works immediately

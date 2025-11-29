@@ -64,7 +64,7 @@ export function FeedModal({
         createFeed.mutate(
             {
                 url: feedUrl.trim(),
-                folder_id: selectedFolder || undefined,
+                folder_id: selectedFolder || "",
             },
             {
                 onSuccess: () => {

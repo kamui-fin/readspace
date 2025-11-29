@@ -17,7 +17,7 @@ export function useUserRole() {
         error,
     } = useQuery<UserProfile>({
         queryKey: [USER_QUERY_KEYS.PROFILE],
-        queryFn: () => ApiClient.users.getProfile() as Promise<UserProfile>,
+        queryFn: () => ApiClient.getProfile() as Promise<UserProfile>,
         retry: false, // Don't retry on auth failures
         staleTime: 5 * 60 * 1000, // 5 minutes
         refetchOnWindowFocus: false,

@@ -4,10 +4,18 @@ import { createFolderHooks } from "./use-folders";
 import { createOpmlHooks } from "./use-opml";
 
 // Export factory functions for custom configurations
-export { createFeedHooks, createArticleHooks, createFolderHooks, createOpmlHooks };
+export {
+  createFeedHooks,
+  createArticleHooks,
+  createFolderHooks,
+  createOpmlHooks,
+};
 
 // Re-export enhancement utilities
-export { ARTICLE_ENHANCEMENT_QUERY_KEYS, createTranslationQueryKey } from "./use-articles";
+export {
+  ARTICLE_ENHANCEMENT_QUERY_KEYS,
+  createTranslationQueryKey,
+} from "./use-articles";
 
 // Create and export default hooks
 const defaultFeedHooks = createFeedHooks();
@@ -17,42 +25,43 @@ const defaultOpmlHooks = createOpmlHooks();
 
 // Re-export all default hooks
 export const {
-    useFeeds,
-    useFeed,
-    useCreateFeed,
-    useUpdateFeed,
-    useRefreshFeed,
-    useDeleteFeed,
-    useAdminDeleteFeed,
-    useBulkDeleteFeeds,
-    useBulkUpdateFeedsFolder,
-    useSubscribeToFeed,
+  useFeeds,
+  useFeed,
+  useCreateFeed,
+  useUpdateFeed,
+  useRefreshFeed,
+  useDeleteFeed,
+  useAdminDeleteFeed,
+  useBulkDeleteFeeds,
+  useBulkUpdateFeedsFolder,
+  useSubscribeToFeed,
+  useFeedUnreadCounts,
+  useMarkFeedAllRead,
 } = defaultFeedHooks;
 
 export const {
-    useUnreadCounts,
-    useArticle,
-    useUpdateArticle,
-    useCheckArticleSaved,
-    useSaveArticle,
-    useUnsaveArticle,
-    useInfiniteArticles,
-    useInfiniteRecentlyReadArticles,
-    useInfiniteReadLaterArticles,
-    useInfiniteTodayArticles,
-    useExtractFullText,
-    useSummarizeArticle,
-    fetchTranslation,
+  useUnreadCounts,
+  useArticle,
+  useUpdateArticle,
+  useCheckArticleSaved,
+  useSaveArticle,
+  useUnsaveArticle,
+  useInfiniteArticles,
+  useInfiniteRecentlyReadArticles,
+  useInfiniteReadLaterArticles,
+  useInfiniteTodayArticles,
+  useExtractFullText,
+  useSummarizeArticle,
+  fetchTranslation,
 } = defaultArticleHooks;
 
 export const {
-    useFolders,
-    useCreateFolder,
-    useUpdateFolder,
-    useDeleteFolder,
+  useFolders,
+  useCreateFolder,
+  useUpdateFolder,
+  useDeleteFolder,
+  useMarkFolderAllRead,
 } = defaultFolderHooks;
 
-export const {
-    useImportOPML,
-    useImportTaskStatus,
-} = defaultOpmlHooks;
+export const { useImportOPML, useImportTaskStatus, useActiveImportTask } =
+  defaultOpmlHooks;

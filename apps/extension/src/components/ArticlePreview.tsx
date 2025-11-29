@@ -118,7 +118,7 @@ export function ArticlePreview({
   const isSaved =
     (!!savedArticle &&
       savedArticle.is_saved &&
-      savedArticle.is_read_later !== false) ||
+      savedArticle.is_saved !== false) ||
     saveArticleMutation.isPending ||
     isPreparingToSave
 
@@ -144,10 +144,10 @@ export function ArticlePreview({
     if (
       savedArticle &&
       savedArticle.is_saved &&
-      savedArticle.is_read_later !== false
+      savedArticle.is_saved !== false
     ) {
       const savedTitle = savedArticle.title || ''
-      const savedNote = savedArticle.note || ''
+      const savedNote = savedarticle.user_note || ''
       const savedPriority = (
         savedArticle.priority || 'LOW'
       ).toLowerCase() as Priority
@@ -379,15 +379,14 @@ export function ArticlePreview({
             }
             size="sm"
             variant={isSaved && !hasUnsavedChanges ? 'outline' : 'default'}
-            className={`flex-shrink-0 w-[100px] ${
-              isSaved && !hasUnsavedChanges
-                ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
-                : ''
-            }`}
+            className={`flex-shrink-0 w-[100px] ${isSaved && !hasUnsavedChanges
+              ? 'border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground'
+              : ''
+              }`}
           >
             {isSaved &&
-            !hasUnsavedChanges &&
-            !unsaveArticleMutation.isPending ? (
+              !hasUnsavedChanges &&
+              !unsaveArticleMutation.isPending ? (
               <div className="flex items-center justify-center">
                 <Trash2 className="w-3 h-3 mr-1.5" />
                 <span>Unsave</span>
@@ -480,10 +479,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('low')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'low'
-                        ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'low'
+                      ? 'bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -496,10 +494,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('medium')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'medium'
-                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'medium'
+                      ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >
@@ -512,10 +509,9 @@ export function ArticlePreview({
                   onClick={() => setPriority('high')}
                   className={`
                     px-2 py-1.5 rounded text-xs font-medium transition-all
-                    ${
-                      priority === 'high'
-                        ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
-                        : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
+                    ${priority === 'high'
+                      ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30'
+                      : 'bg-muted/50 text-muted-foreground hover:bg-muted border border-transparent'
                     }
                   `}
                 >

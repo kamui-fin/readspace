@@ -1,4 +1,4 @@
-import type { Feed, Folder } from "@readspace/shared"
+import type { Folder } from "@readspace/shared"
 
 /**
  * Download content as a file using browser APIs
@@ -29,7 +29,7 @@ export function downloadOPML(opmlContent: string, filename?: string): void {
     downloadFile(opmlContent, finalFilename, "application/xml")
 }
 
-interface FeedForOPML {
+export interface FeedForOPML {
     url: string
     title?: string | null
     link?: string | null
@@ -102,7 +102,7 @@ export function generateOPMLContent(
  * Export feeds to OPML format and download
  */
 export function exportFeedsToOPML(
-    feeds: Feed[],
+    feeds: FeedForOPML[],
     folders: Folder[],
     filename?: string
 ): void {

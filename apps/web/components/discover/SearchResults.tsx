@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import {
     feedDiscoveryResultToFeed,
     type FeedDiscoveryResult,
+    type FeedSummary,
 } from "@readspace/shared"
 
 import { Pagination } from "./Pagination"
@@ -46,7 +47,8 @@ export function SearchResults({
     const { status } = useInstantSearch()
 
     // Don't show "no results" while the search is still loading OR while preview is loading
-    const isLoading = status === "loading" || status === "stalled" || isPreviewLoading
+    const isLoading =
+        status === "loading" || status === "stalled" || isPreviewLoading
 
     // Prepare preview feed data if available
     let previewFeedData: any = null
@@ -56,7 +58,8 @@ export function SearchResults({
             folder_id: "",
             folder_name: null,
             is_favorite: false,
-            top_level_category: previewFeed.category,
+            top_level_category:
+                previewFeed.top_level_category || previewFeed.category,
             unread_count: 0,
             last_refreshed_at: null,
             created_at: new Date().toISOString(),
@@ -160,7 +163,7 @@ export function SearchResults({
                 {items.map((hit) => {
                     const hitData = hit as any
                     const discoveryResult: FeedDiscoveryResult = {
-                        id: hitData.id,
+                        id: hitData.id || "",
                         url: hitData.url,
                         title: hitData.title,
                         description: hitData.description,
@@ -182,7 +185,7 @@ export function SearchResults({
                     return (
                         <FeedCard
                             key={hitData.id}
-                            feed={feed}
+                            feed={feed as FeedSummary}
                             className="py-8"
                         />
                     )

@@ -24,7 +24,8 @@ import {
     useDeleteFeed,
     useFeeds,
     useFolders,
-    type Feed,
+    type FeedSummary,
+    type Subscription,
     RSS_QUERY_KEYS,
 } from "@readspace/shared"
 import { useQueryClient } from "@tanstack/react-query"
@@ -35,7 +36,13 @@ import { toast } from "react-hot-toast"
 
 interface BaseFeedCardProps {
     /** The feed to display */
-    feed: Feed | (Feed & { is_preview: true; preview_url: string })
+    feed:
+        | (FeedSummary & { description?: string | null })
+        | (FeedSummary & {
+              is_preview: true
+              preview_url: string
+              description?: string | null
+          })
     /** Variant for styling */
     variant?: "default" | "preview"
     /** Additional className */
@@ -104,7 +111,7 @@ export function BaseFeedCard({
                 return f.id === feed.id
             }
             // Preview feed: check by normalized URL
-            return normalizeUrl(f.url) === normalizeUrl(feedUrl)
+            return normalizeUrl(f.feed.url) === normalizeUrl(feedUrl)
         }) ?? false
 
     const { data: folders, isLoading: foldersLoading } = useFolders()
@@ -166,22 +173,29 @@ export function BaseFeedCard({
             // Optimistically update the feeds query data to reflect the new subscription
             queryClient.setQueryData(
                 [RSS_QUERY_KEYS.FEEDS],
-                (old: Feed[] | undefined) => {
+                (old: Subscription[] | undefined) => {
                     if (!old) return old
                     // Add the current feed to the subscribed feeds list if it's not already there
                     const feedExists = old.some(
-                        (f) => normalizeUrl(f.url) === normalizeUrl(feedUrl)
+                        (f) =>
+                            normalizeUrl(f.feed.url) === normalizeUrl(feedUrl)
                     )
                     if (!feedExists) {
-                        // Create a proper Feed object from the feed
-                        const newFeed = {
-                            ...feed,
-                            url: subscriptionUrl,
-                            folder_id: folderId,
-                            unread_count: 0,
+                        // Create a proper Subscription object
+                        const newSubscription: Subscription = {
+                            id: "temp-id-" + Date.now(), // Temporary ID
                             is_favorite: false,
-                        } as Feed
-                        return [...old, newFeed]
+                            custom_title: null,
+                            created_at: new Date().toISOString(),
+                            folder:
+                                folders?.find((f) => f.id === folderId) || null,
+                            feed: {
+                                ...feed,
+                                id: "temp-feed-id-" + Date.now(), // Temporary ID if needed, or use existing if available
+                                error_count: 0,
+                            } as FeedSummary,
+                        }
+                        return [...old, newSubscription]
                     }
                     return old
                 }
@@ -224,7 +238,7 @@ export function BaseFeedCard({
                 if (!isPreviewFeed) {
                     return f.id === feed.id
                 }
-                return normalizeUrl(f.url) === normalizeUrl(feedUrl)
+                return normalizeUrl(f.feed.url) === normalizeUrl(feedUrl)
             })
             if (subscribedFeed) {
                 await deleteFeed.mutateAsync({ feedId: subscribedFeed.id })

@@ -1,5 +1,5 @@
 import { ApiClient } from "../core";
-import { FeedDetail, Subscription } from "../types/feeds";
+import { FeedDetail, Subscription, SubscriptionExtended } from "../types/feeds";
 
 export const feeds = {
     getFeeds: (params?: {
@@ -7,6 +7,7 @@ export const feeds = {
         tag_names?: string[];
         is_favorite?: boolean;
         skip?: number;
+        extended?: boolean;
     }) => {
         const queryParams = new URLSearchParams();
         if (params?.folder_id) queryParams.append("folder_id", params.folder_id);
@@ -16,9 +17,11 @@ export const feeds = {
             queryParams.append("is_favorite", params.is_favorite.toString());
         if (params?.skip !== undefined)
             queryParams.append("skip", params.skip.toString());
+        if (params?.extended !== undefined)
+            queryParams.append("extended", params.extended.toString());
 
         const queryString = queryParams.toString();
-        return ApiClient.get<Subscription[]>(
+        return ApiClient.get<Subscription[] | SubscriptionExtended[]>(
             `/api/feeds/${queryString ? `?${queryString}` : ""}`,
         );
     },
@@ -67,6 +70,20 @@ export const feeds = {
     deleteFeed: (id: string) => ApiClient.delete(`/api/feeds/${id}`),
 
     adminDeleteFeed: (id: string) => ApiClient.delete(`/api/feeds/${id}/admin`),
+
+    adminUpdateFeed: (
+        id: string,
+        data: {
+            title?: string;
+            description?: string;
+            language?: string;
+            top_level_category?: string;
+            url?: string;
+            link?: string;
+            image_url?: string;
+            popularity_score?: number;
+        },
+    ) => ApiClient.patch<FeedDetail>(`/api/feeds/${id}/admin`, data),
 
     markFeedAllRead: (feed_id: string) =>
         ApiClient.put<{

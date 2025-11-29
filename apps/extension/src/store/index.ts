@@ -266,8 +266,8 @@ export const useExtensionStore = create<ExtensionState>()(
         set({ isLoading: true })
         try {
           const [folders, feeds] = await Promise.all([
-            ApiClient.rss.getFolders() as Promise<Folder[]>,
-            ApiClient.rss.getFeeds() as Promise<Feed[]>,
+            ApiClient.getFolders() as Promise<Folder[]>,
+            ApiClient.getFeeds() as Promise<Feed[]>,
           ])
 
           set({ folders, feeds })
@@ -305,7 +305,7 @@ export const useExtensionStore = create<ExtensionState>()(
         })
 
         try {
-          await ApiClient.rss.createFeed(
+          await ApiClient.createFeed(
             {
               url: feedUrl,
               folder_id: options.folder_id || settings.default_folder_id,
@@ -384,7 +384,7 @@ export const useExtensionStore = create<ExtensionState>()(
           // Subscribe to feeds one by one since there's no bulk endpoint in the current API
           await Promise.all(
             feeds.map((feed) =>
-              ApiClient.rss.createFeed({
+              ApiClient.createFeed({
                 url: feed.url,
                 folder_id: options.folder_id || settings.default_folder_id,
               })
@@ -408,7 +408,7 @@ export const useExtensionStore = create<ExtensionState>()(
         }
 
         try {
-          await ApiClient.rss.deleteFeed(feedId)
+          await ApiClient.deleteFeed(feedId)
           // Reload user data to update the feeds list
           await get().loadUserData()
         } catch (error) {
