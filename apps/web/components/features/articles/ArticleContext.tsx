@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useMemo, useState } from "react"
+import { createContext, useContext, useState } from "react"
 import { type Article } from "@readspace/shared"
 import { useArticleAI } from "../hooks/useArticleAI"
 import { useArticleInteractions } from "../hooks/useArticleInteractions"
@@ -9,7 +9,9 @@ import { useIsMobile } from "../../../../hooks/use-mobile"
 type UseArticleAIResult = ReturnType<typeof useArticleAI>
 type UseArticleInteractionsResult = ReturnType<typeof useArticleInteractions>
 
-interface ArticleContextValue extends UseArticleAIResult, UseArticleInteractionsResult {
+interface ArticleContextValue
+    extends UseArticleAIResult,
+        UseArticleInteractionsResult {
     article: Article
     contentSource: "original" | "extracted" | "translated"
     setContentSource: (source: "original" | "extracted" | "translated") => void
@@ -23,7 +25,8 @@ const ArticleContext = createContext<ArticleContextValue | null>(null)
 
 export function useArticleContext() {
     const context = useContext(ArticleContext)
-    if (!context) throw new Error("useArticleContext must be used within ArticleProvider")
+    if (!context)
+        throw new Error("useArticleContext must be used within ArticleProvider")
     return context
 }
 
@@ -56,9 +59,9 @@ export function ArticleContentProvider({
     onArticleRemoved,
     onBack,
 }: ArticleProviderProps) {
-    const [contentSource, setContentSource] = useState<"original" | "extracted" | "translated">(
-        article.extracted_content ? "extracted" : "original"
-    )
+    const [contentSource, setContentSource] = useState<
+        "original" | "extracted" | "translated"
+    >(article.extracted_content ? "extracted" : "original")
 
     const isMobile = useIsMobile()
 
@@ -81,13 +84,14 @@ export function ArticleContentProvider({
         onArticleRemoved,
     })
 
-    const displayContent = useMemo(() => {
-        if (contentSource === "translated") return aiResult.translatedContent || ""
-        if (contentSource === "extracted") return article.extracted_content || ""
-        return article.content || article.description || ""
-    }, [contentSource, aiResult.translatedContent, article])
+    let displayContent = ""
+    if (contentSource === "translated")
+        displayContent = aiResult.translatedContent || ""
+    else if (contentSource === "extracted")
+        displayContent = article.extracted_content || ""
+    else displayContent = article.content || article.description || ""
 
-    const value = useMemo(() => ({
+    const value = {
         ...aiResult,
         ...interactionsResult,
         article,
@@ -97,16 +101,7 @@ export function ArticleContentProvider({
         isTranslating,
         onBack,
         isReadLaterMode,
-    }), [
-        aiResult,
-        interactionsResult,
-        article,
-        contentSource,
-        displayContent,
-        isTranslating,
-        onBack,
-        isReadLaterMode,
-    ])
+    }
 
     return (
         <ArticleContext.Provider value={value}>

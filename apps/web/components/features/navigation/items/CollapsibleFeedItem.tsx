@@ -58,7 +58,11 @@ function useFeedCollapse(feedId: string, initialOpen?: boolean) {
     return { isOpen, toggle: setIsOpen }
 }
 
-function useFeedNavigation(feedId: string, isMobile: boolean, toggleSidebar: () => void) {
+function useFeedNavigation(
+    feedId: string,
+    isMobile: boolean,
+    toggleSidebar: () => void
+) {
     const router = useRouter()
 
     const handleNavigate = React.useCallback(() => {
@@ -95,7 +99,11 @@ function FeedItemToggle({ isOpen, onToggle, title }: FeedItemToggleProps) {
         <CollapsibleTrigger asChild>
             <button
                 type="button"
-                aria-label={isOpen ? `Collapse folder ${title}` : `Expand folder ${title}`}
+                aria-label={
+                    isOpen
+                        ? `Collapse folder ${title}`
+                        : `Expand folder ${title}`
+                }
                 className="p-1 mr-1 rounded hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring shrink-0"
             >
                 <motion.div
@@ -117,7 +125,12 @@ interface FeedItemButtonProps {
     children: React.ReactNode
 }
 
-function FeedItemButton({ onClick, isActive, title, children }: FeedItemButtonProps) {
+function FeedItemButton({
+    onClick,
+    isActive,
+    title,
+    children,
+}: FeedItemButtonProps) {
     return (
         <SidebarLeftMenuButton
             className="justify-start flex-1"
@@ -143,15 +156,27 @@ export function CollapsibleFeedItem({
     toggleSidebar,
 }: CollapsibleFeedItemProps) {
     const { isOpen, toggle } = useFeedCollapse(feed.id, feed.isOpen)
-    const { handleNavigate } = useFeedNavigation(feed.id, isMobile, toggleSidebar)
+    const { handleNavigate } = useFeedNavigation(
+        feed.id,
+        isMobile,
+        toggleSidebar
+    )
     const pathname = usePathname()
     const isActive = pathname === `/folders/${feed.id}/articles`
 
     return (
         <Collapsible open={isOpen} onOpenChange={toggle}>
             <FeedItemRoot>
-                <FeedItemToggle isOpen={isOpen} onToggle={toggle} title={feed.title} />
-                <FeedItemButton onClick={handleNavigate} isActive={isActive} title={feed.title}>
+                <FeedItemToggle
+                    isOpen={isOpen}
+                    onToggle={toggle}
+                    title={feed.title}
+                />
+                <FeedItemButton
+                    onClick={handleNavigate}
+                    isActive={isActive}
+                    title={feed.title}
+                >
                     {feed.icon &&
                         React.createElement(feed.icon, {
                             className: "ml-1 mr-1 h-4 w-4 shrink-0",

@@ -180,8 +180,8 @@ export function ArticleContent({
                                 contentSource === "translated"
                                     ? translatedContent
                                     : contentSource === "extracted"
-                                        ? article.extracted_content
-                                        : article.content ||
+                                      ? article.extracted_content
+                                      : article.content ||
                                         article.description ||
                                         ""
 
@@ -208,17 +208,17 @@ export function ArticleContent({
                                 <div className="space-y-6">
                                     {(article.description ||
                                         article.user_note) && (
-                                            <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
-                                                <div
-                                                    dangerouslySetInnerHTML={{
-                                                        __html:
-                                                            article.user_note ||
-                                                            article.description ||
-                                                            "",
-                                                    }}
-                                                />
-                                            </blockquote>
-                                        )}
+                                        <blockquote className="border-l-4 border-primary/30 bg-muted/30 pl-4 italic text-muted-foreground prose prose-sm max-w-none">
+                                            <div
+                                                dangerouslySetInnerHTML={{
+                                                    __html:
+                                                        article.user_note ||
+                                                        article.description ||
+                                                        "",
+                                                }}
+                                            />
+                                        </blockquote>
+                                    )}
                                     <div className="flex flex-col items-center justify-center py-8 text-center">
                                         <div className="mx-auto max-w-md">
                                             <p className="text-sm text-muted-foreground">

@@ -22,7 +22,7 @@ export function ArticleToolbarSection() {
         summarizeArticle,
         isTranslating,
         onBack,
-        isReadLaterMode
+        isReadLaterMode,
     } = useArticleContext()
 
     if (!isMobile) return null

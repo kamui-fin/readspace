@@ -35,7 +35,7 @@ export function ArticlesDetail() {
             isReadLaterMode={isReadLaterMode}
             shouldShowPreviewBanner={shouldShowPreviewBanner}
             onMarkAsRead={handleMarkAsRead}
-            onArticleRemoved={() => { }}
+            onArticleRemoved={() => {}}
             onBack={handleBackToList}
         />
     )

@@ -1,7 +1,4 @@
-import {
-    useImportTaskStatus,
-    useCancelImportTask,
-} from "@readspace/shared"
+import { useImportTaskStatus, useCancelImportTask } from "@readspace/shared"
 import { useRouter } from "next/navigation"
 import { toast } from "react-hot-toast"
 
@@ -10,7 +7,6 @@ export function useOpmlTaskStatus(taskId: string) {
     const { data: task, isLoading, error } = useImportTaskStatus(taskId)
 
     const cancelImportMutation = useCancelImportTask()
-
 
     const handleCancelImport = async () => {
         try {

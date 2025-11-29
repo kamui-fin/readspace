@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react"
 
-export function usePersistedState<T>(key: string, initialValue: T): [T, (value: T) => void] {
+export function usePersistedState<T>(
+    key: string,
+    initialValue: T
+): [T, (value: T) => void] {
     const [state, setState] = useState<T>(initialValue)
 
     useEffect(() => {

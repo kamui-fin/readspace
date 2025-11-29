@@ -16,7 +16,7 @@ import {
     TrendingUp,
 } from "lucide-react"
 import React, { useState } from "react"
-import OnboardingLayout from "../Layout"
+import OnboardingLayout from "../OnboardingLayout"
 
 // Categories from discover page with icons
 const CATEGORIES = [
@@ -71,7 +71,7 @@ const getShortCategoryName = (categoryName: string) => {
     return shortNames[categoryName] || categoryName
 }
 
-const StepOne: React.FC = () => {
+const CategorySelectionStep: React.FC = () => {
     const { onboardingData, updateOnboardingData, nextStep } =
         useOnboardingStore()
     const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -215,4 +215,4 @@ const StepOne: React.FC = () => {
     )
 }
 
-export default StepOne
+export default CategorySelectionStep

@@ -41,9 +41,7 @@ export const ScrollableArticle = memo(function ScrollableArticle({
             style={SCROLLBAR_STYLE}
             onClick={onClick}
         >
-            <div className="mx-auto max-w-4xl">
-                {children}
-            </div>
+            <div className="mx-auto max-w-4xl">{children}</div>
         </div>
     )
 })

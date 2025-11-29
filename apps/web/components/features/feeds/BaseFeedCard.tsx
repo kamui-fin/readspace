@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button"
 import { cn, useFeeds, type FeedSummary } from "@readspace/shared"
 import { Trash2 } from "lucide-react"
-import NextImage from "next/image"
 import { useState } from "react"
+import { FeedIcon } from "./FeedIcon"
 import { FeedSubscribeDialog } from "./FeedSubscribeDialog"
 import { FeedUnsubscribeDialog } from "./FeedUnsubscribeDialog"
 
@@ -107,46 +107,7 @@ export function BaseFeedCard({
         >
             <div className="flex gap-3 md:gap-4 w-full min-w-0">
                 {/* Feed Icon */}
-                <div className="relative flex-shrink-0">
-                    {feed.image_url && (
-                        <NextImage
-                            src={feed.image_url}
-                            alt={feed.title || "Feed icon"}
-                            className="w-8 h-8 md:w-9 md:h-9 rounded object-cover"
-                            width={36}
-                            height={36}
-                            onError={(
-                                e: React.SyntheticEvent<HTMLImageElement, Event>
-                            ) => {
-                                const target = e.target as HTMLImageElement
-                                target.style.display = "none"
-                                const fallback =
-                                    target.nextElementSibling as HTMLElement
-                                if (fallback) fallback.style.display = "flex"
-                            }}
-                        />
-                    )}
-                    <div
-                        className={`w-8 h-8 md:w-9 md:h-9 rounded flex items-center justify-center text-white font-bold text-xs md:text-sm ${
-                            feed.title?.toLowerCase().includes("techcrunch")
-                                ? "bg-green-600"
-                                : feed.title
-                                        ?.toLowerCase()
-                                        .includes("hacker news")
-                                  ? "bg-orange-500"
-                                  : "bg-gray-600"
-                        }`}
-                        style={{ display: feed.image_url ? "none" : "flex" }}
-                    >
-                        {feed.title?.toLowerCase().includes("techcrunch")
-                            ? "TC"
-                            : feed.title?.toLowerCase().includes("hacker news")
-                              ? "Y"
-                              : feed.title
-                                ? feed.title.charAt(0).toUpperCase()
-                                : "F"}
-                    </div>
-                </div>
+                <FeedIcon feed={feed} className="w-8 h-8 md:w-9 md:h-9" />
 
                 {/* Feed Content */}
                 <div className="flex-1 min-w-0">

@@ -16,6 +16,7 @@ import {
 import { useArticlesData } from "./useArticlesData"
 import { useArticlesView } from "./useArticlesView"
 import { useArticleUnreadCount } from "./useArticleUnreadCount"
+import { useDeepRefresh } from "./useDeepRefresh"
 import { useIsMobile } from "@/hooks/use-mobile"
 
 interface UseArticlesControllerProps {
@@ -159,21 +160,15 @@ export function useArticlesController({
         }
     }
 
+    const {
+        isRefreshing: isDeepRefreshing,
+        handleDeepRefresh: performDeepRefresh,
+    } = useDeepRefresh()
+
     const handleDeepRefresh = async () => {
-        if (!feedId) return
-        toast.loading("Checking for new articles...", { id: "deep-refresh" })
-        try {
-            await refreshFeed.mutateAsync({ feedId, forceRefetch: true })
+        await performDeepRefresh(feedId, async () => {
             await refetchArticles()
-            toast.success("Check complete! Articles updated.", {
-                id: "deep-refresh",
-            })
-        } catch (error) {
-            console.error("Deep refresh failed:", error)
-            toast.error("Failed to check for new articles.", {
-                id: "deep-refresh",
-            })
-        }
+        })
     }
 
     const handleMarkAllAsRead = async () => {
@@ -229,7 +224,7 @@ export function useArticlesController({
         folderId,
 
         // Loading States
-        isDeepRefreshing: refreshFeed.isPending,
+        isDeepRefreshing,
         isMarkingAllRead:
             markFeedAllRead.isPending || markFolderAllRead.isPending,
 
@@ -248,4 +243,6 @@ export function useArticlesController({
     return controllerResult
 }
 
-export type UseArticlesControllerResult = ReturnType<typeof useArticlesController>
+export type UseArticlesControllerResult = ReturnType<
+    typeof useArticlesController
+>

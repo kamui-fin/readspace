@@ -84,10 +84,10 @@ export function useArticleInteractions({
                                 .map((item: Article) =>
                                     item.id === article.id
                                         ? {
-                                            ...item,
-                                            is_read: true,
-                                            is_saved: false,
-                                        }
+                                              ...item,
+                                              is_read: true,
+                                              is_saved: false,
+                                          }
                                         : item
                                 ) || [],
                     })),
@@ -158,9 +158,9 @@ export function useArticleInteractions({
                             page.items?.map((item: Article) =>
                                 item.id === article.id
                                     ? {
-                                        ...item,
-                                        is_saved: newReadLaterState,
-                                    }
+                                          ...item,
+                                          is_saved: newReadLaterState,
+                                      }
                                     : item
                             ) || [],
                     })),

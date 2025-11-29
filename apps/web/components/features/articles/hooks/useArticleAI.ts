@@ -117,7 +117,6 @@ export function useArticleAI({
                     ? article.extracted_content
                     : article.content || article.description || ""
 
-
             // Fetch new translation with caching
             const data = await fetchTranslation(
                 queryClient,
