@@ -5,8 +5,8 @@ import { SidebarLeftTrigger } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useFeeds, useFolders, useRefreshFeed } from "@readspace/shared"
 import { AlertTriangle, BookOpen, RefreshCw, Rss, Upload } from "lucide-react"
+import { useDeepRefresh } from "./hooks/useDeepRefresh"
 import Link from "next/link"
-import { useState } from "react"
 import { toast } from "sonner"
 
 function GetStartedCards() {
@@ -62,7 +62,6 @@ export function ArticlesEmptyState({
     previewRefreshFailed = false,
     onRefresh,
 }: ArticlesEmptyStateProps) {
-    const [isRefreshing, setIsRefreshing] = useState(false)
     const isMobile = useIsMobile()
     const refreshFeed = useRefreshFeed()
 
@@ -92,29 +91,11 @@ export function ArticlesEmptyState({
     const isLoading = isFoldersLoading || isFeedsLoading
 
     // Deep refresh: poll external RSS feed (only for individual feeds)
+    const { isRefreshing, handleDeepRefresh: performDeepRefresh } =
+        useDeepRefresh()
+
     const handleDeepRefresh = async () => {
-        if (!feedId) return
-
-        setIsRefreshing(true)
-        toast.loading("Checking for new articles...", { id: "deep-refresh" })
-
-        try {
-            await refreshFeed.mutateAsync({ feedId, forceRefetch: true })
-            // After deep refresh completes, refetch articles
-            if (onRefresh) {
-                onRefresh()
-            }
-            toast.success("Check complete! Articles updated.", {
-                id: "deep-refresh",
-            })
-        } catch (error) {
-            console.error("Deep refresh failed:", error)
-            toast.error("Failed to check for new articles. Please try again.", {
-                id: "deep-refresh",
-            })
-        } finally {
-            setIsRefreshing(false)
-        }
+        await performDeepRefresh(feedId, onRefresh)
     }
 
     // Special messaging for different modes

@@ -38,7 +38,8 @@ const PROSE_CLASSES = cn(
 )
 
 const SERIF_FONT_STYLE = {
-    fontFamily: "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
+    fontFamily:
+        "var(--font-garamond-serif), var(--font-noto-serif-sc), var(--font-noto-serif-jp), var(--font-noto-serif-tc)",
 } as const
 
 interface ArticleProseContentProps {
@@ -71,7 +72,8 @@ export const ArticleProseContent = memo(function ArticleProseContent({
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                     <div className="mx-auto max-w-md">
                         <p className="text-sm text-muted-foreground">
-                            This article doesn&apos;t have any content available.
+                            This article doesn&apos;t have any content
+                            available.
                         </p>
                     </div>
                 </div>

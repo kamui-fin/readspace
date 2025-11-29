@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { useIsMobile } from "@/hooks/use-mobile"
 import type { Article } from "@readspace/shared"
 
@@ -92,25 +92,22 @@ export function useArticlesView({
         isFetching,
     ])
 
-    const handleArticleSelect = useCallback(
-        (articleId: string) => {
-            setSelectedArticleId(articleId)
-            if (isMobile) {
-                setShowContent(true)
-            }
-        },
-        [isMobile]
-    )
+    const handleArticleSelect = (articleId: string) => {
+        setSelectedArticleId(articleId)
+        if (isMobile) {
+            setShowContent(true)
+        }
+    }
 
-    const handleBackToList = useCallback(() => {
+    const handleBackToList = () => {
         if (isMobile) {
             setShowContent(false)
         }
-    }, [isMobile])
+    }
 
-    const toggleShowUnreadOnly = useCallback(() => {
+    const toggleShowUnreadOnly = () => {
         setShowUnreadOnly((prev) => !prev)
-    }, [])
+    }
 
     // Filter articles based on unread toggle
     // Note: Don't filter in Read Later mode

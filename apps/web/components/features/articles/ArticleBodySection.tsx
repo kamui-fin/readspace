@@ -10,7 +10,7 @@ export function ArticleBodySection() {
         displayContent,
         contentKey,
         handleScrollMarkAsRead,
-        handleContentClickMarkAsRead
+        handleContentClickMarkAsRead,
     } = useArticleContext()
 
     return (

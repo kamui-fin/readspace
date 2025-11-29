@@ -37,7 +37,7 @@ export function ArticlesDetail() {
             shouldShowPreviewBanner={shouldShowPreviewBanner}
             shouldShowFeedBadge={!feedId}
             onMarkAsRead={handleMarkAsRead}
-            onArticleRemoved={() => { }}
+            onArticleRemoved={() => {}}
             onBack={handleBackToList}
         />
     )

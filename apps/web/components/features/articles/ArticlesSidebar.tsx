@@ -4,11 +4,8 @@ import { FeedPreviewBanner } from "@/components/features/feeds/FeedPreviewBanner
 import { useArticlesContext } from "./ArticlesContext"
 
 export function ArticlesSidebar() {
-    const {
-        feedData,
-        shouldShowPreviewBanner,
-        setIsSubscriptionModalOpen,
-    } = useArticlesContext()
+    const { feedData, shouldShowPreviewBanner, setIsSubscriptionModalOpen } =
+        useArticlesContext()
 
     return (
         <div className="flex flex-col h-full">

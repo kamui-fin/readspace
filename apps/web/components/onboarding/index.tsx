@@ -2,8 +2,8 @@
 
 import { useOnboardingStore } from "@/stores/onboarding"
 import React from "react"
-import StepOne from "./steps/StepOne"
-import StepTwo from "./steps/StepTwo"
+import CategorySelectionStep from "./steps/CategorySelectionStep"
+import FeedSelectionStep from "./steps/FeedSelectionStep"
 
 const Onboarding: React.FC = () => {
     const currentStep = useOnboardingStore((state) => state.currentStep)
@@ -11,11 +11,11 @@ const Onboarding: React.FC = () => {
     const renderStep = () => {
         switch (currentStep) {
             case 1:
-                return <StepOne />
+                return <CategorySelectionStep />
             case 2:
-                return <StepTwo />
+                return <FeedSelectionStep />
             default:
-                return <StepOne />
+                return <CategorySelectionStep />
         }
     }
 

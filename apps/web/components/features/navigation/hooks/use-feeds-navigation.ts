@@ -6,12 +6,8 @@ export type { FeedItem }
 
 export function useFeedsNavigation() {
     // Data transformation
-    const {
-        isFoldersLoading,
-        typedFolders,
-        favoriteFeedItems,
-        feedItems,
-    } = useFeedTree()
+    const { isFoldersLoading, typedFolders, favoriteFeedItems, feedItems } =
+        useFeedTree()
 
     // Loading state
     const isSidebarLoading = isFoldersLoading

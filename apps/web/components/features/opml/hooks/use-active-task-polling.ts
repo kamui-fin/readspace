@@ -9,6 +9,5 @@ export function useActiveTaskPolling() {
         [activeTask]
     )
 
-
     return { activeImports }
 }

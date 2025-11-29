@@ -62,10 +62,10 @@ export function ArticlesList() {
                     isRecentlyReadMode
                         ? "recentlyRead"
                         : isReadLaterMode
-                            ? "readLater"
-                            : isTodayMode
-                                ? "today"
-                                : "allArticles"
+                          ? "readLater"
+                          : isTodayMode
+                            ? "today"
+                            : "allArticles"
                 }
                 feedId={feedId}
                 folderId={folderId}
@@ -106,18 +106,18 @@ export function ArticlesList() {
                             style={{
                                 ...(isStickyItem && isActiveStickyItem
                                     ? {
-                                        background: "hsl(var(--background))",
-                                        zIndex: 10,
-                                    }
+                                          background: "hsl(var(--background))",
+                                          zIndex: 10,
+                                      }
                                     : {}),
                                 ...(isActiveStickyItem
                                     ? {
-                                        position: "sticky",
-                                    }
+                                          position: "sticky",
+                                      }
                                     : {
-                                        position: "absolute",
-                                        transform: `translateY(${virtualItem.start}px)`,
-                                    }),
+                                          position: "absolute",
+                                          transform: `translateY(${virtualItem.start}px)`,
+                                      }),
                                 top: 0,
                                 left: 0,
                                 width: "100%",
@@ -137,7 +137,7 @@ export function ArticlesList() {
                             ) : item ? (
                                 <>
                                     {"type" in item &&
-                                        item.type === "header" ? (
+                                    item.type === "header" ? (
                                         // Date Header with reasonable 48px height
                                         <div
                                             className={`flex items-center gap-2 px-4 py-2 bg-background/95 backdrop-blur-sm ${isActiveStickyItem ? "border-b" : ""}`}
