@@ -11,6 +11,7 @@ from typing import Any, cast
 from urllib.parse import urljoin
 
 import feedparser
+import langcodes
 import nh3
 import structlog
 from bs4 import BeautifulSoup, Tag
@@ -18,7 +19,7 @@ from dateutil import parser as date_parser
 
 from app.typing.entries import ArticleCreate
 from app.typing.feeds import ParsedFeed
-from app.utils.text import calculate_reading_time, clean_html_text
+from app.utils.text import clean_html_text
 from app.utils.urls import extract_domain_from_url
 
 logger = structlog.get_logger(__name__)
@@ -59,17 +60,10 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         description = f"Recent articles from {domain}"
 
     link = feed.get("link") or url
-    language = feed.get("language", "en")
+    language = _normalize_language(feed.get("language", "en"))
 
     # Rich UI images
     image_url = find_feed_icon(feed)
-
-    # Author information
-    author_name = None
-    if hasattr(feed, "author_detail") and hasattr(feed.author_detail, "name"):
-        author_name = str(feed.author_detail.name)[:255]
-    elif hasattr(feed, "author"):
-        author_name = str(feed.author)[:255]
 
     # Last updated timestamp (from feed.updated_parsed)
     last_updated_at = None
@@ -113,11 +107,29 @@ def parse_feed_content(content: str, url: str) -> ParsedFeed:
         link=link,
         language=language,
         image_url=image_url,
-        author_name=author_name,
         last_updated_at=last_updated_at,
         tags=tags,
         articles=articles,
     )
+
+
+def _normalize_language(language_code: str) -> str:
+    """
+    Normalize language code to 2-letter ISO code.
+    Uses langcodes library for robust parsing.
+    """
+    try:
+        # First try standard parsing
+        lang = langcodes.Language.get(language_code)
+        return lang.language if lang.language else "en"
+    except langcodes.LanguageTagError:
+        try:
+            # Fallback: try finding best match
+            lang = langcodes.find(language_code)
+            return lang.language if lang.language else "en"
+        except (langcodes.LanguageTagError, LookupError):
+            # Final fallback
+            return "en"
 
 
 # ==============================================================================
@@ -173,13 +185,6 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         # Resolve relative URLs
         image_url = urljoin(feed_url or link, image_url)
 
-    # Calculate reading time
-    read_time = (
-        min(calculate_reading_time(clean_content, default_wpm=200), 60)
-        if clean_content
-        else 1
-    )
-
     return ArticleCreate(
         title=title,
         link=link,
@@ -189,7 +194,6 @@ def _extract_article_data(entry: dict[str, Any], feed_url: str) -> ArticleCreate
         author=author,
         guid=guid,
         image_url=image_url,
-        estimated_read_time_minutes=read_time,
     )
 
 

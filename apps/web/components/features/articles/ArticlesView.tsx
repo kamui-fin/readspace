@@ -151,9 +151,18 @@ export function ArticlesView({
 
     const handleMarkAsRead = () => {
         if (!selectedArticle) return
+
+        const updateData: { is_read: boolean; is_saved?: boolean } = {
+            is_read: true,
+        }
+
+        if (isReadLaterMode) {
+            updateData.is_saved = false
+        }
+
         updateArticle.mutate({
             articleId: selectedArticle.id,
-            data: { is_read: true },
+            data: updateData,
         })
     }
 

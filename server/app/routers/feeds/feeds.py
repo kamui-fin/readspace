@@ -21,10 +21,12 @@ from app.crud.feed.subscription import (
 from app.db.session import get_db, get_db_factory
 
 from app.models.feed import FeedSubscription
+from app.services import folder as folder_service
 from app.services.feeds.service import SessionFactory, refresh_feed
 from app.services.user.auth import get_current_user
 from app.typing.common import MessageResponse
 from app.typing.feeds import FeedDetail
+from app.typing.responses import FeedsResponse
 from app.typing.subscriptions import (
     SubscriptionResponse,
     SubscriptionResponseExtended,
@@ -54,7 +56,7 @@ async def get_subscription_or_404(
 # --- Routes ---
 @router.get(
     "/",
-    response_model=list[SubscriptionResponse] | list[SubscriptionResponseExtended],
+    response_model=FeedsResponse,
     status_code=status.HTTP_200_OK,
     summary="List user's RSS feeds",
 )
@@ -66,25 +68,41 @@ async def list_feeds(
     is_favorite: bool | None = Query(None, description="Filter by favorite status"),
     extended: bool = Query(False, description="Return full feed details"),
     skip: int = Query(0, ge=0),
-) -> list[SubscriptionResponse] | list[SubscriptionResponseExtended]:
+) -> FeedsResponse:
     """
     Retrieve all RSS feeds the user is subscribed to with optional filtering.
+    Also returns all user folders to ensure empty folders are displayed.
     """
     logger.bind(user_id=current_user.sub)
+    user_uuid = UUID(current_user.sub)
 
+    # 1. Fetch Subscriptions
     subscriptions = await get_subscriptions_by_user(
         db=db,
-        user_id=UUID(current_user.sub),
+        user_id=user_uuid,
         folder_id=folder_id,
         extended=extended,
         skip=skip,
         limit=100,
     )
+
+    # 2. Fetch Folders (only if not filtering by specific folder)
+    folders = []
+    if not folder_id:
+        folders = await folder_service.list_folders(db, user_uuid, skip=0, limit=200)
+
+    # 3. Construct Response
+    subs_response = []
     if extended:
-        return [
+        subs_response = [
             SubscriptionResponseExtended.model_validate(sub) for sub in subscriptions
         ]
-    return [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
+    else:
+        subs_response = [
+            SubscriptionResponse.model_validate(sub) for sub in subscriptions
+        ]
+
+    return FeedsResponse(subscriptions=subs_response, folders=folders)
 
 
 @router.get(

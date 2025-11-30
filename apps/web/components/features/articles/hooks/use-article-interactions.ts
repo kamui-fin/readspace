@@ -30,7 +30,8 @@ export function useArticleInteractions({
     }, [article.id])
 
     const handleMarkAsRead = () => {
-        if (hasMarkedRead || article.is_read) return
+        // Allow if in read later mode (to unsave) or if not read yet
+        if (hasMarkedRead || (article.is_read && !isReadLaterMode)) return
 
         setHasMarkedRead(true)
         if (onMarkAsRead) {

@@ -3,7 +3,7 @@
 import Header from "@/components/features/navigation/AppHeader"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Clock, FileText, Upload } from "lucide-react"
+import { Clock, Upload } from "lucide-react"
 import { useRef } from "react"
 import { useOpmlImport } from "./hooks/use-opml-import"
 import { useActiveImportTask } from "@readspace/shared"
@@ -78,13 +78,14 @@ export default function OpmlImportView() {
                         </Card>
                     ) : (
                         <Card
-                            className={`transition-colors duration-200 ${isDragging
-                                    ? "border-primary bg-primary/5"
-                                    : "border-dashed border-2"
-                                }`}
+                            className={`transition-colors duration-200 cursor-pointer ${isDragging
+                                ? "border-primary bg-primary/5"
+                                : "border-dashed border-2"
+                                } ${isUploading ? "opacity-50 pointer-events-none" : ""}`}
                             onDrop={handleDrop}
                             onDragOver={handleDragOver}
                             onDragLeave={handleDragLeave}
+                            onClick={handleButtonClick}
                         >
                             <CardContent className="p-8 sm:p-12">
                                 <input
@@ -96,43 +97,33 @@ export default function OpmlImportView() {
                                 />
                                 <div className="flex flex-col items-center justify-center gap-6 text-center">
                                     <div className="p-4 bg-muted rounded-full">
-                                        <Upload
-                                            size={48}
-                                            className="text-muted-foreground"
-                                        />
+                                        {isUploading ? (
+                                            <Clock
+                                                size={48}
+                                                className="text-muted-foreground animate-spin"
+                                            />
+                                        ) : (
+                                            <Upload
+                                                size={48}
+                                                className="text-muted-foreground"
+                                            />
+                                        )}
                                     </div>
 
-                                    <div className="space-y-3 max-w-md">
+                                    <div className="space-y-3 max-w-lg">
                                         <h3 className="text-lg sm:text-xl font-medium">
-                                            {isDragging
-                                                ? "Drop your OPML file here"
-                                                : "Upload OPML File"}
+                                            {isUploading
+                                                ? "Uploading..."
+                                                : isDragging
+                                                    ? "Drop your OPML file here"
+                                                    : "Upload OPML File"}
                                         </h3>
                                         <p className="text-sm text-muted-foreground leading-relaxed">
-                                            Drag and drop or click to select a
-                                            .opml or .xml file from your RSS
-                                            reader export
+                                            {isUploading
+                                                ? "Please wait while we process your file"
+                                                : "Drag and drop or click to select a .opml or .xml file from your RSS reader export"}
                                         </p>
                                     </div>
-
-                                    <Button
-                                        onClick={handleButtonClick}
-                                        disabled={isUploading}
-                                        size="lg"
-                                        className="mt-2 w-full sm:w-auto"
-                                    >
-                                        {isUploading ? (
-                                            <>
-                                                <Clock className="mr-2 h-4 w-4 animate-spin" />
-                                                Uploading...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <FileText className="mr-2 h-4 w-4" />
-                                                Choose File
-                                            </>
-                                        )}
-                                    </Button>
                                 </div>
                             </CardContent>
                         </Card>

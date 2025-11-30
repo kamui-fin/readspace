@@ -84,3 +84,8 @@ export interface FeedDiscoveryResult {
   popularity_score: number;
   tags?: string[];
 }
+
+export interface FeedsResponse {
+  subscriptions: Subscription[] | SubscriptionExtended[];
+  folders: Folder[];
+}

@@ -5,13 +5,13 @@ from uuid import UUID
 
 import structlog
 from fastapi import APIRouter, Body, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.custom_exceptions import NotFoundError, ValidationError
-from app.db.session import get_db
+from app.db.session import get_db_factory
 from app.services.ai.service import generate_summary, translate_content
 from app.services.articles.scrape import extract_full_content
 from app.services.articles.service import get_article_details
+from app.services.feeds.service import SessionFactory
 from app.services.user.auth import get_current_user
 from app.typing.enhancements import (
     ExtractionResponse,
@@ -27,9 +27,11 @@ router = APIRouter()
 
 
 # --- Helpers ---
-async def get_article_or_404(db: AsyncSession, article_id: UUID, user_id: UUID) -> Any:
+async def get_article_or_404(db_factory: SessionFactory, article_id: UUID, user_id: UUID) -> Any:
     """Retrieves article details or raises NotFoundError."""
-    article = await get_article_details(db=db, article_id=article_id, user_id=user_id, allow_preview=False)
+    article = await get_article_details(
+        db_factory=db_factory, article_id=article_id, user_id=user_id, allow_preview=False
+    )
     if not article:
         raise NotFoundError(message="Article not found")
     return article
@@ -53,7 +55,7 @@ def resolve_content(request_content: str | None, article: Any) -> str:
 async def extract_full_text(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
 ) -> ExtractionResponse:
     """
     Manually trigger full-text extraction for an article.
@@ -61,7 +63,7 @@ async def extract_full_text(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Verify Article
-    article = await get_article_or_404(db, article_id, UUID(user.sub))
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
 
     if not article.link:
         raise ValidationError(message="Article has no source URL available")
@@ -80,7 +82,7 @@ async def extract_full_text(
 async def summarize_article(
     article_id: UUID,
     user: Annotated[TokenData, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
     request: SummarizeRequest = Body(default_factory=lambda: SummarizeRequest()),
 ) -> SummarizeResponse:
     """
@@ -89,7 +91,7 @@ async def summarize_article(
     logger.bind(article_id=str(article_id), user_id=user.sub)
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(db, article_id, UUID(user.sub))
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
     content_to_use = resolve_content(request.content, article)
 
     # 2. Generate Summary
@@ -107,7 +109,7 @@ async def translate_article(
     article_id: UUID,
     request: Annotated[TranslateRequest, Body(...)],
     user: Annotated[TokenData, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db_factory: Annotated[SessionFactory, Depends(get_db_factory)],
 ) -> TranslateResponse:
     """
     Translate the article content to a target language.
@@ -115,7 +117,7 @@ async def translate_article(
     logger.bind(article_id=str(article_id), user_id=user.sub, target_lang=str(request.target_language))
 
     # 1. Fetch & Resolve Content
-    article = await get_article_or_404(db, article_id, UUID(user.sub))
+    article = await get_article_or_404(db_factory, article_id, UUID(user.sub))
     content_to_use = resolve_content(request.content, article)
 
     # 2. Translate

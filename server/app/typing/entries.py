@@ -23,7 +23,6 @@ class ContentFields(BaseModel):
     content: str | None = None
     image_url: str | None = None
     author: str | None = None
-    estimated_read_time_minutes: int | None = None
 
 
 class UserStateFields(BaseModel):
@@ -136,4 +135,3 @@ class ArticleCreate(BaseModel):
     author: str | None = None
     published_at: datetime
     guid: str
-    estimated_read_time_minutes: int | None = None

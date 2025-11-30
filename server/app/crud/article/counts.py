@@ -70,14 +70,31 @@ async def count_today_articles(
     user_id: UUID,
 ) -> int:
     """Count articles published today in user's feeds."""
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.now(timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
 
     stmt = (
         select(func.count(FeedArticle.id))
         .join(FeedSubscription, FeedArticle.feed_id == FeedSubscription.feed_id)
+        .outerjoin(
+            UserEntry,
+            and_(
+                UserEntry.content_id == FeedArticle.content_id,
+                UserEntry.user_id == user_id,
+            ),
+        )
         .filter(
             FeedSubscription.user_id == user_id,
             FeedArticle.published_at >= today_start,
+            or_(
+                FeedSubscription.last_read_cutoff.is_(None),
+                FeedArticle.published_at > FeedSubscription.last_read_cutoff,
+            ),
+            or_(
+                UserEntry.is_read.is_(None),  # Not marked at all
+                ~UserEntry.is_read,  # Explicitly marked unread
+            ),
         )
     )
 

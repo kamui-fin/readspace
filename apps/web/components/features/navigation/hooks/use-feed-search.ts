@@ -11,20 +11,16 @@ export function useFeedSearch() {
     const [searchValue, setSearchValue] = useState("")
 
     // Data queries
-    const { data: feeds = [] } = useFeeds()
+    const { data: feedsResponse } = useFeeds()
+    const feeds = feedsResponse?.subscriptions || []
+    const folders = feedsResponse?.folders || []
     const { data: unreadCounts } = useUnreadCounts()
     const feedUnreadCounts = unreadCounts?.feed_counts
 
     // Type-safe folder data
     const typedFolders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [feeds])
+        return folders
+    }, [folders])
 
     // Filter feeds with fuzzy search (limit to 100 results for performance)
     const filteredFeeds = useMemo(() => {

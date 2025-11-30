@@ -250,6 +250,12 @@ export function useUpdateArticle(
         queryKey: queryKeys.article(articleId),
       });
 
+      // Explicitly invalidate read later list if save status changed
+      // This ensures the list updates immediately when toggling save from other views
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.infiniteReadLater(),
+      });
+
       // Invalidate check queries (for extension popup)
       queryClient.invalidateQueries({
         predicate: (query) =>

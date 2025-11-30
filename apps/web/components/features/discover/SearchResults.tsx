@@ -93,46 +93,7 @@ export function SearchResults({
         )
     }
 
-    if (items.length === 0 && !isLoading) {
-        // If we have a preview feed, just show that without the "no results" message
-        if (previewFeedData) {
-            return (
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-2 pl-5 pr-2">
-                        <h3 className="text-sm font-medium text-muted-foreground">
-                            Feed Preview
-                        </h3>
-                    </div>
-                    <FeedPreviewCard feed={previewFeedData} />
-                </div>
-            )
-        }
 
-        // Only show "no results" if the preview has failed or there's no preview attempt
-        if (isPreviewError || !isPreviewLoading) {
-            return (
-                <div className="flex flex-col items-center justify-center py-16">
-                    <div className="mb-6">
-                        <NextImage
-                            src="/discover/Search.svg"
-                            alt="No results found"
-                            width={132}
-                            height={128}
-                            className="w-32 h-auto"
-                        />
-                    </div>
-                    <h3 className="text-xl font-medium mb-3 text-foreground dark:text-foreground">
-                        No matching feeds found
-                    </h3>
-                    <p className="text-muted-foreground text-center max-w-md">
-                        Try rephrasing your query or browsing by category.
-                    </p>
-                </div>
-            )
-        }
-
-        return null
-    }
 
     return (
         <>
@@ -148,8 +109,8 @@ export function SearchResults({
                 </div>
             )}
 
-            {/* Only show results header if we have actual results */}
-            {items.length > 0 && (
+            {/* Results Header - Show for both results and empty state (if not loading), but hide if showing preview */}
+            {!previewFeedData && (
                 <div className="flex items-center justify-between mb-2 pl-5 pr-2">
                     <div className="text-[#91998C] dark:text-muted-foreground text-sm">
                         {nbHits} {nbHits === 1 ? "result" : "results"}
@@ -169,34 +130,57 @@ export function SearchResults({
                     </Button>
                 </div>
             )}
-            <div className="flex flex-col divide-y divide-border/40">
-                {items.map((hit) => {
-                    const hitData = hit as unknown as FeedDiscoveryResult
-                    const discoveryResult: FeedDiscoveryResult = {
-                        id: hitData.id || "",
-                        url: hitData.url,
-                        title: hitData.title,
-                        description: hitData.description,
-                        link: hitData.link,
-                        language: hitData.language,
-                        image_url: hitData.image_url,
-                        tags: hitData.tags || [],
-                        top_level_category: hitData.top_level_category,
-                        popularity_score: hitData.popularity_score,
-                    }
 
-                    return (
-                        <FeedCard
-                            key={hitData.id}
-                            feed={discoveryResult}
-                            className="py-8"
+            {items.length === 0 && !isLoading && !previewFeedData ? (
+                <div className="flex flex-col items-center justify-center py-16">
+                    <div className="mb-6">
+                        <NextImage
+                            src="/discover/Search.svg"
+                            alt="No results found"
+                            width={132}
+                            height={128}
+                            className="w-32 h-auto"
                         />
-                    )
-                })}
-            </div>
+                    </div>
+                    <h3 className="text-xl font-medium mb-3 text-foreground dark:text-foreground">
+                        No matching feeds found
+                    </h3>
+                    <p className="text-muted-foreground text-center max-w-md">
+                        Try rephrasing your query or browsing by category.
+                    </p>
+                </div>
+            ) : (
+                <>
+                    <div className="flex flex-col divide-y divide-border/40">
+                        {items.map((hit) => {
+                            const hitData = hit as unknown as FeedDiscoveryResult
+                            const discoveryResult: FeedDiscoveryResult = {
+                                id: hitData.id || "",
+                                url: hitData.url,
+                                title: hitData.title,
+                                description: hitData.description,
+                                link: hitData.link,
+                                language: hitData.language,
+                                image_url: hitData.image_url,
+                                tags: hitData.tags || [],
+                                top_level_category: hitData.top_level_category,
+                                popularity_score: hitData.popularity_score,
+                            }
 
-            {/* Pagination controls */}
-            <Pagination />
+                            return (
+                                <FeedCard
+                                    key={hitData.id}
+                                    feed={discoveryResult}
+                                    className="py-8"
+                                />
+                            )
+                        })}
+                    </div>
+
+                    {/* Pagination controls */}
+                    <Pagination />
+                </>
+            )}
         </>
     )
 }

@@ -9,7 +9,6 @@ from app.crud.article.actions import set_article_state
 from app.crud.article.ingester import upsert_article_content
 from app.models.article import ArticleContent, UserEntry
 from app.typing.entries import ArticleCreate
-from app.utils.text import calculate_reading_time
 
 logger = structlog.get_logger(__name__)
 
@@ -39,8 +38,6 @@ async def save_article_from_url(
     metadata = metadata or {}
 
     # 1. Prepare Content Data
-    reading_time = calculate_reading_time(content)
-
     content_in = ArticleCreate(
         title=title or "Untitled",
         link=url,
@@ -49,13 +46,14 @@ async def save_article_from_url(
         description=metadata.get("description"),
         author=metadata.get("author"),
         image_url=metadata.get("image_url"),
-        estimated_read_time_minutes=reading_time,
         published_at=datetime.now(UTC),
     )
 
     # 2. Delegate to CRUD: Content
     # This handles the "Check if exists, if not create, if yes update title" logic strictly in DB layer
-    article_content = await upsert_article_content(db, article_in=content_in, update_title_if_changed=True)
+    article_content = await upsert_article_content(
+        db, article_in=content_in, update_title_if_changed=True
+    )
 
     # 3. Delegate to CRUD: User State
     # This handles the "Mark as Read Later" logic

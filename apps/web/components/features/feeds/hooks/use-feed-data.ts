@@ -21,10 +21,13 @@ export interface FeedRowData {
 export function useFeedData() {
     // Data queries
     const {
-        data: subscriptions = [],
+        data: feedsResponse,
         isLoading: isLoadingFeeds,
         error: feedsError,
     } = useFeeds({ extended: true })
+
+    const subscriptions = feedsResponse?.subscriptions || []
+    const foldersResponse = feedsResponse?.folders || []
 
     // Map subscriptions to flat Feed objects
     const feeds: FeedRowData[] = useMemo(() => {
@@ -46,14 +49,8 @@ export function useFeedData() {
 
     // Derive folders from subscriptions
     const folders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; (subscriptions as unknown as SubscriptionExtended[]).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [subscriptions])
+        return foldersResponse
+    }, [foldersResponse])
 
     return {
         feeds,

@@ -20,6 +20,9 @@ export function useCreateFolder(
       queryClient.invalidateQueries({
         queryKey: queryKeys.folders(),
       });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.feeds(),
+      });
     },
     ...options,
   });
@@ -41,6 +44,9 @@ export function useUpdateFolder(
     onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.folders(),
+      });
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.feeds(),
       });
     },
     ...options,

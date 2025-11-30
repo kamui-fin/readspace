@@ -1,5 +1,5 @@
 import { ApiClient } from "../core";
-import { FeedDetail, Subscription, SubscriptionExtended } from "../types/feeds";
+import { FeedDetail, Subscription, SubscriptionExtended, FeedsResponse } from "../types/feeds";
 
 export const feeds = {
   getFeeds: (params?: {
@@ -21,7 +21,7 @@ export const feeds = {
       queryParams.append("extended", params.extended.toString());
 
     const queryString = queryParams.toString();
-    return ApiClient.get<Subscription[] | SubscriptionExtended[]>(
+    return ApiClient.get<FeedsResponse>(
       `/api/feeds/${queryString ? `?${queryString}` : ""}`,
     );
   },

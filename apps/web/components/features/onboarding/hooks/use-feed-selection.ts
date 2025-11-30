@@ -18,7 +18,7 @@ export function useFeedSelection() {
         useOnboardingFeeds(onboardingData.selectedCategories)
 
     // Get user's subscribed feeds to check which ones are already followed
-    const { data: subscribedFeeds } = useFeeds(
+    const { data: feedsResponse } = useFeeds(
         {},
         {
             refetchOnMount: false,
@@ -27,6 +27,7 @@ export function useFeedSelection() {
             staleTime: 10 * 60 * 1000,
         }
     )
+    const subscribedFeeds = feedsResponse?.subscriptions
 
     const handleFeedSubscribed = async (feedId: string) => {
         const newFollowedFeeds = [...followedFeeds, feedId]

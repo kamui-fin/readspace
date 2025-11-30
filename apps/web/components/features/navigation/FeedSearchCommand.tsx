@@ -81,7 +81,7 @@ export function FeedSearchCommand({
                     </div>
 
                     <Command.List className="max-h-[400px] overflow-y-auto overflow-x-hidden p-2">
-                        <Command.Empty className="py-6 text-center text-sm">
+                        <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
                             No feeds found.
                         </Command.Empty>
 

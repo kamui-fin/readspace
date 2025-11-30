@@ -22,7 +22,6 @@ class FeedBase(BaseModel):
     language: str = "en"
     image_url: str | None = None
 
-    @field_validator("url", "link", mode="before")
     @classmethod
     def empty_str_to_none(cls, v):
         return v or None
@@ -50,7 +49,6 @@ class AdminFeedUpdate(BaseModel):
     top_level_category: FeedCategory | None = None
     popularity_score: float | None = None
     tags: list[str] | None = None
-    author: str | None = None
 
 
 # ================= Responses =================
@@ -75,7 +73,6 @@ class FeedDetail(FeedSummary):
 
     description: str | None = None
     language: str = "en"
-    author: str | None = None
 
     # Fetching Logic
     last_fetched_at: datetime | None = None
@@ -156,7 +153,6 @@ class FeedScoringData(BaseModel):
     description: str | None = None
     image_url: str | None = None
     language: str | None = None
-    author: str | None = None
     domain: str | None = None
 
 
@@ -183,7 +179,6 @@ class MeilisearchFeedDocument(BaseModel):
     tags: list[str] = Field(default_factory=list)
     top_level_category: str | None = None
     popularity_score: float = 0.0
-    author: str | None = None
 
     @field_validator("top_level_category", mode="before")
     @classmethod
@@ -206,7 +201,6 @@ class ParsedFeed(BaseModel):
     link: str | None = None
     language: str | None = None
     image_url: str | None = None
-    author_name: str | None = None
     last_updated_at: datetime | None = None
     tags: list[str] = Field(default_factory=list)
     articles: list["ArticleCreate"] = Field(default_factory=list)

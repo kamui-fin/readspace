@@ -32,7 +32,7 @@ export function useIsSubscribed(feed: {
     return url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
   };
 
-  const subscription = feedsData?.find((f) => {
+  const subscription = feedsData?.subscriptions?.find((f) => {
     // Check by ID first
     if (f.feed.id === feed.id) {
       return true;

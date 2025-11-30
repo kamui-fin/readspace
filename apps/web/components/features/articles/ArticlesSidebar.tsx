@@ -63,17 +63,13 @@ export function ArticlesSidebar({
 
     // Data Hooks
     const { data: unreadCounts } = useUnreadCounts()
-    const { data: allUserFeeds } = useFeeds()
+    const { data: feedsResponse } = useFeeds()
+    const allUserFeeds = feedsResponse?.subscriptions || []
+    const folders = feedsResponse?.folders || []
 
     const allFolders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; ((allUserFeeds as unknown as Subscription[]) || []).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [allUserFeeds])
+        return folders
+    }, [folders])
 
     // Mutations
     const markFeedAllRead = useMarkFeedAllRead()

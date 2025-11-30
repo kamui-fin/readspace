@@ -15,20 +15,17 @@ export type FeedItem = CollapsibleFeedItemData | RegularFeedItemData
 
 export function useFeedTree() {
     // Data queries - using global defaults for caching
-    const { data: feeds, isLoading: isFeedsLoading } = useFeeds()
+    const { data: feedsResponse, isLoading: isFeedsLoading } = useFeeds()
     const { data: unreadCounts } = useUnreadCounts()
     const pathname = usePathname()
 
+    const feeds = feedsResponse?.subscriptions || []
+    const folders = feedsResponse?.folders || []
+
     // Memoized type-safe data transformations
     const typedFolders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [feeds])
+        return folders
+    }, [folders])
 
     const typedFeeds = useMemo(
         () =>
@@ -67,9 +64,16 @@ export function useFeedTree() {
             }
         })
 
+        // Calculate total unread from all feeds
+        const totalUnread = typedFeeds.reduce(
+            (sum, feed) => sum + (feed.unread_count || 0),
+            0
+        )
+
         return {
             ...counts,
             unread_by_folder,
+            calculated_total_unread: totalUnread,
         }
     }, [unreadCounts, typedFeeds])
 
@@ -135,7 +139,7 @@ export function useFeedTree() {
             id: "all",
             title: "All",
             url: "/articles",
-            count: typedUnreadCounts?.total_unread || 0,
+            count: typedUnreadCounts?.calculated_total_unread || 0,
             icon: null, // Will be handled specially in RegularFeedItem
             isActive: pathname === "/articles",
             isFavorite: false,

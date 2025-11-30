@@ -14,6 +14,7 @@ import type {
   Subscription,
   SubscriptionExtended,
   FeedDiscoveryResult,
+  FeedsResponse,
 } from "../types";
 
 export function useFeeds(
@@ -24,9 +25,9 @@ export function useFeeds(
   },
   options?: Omit<
     UseQueryOptions<
-      Subscription[] | SubscriptionExtended[],
+      FeedsResponse,
       Error,
-      Subscription[] | SubscriptionExtended[],
+      FeedsResponse,
       ReturnType<typeof queryKeys.feeds>
     >,
     "queryKey" | "queryFn"

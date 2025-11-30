@@ -36,7 +36,8 @@ export function FeedSubscriptionModal({
     onClose,
     onSuccess,
 }: FeedSubscriptionModalProps) {
-    const { data: feeds, isLoading: feedsLoading } = useFeeds({})
+    const { data: feedsResponse, isLoading: feedsLoading } = useFeeds({})
+    const folders = feedsResponse?.folders || []
 
     const {
         selectedFolderId,
@@ -54,14 +55,8 @@ export function FeedSubscriptionModal({
     })
 
     const typedFolders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [feeds])
+        return folders
+    }, [folders])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()

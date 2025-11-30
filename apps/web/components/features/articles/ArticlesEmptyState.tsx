@@ -70,7 +70,7 @@ export function ArticlesEmptyState({
     const isMobile = useIsMobile()
 
     // Get user's current feed/folder state
-    const { data: feeds, isLoading: isFeedsLoading } = useFeeds(
+    const { data: feedsResponse, isLoading: isFeedsLoading } = useFeeds(
         {},
         {
             refetchOnMount: false,
@@ -78,16 +78,12 @@ export function ArticlesEmptyState({
             staleTime: 5 * 60 * 1000,
         }
     )
+    const feeds = feedsResponse?.subscriptions || []
+    const folders = feedsResponse?.folders || []
 
     const typedFolders = useMemo(() => {
-        const folderMap = new Map<string, Folder>()
-            ; ((feeds as unknown as Subscription[]) || []).forEach((sub) => {
-                if (sub.folder) {
-                    folderMap.set(sub.folder.id, sub.folder)
-                }
-            })
-        return Array.from(folderMap.values())
-    }, [feeds])
+        return folders
+    }, [folders])
 
     const subscribedFeeds = (feeds || []).map((sub) => ({
         id: sub.feed.id,
